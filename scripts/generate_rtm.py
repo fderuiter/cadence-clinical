@@ -141,7 +141,11 @@ def parse_srs(filepath_or_dir):
                     "description": desc,
                     "source": rel_path,
                 }
-            elif stripped.startswith("- **Trace") or stripped.startswith("* **Trace") or re.match(r"^#{1,6}\s*Trace", stripped):
+            elif (
+                stripped.startswith("- **Trace")
+                or stripped.startswith("* **Trace")
+                or re.match(r"^#{1,6}\s*Trace", stripped)
+            ):
                 # Attempted SRS definition line that failed valid Trace-\d+ pattern
                 if "XXX" not in stripped and "YYY" not in stripped:
                     print(
@@ -199,7 +203,12 @@ def parse_prd(filepath_or_dir):
                     "description": "",
                     "source": rel_path,
                 }
-            elif stripped.startswith("#### PRD-") or stripped.startswith("### PRD-") or stripped.startswith("- **PRD-") or stripped.startswith("* **PRD-"):
+            elif (
+                stripped.startswith("#### PRD-")
+                or stripped.startswith("### PRD-")
+                or stripped.startswith("- **PRD-")
+                or stripped.startswith("* **PRD-")
+            ):
                 if "XXX" not in stripped and "YYY" not in stripped:
                     print(
                         f"ERROR: Malformed PRD requirement ID detected in definition line: '{stripped}' in {rel_path}:{line_no}",
@@ -256,7 +265,9 @@ def check_orphan_fragments(sdlc_dirs=None, all_requirements=None):
         norm_sdlc_dir = os.path.normpath(sdlc_dir)
         for fpath in sdlc_files:
             norm_fpath = os.path.normpath(fpath)
-            rel_fpath = os.path.relpath(norm_fpath, start=os.getcwd()).replace("\\", "/")
+            rel_fpath = os.path.relpath(norm_fpath, start=os.getcwd()).replace(
+                "\\", "/"
+            )
             is_subfragment = os.path.dirname(norm_fpath) != norm_sdlc_dir
             has_reqs = norm_fpath in all_req_sources
             is_linked = norm_fpath in incoming_links
@@ -1014,7 +1025,11 @@ def main():
     srs_path = "docs/SRS.md" if os.path.isfile("docs/SRS.md") else "docs/SRS"
     srs_reqs = parse_srs(srs_path)
 
-    sdlc_path = "docs/SDLC" if os.path.isdir("docs/SDLC") else "docs/SDLC/01_Product_Requirements_Document_PRD.md"
+    sdlc_path = (
+        "docs/SDLC"
+        if os.path.isdir("docs/SDLC")
+        else "docs/SDLC/01_Product_Requirements_Document_PRD.md"
+    )
     prd_reqs = parse_prd(sdlc_path)
     srs_reqs_sdlc = parse_srs(sdlc_path)
 

@@ -3,14 +3,19 @@
 @req:PRD-SYS-001
 """
 
-import os
 import subprocess
 import sys
 from pathlib import Path
+
 import pytest
 
-from scripts.generate_rtm import parse_srs, parse_prd, check_orphan_fragments, check_fragment_relative_links
 import scripts.compliance_utility as compliance_utility
+from scripts.generate_rtm import (
+    check_fragment_relative_links,
+    check_orphan_fragments,
+    parse_prd,
+    parse_srs,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -107,7 +112,10 @@ def test_orphan_fragment_detection(tmp_path):
 
     # Unreferenced, empty-requirement fragment in subfolder
     orphan = sub_dir / "unlinked_fragment.md"
-    orphan.write_text("# Unlinked Document\nThis file defines no requirement and has no links.\n", encoding="utf-8")
+    orphan.write_text(
+        "# Unlinked Document\nThis file defines no requirement and has no links.\n",
+        encoding="utf-8",
+    )
 
     all_reqs = parse_prd(str(sdlc_dir))
 

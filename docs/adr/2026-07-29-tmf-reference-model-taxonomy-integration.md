@@ -67,7 +67,7 @@ We register three real catalog versions in a thread-safe registry:
 - `v3.2.0-complete`: The active default catalog representing the pure, complete standard DIA Reference Model v3.2.0. All new lookups, document ingestions, and validations resolve against this version by default.
 - `v3.2.0-extended`: Layers Cadence-specific `is_extension=True` custom extensions on top of the complete catalog.
 
-- Cross-reference the Standard-vs-Extension policy in [packages/core-models/tmf_reference_model/README.md](../../packages/core-models/tmf_reference_model/README.md) §3.
+- Cross-reference the Standard-vs-Extension policy in [Standard-versus-Extension Policy](#standard-versus-extension-policy).
 - Version isolation is enforced; once a version is registered, it cannot be mutated or overridden.
 
 ### Authoritative-Inventory Scope

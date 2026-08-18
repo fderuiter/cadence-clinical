@@ -10,11 +10,11 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2727
-- **Passed:** 2708 🟢
+- **Total Automated Test Cases Run:** 2734
+- **Passed:** 2715 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
-- **Overall Operational Pass Rate:** 99.30%
+- **Overall Operational Pass Rate:** 99.31%
 
 ## 2. Installation Qualification (IQ)
 
@@ -2638,6 +2638,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_path_normalization_win32`                                                         | `scripts.tests.test_detect_duplication`                                     | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_repo_root_resolution`                                                             | `scripts.tests.test_detect_duplication`                                     | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_scan_file_for_lines`                                                              | `scripts.tests.test_detect_duplication`                                     | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_broken_fragment_relative_link_detection`                                          | `scripts.tests.test_directory_sweeping_pipeline`                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_compliance_utility_directory_sweeping`                                            | `scripts.tests.test_directory_sweeping_pipeline`                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_duplicate_requirement_id_in_fragments_fails`                                      | `scripts.tests.test_directory_sweeping_pipeline`                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_full_generate_rtm_cli_sweeping`                                                   | `scripts.tests.test_directory_sweeping_pipeline`                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_malformed_trace_id_definition_fails`                                              | `scripts.tests.test_directory_sweeping_pipeline`                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_orphan_fragment_detection`                                                        | `scripts.tests.test_directory_sweeping_pipeline`                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_sweep_and_aggregate_modular_fragments`                                            | `scripts.tests.test_directory_sweeping_pipeline`                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_document_renderer_render_docx`                                                    | `scripts.tests.test_document_renderer`                                      | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_document_renderer_render_pdf`                                                     | `scripts.tests.test_document_renderer`                                      | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_document_download_logs_audit_and_watermarks`                                      | `scripts.tests.test_document_router`                                        | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |

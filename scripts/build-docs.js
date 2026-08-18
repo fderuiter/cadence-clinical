@@ -90,15 +90,19 @@ function runCommand(command) {
  * @returns {string} The updated markdown content with corrected links.
  */
 function rewriteLinks(content) {
-  // Inline links [text](link)
+  // Inline links [text](link), ignoring fenced and inline code blocks
   let rewritten = content.replace(
-    /(\[(?:[^\]]|\\\])*\]\()([^)]+)(\))/g,
+    /```[\s\S]*?```|`[^`\n]+`|(\[(?:[^\]]|\\\])*\]\()([^)]+)(\))/g,
     (match, prefix, url, suffix) => {
+      if (match.startsWith("```") || match.startsWith("`")) {
+        return match;
+      }
       let cleanUrl = url.trim();
-      // Only modify relative local links. If it starts with http, https, mailto, or #, keep it as-is.
+      // Only modify relative local links. If it starts with http, https, file, mailto, or #, keep it as-is.
       if (
         cleanUrl.startsWith("http://") ||
         cleanUrl.startsWith("https://") ||
+        cleanUrl.startsWith("file://") ||
         cleanUrl.startsWith("mailto:") ||
         cleanUrl.startsWith("#")
       ) {
@@ -111,6 +115,12 @@ function rewriteLinks(content) {
       } else if (cleanUrl === "LICENSE") {
         // If it points to LICENSE, change it to LICENSE.md
         cleanUrl = "LICENSE.md";
+      } else if (
+        !cleanUrl.startsWith("../") &&
+        fs.existsSync(path.join(repoRoot, cleanUrl)) &&
+        !fs.existsSync(path.join(repoRoot, "docs", cleanUrl))
+      ) {
+        cleanUrl = "../" + cleanUrl;
       }
 
       return `${prefix}${cleanUrl}${suffix}`;
@@ -125,6 +135,7 @@ function rewriteLinks(content) {
       if (
         cleanUrl.startsWith("http://") ||
         cleanUrl.startsWith("https://") ||
+        cleanUrl.startsWith("file://") ||
         cleanUrl.startsWith("mailto:") ||
         cleanUrl.startsWith("#")
       ) {
@@ -135,6 +146,12 @@ function rewriteLinks(content) {
         cleanUrl = cleanUrl.substring(5);
       } else if (cleanUrl === "LICENSE") {
         cleanUrl = "LICENSE.md";
+      } else if (
+        !cleanUrl.startsWith("../") &&
+        fs.existsSync(path.join(repoRoot, cleanUrl)) &&
+        !fs.existsSync(path.join(repoRoot, "docs", cleanUrl))
+      ) {
+        cleanUrl = "../" + cleanUrl;
       }
 
       return `${prefix}${cleanUrl}`;
@@ -185,12 +202,16 @@ function sweepAndPreprocessDocs(docsDir) {
     const docSubDir = path.dirname(relToDocs);
 
     const rewritten = content.replace(
-      /(\[(?:[^\]]|\\\])*\]\()([^)]+)(\))/g,
+      /```[\s\S]*?```|`[^`\n]+`|(\[(?:[^\]]|\\\])*\]\()([^)]+)(\))/g,
       (match, prefix, url, suffix) => {
+        if (match.startsWith("```") || match.startsWith("`")) {
+          return match;
+        }
         let cleanUrl = url.trim();
         if (
           cleanUrl.startsWith("http://") ||
           cleanUrl.startsWith("https://") ||
+          cleanUrl.startsWith("file://") ||
           cleanUrl.startsWith("mailto:") ||
           cleanUrl.startsWith("#")
         ) {

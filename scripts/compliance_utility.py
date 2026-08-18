@@ -185,8 +185,14 @@ def get_valid_requirements(docs_dir: str = DEFAULT_DOCS_DIR) -> set[str]:
     if os.path.isdir(sdlc_dir):
         reqs.update(parse_srs(sdlc_dir))
         reqs.update(parse_prd(sdlc_dir))
-    elif os.path.isfile(os.path.join(docs_dir, "SDLC/01_Product_Requirements_Document_PRD.md")):
-        reqs.update(parse_prd(os.path.join(docs_dir, "SDLC/01_Product_Requirements_Document_PRD.md")))
+    elif os.path.isfile(
+        os.path.join(docs_dir, "SDLC/01_Product_Requirements_Document_PRD.md")
+    ):
+        reqs.update(
+            parse_prd(
+                os.path.join(docs_dir, "SDLC/01_Product_Requirements_Document_PRD.md")
+            )
+        )
 
     # Also sweep any other subdirectories or root markdown files under docs_dir
     reqs.update(parse_srs(docs_dir))
