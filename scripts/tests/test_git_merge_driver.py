@@ -125,9 +125,9 @@ def test_merge_generic_json():
 
 
 def test_merge_markdown_text():
-    anc_content = "# Document\n\n- Baseline bullet\n"
-    curr_content = "# Document\n\n- Baseline bullet\n- Bullet Added by HEAD\n"
-    oth_content = "# Document\n\n- Baseline bullet\n- Bullet Added by OTHER\n"
+    anc_content = "# Header\n\nSection 1\n\nSection 2\n"
+    curr_content = "# Header\n\nSection 1 updated by HEAD\n\nSection 2\n"
+    oth_content = "# Header\n\nSection 1\n\nSection 2 updated by OTHER\n"
 
     with tempfile.TemporaryDirectory() as tmpdir:
         curr_file = os.path.join(tmpdir, "curr.md")
@@ -150,5 +150,36 @@ def test_merge_markdown_text():
         assert "<<<<<<<" not in merged
         assert "=======" not in merged
         assert ">>>>>>>" not in merged
-        assert "- Bullet Added by HEAD" in merged
-        assert "- Bullet Added by OTHER" in merged
+        assert "Section 1 updated by HEAD" in merged
+        assert "Section 2 updated by OTHER" in merged
+
+
+def test_merge_markdown_text_overlapping():
+    anc_content = "# Header\n\nOriginal line\n"
+    curr_content = "# Header\n\nLine edited by HEAD\n"
+    oth_content = "# Header\n\nLine edited by OTHER\n"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        curr_file = os.path.join(tmpdir, "curr.md")
+        oth_file = os.path.join(tmpdir, "oth.md")
+        anc_file = os.path.join(tmpdir, "anc.md")
+
+        with open(curr_file, "w", encoding="utf-8") as f:
+            f.write(curr_content)
+        with open(oth_file, "w", encoding="utf-8") as f:
+            f.write(oth_content)
+        with open(anc_file, "w", encoding="utf-8") as f:
+            f.write(anc_content)
+
+        success = merge_markdown_text(anc_file, curr_file, oth_file)
+        assert success is False
+
+        with open(curr_file, encoding="utf-8") as f:
+            merged = f.read()
+
+        assert "<<<<<<<" in merged
+        assert "=======" in merged
+        assert ">>>>>>>" in merged
+        assert "Line edited by HEAD" in merged
+        assert "Line edited by OTHER" in merged
+
