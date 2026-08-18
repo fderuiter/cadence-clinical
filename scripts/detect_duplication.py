@@ -402,6 +402,10 @@ def main() -> None:
                                     "apps/etmf/adapters/migrate.py",
                                 },
                                 {
+                                    "apps/etmf/infrastructure/models.py",
+                                    "apps/etmf/database/migrate.py",
+                                },
+                                {
                                     "apps/ctms/alembic/env.py",
                                     "apps/quality/alembic/env.py",
                                 },
@@ -528,6 +532,10 @@ def main() -> None:
                                 {
                                     "apps/etmf/presentation/routers/etmf.py",
                                     "apps/execution/main.py",
+                                },
+                                {
+                                    "apps/etmf/infrastructure/models.py",
+                                    "apps/etmf/database/migrate.py",
                                 },
                             ]
                         ):

@@ -16,3 +16,4 @@ docs/adr/index.md merge=union
 .secrets.baseline merge=custom-metadata-driver
 *.json merge=custom-metadata-driver
 *.md merge=custom-metadata-driver
+.cadence/snapshots/*.tar.gz merge=custom-metadata-driver

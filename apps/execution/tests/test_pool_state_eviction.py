@@ -19,6 +19,8 @@ async def test_pool_connection_state_eviction(tmp_path: Path) -> None:
     """
     db_file = str(tmp_path / "test_eviction.db")
 
+    await db_manager.close()
+
     # 1. Initialize test database
     db_manager.init_db(f"sqlite+aiosqlite:///{db_file}")
 
@@ -79,6 +81,8 @@ async def test_concurrent_connection_isolation_and_no_weakref_errors(
     @req:PRD-SYS-001
     """
     db_file = str(tmp_path / "test_isolation.db")
+
+    await db_manager.close()
 
     db_manager.init_db(f"sqlite+aiosqlite:///{db_file}")
 

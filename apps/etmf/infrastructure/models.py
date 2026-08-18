@@ -462,6 +462,60 @@ event.listen(
     trigger_document_delete_pg_create.execute_if(dialect="postgresql"),
 )
 
+trigger_verify_func_pg = DDL("""
+CREATE OR REPLACE FUNCTION verify_gxp_session_context()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_user_id VARCHAR(255);
+    v_change_reason VARCHAR(255);
+    v_app_writing VARCHAR(50);
+BEGIN
+    v_app_writing := COALESCE(current_setting('cadence.app_writing', true), 'false');
+    IF (v_app_writing = 'true') THEN
+        RETURN NEW;
+    END IF;
+
+    v_user_id := current_setting('cadence.current_user_id', true);
+    IF (v_user_id IS NULL OR v_user_id = '') THEN
+        RAISE EXCEPTION 'GxP Compliance Violation: Write operations lacking session-level user identifiers are strictly prohibited.';
+    END IF;
+
+    IF (TG_OP IN ('UPDATE', 'DELETE')) THEN
+        v_change_reason := current_setting('cadence.current_change_reason', true);
+        IF (v_change_reason IS NULL OR v_change_reason = '') THEN
+            RAISE EXCEPTION 'GxP Compliance Violation: Write operations lacking session-level change justification are strictly prohibited.';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;""")
+
+trigger_verify_document_pg_drop = DDL("""
+DROP TRIGGER IF EXISTS trg_verify_gxp_tmf_documents ON tmf_documents;
+""")
+
+trigger_verify_document_pg_create = DDL("""
+CREATE TRIGGER trg_verify_gxp_tmf_documents
+BEFORE UPDATE OR DELETE ON tmf_documents
+FOR EACH ROW EXECUTE FUNCTION verify_gxp_session_context();""")
+
+event.listen(
+    TMFDocument.__table__,
+    "after_create",
+    trigger_verify_func_pg.execute_if(dialect="postgresql"),
+)
+event.listen(
+    TMFDocument.__table__,
+    "after_create",
+    trigger_verify_document_pg_drop.execute_if(dialect="postgresql"),
+)
+event.listen(
+    TMFDocument.__table__,
+    "after_create",
+    trigger_verify_document_pg_create.execute_if(dialect="postgresql"),
+)
+
 
 @event.listens_for(TMFDocument, "before_delete")
 def prevent_document_delete(mapper, connection, target):
