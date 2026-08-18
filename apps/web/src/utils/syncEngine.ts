@@ -12,10 +12,12 @@ export interface PendingDelta {
 }
 
 export class IndexedDBManager {
+  private baseDbName = "SyncEngineDB";
+  private currentUserId: string | null = null;
   private dbName = "SyncEngineDB";
   private storeName = "pending_sync_deltas";
   private useMemory = false;
-  private memoryStore: Map<string, PendingDelta> = new Map();
+  private memoryStores: Map<string, Map<string, PendingDelta>> = new Map();
 
   constructor() {
     if (typeof window === "undefined" || !window.indexedDB) {
@@ -23,10 +25,45 @@ export class IndexedDBManager {
     }
   }
 
-  async init(): Promise<void> {
+  public setUserId(userId: string | null): void {
+    this.currentUserId = userId || null;
+    this.dbName = this.resolveDbName();
+  }
+
+  public getUserId(): string | null {
+    return this.currentUserId;
+  }
+
+  public getDbName(): string {
+    return this.resolveDbName();
+  }
+
+  private resolveDbName(): string {
+    const activeUserId =
+      this.currentUserId ||
+      offlineAuthManager.getActiveSession()?.userId ||
+      (offlineAuthManager.getActiveSession() as any)?.user_id ||
+      null;
+    return activeUserId ? `${this.baseDbName}_${activeUserId}` : this.baseDbName;
+  }
+
+  private getMemoryStore(): Map<string, PendingDelta> {
+    const name = this.getDbName();
+    if (!this.memoryStores.has(name)) {
+      this.memoryStores.set(name, new Map());
+    }
+    return this.memoryStores.get(name)!;
+  }
+
+  async init(userId?: string): Promise<void> {
+    if (userId !== undefined) {
+      this.setUserId(userId);
+    } else {
+      this.dbName = this.resolveDbName();
+    }
     if (this.useMemory) return;
     return new Promise((resolve, reject) => {
-      const request = window.indexedDB.open(this.dbName, 1);
+      const request = window.indexedDB.open(this.getDbName(), 1);
       request.onerror = () => {
         this.useMemory = true; // fallback
         resolve();
@@ -45,7 +82,7 @@ export class IndexedDBManager {
 
   private getDB(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
-      const request = window.indexedDB.open(this.dbName, 1);
+      const request = window.indexedDB.open(this.getDbName(), 1);
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result);
     });
@@ -53,7 +90,7 @@ export class IndexedDBManager {
 
   async addDelta(delta: PendingDelta): Promise<void> {
     if (this.useMemory) {
-      this.memoryStore.set(delta.deltaId, delta);
+      this.getMemoryStore().set(delta.deltaId, delta);
       return;
     }
     const db = await this.getDB();
@@ -68,7 +105,7 @@ export class IndexedDBManager {
 
   async getDeltas(): Promise<PendingDelta[]> {
     if (this.useMemory) {
-      return Array.from(this.memoryStore.values());
+      return Array.from(this.getMemoryStore().values());
     }
     const db = await this.getDB();
     return new Promise((resolve, reject) => {
@@ -82,7 +119,7 @@ export class IndexedDBManager {
 
   async getDeltasCount(): Promise<number> {
     if (this.useMemory) {
-      return this.memoryStore.size;
+      return this.getMemoryStore().size;
     }
     const db = await this.getDB();
     return new Promise((resolve, reject) => {
@@ -96,7 +133,8 @@ export class IndexedDBManager {
 
   async clearDeltas(ids: string[]): Promise<void> {
     if (this.useMemory) {
-      ids.forEach((id) => this.memoryStore.delete(id));
+      const store = this.getMemoryStore();
+      ids.forEach((id) => store.delete(id));
       return;
     }
     const db = await this.getDB();
@@ -146,6 +184,10 @@ export class ClientSyncEngine {
   }
 
   async queueDelta(delta: Omit<PendingDelta, "deltaId">): Promise<void> {
+    const activeSession = offlineAuthManager.getActiveSession();
+    if (activeSession?.userId || (activeSession as any)?.user_id) {
+      this.dbManager.setUserId(activeSession.userId || (activeSession as any).user_id);
+    }
     const deltaId = `delta_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const item: PendingDelta = {
       deltaId,
@@ -165,16 +207,6 @@ export class ClientSyncEngine {
     syncStore.setStatus("SYNCING");
 
     try {
-      await this.dbManager.init();
-      const allDeltas = await this.dbManager.getDeltas();
-      if (allDeltas.length === 0) {
-        syncStore.setStatus("IDLE");
-        syncStore.setPendingCount(0);
-        this.isSyncing = false;
-        this.resetBackoff();
-        return;
-      }
-
       // Check for active offline session
       const activeSession = offlineAuthManager.getActiveSession();
       if (!activeSession) {
@@ -190,6 +222,21 @@ export class ClientSyncEngine {
             })
           );
         }
+        return;
+      }
+
+      const activeUserId = activeSession.userId || (activeSession as any)?.user_id;
+      if (activeUserId) {
+        this.dbManager.setUserId(activeUserId);
+      }
+
+      await this.dbManager.init();
+      const allDeltas = await this.dbManager.getDeltas();
+      if (allDeltas.length === 0) {
+        syncStore.setStatus("IDLE");
+        syncStore.setPendingCount(0);
+        this.isSyncing = false;
+        this.resetBackoff();
         return;
       }
 
