@@ -190,7 +190,9 @@ The diagram below represents the local development runtime and mapping of all 20
 flowchart TD
     subgraph Local Developer Host Environment
         subject-portal[subject-portal - Subjects PWA Portal]
+        front-proxy[front-proxy - NGINX Front Proxy]
         gateway[gateway - FastAPI API Gateway/Router]
+        gateway-rewrite[gateway-rewrite - NestJS Gateway Rewrite]
         keycloak[keycloak - Keycloak IAM]
         designer[designer - MDR/SDR Service]
         execution[execution - Trial EDC Runtime]
