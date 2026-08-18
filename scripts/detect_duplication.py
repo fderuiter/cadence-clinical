@@ -377,6 +377,10 @@ def main() -> None:
                                     "apps/web/src/views/CtmsView.vue",
                                 },
                                 {
+                                    "apps/web/src/components/tickets/TicketSignModal.vue",
+                                    "apps/web/src/components/tickets/TicketCreateModal.vue",
+                                },
+                                {
                                     "apps/web/src/components/clinical/ClinicalLookupInput.vue",
                                     "apps/web/src/components/clinical/ClinicalInput.vue",
                                 },
