@@ -11,6 +11,12 @@ export class JwksCoalescerService implements OnModuleInit {
   // Cached parsed public KeyObjects to eliminate parsing overhead on fast-path
   private publicKeyCache = new Map<string, any>();
 
+  // Short-lived negative cache for unassigned / invalid key IDs: kid -> expiration timestamp (epoch ms)
+  private negativeCache = new Map<string, number>();
+
+  // Global in-flight fetch promise to coalesce concurrent requests for uncached/unknown key IDs
+  private inFlightFetch: Promise<void> | null = null;
+
   // In-flight fetches map to merge concurrent requests for the same uncached kid
   private inFlightFetches = new Map<string, Promise<void>>();
 
@@ -21,6 +27,17 @@ export class JwksCoalescerService implements OnModuleInit {
 
   // Request timeout in milliseconds (default to 5.0 seconds)
   private timeoutMs: number = 5000;
+
+  // Negative cache TTL in milliseconds (default to 10 seconds per Requirement 2)
+  private negativeCacheTtlMs: number = process.env.NEGATIVE_CACHE_TTL_MS
+    ? parseInt(process.env.NEGATIVE_CACHE_TTL_MS, 10)
+    : 10000;
+
+  // Negative cache max capacity threshold (default to 1000 entries per Requirement 4)
+  private negativeCacheMaxCapacity: number = process.env
+    .NEGATIVE_CACHE_MAX_CAPACITY
+    ? parseInt(process.env.NEGATIVE_CACHE_MAX_CAPACITY, 10)
+    : 1000;
 
   // Track number of HTTP fetch calls for metrics / testing assertions
   private fetchCount: number = 0;
@@ -59,7 +76,14 @@ export class JwksCoalescerService implements OnModuleInit {
     }
     this.logger.log("Starting eager JWKS prefetching...");
     try {
-      await this.fetchAndCacheKeys(this.timeoutMs);
+      if (!this.inFlightFetch) {
+        this.inFlightFetch = this.fetchAndCacheKeys(this.timeoutMs).finally(
+          () => {
+            this.inFlightFetch = null;
+          }
+        );
+      }
+      await this.inFlightFetch;
       this.logger.log("Eager JWKS prefetching completed successfully.");
     } catch (error: any) {
       // Complete startup process successfully even if initial prefetch fails
@@ -72,9 +96,18 @@ export class JwksCoalescerService implements OnModuleInit {
   /**
    * Dynamically configure options (mainly for testing or custom runtime setups)
    */
-  configure(options: { jwksUrl?: string; timeoutMs?: number }): void {
+  configure(options: {
+    jwksUrl?: string;
+    timeoutMs?: number;
+    negativeCacheTtlMs?: number;
+    negativeCacheMaxCapacity?: number;
+  }): void {
     if (options.jwksUrl) this.jwksUrl = options.jwksUrl;
     if (options.timeoutMs !== undefined) this.timeoutMs = options.timeoutMs;
+    if (options.negativeCacheTtlMs !== undefined)
+      this.negativeCacheTtlMs = options.negativeCacheTtlMs;
+    if (options.negativeCacheMaxCapacity !== undefined)
+      this.negativeCacheMaxCapacity = options.negativeCacheMaxCapacity;
   }
 
   /**
@@ -86,20 +119,70 @@ export class JwksCoalescerService implements OnModuleInit {
   }
 
   /**
-   * Reset the fetch count and the in-memory key cache.
+   * Reset the fetch count and all in-memory caches.
    */
   reset(): void {
     this.keyCache.clear();
     this.publicKeyCache.clear();
     this.inFlightFetches.clear();
+    this.inFlightFetch = null;
+    this.negativeCache.clear();
     this.fetchCount = 0;
   }
 
   /**
-   * Get all currently cached keys
+   * Get all currently cached keys (positive cache)
    */
   getCachedKeys(): Map<string, any> {
     return this.keyCache;
+  }
+
+  /**
+   * Get all currently active negative cache entries (kid -> expiresAt)
+   */
+  getNegativeCache(): Map<string, number> {
+    return this.negativeCache;
+  }
+
+  /**
+   * Get total number of entries currently stored in the negative cache
+   */
+  getNegativeCacheSize(): number {
+    return this.negativeCache.size;
+  }
+
+  /**
+   * Record an unassigned key ID in the negative cache with capacity eviction (LRU order).
+   */
+  private addToNegativeCache(kid: string): void {
+    const expiresAt = Date.now() + this.negativeCacheTtlMs;
+
+    // Delete existing entry so re-adding puts it at the end of Map iteration order (LRU eviction)
+    if (this.negativeCache.has(kid)) {
+      this.negativeCache.delete(kid);
+    } else if (this.negativeCache.size >= this.negativeCacheMaxCapacity) {
+      const oldestKey = this.negativeCache.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.negativeCache.delete(oldestKey);
+      }
+    }
+
+    this.negativeCache.set(kid, expiresAt);
+  }
+
+  /**
+   * Check if a key ID is currently recorded in the active negative cache.
+   */
+  private isNegativelyCached(kid: string): boolean {
+    if (!this.negativeCache.has(kid)) {
+      return false;
+    }
+    const expiresAt = this.negativeCache.get(kid)!;
+    if (Date.now() >= expiresAt) {
+      this.negativeCache.delete(kid);
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -127,6 +210,8 @@ export class JwksCoalescerService implements OnModuleInit {
         for (const key of jwks.keys) {
           if (key.kid) {
             this.keyCache.set(key.kid, key);
+            // If key is present in JWKS, clear any negative cache entry
+            this.negativeCache.delete(key.kid);
           }
         }
       } else {
@@ -139,53 +224,66 @@ export class JwksCoalescerService implements OnModuleInit {
 
   /**
    * Retrieves a public key by Key ID (kid).
-   * Implements eager cache checks and dynamic promise coalescing for stampede protection.
+   * Implements eager cache checks, short-lived negative cache rejection,
+   * and dynamic global promise coalescing for stampede protection.
    */
   async getKey(kid: string): Promise<any> {
     if (!kid) {
       throw new Error("Cannot fetch key: No Key ID (kid) provided.");
     }
 
-    // Requirement 3: Check the local key cache before starting any network request
+    // Requirement 3: Check the local positive key cache before starting any network request
     if (this.keyCache.has(kid)) {
       return this.keyCache.get(kid);
     }
 
-    // Requirement 4: Merge multiple concurrent verification requests for the same uncached key ID
-    let inFlight = this.inFlightFetches.get(kid);
-    if (!inFlight) {
+    // Requirement 3: Reject requests matching active negative cache entries without initiating outbound calls
+    if (this.isNegativelyCached(kid)) {
+      this.logger.debug(
+        `Negative cache hit for kid "${kid}". Rejecting without network fetch.`
+      );
+      throw new Error(`Key ID "${kid}" not found in retrieved JWKS keys.`);
+    }
+
+    // Requirement 1: Coalesce concurrent uncached key ID lookups into a single global fetch operation
+    if (!this.inFlightFetch) {
       this.logger.log(
         `Cache miss for kid "${kid}". Initiating coalesced JWKS fetch...`
       );
-      inFlight = (async () => {
-        await this.fetchAndCacheKeys(this.timeoutMs);
-      })().finally(() => {
-        // Clean up the in-flight map entry after resolution/rejection so future requests can retry if needed
-        this.inFlightFetches.delete(kid);
-      });
-      this.inFlightFetches.set(kid, inFlight);
+      this.inFlightFetch = this.fetchAndCacheKeys(this.timeoutMs).finally(
+        () => {
+          this.inFlightFetch = null;
+        }
+      );
     } else {
       this.logger.log(
         `Coalescing request: Joining in-flight JWKS fetch for kid "${kid}".`
       );
     }
 
+    this.inFlightFetches.set(kid, this.inFlightFetch);
+
     try {
-      await inFlight;
+      await this.inFlightFetch;
     } catch (error: any) {
-      // Requirement 5: If an on-demand key fetch fails, retain existing cached keys to prevent breaking active user sessions
+      // Requirement 5: Retain previously cached valid keys when outbound key retrieval attempts fail
       this.logger.error(
         `Dynamic JWKS fetch failed for kid "${kid}": ${error.message}`
       );
       throw new Error(
         `Failed to fetch public key for kid "${kid}": ${error.message}`
       );
+    } finally {
+      this.inFlightFetches.delete(kid);
     }
 
     // After coalesced fetch resolves, re-check local cache for the key
     if (this.keyCache.has(kid)) {
       return this.keyCache.get(kid);
     }
+
+    // Requirement 2: Record unassigned key IDs in a negative lookup cache for 10 seconds upon fetch completion
+    this.addToNegativeCache(kid);
 
     throw new Error(`Key ID "${kid}" not found in retrieved JWKS keys.`);
   }
@@ -218,7 +316,7 @@ export class JwksCoalescerService implements OnModuleInit {
       throw new Error("Token header does not contain a Key ID (kid).");
     }
 
-    // 2. Get the key (from cache, or coalesced dynamic fetch)
+    // 2. Get the key (from cache, negative cache, or coalesced dynamic fetch)
     const jwk = await this.getKey(kid);
 
     // 3. Re-verify cryptographic signature
