@@ -1,3 +1,4 @@
+import asyncio
 import functools
 import inspect
 import json
@@ -309,6 +310,7 @@ class RelationalDatabaseManager:
             await self.engine.dispose()
             self.engine = None
             self.session_maker = None
+        await asyncio.sleep(0)
 
     def get_session_maker(self) -> async_sessionmaker[AsyncSession]:
         if not self.session_maker:
