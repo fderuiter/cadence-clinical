@@ -321,3 +321,98 @@ async def test_epro_quarantine_sync_pipeline():
             .first()
         )
         assert replay_audit is not None
+
+
+@pytest.mark.asyncio
+async def test_epro_version_mismatch_quarantine_pipeline():
+    """
+    Verify fast version-check and immediate quarantine of mismatched submissions.
+    @req:PRD-SYS-001
+    """
+    async_session = db_manager.get_session_maker()
+    async with async_session() as session:
+        inst = Instrument(
+            id="v2_diary",
+            name="Versioned Diary",
+            items={},
+            response_types={},
+            scoring_metadata={},
+            created_by="admin",
+            reason_for_change="Setup v2",
+            version_index=2,  # Active version on server is 2
+        )
+        session.add(inst)
+
+        now = datetime.now(UTC).replace(tzinfo=None)
+        assign = SubjectAssignment(
+            subject_id="sub_bob",
+            instrument_id="v2_diary",
+            start_date=now - timedelta(days=1),
+            end_date=now + timedelta(days=1),
+            created_by="admin",
+            reason_for_change="Setup assignment for bob",
+            version_index=1,
+        )
+        session.add(assign)
+        await session.commit()
+
+    client = TestClient(app)
+
+    # Submit an outdated ePRO submission with version_index=1 (active on server is 2)
+    payload = {
+        "subject_id": "sub_bob",
+        "diary_id": "v2_diary",
+        "version_index": 1,  # Outdated version!
+        "device_timestamp": "2026-08-04T12:00:00Z",
+        "answers": {"pain_score": 5},
+        "offline_sync_markers": {
+            "sequence_number": 1,
+            "client_id": "device_bob",
+            "conflict_strategy": "CLIENT_WINS",
+        },
+    }
+
+    headers = get_auth_headers(
+        roles="Subject", change_reason="Outdated submit", user_id="sub_bob"
+    )
+    resp = client.post("/api/v1/interop/epro/submit", json=payload, headers=headers)
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["status"] == "QUARANTINED"
+    assert data["sync_status"] == "QUARANTINED"
+    assert "Version mismatch" in data["validation_errors"][0]
+
+    # Verify database entry is added to quarantine table
+    async with async_session() as session:
+        q_record = (
+            (
+                await session.execute(
+                    select(EPROSubmissionQuarantine).where(
+                        EPROSubmissionQuarantine.subject_id == "sub_bob"
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
+        assert q_record is not None
+        assert q_record.status == "QUARANTINED"
+        assert q_record.diary_id == "v2_diary"
+        assert q_record.original_answers["pain_score"] == 5
+        assert "Version mismatch" in q_record.validation_errors[0]
+
+        # Verify audit logs record the version mismatch quarantine
+        audit_rec = (
+            (
+                await session.execute(
+                    select(InteropAuditLog).where(
+                        InteropAuditLog.action == "EPRO_QUARANTINED",
+                        InteropAuditLog.user_id == "sub_bob",
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
+        assert audit_rec is not None
+        assert "due to version mismatch" in audit_rec.details

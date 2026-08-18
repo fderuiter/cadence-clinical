@@ -186,6 +186,7 @@ const state = reactive({
   submissions: [],
   isSyncDrawerOpen: false,
   syncStatusText: "Online. All submissions synchronized.",
+  autoSyncSuspended: false,
   pinSetup: {
     isOpen: false,
     pin: "",
@@ -1737,10 +1738,17 @@ async function refreshSubmissionsState() {
   }
 }
 
-async function syncOfflineQueue() {
+async function syncOfflineQueue(isManual = false) {
   const statusTextEl = document.getElementById("sync-queue-status-text");
   const queued = await getQueuedSubmissions();
   const online = checkOnline();
+
+  if (state.autoSyncSuspended && !isManual) {
+    console.log(
+      "[App] Auto-sync suspended due to version mismatch. Manual refresh required."
+    );
+    return;
+  }
 
   if (!online) {
     const txt = `Offline Mode. ${queued.length} submission(s) queued locally.`;
@@ -1789,6 +1797,8 @@ async function syncOfflineQueue() {
     submissions: decryptable.map((item) => ({
       subject_id: item.subject_id,
       diary_id: item.diary_id,
+      version_index:
+        typeof item.version_index === "number" ? item.version_index : 1,
       device_timestamp: item.device_timestamp,
       answers: item.answers,
       offline_sync_markers: {
@@ -1808,6 +1818,7 @@ async function syncOfflineQueue() {
 
     if (response && response.results) {
       const updates = [];
+      let hasQuarantined = false;
       const hasKeys = response.results.some((res) => {
         return (
           (res.offline_sync_markers?.sequence_number !== undefined &&
@@ -1826,12 +1837,19 @@ async function syncOfflineQueue() {
             (q) => q.sequence_number === resSeq && q.client_id === resClientId
           );
           if (item) {
+            const isQuar = res.status === "QUARANTINED";
+            if (isQuar) {
+              hasQuarantined = true;
+            }
             updates.push({
               sequence_number: item.sequence_number,
               status: res.status,
               additionalFields: {
                 resolved_answers: res.answers,
                 resolved_at: new Date().toISOString(),
+                error: isQuar
+                  ? "Version mismatch: client version index does not match the active instrument version."
+                  : null,
               },
             });
           }
@@ -1842,12 +1860,19 @@ async function syncOfflineQueue() {
           const item = decryptable[i];
           const res = response.results[i];
           if (res) {
+            const isQuar = res.status === "QUARANTINED";
+            if (isQuar) {
+              hasQuarantined = true;
+            }
             updates.push({
               sequence_number: item.sequence_number,
               status: res.status,
               additionalFields: {
                 resolved_answers: res.answers,
                 resolved_at: new Date().toISOString(),
+                error: isQuar
+                  ? "Version mismatch: client version index does not match the active instrument version."
+                  : null,
               },
             });
           }
@@ -1856,6 +1881,19 @@ async function syncOfflineQueue() {
 
       if (updates.length > 0) {
         await bulkUpdateSubmissionStatuses(updates);
+      }
+
+      if (hasQuarantined) {
+        state.autoSyncSuspended = true;
+        const msg =
+          "ALERT: Outdated Form Structure! Please perform manual refresh to reload active clinical structures.";
+        state.syncStatusText = msg;
+        if (statusTextEl) {
+          statusTextEl.textContent = msg;
+        }
+        alert(msg);
+      } else if (isManual) {
+        state.autoSyncSuspended = false;
       }
     }
 

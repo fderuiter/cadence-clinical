@@ -356,6 +356,12 @@ export async function queueSubmission({
   const client_id = await getClientId();
   const device_timestamp = new Date().toISOString();
 
+  const instrument = await getInstrumentFromDB(diary_id);
+  const version_index =
+    instrument && typeof instrument.version_index === "number"
+      ? instrument.version_index
+      : 1;
+
   const encAnswers = await encryptAESGCM(answers, inMemorySessionKey);
   const encSubjectId = await encryptAESGCM(subject_id, inMemorySessionKey);
   const encUsername = await encryptAESGCM(username, inMemorySessionKey);
@@ -365,6 +371,7 @@ export async function queueSubmission({
     client_id,
     subject_id: encSubjectId,
     diary_id,
+    version_index,
     assignment_id,
     device_timestamp,
     answers: encAnswers,

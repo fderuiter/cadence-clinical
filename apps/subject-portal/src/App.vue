@@ -202,6 +202,36 @@
 
       <!-- Main Viewport -->
       <main class="portal-main">
+        <!-- Version mismatch banner -->
+        <div
+          v-if="state.autoSyncSuspended"
+          class="card error-state"
+          style="
+            border: 1px solid var(--danger);
+            background-color: #fee2e2;
+            color: #b91c1c;
+            padding: 16px;
+            margin-bottom: 24px;
+            text-align: center;
+          "
+        >
+          <p style="font-weight: bold; font-size: 16px; margin: 0 0 8px 0">
+            ⚠️ Outdated Form Structure Detected
+          </p>
+          <p style="font-size: 14px; margin: 0 0 12px 0">
+            The questionnaire version index does not match the active server
+            structure. Automatic sync is suspended. Please perform a manual
+            refresh.
+          </p>
+          <button
+            id="btn-alert-sync-now"
+            type="button"
+            class="btn btn-primary"
+            @click="triggerManualSync"
+          >
+            Manual Sync / Refresh
+          </button>
+        </div>
         <!-- View 1: My Tasks (Assigned Questionnaires) -->
         <section
           id="view-tasks"
@@ -1085,7 +1115,9 @@ function getSubmissionClass(item) {
       item.status === "CREATED" || item.status === "UPDATED_CLIENT_WINS",
     "submission-merged": item.status === "MERGED",
     "submission-ignored": item.status === "IGNORED_SERVER_WINS",
-    "submission-error": item.status === "DECRYPTION_ERROR",
+    "submission-quarantined": item.status === "QUARANTINED",
+    "submission-error":
+      item.status === "DECRYPTION_ERROR" || item.status === "QUARANTINED",
   };
 }
 
@@ -1099,7 +1131,8 @@ function getBadgeClass(item) {
     return "completed";
   if (
     item.status === "IGNORED_SERVER_WINS" ||
-    item.status === "DECRYPTION_ERROR"
+    item.status === "DECRYPTION_ERROR" ||
+    item.status === "QUARANTINED"
   )
     return "overdue";
   return "pending";
@@ -1111,6 +1144,7 @@ function getStatusLabel(item) {
     return "SYNCED";
   if (item.status === "MERGED") return "MERGED";
   if (item.status === "IGNORED_SERVER_WINS") return "CONFLICT (Ignored)";
+  if (item.status === "QUARANTINED") return "QUARANTINED";
   return item.status;
 }
 
@@ -1126,6 +1160,8 @@ function getStatusDescription(item) {
     return "Conflict resolved: Local and server entries were combined.";
   } else if (item.status === "IGNORED_SERVER_WINS") {
     return "Conflict resolved: Server data was preserved; local entry archived.";
+  } else if (item.status === "QUARANTINED") {
+    return "Quarantined: Under review by clinical trial managers due to validation/version mismatch errors.";
   } else if (item.status === "DECRYPTION_ERROR") {
     return item.error || "Decryption failed: Secure key cleared.";
   }
