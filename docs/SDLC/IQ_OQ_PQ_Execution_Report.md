@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2727
-- **Passed:** 2708 🟢
+- **Total Automated Test Cases Run:** 2732
+- **Passed:** 2713 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.30%
@@ -594,6 +594,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_validate_study_terminology_endpoint_not_found`                                    | `apps.designer.tests.test_terminology_validation`                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_validate_study_terminology_endpoint_success`                                      | `apps.designer.tests.test_terminology_validation`                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_validate_study_terminology_fully_valid`                                           | `apps.designer.tests.test_terminology_validation`                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_atomic_rollback_leaves_graph_unmodified`                                          | `apps.designer.tests.test_transactional_usdm_ingest`                        | PRD-DDF-001, PRD-SYS-001                                                           | 🟢 PASSED  | < 1s     |
+| `test_commit_usdm_graph_with_empty_arrays`                                              | `apps.designer.tests.test_transactional_usdm_ingest`                        | PRD-MDR-007, PRD-SYS-001                                                           | 🟢 PASSED  | < 1s     |
+| `test_ingest_incomplete_study_with_empty_arrays`                                        | `apps.designer.tests.test_transactional_usdm_ingest`                        | PRD-DDF-001, PRD-SYS-001                                                           | 🟢 PASSED  | < 1s     |
+| `test_linear_scaling_and_no_timeout_on_large_payload`                                   | `apps.designer.tests.test_transactional_usdm_ingest`                        | PRD-DDF-001, PRD-SYS-001                                                           | 🟢 PASSED  | < 1s     |
+| `test_mock_state_unchanged_on_transaction_failure`                                      | `apps.designer.tests.test_transactional_usdm_ingest`                        | PRD-MDR-007, PRD-SYS-001                                                           | 🟢 PASSED  | < 1s     |
 | `test_site_and_visit_locks`                                                             | `apps.designer.tests.test_trial_lock`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_subject_and_form_locks`                                                           | `apps.designer.tests.test_trial_lock`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_trial_lock_freeze`                                                                | `apps.designer.tests.test_trial_lock`                                       | PRD-SYS-003, Trace-3                                                               | 🟢 PASSED  | < 1s     |
