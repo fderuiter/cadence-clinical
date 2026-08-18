@@ -86,6 +86,26 @@ class SubjectReconsentRequest(BaseModel):
     )
 
 
+class BulkSubjectReconsentRequest(BaseModel):
+    """Request payload to register batch subject re-consent for an amended version."""
+
+    subject_ids: list[str] = Field(..., description="List of subject identifiers")
+    study_id: str = Field(..., description="Study identifier")
+    protocol_version: str = Field(..., description="Amended protocol version tag")
+    version_index: int = Field(2, description="Protocol version index")
+    icf_signed: bool = Field(True, description="Whether ICF is signed")
+    signature_type: str = Field(
+        "ECONSENT", description="Signature type: 'ECONSENT' or 'PAPER_UPLOAD'"
+    )
+    signer_name: str = Field(
+        "site_coordinator_01", description="Full name or user ID of batch signer"
+    )
+    reason_for_change: str = Field(
+        "Bulk protocol amendment re-consent verification",
+        description="GxP reason for change",
+    )
+
+
 # In-memory store for amendment publications
 _AMENDMENT_STORE: dict[str, dict] = {}
 
@@ -213,6 +233,7 @@ async def get_amendment_summary_endpoint(
 async def get_subject_impact_analysis(
     study_id: str,
     target_version: str = "2.0.0",
+    site_id: str | None = None,
     current_user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Calculates subject migration impact for an active protocol amendment.
@@ -224,10 +245,14 @@ async def get_subject_impact_analysis(
     completed_prev: list[dict[str, Any]] = []
 
     async with db_manager.get_session_maker()() as session:
-        stmt = select(ClinicalSubject).where(
+        conditions = [
             ClinicalSubject.study_id == study_id,
             ClinicalSubject.is_deleted.is_(False),
-        )
+        ]
+        if site_id:
+            conditions.append(ClinicalSubject.site_id == site_id)
+
+        stmt = select(ClinicalSubject).where(*conditions)
         res = await session.execute(stmt)
         subjects = res.scalars().all()
 
@@ -236,6 +261,7 @@ async def get_subject_impact_analysis(
             sub_info = {
                 "id": sub_id,
                 "status": sub.status,
+                "site_id": getattr(sub, "site_id", "SITE-101"),
                 "active_protocol_version": getattr(
                     sub, "active_protocol_version", "1.0.0"
                 ),
@@ -269,6 +295,7 @@ async def get_subject_impact_analysis(
     total_active = len(migrated) + len(pending)
     return {
         "study_id": study_id,
+        "site_id": site_id,
         "target_version": target_version,
         "total_active_subjects": total_active,
         "categories": {
@@ -392,4 +419,80 @@ async def register_subject_reconsent(
             "protocol_version": payload.protocol_version,
             "icf_signed": payload.icf_signed,
             "unlocked": payload.icf_signed,
+        }
+
+
+@router.post("/bulk-reconsent")
+async def register_bulk_subject_reconsent(
+    payload: BulkSubjectReconsentRequest,
+    current_user: dict = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Registers batch subject re-consent for an amended version, unlocking gating in bulk.
+
+    Requirements: PRD-SUB-007, PRD-SYS-001
+    """
+    async with db_manager.get_session_maker()() as session:
+        now = datetime.now(UTC)
+        cleared_subject_ids: list[str] = []
+
+        for sub_id in payload.subject_ids:
+            # 1. Fetch or create consent record
+            stmt = select(SubjectConsent).where(
+                SubjectConsent.subject_id == sub_id,
+                SubjectConsent.study_id == payload.study_id,
+                or_(
+                    SubjectConsent.version_tag == payload.protocol_version,
+                    SubjectConsent.protocol_version == payload.protocol_version,
+                ),
+            )
+            res = await session.execute(stmt)
+            consent = res.scalars().first()
+
+            if consent:
+                consent.icf_signed = payload.icf_signed
+                consent.icf_signed_date = now
+                consent.status = "SIGNED" if payload.icf_signed else "PENDING"
+                consent.requires_reconsent = False
+                consent.is_paper_override = payload.signature_type == "PAPER_UPLOAD"
+            else:
+                consent = SubjectConsent(
+                    subject_id=sub_id,
+                    study_id=payload.study_id,
+                    version_tag=payload.protocol_version,
+                    protocol_version=payload.protocol_version,
+                    version_index=payload.version_index,
+                    icf_signed=payload.icf_signed,
+                    icf_signed_date=now,
+                    status="SIGNED" if payload.icf_signed else "PENDING",
+                    requires_reconsent=False,
+                    is_paper_override=payload.signature_type == "PAPER_UPLOAD",
+                )
+                session.add(consent)
+
+            # 2. Advance subject active version
+            stmt_sub = select(ClinicalSubject).where(
+                or_(
+                    ClinicalSubject.id == sub_id,
+                    ClinicalSubject.subject_id == sub_id,
+                )
+            )
+            sub_res = await session.execute(stmt_sub)
+            subject = sub_res.scalars().first()
+            if subject and payload.icf_signed:
+                subject.active_protocol_version = payload.protocol_version
+
+            cleared_subject_ids.append(sub_id)
+
+        await session.commit()
+
+        return {
+            "status": "SUCCESS",
+            "study_id": payload.study_id,
+            "protocol_version": payload.protocol_version,
+            "processed_count": len(cleared_subject_ids),
+            "cleared_subject_ids": cleared_subject_ids,
+            "signature_type": payload.signature_type,
+            "signer_name": payload.signer_name,
+            "reason_for_change": payload.reason_for_change,
+            "timestamp": now.isoformat(),
         }
