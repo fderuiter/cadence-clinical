@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.econsent.adapters.database import db_manager
+from apps.econsent.adapters.notifications_client import publish_notification
 from apps.econsent.adapters.repositories import (
     SQLConsentAuditRepository,
     SQLReconsentRepository,
@@ -38,7 +39,12 @@ async def trigger_reconsent(
     reconsent_repo = SQLReconsentRepository(session)
     consent_repo = SQLSubjectConsentRepository(session)
     audit_repo = SQLConsentAuditRepository(session)
-    svc = ReconsentService(reconsent_repo, consent_repo, audit_repo)
+    svc = ReconsentService(
+        reconsent_repo,
+        consent_repo,
+        audit_repo,
+        notification_dispatcher=publish_notification,
+    )
 
     requirements = await svc.trigger_reconsent_for_active_cohort(
         study_id=payload.study_id,

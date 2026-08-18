@@ -801,10 +801,12 @@ class ReconsentService:
         reconsent_repo: IReconsentRepository,
         consent_repo: ISubjectConsentRepository,
         audit_repo: IConsentAuditRepository | None = None,
+        notification_dispatcher: Any | None = None,
     ) -> None:
         self.reconsent_repo = reconsent_repo
         self.consent_repo = consent_repo
         self.audit_repo = audit_repo
+        self.notification_dispatcher = notification_dispatcher
 
     async def trigger_reconsent_for_active_cohort(
         self,
@@ -862,28 +864,25 @@ class ReconsentService:
             )
 
         # Dispatch automated notification events via HTTP client
-        try:
-            from apps.econsent.adapters.notifications_client import (
-                publish_notification,
-            )
-
-            for req in requirements:
-                await publish_notification(
-                    {
-                        "recipient_user_id": req.subject_pseudonym,
-                        "category": "ALERTS",
-                        "priority": "CRITICAL",
-                        "channels": "IN_APP,EMAIL",
-                        "message_content": (
-                            f"URGENT: Protocol amendment re-consent required for study {study_id}. "
-                            f"Version: {new_version_index}.0"
-                        ),
-                        "related_entity_id": req.id,
-                        "related_entity_type": "RECONSENT_REQUIRED",
-                    }
-                )
-        except Exception:
-            pass
+        if self.notification_dispatcher:
+            try:
+                for req in requirements:
+                    await self.notification_dispatcher(
+                        {
+                            "recipient_user_id": req.subject_pseudonym,
+                            "category": "ALERTS",
+                            "priority": "CRITICAL",
+                            "channels": "IN_APP,EMAIL",
+                            "message_content": (
+                                f"URGENT: Protocol amendment re-consent required for study {study_id}. "
+                                f"Version: {new_version_index}.0"
+                            ),
+                            "related_entity_id": req.id,
+                            "related_entity_type": "RECONSENT_REQUIRED",
+                        }
+                    )
+            except Exception:
+                pass
 
         return requirements
 
