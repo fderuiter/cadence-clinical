@@ -1,4 +1,5 @@
 import { deriveSessionKey, encryptAESGCM, decryptAESGCM } from "ui";
+import { validateEproPayload } from "usdm-schemas";
 
 let inMemorySessionKey = null;
 
@@ -365,6 +366,13 @@ export async function queueSubmission({
   if (!inMemorySessionKey) {
     throw new Error(
       "Encryption key not initialized. Cannot queue submission securely."
+    );
+  }
+
+  const validation = validateEproPayload(answers || {});
+  if (!validation.valid) {
+    throw new Error(
+      `Schema Validation Failed: ${validation.errors.join("; ")}`
     );
   }
 

@@ -13,10 +13,12 @@ import {
   encryptAESGCM,
   decryptAESGCM,
 } from "ui";
+import { validateEproPayload } from "usdm-schemas";
 import {
   queueSubmission,
   getQueuedSubmissions,
   getAllSubmissions,
+  updateSubmissionStatus,
   bulkUpdateSubmissionStatuses,
   clearAllSubmissions,
   initSessionKey,
@@ -1874,10 +1876,14 @@ async function renderSyncQueueList() {
         statusLabel = "CONFLICT (Ignored)";
         statusDesc =
           "Conflict resolved: Server data was preserved; local entry archived.";
-      } else if (item.status === "QUARANTINED") {
+      } else if (
+        item.status === "QUARANTINED" ||
+        item.status === "LOCAL_QUARANTINED"
+      ) {
         badgeClass = "pending";
         statusLabel = "QUARANTINED";
         statusDesc =
+          item.error ||
           "Quarantined: Under review by clinical trial managers due to validation errors.";
       } else if (item.status === "DECRYPTION_ERROR") {
         badgeClass = "pending";
@@ -1956,7 +1962,21 @@ async function syncOfflineQueue(isManual = false) {
     (item) => item.status !== "DECRYPTION_ERROR"
   );
 
-  if (decryptable.length === 0) {
+  // Pre-transmission schema gate: validate queued submissions against USDM Zod schema
+  const validSubmissions = [];
+  for (const item of decryptable) {
+    const validation = validateEproPayload(item.answers || {});
+    if (!validation.valid) {
+      const errMsg = `Local schema quarantine: ${validation.errors.join("; ")}`;
+      await updateSubmissionStatus(item.sequence_number, "LOCAL_QUARANTINED", {
+        error: errMsg,
+      });
+    } else {
+      validSubmissions.push(item);
+    }
+  }
+
+  if (validSubmissions.length === 0) {
     const txtComplete = "Online. Sync complete.";
     if (statusTextEl) {
       statusTextEl.textContent = txtComplete;
@@ -1967,14 +1987,14 @@ async function syncOfflineQueue(isManual = false) {
     return;
   }
 
-  const txtSyncing = `Online. Syncing ${decryptable.length} submission(s)...`;
+  const txtSyncing = `Online. Syncing ${validSubmissions.length} submission(s)...`;
   if (statusTextEl) {
     statusTextEl.textContent = txtSyncing;
   }
   state.syncStatusText = txtSyncing;
 
   const payload = {
-    submissions: decryptable.map((item) => ({
+    submissions: validSubmissions.map((item) => ({
       subject_id: item.subject_id,
       diary_id: item.diary_id,
       version_index:
@@ -2013,7 +2033,7 @@ async function syncOfflineQueue(isManual = false) {
             res.offline_sync_markers?.sequence_number ?? res.sequence_number;
           const resClientId =
             res.offline_sync_markers?.client_id ?? res.client_id;
-          const item = decryptable.find(
+          const item = validSubmissions.find(
             (q) => q.sequence_number === resSeq && q.client_id === resClientId
           );
           if (item) {
@@ -2036,8 +2056,8 @@ async function syncOfflineQueue(isManual = false) {
         }
       } else {
         // Graceful fallback to index matching
-        for (let i = 0; i < decryptable.length; i++) {
-          const item = decryptable[i];
+        for (let i = 0; i < validSubmissions.length; i++) {
+          const item = validSubmissions[i];
           const res = response.results[i];
           if (res) {
             const isQuar = res.status === "QUARANTINED";

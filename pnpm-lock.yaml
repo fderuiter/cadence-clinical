@@ -68,6 +68,9 @@ importers:
       ui:
         specifier: workspace:*
         version: link:../../packages/ui
+      usdm-schemas:
+        specifier: workspace:*
+        version: link:../../packages/usdm-schemas
       vue:
         specifier: ^3.5.40
         version: 3.5.40(typescript@7.0.2)
