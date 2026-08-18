@@ -163,3 +163,55 @@ def test_esignature_duplicate_serial_rejection(test_x509_cert, test_private_key)
     res = verifier.verify_pdf(signed_pdf)
     assert res.is_valid is False
     assert res.status == "UNTRUSTED_SELF_SIGNED"
+
+
+def test_certificate_revocation_string_serial_formats(test_x509_cert, test_private_key):
+    """Verify that a certificate is correctly identified as revoked when serial number is provided
+    as string decimal, hex, or 0x-prefixed hex in revoked_certs.
+
+    Requirements: PRD-SYS-001
+    """
+    signer = PKCS7Signer(cert=test_x509_cert, key=test_private_key)
+    original_pdf = b"%PDF-1.4 sample document containing Subject"
+    signed_pdf = signer.sign_pdf(original_pdf)
+
+    # Test 1: Decimal string serial number
+    str_dec_serial = str(test_x509_cert.serial_number)
+    verifier1 = ESignatureVerifier(revoked_certs={str_dec_serial})
+    res1 = verifier1.verify_pdf(signed_pdf)
+    assert res1.is_valid is False
+    assert res1.status == "CERTIFICATE_REVOKED"
+
+    # Test 2: Hex string serial number with 0x
+    hex_0x_serial = hex(test_x509_cert.serial_number)
+    verifier2 = ESignatureVerifier(revoked_certs={hex_0x_serial})
+    res2 = verifier2.verify_pdf(signed_pdf)
+    assert res2.is_valid is False
+    assert res2.status == "CERTIFICATE_REVOKED"
+
+    # Test 3: Raw clean hex string serial number without 0x
+    hex_clean_serial = hex(test_x509_cert.serial_number)[2:]
+    verifier3 = ESignatureVerifier(revoked_certs={hex_clean_serial})
+    res3 = verifier3.verify_pdf(signed_pdf)
+    assert res3.is_valid is False
+    assert res3.status == "CERTIFICATE_REVOKED"
+
+
+def test_valid_certificate_pem_substring_no_false_positive(
+    test_x509_cert, test_private_key
+):
+    """Verify that a document signed by a valid certificate is NOT falsely rejected when revoked_certs
+    contains small integer serial numbers that appear as accidental substring matches in the PEM block.
+
+    Requirements: PRD-SYS-001
+    """
+    signer = PKCS7Signer(cert=test_x509_cert, key=test_private_key)
+    original_pdf = b"%PDF-1.4 sample document containing Subject"
+    signed_pdf = signer.sign_pdf(original_pdf)
+
+    # revoked_certs contains small integer identifiers that are NOT the cert's serial number
+    verifier = ESignatureVerifier(revoked_certs={1, 2, 12, "1", "12", "A", "B", "MII"})
+    res = verifier.verify_pdf(signed_pdf)
+
+    assert res.is_valid is True
+    assert res.status == "VALID"
