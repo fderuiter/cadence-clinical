@@ -22,7 +22,7 @@ from apps.execution.database.models import (
 )
 from apps.execution.main import app as exec_app
 from apps.execution.trial_lock import TrialLockManager
-from apps.gateway.main import generate_signature
+from packages.testing.security import generate_signature
 
 
 @pytest_asyncio.fixture(autouse=True)
