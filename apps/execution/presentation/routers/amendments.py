@@ -153,28 +153,25 @@ async def publish_amendment_endpoint(
 
         if impacted_subject_ids:
             try:
-                from apps.notifications.domain.event_models import SystemDomainEvent
-                from apps.notifications.workers.notification_worker import (
-                    publish_domain_event,
+                from apps.execution.notifications_client import (
+                    publish_notification,
                 )
 
                 for sid in impacted_subject_ids:
-                    event = SystemDomainEvent(
-                        event_id=str(uuid.uuid4()),
-                        event_type="RECONSENT_REQUIRED",
-                        study_id=payload.study_id,
-                        source_service="execution",
-                        timestamp_utc=now_iso,
-                        payload={
-                            "version_number": payload.version_number,
-                            "protocol_version": payload.version_number,
-                            "subject_id": sid,
-                            "subject_pseudonym": sid,
-                            "change_summary": diff["summary_of_changes"],
-                            "summary_of_changes": diff["summary_of_changes"],
-                        },
+                    await publish_notification(
+                        {
+                            "recipient_user_id": sid,
+                            "category": "ALERTS",
+                            "priority": "CRITICAL",
+                            "channels": "IN_APP,EMAIL",
+                            "message_content": (
+                                f"URGENT: Protocol amendment re-consent required for study {payload.study_id}. "
+                                f"Version: {payload.version_number}"
+                            ),
+                            "related_entity_id": str(uuid.uuid4()),
+                            "related_entity_type": "RECONSENT_REQUIRED",
+                        }
                     )
-                    await publish_domain_event(event)
             except Exception:
                 pass
 

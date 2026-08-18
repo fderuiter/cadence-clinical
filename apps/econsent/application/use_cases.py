@@ -861,32 +861,27 @@ class ReconsentService:
                 )
             )
 
-        # Dispatch automated notification events to immediate email worker
+        # Dispatch automated notification events via HTTP client
         try:
-            from apps.notifications.domain.event_models import SystemDomainEvent
-            from apps.notifications.workers.notification_worker import (
-                publish_domain_event,
+            from apps.econsent.adapters.notifications_client import (
+                publish_notification,
             )
 
             for req in requirements:
-                event = SystemDomainEvent(
-                    event_id=str(uuid.uuid4()),
-                    event_type="RECONSENT_REQUIRED",
-                    study_id=study_id,
-                    source_service="econsent",
-                    timestamp_utc=now.isoformat(),
-                    payload={
-                        "template_id": template_id,
-                        "prior_version_index": prior_version_index,
-                        "new_version_index": new_version_index,
-                        "version_number": f"{new_version_index}.0",
-                        "subject_pseudonym": req.subject_pseudonym,
-                        "subject_id": req.subject_pseudonym,
-                        "change_summary": change_summary,
-                        "requirement_id": req.id,
-                    },
+                await publish_notification(
+                    {
+                        "recipient_user_id": req.subject_pseudonym,
+                        "category": "ALERTS",
+                        "priority": "CRITICAL",
+                        "channels": "IN_APP,EMAIL",
+                        "message_content": (
+                            f"URGENT: Protocol amendment re-consent required for study {study_id}. "
+                            f"Version: {new_version_index}.0"
+                        ),
+                        "related_entity_id": req.id,
+                        "related_entity_type": "RECONSENT_REQUIRED",
+                    }
                 )
-                await publish_domain_event(event)
         except Exception:
             pass
 

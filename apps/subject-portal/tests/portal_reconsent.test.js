@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import {
   state,
   openReconsentModal,
-  closeReconsentModal,
+  _closeReconsentModal,
   submitReconsentSignature,
   renderInbox,
 } from "../src/index.js";
@@ -45,7 +45,8 @@ describe("Subject Portal Immediate Re-Consent Workflow", () => {
       {
         id: "notif_reconsent_01",
         channel: "IN_APP",
-        message_content: "URGENT: Protocol amendment re-consent required for study STUDY-01.",
+        message_content:
+          "URGENT: Protocol amendment re-consent required for study STUDY-01.",
         is_read: false,
         related_entity_type: "RECONSENT_REQUIRED",
       },
@@ -54,7 +55,9 @@ describe("Subject Portal Immediate Re-Consent Workflow", () => {
     renderInbox();
 
     const container = document.getElementById("inbox-container");
-    expect(container.innerHTML).toContain("URGENT: Protocol amendment re-consent required");
+    expect(container.innerHTML).toContain(
+      "URGENT: Protocol amendment re-consent required"
+    );
     expect(container.innerHTML).toContain("Review &amp; Sign");
   });
 
@@ -62,11 +65,15 @@ describe("Subject Portal Immediate Re-Consent Workflow", () => {
     openReconsentModal();
     state.reconsentForm.username = "";
     await submitReconsentSignature();
-    expect(state.reconsentModalError).toContain("Please enter your User ID / Username.");
+    expect(state.reconsentModalError).toContain(
+      "Please enter your User ID / Username."
+    );
 
     state.reconsentForm.username = "subject_001";
     await submitReconsentSignature();
-    expect(state.reconsentModalError).toContain("Please enter your Security PIN / Password.");
+    expect(state.reconsentModalError).toContain(
+      "Please enter your Security PIN / Password."
+    );
   });
 
   it("executes e-signature, logs 21 CFR Part 11 audit record, and unlocks submission status", async () => {

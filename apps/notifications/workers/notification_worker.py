@@ -180,7 +180,10 @@ class NotificationWorker:
                 )
             elif event_type in ("RECONSENT_REQUIRED", "PROTOCOL_AMENDMENT_RECONSENT"):
                 target_ids = payload.get("impacted_subjects") or [
-                    payload.get("subject_pseudonym") or payload.get("subject_id") or payload.get("user_id") or "subject_001"
+                    payload.get("subject_pseudonym")
+                    or payload.get("subject_id")
+                    or payload.get("user_id")
+                    or "subject_001"
                 ]
                 for tid in target_ids:
                     resolved.append(

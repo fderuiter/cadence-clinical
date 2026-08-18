@@ -222,8 +222,8 @@
           "
           role="alert"
         >
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <span style="font-size: 24px;">⚠️</span>
+          <div style="display: flex; align-items: center; gap: 12px">
+            <span style="font-size: 24px">⚠️</span>
             <div>
               <h3
                 style="
@@ -235,7 +235,7 @@
               >
                 Action Required: Protocol Amendment Re-Consent
               </h3>
-              <p style="margin: 0; font-size: 14px;">
+              <p style="margin: 0; font-size: 14px">
                 A study protocol amendment requires your review and electronic
                 signature before diary submission.
               </p>
@@ -924,12 +924,12 @@
       tabindex="-1"
       @keydown="handleReconsentModalKeyDown"
     >
-      <div class="modal" style="max-width: 600px;">
+      <div class="modal" style="max-width: 600px">
         <div id="portal-reconsent-modal-title" class="modal-header">
           Protocol Amendment Re-Consent Review
         </div>
         <div class="modal-body">
-          <p style="font-size: 14px; margin-bottom: 12px;">
+          <p style="font-size: 14px; margin-bottom: 12px">
             A new protocol amendment has been published for your clinical study.
             Please review the change summary below and execute your electronic
             signature to complete re-consent.
@@ -964,10 +964,10 @@
               border-radius: 6px;
             "
           >
-            <h4 style="margin: 0 0 6px 0; font-size: 14px; color: #1e293b;">
+            <h4 style="margin: 0 0 6px 0; font-size: 14px; color: #1e293b">
               Summary of Protocol Amendments:
             </h4>
-            <p style="margin: 0; font-size: 13px; color: #475569;">
+            <p style="margin: 0; font-size: 13px; color: #475569">
               {{
                 state.pendingReconsent?.change_summary ||
                 state.pendingReconsent?.summary_of_changes ||
@@ -980,7 +980,10 @@
             <label for="reconsent-sign-reason"
               >Reason for Action / Declaration</label
             >
-            <select id="reconsent-sign-reason" v-model="state.reconsentForm.reason">
+            <select
+              id="reconsent-sign-reason"
+              v-model="state.reconsentForm.reason"
+            >
               <option value="Protocol Amendment Re-Consent Acknowledgment">
                 Protocol Amendment Re-Consent Acknowledgment
               </option>

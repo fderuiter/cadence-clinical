@@ -1273,11 +1273,17 @@ function renderInbox() {
     .map((notif) => {
       const isUnread = !notif.is_read;
       const unreadClass = isUnread ? "unread" : "";
-      const dueText = notif.due_at ? new Date(notif.due_at).toLocaleString() : new Date().toLocaleString();
+      const dueText = notif.due_at
+        ? new Date(notif.due_at).toLocaleString()
+        : new Date().toLocaleString();
       const isReconsent =
         notif.related_entity_type === "RECONSENT_REQUIRED" ||
-        (notif.message_content && notif.message_content.toLowerCase().includes("re-consent required")) ||
-        (notif.message && notif.message.toLowerCase().includes("re-consent required"));
+        (notif.message_content &&
+          notif.message_content
+            .toLowerCase()
+            .includes("re-consent required")) ||
+        (notif.message &&
+          notif.message.toLowerCase().includes("re-consent required"));
 
       let actionHtml = `<span class="status-pill completed">Read</span>`;
       if (isUnread) {
@@ -1292,7 +1298,7 @@ function renderInbox() {
         <div class="inbox-item ${unreadClass}" id="notif-card-${notif.id}">
           <div class="inbox-meta">
             <span class="inbox-name">${notif.message_content || notif.message || `Scheduled trial survey reminder (channel: ${notif.channel})`}</span>
-            <span class="inbox-due">Timestamp: ${dueText} (Channel: ${notif.channel || 'IN_APP'})</span>
+            <span class="inbox-due">Timestamp: ${dueText} (Channel: ${notif.channel || "IN_APP"})</span>
           </div>
           <div class="inbox-actions">
             ${actionHtml}
@@ -1678,7 +1684,8 @@ function openReconsentModal() {
       id: "req_default",
       study_id: "STUDY-01",
       protocol_version: "2.0",
-      change_summary: "Protocol amendment updates requiring active subject re-consent.",
+      change_summary:
+        "Protocol amendment updates requiring active subject re-consent.",
     };
   }
   state.reconsentModalError = "";
@@ -1714,14 +1721,18 @@ async function checkPendingReconsent() {
       }
     }
   } catch (err) {
-    console.warn("Could not query pending re-consent requirements from server:", err);
+    console.warn(
+      "Could not query pending re-consent requirements from server:",
+      err
+    );
   }
 
   // Fallback check: check if state.notifications contains a reconsent alert
   const reconsentNotif = state.notifications.find(
     (n) =>
       n.related_entity_type === "RECONSENT_REQUIRED" ||
-      (n.message_content && n.message_content.toLowerCase().includes("re-consent required")) ||
+      (n.message_content &&
+        n.message_content.toLowerCase().includes("re-consent required")) ||
       (n.message && n.message.toLowerCase().includes("re-consent required"))
   );
 
@@ -1774,10 +1785,13 @@ async function submitReconsentSignature() {
 
       if (requirementId && !requirementId.startsWith("req_")) {
         try {
-          await dispatchApi(`api/v1/econsent/reconsent/complete/${requirementId}`, {
-            method: "POST",
-            change_reason: declReason,
-          });
+          await dispatchApi(
+            `api/v1/econsent/reconsent/complete/${requirementId}`,
+            {
+              method: "POST",
+              change_reason: declReason,
+            }
+          );
         } catch (e) {
           console.warn("Could not mark reconsent requirement complete:", e);
         }
@@ -1801,7 +1815,9 @@ async function submitReconsentSignature() {
     state.reconsentModalOpen = false;
     state.reconsentModalError = "";
 
-    showToast("Re-Consent signed and submitted successfully. Submissions unlocked.");
+    showToast(
+      "Re-Consent signed and submitted successfully. Submissions unlocked."
+    );
   } catch (err) {
     state.reconsentModalError = `Re-Consent submission failed: ${err.message || err}`;
   }
