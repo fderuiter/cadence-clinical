@@ -282,13 +282,11 @@ async def evaluate_tsdv_rule(
     subject_uuid = target_sub.id
 
     # 3. Perform Deterministic Evaluation
-    required, subject_selected, field_decision, explanation = (
-        evaluate_tsdv_requirement(
-            config=config,
-            subject_uuid=subject_uuid,
-            enrollment_index=enrollment_index,
-            domain=domain,
-        )
+    required, subject_selected, field_decision, explanation = evaluate_tsdv_requirement(
+        config=config,
+        subject_uuid=subject_uuid,
+        enrollment_index=enrollment_index,
+        domain=domain,
     )
 
     return TSDVEvaluationResponse(
@@ -457,9 +455,7 @@ async def bulk_sdv_signoff(
             SDVSignOff.study_id == payload.study_id,
         )
         res_signoffs = await session.execute(stmt_signoffs)
-        existing_signoffs = {
-            so.target_id: so for so in res_signoffs.scalars().all()
-        }
+        existing_signoffs = {so.target_id: so for so in res_signoffs.scalars().all()}
 
         # We process each target_id
         for tid in payload.target_ids:

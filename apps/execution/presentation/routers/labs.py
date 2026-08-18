@@ -18,7 +18,6 @@ from fastapi import (
     Query,
     Request,
 )
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.execution.adapters.repositories import get_execution_db_session

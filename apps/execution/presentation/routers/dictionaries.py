@@ -229,9 +229,7 @@ async def get_dictionary_import_job(
     res = await session.execute(stmt)
     job = res.scalars().first()
     if not job:
-        raise HTTPException(
-            status_code=404, detail="Dictionary import job not found"
-        )
+        raise HTTPException(status_code=404, detail="Dictionary import job not found")
 
     return JobStatusResponse(
         job_id=job.id,

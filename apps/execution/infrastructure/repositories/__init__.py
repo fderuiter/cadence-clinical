@@ -7,11 +7,11 @@ from apps.execution.infrastructure.repositories.execution_repositories import (
     SQLAlchemyConsentRepository,
     SQLAlchemyExecutionDOARepository,
     SQLAlchemySubjectRepository,
+    get_audit_repository,
+    get_consent_repository,
     get_execution_db_session,
     get_execution_doa_repository,
     get_subject_repository,
-    get_consent_repository,
-    get_audit_repository,
 )
 
 __all__ = [

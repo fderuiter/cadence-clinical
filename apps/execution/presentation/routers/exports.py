@@ -241,9 +241,7 @@ async def export_sdtm_domain(
     )  # pragma: allowlist secret
 
     try:
-        records, supp_records = await run_sdtm_extraction(
-            session, study_id, dom_upper
-        )
+        records, supp_records = await run_sdtm_extraction(session, study_id, dom_upper)
         export_data = {dom_upper: records}
         if supp_records:
             export_data[f"SUPP{dom_upper}"] = supp_records
@@ -324,9 +322,7 @@ async def export_sdtm_domain(
             )
 
         # Default: Dataset-JSON format
-        dataset_json = serialize_to_dataset_json(
-            data=export_data, study_id=study_id
-        )
+        dataset_json = serialize_to_dataset_json(data=export_data, study_id=study_id)
         validate_dataset_json(dataset_json)
 
         export_log = BiostatExport(
@@ -572,9 +568,7 @@ async def export_biostat_bundle(
     try:
         bundle_data = {}
         for dom in ["DM", "AE", "VS", "LB", "MH", "CM"]:
-            records, supp_records = await run_sdtm_extraction(
-                session, study_id, dom
-            )
+            records, supp_records = await run_sdtm_extraction(session, study_id, dom)
             if records:
                 bundle_data[dom] = records
             if supp_records:
@@ -643,9 +637,7 @@ async def export_biostat_bundle(
             )
 
         # Default: Dataset-JSON format
-        dataset_json = serialize_to_dataset_json(
-            data=bundle_data, study_id=study_id
-        )
+        dataset_json = serialize_to_dataset_json(data=bundle_data, study_id=study_id)
         validate_dataset_json(dataset_json)
 
         export_log = BiostatExport(
@@ -764,11 +756,7 @@ async def execute_export_wizard(
 
         if fmt in ("xpt_v5", "xpt_v8", "xpt", "sas_xpt"):
             # If single dataset, return binary XPT; if multiple, package in zip
-            ver = (
-                "v8"
-                if fmt == "xpt_v8" or request_data.xpt_version == "v8"
-                else "v5"
-            )
+            ver = "v8" if fmt == "xpt_v8" or request_data.xpt_version == "v8" else "v5"
             if len(bundle_data) == 1:
                 ds_name, ds_recs = next(iter(bundle_data.items()))
                 xpt_content = write_xpt(ds_name, ds_recs, version=ver)

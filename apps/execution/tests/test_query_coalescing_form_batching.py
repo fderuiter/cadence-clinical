@@ -338,9 +338,7 @@ async def test_auto_query_generation_and_auto_close_on_form_completion() -> None
         # Verify query was opened for AE_CONSENT_TEMPORAL_CHECK
         q_resp = await client.get("/api/v1/execution/queries", headers=headers)
         queries = q_resp.json()
-        ae_queries = [
-            q for q in queries if q["rule_id"] == "AE_CONSENT_TEMPORAL_CHECK"
-        ]
+        ae_queries = [q for q in queries if q["rule_id"] == "AE_CONSENT_TEMPORAL_CHECK"]
         assert len(ae_queries) >= 1
         assert all(q["status"] == "OPEN" for q in ae_queries)
 

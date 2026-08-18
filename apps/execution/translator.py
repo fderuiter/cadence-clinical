@@ -277,23 +277,25 @@ async def process_translation(
                                 uuid.UUID(str(study_id))
                                 fallback_val = str(study_id)
                             except ValueError:
-                                fallback_val = (
-                                    "00000000-0000-0000-0000-000000000001"  # deid-ignore
-                                )
+                                fallback_val = "00000000-0000-0000-0000-000000000001"  # deid-ignore
                             v_payload["id"] = fallback_val
-                            warnings.append({
-                                "field": "study_id",
-                                "generated_value": fallback_val,
-                                "warning_reason": "Missing required field 'study_id'; auto-populated fallback UUID.",
-                            })
+                            warnings.append(
+                                {
+                                    "field": "study_id",
+                                    "generated_value": fallback_val,
+                                    "warning_reason": "Missing required field 'study_id'; auto-populated fallback UUID.",
+                                }
+                            )
 
                         if "name" not in v_payload or not v_payload["name"]:
                             v_payload["name"] = "Default Study Name"
-                            warnings.append({
-                                "field": "name",
-                                "generated_value": "Default Study Name",
-                                "warning_reason": "Missing required field 'name'; auto-populated fallback name.",
-                            })
+                            warnings.append(
+                                {
+                                    "field": "name",
+                                    "generated_value": "Default Study Name",
+                                    "warning_reason": "Missing required field 'name'; auto-populated fallback name.",
+                                }
+                            )
 
                         # Auto-populate missing required USDM model fields for documentedBy items to pass validation
                         if "documentedBy" in v_payload and isinstance(
@@ -305,32 +307,44 @@ async def process_translation(
                                 if "id" not in doc or not doc.get("id"):
                                     fallback_doc_id = f"00000000-0000-0000-0000-00000000100{doc_idx}"  # deid-ignore
                                     doc["id"] = fallback_doc_id
-                                    warnings.append({
-                                        "field": "documentedBy.id",
-                                        "generated_value": fallback_doc_id,
-                                        "warning_reason": "Missing required field 'documentedBy.id'; auto-populated fallback UUID.",
-                                    })
+                                    warnings.append(
+                                        {
+                                            "field": "documentedBy.id",
+                                            "generated_value": fallback_doc_id,
+                                            "warning_reason": "Missing required field 'documentedBy.id'; auto-populated fallback UUID.",
+                                        }
+                                    )
                                 if "type" not in doc or not doc.get("type"):
                                     doc["type"] = "Protocol"
-                                    warnings.append({
-                                        "field": "documentedBy.type",
-                                        "generated_value": "Protocol",
-                                        "warning_reason": "Missing required field 'documentedBy.type'; auto-populated fallback type.",
-                                    })
-                                if "templateName" not in doc or not doc.get("templateName"):
+                                    warnings.append(
+                                        {
+                                            "field": "documentedBy.type",
+                                            "generated_value": "Protocol",
+                                            "warning_reason": "Missing required field 'documentedBy.type'; auto-populated fallback type.",
+                                        }
+                                    )
+                                if "templateName" not in doc or not doc.get(
+                                    "templateName"
+                                ):
                                     doc["templateName"] = "Standard Template"
-                                    warnings.append({
-                                        "field": "documentedBy.templateName",
-                                        "generated_value": "Standard Template",
-                                        "warning_reason": "Missing required field 'documentedBy.templateName'; auto-populated fallback template name.",
-                                    })
-                                if "instanceType" not in doc or not doc.get("instanceType"):
+                                    warnings.append(
+                                        {
+                                            "field": "documentedBy.templateName",
+                                            "generated_value": "Standard Template",
+                                            "warning_reason": "Missing required field 'documentedBy.templateName'; auto-populated fallback template name.",
+                                        }
+                                    )
+                                if "instanceType" not in doc or not doc.get(
+                                    "instanceType"
+                                ):
                                     doc["instanceType"] = "StudyDefinitionDocument"
-                                    warnings.append({
-                                        "field": "documentedBy.instanceType",
-                                        "generated_value": "StudyDefinitionDocument",
-                                        "warning_reason": "Missing required field 'documentedBy.instanceType'; auto-populated fallback instance type.",
-                                    })
+                                    warnings.append(
+                                        {
+                                            "field": "documentedBy.instanceType",
+                                            "generated_value": "StudyDefinitionDocument",
+                                            "warning_reason": "Missing required field 'documentedBy.instanceType'; auto-populated fallback instance type.",
+                                        }
+                                    )
 
                                 if "language" not in doc or not isinstance(
                                     doc.get("language"), dict
@@ -342,51 +356,67 @@ async def process_translation(
                                         "codeSystemVersion": "2002",
                                         "code": "en",
                                     }
-                                    warnings.append({
-                                        "field": "documentedBy.language",
-                                        "generated_value": doc["language"],
-                                        "warning_reason": "Missing required field 'documentedBy.language'; auto-populated fallback language object.",
-                                    })
+                                    warnings.append(
+                                        {
+                                            "field": "documentedBy.language",
+                                            "generated_value": doc["language"],
+                                            "warning_reason": "Missing required field 'documentedBy.language'; auto-populated fallback language object.",
+                                        }
+                                    )
                                 else:
                                     lang = doc["language"]
                                     if "id" not in lang or not lang.get("id"):
                                         fallback_lang_id = f"00000000-0000-0000-0000-00000000200{doc_idx}"  # deid-ignore
                                         lang["id"] = fallback_lang_id
-                                        warnings.append({
-                                            "field": "documentedBy.language.id",
-                                            "generated_value": fallback_lang_id,
-                                            "warning_reason": "Missing required field 'documentedBy.language.id'; auto-populated fallback UUID.",
-                                        })
-                                    if "codeSystem" not in lang or not lang.get("codeSystem"):
+                                        warnings.append(
+                                            {
+                                                "field": "documentedBy.language.id",
+                                                "generated_value": fallback_lang_id,
+                                                "warning_reason": "Missing required field 'documentedBy.language.id'; auto-populated fallback UUID.",
+                                            }
+                                        )
+                                    if "codeSystem" not in lang or not lang.get(
+                                        "codeSystem"
+                                    ):
                                         lang["codeSystem"] = "ISO 639-1"
-                                        warnings.append({
-                                            "field": "documentedBy.language.codeSystem",
-                                            "generated_value": "ISO 639-1",
-                                            "warning_reason": "Missing required field 'documentedBy.language.codeSystem'; auto-populated fallback code system.",
-                                        })
-                                    if "codeSystemVersion" not in lang or not lang.get("codeSystemVersion"):
+                                        warnings.append(
+                                            {
+                                                "field": "documentedBy.language.codeSystem",
+                                                "generated_value": "ISO 639-1",
+                                                "warning_reason": "Missing required field 'documentedBy.language.codeSystem'; auto-populated fallback code system.",
+                                            }
+                                        )
+                                    if "codeSystemVersion" not in lang or not lang.get(
+                                        "codeSystemVersion"
+                                    ):
                                         lang["codeSystemVersion"] = "2002"
-                                        warnings.append({
-                                            "field": "documentedBy.language.codeSystemVersion",
-                                            "generated_value": "2002",
-                                            "warning_reason": "Missing required field 'documentedBy.language.codeSystemVersion'; auto-populated fallback code system version.",
-                                        })
+                                        warnings.append(
+                                            {
+                                                "field": "documentedBy.language.codeSystemVersion",
+                                                "generated_value": "2002",
+                                                "warning_reason": "Missing required field 'documentedBy.language.codeSystemVersion'; auto-populated fallback code system version.",
+                                            }
+                                        )
                                     if "code" not in lang or not lang.get("code"):
                                         if "decode" in lang and lang.get("decode"):
                                             fallback_code = str(lang["decode"]).lower()
                                             lang["code"] = fallback_code
-                                            warnings.append({
-                                                "field": "documentedBy.language.code",
-                                                "generated_value": fallback_code,
-                                                "warning_reason": f"Missing required field 'documentedBy.language.code'; derived fallback from decode '{lang.get('decode')}'.",
-                                            })
+                                            warnings.append(
+                                                {
+                                                    "field": "documentedBy.language.code",
+                                                    "generated_value": fallback_code,
+                                                    "warning_reason": f"Missing required field 'documentedBy.language.code'; derived fallback from decode '{lang.get('decode')}'.",
+                                                }
+                                            )
                                         else:
                                             lang["code"] = "en"
-                                            warnings.append({
-                                                "field": "documentedBy.language.code",
-                                                "generated_value": "en",
-                                                "warning_reason": "Missing required field 'documentedBy.language.code'; auto-populated fallback language code.",
-                                            })
+                                            warnings.append(
+                                                {
+                                                    "field": "documentedBy.language.code",
+                                                    "generated_value": "en",
+                                                    "warning_reason": "Missing required field 'documentedBy.language.code'; auto-populated fallback language code.",
+                                                }
+                                            )
 
                                 if "versions" in doc and isinstance(
                                     doc["versions"], list
@@ -397,25 +427,35 @@ async def process_translation(
                                         if "id" not in ver or not ver.get("id"):
                                             fallback_ver_id = f"00000000-0000-0000-0000-00000000300{doc_idx}{ver_idx}"  # deid-ignore
                                             ver["id"] = fallback_ver_id
-                                            warnings.append({
-                                                "field": "documentedBy.versions.id",
-                                                "generated_value": fallback_ver_id,
-                                                "warning_reason": "Missing required field 'documentedBy.versions.id'; auto-populated fallback UUID.",
-                                            })
+                                            warnings.append(
+                                                {
+                                                    "field": "documentedBy.versions.id",
+                                                    "generated_value": fallback_ver_id,
+                                                    "warning_reason": "Missing required field 'documentedBy.versions.id'; auto-populated fallback UUID.",
+                                                }
+                                            )
                                         if "status" not in ver or not ver.get("status"):
                                             ver["status"] = "Final"
-                                            warnings.append({
-                                                "field": "documentedBy.versions.status",
-                                                "generated_value": "Final",
-                                                "warning_reason": "Missing required field 'documentedBy.versions.status'; auto-populated fallback status.",
-                                            })
-                                        if "instanceType" not in ver or not ver.get("instanceType"):
-                                            ver["instanceType"] = "StudyDefinitionDocumentVersion"
-                                            warnings.append({
-                                                "field": "documentedBy.versions.instanceType",
-                                                "generated_value": "StudyDefinitionDocumentVersion",
-                                                "warning_reason": "Missing required field 'documentedBy.versions.instanceType'; auto-populated fallback instance type.",
-                                            })
+                                            warnings.append(
+                                                {
+                                                    "field": "documentedBy.versions.status",
+                                                    "generated_value": "Final",
+                                                    "warning_reason": "Missing required field 'documentedBy.versions.status'; auto-populated fallback status.",
+                                                }
+                                            )
+                                        if "instanceType" not in ver or not ver.get(
+                                            "instanceType"
+                                        ):
+                                            ver["instanceType"] = (
+                                                "StudyDefinitionDocumentVersion"
+                                            )
+                                            warnings.append(
+                                                {
+                                                    "field": "documentedBy.versions.instanceType",
+                                                    "generated_value": "StudyDefinitionDocumentVersion",
+                                                    "warning_reason": "Missing required field 'documentedBy.versions.instanceType'; auto-populated fallback instance type.",
+                                                }
+                                            )
 
                                         if "contents" in ver and isinstance(
                                             ver["contents"], list
@@ -425,36 +465,67 @@ async def process_translation(
                                             ):
                                                 if not isinstance(content, dict):
                                                     continue
-                                                if "id" not in content or not content.get("id"):
+                                                if (
+                                                    "id" not in content
+                                                    or not content.get("id")
+                                                ):
                                                     fallback_cnt_id = f"00000000-0000-0000-0000-00000000400{doc_idx}{ver_idx}{cnt_idx}"  # deid-ignore
                                                     content["id"] = fallback_cnt_id
-                                                    warnings.append({
-                                                        "field": "documentedBy.versions.contents.id",
-                                                        "generated_value": fallback_cnt_id,
-                                                        "warning_reason": "Missing required field 'documentedBy.versions.contents.id'; auto-populated fallback UUID.",
-                                                    })
-                                                if "displaySectionNumber" not in content or not content.get("displaySectionNumber"):
+                                                    warnings.append(
+                                                        {
+                                                            "field": "documentedBy.versions.contents.id",
+                                                            "generated_value": fallback_cnt_id,
+                                                            "warning_reason": "Missing required field 'documentedBy.versions.contents.id'; auto-populated fallback UUID.",
+                                                        }
+                                                    )
+                                                if (
+                                                    "displaySectionNumber"
+                                                    not in content
+                                                    or not content.get(
+                                                        "displaySectionNumber"
+                                                    )
+                                                ):
                                                     fallback_sec_num = f"{cnt_idx + 1}"
-                                                    content["displaySectionNumber"] = fallback_sec_num
-                                                    warnings.append({
-                                                        "field": "documentedBy.versions.contents.displaySectionNumber",
-                                                        "generated_value": fallback_sec_num,
-                                                        "warning_reason": "Missing required field 'documentedBy.versions.contents.displaySectionNumber'; auto-populated fallback section number.",
-                                                    })
-                                                if "displaySectionTitle" not in content or not content.get("displaySectionTitle"):
-                                                    content["displaySectionTitle"] = "Section Title"
-                                                    warnings.append({
-                                                        "field": "documentedBy.versions.contents.displaySectionTitle",
-                                                        "generated_value": "Section Title",
-                                                        "warning_reason": "Missing required field 'documentedBy.versions.contents.displaySectionTitle'; auto-populated fallback section title.",
-                                                    })
-                                                if "instanceType" not in content or not content.get("instanceType"):
-                                                    content["instanceType"] = "NarrativeContent"
-                                                    warnings.append({
-                                                        "field": "documentedBy.versions.contents.instanceType",
-                                                        "generated_value": "NarrativeContent",
-                                                        "warning_reason": "Missing required field 'documentedBy.versions.contents.instanceType'; auto-populated fallback instance type.",
-                                                    })
+                                                    content["displaySectionNumber"] = (
+                                                        fallback_sec_num
+                                                    )
+                                                    warnings.append(
+                                                        {
+                                                            "field": "documentedBy.versions.contents.displaySectionNumber",
+                                                            "generated_value": fallback_sec_num,
+                                                            "warning_reason": "Missing required field 'documentedBy.versions.contents.displaySectionNumber'; auto-populated fallback section number.",
+                                                        }
+                                                    )
+                                                if (
+                                                    "displaySectionTitle" not in content
+                                                    or not content.get(
+                                                        "displaySectionTitle"
+                                                    )
+                                                ):
+                                                    content["displaySectionTitle"] = (
+                                                        "Section Title"
+                                                    )
+                                                    warnings.append(
+                                                        {
+                                                            "field": "documentedBy.versions.contents.displaySectionTitle",
+                                                            "generated_value": "Section Title",
+                                                            "warning_reason": "Missing required field 'documentedBy.versions.contents.displaySectionTitle'; auto-populated fallback section title.",
+                                                        }
+                                                    )
+                                                if (
+                                                    "instanceType" not in content
+                                                    or not content.get("instanceType")
+                                                ):
+                                                    content["instanceType"] = (
+                                                        "NarrativeContent"
+                                                    )
+                                                    warnings.append(
+                                                        {
+                                                            "field": "documentedBy.versions.contents.instanceType",
+                                                            "generated_value": "NarrativeContent",
+                                                            "warning_reason": "Missing required field 'documentedBy.versions.contents.instanceType'; auto-populated fallback instance type.",
+                                                        }
+                                                    )
 
                         # Run USDM ingestion validation checks
                         payload_str = json.dumps(v_payload)
@@ -462,11 +533,13 @@ async def process_translation(
 
                         # Record validation warnings from report
                         for w in report.warnings:
-                            warnings.append({
-                                "field": w.field or "validation",
-                                "generated_value": None,
-                                "warning_reason": w.reason,
-                            })
+                            warnings.append(
+                                {
+                                    "field": w.field or "validation",
+                                    "generated_value": None,
+                                    "warning_reason": w.reason,
+                                }
+                            )
 
                         # Filter report errors to find critical structural validation errors
                         critical_errors = []

@@ -368,9 +368,7 @@ async def get_form_lock_status_endpoint(
     try:
         stmt = select(DataLock).where(
             (DataLock.form_id == form_id)
-            | (
-                (DataLock.scope_id == form_id) & (DataLock.scope_type == "FORM")
-            ),
+            | ((DataLock.scope_id == form_id) & (DataLock.scope_type == "FORM")),
             DataLock.is_active.is_(True),
         )
         res = await session.execute(stmt)
@@ -401,9 +399,7 @@ async def get_form_lock_status_endpoint(
                 if r.created_at
                 else datetime.now(UTC).isoformat(),
                 unlocked_by=r.unlocked_by,
-                unlocked_at=r.unlocked_at.isoformat()
-                if r.unlocked_at
-                else None,
+                unlocked_at=r.unlocked_at.isoformat() if r.unlocked_at else None,
                 unlock_justification=r.unlock_justification,
                 signature_token=r.signature_token,
             )
@@ -491,9 +487,7 @@ async def list_data_locks_endpoint(
                 if r.created_at
                 else datetime.now(UTC).isoformat(),
                 unlocked_by=r.unlocked_by,
-                unlocked_at=r.unlocked_at.isoformat()
-                if r.unlocked_at
-                else None,
+                unlocked_at=r.unlocked_at.isoformat() if r.unlocked_at else None,
                 unlock_justification=r.unlock_justification,
                 signature_token=r.signature_token,
             )

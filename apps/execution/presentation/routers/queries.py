@@ -492,9 +492,7 @@ async def reopen_query(
         raise HTTPException(status_code=404, detail="Clinical query not found")
 
     try:
-        QueryService.validate_transition(
-            q.status, "REOPENED", has_reason=has_reason
-        )
+        QueryService.validate_transition(q.status, "REOPENED", has_reason=has_reason)
     except StateTransitionError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -653,9 +651,7 @@ async def update_query_state(
     has_reason = bool(reason_val)
 
     try:
-        QueryService.validate_transition(
-            q.status, target_status, has_reason=has_reason
-        )
+        QueryService.validate_transition(q.status, target_status, has_reason=has_reason)
     except StateTransitionError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -918,9 +914,7 @@ async def sync_queries(
 
         elif action == "QUERY_REOPEN" and q:
             with suppress(StateTransitionError):
-                QueryService.validate_transition(
-                    q.status, "REOPENED", has_reason=True
-                )
+                QueryService.validate_transition(q.status, "REOPENED", has_reason=True)
                 q.status = "REOPENED"
                 q.resolver = None
                 q.resolved_at = None

@@ -240,19 +240,19 @@ async def get_execution_doa_repository(
 
 async def get_subject_repository(
     session: AsyncSession = Depends(get_execution_db_session),
-) -> "SQLAlchemySubjectRepository":
+) -> SQLAlchemySubjectRepository:
     return SQLAlchemySubjectRepository(session)
 
 
 async def get_consent_repository(
     session: AsyncSession = Depends(get_execution_db_session),
-) -> "SQLAlchemyConsentRepository":
+) -> SQLAlchemyConsentRepository:
     return SQLAlchemyConsentRepository(session)
 
 
 async def get_audit_repository(
     session: AsyncSession = Depends(get_execution_db_session),
-) -> "SQLAlchemyAuditRepository":
+) -> SQLAlchemyAuditRepository:
     return SQLAlchemyAuditRepository(session)
 
 

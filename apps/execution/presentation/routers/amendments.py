@@ -262,9 +262,7 @@ async def get_subject_impact_analysis(
             "id": sub_id,
             "status": sub.status,
             "site_id": getattr(sub, "site_id", "SITE-101"),
-            "active_protocol_version": getattr(
-                sub, "active_protocol_version", "1.0.0"
-            ),
+            "active_protocol_version": getattr(sub, "active_protocol_version", "1.0.0"),
         }
 
         if sub.status in ("COMPLETED", "WITHDRAWN", "SCREEN_FAILED"):

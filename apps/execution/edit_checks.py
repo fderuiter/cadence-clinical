@@ -54,7 +54,6 @@ def rewrite_condition_ast(node: Any) -> Any:
     return node
 
 
-
 class BatchEvaluationContext:
     """In-memory evaluation context loaded in exactly three batch database queries.
 
@@ -74,9 +73,7 @@ class BatchEvaluationContext:
         self.observations = observations
 
         # Build fast lookup maps
-        self.visit_by_id: dict[str, ClinicalVisit] = {
-            v.id: v for v in visits if v.id
-        }
+        self.visit_by_id: dict[str, ClinicalVisit] = {v.id: v for v in visits if v.id}
         self.visit_by_name: dict[str, ClinicalVisit] = {
             v.visit_name.upper(): v for v in visits if v.visit_name
         }
@@ -220,10 +217,7 @@ class LabOutOfRangeCheckRule(EditCheckRule):
     message = "Laboratory observation is out of range. Indicator: {indicator}, Normal bounds: {bounds}."
 
     def applies_to_observation(self, observation: ClinicalObservation) -> bool:
-        return (
-            observation.domain == "LB"
-            or observation.lab_out_of_range is not None
-        )
+        return observation.domain == "LB" or observation.lab_out_of_range is not None
 
     async def evaluate(
         self,
@@ -924,9 +918,7 @@ async def _resolve_pending_predecessor_checks_for_form_in_session(
     if not pending_checks:
         return
 
-    batch_context = await BatchEvaluationContext.load(
-        session, subject_id, cv.study_id
-    )
+    batch_context = await BatchEvaluationContext.load(session, subject_id, cv.study_id)
     authored_rules = await load_active_authored_rules(session, cv.study_id)
     combined_rules = list(CROSS_FORM_LONGITUDINAL_RULES) + authored_rules
 
@@ -990,9 +982,7 @@ async def _resolve_pending_predecessor_checks_for_form_in_session(
                     existing_query.status = "CLOSED"
                     existing_query.resolver = "SYSTEM"
                     existing_query.resolved_at = datetime.utcnow()
-                    existing_query.response = (
-                        f"Auto-resolved: data corrected and {rule.rule_id} check passes."
-                    )
+                    existing_query.response = f"Auto-resolved: data corrected and {rule.rule_id} check passes."
                     existing_query.version += 1
 
             pending.is_deleted = True
@@ -1060,9 +1050,7 @@ async def run_asynchronous_form_edit_checks(
                 )
 
                 # 5. Load active authored rules for the study and combine with static rules
-                authored_rules = await load_active_authored_rules(
-                    session, sub.study_id
-                )
+                authored_rules = await load_active_authored_rules(session, sub.study_id)
                 combined_rules = list(CROSS_FORM_LONGITUDINAL_RULES) + authored_rules
 
                 # Batch query existing active queries and pending checks for this subject
