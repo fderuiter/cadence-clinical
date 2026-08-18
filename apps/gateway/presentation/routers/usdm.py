@@ -7,13 +7,13 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from apps.execution.domain.acl.usdm_validation_dto import validate_usdm_payload
 from apps.gateway.domain.acl.usdm_dto import (
     UsdmExportResponse,
     UsdmImportRequest,
     UsdmImportResponse,
 )
 from apps.gateway.domain.acl.usdm_importer import USDMImporter
+from apps.gateway.domain.acl.usdm_validation import validate_usdm_payload
 from packages.security.middleware import get_current_user
 
 router = APIRouter()

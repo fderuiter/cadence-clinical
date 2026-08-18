@@ -4,10 +4,8 @@ Provides deterministic pseudonymization, stable per-subject date-shifting, and a
 """
 
 import re
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Any
-
-from dateutil import parser as date_parser
 
 from packages.deid.transforms import (
     normalize_and_cap_age,
@@ -111,10 +109,9 @@ def shift_partial_date(date_str: str, shift_days: int) -> str:
                 day_str = f"{d_val:02d}"
                 has_valid_day = True
 
-        # Form a full dummy date string for calculation
-        dummy_date_str = f"{year_str}-{month_str}-{day_str}"
+        # Form a full date for fast calculation
         try:
-            dt = date_parser.parse(dummy_date_str)
+            dt = date(int(year_str), int(month_str), int(day_str))
             shifted_dt = dt + timedelta(days=shift_days)
 
             shifted_year = f"{shifted_dt.year:04d}"

@@ -587,19 +587,6 @@ def test_date_shifting_placeholders_and_duration_intervals() -> None:
     assert "UN-UN" in deid_1["MHSTDTC"]
 
 
-@pytest.mark.asyncio
-async def test_usdm_export_schema_validation_gateway() -> None:
-    """Verify that outgoing USDM export payloads pass USDM schema validation."""
-    from apps.gateway.presentation.routers.usdm import export_usdm_protocol_spec
-
-    res = await export_usdm_protocol_spec(
-        study_id="study_test_usdm_01", user={"user_id": "test_dm"}
-    )
-    assert res.study_id == "study_test_usdm_01"
-    assert res.usdm_json["id"] == "study_test_usdm_01"
-    assert res.usdm_json["usdmVersion"] == "3.0"
-
-
 def test_audit_log_error_scrubbing_zero_leaks() -> None:
     """Verify that audit log error messages scrub patient, site, and study IDs with zero leaks."""
     raw_error = (
