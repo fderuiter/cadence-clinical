@@ -36,6 +36,11 @@ class CertificateStoreService:
         now_iso = datetime.now(UTC).isoformat()
         fingerprint = cert.fingerprint(hashes.SHA256()).hex().lower()
 
+        if serial_hex in self._cert_registry:
+            existing_fp = self._cert_registry[serial_hex].get("fingerprint")
+            if existing_fp and existing_fp != fingerprint:
+                return self._cert_registry[serial_hex]
+
         record = {
             "user_id": user_id,
             "serial_number": serial_hex,

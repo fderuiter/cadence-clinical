@@ -26,6 +26,7 @@ if sys.version_info < (3, 14):
 import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
 
+from packages.compliance.services.gxp_signer import sign_gxp_markdown
 from scripts.runtime_guard import enforce_python_runtime, print_runtime_info
 
 
@@ -575,6 +576,8 @@ def generate_qualification_report(
     timestamp=None,
     draft=False,
 ):
+    real_time_utc = datetime.now(UTC)
+    real_timestamp = real_time_utc.strftime("%Y-%m-%d %H:%M:%S UTC")
     if timestamp is None:
         timestamp = get_stable_timestamp()
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -590,202 +593,229 @@ def generate_qualification_report(
     )
     skipped_run = sum(1 for r in test_results.values() if r["status"] == "SKIPPED")
 
-    with open(output_path, "w", encoding="utf-8") as f:
-        if draft:
-            f.write(DRAFT_BANNER)
-        f.write(
-            "# GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report\n\n"
+    report_lines = []
+    if draft:
+        report_lines.append(DRAFT_BANNER)
+    report_lines.append(
+        "# GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report\n"
+    )
+    report_lines.append(f"*Execution Date:* {timestamp}\n")
+    report_lines.append(
+        "*Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B\n"
+    )
+
+    report_lines.append("\n## 1. Executive Summary & Verification Declaration\n")
+    report_lines.append(
+        "This report documents the Installation Qualification (IQ) and Operational Qualification (OQ) for the Cadence Clinical platform.\n"
+    )
+    report_lines.append(
+        "Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.\n"
+    )
+
+    report_lines.append("\n### Validation Result Summary\n")
+    report_lines.append(f"- **Total Automated Test Cases Run:** {total_run}\n")
+    report_lines.append(f"- **Passed:** {passed_run} 🟢\n")
+    if unverified_run > 0:
+        report_lines.append(f"- **Unverified (Draft):** {unverified_run} ⚪\n")
+    report_lines.append(f"- **Failed/Errors:** {failed_run} 🔴\n")
+    report_lines.append(f"- **Skipped:** {skipped_run} ⚪\n")
+    report_lines.append(
+        f"- **Overall Operational Pass Rate:** {(passed_run / total_run * 100) if total_run > 0 else 0:.2f}%\n"
+    )
+
+    report_lines.append("\n## 2. Installation Qualification (IQ)\n")
+    report_lines.append(
+        "The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.\n"
+    )
+
+    report_lines.append("\n### 2.1 System Environment Metadata\n")
+    report_lines.append(
+        "- **Operating System / Platform:** linux (containerized target specification)\n"
+    )
+    report_lines.append(
+        "- **Python Version:** 3.14.5 (Docker execution environment baseline)\n"
+    )
+    report_lines.append(
+        "- **Database Provider (Execution Engine):** PostgreSQL / SQLite in-memory fallback\n"
+    )
+    report_lines.append(
+        "- **Graph Database Provider (Designer Engine):** Neo4j (mocked in unit suite)\n"
+    )
+    report_lines.append("- **Identity Management Gateway:** Keycloak OIDC Router\n")
+
+    report_lines.append("\n### 2.2 Static Analysis & Security Gateways\n")
+    report_lines.append(
+        "| Tool | Target Standard | Status | Outcome / Verification Reference |\n"
+    )
+    report_lines.append("| :--- | :--- | :--- | :--- |\n")
+    report_lines.append(
+        "| **Ruff / Black** | PEP 8 / Clean Code formatting | Passed | Zero warnings, style rules enforced. |\n"
+    )
+    report_lines.append(
+        "| **Bandit Security** | Secure Python programming | Passed | No high-severity vulnerabilities found in application code. |\n"
+    )
+    report_lines.append(
+        "| **pip-audit** | Dependency vulnerability auditing | Passed | Zero CVEs detected on active virtualenv packages. |\n"
+    )
+    report_lines.append(
+        "| **Git Secrets** | Secret leakage prevention | Passed | Clean commit signatures, no exposed API tokens. |\n"
+    )
+
+    report_lines.append("\n### 2.3 Installed Dependency Package Ledger (Pip List)\n")
+    report_lines.append("```\n")
+    report_lines.append(get_installed_packages())
+    report_lines.append("```\n")
+
+    report_lines.append("\n## 3. Operational Qualification (OQ)\n")
+    report_lines.append(
+        "The Operational Qualification verifies that individual clinical operations, state machine transitions, cryptographic workflows, database-level triggers, and blinding boundaries are executed accurately according to functional requirements.\n"
+    )
+
+    report_lines.append("\n### 3.1 Traceability Mappings Verification\n")
+    report_lines.append(
+        "| Test Case Name | Classname / Suite | Target Req | Status | Duration |\n"
+    )
+    report_lines.append("| :--- | :--- | :--- | :--- | :--- |\n")
+
+    # Sort test cases by file name and test name
+    for (classname, name), res in sorted(test_results.items()):
+        matching_reqs = []
+        for req_id, mapped in test_mappings.items():
+            for m in mapped:
+                if m["test_name"] == name and classname in m["file"].replace("/", "."):
+                    matching_reqs.append(req_id)
+
+        reqs_str = (
+            ", ".join(sorted(matching_reqs)) if matching_reqs else "*Regression/Helper*"
         )
-        f.write(f"*Execution Date:* {timestamp}\n")
-        f.write(
-            "*Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B\n\n"
+        status_emoji = (
+            "🟢 PASSED"
+            if res["status"] == "PASSED"
+            else "⚪ UNVERIFIED"
+            if res["status"] == "UNVERIFIED"
+            else ("🔴 FAILED" if res["status"] in ("FAILED", "ERROR") else "⚪ SKIPPED")
+        )
+        duration_val = "N/A" if res["status"] == "UNVERIFIED" else "< 1s"
+        report_lines.append(
+            f"| `{name}` | `{classname}` | {reqs_str} | {status_emoji} | {duration_val} |\n"
         )
 
-        f.write("## 1. Executive Summary & Verification Declaration\n\n")
-        f.write(
-            "This report documents the Installation Qualification (IQ) and Operational Qualification (OQ) for the Cadence Clinical platform.\n"
-        )
-        f.write(
-            "Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.\n\n"
-        )
+    report_lines.append(
+        "\n## 4. Performance Qualification (PQ) & Scenario Validation\n"
+    )
+    report_lines.append(
+        "Performance Qualification documents the verification of end-to-end clinical workflow scenarios defined in Section 5 of the QA & Validation Plan.\n"
+    )
 
-        f.write("### Validation Result Summary\n")
-        f.write(f"- **Total Automated Test Cases Run:** {total_run}\n")
-        f.write(f"- **Passed:** {passed_run} 🟢\n")
-        if unverified_run > 0:
-            f.write(f"- **Unverified (Draft):** {unverified_run} ⚪\n")
-        f.write(f"- **Failed/Errors:** {failed_run} 🔴\n")
-        f.write(f"- **Skipped:** {skipped_run} ⚪\n")
-        f.write(
-            f"- **Overall Operational Pass Rate:** {(passed_run / total_run * 100) if total_run > 0 else 0:.2f}%\n\n"
-        )
+    import json
 
-        f.write("## 2. Installation Qualification (IQ)\n\n")
-        f.write(
-            "The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.\n\n"
-        )
+    import jsonschema
 
-        f.write("### 2.1 System Environment Metadata\n")
-        f.write(
-            "- **Operating System / Platform:** linux (containerized target specification)\n"
-        )
-        f.write(
-            "- **Python Version:** 3.14.5 (Docker execution environment baseline)\n"
-        )
-        f.write(
-            "- **Database Provider (Execution Engine):** PostgreSQL / SQLite in-memory fallback\n"
-        )
-        f.write(
-            "- **Graph Database Provider (Designer Engine):** Neo4j (mocked in unit suite)\n"
-        )
-        f.write("- **Identity Management Gateway:** Keycloak OIDC Router\n\n")
+    schema_file = REPO_ROOT / "docs" / "SDLC" / "pq_scenarios_schema.json"
+    config_file = REPO_ROOT / "docs" / "SDLC" / "pq_scenarios.json"
 
-        f.write("### 2.2 Static Analysis & Security Gateways\n")
-        f.write(
-            "| Tool | Target Standard | Status | Outcome / Verification Reference |\n"
+    try:
+        with open(schema_file, encoding="utf-8") as sf:
+            schema = json.load(sf)
+        with open(config_file, encoding="utf-8") as cf:
+            config = json.load(cf)
+        jsonschema.validate(instance=config, schema=schema)
+        scenarios = config["scenarios"]
+    except Exception as e:
+        print(
+            f"ERROR: Failed to load/validate PQ scenarios from standalone JSON configuration: {e}",
+            file=sys.stderr,
         )
-        f.write("| :--- | :--- | :--- | :--- |\n")
-        f.write(
-            "| **Ruff / Black** | PEP 8 / Clean Code formatting | Passed | Zero warnings, style rules enforced. |\n"
-        )
-        f.write(
-            "| **Bandit Security** | Secure Python programming | Passed | No high-severity vulnerabilities found in application code. |\n"
-        )
-        f.write(
-            "| **pip-audit** | Dependency vulnerability auditing | Passed | Zero CVEs detected on active virtualenv packages. |\n"
-        )
-        f.write(
-            "| **Git Secrets** | Secret leakage prevention | Passed | Clean commit signatures, no exposed API tokens. |\n\n"
-        )
+        sys.exit(1)
 
-        f.write("### 2.3 Installed Dependency Package Ledger (Pip List)\n")
-        f.write("```\n")
-        f.write(get_installed_packages())
-        f.write("```\n\n")
+    for sc in scenarios:
+        matching_results = []
+        for (classname, name), res in test_results.items():
+            if name == sc["test"] or name.startswith(sc["test"] + "["):
+                matching_results.append(res)
 
-        f.write("## 3. Operational Qualification (OQ)\n\n")
-        f.write(
-            "The Operational Qualification verifies that individual clinical operations, state machine transitions, cryptographic workflows, database-level triggers, and blinding boundaries are executed accurately according to functional requirements.\n\n"
-        )
-
-        f.write("### 3.1 Traceability Mappings Verification\n")
-        f.write(
-            "| Test Case Name | Classname / Suite | Target Req | Status | Duration |\n"
-        )
-        f.write("| :--- | :--- | :--- | :--- | :--- |\n")
-
-        # Sort test cases by file name and test name
-        for (classname, name), res in sorted(test_results.items()):
-            # Find matching requirements for this test
-            matching_reqs = []
-            for req_id, mapped in test_mappings.items():
-                for m in mapped:
-                    if m["test_name"] == name and classname in m["file"].replace(
-                        "/", "."
-                    ):
-                        matching_reqs.append(req_id)
-
-            reqs_str = (
-                ", ".join(sorted(matching_reqs))
-                if matching_reqs
-                else "*Regression/Helper*"
-            )
-            status_emoji = (
-                "🟢 PASSED"
-                if res["status"] == "PASSED"
-                else "⚪ UNVERIFIED"
-                if res["status"] == "UNVERIFIED"
-                else (
-                    "🔴 FAILED"
-                    if res["status"] in ("FAILED", "ERROR")
-                    else "⚪ SKIPPED"
+        if not matching_results:
+            if draft:
+                status = "UNVERIFIED"
+            else:
+                raise ValueError(
+                    f"ERROR: Active test '{sc['test']}' for scenario '{sc['id']}' is missing from the test results report!"
                 )
-            )
-            duration_val = "N/A" if res["status"] == "UNVERIFIED" else "< 1s"
-            f.write(
-                f"| `{name}` | `{classname}` | {reqs_str} | {status_emoji} | {duration_val} |\n"
-            )
-
-        f.write("\n## 4. Performance Qualification (PQ) & Scenario Validation\n\n")
-        f.write(
-            "Performance Qualification documents the verification of end-to-end clinical workflow scenarios defined in Section 5 of the QA & Validation Plan.\n\n"
-        )
-
-        import json
-
-        import jsonschema
-
-        schema_file = REPO_ROOT / "docs" / "SDLC" / "pq_scenarios_schema.json"
-        config_file = REPO_ROOT / "docs" / "SDLC" / "pq_scenarios.json"
-
-        try:
-            with open(schema_file, encoding="utf-8") as sf:
-                schema = json.load(sf)
-            with open(config_file, encoding="utf-8") as cf:
-                config = json.load(cf)
-            jsonschema.validate(instance=config, schema=schema)
-            scenarios = config["scenarios"]
-        except Exception as e:
-            print(
-                f"ERROR: Failed to load/validate PQ scenarios from standalone JSON configuration: {e}",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-
-        for sc in scenarios:
-            matching_results = []
-            for (classname, name), res in test_results.items():
-                if name == sc["test"] or name.startswith(sc["test"] + "["):
-                    matching_results.append(res)
-
-            if not matching_results:
-                if draft:
-                    status = "UNVERIFIED"
-                else:
-                    raise ValueError(
-                        f"ERROR: Active test '{sc['test']}' for scenario '{sc['id']}' is missing from the test results report!"
-                    )
+        else:
+            statuses = [r.get("status", "UNTESTED") for r in matching_results]
+            if any(s in ("FAILED", "ERROR") for s in statuses):
+                status = "FAILED"
+            elif any(s == "SKIPPED" for s in statuses):
+                status = "SKIPPED"
+            elif any(s == "PASSED" for s in statuses):
+                status = "PASSED"
+            elif any(s == "UNVERIFIED" for s in statuses):
+                status = "UNVERIFIED"
             else:
-                statuses = [r.get("status", "UNTESTED") for r in matching_results]
-                if any(s in ("FAILED", "ERROR") for s in statuses):
-                    status = "FAILED"
-                elif any(s == "SKIPPED" for s in statuses):
-                    status = "SKIPPED"
-                elif any(s == "PASSED" for s in statuses):
-                    status = "PASSED"
-                elif any(s == "UNVERIFIED" for s in statuses):
-                    status = "UNVERIFIED"
-                else:
-                    status = "FAILED"
+                status = "FAILED"
 
-            if status == "PASSED":
-                status_text = "✅ Verified Compliant via Automated Integration Suite"
-            elif status == "FAILED":
-                status_text = "❌ Failed via Automated Integration Suite"
-            elif status == "SKIPPED":
-                status_text = "⚪ Skipped via Automated Integration Suite"
-            elif status == "UNVERIFIED":
-                status_text = "⚪ Unverified (Draft Mode)"
-            else:
-                status_text = "🔴 Untested"
+        if status == "PASSED":
+            status_text = "✅ Verified Compliant via Automated Integration Suite"
+        elif status == "FAILED":
+            status_text = "❌ Failed via Automated Integration Suite"
+        elif status == "SKIPPED":
+            status_text = "⚪ Skipped via Automated Integration Suite"
+        elif status == "UNVERIFIED":
+            status_text = "⚪ Unverified (Draft Mode)"
+        else:
+            status_text = "🔴 Untested"
 
-            f.write(f"### {sc['id']}: {sc['name']}\n")
-            f.write(f"- **Target Requirements:** {sc['reqs']}\n")
-            f.write(f"- **Description:** {sc['desc']}\n")
-            f.write(f"- **Verification Status:** {status_text}\n\n")
+        report_lines.append(f"\n### {sc['id']}: {sc['name']}\n")
+        report_lines.append(f"- **Target Requirements:** {sc['reqs']}\n")
+        report_lines.append(f"- **Description:** {sc['desc']}\n")
+        report_lines.append(f"- **Verification Status:** {status_text}\n")
 
-        f.write("## 5. Qualification Review & Authorization\n\n")
-        f.write(
-            "This GxP computerized system validation log is compiled with mathematical determinism directly from the execution runners of the build system.\n\n"
-        )
-        f.write("```\n")
-        f.write(
-            "Lead Systems Validation Engineer:   ___________________________   Date: _______________\n"
-        )
-        f.write(
-            "Director of Clinical Quality Assurance: ___________________________   Date: _______________\n"
-        )
-        f.write("```\n")
+    report_lines.append("\n## 5. Qualification Review & Authorization\n")
+    report_lines.append(
+        "This GxP computerized system validation log is compiled with mathematical determinism directly from the execution runners of the build system.\n"
+    )
+    report_lines.append("```\n")
+    report_lines.append(
+        "Lead Systems Validation Engineer:   ___________________________   Date: _______________\n"
+    )
+    report_lines.append(
+        "Director of Clinical Quality Assurance: ___________________________   Date: _______________\n"
+    )
+    report_lines.append("```\n")
+
+    body_text = "".join(report_lines)
+
+    # Sign primary report
+    signed_report = sign_gxp_markdown(
+        content=body_text,
+        signing_reason="GxP Qualification Execution Sign-Off",
+        timestamp=timestamp,
+    )
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(signed_report)
+
+    # Also write dynamic run report in runs/ directory
+    runs_dir = os.path.join(os.path.dirname(output_path), "runs")
+    os.makedirs(runs_dir, exist_ok=True)
+    ts_slug = real_time_utc.strftime("%Y%m%d_%H%M%S")
+    run_file_path = os.path.join(runs_dir, f"IQ_OQ_PQ_Execution_Report_{ts_slug}.md")
+
+    dynamic_body_text = (
+        body_text.replace(timestamp, real_timestamp)
+        if timestamp != real_timestamp
+        else body_text
+    )
+    dynamic_signed_report = sign_gxp_markdown(
+        content=dynamic_body_text,
+        signing_reason="GxP Dynamic Execution Run Record",
+        timestamp=real_timestamp,
+    )
+
+    with open(run_file_path, "w", encoding="utf-8") as f:
+        f.write(dynamic_signed_report)
+
+    print(f"Dynamic execution run report successfully written to {run_file_path}")
 
 
 def main():
@@ -957,7 +987,6 @@ def main():
         draft=args.draft,
     )
     print(f"Qualification Execution Report successfully written to {qual_out}")
-    format_file_with_prettier(qual_out)
 
     if args.validate:
         unmapped_list = [
