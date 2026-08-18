@@ -10,11 +10,11 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2728
-- **Passed:** 2709 🟢
+- **Total Automated Test Cases Run:** 2734
+- **Passed:** 2715 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
-- **Overall Operational Pass Rate:** 99.30%
+- **Overall Operational Pass Rate:** 99.31%
 
 ## 2. Installation Qualification (IQ)
 
@@ -2666,10 +2666,17 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_parse_sqlalchemy_schema_execution`                                                | `scripts.tests.test_generate_schema_documentation`                          | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_generate_schemas_halts_in_production`                                             | `scripts.tests.test_generate_schemas`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_generate_schemas_omits_sensitive_tables`                                          | `scripts.tests.test_generate_schemas`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
-| `test_is_logical_code`                                                                  | `scripts.tests.test_git_merge_driver`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
-| `test_merge_generic_json`                                                               | `scripts.tests.test_git_merge_driver`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
-| `test_merge_markdown_text`                                                              | `scripts.tests.test_git_merge_driver`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
-| `test_merge_secrets_baseline`                                                           | `scripts.tests.test_git_merge_driver`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_git_merge_driver_cli_conflict_and_markers`                                        | `scripts.tests.test_git_merge_driver`                                       | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
+| `test_git_merge_driver_cli_non_overlapping_success`                                     | `scripts.tests.test_git_merge_driver`                                       | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
+| `test_gitattributes_configuration_mapping`                                              | `scripts.tests.test_git_merge_driver`                                       | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
+| `test_is_logical_code`                                                                  | `scripts.tests.test_git_merge_driver`                                       | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
+| `test_merge_generic_json`                                                               | `scripts.tests.test_git_merge_driver`                                       | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
+| `test_merge_generic_json_value_collision_fail_fast`                                     | `scripts.tests.test_git_merge_driver`                                       | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
+| `test_merge_markdown_text`                                                              | `scripts.tests.test_git_merge_driver`                                       | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
+| `test_merge_secrets_baseline`                                                           | `scripts.tests.test_git_merge_driver`                                       | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
+| `test_merge_secrets_baseline_structural_mismatch_fail_fast`                             | `scripts.tests.test_git_merge_driver`                                       | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
+| `test_merge_secrets_baseline_top_level_scalar_collision`                                | `scripts.tests.test_git_merge_driver`                                       | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
+| `test_merge_secrets_baseline_value_collision_fail_fast`                                 | `scripts.tests.test_git_merge_driver`                                       | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
 | `test_fail_fast_without_report_and_draft_flag`                                          | `scripts.tests.test_gxp_fail_fast`                                          | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
 | `test_missing_report_gxp_sync_dry_run`                                                  | `scripts.tests.test_gxp_fail_fast`                                          | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
 | `test_success_with_draft_flag`                                                          | `scripts.tests.test_gxp_fail_fast`                                          | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
