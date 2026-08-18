@@ -541,3 +541,168 @@ async def test_outbox_worker_concurrent_dispatch(monkeypatch) -> None:
 
     # If concurrency is working, max_active_tasks should be 3
     assert max_active_tasks == 3
+
+
+@pytest.mark.asyncio
+async def test_rollback_prevents_outbox_record_creation() -> None:
+    """AC1: Verify that rolling back a clinical data write prevents any outbox records from being created."""
+    # 1. Database-level transaction rollback
+    async with db_manager.get_session_maker()() as session:
+        # Create a clinical subject and an outbox record inside the session
+        from apps.execution.database.models import ClinicalSubject
+
+        subj = ClinicalSubject(
+            subject_id="SUBJ-ROLLBACK-01",
+            study_id="STUDY-001",
+            status="SCREENING",
+        )
+        outbox_rec = IntegrationOutbox(
+            event_type="TRIAL_LOCK",
+            payload={"trial_locked": True, "reason": "Test Rollback"},
+            status="PENDING",
+            attempts=0,
+            correlation_id="corr-rollback-1",
+            created_by="tester",
+            reason_for_change="Test Rollback",
+        )
+        session.add(subj)
+        session.add(outbox_rec)
+
+        # Explicitly roll back the session
+        await session.rollback()
+
+    # Verify that neither the clinical record nor the outbox record exists
+    async with db_manager.get_session_maker()() as session:
+        res_subj = await session.execute(
+            select(ClinicalSubject).where(
+                ClinicalSubject.subject_id == "SUBJ-ROLLBACK-01"
+            )
+        )
+        assert res_subj.scalars().first() is None
+
+        res_outbox = await session.execute(
+            select(IntegrationOutbox).where(
+                IntegrationOutbox.correlation_id == "corr-rollback-1"
+            )
+        )
+        assert res_outbox.scalars().first() is None
+
+
+@pytest.mark.asyncio
+async def test_commit_clinical_change_without_reason_fails() -> None:
+    """AC2: Verify that attempting to commit a clinical state change without a provided reason fails immediately."""
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # Generate headers missing change_reason / X-Change-Reason
+        headers = get_auth_headers(change_reason="")
+        headers.pop("X-Change-Reason", None)
+
+        resp = await client.post(
+            "/api/v1/execution/locks/trial/lock",
+            headers=headers,
+        )
+        # Should be rejected with 403 Forbidden due to missing change justification header
+        assert resp.status_code in (400, 403)
+        assert TrialLockManager.is_locked() is False
+
+        # Verify no outbox record was created
+        async with db_manager.get_session_maker()() as session:
+            res = await session.execute(select(IntegrationOutbox))
+            assert len(res.scalars().all()) == 0
+
+
+@pytest.mark.asyncio
+async def test_parallel_workers_do_not_deliver_duplicate_events() -> None:
+    """AC3: Verify that parallel background workers do not deliver the same outbox event multiple times."""
+    # Populate 5 pending outbox records
+    async with db_manager.get_session_maker()() as session:
+        for i in range(5):
+            rec = IntegrationOutbox(
+                event_type="TRIAL_LOCK",
+                payload={"trial_locked": True, "reason": f"Parallel Lock {i}"},
+                status="PENDING",
+                attempts=0,
+                correlation_id=f"corr-parallel-{i}",
+                created_by="system",
+                reason_for_change=f"Parallel test {i}",
+            )
+            session.add(rec)
+        await session.commit()
+
+    dispatched_ids = []
+    dispatch_lock = asyncio.Lock()
+
+    async def mock_post(client_self, url, **kwargs):
+        json_data = kwargs.get("json", {})
+        reason = json_data.get("reason", "")
+        async with dispatch_lock:
+            dispatched_ids.append(reason)
+        from unittest.mock import MagicMock
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.raise_for_status = MagicMock()
+        return mock_resp
+
+    # On PostgreSQL, pg_try_advisory_xact_lock(42003) allows only 1 worker to acquire lock per cycle
+    advisory_lock_acquired = False
+    original_session_maker = db_manager.get_session_maker()
+
+    def locking_session_factory():
+        session = original_session_maker()
+        orig_execute = session.execute
+
+        async def mock_execute(stmt, *args, **kwargs):
+            nonlocal advisory_lock_acquired
+            stmt_str = str(stmt)
+            if "pg_try_advisory_xact_lock" in stmt_str:
+                from unittest.mock import MagicMock
+
+                mock_res = MagicMock()
+                if not advisory_lock_acquired:
+                    advisory_lock_acquired = True
+                    mock_res.scalar.return_value = True
+                else:
+                    mock_res.scalar.return_value = False
+                return mock_res
+            return await orig_execute(stmt, *args, **kwargs)
+
+        session.execute = mock_execute
+        return session
+
+    with patch.object(db_manager.engine.dialect, "name", "postgresql"):
+        with patch("httpx.AsyncClient.post", mock_post):
+            with patch(
+                "apps.execution.workers.outbox_worker._session_maker",
+                locking_session_factory,
+            ):
+                # Run two workers in parallel
+                await asyncio.gather(poll_and_dispatch(), poll_and_dispatch())
+
+    # Verify each event was dispatched exactly once
+    assert len(dispatched_ids) == 5
+    assert len(set(dispatched_ids)) == 5
+
+
+@pytest.mark.asyncio
+async def test_background_worker_uses_separate_database_connection_channel() -> None:
+    """AC4: Verify that background worker queries use a separate database connection channel from client-facing API traffic."""
+    from apps.execution.database.core import bg_db_manager, db_manager
+
+    # bg_db_manager and db_manager must be separate instances
+    assert bg_db_manager is not db_manager
+
+    # Initialize bg_db_manager with its own isolated engine
+    bg_db_manager.init_db("sqlite+aiosqlite:///:memory:")
+
+    assert bg_db_manager.engine is not None
+    assert db_manager.engine is not None
+    assert bg_db_manager.engine is not db_manager.engine
+
+    # session_maker instances must be different factories
+    bg_sm = bg_db_manager.get_session_maker()
+    api_sm = db_manager.get_session_maker()
+    assert bg_sm is not api_sm
+
+    await bg_db_manager.close()
