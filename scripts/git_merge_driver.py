@@ -392,65 +392,13 @@ def merge_generic_json(ancestor, current, other) -> bool:
 
 
 def merge_markdown_text(ancestor, current, other) -> bool:
-    """Merge markdown or text files by resolving simple concurrent updates cleanly."""
-    # First, run standard merge-file to see if it cleanly succeeds without conflict markers
+    """Merge markdown or text files by resolving simple non-overlapping updates cleanly.
+
+    If overlapping changes occur, git merge-file leaves standard conflict markers
+    in current and returns non-zero, in which case we return False to escalate.
+    """
     rc = run_git_merge_file(ancestor, current, other)
-    if rc == 0:
-        return True
-
-    # If conflict markers exist, attempt to resolve them cleanly
-    try:
-        with open(current, encoding="utf-8") as f:
-            content = f.read()
-
-        if "<<<<<<<" not in content:
-            return True
-
-        # Custom resolution: split by line and parse conflict blocks
-        lines = content.splitlines()
-        resolved_lines = []
-        i = 0
-        n = len(lines)
-        while i < n:
-            line = lines[i]
-            if line.startswith("<<<<<<<"):
-                # Conflict starts
-                ours_block = []
-                theirs_block = []
-                i += 1
-                # Parse ours block until =======
-                while i < n and not lines[i].startswith("======="):
-                    ours_block.append(lines[i])
-                    i += 1
-                i += 1  # Skip =======
-                # Parse theirs block until >>>>>>>
-                while i < n and not lines[i].startswith(">>>>>>>"):
-                    theirs_block.append(lines[i])
-                    i += 1
-                i += 1  # Skip >>>>>>>
-
-                # Clean resolution of independent bullet points / documentation lines
-                # If they are distinct lines, we can just concatenate or union them
-                combined_block = []
-                # Remove duplicate lines from both sides, preserving order
-                seen = set()
-                for line in ours_block + theirs_block:
-                    if line not in seen or line.strip() == "":
-                        seen.add(line)
-                        combined_block.append(line)
-
-                resolved_lines.extend(combined_block)
-            else:
-                resolved_lines.append(line)
-                i += 1
-
-        with open(current, "w", encoding="utf-8") as f:
-            f.write("\n".join(resolved_lines) + "\n")
-        return True
-
-    except Exception as e:
-        print(f"Error resolving text conflicts: {e}", file=sys.stderr)
-        return False
+    return rc == 0
 
 
 def main():
@@ -526,7 +474,6 @@ def main():
                 f"[Merge-Driver] Failed to merge doc/text '{pathname}' - Escalating to manual review.",
                 file=sys.stderr,
             )
-            run_git_merge_file(ancestor, current, other)
             sys.exit(1)
 
     # 5. Handle snapshot or binary .tar.gz files cleanly by keeping our version

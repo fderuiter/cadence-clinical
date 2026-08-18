@@ -7,11 +7,6 @@
 *.jpg binary
 *.ico binary
 
-# Auto-Generated SDLC Compliance Reports & ADR Index (Union merge strategy prevents git conflict blocks)
-docs/SDLC/Requirements_Traceability_Matrix.md merge=union
-docs/SDLC/IQ_OQ_PQ_Execution_Report.md merge=union
-docs/adr/index.md merge=union
-
 # Custom Git Merge Driver Mappings for Metadata and Documentation
 .secrets.baseline merge=custom-metadata-driver
 *.secrets.baseline merge=custom-metadata-driver
