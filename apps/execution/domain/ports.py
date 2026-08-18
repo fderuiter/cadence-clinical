@@ -9,7 +9,23 @@ from apps.execution.domain.models import (
     ExecutionDelegationEntity,
     ExecutionStaffEntity,
 )
+from apps.execution.econsent_client import (
+    IConsentClient,
+    IConsentVerificationClient,
+)
 from packages.hexagonal import RepositoryPort
+
+__all__ = [
+    "ISubjectRepository",
+    "IConsentRepository",
+    "IAuditRepository",
+    "IExecutionDOARepository",
+    "IConsentClient",
+    "IConsentVerificationClient",
+    "SubjectRepositoryPort",
+    "ConsentRepositoryPort",
+    "AuditRepositoryPort",
+]
 
 
 class ISubjectRepository(RepositoryPort[ClinicalSubjectDomain]):

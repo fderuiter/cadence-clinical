@@ -258,7 +258,9 @@ async def test_consent_record_immutability(db_session) -> None:
     sig_record = res_sig.scalar_one()
     await db_session.delete(sig_record)
 
-    with pytest.raises(ValueError, match="Cannot delete consent records"):
+    with pytest.raises(
+        ValueError, match="Hard deletion of ConsentSignature is forbidden"
+    ):
         await db_session.commit()
 
     await db_session.rollback()

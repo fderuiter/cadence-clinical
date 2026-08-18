@@ -64,90 +64,10 @@ def receive_before_flush(session: Session, flush_context, instances):
         except Exception:
             pass
 
-    # If the session contains eTMF, Interop, CTMS, Quality, eISF, or Notifications objects, skip execution auditing
-    for obj in list(session.new) + list(session.dirty) + list(session.deleted):
-        module_name = getattr(obj.__class__, "__module__", "")
-        if "apps.econsent" in module_name:
-            return
-
-        if hasattr(obj, "__tablename__") and obj.__tablename__ in (
-            "tmf_documents",
-            "tmf_audit_logs",
-            "tmf_expected_documents",
-            "tmf_document_qc_transitions",
-            "tmf_document_expiration_alert_states",
-            "epro_submissions",
-            "epro_defeated_submissions",
-            "epro_quarantined_submissions",
-            "interop_audit_logs",
-            "instruments",
-            "subject_assignments",
-            "subject_notifications",
-            "ctms_studies",
-            "ctms_audit_logs",
-            "ctms_monitoring_visits",
-            "ctms_monitoring_visit_findings",
-            "ctms_generated_letters",
-            "ctms_recruitment_records",
-            "ctms_site_milestones",
-            "ctms_cra_allocations",
-            "ctms_investigator_grants",
-            "ctms_budget_line_items",
-            "ctms_payment_milestones",
-            "ctms_investigator_payables",
-            "ctms_clinical_queries",
-            "ctms_defeated_monitoring_visits",
-            "quality_deviations",
-            "quality_root_cause_analyses",
-            "quality_capa_records",
-            "quality_audit_logs",
-            "isf_documents",
-            "isf_audit_logs",
-            "notification_records",
-            "notification_audit_logs",
-            "notification_deliveries",
-            "consent_documents",
-            "consent_audit_logs",
-            "consent_clauses",
-            "consent_templates",
-            "consent_translations",
-            "comprehension_checks",
-            "comprehension_results",
-            "consent_signatures",
-            "organizations",
-            "sites",
-            "personnel",
-            "personnel_assignments",
-            "delegations_of_authority",
-            "org_audit_logs",
-            "org_training_logs",
-            "safety_cases",
-            "safety_export_jobs",
-            "safety_audit_logs",
-            "sae_reconciliation_runs",
-            "sae_discrepancies",
-            "sae_reconciliation_jobs",
-            "tickets",
-            "ticket_audit_logs",
-            "ticket_comments",
-            "ticket_attachments",
-            "integration_outbox",
-            "security_audit_logs",
-            "test_user_records",
-        ):
-            return
-
     # Check for read-only freeze
     has_clinical_mutations = any(
-        hasattr(obj, "__tablename__")
-        and obj.__tablename__
-        not in (
-            "audit_logs",
-            "audit_ledger_seals",
-            "data_locks",
-            "integration_outbox",
-            "security_audit_logs",
-        )
+        isinstance(obj, AuditedModel)
+        and getattr(obj, "__tablename__", "") != "data_locks"
         for obj in list(session.new) + list(session.dirty) + list(session.deleted)
     )
 
@@ -158,7 +78,10 @@ def receive_before_flush(session: Session, flush_context, instances):
 
     # Check for read-only / inactive form submissions
     for obj in list(session.new) + list(session.dirty) + list(session.deleted):
-        if hasattr(obj, "__tablename__") and obj.__tablename__ == "form_submissions":
+        if (
+            isinstance(obj, AuditedModel)
+            and getattr(obj, "__tablename__", "") == "form_submissions"
+        ):
             if obj in session.deleted:
                 raise PermissionError("Cannot delete a form submission record.")
             if obj in session.dirty:
@@ -192,9 +115,9 @@ def receive_before_flush(session: Session, flush_context, instances):
 
     # Propagate site_id for subject-derived records if not specified
     for obj in list(session.new) + list(session.dirty):
-        if not hasattr(obj, "__tablename__") or obj.__tablename__ == "audit_logs":
+        if not isinstance(obj, AuditedModel):
             continue
-        tablename = obj.__tablename__
+        tablename = getattr(obj, "__tablename__", None)
         if tablename in (
             "clinical_visits",
             "clinical_observations",
@@ -236,12 +159,9 @@ def receive_before_flush(session: Session, flush_context, instances):
 
     # Check for site-level and visit-level locks
     for obj in list(session.new) + list(session.dirty) + list(session.deleted):
-        if not hasattr(obj, "__tablename__") or obj.__tablename__ in (
-            "audit_logs",
-            "audit_ledger_seals",
-            "data_locks",
-            "integration_outbox",
-            "security_audit_logs",
+        if (
+            not isinstance(obj, AuditedModel)
+            or getattr(obj, "__tablename__", "") == "data_locks"
         ):
             continue
 
@@ -767,8 +687,8 @@ def receive_before_flush(session: Session, flush_context, instances):
 
     for obj in list(session.dirty):
         if (
-            not hasattr(obj, "__tablename__")
-            or obj.__tablename__ != "clinical_observations"
+            not isinstance(obj, AuditedModel)
+            or getattr(obj, "__tablename__", "") != "clinical_observations"
         ):
             continue
 
@@ -860,14 +780,7 @@ def receive_before_flush(session: Session, flush_context, instances):
 
     # Track Inserts
     for obj in session.new:
-        if (
-            not hasattr(obj, "__tablename__")
-            or obj.__tablename__ in ("audit_logs", "audit_ledger_seals")
-            or not (
-                getattr(obj, "__module__", "").startswith("apps.execution")
-                or isinstance(obj, AuditedModel)
-            )
-        ):
+        if not isinstance(obj, AuditedModel):
             continue
 
         new_values = {}
@@ -896,14 +809,7 @@ def receive_before_flush(session: Session, flush_context, instances):
 
     # Track Updates
     for obj in session.dirty:
-        if (
-            not hasattr(obj, "__tablename__")
-            or obj.__tablename__ in ("audit_logs", "audit_ledger_seals")
-            or not (
-                getattr(obj, "__module__", "").startswith("apps.execution")
-                or isinstance(obj, AuditedModel)
-            )
-        ):
+        if not isinstance(obj, AuditedModel):
             continue
         if not session.is_modified(obj, include_collections=False):
             continue
@@ -980,14 +886,7 @@ def receive_before_flush(session: Session, flush_context, instances):
                 f"Hard deletion of {obj.__class__.__name__} is forbidden. Use soft deletes by setting is_deleted=True."
             )
 
-        if (
-            not hasattr(obj, "__tablename__")
-            or obj.__tablename__ in ("audit_logs", "audit_ledger_seals")
-            or not (
-                getattr(obj, "__module__", "").startswith("apps.execution")
-                or isinstance(obj, AuditedModel)
-            )
-        ):
+        if not isinstance(obj, AuditedModel):
             continue
 
         # If it's another non-audited model, capture its deletion? The requirement says "all clinical records must be versioned..."

@@ -1,3 +1,7 @@
-from apps.execution.domain.ports import IExecutionDOARepository
+from apps.execution.domain.ports import (
+    IConsentClient,
+    IConsentVerificationClient,
+    IExecutionDOARepository,
+)
 
-__all__ = ["IExecutionDOARepository"]
+__all__ = ["IExecutionDOARepository", "IConsentVerificationClient", "IConsentClient"]
