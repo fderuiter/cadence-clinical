@@ -12,7 +12,7 @@ async def test_in_memory_accessibility_auditing():
     """Verify that automated layout WCAG checks identify contrast and element focus violations.
 
     @req: PRD-CRF-015
-    @req: Trace-31
+    @req: Trace-33
     """
     html_content = """
     <html>
