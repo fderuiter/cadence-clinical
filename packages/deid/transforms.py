@@ -328,3 +328,54 @@ def normalize_and_cap_age(age_val: Any, cap: int = 89) -> Any:
             return age_val
 
     return age_val
+
+
+def scrub_error_message(msg: str) -> str:
+    """
+    Scrubs and redacts raw subject, site, and study identifiers, quoted field values,
+    and PII to prevent leaking PHI in audit logs and diagnostic messages.
+    """
+    if not msg:
+        return msg
+
+    # Redact SSNs, emails, phones
+    msg = re.sub(r"\b\d{3}-\d{2}-\d{4}\b", "[REDACTED_SSN]", msg)
+    msg = re.sub(
+        r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
+        "[REDACTED_EMAIL]",
+        msg,
+    )
+    msg = re.sub(
+        r"\b(?:\+?1[-. ]?)?\(?\d{3}\)?[-. ]?\d{3}[-. ]?\d{4}\b",
+        "[REDACTED_PHONE]",
+        msg,
+    )
+
+    # Redact subject patterns like SUBJ-101, USUBJID-123, SUBJID: 1001, subject_001, PATIENT-001
+    msg = re.sub(
+        r"\b(?:USUBJID|SUBJID|SUBJECT|PATIENT)[_:-]+\s*[\w-]+\b",
+        "[REDACTED_SUBJECT]",
+        msg,
+        flags=re.IGNORECASE,
+    )
+    msg = re.sub(r"\bSUBJ-[\w-]+\b", "[REDACTED_SUBJECT]", msg, flags=re.IGNORECASE)
+
+    # Redact site patterns like SITE-01, SITEID_99, site-A
+    msg = re.sub(
+        r"\b(?:SITEID|SITE)[_:-]+\s*[\w-]+\b",
+        "[REDACTED_SITE]",
+        msg,
+        flags=re.IGNORECASE,
+    )
+
+    # Redact study patterns like STUDY-001, STUDYID_123
+    msg = re.sub(
+        r"\b(?:STUDYID|STUDY)[_:-]+\s*[\w-]+\b",
+        "[REDACTED_STUDY]",
+        msg,
+        flags=re.IGNORECASE,
+    )
+
+    # Redact quoted field values
+    msg = re.sub(r"'(.*?)'", "'[REDACTED_VALUE]'", msg)
+    return re.sub(r"\"(.*?)\"", '"[REDACTED_VALUE]"', msg)

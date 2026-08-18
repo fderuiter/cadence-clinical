@@ -490,3 +490,121 @@ async def test_error_redaction_and_scrubbing_on_failed_export(
             # Check absolutely no raw subject identifiers exist in the error log
             assert "SUBJ-BAD" not in export_row.error_message
             assert "SITE-X" not in export_row.error_message
+
+
+# ==============================================================================
+# ACCEPTANCE CRITERIA SUITE (1,000 record performance, age capping, dates, USDM, audit)
+# ==============================================================================
+
+
+def test_in_process_export_performance_1000_records() -> None:
+    """Verify that in-process de-identification of 1,000 records completes in under 100 milliseconds."""
+    salt = "performance-test-salt-12345"
+
+    # Generate 1,000 clinical records across 100 subjects
+    records = []
+    for i in range(1000):
+        subj_idx = i % 100
+        records.append(
+            {
+                "STUDYID": "STUDY-PERF-001",
+                "USUBJID": f"SUBJ-{subj_idx:04d}",
+                "SUBJID": f"{subj_idx:04d}",
+                "SITEID": f"SITE-{subj_idx % 10}",
+                "AGE": 20 + (i % 80),  # ages range from 20 to 99
+                "RFSTDTC": "2023-01-15",
+                "RFENDTC": "2023-06-30",
+                "TRTSDT": 22000 + i,
+                "TRTEDT": 22100 + i,
+            }
+        )
+
+    t_start = time.perf_counter()
+    deidentified = deidentify_export_data(records, salt)
+    t_end = time.perf_counter()
+
+    duration_ms = (t_end - t_start) * 1000.0
+    assert len(deidentified) == 1000
+    assert duration_ms < 100.0, (
+        f"De-identification took {duration_ms:.2f}ms (must be < 100ms)"
+    )
+
+
+def test_identifier_masking_and_age_capping_types() -> None:
+    """Verify identifiers are pseudonymized and all age values > 89 are capped to 89 across int, float, and string forms."""
+    salt = "age-capping-salt-999"
+    records = [
+        {"USUBJID": "SUBJ-901", "AGE": 95, "AAGE": 92.5, "agetxt": "105 years old"},
+        {"USUBJID": "SUBJ-902", "AGE": 45, "AAGE": 45.0, "agetxt": "45"},
+        {"USUBJID": "SUBJ-903", "AGE": 89, "AAGE": 89.0, "agetxt": "89"},
+    ]
+
+    deid = deidentify_export_data(records, salt)
+
+    # SUBJ-901 (>89 capped)
+    assert deid[0]["USUBJID"] != "SUBJ-901"
+    assert deid[0]["AGE"] == 89
+    assert deid[0]["AAGE"] == 89.0
+    assert deid[0]["agetxt"] == "89"
+
+    # SUBJ-902 (<=89 unchanged)
+    assert deid[1]["AGE"] == 45
+    assert deid[1]["AAGE"] == 45.0
+
+    # SUBJ-903 (==89 unchanged)
+    assert deid[2]["AGE"] == 89
+    assert deid[2]["AAGE"] == 89.0
+
+
+def test_date_shifting_placeholders_and_duration_intervals() -> None:
+    """Verify partial date placeholders ('00', 'UN') are retained and duration intervals are preserved."""
+    salt = "date-shift-test-salt"
+
+    # Subject with two events (10 days duration) and placeholder dates
+    record_1 = {
+        "USUBJID": "SUBJ-DUR-01",
+        "AESTDTC": "2023-05-10",
+        "AEENDTC": "2023-05-20",
+        "TRTSDT": 22000,
+        "TRTEDT": 22010,
+        "BRTHDTC": "1950-00-00",
+        "MHSTDTC": "2022-UN-UN",
+    }
+
+    deid_1 = deidentify_export_data([record_1], salt)[0]
+
+    # Check SAS integer duration interval (TRTEDT - TRTSDT) is strictly preserved
+    orig_sas_dur = record_1["TRTEDT"] - record_1["TRTSDT"]
+    shifted_sas_dur = deid_1["TRTEDT"] - deid_1["TRTSDT"]
+    assert orig_sas_dur == shifted_sas_dur == 10
+
+    # Check event order preserved: shifted start <= shifted end
+    assert deid_1["AESTDTC"] < deid_1["AEENDTC"]
+    assert deid_1["TRTSDT"] < deid_1["TRTEDT"]
+
+    # Check missing date placeholders are preserved in shifted output
+    assert deid_1["BRTHDTC"].endswith("-00-00")
+    assert "UN-UN" in deid_1["MHSTDTC"]
+
+
+def test_audit_log_error_scrubbing_zero_leaks() -> None:
+    """Verify that audit log error messages scrub patient, site, and study IDs with zero leaks."""
+    raw_error = (
+        "Pipeline crash for SUBJ-1002 at SITE-NORTH in STUDY-CLIN-01: "
+        "Failed parsing value 'John Doe' with SSN 123-45-6789 and email john@example.com."
+    )
+    scrubbed = scrub_error_message(raw_error)
+
+    assert "SUBJ-1002" not in scrubbed
+    assert "SITE-NORTH" not in scrubbed
+    assert "STUDY-CLIN-01" not in scrubbed
+    assert "John Doe" not in scrubbed
+    assert "123-45-6789" not in scrubbed
+    assert "john@example.com" not in scrubbed
+
+    assert "[REDACTED_SUBJECT]" in scrubbed
+    assert "[REDACTED_SITE]" in scrubbed
+    assert "[REDACTED_STUDY]" in scrubbed
+    assert "[REDACTED_VALUE]" in scrubbed
+    assert "[REDACTED_SSN]" in scrubbed
+    assert "[REDACTED_EMAIL]" in scrubbed

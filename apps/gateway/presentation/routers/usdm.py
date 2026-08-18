@@ -3,7 +3,9 @@
 Requirements: PRD-SYS-001
 """
 
-from fastapi import APIRouter, Depends, status
+import json
+
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from apps.gateway.domain.acl.usdm_dto import (
     UsdmExportResponse,
@@ -11,6 +13,7 @@ from apps.gateway.domain.acl.usdm_dto import (
     UsdmImportResponse,
 )
 from apps.gateway.domain.acl.usdm_importer import USDMImporter
+from apps.gateway.domain.acl.usdm_validation import validate_usdm_payload
 from packages.security.middleware import get_current_user
 
 router = APIRouter()
@@ -52,12 +55,20 @@ async def export_usdm_protocol_spec(
 
     Requirements: PRD-SYS-001
     """
+    export_payload = {
+        "id": study_id,
+        "usdmVersion": "3.0",
+        "name": f"Exported USDM Spec for {study_id}",
+        "studyDesigns": [],
+    }
+    report = validate_usdm_payload(json.dumps(export_payload))
+    if not report.validity:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"USDM Export schema validation failed: {[e.reason for e in report.errors]}",
+        )
+
     return UsdmExportResponse(
         study_id=study_id,
-        usdm_json={
-            "id": study_id,
-            "usdmVersion": "v3.0",
-            "name": f"Exported USDM Spec for {study_id}",
-            "studyDesigns": [],
-        },
+        usdm_json=export_payload,
     )

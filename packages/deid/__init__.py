@@ -37,6 +37,7 @@ from packages.deid.transforms import (
     normalize_and_cap_age,
     pseudonymize_subject_id,
     pseudonymize_value,
+    scrub_error_message,
     shift_date_by_subject,
     shift_date_string,
 )
@@ -54,6 +55,7 @@ __all__ = [
     "apply_deid_transforms",
     "cap_age_string",
     "pseudonymize_value",
+    "scrub_error_message",
     "shift_date_string",
     "get_subject_date_shift",
     "shift_date_by_subject",

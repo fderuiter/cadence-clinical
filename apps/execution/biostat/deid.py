@@ -4,15 +4,16 @@ Provides deterministic pseudonymization, stable per-subject date-shifting, and a
 """
 
 import re
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Any
-
-from dateutil import parser as date_parser
 
 from packages.deid.transforms import (
     normalize_and_cap_age,
     pseudonymize_value,
     shift_date_string,
+)
+from packages.deid.transforms import (
+    scrub_error_message as package_scrub_error_message,
 )
 
 # Standard registry of date fields
@@ -41,6 +42,32 @@ ADAM_DATE_FIELDS = {
     "AENDT",
 }
 
+PII_DIRECT = {
+    "patient_name",
+    "patientname",
+    "name",
+    "first_name",
+    "last_name",
+    "ssn",
+    "social_security_number",
+    "email",
+    "phone",
+    "telephone",
+    "address",
+    "street",
+    "zipcode",
+    "postal_code",
+}
+
+PII_DATES = {
+    "birth_date",
+    "birthdate",
+    "dob",
+    "date_of_birth",
+}
+
+AGE_FIELDS = {"age", "aage", "agetxt", "age_val", "age_value"}
+
 
 def shift_partial_date(date_str: str, shift_days: int) -> str:
     """
@@ -68,15 +95,23 @@ def shift_partial_date(date_str: str, shift_days: int) -> str:
         month_str = "06"  # Default mid-year for partial/missing month
         day_str = "15"  # Default mid-month for partial/missing day
 
+        has_valid_month = False
         if len(parts) >= 3 and parts[2].isdigit():
-            month_str = parts[2]
-        if len(parts) >= 5 and parts[4].isdigit():
-            day_str = parts[4]
+            m_val = int(parts[2])
+            if 1 <= m_val <= 12:
+                month_str = f"{m_val:02d}"
+                has_valid_month = True
 
-        # Form a full dummy date string for calculation
-        dummy_date_str = f"{year_str}-{month_str}-{day_str}"
+        has_valid_day = False
+        if len(parts) >= 5 and parts[4].isdigit():
+            d_val = int(parts[4])
+            if 1 <= d_val <= 31:
+                day_str = f"{d_val:02d}"
+                has_valid_day = True
+
+        # Form a full date for fast calculation
         try:
-            dt = date_parser.parse(dummy_date_str)
+            dt = date(int(year_str), int(month_str), int(day_str))
             shifted_dt = dt + timedelta(days=shift_days)
 
             shifted_year = f"{shifted_dt.year:04d}"
@@ -86,9 +121,9 @@ def shift_partial_date(date_str: str, shift_days: int) -> str:
             # Reconstruct the original string, inserting shifted numeric parts
             new_parts = list(parts)
             new_parts[0] = shifted_year
-            if len(parts) >= 3 and parts[2].isdigit():
+            if len(parts) >= 3 and has_valid_month:
                 new_parts[2] = shifted_month
-            if len(parts) >= 5 and parts[4].isdigit():
+            if len(parts) >= 5 and has_valid_day:
                 new_parts[4] = shifted_day
 
             return "".join(new_parts) + time_part
@@ -99,78 +134,88 @@ def shift_partial_date(date_str: str, shift_days: int) -> str:
     return shift_date_string(original_str, shift_days)
 
 
-def deidentify_record(row: dict[str, Any], salt: str) -> dict[str, Any]:
+def deidentify_record(
+    row: dict[str, Any],
+    salt: str,
+    offset_cache: dict[str, int] | None = None,
+    pseudo_cache: dict[str, str] | None = None,
+) -> dict[str, Any]:
     """
     Transforms a single SDTM/ADaM record without mutating the input.
     """
-    # Create a shallow/deep copy of the dictionary
     r = dict(row)
 
+    def _pseudo(val_str: str) -> str:
+        if pseudo_cache is not None and val_str in pseudo_cache:
+            return pseudo_cache[val_str]
+        res = pseudonymize_value(val_str, salt)
+        if pseudo_cache is not None:
+            pseudo_cache[val_str] = res
+        return res
+
     # 1. Resolve deterministic offset
-    # Derive a stable per-subject date-shift offset from the record's original USUBJID
-    # Capture the original USUBJID before modifying/pseudonymizing it!
-    original_usubjid = r.get("USUBJID")
+    original_usubjid = r.get("USUBJID") or r.get("SUBJID") or r.get("subject_id") or ""
     offset = 0
     if (
         original_usubjid
         and isinstance(original_usubjid, str)
         and original_usubjid.strip()
     ):
-        h = pseudonymize_value(original_usubjid, salt)
-        # Map to range [-365, 365] inclusive (731 possible days)
-        offset = (int(h, 16) % 731) - 365
+        subj_key = original_usubjid.strip()
+        if offset_cache is not None and subj_key in offset_cache:
+            offset = offset_cache[subj_key]
+        else:
+            h = _pseudo(subj_key)
+            # Map to range [-365, 365] inclusive (731 possible days)
+            offset = (int(h, 16) % 731) - 365
+            if offset_cache is not None:
+                offset_cache[subj_key] = offset
 
-    # 2. Pseudonymize USUBJID, SUBJID, SITEID
-    for identifier_field in ("USUBJID", "SUBJID", "SITEID"):
+    # 2. Pseudonymize USUBJID, SUBJID, SITEID, subject_id, site_id
+    for identifier_field in ("USUBJID", "SUBJID", "SITEID", "subject_id", "site_id"):
         if identifier_field in r:
             val = r[identifier_field]
             if val is not None and isinstance(val, str) and val.strip():
-                r[identifier_field] = pseudonymize_value(val, salt)
+                r[identifier_field] = _pseudo(val.strip())
 
-    # 3. Direct PII scrubbing and date shifting
-    pii_direct = {
-        "patient_name",
-        "patientname",
-        "name",
-        "first_name",
-        "last_name",
-        "ssn",
-        "social_security_number",
-        "email",
-        "phone",
-        "telephone",
-        "address",
-        "street",
-        "zipcode",
-        "postal_code",
-    }
-    pii_dates = {
-        "birth_date",
-        "birthdate",
-        "dob",
-        "date_of_birth",
-    }
-    for field_name in list(r.keys()):
+    # 3. Direct PII scrubbing, date shifting, and age capping
+    for field_name, val in list(r.items()):
+        if val is None:
+            continue
         fn_lower = field_name.lower()
-        if fn_lower in pii_direct:
-            r[field_name] = "[REDACTED]"
-        elif fn_lower in pii_dates or field_name in SDTM_DATE_FIELDS:
-            val = r[field_name]
-            if val is not None and isinstance(val, str) and val.strip():
-                r[field_name] = shift_partial_date(val, offset)
-        elif field_name in ADAM_DATE_FIELDS:
-            val = r[field_name]
-            # SAS dates are floats/ints. Skip booleans.
-            if (
-                val is not None
-                and isinstance(val, (int, float))
-                and not isinstance(val, bool)
-            ):
-                r[field_name] = val + offset
 
-    # 4. Cap AGE field
-    # Cap the AGE field (DM and any ADaM row carrying it) at the policy threshold (values > 89 set to 89)
-    if "AGE" in r:
+        if fn_lower in PII_DIRECT:
+            r[field_name] = "[REDACTED]"
+            continue
+
+        if (
+            fn_lower in PII_DATES
+            or field_name in SDTM_DATE_FIELDS
+            or field_name in ADAM_DATE_FIELDS
+            or field_name.endswith("DTC")
+            or field_name.endswith("DT")
+            or field_name.endswith("DTM")
+            or fn_lower.endswith("_dt")
+            or fn_lower.endswith("_date")
+        ):
+            if isinstance(val, (int, float)) and not isinstance(val, bool):
+                r[field_name] = val + offset
+            elif isinstance(val, str):
+                val_strip = val.strip()
+                if not val_strip:
+                    continue
+                if val_strip.isdigit() or (
+                    val_strip.startswith("-") and val_strip[1:].isdigit()
+                ):
+                    r[field_name] = int(val_strip) + offset
+                else:
+                    r[field_name] = shift_partial_date(val_strip, offset)
+            continue
+
+        if fn_lower in AGE_FIELDS:
+            r[field_name] = normalize_and_cap_age(val)
+
+    if "AGE" in r and r["AGE"] is not None:
         r["AGE"] = normalize_and_cap_age(r["AGE"])
 
     return r
@@ -182,14 +227,23 @@ def deidentify_export_data(
 ) -> dict[str, list[dict[str, Any]]] | list[dict[str, Any]]:
     """
     Applies non-mutating de-identification transform over lists or bundles of SDTM/ADaM records.
+    Uses in-memory offset and pseudonym caching for extreme high-throughput (<100ms for 1,000+ records).
     """
+    offset_cache: dict[str, int] = {}
+    pseudo_cache: dict[str, str] = {}
+
+    def _transform(row: dict[str, Any]) -> dict[str, Any]:
+        return deidentify_record(
+            row, salt, offset_cache=offset_cache, pseudo_cache=pseudo_cache
+        )
+
     if isinstance(export_data, dict):
         new_bundle = {}
         for ds_name, records in export_data.items():
-            new_bundle[ds_name] = [deidentify_record(r, salt) for r in records]
+            new_bundle[ds_name] = [_transform(r) for r in records]
         return new_bundle
     if isinstance(export_data, list):
-        return [deidentify_record(r, salt) for r in export_data]
+        return [_transform(r) for r in export_data]
     return export_data
 
 
@@ -197,15 +251,6 @@ def scrub_error_message(msg: str) -> str:
     """
     Scrubs and redacts raw subject identifiers and quoted field values
     to prevent leaking PII/PHI in biostat export audit error logs.
+    Delegates to package_scrub_error_message for unified platform scrubbing.
     """
-    if not msg:
-        return msg
-    # Redact subject patterns like SUBJ-101, SUBJ-INVALID
-    msg = re.sub(r"\bSUBJ-\w+", "[REDACTED_SUBJECT]", msg)
-    # Redact site patterns like SITE-A
-    msg = re.sub(r"\bSITE-\w+", "[REDACTED_SITE]", msg)
-    # Redact study patterns like STUDY-001
-    msg = re.sub(r"\bSTUDY-\w+", "[REDACTED_STUDY]", msg)
-    # Redact any single/double quoted strings (which often hold raw values/IDs in errors)
-    msg = re.sub(r"'(.*?)'", "'[REDACTED_VALUE]'", msg)
-    return re.sub(r"\"(.*?)\"", '"[REDACTED_VALUE]"', msg)
+    return package_scrub_error_message(msg)

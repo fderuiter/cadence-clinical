@@ -100,3 +100,16 @@ def test_gateway_usdm_unauthenticated_returns_401(
     """
     response = client_unauthenticated.get("/api/v1/usdm/export/study_123")
     assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_usdm_export_schema_validation_gateway() -> None:
+    """Verify that outgoing USDM export payloads pass USDM schema validation."""
+    from apps.gateway.presentation.routers.usdm import export_usdm_protocol_spec
+
+    res = await export_usdm_protocol_spec(
+        study_id="study_test_usdm_01", user={"user_id": "test_dm"}
+    )
+    assert res.study_id == "study_test_usdm_01"
+    assert res.usdm_json["id"] == "study_test_usdm_01"
+    assert res.usdm_json["usdmVersion"] == "3.0"

@@ -67,10 +67,19 @@ def shift_partial_date(date_str: str, shift_days: int) -> str:
         month_str = "06"  # Default mid-year for partial/missing month
         day_str = "15"  # Default mid-month for partial/missing day
 
+        has_valid_month = False
         if len(parts) >= 3 and parts[2].isdigit():
-            month_str = parts[2]
+            m_val = int(parts[2])
+            if 1 <= m_val <= 12:
+                month_str = f"{m_val:02d}"
+                has_valid_month = True
+
+        has_valid_day = False
         if len(parts) >= 5 and parts[4].isdigit():
-            day_str = parts[4]
+            d_val = int(parts[4])
+            if 1 <= d_val <= 31:
+                day_str = f"{d_val:02d}"
+                has_valid_day = True
 
         # Form a full dummy date string for calculation
         dummy_date_str = f"{year_str}-{month_str}-{day_str}"
@@ -85,9 +94,9 @@ def shift_partial_date(date_str: str, shift_days: int) -> str:
             # Reconstruct the original string, inserting shifted numeric parts
             new_parts = list(parts)
             new_parts[0] = shifted_year
-            if len(parts) >= 3 and parts[2].isdigit():
+            if len(parts) >= 3 and has_valid_month:
                 new_parts[2] = shifted_month
-            if len(parts) >= 5 and parts[4].isdigit():
+            if len(parts) >= 5 and has_valid_day:
                 new_parts[4] = shifted_day
 
             return "".join(new_parts) + time_part

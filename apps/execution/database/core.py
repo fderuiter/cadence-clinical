@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from typing import Any
 
@@ -141,6 +142,7 @@ class DatabaseSessionManager:
             self.engine = None
             self.session_maker = None
         self._sqlite_settings.clear()
+        await asyncio.sleep(0)
 
     def get_session_maker(self) -> async_sessionmaker[AsyncSession]:
         """
