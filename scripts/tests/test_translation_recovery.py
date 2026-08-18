@@ -198,7 +198,10 @@ async def test_audited_fallbacks_and_warning_propagation():
         assert "documentedBy.type" in warning_fields
         assert "documentedBy.templateName" in warning_fields
         assert "documentedBy.instanceType" in warning_fields
-        assert "documentedBy.language" in warning_fields or "documentedBy.language.id" in warning_fields
+        assert (
+            "documentedBy.language" in warning_fields
+            or "documentedBy.language.id" in warning_fields
+        )
         assert "documentedBy.versions.id" in warning_fields
         assert "documentedBy.versions.status" in warning_fields
         assert "documentedBy.versions.contents.id" in warning_fields

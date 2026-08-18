@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2727
-- **Passed:** 2708 🟢
+- **Total Automated Test Cases Run:** 2728
+- **Passed:** 2709 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.30%
@@ -2807,6 +2807,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_terminology_cache_prevents_db_queries`                                            | `scripts.tests.test_transformers`                                           | PRD-MDR-001                                                                        | 🟢 PASSED  | < 1s     |
 | `test_usdm_endpoint_returns_nested_schema_and_fast`                                     | `scripts.tests.test_transformers`                                           | PRD-MDR-003, PRD-MDR-004                                                           | 🟢 PASSED  | < 1s     |
 | `test_usdm_validation_error_on_invalid_data`                                            | `scripts.tests.test_transformers`                                           | PRD-MDR-001                                                                        | 🟢 PASSED  | < 1s     |
+| `test_audited_fallbacks_and_warning_propagation`                                        | `scripts.tests.test_translation_recovery`                                   | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_security_gate_unauthenticated_requests`                                           | `scripts.tests.test_translation_recovery`                                   | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_translation_error_status_and_rollback`                                            | `scripts.tests.test_translation_recovery`                                   | Trace-12                                                                           | 🟢 PASSED  | < 1s     |
 | `test_translation_status_and_listing_success`                                           | `scripts.tests.test_translation_recovery`                                   | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
