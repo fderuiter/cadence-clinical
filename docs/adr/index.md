@@ -204,6 +204,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-31: Randomization and Trial Supply Management](2026-08-31-randomization-and-trial-supply-management.md)
 
 ### 5. Compliance, Audit & Governance
+- [2026-08-18: Metadata-Bound Filtering and Consent Abstraction for Transaction Auditing](2026-08-18-metadata-bound-filtering-and-consent-abstraction-for-transaction-auditing.md)
 
 - [2026-08-15: Comprehensive Clinical Quality and RBQM eQMS Architecture](2026-08-15-comprehensive-clinical-quality-and-rbqm-eqms-architecture.md)
 

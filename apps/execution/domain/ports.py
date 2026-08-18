@@ -15,6 +15,18 @@ from apps.execution.econsent_client import (
 )
 from packages.hexagonal import RepositoryPort
 
+__all__ = [
+    "ISubjectRepository",
+    "IConsentRepository",
+    "IAuditRepository",
+    "IExecutionDOARepository",
+    "IConsentClient",
+    "IConsentVerificationClient",
+    "SubjectRepositoryPort",
+    "ConsentRepositoryPort",
+    "AuditRepositoryPort",
+]
+
 
 class ISubjectRepository(RepositoryPort[ClinicalSubjectDomain]):
     """Repository port for ClinicalSubjectDomain."""

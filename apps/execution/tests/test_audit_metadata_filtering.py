@@ -2,11 +2,8 @@
 Tests for metadata-bound entity filtering and abstract consent client integration.
 """
 
-from unittest.mock import AsyncMock, patch
-
 import httpx
 import pytest
-import pytest_asyncio
 from fastapi import HTTPException
 from sqlalchemy import Column, Integer, String, select
 from sqlalchemy.orm import DeclarativeBase
@@ -45,6 +42,7 @@ async def test_shared_session_coexistence_auditing():
     db_manager.init_db("sqlite+aiosqlite:///:memory:")
     async with db_manager.engine.begin() as conn:
         from apps.execution.database.models import Base
+
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(DummyForeignBase.metadata.create_all)
 
@@ -56,9 +54,7 @@ async def test_shared_session_coexistence_auditing():
             site_id="SITE-01",
             status="SCREENING",
         )
-        foreign_doc = DummyForeignSiblingModel(
-            title="External Protocol Doc"
-        )
+        foreign_doc = DummyForeignSiblingModel(title="External Protocol Doc")
 
         session.add(subj)
         session.add(foreign_doc)
@@ -96,7 +92,6 @@ async def test_abstract_consent_client_interface_and_graceful_network_failure():
 
     # Test custom mock implementation of IConsentVerificationClient
     class MockConsentVerificationClient(IConsentVerificationClient):
-
         async def get_subject_consent_status(
             self,
             subject_pseudonym: str,
@@ -117,6 +112,7 @@ async def test_abstract_consent_client_interface_and_graceful_network_failure():
         db_manager.init_db("sqlite+aiosqlite:///:memory:")
         async with db_manager.engine.begin() as conn:
             from apps.execution.database.models import Base
+
             await conn.run_sync(Base.metadata.create_all)
 
         async with db_manager.get_session_maker()() as session:

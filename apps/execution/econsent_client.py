@@ -160,4 +160,3 @@ async def fetch_subject_consent_status(
     """Convenience module helper to fetch canonical subject consent status."""
     client = get_consent_verification_client()
     return await client.get_subject_consent_status(subject_pseudonym, study_id)
-
