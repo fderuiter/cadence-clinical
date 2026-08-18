@@ -38,6 +38,12 @@ FALLBACK_TEMPLATES = {
         <p>Diary Name: {{ payload.diary_name }}</p>
         <p>Due Date: {{ payload.due_date }}</p>
     """,
+    "reconsent_required.html.j2": """
+        <h2>Protocol Amendment Re-Consent Required</h2>
+        <p>Study ID: {{ study_id }}</p>
+        <p>Protocol Version: {{ payload.protocol_version or payload.version_number or '2.0' }}</p>
+        <p>Change Summary: {{ payload.change_summary or payload.summary_of_changes or 'Protocol amendment updates' }}</p>
+    """,
 }
 
 
@@ -77,5 +83,7 @@ def get_template_name_for_event(event_type: str) -> str:
         "SAE_RECONCILIATION_FLAG": "sae_reconciliation.html.j2",
         "PROTOCOL_AMENDMENT_SUBMITTED": "protocol_amendment.html.j2",
         "MISSING_DIARY_ENTRY": "missing_diary_alert.html.j2",
+        "RECONSENT_REQUIRED": "reconsent_required.html.j2",
+        "PROTOCOL_AMENDMENT_RECONSENT": "reconsent_required.html.j2",
     }
     return mapping.get(event_type, "default_alert.html.j2")

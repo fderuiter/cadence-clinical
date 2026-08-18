@@ -136,6 +136,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-01: Cryptographic Signature Verification Engine for Part 11 eSignatures](2026-08-01-cryptographic-signature-verification-engine-for-esignatures.md)
 
 ### 3. Clinical Data Interoperability & Standards
+
 - [2026-08-17: Fast Version-Check with Immediate Quarantine and Client Alerting](2026-08-17-fast-version-check-with-immediate-quarantine-and-client-alerting.md)
 
 - [2026-08-14: Offline TypeScript Schema Generator using SQLModel Base Metadata](2026-08-14-offline-typescript-schema-generator-using-sqlmodel-base-metadata.md)
@@ -168,6 +169,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+
 - [2026-08-15: Comprehensive Clinical Issue and Operations Hub Architecture](2026-08-15-comprehensive-clinical-issue-and-operations-hub-architecture.md)
 
 - [2026-08-15: Comprehensive CTMS Modular Architecture and Ecosystem Synchronization](2026-08-15-comprehensive-ctms-modular-architecture-and-ecosystem-synchronization.md)
