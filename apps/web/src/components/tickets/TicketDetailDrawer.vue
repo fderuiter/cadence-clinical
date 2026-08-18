@@ -1,17 +1,33 @@
 <template>
   <div v-if="isOpen" class="drawer-backdrop" @click.self="close">
-    <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-ticket-title">
+    <div
+      class="drawer-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="drawer-ticket-title"
+    >
       <!-- Drawer Header -->
       <div class="drawer-header">
         <div class="drawer-header-meta">
-          <span class="ref-badge">{{ ticket.reference || `#${ticket.id?.substring(0, 8)}` }}</span>
-          <span class="badge" :class="`badge-cat-${ticket.category?.toLowerCase()}`">
+          <span class="ref-badge">{{
+            ticket.reference || `#${ticket.id?.substring(0, 8)}`
+          }}</span>
+          <span
+            class="badge"
+            :class="`badge-cat-${ticket.category?.toLowerCase()}`"
+          >
             {{ formatCategory(ticket.category) }}
           </span>
-          <span class="badge" :class="`badge-sev-${ticket.gxp_severity?.toLowerCase()}`">
+          <span
+            class="badge"
+            :class="`badge-sev-${ticket.gxp_severity?.toLowerCase()}`"
+          >
             {{ ticket.gxp_severity }}
           </span>
-          <span class="badge" :class="`badge-status-${ticket.status?.toLowerCase()}`">
+          <span
+            class="badge"
+            :class="`badge-status-${ticket.status?.toLowerCase()}`"
+          >
             {{ formatStatus(ticket.status) }}
           </span>
           <span v-if="ticket.signature_token" class="badge badge-signed">
@@ -19,19 +35,36 @@
           </span>
         </div>
 
-        <h2 id="drawer-ticket-title" class="drawer-title">{{ ticket.title }}</h2>
+        <h2 id="drawer-ticket-title" class="drawer-title">
+          {{ ticket.title }}
+        </h2>
 
-        <div v-if="ticket.sla_target_at" class="sla-banner" :class="slaBannerClass">
+        <div
+          v-if="ticket.sla_target_at"
+          class="sla-banner"
+          :class="slaBannerClass"
+        >
           <div class="sla-banner-left">
             <span class="sla-icon">{{ slaIcon }}</span>
             <span class="sla-text">{{ slaStatusText }}</span>
           </div>
           <div class="sla-progress-track">
-            <div class="sla-progress-fill" :style="{ width: `${Math.min(slaElapsedPercent, 100)}%` }" :class="slaProgressClass"></div>
+            <div
+              class="sla-progress-fill"
+              :style="{ width: `${Math.min(slaElapsedPercent, 100)}%` }"
+              :class="slaProgressClass"
+            ></div>
           </div>
         </div>
 
-        <button type="button" class="drawer-close" aria-label="Close" @click="close">✕</button>
+        <button
+          type="button"
+          class="drawer-close"
+          aria-label="Close"
+          @click="close"
+        >
+          ✕
+        </button>
       </div>
 
       <!-- Action Bar -->
@@ -62,7 +95,10 @@
             ⏸ Pause (Wait Sponsor)
           </button>
           <button
-            v-if="ticket.status === 'WAITING_ON_SITE' || ticket.status === 'WAITING_ON_SPONSOR'"
+            v-if="
+              ticket.status === 'WAITING_ON_SITE' ||
+              ticket.status === 'WAITING_ON_SPONSOR'
+            "
             class="btn btn-sm btn-primary"
             :disabled="actionLoading"
             @click="transitionTicket('IN_PROGRESS')"
@@ -70,7 +106,11 @@
             ▶ Resume Work
           </button>
           <button
-            v-if="ticket.status === 'IN_PROGRESS' || ticket.status === 'WAITING_ON_SITE' || ticket.status === 'WAITING_ON_SPONSOR'"
+            v-if="
+              ticket.status === 'IN_PROGRESS' ||
+              ticket.status === 'WAITING_ON_SITE' ||
+              ticket.status === 'WAITING_ON_SPONSOR'
+            "
             class="btn btn-sm btn-success"
             :disabled="actionLoading"
             @click="openResolveModal"
@@ -88,7 +128,12 @@
         </div>
 
         <button
-          v-if="!ticket.signature_token && (ticket.gxp_severity === 'CRITICAL' || ticket.gxp_severity === 'MAJOR' || ticket.status === 'RESOLVED')"
+          v-if="
+            !ticket.signature_token &&
+            (ticket.gxp_severity === 'CRITICAL' ||
+              ticket.gxp_severity === 'MAJOR' ||
+              ticket.status === 'RESOLVED')
+          "
           class="btn btn-sm btn-sign"
           @click="isSignModalOpen = true"
         >
@@ -161,7 +206,10 @@
               </div>
               <div class="meta-item">
                 <span class="meta-label">Priority</span>
-                <span class="meta-value priority-tag" :class="`priority-${ticket.priority?.toLowerCase()}`">
+                <span
+                  class="meta-value priority-tag"
+                  :class="`priority-${ticket.priority?.toLowerCase()}`"
+                >
                   {{ ticket.priority }}
                 </span>
               </div>
@@ -171,7 +219,9 @@
               </div>
               <div class="meta-item">
                 <span class="meta-label">Created At</span>
-                <span class="meta-value">{{ formatDate(ticket.created_at) }}</span>
+                <span class="meta-value">{{
+                  formatDate(ticket.created_at)
+                }}</span>
               </div>
             </div>
           </div>
@@ -184,16 +234,31 @@
             </div>
           </div>
 
-          <div v-if="ticket.root_cause_category || ticket.root_cause_summary" class="section-card rca-card">
+          <div
+            v-if="ticket.root_cause_category || ticket.root_cause_summary"
+            class="section-card rca-card"
+          >
             <h4 class="card-title">Root Cause Analysis (5-Whys)</h4>
-            <div class="rca-category-pill">Category: {{ formatRCA(ticket.root_cause_category) }}</div>
-            <div v-if="ticket.resolution_code" class="rca-category-pill">Resolution: {{ ticket.resolution_code }}</div>
+            <div class="rca-category-pill">
+              Category: {{ formatRCA(ticket.root_cause_category) }}
+            </div>
+            <div v-if="ticket.resolution_code" class="rca-category-pill">
+              Resolution: {{ ticket.resolution_code }}
+            </div>
             <p class="rca-summary">{{ ticket.root_cause_summary }}</p>
           </div>
 
-          <div v-if="ticket.context_payload && Object.keys(ticket.context_payload).length > 0" class="section-card">
+          <div
+            v-if="
+              ticket.context_payload &&
+              Object.keys(ticket.context_payload).length > 0
+            "
+            class="section-card"
+          >
             <h4 class="card-title">Structured Ingestion Payload</h4>
-            <pre class="json-viewer">{{ JSON.stringify(ticket.context_payload, null, 2) }}</pre>
+            <pre class="json-viewer">{{
+              JSON.stringify(ticket.context_payload, null, 2)
+            }}</pre>
           </div>
         </div>
 
@@ -228,12 +293,25 @@
               v-for="c in filteredComments"
               :key="c.id"
               class="comment-card"
-              :class="{ 'comment-internal': c.visibility === 'INTERNAL_SPONSOR' }"
+              :class="{
+                'comment-internal': c.visibility === 'INTERNAL_SPONSOR',
+              }"
             >
               <div class="comment-header">
                 <span class="comment-author">{{ c.user_id }}</span>
-                <span class="badge" :class="c.visibility === 'INTERNAL_SPONSOR' ? 'badge-internal' : 'badge-public'">
-                  {{ c.visibility === 'INTERNAL_SPONSOR' ? '🔒 Internal Note' : '🌐 Public' }}
+                <span
+                  class="badge"
+                  :class="
+                    c.visibility === 'INTERNAL_SPONSOR'
+                      ? 'badge-internal'
+                      : 'badge-public'
+                  "
+                >
+                  {{
+                    c.visibility === "INTERNAL_SPONSOR"
+                      ? "🔒 Internal Note"
+                      : "🌐 Public"
+                  }}
                 </span>
                 <span class="comment-time">{{ formatDate(c.created_at) }}</span>
               </div>
@@ -248,11 +326,19 @@
           <div class="new-comment-box">
             <div class="visibility-selector">
               <label class="radio-label">
-                <input v-model="newCommentVisibility" type="radio" value="PUBLIC" />
+                <input
+                  v-model="newCommentVisibility"
+                  type="radio"
+                  value="PUBLIC"
+                />
                 <span>🌐 Public (Site Visible)</span>
               </label>
               <label class="radio-label">
-                <input v-model="newCommentVisibility" type="radio" value="INTERNAL_SPONSOR" />
+                <input
+                  v-model="newCommentVisibility"
+                  type="radio"
+                  value="INTERNAL_SPONSOR"
+                />
                 <span>🔒 Internal Sponsor Note</span>
               </label>
             </div>
@@ -271,7 +357,11 @@
               />
               <button
                 class="btn btn-primary"
-                :disabled="!newCommentContent.trim() || !newCommentReason.trim() || commentSubmitting"
+                :disabled="
+                  !newCommentContent.trim() ||
+                  !newCommentReason.trim() ||
+                  commentSubmitting
+                "
                 @click="submitComment"
               >
                 Post Note
@@ -284,7 +374,10 @@
         <div v-if="activeTab === 'attachments'" class="tab-pane">
           <div class="attachment-upload-box">
             <h4 class="card-title">Upload Audited Evidence Blob</h4>
-            <p class="upload-hint">Upload logs, temperature traces, source certificates, or PDFs (21 CFR Part 11 &amp; DEID scanned).</p>
+            <p class="upload-hint">
+              Upload logs, temperature traces, source certificates, or PDFs (21
+              CFR Part 11 &amp; DEID scanned).
+            </p>
             <div class="upload-inputs">
               <input
                 ref="fileInput"
@@ -300,7 +393,9 @@
               />
               <button
                 class="btn btn-primary"
-                :disabled="!selectedFile || !attachmentReason.trim() || uploadSubmitting"
+                :disabled="
+                  !selectedFile || !attachmentReason.trim() || uploadSubmitting
+                "
                 @click="uploadAttachment"
               >
                 📎 Attach Evidence
@@ -309,21 +404,28 @@
           </div>
 
           <div class="attachments-list">
-            <div v-for="att in attachments" :key="att.id" class="attachment-card">
+            <div
+              v-for="att in attachments"
+              :key="att.id"
+              class="attachment-card"
+            >
               <div class="attachment-icon">📄</div>
               <div class="attachment-details">
                 <div class="attachment-filename">{{ att.filename }}</div>
                 <div class="attachment-meta">
-                  <span>{{ (att.file_size_bytes / 1024).toFixed(1) }} KB</span> •
-                  <span>Uploaded by {{ att.uploaded_by }}</span> •
+                  <span>{{ (att.file_size_bytes / 1024).toFixed(1) }} KB</span>
+                  • <span>Uploaded by {{ att.uploaded_by }}</span> •
                   <span>{{ formatDate(att.uploaded_at) }}</span>
                 </div>
                 <div class="sha-hash" :title="att.sha256_hash">
-                  SHA-256: <code>{{ att.sha256_hash?.substring(0, 16) }}...</code>
+                  SHA-256:
+                  <code>{{ att.sha256_hash?.substring(0, 16) }}...</code>
                 </div>
               </div>
               <div class="attachment-badges">
-                <span v-if="att.deid_scrubbed" class="badge badge-deid">🛡️ DEID Verified</span>
+                <span v-if="att.deid_scrubbed" class="badge badge-deid"
+                  >🛡️ DEID Verified</span
+                >
               </div>
             </div>
 
@@ -339,8 +441,12 @@
             <div class="sig-card-header">
               <span class="sig-seal-icon">🛡️</span>
               <div>
-                <h4 class="sig-card-title">Authoritative 21 CFR Part 11 Electronic Signature</h4>
-                <p class="sig-card-subtitle">Legally binding sign-off recorded in tamper-evident ledger</p>
+                <h4 class="sig-card-title">
+                  Authoritative 21 CFR Part 11 Electronic Signature
+                </h4>
+                <p class="sig-card-subtitle">
+                  Legally binding sign-off recorded in tamper-evident ledger
+                </p>
               </div>
             </div>
             <div class="sig-details-grid">
@@ -350,22 +456,34 @@
               </div>
               <div class="sig-item">
                 <span class="sig-label">Timestamp (UTC):</span>
-                <span class="sig-val">{{ formatDate(ticket.signature_timestamp) }}</span>
+                <span class="sig-val">{{
+                  formatDate(ticket.signature_timestamp)
+                }}</span>
               </div>
               <div class="sig-item full-width">
                 <span class="sig-label">Signature Meaning:</span>
-                <span class="sig-val meaning-val">{{ ticket.signature_meaning }}</span>
+                <span class="sig-val meaning-val">{{
+                  ticket.signature_meaning
+                }}</span>
               </div>
               <div class="sig-item full-width">
                 <span class="sig-label">Cryptographic Token:</span>
-                <span class="sig-val token-val"><code>{{ ticket.signature_token }}</code></span>
+                <span class="sig-val token-val"
+                  ><code>{{ ticket.signature_token }}</code></span
+                >
               </div>
             </div>
           </div>
 
           <div v-else class="empty-sig-box">
-            <p>No 21 CFR Part 11 electronic signature has been captured for this ticket.</p>
-            <button class="btn btn-primary btn-sign-action" @click="isSignModalOpen = true">
+            <p>
+              No 21 CFR Part 11 electronic signature has been captured for this
+              ticket.
+            </p>
+            <button
+              class="btn btn-primary btn-sign-action"
+              @click="isSignModalOpen = true"
+            >
               ✍️ Sign &amp; Authorize Ticket
             </button>
           </div>
@@ -380,7 +498,9 @@
                 <div class="audit-row-header">
                   <span class="audit-action">{{ log.action }}</span>
                   <span class="audit-user">{{ log.user_id }}</span>
-                  <span class="audit-time">{{ formatDate(log.timestamp) }}</span>
+                  <span class="audit-time">{{
+                    formatDate(log.timestamp)
+                  }}</span>
                 </div>
                 <div class="audit-reason">Reason: {{ log.change_reason }}</div>
               </div>
@@ -468,35 +588,42 @@ const slaElapsedPercent = computed(() => {
   const total = end - start;
   if (total <= 0) return 100;
   const now = Date.now();
-  const elapsed = now - start - (props.ticket.sla_total_paused_seconds || 0) * 1000;
+  const elapsed =
+    now - start - (props.ticket.sla_total_paused_seconds || 0) * 1000;
   return Math.max(0, Math.min(100, (elapsed / total) * 100));
 });
 
 const slaBannerClass = computed(() => {
   if (props.ticket.sla_breached) return "sla-breached";
-  if (props.ticket.sla_amber_warned || slaElapsedPercent.value >= 75) return "sla-warning";
+  if (props.ticket.sla_amber_warned || slaElapsedPercent.value >= 75)
+    return "sla-warning";
   if (props.ticket.status?.startsWith("WAITING_")) return "sla-paused";
   return "sla-normal";
 });
 
 const slaProgressClass = computed(() => {
   if (props.ticket.sla_breached) return "fill-breached";
-  if (props.ticket.sla_amber_warned || slaElapsedPercent.value >= 75) return "fill-warning";
+  if (props.ticket.sla_amber_warned || slaElapsedPercent.value >= 75)
+    return "fill-warning";
   if (props.ticket.status?.startsWith("WAITING_")) return "fill-paused";
   return "fill-normal";
 });
 
 const slaIcon = computed(() => {
   if (props.ticket.sla_breached) return "🚨";
-  if (props.ticket.sla_amber_warned || slaElapsedPercent.value >= 75) return "⚠️";
+  if (props.ticket.sla_amber_warned || slaElapsedPercent.value >= 75)
+    return "⚠️";
   if (props.ticket.status?.startsWith("WAITING_")) return "⏸";
   return "⏱";
 });
 
 const slaStatusText = computed(() => {
-  if (props.ticket.sla_breached) return "SLA Breached - Escalated to Lead CRA & QA";
-  if (props.ticket.status?.startsWith("WAITING_")) return "SLA Paused (Waiting on Response)";
-  if (props.ticket.sla_amber_warned || slaElapsedPercent.value >= 75) return "SLA Warning (>75% Elapsed)";
+  if (props.ticket.sla_breached)
+    return "SLA Breached - Escalated to Lead CRA & QA";
+  if (props.ticket.status?.startsWith("WAITING_"))
+    return "SLA Paused (Waiting on Response)";
+  if (props.ticket.sla_amber_warned || slaElapsedPercent.value >= 75)
+    return "SLA Warning (>75% Elapsed)";
   return "SLA Active & Compliant";
 });
 
@@ -540,9 +667,11 @@ const openResolveModal = () => {
     ticketId: props.ticket.id,
     newStatus: "RESOLVED",
     root_cause_category: "PROCESS_WORKFLOW_DEFICIT",
-    root_cause_summary: "Clinical team addressed protocol checklist with site coordinator.",
+    root_cause_summary:
+      "Clinical team addressed protocol checklist with site coordinator.",
     resolution_code: "CORRECTIVE_ACTION_IMPLEMENTED",
-    reason_for_change: "Resolving ticket following comprehensive clinical assessment.",
+    reason_for_change:
+      "Resolving ticket following comprehensive clinical assessment.",
   });
 };
 
@@ -673,7 +802,8 @@ const onTicketSigned = (sigPayload) => {
   color: #ffffff;
 }
 
-.badge-status-waiting_on_site, .badge-status-waiting_on_sponsor {
+.badge-status-waiting_on_site,
+.badge-status-waiting_on_sponsor {
   background: #f59e0b;
   color: #0f172a;
 }
@@ -766,10 +896,18 @@ const onTicketSigned = (sigPayload) => {
   transition: width 0.3s ease;
 }
 
-.fill-normal { background: #38bdf8; }
-.fill-warning { background: #f59e0b; }
-.fill-breached { background: #ef4444; }
-.fill-paused { background: #94a3b8; }
+.fill-normal {
+  background: #38bdf8;
+}
+.fill-warning {
+  background: #f59e0b;
+}
+.fill-breached {
+  background: #ef4444;
+}
+.fill-paused {
+  background: #94a3b8;
+}
 
 .drawer-actions {
   display: flex;
@@ -1182,7 +1320,7 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .audit-timeline::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 10px;
   left: 6px;
@@ -1268,17 +1406,48 @@ const onTicketSigned = (sigPayload) => {
   font-size: 0.78rem;
 }
 
-.btn-primary { background: #2563eb; color: #ffffff; }
-.btn-primary:hover:not(:disabled) { background: #1d4ed8; }
-.btn-secondary { background: #ffffff; border-color: #cbd5e1; color: #475569; }
-.btn-secondary:hover:not(:disabled) { background: #f1f5f9; color: #0f172a; }
-.btn-warning { background: #f59e0b; color: #ffffff; }
-.btn-warning:hover:not(:disabled) { background: #d97706; }
-.btn-success { background: #10b981; color: #ffffff; }
-.btn-success:hover:not(:disabled) { background: #059669; }
-.btn-sign { background: #059669; color: #ffffff; font-weight: 700; }
-.btn-sign:hover:not(:disabled) { background: #047857; }
-.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-primary {
+  background: #2563eb;
+  color: #ffffff;
+}
+.btn-primary:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+.btn-secondary {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+.btn-secondary:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+.btn-warning {
+  background: #f59e0b;
+  color: #ffffff;
+}
+.btn-warning:hover:not(:disabled) {
+  background: #d97706;
+}
+.btn-success {
+  background: #10b981;
+  color: #ffffff;
+}
+.btn-success:hover:not(:disabled) {
+  background: #059669;
+}
+.btn-sign {
+  background: #059669;
+  color: #ffffff;
+  font-weight: 700;
+}
+.btn-sign:hover:not(:disabled) {
+  background: #047857;
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 .form-control {
   padding: 6px 10px;

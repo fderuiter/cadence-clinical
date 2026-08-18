@@ -318,6 +318,11 @@ def main() -> None:
                                     "apps/designer/src/domain/usdm_ingestion.py",
                                 },
                                 {
+                                    "apps/web/src/composables/useSchemaIngestion.js",
+                                    "apps/web/src/composables/usePiSignoff.js",
+                                    "apps/web/src/views/EcrfView.vue",
+                                },
+                                {
                                     "apps/ctms/services/doa_service.py",
                                     "apps/econsent/services/econsent_service.py",
                                     "apps/notifications/workers/notification_worker.py",

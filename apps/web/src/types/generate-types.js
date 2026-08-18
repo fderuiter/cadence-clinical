@@ -113,4 +113,3 @@ function generate() {
 generate();
 
 export { translateProperty, generate };
-

@@ -1,0 +1,3 @@
+# Keep generated TypeScript schema pristine
+src/types/db_schemas.ts
+**/db_schemas.ts
