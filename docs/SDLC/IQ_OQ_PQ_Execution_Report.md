@@ -10,11 +10,11 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2727
-- **Passed:** 2708 🟢
+- **Total Automated Test Cases Run:** 2736
+- **Passed:** 2717 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
-- **Overall Operational Pass Rate:** 99.30%
+- **Overall Operational Pass Rate:** 99.31%
 
 ## 2. Installation Qualification (IQ)
 
@@ -1757,6 +1757,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_gateway_bearer_only_subject_routing_and_header_enforcement`                       | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_gateway_comprehensive_scope_spoofing_prevention`                                  | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_gateway_cors_headers`                                                             | `apps.gateway.tests.test_gateway`                                           | PRD-UNI-001                                                                        | 🟢 PASSED  | < 1s     |
+| `test_gateway_local_secret_bypasses_audience_check`                                     | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_gateway_notifications_header_enforcement_and_spoofing_prevention`                 | `apps.gateway.tests.test_gateway`                                           | PRD-SYS-004                                                                        | 🟢 PASSED  | < 1s     |
 | `test_gateway_proxy_eisf_headers_propagation`                                           | `apps.gateway.tests.test_gateway`                                           | Trace-18                                                                           | 🟢 PASSED  | < 1s     |
 | `test_gateway_rate_limiting`                                                            | `apps.gateway.tests.test_gateway`                                           | PRD-UNI-001                                                                        | 🟢 PASSED  | < 1s     |
@@ -1769,14 +1770,22 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_gateway_startup_production_with_skip_jwks`                                        | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_gateway_startup_production_with_test_secret`                                      | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_gateway_startup_production_with_unverified_jwt`                                   | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_gateway_startup_staging_fails_with_bypass_configs`                                | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_gateway_subject_role_routing_restrictions`                                        | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_gateway_tenant_claim_extraction`                                                  | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_gateway_tenant_spoofing_prevention`                                               | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_gateway_test_secret_bypasses_audience_check`                                      | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_gateway_unauthorized_client_token_returns_401`                                    | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_generate_signature`                                                               | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_generate_signature_v2`                                                            | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_get_openapi_json`                                                                 | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_get_openapi_json_error`                                                           | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_get_swagger_ui`                                                                   | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_keycloak_token_missing_audience`                                                  | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_keycloak_token_unauthorized_audience_array`                                       | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_keycloak_token_unauthorized_audience_string`                                      | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_keycloak_token_valid_audience_array`                                              | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_keycloak_token_valid_audience_string`                                             | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_proxy_requests_change_reason_too_long`                                            | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_proxy_requests_invalid_auth`                                                      | `apps.gateway.tests.test_gateway`                                           | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_proxy_requests_no_auth`                                                           | `apps.gateway.tests.test_gateway`                                           | PRD-UNI-001                                                                        | 🟢 PASSED  | < 1s     |

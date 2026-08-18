@@ -417,7 +417,7 @@ async def verify_token(token: str) -> dict[str, Any]:
                 options={"verify_aud": False},
             )
         except JWTError:
-            raise HTTPException(status_code=401, detail="Invalid token")
+            pass
 
     try:
         unverified_header = jwt.get_unverified_header(token)
@@ -479,12 +479,26 @@ async def verify_token(token: str) -> dict[str, Any]:
                 break
 
         if rsa_key:
-            return jwt.decode(
+            client_id = os.getenv("KEYCLOAK_CLIENT_ID", KEYCLOAK_CLIENT_ID)
+            payload = jwt.decode(
                 token,
                 rsa_key,
                 algorithms=[JWT_ALGORITHM],
-                options={"verify_aud": False},
+                audience=client_id,
+                options={"verify_aud": True},
             )
+            aud = payload.get("aud")
+            if isinstance(aud, str):
+                aud_match = aud == client_id
+            elif isinstance(aud, (list, tuple, set)):
+                aud_match = client_id in aud
+            else:
+                aud_match = False
+
+            if not aud_match:
+                raise HTTPException(status_code=401, detail="Invalid token audience")
+
+            return payload
 
         # Fallback if ALLOW_UNVERIFIED_JWT_FOR_TEST is set
         if os.getenv("ALLOW_UNVERIFIED_JWT_FOR_TEST"):
