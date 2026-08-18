@@ -315,6 +315,3 @@ async def test_failure_recovery_high_availability():
     results = batch_flush_with_resolution(offline_sync_queue, ["sub_1"])
     assert len(results) == 2
     assert "resolved_sub_1" in results
-
-
-

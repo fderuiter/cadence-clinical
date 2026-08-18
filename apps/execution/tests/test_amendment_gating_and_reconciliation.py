@@ -16,6 +16,8 @@ from sqlalchemy import select, text
 from apps.execution.database.core import db_manager as exec_db_manager
 from apps.execution.database.models import (
     Base as ExecBase,
+)
+from apps.execution.database.models import (
     ClinicalObservation,
     MigrationRule,
     SubjectConsent,

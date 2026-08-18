@@ -1,6 +1,3 @@
-import pytest
-
-
 def test_crf_authoring_global_library_instantiation():
     """
     Verify that the layout designer allows loading, referencing, and instantiating
@@ -187,6 +184,3 @@ def test_failure_recovery_and_high_availability():
     assert network_online is False
     indexed_db_cache = {"unsynced_draft_1": "payload_data"}
     assert indexed_db_cache["unsynced_draft_1"] is not None
-
-
-

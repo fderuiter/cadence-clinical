@@ -1,6 +1,5 @@
 import json
 
-import pytest
 import yaml
 from fastapi.testclient import TestClient
 

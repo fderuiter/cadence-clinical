@@ -6,9 +6,9 @@ Requirements: PRD-SYS-001
 from fastapi.testclient import TestClient
 
 import packages  # noqa: F401
-from apps.execution.tests.test_lock_router import _make_auth_headers
 from apps.execution.main import app
 from apps.execution.services.subject_migration import LiveSubjectMigrationEngine
+from apps.execution.tests.test_lock_router import _make_auth_headers
 
 client = TestClient(app)
 

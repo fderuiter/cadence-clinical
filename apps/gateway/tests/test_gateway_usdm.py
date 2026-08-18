@@ -105,8 +105,10 @@ def test_gateway_usdm_unauthenticated_returns_401(
 def test_gateway_proxying_v2_studies(monkeypatch: pytest.MonkeyPatch):
     """Verify that the Gateway router proxies /api/v2/studies correctly."""
     import time
+
     import httpx
     from jose import jwt
+
     from apps.gateway.main import app as gateway_app
 
     sent_request_url = None
@@ -133,4 +135,3 @@ def test_gateway_proxying_v2_studies(monkeypatch: pytest.MonkeyPatch):
         )
         assert response.status_code == 200
         assert sent_request_url == "http://localhost:8001/api/v2/studies/study_1/usdm"
-

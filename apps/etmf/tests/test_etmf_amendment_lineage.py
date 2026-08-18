@@ -12,7 +12,8 @@ from sqlalchemy import select
 
 from apps.etmf.database import db_manager as etmf_db_manager
 from apps.etmf.main import app as etmf_app
-from apps.etmf.models import Base as EtmfBase, DocumentQCTransition
+from apps.etmf.models import Base as EtmfBase
+from apps.etmf.models import DocumentQCTransition
 from packages.testing.security import generate_signature
 
 

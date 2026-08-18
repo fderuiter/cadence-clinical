@@ -13,10 +13,10 @@ from apps.execution.database.models import (
     SubjectRandomization,
 )
 from apps.execution.main import app as exec_app
-from packages.testing.security import generate_signature
 from packages.security import TrialRole, check_trial_role, enforce_site_isolation
 from packages.security.audit_logger import audit_logger_engine
 from packages.security.rbac import Principal
+from packages.testing.security import generate_signature
 
 
 @pytest_asyncio.fixture(autouse=True)
