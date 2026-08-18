@@ -1,5 +1,5 @@
 // Auto-generated from OpenAPI schema definition
-// Generated on: 2026-08-15T13:49:49.705Z
+// Generated on: 2026-08-18T02:55:34.745Z
 
 export interface ActivityAssignmentRequest {
   visit_id: string;
@@ -430,12 +430,7 @@ export interface ExtractedActivity {
 
 export interface ExtractedArm {
   name: string;
-  arm_type:
-    | "EXPERIMENTAL"
-    | "ACTIVE_COMPARATOR"
-    | "PLACEBO_COMPARATOR"
-    | "SHAM_COMPARATOR"
-    | "NO_INTERVENTION";
+  arm_type: "EXPERIMENTAL" | "ACTIVE_COMPARATOR" | "PLACEBO_COMPARATOR" | "SHAM_COMPARATOR" | "NO_INTERVENTION";
   description?: string | null;
   target_sample_size?: number | null;
 }
@@ -568,11 +563,7 @@ export interface LibraryObjectAmendRequest {
 
 export interface LibraryObjectListResponse {
   object?: string;
-  data:
-    | FormLibraryObjectDetail
-    | DataElementLibraryObjectDetail
-    | ArmLibraryObjectDetail
-    | VisitLibraryObjectDetail[];
+  data: FormLibraryObjectDetail | DataElementLibraryObjectDetail | ArmLibraryObjectDetail | VisitLibraryObjectDetail[];
   has_more: boolean;
   next_cursor?: string | null;
 }
@@ -582,8 +573,7 @@ export interface LibraryObjectTransitionRequest {
   change_reason: string;
 }
 
-export type LibraryStatus =
-  "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED" | "ARCHIVED" | "REJECTED";
+export type LibraryStatus = "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED" | "ARCHIVED" | "REJECTED";
 
 export interface LinkArmApplicabilityRequest {
   arm_id: string;
@@ -656,6 +646,19 @@ export interface ProtocolQualityScore {
   feasibility?: FeasibilityReport | null;
 }
 
+export interface PublishStudyVersionRequest {
+  description?: string | null;
+  baseline_snapshot?: Record<string, any> | null;
+  amended_snapshot?: Record<string, any> | null;
+}
+
+export interface PublishStudyVersionResponse {
+  status: string;
+  version_id: string;
+  amendment_id?: string | null;
+  summary_of_changes?: string | null;
+}
+
 export interface QualityRuleFinding {
   rule_id: string;
   severity: string;
@@ -711,20 +714,7 @@ export interface SectionTransitionRequest {
   signing_reason?: SigningReason | null;
 }
 
-export type SigningReason =
-  | "AUTHOR"
-  | "REVIEW"
-  | "APPROVAL"
-  | "SPONSOR_APPROVAL"
-  | "INVESTIGATOR_SIGNATURE"
-  | "TECHNICAL_QC"
-  | "CLINICAL_QC"
-  | "DATA_LOCK"
-  | "SYSTEM_SEAL"
-  | "PROTOCOL_APPROVAL"
-  | "REGULATORY_FORM_SIGNATURE"
-  | "TRAINING_ACKNOWLEDGEMENT"
-  | "SITE_VISIT_SIGN_OFF";
+export type SigningReason = "AUTHOR" | "REVIEW" | "APPROVAL" | "SPONSOR_APPROVAL" | "INVESTIGATOR_SIGNATURE" | "TECHNICAL_QC" | "CLINICAL_QC" | "DATA_LOCK" | "SYSTEM_SEAL" | "PROTOCOL_APPROVAL" | "REGULATORY_FORM_SIGNATURE" | "TRAINING_ACKNOWLEDGEMENT" | "SITE_VISIT_SIGN_OFF";
 
 export interface SoACellView {
   activity_id: string;
@@ -873,8 +863,7 @@ export interface TerminologyConcept {
   valid: boolean;
 }
 
-export type TerminologyEnum =
-  "SNOMED-CT" | "LOINC" | "MedDRA" | "WHODrug" | "NCI" | "CDISC-CT";
+export type TerminologyEnum = "SNOMED-CT" | "LOINC" | "MedDRA" | "WHODrug" | "NCI" | "CDISC-CT";
 
 export interface TerminologySearchResponse {
   query: string;
@@ -1069,3 +1058,4 @@ export interface apps__designer__library__UpdateVisitRequest {
   object_type?: string;
   payload: VisitPayload;
 }
+
