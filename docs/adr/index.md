@@ -357,3 +357,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-11: Site Compliance Cache and Transition Gating](2026-09-11-site-compliance-cache-and-transition-gating.md)
 - [2026-08-13: ADR-[NUMBER]: Port Contract Compliance & Backend Static Verification](2026-08-13-port-contract-compliance-and-backend-static-verification.md)
 - [2026-08-17: Unified Database Schema Introspection and Automated Type Synchronization Gating](2026-08-17-unified-database-introspection-and-type-gating.md)
+- [2026-08-18: Audit Auto-Populated Translation Fallbacks and Propagate Warnings Metadata](2026-08-18-audit-translation-fallbacks-and-warnings-metadata.md)
