@@ -38,7 +38,9 @@ async def setup_tickets_db():
 
 def create_sig_token(user_id: str) -> str:
     """Helper to generate a valid Part 11 JWT re-authentication signature token."""
-    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+    secret = os.getenv(
+        "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    )  # pragma: allowlist secret
     payload = {
         "sub": user_id,
         "exp": time.time() + 300,

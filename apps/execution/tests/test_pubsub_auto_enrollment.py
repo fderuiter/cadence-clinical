@@ -32,7 +32,9 @@ from apps.execution.database.models.compliance import SiteComplianceCache
 from apps.execution.main import app
 from apps.execution.workers.consent_subscriber import handle_consent_completed_message
 
-GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+GATEWAY_SECRET = os.getenv(
+    "GATEWAY_SECRET", "internal-gateway-secret-12345"
+)  # pragma: allowlist secret
 
 
 def get_auth_headers(
