@@ -23,11 +23,12 @@ from fastapi import (
 )
 from pydantic import ValidationError
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.execution.adapters.repositories import get_execution_db_session
 from apps.execution.coding.importer import process_dictionary_import
 from apps.execution.coding.parsers import MedDRAParser, WHODrugParser
 from apps.execution.database.context import current_change_reason, current_user_id
-from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
     DictionaryImportJob,
     ImportState,
@@ -121,6 +122,7 @@ async def import_dictionary(
     files: UploadFile = File(...),
     parse_multilingual: bool = Form(True),
     roles: list[str] = Depends(require_roles("TERMINOLOGY_MANAGER", "SYSTEM_ADMIN")),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> JobStatusResponse:
     """Imports raw dictionary files and schedules a background parsing task."""
     try:
@@ -172,7 +174,7 @@ async def import_dictionary(
     db_type = DBDictionaryType[dictionary_type.value]
 
     # 3. Create the initial DictionaryImportJob record in PENDING status
-    async with db_manager.get_session_maker()() as session, session.begin():
+    async with session.begin():
         job = DictionaryImportJob(
             dictionary_type=db_type,
             dictionary_version=version,
@@ -190,6 +192,8 @@ async def import_dictionary(
     # 4. Schedule the background parsing task
     user_id = current_user_id.get()
     change_reason = current_change_reason.get()
+
+    from apps.execution.database.core import db_manager
 
     background_tasks.add_task(
         process_dictionary_import,
@@ -218,28 +222,28 @@ async def import_dictionary(
 async def get_dictionary_import_job(
     job_id: str,
     roles: list[str] = Depends(require_roles("TERMINOLOGY_MANAGER", "SYSTEM_ADMIN")),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> JobStatusResponse:
     """Query the execution status, progress, and import counts of a dictionary import job by ID."""
-    async with db_manager.get_session_maker()() as session:
-        stmt = select(DictionaryImportJob).where(DictionaryImportJob.id == job_id)
-        res = await session.execute(stmt)
-        job = res.scalars().first()
-        if not job:
-            raise HTTPException(
-                status_code=404, detail="Dictionary import job not found"
-            )
-
-        return JobStatusResponse(
-            job_id=job.id,
-            dictionary_type=job.dictionary_type.value,
-            version=job.dictionary_version,
-            status=JobStatusEnum(job.status.value),
-            started_at=job.started_at,
-            completed_at=job.completed_at,
-            progress_percentage=job.progress_percentage,
-            records_imported=job.records_imported,
-            errors_encountered=job.errors_encountered,
+    stmt = select(DictionaryImportJob).where(DictionaryImportJob.id == job_id)
+    res = await session.execute(stmt)
+    job = res.scalars().first()
+    if not job:
+        raise HTTPException(
+            status_code=404, detail="Dictionary import job not found"
         )
+
+    return JobStatusResponse(
+        job_id=job.id,
+        dictionary_type=job.dictionary_type.value,
+        version=job.dictionary_version,
+        status=JobStatusEnum(job.status.value),
+        started_at=job.started_at,
+        completed_at=job.completed_at,
+        progress_percentage=job.progress_percentage,
+        records_imported=job.records_imported,
+        errors_encountered=job.errors_encountered,
+    )
 
 
 @router.get("/api/v1/dictionaries/meddra/code", response_model=MedDRACodingResult)
@@ -248,21 +252,21 @@ async def get_meddra_code(
     version: str | None = Query("26.0"),
     target_level: MedDRATargetLevelEnum | None = Query(MedDRATargetLevelEnum.LLT),
     roles: list[str] = Depends(get_normalized_roles),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> MedDRACodingResult:
     """Performs coding or interactive auto-complete lookup on adverse events using version-aware matcher."""
     from apps.execution.coding import search_dictionary
 
-    async with db_manager.get_session_maker()() as session:
-        try:
-            return await search_dictionary(
-                session=session,
-                term=term,
-                dictionary_type="MEDDRA",
-                version=version,
-                target_level=target_level.value if target_level else None,
-            )
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+    try:
+        return await search_dictionary(
+            session=session,
+            term=term,
+            dictionary_type="MEDDRA",
+            version=version,
+            target_level=target_level.value if target_level else None,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/api/v1/dictionaries/whodrug/code", response_model=WHODrugCodingResult)
@@ -270,20 +274,20 @@ async def get_whodrug_code(
     term: str,
     version: str,
     roles: list[str] = Depends(get_normalized_roles),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> WHODrugCodingResult:
     """Performs coding or interactive lookup on WHODrug database using version-aware matcher."""
     from apps.execution.coding import search_dictionary
 
-    async with db_manager.get_session_maker()() as session:
-        try:
-            return await search_dictionary(
-                session=session,
-                term=term,
-                dictionary_type="WHODRUG",
-                version=version,
-            )
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+    try:
+        return await search_dictionary(
+            session=session,
+            term=term,
+            dictionary_type="WHODRUG",
+            version=version,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post(
@@ -319,11 +323,12 @@ async def post_impact_analysis(
             "data manager", "sponsor_dm", "TERMINOLOGY_MANAGER", "SYSTEM_ADMIN"
         )
     ),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> ImpactAnalysisResponse:
     """Manually triggers up-versioning impact analysis on existing coded assignments."""
     from apps.execution.coding import trigger_impact_analysis
 
-    async with db_manager.get_session_maker()() as session, session.begin():
+    async with session.begin():
         try:
             metrics_dict = await trigger_impact_analysis(
                 session=session,
@@ -359,59 +364,22 @@ async def list_coding_assignments(
     verbatim_text: str | None = None,
     dictionary_type: str | None = None,
     roles: list[str] = Depends(get_normalized_roles),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> list[CodingAssignmentResponse]:
     """Lists and filters medical coding assignments."""
     from apps.execution.coding import (
         list_coding_assignments as list_assignments_service,
     )
 
-    async with db_manager.get_session_maker()() as session:
-        assignments = await list_assignments_service(
-            session=session,
-            observation_id=observation_id,
-            status=status,
-            verbatim_text=verbatim_text,
-            dictionary_type=dictionary_type,
-        )
-        return [
-            CodingAssignmentResponse(
-                id=a.id,
-                verbatim_text=a.verbatim_text,
-                source_field=a.source_field,
-                observation_id=a.observation_id,
-                dictionary_type=a.dictionary_type.value,
-                dictionary_version=a.dictionary_version,
-                coded_code=a.coded_code,
-                coded_term=a.coded_term,
-                status=a.status.value,
-                recoding_status=a.recoding_status.value,
-                assigned_by=a.assigned_by,
-                assigned_at=a.assigned_at,
-                score=a.score,
-                hierarchy=a.hierarchy,
-                suggestions=a.suggestions,
-                domain=a.domain,
-                version=a.version,
-                is_deleted=a.is_deleted,
-            )
-            for a in assignments
-        ]
-
-
-@router.get(
-    "/api/v1/execution/coding/assignments/{assignment_id}",
-    response_model=CodingAssignmentResponse,
-)
-async def get_coding_assignment(
-    assignment_id: str,
-    roles: list[str] = Depends(get_normalized_roles),
-) -> CodingAssignmentResponse:
-    """Retrieves a single medical coding assignment by ID."""
-    from apps.execution.coding import get_coding_assignment as get_assignment_service
-
-    async with db_manager.get_session_maker()() as session:
-        a = await get_assignment_service(session=session, assignment_id=assignment_id)
-        return CodingAssignmentResponse(
+    assignments = await list_assignments_service(
+        session=session,
+        observation_id=observation_id,
+        status=status,
+        verbatim_text=verbatim_text,
+        dictionary_type=dictionary_type,
+    )
+    return [
+        CodingAssignmentResponse(
             id=a.id,
             verbatim_text=a.verbatim_text,
             source_field=a.source_field,
@@ -431,6 +399,43 @@ async def get_coding_assignment(
             version=a.version,
             is_deleted=a.is_deleted,
         )
+        for a in assignments
+    ]
+
+
+@router.get(
+    "/api/v1/execution/coding/assignments/{assignment_id}",
+    response_model=CodingAssignmentResponse,
+)
+async def get_coding_assignment(
+    assignment_id: str,
+    roles: list[str] = Depends(get_normalized_roles),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> CodingAssignmentResponse:
+    """Retrieves a single medical coding assignment by ID."""
+    from apps.execution.coding import get_coding_assignment as get_assignment_service
+
+    a = await get_assignment_service(session=session, assignment_id=assignment_id)
+    return CodingAssignmentResponse(
+        id=a.id,
+        verbatim_text=a.verbatim_text,
+        source_field=a.source_field,
+        observation_id=a.observation_id,
+        dictionary_type=a.dictionary_type.value,
+        dictionary_version=a.dictionary_version,
+        coded_code=a.coded_code,
+        coded_term=a.coded_term,
+        status=a.status.value,
+        recoding_status=a.recoding_status.value,
+        assigned_by=a.assigned_by,
+        assigned_at=a.assigned_at,
+        score=a.score,
+        hierarchy=a.hierarchy,
+        suggestions=a.suggestions,
+        domain=a.domain,
+        version=a.version,
+        is_deleted=a.is_deleted,
+    )
 
 
 @router.post(
@@ -442,46 +447,46 @@ async def process_coding_action(
     request: Request,
     payload: CoderActionRequest,
     roles: list[str] = Depends(require_roles("data manager")),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> CodingAssignmentResponse:
     """Accepts a suggestion or submits a manual override, persisting results and updating the ledger."""
     from apps.execution.coding import process_coding_action as process_action_service
 
     actor = current_user_id.get() or "system"
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            try:
-                as_db = await process_action_service(
-                    session=session,
-                    assignment_id=assignment_id,
-                    action=payload.action,
-                    code=payload.code,
-                    term=payload.term,
-                    suggestion_index=payload.suggestion_index,
-                    reason_for_change=payload.reason_for_change,
-                    actor=actor,
-                )
-            except ValueError as e:
-                raise HTTPException(status_code=400, detail=str(e))
-        return CodingAssignmentResponse(
-            id=as_db.id,
-            verbatim_text=as_db.verbatim_text,
-            source_field=as_db.source_field,
-            observation_id=as_db.observation_id,
-            dictionary_type=as_db.dictionary_type.value,
-            dictionary_version=as_db.dictionary_version,
-            coded_code=as_db.coded_code,
-            coded_term=as_db.coded_term,
-            status=as_db.status.value,
-            recoding_status=as_db.recoding_status.value,
-            assigned_by=as_db.assigned_by,
-            assigned_at=as_db.assigned_at,
-            score=as_db.score,
-            hierarchy=as_db.hierarchy,
-            suggestions=as_db.suggestions,
-            domain=as_db.domain,
-            version=as_db.version,
-            is_deleted=as_db.is_deleted,
-        )
+    async with session.begin():
+        try:
+            as_db = await process_action_service(
+                session=session,
+                assignment_id=assignment_id,
+                action=payload.action,
+                code=payload.code,
+                term=payload.term,
+                suggestion_index=payload.suggestion_index,
+                reason_for_change=payload.reason_for_change,
+                actor=actor,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    return CodingAssignmentResponse(
+        id=as_db.id,
+        verbatim_text=as_db.verbatim_text,
+        source_field=as_db.source_field,
+        observation_id=as_db.observation_id,
+        dictionary_type=as_db.dictionary_type.value,
+        dictionary_version=as_db.dictionary_version,
+        coded_code=as_db.coded_code,
+        coded_term=as_db.coded_term,
+        status=as_db.status.value,
+        recoding_status=as_db.recoding_status.value,
+        assigned_by=as_db.assigned_by,
+        assigned_at=as_db.assigned_at,
+        score=as_db.score,
+        hierarchy=as_db.hierarchy,
+        suggestions=as_db.suggestions,
+        domain=as_db.domain,
+        version=as_db.version,
+        is_deleted=as_db.is_deleted,
+    )
 
 
 @router.post(
@@ -496,12 +501,13 @@ async def process_coding_action(
 async def post_batch_assign(
     payload: BatchAssignRequest,
     roles: list[str] = Depends(get_normalized_roles),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> BatchAssignResponse:
     """Performs batch medical coding assignment across multiple assignments with GxP audit logging."""
     from apps.execution.coding import batch_assign_codes
 
     actor = current_user_id.get() or "system"
-    async with db_manager.get_session_maker()() as session, session.begin():
+    async with session.begin():
         items_payload = (
             [it.model_dump() for it in payload.items] if payload.items else None
         )
@@ -537,12 +543,13 @@ async def post_raise_coding_query(
     assignment_id: str,
     payload: RaiseQueryRequest,
     roles: list[str] = Depends(get_normalized_roles),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> RaiseQueryResponse:
     """Escalates a coding discrepancy into a ClinicalQuery on the associated observation/eCRF record."""
     from apps.execution.coding import raise_coding_query as raise_query_service
 
     actor = current_user_id.get() or "system"
-    async with db_manager.get_session_maker()() as session, session.begin():
+    async with session.begin():
         try:
             res = await raise_query_service(
                 session=session,
@@ -571,6 +578,7 @@ async def get_coding_queue(
     verbatim_text: str | None = None,
     dictionary_type: str | None = None,
     roles: list[str] = Depends(get_normalized_roles),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> list[CodingAssignmentResponse]:
     """Retrieves the active coding queue."""
     return await list_coding_assignments(
@@ -579,4 +587,5 @@ async def get_coding_queue(
         verbatim_text=verbatim_text,
         dictionary_type=dictionary_type,
         roles=roles,
+        session=session,
     )

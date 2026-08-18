@@ -10,9 +10,10 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import packages  # noqa: F401
-from apps.execution.database.core import db_manager
+from apps.execution.adapters.repositories import get_execution_db_session
 from apps.execution.database.models import ClinicalSubject, SubjectConsent
 from apps.execution.services.amendment_diff import StudyVersionDiffEngine
 from apps.execution.subject_lifecycle import (
@@ -94,6 +95,7 @@ _AMENDMENT_STORE: dict[str, dict] = {}
 async def publish_amendment_endpoint(
     payload: PublishAmendmentRequest,
     current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> PublishAmendmentResponse:
     """Publish protocol amendment version and compute structural summary of changes.
 
@@ -124,57 +126,55 @@ async def publish_amendment_endpoint(
     _AMENDMENT_STORE[key] = record
 
     # Set re-consent requirements and dispatch immediate email notifications to active subjects
-    if db_manager.session_maker:
-        async with db_manager.get_session_maker()() as session:
-            stmt = select(ClinicalSubject).where(
-                ClinicalSubject.study_id == payload.study_id,
-                ClinicalSubject.is_deleted.is_(False),
+    stmt = select(ClinicalSubject).where(
+        ClinicalSubject.study_id == payload.study_id,
+        ClinicalSubject.is_deleted.is_(False),
+    )
+    res = await session.execute(stmt)
+    subjects = res.scalars().all()
+
+    impacted_subject_ids = []
+    for sub in subjects:
+        sub_id = sub.subject_id or sub.id
+        if sub.status not in ("COMPLETED", "WITHDRAWN", "SCREEN_FAILED"):
+            impacted_subject_ids.append(sub_id)
+
+            # Set pending consent requirement flag
+            stmt_c = select(SubjectConsent).where(
+                SubjectConsent.subject_id == sub_id,
+                SubjectConsent.study_id == payload.study_id,
+                SubjectConsent.is_deleted.is_(False),
             )
-            res = await session.execute(stmt)
-            subjects = res.scalars().all()
+            c_res = await session.execute(stmt_c)
+            consents = c_res.scalars().all()
+            for c in consents:
+                c.requires_reconsent = True
 
-            impacted_subject_ids = []
-            for sub in subjects:
-                sub_id = sub.subject_id or sub.id
-                if sub.status not in ("COMPLETED", "WITHDRAWN", "SCREEN_FAILED"):
-                    impacted_subject_ids.append(sub_id)
+    await session.commit()
 
-                    # Set pending consent requirement flag
-                    stmt_c = select(SubjectConsent).where(
-                        SubjectConsent.subject_id == sub_id,
-                        SubjectConsent.study_id == payload.study_id,
-                        SubjectConsent.is_deleted.is_(False),
-                    )
-                    c_res = await session.execute(stmt_c)
-                    consents = c_res.scalars().all()
-                    for c in consents:
-                        c.requires_reconsent = True
+    if impacted_subject_ids:
+        try:
+            from apps.execution.notifications_client import (
+                publish_notification,
+            )
 
-            await session.commit()
-
-            if impacted_subject_ids:
-                try:
-                    from apps.execution.notifications_client import (
-                        publish_notification,
-                    )
-
-                    for sid in impacted_subject_ids:
-                        await publish_notification(
-                            {
-                                "recipient_user_id": sid,
-                                "category": "ALERTS",
-                                "priority": "CRITICAL",
-                                "channels": "IN_APP,EMAIL",
-                                "message_content": (
-                                    f"URGENT: Protocol amendment re-consent required for study {payload.study_id}. "
-                                    f"Version: {payload.version_number}"
-                                ),
-                                "related_entity_id": str(uuid.uuid4()),
-                                "related_entity_type": "RECONSENT_REQUIRED",
-                            }
-                        )
-                except Exception:
-                    pass
+            for sid in impacted_subject_ids:
+                await publish_notification(
+                    {
+                        "recipient_user_id": sid,
+                        "category": "ALERTS",
+                        "priority": "CRITICAL",
+                        "channels": "IN_APP,EMAIL",
+                        "message_content": (
+                            f"URGENT: Protocol amendment re-consent required for study {payload.study_id}. "
+                            f"Version: {payload.version_number}"
+                        ),
+                        "related_entity_id": str(uuid.uuid4()),
+                        "related_entity_type": "RECONSENT_REQUIRED",
+                    }
+                )
+        except Exception:
+            pass
 
     return PublishAmendmentResponse(
         amendment_id=amendment_id,
@@ -214,6 +214,7 @@ async def get_subject_impact_analysis(
     study_id: str,
     target_version: str = "2.0.0",
     current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> dict[str, Any]:
     """Calculates subject migration impact for an active protocol amendment.
 
@@ -223,48 +224,47 @@ async def get_subject_impact_analysis(
     pending: list[dict[str, Any]] = []
     completed_prev: list[dict[str, Any]] = []
 
-    async with db_manager.get_session_maker()() as session:
-        stmt = select(ClinicalSubject).where(
-            ClinicalSubject.study_id == study_id,
-            ClinicalSubject.is_deleted.is_(False),
-        )
-        res = await session.execute(stmt)
-        subjects = res.scalars().all()
+    stmt = select(ClinicalSubject).where(
+        ClinicalSubject.study_id == study_id,
+        ClinicalSubject.is_deleted.is_(False),
+    )
+    res = await session.execute(stmt)
+    subjects = res.scalars().all()
 
-        for sub in subjects:
-            sub_id = sub.subject_id or sub.id
-            sub_info = {
-                "id": sub_id,
-                "status": sub.status,
-                "active_protocol_version": getattr(
-                    sub, "active_protocol_version", "1.0.0"
+    for sub in subjects:
+        sub_id = sub.subject_id or sub.id
+        sub_info = {
+            "id": sub_id,
+            "status": sub.status,
+            "active_protocol_version": getattr(
+                sub, "active_protocol_version", "1.0.0"
+            ),
+        }
+
+        if sub.status in ("COMPLETED", "WITHDRAWN", "SCREEN_FAILED"):
+            completed_prev.append(sub_info)
+        elif getattr(sub, "active_protocol_version", None) == target_version:
+            migrated.append(sub_info)
+        else:
+            # Check if signed consent exists for target version
+            stmt_c = select(SubjectConsent).where(
+                SubjectConsent.subject_id == sub_id,
+                or_(
+                    SubjectConsent.version_tag == target_version,
+                    SubjectConsent.protocol_version == target_version,
                 ),
-            }
-
-            if sub.status in ("COMPLETED", "WITHDRAWN", "SCREEN_FAILED"):
-                completed_prev.append(sub_info)
-            elif getattr(sub, "active_protocol_version", None) == target_version:
+                or_(
+                    SubjectConsent.icf_signed.is_(True),
+                    SubjectConsent.status == "SIGNED",
+                ),
+                SubjectConsent.is_deleted.is_(False),
+            )
+            c_res = await session.execute(stmt_c)
+            signed_c = c_res.scalars().first()
+            if signed_c:
                 migrated.append(sub_info)
             else:
-                # Check if signed consent exists for target version
-                stmt_c = select(SubjectConsent).where(
-                    SubjectConsent.subject_id == sub_id,
-                    or_(
-                        SubjectConsent.version_tag == target_version,
-                        SubjectConsent.protocol_version == target_version,
-                    ),
-                    or_(
-                        SubjectConsent.icf_signed.is_(True),
-                        SubjectConsent.status == "SIGNED",
-                    ),
-                    SubjectConsent.is_deleted.is_(False),
-                )
-                c_res = await session.execute(stmt_c)
-                signed_c = c_res.scalars().first()
-                if signed_c:
-                    migrated.append(sub_info)
-                else:
-                    pending.append(sub_info)
+                pending.append(sub_info)
 
     total_active = len(migrated) + len(pending)
     return {
@@ -298,98 +298,98 @@ async def get_subject_impact_analysis(
 async def validate_gating_endpoint(
     payload: ValidateGatingRequest,
     current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> dict[str, Any]:
     """Validates subject re-consent gating before form data entry.
 
     Requirements: PRD-SUB-007
     """
-    async with db_manager.get_session_maker()() as session:
-        try:
-            active_ver = await validate_subject_version_gating(
-                session=session,
-                subject_id=payload.subject_id,
-                target_visit_id=payload.target_visit_id,
-                active_protocol_version=payload.active_protocol_version,
-                requires_reconsent=payload.requires_reconsent,
-            )
-            await session.commit()
-            return {
-                "allowed": True,
-                "subject_id": payload.subject_id,
-                "active_protocol_version": active_ver,
-            }
-        except ReConsentRequiredException as e:
-            raise HTTPException(
-                status_code=status.HTTP_423_LOCKED,
-                detail=str(e),
-            )
-        except ValueError as e:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=str(e),
-            )
+    try:
+        active_ver = await validate_subject_version_gating(
+            session=session,
+            subject_id=payload.subject_id,
+            target_visit_id=payload.target_visit_id,
+            active_protocol_version=payload.active_protocol_version,
+            requires_reconsent=payload.requires_reconsent,
+        )
+        await session.commit()
+        return {
+            "allowed": True,
+            "subject_id": payload.subject_id,
+            "active_protocol_version": active_ver,
+        }
+    except ReConsentRequiredException as e:
+        raise HTTPException(
+            status_code=status.HTTP_423_LOCKED,
+            detail=str(e),
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
 
 
 @router.post("/reconsent")
 async def register_subject_reconsent(
     payload: SubjectReconsentRequest,
     current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> dict[str, Any]:
     """Registers subject signed re-consent for an amended version, unlocking gating.
 
     Requirements: PRD-SUB-007, PRD-SYS-001
     """
-    async with db_manager.get_session_maker()() as session:
-        # 1. Fetch or create consent record
-        stmt = select(SubjectConsent).where(
-            SubjectConsent.subject_id == payload.subject_id,
-            SubjectConsent.study_id == payload.study_id,
-            or_(
-                SubjectConsent.version_tag == payload.protocol_version,
-                SubjectConsent.protocol_version == payload.protocol_version,
-            ),
+    # 1. Fetch or create consent record
+    stmt = select(SubjectConsent).where(
+        SubjectConsent.subject_id == payload.subject_id,
+        SubjectConsent.study_id == payload.study_id,
+        or_(
+            SubjectConsent.version_tag == payload.protocol_version,
+            SubjectConsent.protocol_version == payload.protocol_version,
+        ),
+    )
+    res = await session.execute(stmt)
+    consent = res.scalars().first()
+
+    now = datetime.now(UTC)
+    if consent:
+        consent.icf_signed = payload.icf_signed
+        consent.icf_signed_date = now
+        consent.status = "SIGNED" if payload.icf_signed else "PENDING"
+        consent.requires_reconsent = False
+    else:
+        consent = SubjectConsent(
+            subject_id=payload.subject_id,
+            study_id=payload.study_id,
+            version_tag=payload.protocol_version,
+            protocol_version=payload.protocol_version,
+            version_index=payload.version_index,
+            icf_signed=payload.icf_signed,
+            icf_signed_date=now,
+            status="SIGNED" if payload.icf_signed else "PENDING",
+            requires_reconsent=False,
         )
-        res = await session.execute(stmt)
-        consent = res.scalars().first()
+        session.add(consent)
 
-        now = datetime.now(UTC)
-        if consent:
-            consent.icf_signed = payload.icf_signed
-            consent.icf_signed_date = now
-            consent.status = "SIGNED" if payload.icf_signed else "PENDING"
-            consent.requires_reconsent = False
-        else:
-            consent = SubjectConsent(
-                subject_id=payload.subject_id,
-                study_id=payload.study_id,
-                version_tag=payload.protocol_version,
-                protocol_version=payload.protocol_version,
-                version_index=payload.version_index,
-                icf_signed=payload.icf_signed,
-                icf_signed_date=now,
-                status="SIGNED" if payload.icf_signed else "PENDING",
-                requires_reconsent=False,
-            )
-            session.add(consent)
-
-        # 2. Advance subject active version
-        stmt_sub = select(ClinicalSubject).where(
-            or_(
-                ClinicalSubject.id == payload.subject_id,
-                ClinicalSubject.subject_id == payload.subject_id,
-            )
+    # 2. Advance subject active version
+    stmt_sub = select(ClinicalSubject).where(
+        or_(
+            ClinicalSubject.id == payload.subject_id,
+            ClinicalSubject.subject_id == payload.subject_id,
         )
-        sub_res = await session.execute(stmt_sub)
-        subject = sub_res.scalars().first()
-        if subject and payload.icf_signed:
-            subject.active_protocol_version = payload.protocol_version
+    )
+    sub_res = await session.execute(stmt_sub)
+    subject = sub_res.scalars().first()
+    if subject and payload.icf_signed:
+        subject.active_protocol_version = payload.protocol_version
 
-        await session.commit()
+    await session.commit()
 
-        return {
-            "status": "SUCCESS",
-            "subject_id": payload.subject_id,
-            "protocol_version": payload.protocol_version,
-            "icf_signed": payload.icf_signed,
-            "unlocked": payload.icf_signed,
-        }
+    return {
+        "status": "SUCCESS",
+        "subject_id": payload.subject_id,
+        "protocol_version": payload.protocol_version,
+        "icf_signed": payload.icf_signed,
+        "unlocked": payload.icf_signed,
+    }

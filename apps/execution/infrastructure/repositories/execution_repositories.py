@@ -29,7 +29,7 @@ from apps.execution.domain.ports import (
     IExecutionDOARepository,
     ISubjectRepository,
 )
-from packages.database import map_database_exceptions
+from packages.database import DatabaseSessionDependency, map_database_exceptions
 
 
 class SQLAlchemyExecutionDOARepository(IExecutionDOARepository):
@@ -229,16 +229,31 @@ class SQLAlchemyExecutionDOARepository(IExecutionDOARepository):
 SQLAlchemExecutionDOARepository = SQLAlchemyExecutionDOARepository
 
 
-async def get_execution_db_session():
-    session_maker = db_manager.get_session_maker()
-    async with session_maker() as session:
-        yield session
+get_execution_db_session = DatabaseSessionDependency(db_manager)
 
 
 async def get_execution_doa_repository(
     session: AsyncSession = Depends(get_execution_db_session),
 ) -> SQLAlchemyExecutionDOARepository:
     return SQLAlchemyExecutionDOARepository(session)
+
+
+async def get_subject_repository(
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> "SQLAlchemySubjectRepository":
+    return SQLAlchemySubjectRepository(session)
+
+
+async def get_consent_repository(
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> "SQLAlchemyConsentRepository":
+    return SQLAlchemyConsentRepository(session)
+
+
+async def get_audit_repository(
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> "SQLAlchemyAuditRepository":
+    return SQLAlchemyAuditRepository(session)
 
 
 class SQLAlchemySubjectRepository(ISubjectRepository):

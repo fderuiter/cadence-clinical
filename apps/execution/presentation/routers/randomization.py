@@ -5,8 +5,9 @@ Requirements: PRD-SYS-005
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.execution.database.core import db_manager
+from apps.execution.adapters.repositories import get_execution_db_session
 from apps.execution.database.models import ClinicalSubject
 from apps.execution.dependencies import verify_change_justification
 from apps.execution.presentation.routers.randomization_schemas import (
@@ -39,6 +40,7 @@ async def randomize_subject_endpoint(
             ROLE_SITE_INVESTIGATOR, ROLE_INVESTIGATOR, ROLE_CRC, "investigator"
         )
     ),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> SubjectRandomizationResponse:
     """Execute GxP compliant subject randomization allocation and block-index advancement."""
     # Ensure change justification headers are present and valid
@@ -46,13 +48,12 @@ async def randomize_subject_endpoint(
     change_reason = request.headers.get("X-Change-Reason")
 
     # Fetch subject to resolve study_id
-    async with db_manager.get_session_maker()() as session:
-        stmt = select(ClinicalSubject).where(ClinicalSubject.subject_id == subject_id)
-        result = await session.execute(stmt)
-        subject = result.scalars().first()
-        if not subject:
-            raise HTTPException(status_code=404, detail="Subject not found")
-        study_id = subject.study_id
+    stmt = select(ClinicalSubject).where(ClinicalSubject.subject_id == subject_id)
+    result = await session.execute(stmt)
+    subject = result.scalars().first()
+    if not subject:
+        raise HTTPException(status_code=404, detail="Subject not found")
+    study_id = subject.study_id
 
     # Execute randomization via service
     from apps.execution.cryptography import AllocationKeyManager
@@ -78,11 +79,10 @@ async def randomize_subject_endpoint(
         raise HTTPException(status_code=400, detail=str(e))
 
     # Decrypt allocation plaintext for response (which will then be masked/blinded)
-    async with db_manager.get_session_maker()() as session:
-        key_mgr = AllocationKeyManager()
-        await key_mgr.load_from_db(session)
-        decrypted = key_mgr.decrypt(assignment.encrypted_allocation)
-        allocated_arm = decrypted.get("allocation")
+    key_mgr = AllocationKeyManager()
+    await key_mgr.load_from_db(session)
+    decrypted = key_mgr.decrypt(assignment.encrypted_allocation)
+    allocated_arm = decrypted.get("allocation")
 
     response_dict = {
         "subject_id": assignment.subject_id,

@@ -9,8 +9,9 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.execution.database.core import db_manager
+from apps.execution.adapters.repositories import get_execution_db_session
 from apps.execution.database.models import (
     AuditLog,
     ClinicalObservation,
@@ -144,29 +145,26 @@ async def sync_offline_batch(
     payload: OfflineBatchSyncRequest,
     request: Request,
     user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> OfflineBatchSyncResponse:
     """Ingest batch of queued offline eCRF/ePRO deltas idempotently.
 
     Requirements: PRD-SYS-001
     """
-    async with db_manager.get_session_maker()() as session:
-        # Check idempotency first outside the write transaction to allow instant return
-        stmt = select(SyncedBatchIdempotencyKey).where(
-            SyncedBatchIdempotencyKey.client_batch_id == payload.client_batch_id
+    # Check idempotency first
+    stmt = select(SyncedBatchIdempotencyKey).where(
+        SyncedBatchIdempotencyKey.client_batch_id == payload.client_batch_id
+    )
+    res = await session.execute(stmt)
+    existing_key = res.scalar_one_or_none()
+
+    if existing_key is not None:
+        return OfflineBatchSyncResponse(
+            client_batch_id=payload.client_batch_id,
+            status="ALREADY_PROCESSED",
+            processed_count=existing_key.processed_count,
+            conflicts=[],
         )
-        res = await session.execute(stmt)
-        existing_key = res.scalar_one_or_none()
-
-        if existing_key is not None:
-            return OfflineBatchSyncResponse(
-                client_batch_id=payload.client_batch_id,
-                status="ALREADY_PROCESSED",
-                processed_count=existing_key.processed_count,
-                conflicts=[],
-            )
-
-        # To start a new explicit write transaction, we commit/rollback any active implicit transaction
-        await session.rollback()
 
         # Open transactional block
         async with session.begin():
@@ -242,22 +240,24 @@ async def sync_offline_batch(
     status_code=status.HTTP_200_OK,
     response_model=dict[str, Any],
 )
-async def offline_sync_endpoint(payload: dict[str, Any]) -> dict[str, Any]:
+async def offline_sync_endpoint(
+    payload: dict[str, Any],
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> dict[str, Any]:
     """Synchronize queued offline delta transactions.
 
     Requirements: PRD-SYS-001
     """
-    async with db_manager.get_session_maker()() as session:
-        try:
-            engine = ServiceOfflineSyncEngine(session=session)
-            return await engine.process_delta_batch(payload)
-        except ValueError as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
-            )
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Synchronization failure: {str(e)}",
-            )
+    try:
+        engine = ServiceOfflineSyncEngine(session=session)
+        return await engine.process_delta_batch(payload)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Synchronization failure: {str(e)}",
+        )

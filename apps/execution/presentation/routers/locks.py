@@ -12,9 +12,10 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import packages  # noqa: F401
-from apps.execution.database.core import db_manager
+from apps.execution.adapters.repositories import get_execution_db_session
 from apps.execution.database.models.lock import DataLock
 from apps.execution.domain.lock_models import (
     DataLockRecord,
@@ -79,6 +80,7 @@ async def lock_data_endpoint(
     payload: DataLockRequest,
     request: Request,
     current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> DataLockResponse:
     """Execute study, site, subject, visit, form, or field-level data lock or freeze operation.
 
@@ -116,31 +118,29 @@ async def lock_data_endpoint(
     now_iso = now_dt.isoformat()
 
     # 1. Relational Persistence in Database
-    if db_manager.session_maker:
-        try:
-            async with db_manager.get_session_maker()() as session:
-                async with session.begin():
-                    db_lock = DataLock(
-                        id=lock_id,
-                        study_id=payload.study_id,
-                        site_id=payload.site_id,
-                        subject_id=payload.subject_id,
-                        visit_id=payload.visit_id,
-                        form_id=payload.form_id,
-                        item_group_id=payload.item_group_id,
-                        field_name=payload.field_name,
-                        scope_type=scope_type,
-                        scope_id=scope_id,
-                        lock_type=lock_type,
-                        is_active=True,
-                        created_at=now_dt,
-                        created_by=user_id,
-                        reason_for_change=reason,
-                        signature_token=sig_token if lock_type == "HARD_LOCK" else None,
-                    )
-                    session.add(db_lock)
-        except Exception:
-            pass
+    try:
+        async with session.begin():
+            db_lock = DataLock(
+                id=lock_id,
+                study_id=payload.study_id,
+                site_id=payload.site_id,
+                subject_id=payload.subject_id,
+                visit_id=payload.visit_id,
+                form_id=payload.form_id,
+                item_group_id=payload.item_group_id,
+                field_name=payload.field_name,
+                scope_type=scope_type,
+                scope_id=scope_id,
+                lock_type=lock_type,
+                is_active=True,
+                created_at=now_dt,
+                created_by=user_id,
+                reason_for_change=reason,
+                signature_token=sig_token if lock_type == "HARD_LOCK" else None,
+            )
+            session.add(db_lock)
+    except Exception:
+        pass
 
     # 2. In-Memory Manager synchronization
     if scope_type in ("STUDY", "TRIAL"):
@@ -199,6 +199,7 @@ async def unlock_data_endpoint(
     payload: DataLockRequest,
     request: Request,
     current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> DataLockResponse:
     """Execute GxP data unlock override operation enforcing >= 50 chars justification.
 
@@ -256,32 +257,30 @@ async def unlock_data_endpoint(
         TrialLockManager.unlock_visit(payload.visit_id)
 
     # 2. Update Database Persistence
-    if db_manager.session_maker:
-        try:
-            async with db_manager.get_session_maker()() as session:
-                async with session.begin():
-                    stmt = select(DataLock).where(DataLock.is_active.is_(True))
-                    if target_lock_id:
-                        stmt = stmt.where(DataLock.id == target_lock_id)
-                    elif payload.form_id:
-                        stmt = stmt.where(
-                            (DataLock.form_id == payload.form_id)
-                            | (DataLock.scope_id == payload.form_id)
-                        )
-                    elif scope_id:
-                        stmt = stmt.where(DataLock.scope_id == scope_id)
+    try:
+        async with session.begin():
+            stmt = select(DataLock).where(DataLock.is_active.is_(True))
+            if target_lock_id:
+                stmt = stmt.where(DataLock.id == target_lock_id)
+            elif payload.form_id:
+                stmt = stmt.where(
+                    (DataLock.form_id == payload.form_id)
+                    | (DataLock.scope_id == payload.form_id)
+                )
+            elif scope_id:
+                stmt = stmt.where(DataLock.scope_id == scope_id)
 
-                    res = await session.execute(stmt)
-                    matched_locks = res.scalars().all()
-                    for lock_item in matched_locks:
-                        lock_item.is_active = False
-                        lock_item.unlocked_at = now_dt
-                        lock_item.unlocked_by = user_id
-                        lock_item.unlock_justification = effective_justification
-                        lock_item.reason_for_change = effective_justification
-                        target_lock_id = lock_item.id
-        except Exception:
-            pass
+            res = await session.execute(stmt)
+            matched_locks = res.scalars().all()
+            for lock_item in matched_locks:
+                lock_item.is_active = False
+                lock_item.unlocked_at = now_dt
+                lock_item.unlocked_by = user_id
+                lock_item.unlock_justification = effective_justification
+                lock_item.reason_for_change = effective_justification
+                target_lock_id = lock_item.id
+    except Exception:
+        pass
 
     # Update in-memory record store
     if target_lock_id and target_lock_id in _LOCK_STORE:
@@ -356,6 +355,7 @@ async def unlock_data_endpoint(
 async def get_form_lock_status_endpoint(
     form_id: str,
     current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> list[DataLockRecord]:
     """Retrieve active data locks for specified eCRF form submission.
 
@@ -364,55 +364,53 @@ async def get_form_lock_status_endpoint(
     results: list[DataLockRecord] = []
     seen_ids: set[str] = set()
 
-    # Query active locks from database if engine is initialized
-    if db_manager.session_maker:
-        try:
-            async with db_manager.get_session_maker()() as session:
-                stmt = select(DataLock).where(
-                    (DataLock.form_id == form_id)
-                    | (
-                        (DataLock.scope_id == form_id) & (DataLock.scope_type == "FORM")
-                    ),
-                    DataLock.is_active.is_(True),
-                )
-                res = await session.execute(stmt)
-                db_records = res.scalars().all()
-                for r in db_records:
-                    rec = DataLockRecord(
-                        lock_id=r.id,
-                        study_id=r.study_id,
-                        site_id=r.site_id,
-                        subject_id=r.subject_id,
-                        visit_id=r.visit_id,
-                        form_id=r.form_id,
-                        item_group_id=r.item_group_id,
-                        field_name=r.field_name,
-                        scope=r.scope_type,
-                        scope_type=r.scope_type,
-                        scope_id=r.scope_id,
-                        status=r.lock_type,
-                        lock_type=r.lock_type,
-                        is_active=r.is_active,
-                        locked_by=r.created_by,
-                        created_by=r.created_by,
-                        reason_for_change=r.reason_for_change,
-                        locked_at=r.created_at.isoformat()
-                        if r.created_at
-                        else datetime.now(UTC).isoformat(),
-                        created_at=r.created_at.isoformat()
-                        if r.created_at
-                        else datetime.now(UTC).isoformat(),
-                        unlocked_by=r.unlocked_by,
-                        unlocked_at=r.unlocked_at.isoformat()
-                        if r.unlocked_at
-                        else None,
-                        unlock_justification=r.unlock_justification,
-                        signature_token=r.signature_token,
-                    )
-                    results.append(rec)
-                    seen_ids.add(r.id)
-        except Exception:
-            pass
+    # Query active locks from database
+    try:
+        stmt = select(DataLock).where(
+            (DataLock.form_id == form_id)
+            | (
+                (DataLock.scope_id == form_id) & (DataLock.scope_type == "FORM")
+            ),
+            DataLock.is_active.is_(True),
+        )
+        res = await session.execute(stmt)
+        db_records = res.scalars().all()
+        for r in db_records:
+            rec = DataLockRecord(
+                lock_id=r.id,
+                study_id=r.study_id,
+                site_id=r.site_id,
+                subject_id=r.subject_id,
+                visit_id=r.visit_id,
+                form_id=r.form_id,
+                item_group_id=r.item_group_id,
+                field_name=r.field_name,
+                scope=r.scope_type,
+                scope_type=r.scope_type,
+                scope_id=r.scope_id,
+                status=r.lock_type,
+                lock_type=r.lock_type,
+                is_active=r.is_active,
+                locked_by=r.created_by,
+                created_by=r.created_by,
+                reason_for_change=r.reason_for_change,
+                locked_at=r.created_at.isoformat()
+                if r.created_at
+                else datetime.now(UTC).isoformat(),
+                created_at=r.created_at.isoformat()
+                if r.created_at
+                else datetime.now(UTC).isoformat(),
+                unlocked_by=r.unlocked_by,
+                unlocked_at=r.unlocked_at.isoformat()
+                if r.unlocked_at
+                else None,
+                unlock_justification=r.unlock_justification,
+                signature_token=r.signature_token,
+            )
+            results.append(rec)
+            seen_ids.add(r.id)
+    except Exception:
+        pass
 
     # Merge active in-memory locks
     for rec in _LOCK_STORE.values():
@@ -432,6 +430,7 @@ async def list_data_locks_endpoint(
     scope_type: str | None = Query(None, description="Filter by scope type"),
     is_active: bool | None = Query(None, description="Filter by active status"),
     current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> Any:
     """List data lock records with optional filtering, or return global lock status if unfiltered."""
     if hasattr(study_id, "default"):
@@ -455,55 +454,53 @@ async def list_data_locks_endpoint(
     results: list[DataLockRecord] = []
     seen_ids: set[str] = set()
 
-    if db_manager.session_maker:
-        try:
-            async with db_manager.get_session_maker()() as session:
-                stmt = select(DataLock)
-                if study_id:
-                    stmt = stmt.where(DataLock.study_id == study_id)
-                if scope_type:
-                    stmt = stmt.where(DataLock.scope_type == scope_type.upper())
-                if is_active is not None:
-                    stmt = stmt.where(DataLock.is_active.is_(is_active))
+    try:
+        stmt = select(DataLock)
+        if study_id:
+            stmt = stmt.where(DataLock.study_id == study_id)
+        if scope_type:
+            stmt = stmt.where(DataLock.scope_type == scope_type.upper())
+        if is_active is not None:
+            stmt = stmt.where(DataLock.is_active.is_(is_active))
 
-                res = await session.execute(stmt)
-                db_records = res.scalars().all()
-                for r in db_records:
-                    rec = DataLockRecord(
-                        lock_id=r.id,
-                        study_id=r.study_id,
-                        site_id=r.site_id,
-                        subject_id=r.subject_id,
-                        visit_id=r.visit_id,
-                        form_id=r.form_id,
-                        item_group_id=r.item_group_id,
-                        field_name=r.field_name,
-                        scope=r.scope_type,
-                        scope_type=r.scope_type,
-                        scope_id=r.scope_id,
-                        status=r.lock_type if r.is_active else "UNLOCKED",
-                        lock_type=r.lock_type,
-                        is_active=r.is_active,
-                        locked_by=r.created_by,
-                        created_by=r.created_by,
-                        reason_for_change=r.reason_for_change,
-                        locked_at=r.created_at.isoformat()
-                        if r.created_at
-                        else datetime.now(UTC).isoformat(),
-                        created_at=r.created_at.isoformat()
-                        if r.created_at
-                        else datetime.now(UTC).isoformat(),
-                        unlocked_by=r.unlocked_by,
-                        unlocked_at=r.unlocked_at.isoformat()
-                        if r.unlocked_at
-                        else None,
-                        unlock_justification=r.unlock_justification,
-                        signature_token=r.signature_token,
-                    )
-                    results.append(rec)
-                    seen_ids.add(r.id)
-        except Exception:
-            pass
+        res = await session.execute(stmt)
+        db_records = res.scalars().all()
+        for r in db_records:
+            rec = DataLockRecord(
+                lock_id=r.id,
+                study_id=r.study_id,
+                site_id=r.site_id,
+                subject_id=r.subject_id,
+                visit_id=r.visit_id,
+                form_id=r.form_id,
+                item_group_id=r.item_group_id,
+                field_name=r.field_name,
+                scope=r.scope_type,
+                scope_type=r.scope_type,
+                scope_id=r.scope_id,
+                status=r.lock_type if r.is_active else "UNLOCKED",
+                lock_type=r.lock_type,
+                is_active=r.is_active,
+                locked_by=r.created_by,
+                created_by=r.created_by,
+                reason_for_change=r.reason_for_change,
+                locked_at=r.created_at.isoformat()
+                if r.created_at
+                else datetime.now(UTC).isoformat(),
+                created_at=r.created_at.isoformat()
+                if r.created_at
+                else datetime.now(UTC).isoformat(),
+                unlocked_by=r.unlocked_by,
+                unlocked_at=r.unlocked_at.isoformat()
+                if r.unlocked_at
+                else None,
+                unlock_justification=r.unlock_justification,
+                signature_token=r.signature_token,
+            )
+            results.append(rec)
+            seen_ids.add(r.id)
+    except Exception:
+        pass
 
     for rec in _LOCK_STORE.values():
         if rec.lock_id not in seen_ids:
@@ -526,6 +523,7 @@ async def list_data_locks_endpoint(
 async def get_lock_hierarchy_tree_endpoint(
     study_id: str = Query("STUDY-001", description="Study ID to query"),
     current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> dict[str, Any]:
     """Retrieve complete lock status tree across Study -> Sites -> Subjects -> Visits -> Forms hierarchy."""
     if hasattr(study_id, "default"):
@@ -536,6 +534,7 @@ async def get_lock_hierarchy_tree_endpoint(
         scope_type=None,
         is_active=True,
         current_user=current_user,
+        session=session,
     )
 
     study_locked = (
