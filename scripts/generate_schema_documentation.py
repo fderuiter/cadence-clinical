@@ -1036,56 +1036,251 @@ def generate_html_visualizer(
 """
 
 
-def main():
-    """Compiles and generates the complete interactive schema boundary dashboard."""
-    print("--- Starting Statically-Compiled Schema Boundaries Extraction ---")
+def extract_all_service_schemas() -> dict[str, Any]:
+    """Statically extracts schema metadata across all relational and graph services.
 
-    try:
-        # Import Relational Base Classes
-        from apps.etmf.infrastructure.models import Base as EtmfBase
-        from apps.execution.database.models import Base as ExecutionBase
+    Returns:
+        Dictionary mapping service IDs to service metadata and extracted table/node entities.
+    """
+    from apps.ctms.models import Base as CtmsBase
+    from apps.econsent.adapters.models import Base as EconsentBase
+    from apps.eisf.infrastructure.models import Base as EisfBase
+    from apps.etmf.infrastructure.models import Base as EtmfBase
+    from apps.execution.database.models import Base as ExecutionBase
+    from apps.interop.infrastructure.models import Base as InteropBase
+    from apps.notifications.infrastructure.models import Base as NotificationsBase
+    from apps.org.infrastructure.models import Base as OrgBase
+    from apps.quality.infrastructure.models import Base as QualityBase
+    from apps.safety.infrastructure.models import Base as SafetyBase
+    from apps.tickets.infrastructure.models import Base as TicketsBase
 
-        print("Imported SQL bases statically under mocked environment keys.")
-    except Exception as e:
-        print(f"Error: Failed to statically import database models: {e}")
-        sys.exit(1)
+    relational_services = [
+        ("execution", "Execution / EDC", ExecutionBase, "#0d9488"),
+        ("etmf", "eTMF", EtmfBase, "#d97706"),
+        ("safety", "Safety / Pharmacovigilance", SafetyBase, "#ef4444"),
+        ("org", "Organization Management", OrgBase, "#8b5cf6"),
+        ("eisf", "eISF", EisfBase, "#10b981"),
+        ("econsent", "eConsent", EconsentBase, "#3b82f6"),
+        ("interop", "Interoperability / EHR", InteropBase, "#ec4899"),
+        ("notifications", "Notifications", NotificationsBase, "#f59e0b"),
+        ("tickets", "Tickets / Support", TicketsBase, "#64748b"),
+        ("ctms", "CTMS", CtmsBase, "#0284c7"),
+        ("quality", "Quality / EQMS", QualityBase, "#84cc16"),
+    ]
 
-    # 1. Parse relational metadata
-    execution_tables = parse_sqlalchemy_schema(ExecutionBase, "execution")
-    print(
-        f"  - Extracted {len(execution_tables)} entities from Execution microservice."
-    )
+    services_meta: dict[str, Any] = {}
 
-    etmf_tables = parse_sqlalchemy_schema(EtmfBase, "etmf")
-    print(f"  - Extracted {len(etmf_tables)} entities from eTMF microservice.")
+    for s_id, s_name, base_cls, color in relational_services:
+        tables = parse_sqlalchemy_schema(base_cls, s_id)
+        services_meta[s_id] = {
+            "name": s_name,
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "color": color,
+            "tables": tables,
+        }
 
-    # 2. Add graph metadata
     designer_nodes = get_designer_schema()
-    print(f"  - Extracted {len(designer_nodes)} entities from Designer graph model.")
-
-    # Aggregate into unified services dictionary
-    services = {
-        "designer": {
-            "name": "Designer / MDR",
-            "db_type": "Neo4j Graph Database",
-            "color": "#6366f1",
-            "tables": designer_nodes,
-        },
-        "execution": {
-            "name": "Execution / EDC",
-            "db_type": "PostgreSQL (SQLAlchemy)",
-            "color": "#0d9488",
-            "tables": execution_tables,
-        },
-        "etmf": {
-            "name": "eTMF",
-            "db_type": "PostgreSQL (SQLAlchemy)",
-            "color": "#d97706",
-            "tables": etmf_tables,
-        },
+    services_meta["designer"] = {
+        "name": "Designer / MDR",
+        "db_type": "Neo4j Graph Database",
+        "color": "#6366f1",
+        "tables": designer_nodes,
     }
 
-    # 3. Define inter-service boundary interfaces / transfer pathways
+    return services_meta
+
+
+def generate_cdisc_usdm_compliance_catalog(
+    services: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Generates a CDISC USDM v3.0 compliant schema catalog JSON document.
+
+    Args:
+        services: Extracted services dictionary. If None, automatically extracts.
+
+    Returns:
+        A dictionary conforming to the CDISC USDM v3.0 protocol schema specification.
+    """
+    from apps.designer.domain.cdisc.usdm_models import USDMStudy
+
+    if services is None:
+        services = extract_all_service_schemas()
+
+    biomedical_concepts = []
+
+    for service_id, service_info in services.items():
+        tables_or_nodes = service_info.get("tables", [])
+        db_type = service_info.get("db_type", "PostgreSQL (SQLAlchemy)")
+
+        for item in tables_or_nodes:
+            table_name = item.get("table_name", item.get("class_name", "Unknown"))
+            class_name = item.get("class_name", table_name)
+            description = item.get("description", "No description provided.")
+            is_gxp = item.get("gxp", False)
+            is_immutable = item.get("immutable", False)
+
+            bc_properties = []
+            for col in item.get("columns", []):
+                col_name = col.get("name")
+                col_type = col.get("type", "String")
+                is_nullable = col.get("nullable", True)
+                is_pk = col.get("primary_key", False)
+                fks = col.get("foreign_keys", [])
+                gxp_highlight = col.get("gxp_highlight", False)
+
+                bc_properties.append(
+                    {
+                        "id": f"prop_{service_id}_{table_name}_{col_name}",
+                        "name": col_name,
+                        "label": f"{col_name} ({col_type})",
+                        "cdashVariable": col_name.upper(),
+                        "dataType": str(col_type),
+                        "mandatory": not is_nullable,
+                        "config": {
+                            "primary_key": is_pk,
+                            "foreign_keys": fks,
+                            "gxp_highlight": gxp_highlight,
+                            "service": service_id,
+                            "db_type": db_type,
+                            "gxp_audited": is_gxp,
+                            "immutable": is_immutable,
+                        },
+                    }
+                )
+
+            concept = {
+                "id": f"bc_{service_id}_{table_name}",
+                "name": table_name,
+                "label": f"{service_info.get('name', service_id)} - {class_name}",
+                "conceptCode": f"SCHEMA_{service_id.upper()}_{table_name.upper()}",
+                "displayName": f"{table_name} ({service_id})",
+                "definition": description,
+                "cdashDomain": service_id,
+                "cdashVariable": table_name.upper(),
+                "dataType": (
+                    "Graph Node" if "graph" in db_type.lower() else "Relational Table"
+                ),
+                "properties": bc_properties,
+            }
+            biomedical_concepts.append(concept)
+
+    study_design = {
+        "id": "sd_multi_service_architecture",
+        "name": "Multi-Service Architecture Schema Boundary Design",
+        "designType": "Decentralized Microservices Schema Catalog",
+        "arms": [],
+        "epochs": [],
+        "encounters": [],
+        "activities": [],
+        "biomedicalConcepts": biomedical_concepts,
+        "eligibilityCriteria": [],
+    }
+
+    doc = {
+        "id": "cdisc_usdm_compliance_catalog",
+        "name": "CADENCE-CDISC-USDM-COMPLIANCE-CATALOG",
+        "protocolTitle": (
+            "Cadence Clinical Unified CDISC USDM Compliance Schema Documentation"
+        ),
+        "protocolId": "CADENCE-SCHEMA-CATALOG-001",
+        "phase": "Compliance Certification",
+        "therapeuticArea": "eClinical System Engineering",
+        "usdmVersion": "3.0",
+        "studyVersions": [
+            {
+                "id": "v1.0",
+                "versionTag": "1.0",
+                "status": "APPROVED",
+                "versionIndex": 1,
+                "studyDesigns": [study_design],
+            }
+        ],
+        "studyDesigns": [study_design],
+        "biomedicalConcepts": biomedical_concepts,
+    }
+
+    USDMStudy(**doc)
+    return doc
+
+
+def export_cdisc_compliance_document(
+    output_path: str | Path | None = None,
+    validate: bool = True,
+) -> tuple[dict[str, Any], Path]:
+    """Generates and writes the CDISC USDM compliance JSON document to disk.
+
+    Args:
+        output_path: Target file path. Defaults to `docs/CDISC/cdisc_usdm_compliance.json`.
+        validate: Whether to validate the document structure against USDM Pydantic schemas.
+
+    Returns:
+        Tuple of (usdm_catalog_dict, written_path).
+    """
+    from apps.designer.domain.cdisc.usdm_models import USDMStudy
+
+    if output_path is None:
+        target_file = ROOT_DIR / "docs" / "CDISC" / "cdisc_usdm_compliance.json"
+    else:
+        target_file = Path(output_path)
+        if not target_file.is_absolute():
+            target_file = ROOT_DIR / target_file
+
+    services = extract_all_service_schemas()
+    usdm_doc = generate_cdisc_usdm_compliance_catalog(services)
+
+    if validate:
+        USDMStudy(**usdm_doc)
+
+    target_file.parent.mkdir(parents=True, exist_ok=True)
+    with target_file.open("w", encoding="utf-8") as f:
+        json.dump(usdm_doc, f, indent=2)
+
+    return usdm_doc, target_file
+
+
+def main():
+    """Compiles and generates the complete interactive schema boundary dashboard and CDISC USDM catalog."""
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Generate Schema Documentation & CDISC USDM Catalog."
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        default=None,
+        help="Custom destination for CDISC USDM compliance JSON.",
+    )
+    parser.add_argument(
+        "--no-validate",
+        action="store_true",
+        help="Disable Pydantic validation.",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit full USDM document to stdout.",
+    )
+    args, _ = parser.parse_known_args()
+
+    try:
+        services = extract_all_service_schemas()
+    except Exception as e:
+        if args.json:
+            print(json.dumps({"error": str(e)}))
+        else:
+            print(f"Error: Failed to statically import database models: {e}")
+        sys.exit(1)
+
+    if not args.json:
+        print("--- Starting Statically-Compiled Schema Boundaries Extraction ---")
+        print(f"Statically extracted schema metadata for {len(services)} services.")
+        for s_id, s_data in services.items():
+            print(
+                f"  - Extracted {len(s_data['tables'])} entities from {s_data['name']}."
+            )
+
+    # Define inter-service boundary interfaces / transfer pathways
     edges = [
         {
             "from": "designer_Study",
@@ -1119,7 +1314,7 @@ def main():
     # Render standalone visual document
     html_content = generate_html_visualizer(services, edges)
 
-    # Target files to write
+    # Target HTML files to write
     output_paths = [
         ROOT_DIR / "docs" / "schema_visualizer.html",
         ROOT_DIR / "docs" / "schema" / "index.html",
@@ -1128,7 +1323,33 @@ def main():
     for out_path in output_paths:
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(html_content, encoding="utf-8")
-        print(f"[SUCCESS] Standalone interactive visual schema written to: {out_path}")
+        if not args.json:
+            print(
+                f"[SUCCESS] Standalone interactive visual schema written to: {out_path}"
+            )
+
+    # Export validated CDISC USDM compliance catalog
+    cdisc_paths = []
+    if args.output:
+        cdisc_paths.append(Path(args.output))
+    else:
+        cdisc_paths = [
+            ROOT_DIR / "docs" / "CDISC" / "cdisc_usdm_compliance.json",
+            ROOT_DIR / "docs" / "schema" / "cdisc_usdm_compliance.json",
+        ]
+
+    for c_path in cdisc_paths:
+        usdm_doc, written_path = export_cdisc_compliance_document(
+            output_path=c_path, validate=not args.no_validate
+        )
+        if not args.json:
+            print(
+                f"[SUCCESS] Validated CDISC USDM compliance catalog written to: {written_path}"
+            )
+
+    if args.json:
+        usdm_doc = generate_cdisc_usdm_compliance_catalog(services)
+        print(json.dumps(usdm_doc, indent=2))
 
 
 if __name__ == "__main__":

@@ -79,12 +79,20 @@ def test_generate_schema_documentation_main(tmp_path, monkeypatch):
 
     scripts.generate_schema_documentation.main()
 
-    # Assert both files are written and have valid HTML layout
+    # Assert HTML and CDISC JSON files are written and have valid content
+    output_cdisc_file = tmp_path / "docs" / "CDISC" / "cdisc_usdm_compliance.json"
     assert output_html_file.exists()
     assert output_index_file.exists()
+    assert output_cdisc_file.exists()
 
     content = output_html_file.read_text(encoding="utf-8")
     assert "<!DOCTYPE html>" in content
     assert "Interactive Boundary Explorer" in content
     assert "FDA 21 CFR Part 11 & EU Annex 11 Compliance" in content
     assert "schemaData" in content
+
+    import json
+
+    cdisc_data = json.loads(output_cdisc_file.read_text(encoding="utf-8"))
+    assert cdisc_data["usdmVersion"] == "3.0"
+    assert len(cdisc_data["biomedicalConcepts"]) > 0

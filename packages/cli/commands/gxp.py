@@ -6,6 +6,7 @@ from pathlib import Path
 
 import typer
 
+from packages.cli.commands.cdisc import run_cdisc_export
 from packages.cli.formatting import (
     console,
     is_json_mode,
@@ -122,3 +123,24 @@ def verify_gxp(
         print_error("GxP signature verification failed:")
         console.print(res.stderr or res.stdout)
         sys.exit(1)
+
+
+@gxp_app.command("export-cdisc")
+def export_cdisc_gxp(
+    ctx: typer.Context,
+    output: str = typer.Option(
+        "docs/CDISC/cdisc_usdm_compliance.json",
+        "--output",
+        "-o",
+        help="Path to save generated CDISC USDM compliance JSON document",
+    ),
+    validate: bool = typer.Option(
+        True,
+        "--validate/--no-validate",
+        help="Validate generated document against CDISC USDM Pydantic schema",
+    ),
+) -> None:
+    """Generate a validated CDISC USDM compliance document from local database models."""
+    run_cdisc_export(
+        ctx, output=output, validate=validate, command_name="gxp export-cdisc"
+    )

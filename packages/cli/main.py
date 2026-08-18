@@ -2,6 +2,7 @@
 
 import typer
 
+from packages.cli.commands.cdisc import cdisc_app
 from packages.cli.commands.check import check_app
 from packages.cli.commands.db import db_app
 from packages.cli.commands.dev import dev_app
@@ -50,6 +51,7 @@ app.add_typer(fix_app, name="fix")
 app.add_typer(db_app, name="db")
 app.add_typer(scaffold_app, name="scaffold")
 app.add_typer(gxp_app, name="gxp")
+app.add_typer(cdisc_app, name="cdisc")
 
 
 def main() -> None:

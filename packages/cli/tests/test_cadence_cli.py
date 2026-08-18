@@ -24,6 +24,37 @@ def test_cli_help():
     assert "db" in result.output
     assert "scaffold" in result.output
     assert "gxp" in result.output
+    assert "cdisc" in result.output
+
+
+def test_cli_cdisc_export_json(tmp_path: Path):
+    """Verify cadence cdisc export --json outputs structured USDM document."""
+    out_file = tmp_path / "cdisc_export_test.json"
+    result = runner.invoke(
+        app, ["--json", "cdisc", "export", "--output", str(out_file)]
+    )
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["command"] == "cdisc export"
+    assert data["success"] is True
+    assert data["usdm_version"] == "3.0"
+    assert data["biomedical_concepts_count"] > 0
+    assert out_file.exists()
+
+
+def test_cli_gxp_export_cdisc_json(tmp_path: Path):
+    """Verify cadence gxp export-cdisc --json outputs structured USDM document."""
+    out_file = tmp_path / "gxp_export_test.json"
+    result = runner.invoke(
+        app, ["--json", "gxp", "export-cdisc", "--output", str(out_file)]
+    )
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["command"] == "gxp export-cdisc"
+    assert data["success"] is True
+    assert data["usdm_version"] == "3.0"
+    assert data["biomedical_concepts_count"] > 0
+    assert out_file.exists()
 
 
 def test_cli_doctor_json():
