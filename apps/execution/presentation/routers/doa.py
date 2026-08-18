@@ -11,10 +11,10 @@ from pydantic import BaseModel, Field
 
 from apps.execution.adapters.repositories import (
     SQLAlchemExecutionDOARepository,
+    get_execution_db_session,
     get_execution_doa_repository,
 )
 from apps.execution.application.services import ExecutionDOAUseCase
-from apps.execution.database import db_manager
 from apps.execution.domain.doa_models import (
     DOAAssignmentRecord,
     DOATaskDelegationEnum,
@@ -103,8 +103,7 @@ _DOA_SERVICE = DOAService()
 
 async def _run_with_repo(repo, func):
     if repo is None or isinstance(repo, DependsClass):
-        session_maker = db_manager.get_session_maker()
-        async with session_maker() as session:
+        async for session in get_execution_db_session():
             r = SQLAlchemExecutionDOARepository(session)
             return await func(r)
     return await func(repo)

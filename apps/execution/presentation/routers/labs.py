@@ -19,11 +19,13 @@ from fastapi import (
     Request,
 )
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from apps.execution.adapters.repositories import get_execution_db_session
 from apps.execution.database.context import (
     current_change_reason,
     current_user_id,
 )
-from apps.execution.database.core import db_manager
 from apps.execution.services.lab_ingestion_service import (
     LabBatchIngestResult,
     LabIngestionService,
@@ -40,6 +42,7 @@ async def ingest_lab_batch_endpoint(
     request: Request,
     background_tasks: BackgroundTasks,
     roles: list[str] = Depends(verify_not_auditor),
+    session: AsyncSession = Depends(get_execution_db_session),
 ) -> LabBatchIngestResult:
     """Ingest central or local laboratory batch data (CSV, HL7 v2.x, or FHIR JSON).
 
@@ -123,18 +126,17 @@ async def ingest_lab_batch_endpoint(
     user_id = current_user_id.get() or "system_lab_ingestion"
     gxp_reason = current_change_reason.get() or reason_for_change
 
-    async with db_manager.get_session_maker()() as session:
-        return await LabIngestionService.ingest_batch(
-            session=session,
-            payload=raw_payload,
-            format=format_type,
-            study_id=study_id,
-            site_id=site_id,
-            lab_source=lab_source,
-            user_id=user_id,
-            change_reason=gxp_reason,
-            background_tasks=background_tasks,
-        )
+    return await LabIngestionService.ingest_batch(
+        session=session,
+        payload=raw_payload,
+        format=format_type,
+        study_id=study_id,
+        site_id=site_id,
+        lab_source=lab_source,
+        user_id=user_id,
+        change_reason=gxp_reason,
+        background_tasks=background_tasks,
+    )
 
 
 @router.get(
