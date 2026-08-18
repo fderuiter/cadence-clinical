@@ -5,4 +5,14 @@ export { TraceContextModule } from "./trace-context.module.js";
 export { PinoLoggerService, scrubPii } from "./pino-logger.service.js";
 export { TraceContextMiddleware } from "./trace-context.middleware.js";
 export { propagateTraceContext } from "./trace-context-http.helper.js";
+export {
+  IngressHeaderSanitizerMiddleware,
+  IngressHeaderSanitizationMiddleware,
+  DEFAULT_ALLOWED_HEADERS,
+  DEFAULT_PROHIBITED_HEADERS,
+  IngressHeaderSanitizerOptions,
+} from "./ingress-header-sanitizer.middleware.js";
+export { IngressHeaderSanitizerService } from "./ingress-header-sanitizer.service.js";
+export { IngressHeaderSanitizerModule } from "./ingress-header-sanitizer.module.js";
+
 
