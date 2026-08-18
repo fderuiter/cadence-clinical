@@ -68,6 +68,7 @@ from apps.execution.domain.acl.protocol_version_ref_dto import (
 )
 from apps.execution.edit_checks import (
     run_asynchronous_edit_checks,
+    run_asynchronous_form_edit_checks,
     run_synchronous_edit_checks,
 )
 from apps.execution.exceptions import (
@@ -3116,40 +3117,14 @@ async def complete_form_submission(
         sub.status = "COMPLETED"
         await session.commit()
 
-        # Query active observations in this form submission
-        # (subject_id, visit_id, and page_id == form_id)
-        stmt_obs = select(ClinicalObservation).where(
-            ClinicalObservation.subject_id == sub.subject_id,
-            ClinicalObservation.visit_id == sub.visit_id,
-            ClinicalObservation.page_id == sub.form_id,
-            ClinicalObservation.is_deleted.is_(False),
-        )
-        res_obs = await session.execute(stmt_obs)
-        form_obs = res_obs.scalars().all()
-
         user_id = current_user_id.get() or "system"
         change_reason = current_change_reason.get() or "Form Completion Edit Checks"
 
-        # Enqueue background edit checks for each observation in the form
-        for obs in form_obs:
-            background_tasks.add_task(
-                run_asynchronous_edit_checks,
-                db_manager.get_session_maker(),
-                obs.id,
-                user_id=user_id,
-                change_reason=change_reason,
-            )
-
-        # Also resume pending predecessor checks that were waiting for this visit/form to be completed
-        from apps.execution.edit_checks import (
-            resolve_pending_predecessor_checks_for_form,
-        )
-
+        # Enqueue exactly one background form-level edit check task
         background_tasks.add_task(
-            resolve_pending_predecessor_checks_for_form,
+            run_asynchronous_form_edit_checks,
             db_manager.get_session_maker(),
-            sub.subject_id,
-            sub.visit_id,
+            sub.id,
             user_id=user_id,
             change_reason=change_reason,
         )
