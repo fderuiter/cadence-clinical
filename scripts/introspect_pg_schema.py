@@ -182,12 +182,23 @@ def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
         consolidated_tables[table.name] = table
     for table in eisf_Base.metadata.tables.values():
         consolidated_tables[table.name] = table
-    if hasattr(EISFDocumentRecord, "__table__") and EISFDocumentRecord.__table__ is not None:
-        consolidated_tables[EISFDocumentRecord.__table__.name] = EISFDocumentRecord.__table__
-    if hasattr(EISFSectionTaxonomy, "__table__") and EISFSectionTaxonomy.__table__ is not None:
-        consolidated_tables[EISFSectionTaxonomy.__table__.name] = EISFSectionTaxonomy.__table__
+    if (
+        hasattr(EISFDocumentRecord, "__table__")
+        and EISFDocumentRecord.__table__ is not None
+    ):
+        consolidated_tables[EISFDocumentRecord.__table__.name] = (
+            EISFDocumentRecord.__table__
+        )
+    if (
+        hasattr(EISFSectionTaxonomy, "__table__")
+        and EISFSectionTaxonomy.__table__ is not None
+    ):
+        consolidated_tables[EISFSectionTaxonomy.__table__.name] = (
+            EISFSectionTaxonomy.__table__
+        )
     try:
         from sqlmodel import SQLModel
+
         for table in SQLModel.metadata.tables.values():
             consolidated_tables[table.name] = table
     except Exception:
@@ -202,7 +213,10 @@ def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
                 if mapper.local_table is not None:
                     module_name = getattr(mapper.class_, "__module__", "")
                     parts = module_name.split(".")
-                    if any(k in parts for k in ("test", "tests", "mock", "conftest", "fakes")):
+                    if any(
+                        k in parts
+                        for k in ("test", "tests", "mock", "conftest", "fakes")
+                    ):
                         test_tables.add(mapper.local_table.name)
                     else:
                         prod_tables.add(mapper.local_table.name)
