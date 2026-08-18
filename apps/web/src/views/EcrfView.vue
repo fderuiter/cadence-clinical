@@ -8,7 +8,7 @@
       </p>
     </div>
 
-    <!-- Active User Role Badge & CRA Mode Toggle (for Sub-Issue 10) -->
+    <!-- Active User Role Badge & CRA Mode Toggle -->
     <div
       style="
         display: flex;
@@ -38,7 +38,7 @@
         >
       </div>
 
-      <!-- Let user select role in demo mode to test Site Coordinator (CRC) vs Monitor (CRA) workflows -->
+      <!-- Demo role tester select -->
       <div
         style="
           display: flex;
@@ -71,1004 +71,196 @@
       class="ecrf-workspace-layout"
       style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap"
     >
-      <!-- Left Column: Dynamic eCRF Form -->
+      <!-- Left Column: CRC Persona Component & CRA Verification Bar Slot -->
       <div class="ecrf-form-column" style="flex: 1 1 580px; min-width: 0">
-        <div class="card">
-          <div class="card-title">Subject eCRF Data Entry Form</div>
-
-          <!-- Sub-Issue 9: Subject & Visit Selection Panel -->
-          <div
-            style="
-              display: flex;
-              flex-wrap: wrap;
-              gap: var(--spacing-md);
-              margin-bottom: var(--spacing-md);
-              border-bottom: 1px solid var(--border);
-              padding-bottom: 12px;
-            "
-          >
-            <div class="form-group" style="flex: 1">
-              <label for="ecrf-subject-selector" style="font-weight: bold"
-                >Active Subject ID</label
-              >
-              <select
-                id="ecrf-subject-selector"
-                v-model="selectedSubjectId"
-                style="
-                  width: 100%;
-                  padding: 8px;
-                  border: 1px solid var(--border);
-                  border-radius: 4px;
-                "
-                @change="loadEcrfSession"
-              >
-                <option value="SUBJ-001">SUBJ-001 (Mock Subject)</option>
-                <option value="SUBJ-002">SUBJ-002 (Screened Cohort)</option>
-                <option value="SUBJ-003">SUBJ-003 (Post-Randomization)</option>
-              </select>
-            </div>
-            <div class="form-group" style="flex: 1">
-              <label for="ecrf-visit-selector" style="font-weight: bold"
-                >Active Visit / Encounter</label
-              >
-              <select
-                id="ecrf-visit-selector"
-                v-model="selectedVisitId"
-                style="
-                  width: 100%;
-                  padding: 8px;
-                  border: 1px solid var(--border);
-                  border-radius: 4px;
-                "
-                @change="loadEcrfSession"
-              >
-                <option value="Screening">Screening / Day -7</option>
-                <option value="Week2">Week 2 Treatment</option>
-                <option value="Week4">Week 4 Treatment</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Protocol Amendment Re-Consent Gating Banner (PRD-SUB-007) -->
-          <div
-            v-if="isReconsentGated"
-            id="reconsent-gating-banner"
-            class="reconsent-banner"
-            style="
-              background-color: #fef2f2;
-              border: 2px solid #ef4444;
-              border-radius: 8px;
-              padding: 16px 20px;
-              margin-bottom: var(--spacing-md);
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              flex-wrap: wrap;
-              gap: 12px;
-            "
-          >
-            <div>
-              <div
-                style="
-                  font-size: 1.05rem;
-                  font-weight: 700;
-                  color: #991b1b;
-                  display: flex;
-                  align-items: center;
-                  gap: 8px;
-                "
-              >
-                <span>⚠️</span>
-                <span
-                  >Protocol Amendment Active (v2.0.0) — Re-Consent
-                  Required</span
-                >
-              </div>
-              <p style="margin: 4px 0 0 0; font-size: 0.875rem; color: #7f1d1d">
-                This subject must complete re-consent for Protocol Version 2.0.0
-                before further visit data entry can be saved (PRD-SUB-007). All
-                input fields are currently locked.
-              </p>
-            </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap">
-              <button
-                id="btn-open-econsent"
-                type="button"
-                class="btn btn-primary"
-                style="
-                  background-color: #dc2626;
-                  color: white;
-                  font-weight: bold;
-                  padding: 8px 14px;
-                  font-size: 0.85rem;
-                  border-radius: 6px;
-                  border: none;
-                  cursor: pointer;
-                "
-                @click="openEconsentModal"
-              >
-                ✍️ Open eConsent Form
-              </button>
-              <button
-                id="btn-upload-paper-icf"
-                type="button"
-                class="btn btn-secondary"
-                style="
-                  background-color: #ffffff;
-                  color: #991b1b;
-                  border: 1px solid #f87171;
-                  font-weight: bold;
-                  padding: 8px 14px;
-                  font-size: 0.85rem;
-                  border-radius: 6px;
-                  cursor: pointer;
-                "
-                @click="openPaperIcfModal"
-              >
-                📄 Upload Signed Paper ICF
-              </button>
-            </div>
-          </div>
-
-          <!-- Batch Verification Action Bar -->
-          <div
-            v-if="selectedBatchFields.length > 0"
-            id="batch-sdv-bar"
-            style="
-              background-color: #eff6ff;
-              border: 1px solid #bfdbfe;
-              border-radius: 8px;
-              padding: 12px 16px;
-              margin-bottom: var(--spacing-md);
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              flex-wrap: wrap;
-              gap: var(--spacing-sm);
-            "
-          >
-            <div style="font-size: 0.9rem; font-weight: 600; color: #1e40af">
-              Selected {{ selectedBatchFields.length }} fields for Batch Source
-              Data Verification
-            </div>
-            <button
-              id="btn-batch-verify"
-              class="btn btn-primary"
-              style="
-                background-color: #2563eb;
-                color: white;
-                font-weight: bold;
-                padding: 6px 12px;
-                font-size: 0.85rem;
-              "
-              @click="initiateBatchVerify"
-            >
-              Batch Verify Selected ({{ selectedBatchFields.length }})
-            </button>
-          </div>
-
-          <form
-            id="form-VS_DEMO"
-            class="clinical-form responsive-grid"
-            @submit.prevent
-          >
-            <fieldset
-              :disabled="isReconsentGated"
-              style="border: none; padding: 0; margin: 0; display: contents"
-            >
-              <template v-for="field in store.ecrfFields" :key="field.id">
-                <div
-                  v-show="store.fieldVisibility[field.id] !== false"
-                  :style="`grid-column: span ${field.gridSpan || 12}; display: flex; flex-direction: column; gap: 8px;`"
-                  style="margin-bottom: 8px"
-                >
-                  <ClinicalFormField
-                    :field="field"
-                    :model-value="store.formValues[field.id]"
-                    :query="store.formQueries[field.id]"
-                    :error="getValidationError(field)"
-                    :lookup-status="lookupStatuses[field.id]"
-                    :can-manage-queries="store.canManageQueries"
-                    :query-label="
-                      store.getQueryLabel(store.formQueries[field.id])
-                    "
-                    @update:model-value="store.formValues[field.id] = $event"
-                    @input="handleLookupInput(field, $event)"
-                    @change="
-                      (val, target) => handleFieldChange(field, val, target)
-                    "
-                    @create-query="createQuery(field.id, $event)"
-                    @respond-query="respondQuery(field.id, $event)"
-                    @close-query="closeQuery(field.id)"
-                    @reopen-query="reopenQuery(field.id)"
-                  />
-
-                  <!-- Sub-Issue 10: CRA Monitoring and SDV (Source Document Verification) checkbox -->
-                  <div
-                    v-if="isCraUser"
-                    style="
-                      display: flex;
-                      align-items: center;
-                      gap: 8px;
-                      background-color: #f0fdf4;
-                      border: 1px dashed #bbf7d0;
-                      padding: 8px;
-                      border-radius: 4px;
-                      margin-top: -6px;
-                    "
-                    class="sdv-box"
-                  >
-                    <input
-                      :id="`sdv-${field.id}`"
-                      type="checkbox"
-                      :checked="sdvStates[getSdvKey(field.id)] === true"
-                      style="cursor: pointer"
-                      @change="handleSdvToggle(field.id, $event.target.checked)"
-                    />
-                    <label
-                      :for="`sdv-${field.id}`"
-                      style="
-                        font-size: 0.8rem;
-                        color: #166534;
-                        font-weight: 600;
-                        margin: 0;
-                        cursor: pointer;
-                      "
-                    >
-                      Source Document Verified (SDV)
-                    </label>
-                  </div>
-
-                  <!-- Batch SDV Selection Checkbox -->
-                  <div
-                    v-if="isAuthorizedForBulkSdv"
-                    style="
-                      display: flex;
-                      align-items: center;
-                      gap: 8px;
-                      background-color: #eff6ff;
-                      border: 1px dashed #bfdbfe;
-                      padding: 8px;
-                      border-radius: 4px;
-                      margin-top: 4px;
-                    "
-                    class="batch-sdv-box"
-                  >
-                    <input
-                      :id="`batch-sdv-${field.id}`"
-                      v-model="selectedBatchFields"
-                      type="checkbox"
-                      :value="field.id"
-                      style="cursor: pointer"
-                      class="batch-sdv-checkbox"
-                    />
-                    <label
-                      :for="`batch-sdv-${field.id}`"
-                      style="
-                        font-size: 0.8rem;
-                        color: #1e40af;
-                        font-weight: 600;
-                        margin: 0;
-                        cursor: pointer;
-                      "
-                    >
-                      Select for Batch SDV
-                    </label>
-                  </div>
-                </div>
-              </template>
-            </fieldset>
-          </form>
-
-          <div class="form-actions">
-            <button
-              id="btn-clear-ecrf"
-              class="btn"
-              :disabled="isReconsentGated"
-              @click="clearForm"
-            >
-              Clear Form
-            </button>
-            <button
-              id="btn-submit-ecrf"
-              class="btn btn-primary"
-              :disabled="isReconsentGated"
-              @click="submitEcrf"
-            >
-              {{
-                isReconsentGated
-                  ? "Locked (Re-Consent Required)"
-                  : "Submit eCRF Session"
-              }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Right Column: Verification & CDASH Metadata Tools -->
-        <div
-          class="ecrf-side-column"
-          style="
-            flex: 1 1 380px;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-          "
+        <CrcFormRenderer
+          v-model:selected-subject-id="selectedSubjectId"
+          v-model:selected-visit-id="selectedVisitId"
+          v-model:show-econsent-modal="showEconsentModal"
+          v-model:show-paper-icf-modal="showPaperIcfModal"
+          v-model:econsent-signer-name="econsentSignerName"
+          v-model:paper-icf-date="paperIcfDate"
+          v-model:paper-icf-note="paperIcfNote"
+          v-model:selected-batch-fields="selectedBatchFields"
+          :store="store"
+          :is-reconsent-gated="isReconsentGated"
+          :reconsent-submitting="reconsentSubmitting"
+          :lookup-statuses="lookupStatuses"
+          :get-validation-error="getValidationError"
+          :is-cra-user="isCraUser"
+          :is-authorized-for-bulk-sdv="isAuthorizedForBulkSdv"
+          :sdv-states="sdvStates"
+          :get-sdv-key="getSdvKey"
+          @load-ecrf-session="loadEcrfSession"
+          @open-econsent-modal="openEconsentModal"
+          @open-paper-icf-modal="openPaperIcfModal"
+          @handle-complete-reconsent="(method) => handleCompleteReconsent(method, store)"
+          @handle-lookup-input="handleLookupInput"
+          @handle-field-change="handleFieldChange"
+          @create-query="createQuery"
+          @respond-query="respondQuery"
+          @close-query="closeQuery"
+          @reopen-query="reopenQuery"
+          @handle-sdv-toggle="onSdvToggle"
+          @clear-form="clearForm"
+          @submit-ecrf="submitEcrf"
         >
-          <!-- PI Sign-Off Worklist and Verification Card -->
-          <div
-            class="card"
-            style="display: flex; flex-direction: column; gap: 16px"
-          >
-            <div class="card-title">
-              PI Sign-Off Worklist &amp; Verification
-            </div>
-            <p style="font-size: 0.85rem; color: #475569; margin-bottom: 4px">
-              Perform a 21 CFR Part 11 compliant electronic signature. This
-              action requires re-authenticating the Principal Investigator
-              credentials to obtain a secure single-use signature token.
-            </p>
-
-            <div style="display: flex; flex-direction: column; gap: 12px">
-              <div class="form-group">
-                <label for="signoff-target-type"
-                  >Sign-Off Scope (Granularity)</label
-                >
-                <select
-                  id="signoff-target-type"
-                  v-model="signoffTargetType"
-                  style="
-                    width: 100%;
-                    padding: 8px;
-                    border: 1px solid var(--border);
-                    border-radius: 4px;
-                  "
-                >
-                  <option value="FORM">FORM Level</option>
-                  <option value="VISIT">VISIT Level</option>
-                  <option value="SUBJECT">SUBJECT Level</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label for="signoff-target-id">Select Target ID</label>
-                <select
-                  id="signoff-target-id"
-                  v-model="signoffTargetId"
-                  style="
-                    width: 100%;
-                    padding: 8px;
-                    border: 1px solid var(--border);
-                    border-radius: 4px;
-                  "
-                >
-                  <option value="">-- Choose ID --</option>
-                  <template v-if="signoffTargetType === 'SUBJECT'">
-                    <option
-                      v-for="sub in availableSubjects"
-                      :key="sub"
-                      :value="sub"
-                    >
-                      {{ sub }}
-                    </option>
-                  </template>
-                  <template v-else-if="signoffTargetType === 'VISIT'">
-                    <option
-                      v-for="visit in availableVisits"
-                      :key="visit"
-                      :value="visit"
-                    >
-                      {{ visit }}
-                    </option>
-                  </template>
-                  <template v-else-if="signoffTargetType === 'FORM'">
-                    <option
-                      v-for="form in availableFormSubmissions"
-                      :key="form"
-                      :value="form"
-                    >
-                      {{ form }}
-                    </option>
-                  </template>
-                  <option value="custom">-- Enter Custom --</option>
-                </select>
-              </div>
-
-              <div v-if="signoffTargetId === 'custom'" class="form-group">
-                <label for="signoff-custom-target-id"
-                  >Custom Target ID Value</label
-                >
-                <input
-                  id="signoff-custom-target-id"
-                  type="text"
-                  placeholder="Enter custom target ID..."
-                  style="
-                    width: 100%;
-                    padding: 8px;
-                    border: 1px solid var(--border);
-                    border-radius: 4px;
-                  "
-                  @input="(e) => (customTargetId = e.target.value)"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="signoff-reason">Signing Reason / Attestation</label>
-                <select
-                  id="signoff-reason"
-                  v-model="signoffReason"
-                  style="
-                    width: 100%;
-                    padding: 8px;
-                    border: 1px solid var(--border);
-                    border-radius: 4px;
-                  "
-                >
-                  <option
-                    v-for="reason in validSigningReasons"
-                    :key="reason"
-                    :value="reason"
-                  >
-                    {{ reason }}
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            <div
-              style="display: flex; justify-content: flex-end; margin-top: 8px"
-            >
-              <button
-                id="btn-pi-signoff"
-                class="btn btn-primary"
-                type="button"
-                @click="handleSignOffSubmit"
-              >
-                ✍️ Sign Off Target
-              </button>
-            </div>
-          </div>
-
-          <!-- Live Form State & CDASH Meta Card -->
-          <div
-            class="card"
-            style="display: flex; flex-direction: column; gap: 16px"
-          >
-            <div>
-              <div class="card-title">CDASH Metadata Specification</div>
-              <p style="font-size: 0.85rem; color: #475569; margin-bottom: 8px">
-                The fields on the left are dynamically rendered using structural
-                CDASH metadata tags (e.g. <code>DM.BRTHDT</code>,
-                <code>VS.VSSBP</code>).
-              </p>
-            </div>
-
-            <div
-              style="
-                border: 1px solid var(--border);
-                border-radius: 8px;
-                padding: 12px;
-                background-color: #f8fafc;
-              "
-            >
-              <h3
-                style="
-                  font-size: 0.9rem;
-                  font-weight: 700;
-                  margin-bottom: 8px;
-                  color: var(--primary);
-                "
-              >
-                Real-time Field Validation Rules:
-              </h3>
-              <ul
-                style="
-                  font-size: 0.8rem;
-                  padding-left: 20px;
-                  color: #475569;
-                  display: flex;
-                  flex-direction: column;
-                  gap: 6px;
-                "
-              >
-                <li>
-                  <strong>Birth Date:</strong> Must match YYYY-MM-DD pattern.
-                </li>
-                <li>
-                  <strong>Systolic BP:</strong> Numeric value between 50 and 250
-                  mmHg.
-                </li>
-                <li>
-                  <strong>Diastolic BP:</strong> Numeric value between 30 and
-                  150 mmHg.
-                </li>
-                <li>
-                  <strong>Pulse Rate:</strong> Numeric value between 30 and 200
-                  bpm.
-                </li>
-              </ul>
-            </div>
-
-            <div
-              style="
-                border: 1px solid var(--border);
-                border-radius: 8px;
-                padding: 12px;
-                background-color: #f8fafc;
-              "
-            >
-              <h3
-                style="
-                  font-size: 0.9rem;
-                  font-weight: 700;
-                  margin-bottom: 8px;
-                  color: var(--primary);
-                "
-              >
-                Query Management Actions:
-              </h3>
-              <p style="font-size: 0.8rem; color: #475569; line-height: 1.4">
-                Click the 💬 / ⚠️ flags next to input fields to raise, answer,
-                close, or reopen discrepancy notes. All query transitions are
-                audit-logged in real-time.
-              </p>
-            </div>
-          </div>
-        </div>
+          <template #batch-sdv-bar>
+            <!-- CRA Persona Component: Batch SDV Action Bar -->
+            <CraVerificationConsole
+              :selected-batch-fields="selectedBatchFields"
+              :is-authorized-for-bulk-sdv="isAuthorizedForBulkSdv"
+              @initiate-batch-verify="initiateBatchVerify"
+            />
+          </template>
+        </CrcFormRenderer>
       </div>
 
-      <!-- Full-Width Bottom Section: Protocol Ingestion & Review -->
-      <div style="margin-top: 24px">
+      <!-- Right Column: PI Persona Component & CDASH Metadata Tools -->
+      <div
+        class="ecrf-side-column"
+        style="
+          flex: 1 1 380px;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        "
+      >
+        <!-- PI Persona Component: Signature Worklist & Re-authentication Drawer/Modal -->
+        <PiSignatureDrawer
+          v-model:signoff-target-type="signoffTargetType"
+          v-model:signoff-target-id="signoffTargetId"
+          v-model:custom-target-id="customTargetId"
+          v-model:signoff-reason="signoffReason"
+          v-model:reauth-username="reauthUsername"
+          v-model:reauth-password="reauthPassword"
+          v-model:reauth-totp="reauthTotp"
+          v-model:simulate-delay="simulateDelay"
+          :available-subjects="availableSubjects"
+          :available-visits="availableVisits"
+          :available-form-submissions="availableFormSubmissions"
+          :valid-signing-reasons="validSigningReasons"
+          :show-reauth-modal="showReauthModal"
+          :reauth-error="reauthError"
+          @submit-signoff="handleSignOffSubmit"
+          @cancel-reauth="cancelReauth"
+          @confirm-reauth="confirmReauth"
+        />
+
+        <!-- Live Form State & CDASH Meta Card -->
         <div
           class="card"
-          style="
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            grid-column: span 12;
-          "
+          style="display: flex; flex-direction: column; gap: 16px"
         >
-          <div class="card-title">
-            Ultimate CRF Builder: Protocol Ingestion &amp; Review
+          <div>
+            <div class="card-title">CDASH Metadata Specification</div>
+            <p style="font-size: 0.85rem; color: #475569; margin-bottom: 8px">
+              The fields on the left are dynamically rendered using structural
+              CDASH metadata tags (e.g. <code>DM.BRTHDT</code>,
+              <code>VS.VSSBP</code>).
+            </p>
           </div>
-          <p style="font-size: 0.85rem; color: #475569">
-            Upload a clinical protocol document (PDF/DOCX) to automatically
-            generate candidate SoA visits and form fields with trace citations
-            and confidence levels. Accept, edit, or reject each item before
-            promoting reviewed candidates into a formal study draft.
-          </p>
 
-          <!-- Upload File Section -->
           <div
             style="
-              border: 1px dashed var(--border);
+              border: 1px solid var(--border);
               border-radius: 8px;
-              padding: 16px;
-              text-align: center;
+              padding: 12px;
               background-color: #f8fafc;
             "
           >
-            <input
-              ref="fileInputRef"
-              type="file"
-              accept=".pdf,.docx"
-              style="display: none"
-              @change="triggerDocumentUpload"
-            />
-            <button
-              class="btn"
-              type="button"
-              :disabled="store.ingestionLoading"
-              @click="triggerFileSelect"
-            >
-              {{
-                store.ingestionLoading
-                  ? "Processing Document..."
-                  : "📁 Select Protocol PDF/DOCX"
-              }}
-            </button>
-            <div
-              v-if="selectedFileName"
-              style="margin-top: 8px; font-size: 0.8rem; color: #475569"
-            >
-              Selected:
-              <strong class="selected-file-name">{{ selectedFileName }}</strong>
-            </div>
-          </div>
-
-          <!-- Ingestion Error Display -->
-          <div
-            v-if="store.ingestionError"
-            style="color: #ef4444; font-size: 0.85rem; margin-top: 8px"
-          >
-            Error: {{ store.ingestionError }}
-          </div>
-
-          <!-- Candidate Draft Item Review List -->
-          <div
-            v-if="store.candidateDraft"
-            style="
-              display: flex;
-              flex-direction: column;
-              gap: 16px;
-              margin-top: 12px;
-            "
-            class="candidate-draft-section"
-          >
-            <div
+            <h3
               style="
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                border-bottom: 1px solid var(--border);
-                padding-bottom: 8px;
-              "
-            >
-              <span style="font-size: 0.9rem; font-weight: 700">
-                Candidate ID:
-                <code
-                  style="
-                    background-color: rgb(241 245 249);
-                    padding: 2px 4px;
-                    border-radius: 4px;
-                  "
-                  class="candidate-id"
-                  >{{ store.candidateDraft.id }}</code
-                >
-              </span>
-              <span
-                :class="[
-                  'badge',
-                  store.candidateDraft.status === 'PROMOTED'
-                    ? 'lookup-valid'
-                    : 'lookup-degraded',
-                ]"
-                style="font-size: 0.8rem; padding: 4px 8px; border-radius: 4px"
-                class="candidate-status"
-              >
-                {{ store.candidateDraft.status }}
-              </span>
-            </div>
-
-            <div
-              style="
-                font-size: 0.85rem;
-                font-weight: bold;
+                font-size: 0.9rem;
+                font-weight: 700;
+                margin-bottom: 8px;
                 color: var(--primary);
               "
             >
-              Candidate Items Under Review:
-            </div>
-
-            <div
+              Real-time Field Validation Rules:
+            </h3>
+            <ul
               style="
+                font-size: 0.8rem;
+                padding-left: 20px;
+                color: #475569;
                 display: flex;
                 flex-direction: column;
-                gap: 12px;
-                max-height: 400px;
-                overflow-y: auto;
+                gap: 6px;
               "
             >
-              <div
-                v-for="item in Object.values(store.candidateDraft.items)"
-                :key="item.id"
-                style="
-                  border: 1px solid var(--border);
-                  border-radius: 8px;
-                  padding: 12px;
-                  display: flex;
-                  flex-direction: column;
-                  gap: 8px;
-                "
-                class="candidate-item-card"
-              >
-                <div
-                  style="
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: flex-start;
-                  "
-                >
-                  <div>
-                    <span
-                      class="badge"
-                      style="
-                        background-color: rgb(226 232 240);
-                        color: #475569;
-                        font-size: 0.75rem;
-                        text-transform: uppercase;
-                        margin-right: 6px;
-                      "
-                    >
-                      <!-- deid: ignore -->
-                      {{ item.type }}
-                    </span>
-                    <strong class="item-label">{{
-                      item.type === "visit" ? item.name : item.label
-                    }}</strong>
-                  </div>
+              <li>
+                <strong>Birth Date:</strong> Must match YYYY-MM-DD pattern.
+              </li>
+              <li>
+                <strong>Systolic BP:</strong> Numeric value between 50 and 250
+                mmHg.
+              </li>
+              <li>
+                <strong>Diastolic BP:</strong> Numeric value between 30 and
+                150 mmHg.
+              </li>
+              <li>
+                <strong>Pulse Rate:</strong> Numeric value between 30 and 200
+                bpm.
+              </li>
+            </ul>
+          </div>
 
-                  <!-- Confidence badge and citations -->
-                  <div style="display: flex; align-items: center; gap: 6px">
-                    <span
-                      :class="[
-                        'badge',
-                        getConfidenceClass(item.confidence_level),
-                      ]"
-                      style="font-size: 0.7rem"
-                      class="item-confidence"
-                    >
-                      {{ (item.confidence * 100).toFixed(0) }}% ({{
-                        item.confidence_level
-                      }})
-                    </span>
-                    <span
-                      style="font-size: 0.75rem; color: #64748b"
-                      title="Source Reference"
-                      class="item-citation"
-                    >
-                      📖 {{ item.source_citation }}
-                    </span>
-                  </div>
-                </div>
-
-                <!-- Item Edit Fields if user is editing -->
-                <div
-                  v-if="editingItemId === item.id"
-                  style="
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                    background-color: #f8fafc;
-                    padding: 8px;
-                    border-radius: 6px;
-                  "
-                  class="item-edit-section"
-                >
-                  <div class="form-group">
-                    <label style="font-size: 0.75rem"
-                      >Modify Candidate Name/Label</label
-                    >
-                    <input
-                      v-model="editItemValue"
-                      type="text"
-                      style="
-                        width: 100%;
-                        padding: 6px;
-                        border: 1px solid var(--border);
-                        border-radius: 4px;
-                        font-size: 0.8rem;
-                      "
-                      class="edit-item-input"
-                    />
-                  </div>
-                  <div class="form-group">
-                    <label style="font-size: 0.75rem"
-                      >Change Reason Justification (Mandatory)</label
-                    >
-                    <input
-                      v-model="editItemReason"
-                      type="text"
-                      placeholder="Enter mandatory reason..."
-                      style="
-                        width: 100%;
-                        padding: 6px;
-                        border: 1px solid var(--border);
-                        border-radius: 4px;
-                        font-size: 0.8rem;
-                      "
-                      class="edit-item-reason"
-                    />
-                  </div>
-                  <div
-                    style="display: flex; justify-content: flex-end; gap: 6px"
-                  >
-                    <button class="btn btn-sm" @click="cancelEditItem">
-                      Cancel
-                    </button>
-                    <button
-                      class="btn btn-primary btn-sm save-edit-btn"
-                      @click="saveEditItem(item.id)"
-                    >
-                      Save Edit
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Reason Prompt modal/input inline for Rejection -->
-                <div
-                  v-else-if="rejectingItemId === item.id"
-                  style="
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                    background-color: #fef2f2;
-                    padding: 8px;
-                    border-radius: 6px;
-                  "
-                  class="item-reject-section"
-                >
-                  <div class="form-group">
-                    <label
-                      style="
-                        font-size: 0.75rem;
-                        color: #ef4444;
-                        font-weight: bold;
-                      "
-                      >Provide Rejection Reason (Mandatory)</label
-                    >
-                    <input
-                      v-model="rejectItemReason"
-                      type="text"
-                      placeholder="Provide justification for rejecting candidate..."
-                      style="
-                        width: 100%;
-                        padding: 6px;
-                        border: 1px solid var(--border);
-                        border-radius: 4px;
-                        font-size: 0.8rem;
-                      "
-                      class="reject-item-reason"
-                    />
-                  </div>
-                  <div
-                    style="display: flex; justify-content: flex-end; gap: 6px"
-                  >
-                    <button class="btn btn-sm" @click="cancelRejectItem">
-                      Cancel
-                    </button>
-                    <button
-                      class="btn btn-primary btn-sm confirm-reject-btn"
-                      style="background-color: #ef4444"
-                      @click="confirmRejectItem(item.id)"
-                    >
-                      Confirm Reject
-                    </button>
-                  </div>
-                </div>
-
-                <!-- General Item Actions & Metadata -->
-                <div
-                  v-else
-                  style="
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    font-size: 0.8rem;
-                  "
-                >
-                  <div style="color: #64748b">
-                    Status:
-                    <span
-                      :class="['badge', getStatusClass(item.review_status)]"
-                      style="font-size: 0.75rem"
-                      class="item-review-status"
-                    >
-                      {{ item.review_status }}
-                    </span>
-                    <span
-                      v-if="item.reason"
-                      style="margin-left: 6px; font-style: italic"
-                      class="item-review-reason"
-                    >
-                      - "{{ item.reason }}"
-                    </span>
-                  </div>
-
-                  <div
-                    v-if="store.candidateDraft.status !== 'PROMOTED'"
-                    style="display: flex; gap: 6px"
-                  >
-                    <button
-                      class="btn btn-sm accept-btn"
-                      style="padding: 2px 8px; font-size: 0.75rem"
-                      @click="acceptItem(item.id)"
-                    >
-                      ✔️ Accept
-                    </button>
-                    <button
-                      class="btn btn-sm edit-btn"
-                      style="padding: 2px 8px; font-size: 0.75rem"
-                      @click="startEditItem(item)"
-                    >
-                      ✏️ Edit
-                    </button>
-                    <button
-                      class="btn btn-sm reject-btn"
-                      style="
-                        padding: 2px 8px;
-                        font-size: 0.75rem;
-                        background-color: #fecaca;
-                        color: #991b1b;
-                      "
-                      @click="startRejectItem(item.id)"
-                    >
-                      ❌ Reject
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Promotion Gating Controls -->
-            <div
-              v-if="store.candidateDraft.status !== 'PROMOTED'"
+          <div
+            style="
+              border: 1px solid var(--border);
+              border-radius: 8px;
+              padding: 12px;
+              background-color: #f8fafc;
+            "
+          >
+            <h3
               style="
-                border-top: 1px solid var(--border);
-                padding-top: 12px;
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
+                font-size: 0.9rem;
+                font-weight: 700;
+                margin-bottom: 8px;
+                color: var(--primary);
               "
             >
-              <div class="form-group">
-                <label for="promote-change-reason" style="font-weight: bold"
-                  >Promotion Change Reason (Mandatory)</label
-                >
-                <input
-                  id="promote-change-reason"
-                  v-model="promoteChangeReason"
-                  type="text"
-                  placeholder="Enter justification to promote reviewed draft into formal protocol..."
-                  style="
-                    width: 100%;
-                    padding: 8px;
-                    border: 1px solid var(--border);
-                    border-radius: 4px;
-                  "
-                  class="promote-change-reason"
-                />
-              </div>
-
-              <div
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
-                <span
-                  style="font-size: 0.8rem; color: #64748b"
-                  class="remaining-reviews-text"
-                >
-                  {{
-                    unreviewedCount === 0
-                      ? "✅ All items reviewed. Ready to promote."
-                      : `⚠️ ${unreviewedCount} items remaining to be reviewed.`
-                  }}
-                </span>
-                <button
-                  id="btn-promote-candidate"
-                  class="btn btn-primary"
-                  type="button"
-                  :disabled="
-                    unreviewedCount > 0 ||
-                    !promoteChangeReason.trim() ||
-                    store.ingestionLoading
-                  "
-                  @click="promoteCandidate"
-                >
-                  🚀 Promote Reviewed Candidate
-                </button>
-              </div>
-            </div>
-            <div
-              v-else
-              style="
-                background-color: #f0fdf4;
-                border: 1px solid #bbf7d0;
-                border-radius: 8px;
-                padding: 12px;
-                color: #166534;
-                font-size: 0.85rem;
-                text-align: center;
-              "
-            >
-              This candidate has already been promoted.
-            </div>
+              Query Management Actions:
+            </h3>
+            <p style="font-size: 0.8rem; color: #475569; line-height: 1.4">
+              Click the 💬 / ⚠️ flags next to input fields to raise, answer,
+              close, or reopen discrepancy notes. All query transitions are
+              audit-logged in real-time.
+            </p>
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Full-Width Bottom Section: Study Designer Persona Component -->
+    <div style="margin-top: 24px">
+      <DesignerSchemaPanel
+        v-model:edit-item-value="editItemValue"
+        v-model:edit-item-reason="editItemReason"
+        v-model:reject-item-reason="rejectItemReason"
+        v-model:promote-change-reason="promoteChangeReason"
+        :store="store"
+        :selected-file-name="selectedFileName"
+        :editing-item-id="editingItemId"
+        :rejecting-item-id="rejectingItemId"
+        :unreviewed-count="unreviewedCount"
+        :get-confidence-class="getConfidenceClass"
+        :get-status-class="getStatusClass"
+        @trigger-file-select="triggerFileSelect"
+        @trigger-document-upload="triggerDocumentUpload"
+        @accept-item="acceptItem"
+        @start-edit-item="startEditItem"
+        @cancel-edit-item="cancelEditItem"
+        @save-edit-item="saveEditItem"
+        @start-reject-item="startRejectItem"
+        @cancel-reject-item="cancelRejectItem"
+        @confirm-reject-item="confirmRejectItem"
+        @promote-candidate="promoteCandidate"
+      />
     </div>
 
     <!-- Reason for Change Modal Dialog -->
@@ -1089,247 +281,6 @@
       @confirm="handleResolveConflict"
       @cancel="handleCancelConflict"
     />
-
-    <!-- Re-authentication Modal Dialog -->
-    <div
-      v-if="showReauthModal"
-      id="reauth-modal"
-      class="modal-overlay"
-      style="display: flex"
-    >
-      <div class="modal">
-        <div class="modal-header">Identity Re-Authentication Required</div>
-        <div class="modal-body">
-          <p>
-            To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>,
-            you must re-verify your identity before performing this
-            high-security action.
-          </p>
-          <!-- Reuse GxpCredentialsInput for GxP re-authentication -->
-          <!-- prettier-ignore -->
-          <GxpCredentialsInput
-            v-model:username="reauthUsername"
-            v-model:password="reauthPassword" data-pragma="pragma: allowlist secret"
-            v-model:totp="reauthTotp"
-            username-id="reauth-username"
-            password-id="reauth-password"
-            totp-id="reauth-totp"
-            :disabled="false"
-            :password-required="true"
-            :group-style="{ marginBottom: '12px' }"
-            :input-style="{
-              width: '100%',
-              padding: '8px',
-              border: '1px solid var(--border)',
-              borderRadius: '4px',
-            }"
-            @keyup-enter="confirmReauth"
-          />
-          <div
-            class="form-group"
-            style="
-              margin-bottom: 12px;
-              display: flex;
-              align-items: center;
-              gap: 8px;
-            "
-          >
-            <input
-              id="reauth-simulate-delay"
-              v-model="simulateDelay"
-              type="checkbox"
-              style="cursor: pointer"
-            />
-            <label
-              for="reauth-simulate-delay"
-              style="
-                font-size: 0.8rem;
-                color: #64748b;
-                font-weight: 500;
-                cursor: pointer;
-                margin: 0;
-              "
-            >
-              Simulate 65s delay (FDA 21 CFR Part 11 Timeout Test)
-            </label>
-          </div>
-          <div
-            v-if="reauthError"
-            class="validation-error-msg"
-            style="margin-top: 8px; color: #ef4444"
-          >
-            {{ reauthError }}
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button id="btn-cancel-reauth" class="btn" @click="cancelReauth">
-            Cancel
-          </button>
-          <button
-            id="btn-confirm-reauth"
-            class="btn btn-primary"
-            @click="confirmReauth"
-          >
-            Verify &amp; Confirm
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- eConsent Signing Modal Dialog (PRD-SUB-007) -->
-    <div
-      v-if="showEconsentModal"
-      id="econsent-modal"
-      class="modal-overlay"
-      style="display: flex"
-    >
-      <div class="modal" style="max-width: 520px">
-        <div class="modal-header">
-          Execute Electronic Re-Consent (ICF v2.0.0)
-        </div>
-        <div class="modal-body">
-          <p>
-            Recording 21 CFR Part 11 compliant digital informed consent for
-            Subject <strong>{{ selectedSubjectId }}</strong> under Protocol
-            Version <strong>2.0.0</strong>.
-          </p>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label style="font-size: 0.85rem; font-weight: 600"
-              >Signer Printed Name:</label
-            >
-            <input
-              v-model="econsentSignerName"
-              type="text"
-              class="form-control"
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 4px;
-                box-sizing: border-box;
-              "
-              placeholder="Full legal name of subject"
-            />
-          </div>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label style="font-size: 0.85rem; font-weight: 600"
-              >Consent Declaration:</label
-            >
-            <div
-              style="
-                background: #f8fafc;
-                padding: 8px 12px;
-                border-radius: 4px;
-                border: 1px solid var(--border);
-                font-size: 0.8rem;
-                color: var(--text-muted);
-              "
-            >
-              "I confirm that I have reviewed the amended protocol details
-              (v2.0.0) and agree to continue participation."
-            </div>
-          </div>
-        </div>
-        <div
-          class="modal-footer"
-          style="
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            padding: 12px 16px;
-          "
-        >
-          <button class="btn btn-secondary" @click="showEconsentModal = false">
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary"
-            style="background-color: #2563eb; color: white"
-            :disabled="!econsentSignerName.trim() || reconsentSubmitting"
-            @click="handleCompleteReconsent('ECONSENT')"
-          >
-            {{
-              reconsentSubmitting ? "Signing..." : "Confirm & Sign ICF v2.0.0"
-            }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Paper ICF Upload Modal Dialog (PRD-SUB-007) -->
-    <div
-      v-if="showPaperIcfModal"
-      id="paper-icf-modal"
-      class="modal-overlay"
-      style="display: flex"
-    >
-      <div class="modal" style="max-width: 520px">
-        <div class="modal-header">Register Signed Paper ICF (v2.0.0)</div>
-        <div class="modal-body">
-          <p>
-            Upload or register site-verified paper Informed Consent Form for
-            Subject <strong>{{ selectedSubjectId }}</strong
-            >.
-          </p>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label style="font-size: 0.85rem; font-weight: 600"
-              >Date ICF Signed by Subject:</label
-            >
-            <input
-              v-model="paperIcfDate"
-              type="date"
-              class="form-control"
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 4px;
-                box-sizing: border-box;
-              "
-            />
-          </div>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label style="font-size: 0.85rem; font-weight: 600"
-              >Investigator Verification Note:</label
-            >
-            <input
-              v-model="paperIcfNote"
-              type="text"
-              class="form-control"
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 4px;
-                box-sizing: border-box;
-              "
-              placeholder="Paper ICF verified and archived in ISF binder."
-            />
-          </div>
-        </div>
-        <div
-          class="modal-footer"
-          style="
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            padding: 12px 16px;
-          "
-        >
-          <button class="btn btn-secondary" @click="showPaperIcfModal = false">
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary"
-            style="background-color: #2563eb; color: white"
-            :disabled="reconsentSubmitting"
-            @click="handleCompleteReconsent('PAPER_UPLOAD')"
-          >
-            {{ reconsentSubmitting ? "Uploading..." : "Verify & Unlock eCRF" }}
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -1339,60 +290,157 @@ import { useRoute } from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
-
-// Re-consent Gating State (PRD-SUB-007)
-const reconsentGatedSubjects = ref(new Set(["SUBJ-002"]));
-const isReconsentGated = computed(() => {
-  return reconsentGatedSubjects.value.has(selectedSubjectId.value);
-});
-
-const showEconsentModal = ref(false);
-const showPaperIcfModal = ref(false);
-const reconsentSubmitting = ref(false);
-const econsentSignerName = ref("Jane Doe");
-const paperIcfDate = ref(new Date().toISOString().split("T")[0]);
-const paperIcfNote = ref("Verified signed paper ICF in investigator binder.");
-
-function openEconsentModal() {
-  showEconsentModal.value = true;
-}
-
-function openPaperIcfModal() {
-  showPaperIcfModal.value = true;
-}
-
-async function handleCompleteReconsent(method) {
-  reconsentSubmitting.value = true;
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    reconsentGatedSubjects.value.delete(selectedSubjectId.value);
-    showEconsentModal.value = false;
-    showPaperIcfModal.value = false;
-    if (store.addLedgerBlock) {
-      await store.addLedgerBlock(
-        "RECONSENT_COMPLETED",
-        {
-          subject_id: selectedSubjectId.value,
-          protocol_version: "2.0.0",
-          method: method,
-        },
-        `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`
-      );
-    }
-  } finally {
-    reconsentSubmitting.value = false;
-  }
-}
-import { validateField, debounce, ClinicalFormField } from "ui"; // Consolidating debounce onto shared packages/ui (PR #566 alignment)
+import { validateField, debounce } from "ui";
 import { evaluateAST } from "../evaluator.js";
 import { terminologyClient } from "../api/terminologyClient";
 import ReasonModal from "../components/ReasonModal.vue";
 import ConflictResolutionModal from "../components/ConflictResolutionModal.vue";
-import GxpCredentialsInput from "../features/signatures/components/GxpCredentialsInput.vue";
 import { useSyncStore } from "../stores/sync";
-import { useNotificationsStore } from "../stores/notifications";
 import { ClientSyncEngine } from "../utils/syncEngine";
 
+// Import Persona Sub-Components
+import CrcFormRenderer from "../components/persona/CrcFormRenderer.vue";
+import CraVerificationConsole from "../components/persona/CraVerificationConsole.vue";
+import PiSignatureDrawer from "../components/persona/PiSignatureDrawer.vue";
+import DesignerSchemaPanel from "../components/persona/DesignerSchemaPanel.vue";
+
+// Import Domain Composables
+import { useConsentGating } from "../composables/useConsentGating";
+import { useVerification } from "../composables/useVerification";
+import { usePiSignoff } from "../composables/usePiSignoff";
+import { useSchemaIngestion } from "../composables/useSchemaIngestion";
+
+const store = useClinicalStore();
+const authStore = useAuthStore();
+const route = useRoute();
+
+// Selected Subject & Visit State
+const selectedSubjectId = ref("SUBJ-001");
+const selectedVisitId = ref("Screening");
+
+// Demo Role Toggle
+const demoRole = ref("site_investigator");
+
+const activeUserRole = computed(() => {
+  if (authStore.isAuthenticated) {
+    const roles = authStore.normalizedRoles || [];
+    if (roles.includes("cra") || roles.includes("monitor")) return "cra";
+    if (roles.includes("site_investigator") || roles.includes("crc"))
+      return "site_investigator";
+    return roles[0] || "site_investigator";
+  }
+  return demoRole.value;
+});
+
+// Domain Composable 1: Consent Gating (CRC)
+const {
+  reconsentGatedSubjects,
+  isReconsentGated,
+  showEconsentModal,
+  showPaperIcfModal,
+  reconsentSubmitting,
+  econsentSignerName,
+  paperIcfDate,
+  paperIcfNote,
+  openEconsentModal,
+  openPaperIcfModal,
+  handleCompleteReconsent,
+} = useConsentGating(selectedSubjectId);
+
+// Domain Composable 2: Verification & SDV (CRA)
+const {
+  sdvStates,
+  selectedBatchFields,
+  pendingSdvToggle,
+  isCraUser,
+  isAuthorizedForBulkSdv,
+  handleSdvToggle: composableHandleSdvToggle,
+  handleVerificationInvalidationOnEdit,
+} = useVerification(activeUserRole);
+
+function getSdvKey(fieldId) {
+  return `${selectedSubjectId.value}:${selectedVisitId.value}:${fieldId}`;
+}
+
+function onSdvToggle(fieldId, checked) {
+  composableHandleSdvToggle(fieldId, checked, () => {
+    showReasonModal.value = true;
+  });
+}
+
+function initiateBatchVerify() {
+  if (selectedBatchFields.value.length === 0) {
+    alert("No fields selected for batch verification!");
+    return;
+  }
+  reauthAction.value = "BULK_SDV";
+  reauthUsername.value =
+    store.user.username || authStore.identity?.username || "fderuiter";
+  reauthPassword.value = "";
+  reauthTotp.value = "";
+  reauthError.value = "";
+  showReauthModal.value = true;
+}
+
+// Domain Composable 3: PI Sign-Off Worklist & Re-authentication (PI)
+const {
+  signoffTargetType,
+  signoffTargetId,
+  customTargetId,
+  signoffReason,
+  availableSubjects,
+  availableVisits,
+  availableFormSubmissions,
+  validSigningReasons,
+  showReauthModal,
+  reauthUsername,
+  reauthPassword,
+  reauthTotp,
+  reauthError,
+  reauthAction,
+  pendingCloseQueryFieldId,
+  simulateDelay,
+  handleSignOffSubmit: composableHandleSignOffSubmit,
+  cancelReauth,
+} = usePiSignoff(store, authStore);
+
+function handleSignOffSubmit() {
+  composableHandleSignOffSubmit((config) => {
+    reauthAction.value = config.action;
+    reauthUsername.value = config.username;
+    reauthPassword.value = "";
+    reauthTotp.value = "";
+    reauthError.value = "";
+    showReauthModal.value = true;
+  }, store.user.username || authStore.identity?.username || "fderuiter");
+}
+
+// Domain Composable 4: Protocol Schema Ingestion & Review (Study Designer)
+const {
+  fileInputRef,
+  selectedFileName,
+  editingItemId,
+  editItemValue,
+  editItemReason,
+  rejectingItemId,
+  rejectItemReason,
+  promoteChangeReason,
+  unreviewedCount,
+  triggerFileSelect,
+  triggerDocumentUpload,
+  getConfidenceClass,
+  getStatusClass,
+  acceptItem,
+  startEditItem,
+  cancelEditItem,
+  saveEditItem,
+  startRejectItem,
+  cancelRejectItem,
+  confirmRejectItem,
+  promoteCandidate,
+} = useSchemaIngestion(store);
+
+// Reason for Change Modal States
 const ecrfReasonOptions = [
   { value: "Initial Entry", text: "Initial Data Entry" },
   { value: "Typographical Error", text: "Correction of typographical error" },
@@ -1400,11 +448,10 @@ const ecrfReasonOptions = [
   { value: "Transcription Error", text: "Correction of transcription error" },
   { value: "Other", text: "Other (specify below)" },
 ];
+const showReasonModal = ref(false);
+const pendingValueChange = ref(null);
 
-const store = useClinicalStore();
-const authStore = useAuthStore();
-const route = useRoute();
-
+// Sync Store & Conflict Resolution
 const syncStore = useSyncStore();
 const syncEngine = new ClientSyncEngine();
 
@@ -1433,20 +480,17 @@ function handleCancelConflict() {
   syncStore.clearConflict();
 }
 
-// Consolidated lookup validation and state management (PR #566 alignment)
-// Unifies and replaces legacy inline timer and request counters (conceptRequestIds, requestCounters, and lastLookupRequestIds)
+// Consolidated lookup validation and state management
 const lookupStatuses = ref({});
 const lookupRequestCounters = reactive({});
 const debouncedLookups = {};
 
-// Performs asynchronous validation against terminology service with strict stale-response protection
 async function performConceptCodeValidation(fieldId, value) {
   if (!value || !value.trim()) {
     lookupStatuses.value[fieldId] = null;
     return;
   }
 
-  // Increment counter atomically per field ID to act as our active stale-response guard
   const nextRequestId = (lookupRequestCounters[fieldId] || 0) + 1;
   lookupRequestCounters[fieldId] = nextRequestId;
 
@@ -1460,10 +504,7 @@ async function performConceptCodeValidation(fieldId, value) {
       changeReason: "Validate code",
     });
 
-    // Stale guard check: discard if another request has been fired since
-    if (nextRequestId !== lookupRequestCounters[fieldId]) {
-      return;
-    }
+    if (nextRequestId !== lookupRequestCounters[fieldId]) return;
 
     if (res.state === "VALID") {
       lookupStatuses.value[fieldId] = {
@@ -1484,9 +525,7 @@ async function performConceptCodeValidation(fieldId, value) {
       };
     }
   } catch (error) {
-    if (nextRequestId !== lookupRequestCounters[fieldId]) {
-      return;
-    }
+    if (nextRequestId !== lookupRequestCounters[fieldId]) return;
     lookupStatuses.value[fieldId] = {
       status: "degraded",
       message:
@@ -1495,7 +534,6 @@ async function performConceptCodeValidation(fieldId, value) {
   }
 }
 
-// Retrieve or initialize the shared debounce wrapper around our consolidated validation
 function getDebouncedLookup(fieldId) {
   if (!debouncedLookups[fieldId]) {
     debouncedLookups[fieldId] = debounce(async (value) => {
@@ -1514,71 +552,15 @@ function handleLookupInput(field, value) {
     return;
   }
 
-  // Use shared debounce utility from packages/ui
   getDebouncedLookup(fieldId)(value);
 }
 
-// Sub-Issue 9 & 10 Subject, Visit, and SDV states
-const selectedSubjectId = ref("SUBJ-001");
-const selectedVisitId = ref("Screening");
+// eCRF Session Management
 const ecrfSessions = reactive({});
-const sdvStates = reactive({}); // keyed by `${subjectId}:${visitId}:${fieldId}`
-
-// Role Tester Toggle support
-const demoRole = ref("site_investigator");
-
-const activeUserRole = computed(() => {
-  if (authStore.isAuthenticated) {
-    const roles = authStore.normalizedRoles || [];
-    if (roles.includes("cra") || roles.includes("monitor")) return "cra";
-    if (roles.includes("site_investigator") || roles.includes("crc"))
-      return "site_investigator";
-    return roles[0] || "site_investigator";
-  }
-  return demoRole.value;
-});
-
-const isCraUser = computed(() => {
-  return activeUserRole.value === "cra";
-});
-
-const selectedBatchFields = ref([]);
-const simulateDelay = ref(false);
-
-const isAuthorizedForBulkSdv = computed(() => {
-  const role = activeUserRole.value;
-  return role === "cra" || role === "monitor" || role === "data_manager";
-});
 
 function getSessionKey() {
   return `${selectedSubjectId.value}:${selectedVisitId.value}`;
 }
-
-function getSdvKey(fieldId) {
-  return `${selectedSubjectId.value}:${selectedVisitId.value}:${fieldId}`;
-}
-
-// Handle SDV Toggle (Sub-Issue 10)
-function handleSdvToggle(fieldId, checked) {
-  pendingSdvToggle.value = { fieldId, checked };
-  showReasonModal.value = true;
-}
-
-function initiateBatchVerify() {
-  if (selectedBatchFields.value.length === 0) {
-    alert("No fields selected for batch verification!");
-    return;
-  }
-  reauthAction.value = "BULK_SDV";
-  reauthUsername.value =
-    store.user.username || authStore.identity?.username || "fderuiter";
-  reauthPassword.value = "";
-  reauthTotp.value = "";
-  reauthError.value = "";
-  showReauthModal.value = true;
-}
-
-const pendingSdvToggle = ref(null);
 
 function loadEcrfSession() {
   const key = getSessionKey();
@@ -1592,12 +574,11 @@ function loadEcrfSession() {
     });
   }
 
-  // Swap Form values and queries references
   store.formValues = ecrfSessions[key].values;
   store.formQueries = ecrfSessions[key].queries;
 
   store.evaluateRules();
-  // Initialize terminology lookups
+
   store.ecrfFields.forEach((field) => {
     if (field.type === "concept_code" && store.formValues[field.id]) {
       performConceptCodeValidation(field.id, store.formValues[field.id]);
@@ -1605,7 +586,6 @@ function loadEcrfSession() {
   });
 }
 
-// Save active form state back to sessions deep-watched
 watch(
   () => store.formValues,
   (newValues) => {
@@ -1630,7 +610,6 @@ watch(
   { deep: true }
 );
 
-// Deep watch formValues to evaluate rules debounced
 watch(
   () => store.formValues,
   () => {
@@ -1669,47 +648,13 @@ onMounted(() => {
   loadEcrfSession();
 });
 
-// Reason Modal States
-const showReasonModal = ref(false);
-const pendingValueChange = ref(null);
-
-// Re-authentication Modal States
-const showReauthModal = ref(false);
-const reauthUsername = ref(store.user.username);
-const reauthPassword = ref("");
-const reauthTotp = ref("");
-const reauthError = ref("");
-const reauthAction = ref(""); // "CLOSE_QUERY" or "BATCH_SIGN_OFF"
-const pendingCloseQueryFieldId = ref(null);
-
-// PI Sign-Off Worklist States
-const signoffTargetType = ref("FORM"); // "FORM", "VISIT", "SUBJECT"
-const signoffTargetId = ref("");
-const customTargetId = ref("");
-const signoffReason = ref("PI approval and sign-off.");
-
-const availableSubjects = ref(["SUBJ-001", "SUBJ-002", "SUBJ-003"]);
-const availableVisits = ref(["V-SCR", "V-TRT-A1", "V-TRT-A2", "V-TRT-B1"]);
-const availableFormSubmissions = ref(["FSUB-001", "FSUB-002", "FSUB-003"]);
-
-const validSigningReasons = [
-  "I attest that this data is accurate and complete.",
-  "PI approval and sign-off.",
-  "Review and confirmation.",
-  "DATA_RECORDING",
-  "DATA_ENTRY_COMPLETED",
-  "PI_REVIEW",
-  "PI_SIGN_OFF",
-  "COMPLIANCE_ATTESTATION",
-];
-
 function getValidationError(field) {
   const value = store.formValues[field.id];
   const res = validateField(field, value, store.formValues, evaluateAST);
   return res.valid ? null : res.message;
 }
 
-// Reason Modal logic
+// Reason Modal & Field Changes
 function handleFieldChange(field, newValue, targetEl) {
   const oldValue = store.formValues[field.id] || "";
   if (newValue === oldValue) return;
@@ -1779,54 +724,14 @@ function saveChange(finalReason) {
 
 function commitChange(field, oldValue, newValue, reason) {
   store.formValues[field.id] = newValue;
-
-  // Check if field has an active SDV verification status
-  const sKey = getSdvKey(field.id);
-  if (sdvStates[sKey] === true) {
-    sdvStates[sKey] = false;
-
-    // Add ledger block for SDV_CLEAR
-    store.addLedgerBlock(
-      "SDV_CLEAR",
-      {
-        fieldId: field.id,
-        label: field.label,
-        subjectId: selectedSubjectId.value,
-        visitId: selectedVisitId.value,
-        oldValue,
-        newValue,
-      },
-      "Verification cleared automatically due to field value modification"
-    );
-
-    // Dispatch alert to notifications store
-    try {
-      const notifStore = useNotificationsStore();
-      const newNotif = {
-        id:
-          "notif-sdv-clear-" +
-          Date.now() +
-          "-" +
-          Math.random().toString(36).substr(2, 4),
-        recipient_user_id: store.user.username || "fderuiter",
-        recipient_role: "monitor",
-        category: "ALERTS",
-        priority: "HIGH",
-        channels: "IN_APP",
-        message_content: `Verification cleared automatically: Field "${field.label}" was modified from "${oldValue}" to "${newValue}" for Subject ${selectedSubjectId.value}.`,
-        related_entity_id: field.id,
-        related_entity_type: "FIELD",
-        status: "OPEN",
-        delivery_state: "DELIVERED",
-        created_at: new Date().toISOString(),
-        created_by: "system",
-      };
-      notifStore.notifications.unshift(newNotif);
-    } catch (e) {
-      console.error("Failed to append notification alert", e);
-    }
-  }
-
+  handleVerificationInvalidationOnEdit(
+    field,
+    oldValue,
+    newValue,
+    selectedSubjectId.value,
+    selectedVisitId.value,
+    store
+  );
   store.addLedgerBlock(
     "FIELD_CHANGE",
     {
@@ -1906,33 +811,25 @@ function closeQuery(fieldId) {
   showReauthModal.value = true;
 }
 
-function handleSignOffSubmit() {
-  const targetId =
-    signoffTargetId.value === "custom"
-      ? customTargetId.value
-      : signoffTargetId.value;
-  if (!targetId || !targetId.trim()) {
-    alert("Please select or enter a valid Target ID first.");
-    return;
-  }
-  reauthAction.value = "BATCH_SIGN_OFF";
-  reauthUsername.value =
-    store.user.username || authStore.identity?.username || "fderuiter";
-  reauthPassword.value = "";
-  reauthTotp.value = "";
-  reauthError.value = "";
-  showReauthModal.value = true;
+function reopenQuery(fieldId) {
+  const queryObj = store.formQueries[fieldId];
+  queryObj.status = "REOPENED";
+  queryObj.message =
+    queryObj.message + " [Reopened due to insufficient response]";
+
+  store.addLedgerBlock(
+    "QUERY_REOPEN",
+    {
+      fieldId,
+      query: queryObj,
+      subjectId: selectedSubjectId.value,
+      visitId: selectedVisitId.value,
+    },
+    "Investigator response was rejected by clinical monitor."
+  );
 }
 
-function cancelReauth() {
-  showReauthModal.value = false;
-  reauthPassword.value = "";
-  reauthTotp.value = "";
-  reauthError.value = "";
-  pendingCloseQueryFieldId.value = null;
-  reauthAction.value = "";
-}
-
+// Re-authentication confirmation handler
 async function confirmReauth() {
   if (!reauthPassword.value) {
     reauthError.value = "Password is required.";
@@ -1944,7 +841,6 @@ async function confirmReauth() {
   const totp = reauthTotp.value || null;
   const action = reauthAction.value;
 
-  // Immediately clear password to ensure GxP compliance & no state leak
   reauthPassword.value = "";
 
   if (action === "CLOSE_QUERY") {
@@ -1995,7 +891,6 @@ async function confirmReauth() {
       const targetIds = [targetId];
       const signingReason = signoffReason.value;
 
-      // Compute canonical batch binding
       const normStudy = studyId.trim();
       const normType = targetType.trim().toUpperCase();
       const normIds = [...targetIds]
@@ -2005,7 +900,6 @@ async function confirmReauth() {
       const normReason = signingReason.trim();
       const bindingStr = `${normStudy}:${normType}:${normIds}:${normReason}`;
 
-      // Calculate SHA-256 batchId
       const msgBuffer = new TextEncoder().encode(bindingStr);
       const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
@@ -2013,7 +907,6 @@ async function confirmReauth() {
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
 
-      // 1. Obtain signature token
       const reauthRes = await soaClient.verifySignature(
         {
           username,
@@ -2027,7 +920,6 @@ async function confirmReauth() {
 
       const sigToken = reauthRes.sig_token;
 
-      // 2. Call batch sign-off
       const signoffRes = await soaClient.batchSignOff(
         {
           studyId,
@@ -2044,7 +936,6 @@ async function confirmReauth() {
         authStore.accessToken
       );
 
-      // 3. Document in ledger
       await store.addLedgerBlock(
         "BATCH_SIGN_OFF_SUCCESS",
         {
@@ -2056,14 +947,12 @@ async function confirmReauth() {
         `PI electronic sign-off approved: ${signoffReason.value}`
       );
 
-      // Clean up variables & UI state
       showReauthModal.value = false;
       reauthTotp.value = "";
       alert(
         `Signature Token obtained successfully.\nBatch sign-off completed for ${signoffTargetType.value} ${targetId}!`
       );
     } catch (err) {
-      // Explicitly wipe credentials on failure
       reauthPassword.value = "";
       reauthTotp.value = "";
 
@@ -2083,7 +972,6 @@ async function confirmReauth() {
       const fieldsToVerify = [...selectedBatchFields.value];
       const signingReason = "Batch Source Data Verification (SDV)";
 
-      // Calculate SHA-256 batchId of our selected fields
       const normStudy = studyId.trim();
       const normFields = fieldsToVerify.sort().join(",");
       const bindingStr = `${normStudy}:SDV:${normFields}:${signingReason}`;
@@ -2095,13 +983,11 @@ async function confirmReauth() {
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
 
-      // Start dual-factor credentials verification
       let tokenRequestedAt = Date.now();
       if (simulateDelay.value) {
-        tokenRequestedAt -= 65000; // shift back to simulate 65s expired token
+        tokenRequestedAt -= 65000;
       }
 
-      // 1. Obtain signature token
       const reauthRes = await soaClient.verifySignature(
         {
           username,
@@ -2115,7 +1001,6 @@ async function confirmReauth() {
 
       const sigToken = reauthRes.sig_token;
 
-      // Check for compliance lockout: 60-second authentication window limit
       const elapsed = (Date.now() - tokenRequestedAt) / 1000;
       if (elapsed > 60) {
         throw new Error(
@@ -2123,7 +1008,6 @@ async function confirmReauth() {
         );
       }
 
-      // 2. Call batch sign-off API
       await soaClient.batchSignOff(
         {
           studyId,
@@ -2140,7 +1024,6 @@ async function confirmReauth() {
         authStore.accessToken
       );
 
-      // 3. Update local SDV states for each verified field and write to ledger
       for (const fieldId of fieldsToVerify) {
         const sKey = getSdvKey(fieldId);
         sdvStates[sKey] = true;
@@ -2157,7 +1040,6 @@ async function confirmReauth() {
         );
       }
 
-      // Clean up variables & UI state
       selectedBatchFields.value = [];
       showReauthModal.value = false;
       reauthTotp.value = "";
@@ -2177,24 +1059,6 @@ async function confirmReauth() {
       }
     }
   }
-}
-
-function reopenQuery(fieldId) {
-  const queryObj = store.formQueries[fieldId];
-  queryObj.status = "REOPENED";
-  queryObj.message =
-    queryObj.message + " [Reopened due to insufficient response]";
-
-  store.addLedgerBlock(
-    "QUERY_REOPEN",
-    {
-      fieldId,
-      query: queryObj,
-      subjectId: selectedSubjectId.value,
-      visitId: selectedVisitId.value,
-    },
-    "Investigator response was rejected by clinical monitor."
-  );
 }
 
 function clearForm() {
@@ -2253,155 +1117,5 @@ function submitEcrf() {
   alert(
     "eCRF Session successfully submitted to secure cryptographic database!"
   );
-}
-
-// Ingestion Review Setup Variables & Logic
-const fileInputRef = ref(null);
-const selectedFileName = ref("");
-const editingItemId = ref(null);
-const editItemValue = ref("");
-const editItemReason = ref("");
-const rejectingItemId = ref(null);
-const rejectItemReason = ref("");
-const promoteChangeReason = ref("");
-
-function triggerFileSelect() {
-  if (fileInputRef.value) {
-    fileInputRef.value.click();
-  }
-}
-
-const unreviewedCount = computed(() => {
-  if (!store.candidateDraft || !store.candidateDraft.items) return 0;
-  return Object.values(store.candidateDraft.items).filter(
-    (item) => item.review_status === "PENDING"
-  ).length;
-});
-
-async function triggerDocumentUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  selectedFileName.value = file.name;
-  try {
-    await store.uploadProtocolDocument(
-      file,
-      "Uploader triggers protocol ingestion scan."
-    );
-    alert("Protocol Document ingested successfully. Candidate draft loaded.");
-  } catch (err) {
-    alert("Ingestion failed: " + err.message);
-  }
-}
-
-function getConfidenceClass(level) {
-  if (level === "auto") return "lookup-valid";
-  if (level === "needs-review") return "lookup-degraded";
-  return "lookup-invalid";
-}
-
-function getStatusClass(status) {
-  if (status === "ACCEPTED") return "lookup-valid";
-  if (status === "EDITED") return "lookup-degraded";
-  if (status === "REJECTED") return "lookup-invalid";
-  return "";
-}
-
-async function acceptItem(itemId) {
-  try {
-    await store.transitionCandidateItemState(
-      store.candidateDraft.id,
-      itemId,
-      "ACCEPTED",
-      "Accepted by clinical reviewer"
-    );
-  } catch (err) {
-    alert("Transition failed: " + err.message);
-  }
-}
-
-function startEditItem(item) {
-  editingItemId.value = item.id;
-  editItemValue.value = item.type === "visit" ? item.name : item.label;
-  editItemReason.value = "";
-}
-
-function cancelEditItem() {
-  editingItemId.value = null;
-  editItemValue.value = "";
-  editItemReason.value = "";
-}
-
-async function saveEditItem(itemId) {
-  if (!editItemReason.value.trim()) {
-    alert("Change reason justification is mandatory for edits!");
-    return;
-  }
-  const item = store.candidateDraft.items[itemId];
-  const payload =
-    item.type === "visit"
-      ? { name: editItemValue.value }
-      : { label: editItemValue.value };
-
-  try {
-    await store.transitionCandidateItemState(
-      store.candidateDraft.id,
-      itemId,
-      "EDITED",
-      editItemReason.value,
-      payload
-    );
-    editingItemId.value = null;
-    editItemValue.value = "";
-    editItemReason.value = "";
-  } catch (err) {
-    alert("Transition failed: " + err.message);
-  }
-}
-
-function startRejectItem(itemId) {
-  rejectingItemId.value = itemId;
-  rejectItemReason.value = "";
-}
-
-function cancelRejectItem() {
-  rejectingItemId.value = null;
-  rejectItemReason.value = "";
-}
-
-async function confirmRejectItem(itemId) {
-  if (!rejectItemReason.value.trim()) {
-    alert("Change reason justification is mandatory for rejection!");
-    return;
-  }
-  try {
-    await store.transitionCandidateItemState(
-      store.candidateDraft.id,
-      itemId,
-      "REJECTED",
-      rejectItemReason.value
-    );
-    rejectingItemId.value = null;
-    rejectItemReason.value = "";
-  } catch (err) {
-    alert("Transition failed: " + err.message);
-  }
-}
-
-async function promoteCandidate() {
-  if (!promoteChangeReason.value.trim()) {
-    alert("Promotion change reason justification is mandatory!");
-    return;
-  }
-  try {
-    await store.promoteCandidateDraft(
-      store.candidateDraft.id,
-      promoteChangeReason.value
-    );
-    alert("Candidate promoted successfully into formal DRAFT version!");
-    promoteChangeReason.value = "";
-  } catch (err) {
-    alert("Promotion failed: " + err.message);
-  }
 }
 </script>
