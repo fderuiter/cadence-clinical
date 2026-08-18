@@ -3,13 +3,30 @@
 Requirements: PRD-SYS-001
 """
 
+from collections.abc import AsyncGenerator
+
+import pytest_asyncio
 from fastapi.testclient import TestClient
 
 import packages  # noqa: F401
+from apps.execution.database.core import db_manager
+from apps.execution.database.models import Base
 from apps.execution.main import app
 from apps.execution.tests.test_lock_router import _make_auth_headers
 
 client = TestClient(app)
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def setup_test_db() -> AsyncGenerator[None]:
+    """Setup in-memory SQLite database before each test and clear down after."""
+    db_manager.init_db("sqlite+aiosqlite:///:memory:")
+    async with db_manager.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    async with db_manager.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await db_manager.close()
 
 
 def test_publish_amendment_post_endpoint() -> None:

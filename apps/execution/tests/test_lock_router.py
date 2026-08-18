@@ -5,10 +5,14 @@ Requirements: PRD-SYS-001
 
 import os
 import time
+from collections.abc import AsyncGenerator
 
+import pytest_asyncio
 from fastapi.testclient import TestClient
 
 import packages  # noqa: F401
+from apps.execution.database.core import db_manager
+from apps.execution.database.models import Base
 from apps.execution.main import app
 from packages.security.signing import generate_gateway_signature
 
@@ -16,6 +20,18 @@ client = TestClient(app)
 GATEWAY_SECRET = os.getenv(
     "GATEWAY_SECRET", default="internal-gateway-secret-12345"
 ).encode("utf-8")  # pragma: allowlist secret
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def setup_test_db() -> AsyncGenerator[None]:
+    """Setup in-memory SQLite database before each test and clear down after."""
+    db_manager.init_db("sqlite+aiosqlite:///:memory:")
+    async with db_manager.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    async with db_manager.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await db_manager.close()
 
 
 def _make_auth_headers(

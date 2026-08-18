@@ -166,64 +166,63 @@ async def sync_offline_batch(
             conflicts=[],
         )
 
-    # Open transactional block
-    async with session.begin():
-        user_val = user.get("sub") or "system"
-        reason_val = (
-            getattr(request.state, "change_reason", None)
-            or "Offline batch synchronization"
-        )
+    user_val = user.get("sub") or "system"
+    reason_val = (
+        getattr(request.state, "change_reason", None)
+        or "Offline batch synchronization"
+    )
 
-        await session.execute(
-            text("SELECT set_config('cadence.current_user_id', :user_id, true);"),
-            {"user_id": user_val},
-        )
-        await session.execute(
-            text("SELECT set_config('cadence.current_change_reason', :reason, true);"),
-            {"reason": reason_val},
-        )
-        await session.execute(
-            text("SELECT set_config('cadence.app_writing', 'true', true);")
-        )
+    await session.execute(
+        text("SELECT set_config('cadence.current_user_id', :user_id, true);"),
+        {"user_id": user_val},
+    )
+    await session.execute(
+        text("SELECT set_config('cadence.current_change_reason', :reason, true);"),
+        {"reason": reason_val},
+    )
+    await session.execute(
+        text("SELECT set_config('cadence.app_writing', 'true', true);")
+    )
 
-        processed_count, conflicts = await OfflineSyncEngine.process_delta_batch(
-            session, payload.deltas
-        )
+    processed_count, conflicts = await OfflineSyncEngine.process_delta_batch(
+        session, payload.deltas
+    )
 
-        status_str = "SUCCESS" if not conflicts else "PARTIAL_SUCCESS"
+    status_str = "SUCCESS" if not conflicts else "PARTIAL_SUCCESS"
 
-        # Record OFFLINE_SYNC_BATCH audit event
-        audit_log = AuditLog(
-            id=str(uuid.uuid4()),
-            table_name="synced_batch_idempotency_keys",
-            record_id=payload.client_batch_id,
-            action="OFFLINE_SYNC_BATCH",
-            user_id=user_val,
-            ip_address=getattr(request.client, "host", None) or "127.0.0.1"
-            if request.client
-            else "127.0.0.1",
-            timestamp=datetime.now(UTC).replace(tzinfo=None),
-            old_values={},
-            new_values={
-                "device_id": payload.device_id,
-                "deltas_count": len(payload.deltas),
-                "processed_count": processed_count,
-                "client_batch_id": payload.client_batch_id,
-                "status": status_str,
-            },
-            version_index=1,
-            change_reason=reason_val,
-        )
-        session.add(audit_log)
+    # Record OFFLINE_SYNC_BATCH audit event
+    audit_log = AuditLog(
+        id=str(uuid.uuid4()),
+        table_name="synced_batch_idempotency_keys",
+        record_id=payload.client_batch_id,
+        action="OFFLINE_SYNC_BATCH",
+        user_id=user_val,
+        ip_address=getattr(request.client, "host", None) or "127.0.0.1"
+        if request.client
+        else "127.0.0.1",
+        timestamp=datetime.now(UTC).replace(tzinfo=None),
+        old_values={},
+        new_values={
+            "device_id": payload.device_id,
+            "deltas_count": len(payload.deltas),
+            "processed_count": processed_count,
+            "client_batch_id": payload.client_batch_id,
+            "status": status_str,
+        },
+        version_index=1,
+        change_reason=reason_val,
+    )
+    session.add(audit_log)
 
-        # Persist idempotency key record
-        idempotency_key_record = SyncedBatchIdempotencyKey(
-            client_batch_id=payload.client_batch_id,
-            device_id=payload.device_id,
-            processed_count=processed_count,
-            processed_at=datetime.now(UTC).replace(tzinfo=None),
-        )
-        session.add(idempotency_key_record)
+    # Persist idempotency key record
+    idempotency_key_record = SyncedBatchIdempotencyKey(
+        client_batch_id=payload.client_batch_id,
+        device_id=payload.device_id,
+        processed_count=processed_count,
+        processed_at=datetime.now(UTC).replace(tzinfo=None),
+    )
+    session.add(idempotency_key_record)
+    await session.commit()
 
     return OfflineBatchSyncResponse(
         client_batch_id=payload.client_batch_id,

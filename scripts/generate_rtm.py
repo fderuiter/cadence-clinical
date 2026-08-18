@@ -86,6 +86,7 @@ def _sweep_markdown_files(path_or_dir):
         "IQ_OQ_PQ_Execution_Report.md",
     }
     for root, dirs, files in os.walk(path_or_dir):
+        dirs[:] = [d for d in dirs if d != "runs" and not d.startswith(".")]
         dirs.sort()
         for f in sorted(files):
             if f.endswith(".md") and f not in ignored_files:
