@@ -711,43 +711,65 @@ def generate_qualification_report(
             "Performance Qualification documents the verification of end-to-end clinical workflow scenarios defined in Section 5 of the QA & Validation Plan.\n\n"
         )
 
-        scenarios = [
-            {
-                "id": "TC-VAL-LOG-001",
-                "name": "Protocol Version Locking & Immutability Rejection",
-                "reqs": "PRD-MDR-001, PRD-UNI-003",
-                "test": "test_prevent_hard_delete_on_audited_model",
-                "desc": "Verifies that locked study version nodes in Neo4j are completely immutable, and direct database manipulations are rejected.",
-            },
-            {
-                "id": "TC-VAL-LOG-002",
-                "name": "Stratification Factor Re-randomization Rejections",
-                "reqs": "PRD-SUB-002, PRD-SUB-001",
-                "test": "test_hard_delete_is_prevented",
-                "desc": "Verifies that stratification factor modifications and backward state machine updates are strictly forbidden once randomized.",
-            },
-            {
-                "id": "TC-VAL-LOG-003",
-                "name": "Offline Mode Data Entry, Sync Collision & Conflict Resolution",
-                "reqs": "PRD-EDC-004, PRD-UNI-002",
-                "test": "test_soft_delete_generates_audit_log",
-                "desc": "Verifies that offline data entries are synchronized accurately, conflict resolution runs deterministically, and the audit ledger captures all states.",
-            },
-            {
-                "id": "TC-VAL-LOG-004",
-                "name": "Re-authentication Enforcement during Emergency Unblinding",
-                "reqs": "PRD-MDR-003, PRD-UNI-002",
-                "test": "test_trial_lock_freeze",
-                "desc": "Verifies that unblinding requests require strict multi-factor re-authentication, trigger immediate unblinded state transition, lock the trial on tampering, and dispatch security alerts.",
-            },
-        ]
+        import json
+        import jsonschema
+
+        schema_file = REPO_ROOT / "docs" / "SDLC" / "pq_scenarios_schema.json"
+        config_file = REPO_ROOT / "docs" / "SDLC" / "pq_scenarios.json"
+
+        try:
+            with open(schema_file, "r", encoding="utf-8") as sf:
+                schema = json.load(sf)
+            with open(config_file, "r", encoding="utf-8") as cf:
+                config = json.load(cf)
+            jsonschema.validate(instance=config, schema=schema)
+            scenarios = config["scenarios"]
+        except Exception as e:
+            print(f"ERROR: Failed to load/validate PQ scenarios from standalone JSON configuration: {e}", file=sys.stderr)
+            sys.exit(1)
 
         for sc in scenarios:
+            matching_results = []
+            for (classname, name), res in test_results.items():
+                if name == sc["test"] or name.startswith(sc["test"] + "["):
+                    matching_results.append(res)
+
+            if not matching_results:
+                if draft:
+                    status = "UNVERIFIED"
+                else:
+                    raise ValueError(
+                        f"ERROR: Active test '{sc['test']}' for scenario '{sc['id']}' is missing from the test results report!"
+                    )
+            else:
+                statuses = [r.get("status", "UNTESTED") for r in matching_results]
+                if any(s in ("FAILED", "ERROR") for s in statuses):
+                    status = "FAILED"
+                elif any(s == "SKIPPED" for s in statuses):
+                    status = "SKIPPED"
+                elif any(s == "PASSED" for s in statuses):
+                    status = "PASSED"
+                elif any(s == "UNVERIFIED" for s in statuses):
+                    status = "UNVERIFIED"
+                else:
+                    status = "FAILED"
+
+            if status == "PASSED":
+                status_text = "✅ Verified Compliant via Automated Integration Suite"
+            elif status == "FAILED":
+                status_text = "❌ Failed via Automated Integration Suite"
+            elif status == "SKIPPED":
+                status_text = "⚪ Skipped via Automated Integration Suite"
+            elif status == "UNVERIFIED":
+                status_text = "⚪ Unverified (Draft Mode)"
+            else:
+                status_text = "🔴 Untested"
+
             f.write(f"### {sc['id']}: {sc['name']}\n")
             f.write(f"- **Target Requirements:** {sc['reqs']}\n")
             f.write(f"- **Description:** {sc['desc']}\n")
             f.write(
-                "- **Verification Status:** ✅ Verified Compliant via Automated Integration Suite\n\n"
+                f"- **Verification Status:** {status_text}\n\n"
             )
 
         f.write("## 5. Qualification Review & Authorization\n\n")
