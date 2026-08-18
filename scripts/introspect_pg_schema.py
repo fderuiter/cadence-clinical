@@ -148,7 +148,13 @@ def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
         return False
 
     try:
-        from apps.eisf.models import Base as eisf_Base
+        from apps.eisf.models import (
+            Base as eisf_Base,
+        )
+        from apps.eisf.models import (
+            EISFDocumentRecord,
+            EISFSectionTaxonomy,
+        )
     except Exception as e:
         import sys
 
@@ -176,16 +182,32 @@ def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
         consolidated_tables[table.name] = table
     for table in eisf_Base.metadata.tables.values():
         consolidated_tables[table.name] = table
+    if hasattr(EISFDocumentRecord, "__table__") and EISFDocumentRecord.__table__ is not None:
+        consolidated_tables[EISFDocumentRecord.__table__.name] = EISFDocumentRecord.__table__
+    if hasattr(EISFSectionTaxonomy, "__table__") and EISFSectionTaxonomy.__table__ is not None:
+        consolidated_tables[EISFSectionTaxonomy.__table__.name] = EISFSectionTaxonomy.__table__
+    try:
+        from sqlmodel import SQLModel
+        for table in SQLModel.metadata.tables.values():
+            consolidated_tables[table.name] = table
+    except Exception:
+        pass
 
     # Identify test-only tables dynamically to prevent test pollution in parallel suites
+    prod_tables = set()
     test_tables = set()
     for base in [exec_Base, ctms_Base, eisf_Base]:
         if hasattr(base, "registry") and base.registry:
             for mapper in base.registry.mappers:
                 if mapper.local_table is not None:
                     module_name = getattr(mapper.class_, "__module__", "")
-                    if any(k in module_name for k in ("test", "mock", "conftest")):
+                    parts = module_name.split(".")
+                    if any(k in parts for k in ("test", "tests", "mock", "conftest", "fakes")):
                         test_tables.add(mapper.local_table.name)
+                    else:
+                        prod_tables.add(mapper.local_table.name)
+
+    test_tables = test_tables - prod_tables
 
     # Iterate over sorted, consolidated tables
     for table in sorted(consolidated_tables.values(), key=lambda t: t.name):
