@@ -115,4 +115,57 @@ describe("Shared Zod Schema Client-Side Validation", () => {
 
     expect(store.soaError).toBeNull();
   });
+
+  it("alerts the user of a skip-logic cycle before writing modifications to local storage", async () => {
+    const store = useClinicalStore();
+
+    // Introduce a skip-logic cyclic loop in ecrfFields: f1 -> f2 -> f3 -> f1
+    store.ecrfFields = [
+      {
+        id: "f1",
+        label: "Field 1",
+        relevant: {
+          node_type: "OPERATOR",
+          value: "==",
+          children: [{ node_type: "XPATH", value: "f2" }],
+        },
+      },
+      {
+        id: "f2",
+        label: "Field 2",
+        relevant: {
+          node_type: "OPERATOR",
+          value: "==",
+          children: [{ node_type: "XPATH", value: "f3" }],
+        },
+      },
+      {
+        id: "f3",
+        label: "Field 3",
+        relevant: {
+          node_type: "OPERATOR",
+          value: "==",
+          children: [{ node_type: "XPATH", value: "f1" }],
+        },
+      },
+    ];
+
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+
+    // Attempting to write modifications to local storage (addLedgerBlock)
+    await expect(
+      store.addLedgerBlock("UPDATE_FIELD", { id: "f1" }, "Testing cyclic check")
+    ).rejects.toThrow("USDM Graph Validator");
+
+    // Verify alert was called with cycle path information
+    expect(alertSpy).toHaveBeenCalled();
+    const alertMsg = alertSpy.mock.calls[0][0];
+    expect(alertMsg).toContain("Skip-Logic Cycle Alert");
+    expect(alertMsg).toContain("f1 -> f2 -> f3 -> f1");
+
+    // Verify local storage was NOT modified with the new block
+    expect(window.localStorage.getItem("ledgerBlocks")).toBeNull();
+
+    alertSpy.mockRestore();
+  });
 });

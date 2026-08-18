@@ -21,6 +21,7 @@ import {
   StudyArmSchema,
   StudyEpochSchema,
   USDMStudySchema,
+  validateUsdmGraph,
 } from "usdm-schemas";
 
 export interface ClinicalField {
@@ -651,6 +652,33 @@ const useClinicalStoreInner = defineStore("clinical", {
       )) as any;
       block.synced = false;
 
+      // Validate USDM Graph before persisting state to localStorage!
+      const graphValidation = validateUsdmGraph(this.currentUsdm, {
+        fields: this.ecrfFields,
+      });
+      if (!graphValidation.valid) {
+        const cycleError = graphValidation.errors.find(
+          (e) => e.code === "CYCLE_DETECTED"
+        );
+        const errorMsg = graphValidation.errors
+          .map((e) => e.message)
+          .join("; ");
+        if (
+          cycleError &&
+          typeof window !== "undefined" &&
+          typeof window.alert === "function"
+        ) {
+          window.alert(`Skip-Logic Cycle Alert: ${cycleError.message}`);
+        }
+        console.error(
+          `Local storage persistence blocked by USDM Graph Validator: ${errorMsg}`
+        );
+        this.soaError = errorMsg;
+        throw new Error(
+          `Local storage persistence blocked by USDM Graph Validator: ${errorMsg}`
+        );
+      }
+
       this.ledgerBlocks.push(block);
 
       // Save persistent fields to localStorage
@@ -839,6 +867,28 @@ const useClinicalStoreInner = defineStore("clinical", {
         console.error(errorMsg);
         this.soaError = errorMsg;
         throw new Error(errorMsg);
+      }
+
+      const graphValidation = validateUsdmGraph(this.currentUsdm, {
+        fields: this.ecrfFields,
+      });
+      if (!graphValidation.valid) {
+        const cycleError = graphValidation.errors.find(
+          (e) => e.code === "CYCLE_DETECTED"
+        );
+        const errorMsg = graphValidation.errors
+          .map((e) => e.message)
+          .join("; ");
+        if (
+          cycleError &&
+          typeof window !== "undefined" &&
+          typeof window.alert === "function"
+        ) {
+          window.alert(`Skip-Logic Cycle Alert: ${cycleError.message}`);
+        }
+        console.error(`Graph validation failure: ${errorMsg}`);
+        this.soaError = errorMsg;
+        throw new Error(`Graph validation failure: ${errorMsg}`);
       }
       const opts = {
         changeReason,
