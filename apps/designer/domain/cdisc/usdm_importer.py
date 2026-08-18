@@ -457,11 +457,6 @@ class USDMGraphImporter:
         if not study_designs:
             warnings.append("USDM study payload contains 0 study designs")
 
-        # Maintain In-Memory State Synchronization
-        _sync_in_memory_mock_state(
-            study_model, user_id=user_id, change_reason=change_reason
-        )
-
         # Execute Transactional Neo4j Cypher Operations
         if self.driver is not None:
             await self._execute_graph_transaction(
@@ -484,6 +479,11 @@ class USDMGraphImporter:
                 performs_links=performs_links,
                 measures_links=measures_links,
             )
+
+        # Maintain In-Memory State Synchronization ONLY AFTER database transaction succeeds
+        _sync_in_memory_mock_state(
+            study_model, user_id=user_id, change_reason=change_reason
+        )
 
         logger.info(
             "Imported USDM study %s with %d nodes and %d relationships",
@@ -651,211 +651,235 @@ class USDMGraphImporter:
             for design_id, cr in all_criteria
         ]
 
-        async with self.driver.session() as session:
-            async with session.begin_transaction() as tx:
-                try:
-                    # 1. Merge Study node
-                    await tx.run(
-                        "MERGE (s:Study {id: $study_id}) "
-                        "SET s.name = $study_name, "
-                        "    s.protocol_title = $protocol_title, "
-                        "    s.protocol_id = $protocol_id, "
-                        "    s.phase = $phase, "
-                        "    s.therapeutic_area = $therapeutic_area, "
-                        "    s.usdm_version = $usdm_version, "
-                        "    s.created_by = $user_id, "
-                        "    s.updated_at = datetime()",
-                        {
-                            "study_id": study_id,
-                            "study_name": study_name,
-                            "protocol_title": protocol_title,
-                            "protocol_id": protocol_id,
-                            "phase": phase,
-                            "therapeutic_area": therapeutic_area,
-                            "usdm_version": usdm_version,
-                            "user_id": user_id,
-                        },
-                    )
+        max_retries = 3
+        initial_delay = 0.05
+        backoff_factor = 2.0
 
-                    # 2. Merge StudyVersions and HAS_VERSION
-                    if versions_data:
+        async with self.driver.session() as session:
+            for attempt in range(max_retries):
+                try:
+                    async with session.begin_transaction() as tx:
+                        # 1. Merge Study node
                         await tx.run(
-                            "UNWIND $versions AS v "
-                            "MERGE (sv:StudyVersion {id: v.id}) "
-                            "SET sv.version_tag = v.version_tag, "
-                            "    sv.status = v.status, "
-                            "    sv.version_index = v.version_index, "
-                            "    sv.created_by = $user_id, "
-                            "    sv.study_id = $study_id "
-                            "WITH sv "
-                            "MATCH (s:Study {id: $study_id}) "
-                            "MERGE (s)-[:HAS_VERSION]->(sv)",
+                            "MERGE (s:Study {id: $study_id}) "
+                            "SET s.name = $study_name, "
+                            "    s.protocol_title = $protocol_title, "
+                            "    s.protocol_id = $protocol_id, "
+                            "    s.phase = $phase, "
+                            "    s.therapeutic_area = $therapeutic_area, "
+                            "    s.usdm_version = $usdm_version, "
+                            "    s.created_by = $user_id, "
+                            "    s.updated_at = datetime()",
                             {
-                                "versions": versions_data,
                                 "study_id": study_id,
+                                "study_name": study_name,
+                                "protocol_title": protocol_title,
+                                "protocol_id": protocol_id,
+                                "phase": phase,
+                                "therapeutic_area": therapeutic_area,
+                                "usdm_version": usdm_version,
                                 "user_id": user_id,
                             },
                         )
 
-                    # 3. Merge StudyDesigns and HAS_DESIGN
-                    if designs_data:
-                        await tx.run(
-                            "UNWIND $designs AS d "
-                            "MERGE (sd:StudyDesign {id: d.id}) "
-                            "SET sd.name = d.name, "
-                            "    sd.design_type = d.design_type, "
-                            "    sd.study_id = $study_id "
-                            "WITH sd, d "
-                            "MATCH (s:Study {id: $study_id}) "
-                            "MERGE (s)-[:HAS_DESIGN]->(sd) "
-                            "WITH sd, d "
-                            "WHERE d.version_id IS NOT NULL "
-                            "MATCH (sv:StudyVersion {id: d.version_id}) "
-                            "MERGE (sv)-[:HAS_DESIGN]->(sd)",
-                            {"designs": designs_data, "study_id": study_id},
-                        )
+                        # 2. Merge StudyVersions and HAS_VERSION
+                        if versions_data:
+                            await tx.run(
+                                "UNWIND $versions AS v "
+                                "MERGE (sv:StudyVersion {id: v.id}) "
+                                "SET sv.version_tag = v.version_tag, "
+                                "    sv.status = v.status, "
+                                "    sv.version_index = v.version_index, "
+                                "    sv.created_by = $user_id, "
+                                "    sv.study_id = $study_id "
+                                "WITH sv "
+                                "MATCH (s:Study {id: $study_id}) "
+                                "MERGE (s)-[:HAS_VERSION]->(sv)",
+                                {
+                                    "versions": versions_data,
+                                    "study_id": study_id,
+                                    "user_id": user_id,
+                                },
+                            )
 
-                    # 4. Merge Epochs and HAS_EPOCH
-                    if epochs_data:
-                        await tx.run(
-                            "UNWIND $epochs AS ep "
-                            "MERGE (e:StudyEpoch {id: ep.id}) "
-                            "SET e.name = ep.name, "
-                            "    e.epoch_type = ep.epoch_type, "
-                            "    e.sequence_number = ep.sequence_number, "
-                            "    e.sequence_index = ep.sequence_index, "
-                            "    e.study_id = $study_id "
-                            "WITH e, ep "
-                            "MATCH (sd:StudyDesign {id: ep.design_id}) "
-                            "MERGE (sd)-[:HAS_EPOCH]->(e)",
-                            {"epochs": epochs_data, "study_id": study_id},
-                        )
+                        # 3. Merge StudyDesigns and HAS_DESIGN
+                        if designs_data:
+                            await tx.run(
+                                "UNWIND $designs AS d "
+                                "MERGE (sd:StudyDesign {id: d.id}) "
+                                "SET sd.name = d.name, "
+                                "    sd.design_type = d.design_type, "
+                                "    sd.study_id = $study_id "
+                                "WITH sd, d "
+                                "MATCH (s:Study {id: $study_id}) "
+                                "MERGE (s)-[:HAS_DESIGN]->(sd) "
+                                "WITH sd, d "
+                                "WHERE d.version_id IS NOT NULL "
+                                "MATCH (sv:StudyVersion {id: d.version_id}) "
+                                "MERGE (sv)-[:HAS_DESIGN]->(sd)",
+                                {"designs": designs_data, "study_id": study_id},
+                            )
 
-                    # 5. Merge Arms and HAS_ARM
-                    if arms_data:
-                        await tx.run(
-                            "UNWIND $arms AS ar "
-                            "MERGE (a:StudyArm {id: ar.id}) "
-                            "SET a.name = ar.name, "
-                            "    a.arm_type = ar.arm_type, "
-                            "    a.description = ar.description, "
-                            "    a.target_sample_size = ar.target_sample_size, "
-                            "    a.study_id = $study_id "
-                            "WITH a, ar "
-                            "MATCH (sd:StudyDesign {id: ar.design_id}) "
-                            "MERGE (sd)-[:HAS_ARM]->(a)",
-                            {"arms": arms_data, "study_id": study_id},
-                        )
+                        # 4. Merge Epochs and HAS_EPOCH
+                        if epochs_data:
+                            await tx.run(
+                                "UNWIND $epochs AS ep "
+                                "MERGE (e:StudyEpoch {id: ep.id}) "
+                                "SET e.name = ep.name, "
+                                "    e.epoch_type = ep.epoch_type, "
+                                "    e.sequence_number = ep.sequence_number, "
+                                "    e.sequence_index = ep.sequence_index, "
+                                "    e.study_id = $study_id "
+                                "WITH e, ep "
+                                "MATCH (sd:StudyDesign {id: ep.design_id}) "
+                                "MERGE (sd)-[:HAS_EPOCH]->(e)",
+                                {"epochs": epochs_data, "study_id": study_id},
+                            )
 
-                    # 6. Merge Encounters and CONTAINS_ENCOUNTER
-                    if encounters_data:
-                        await tx.run(
-                            "UNWIND $encounters AS enc "
-                            "MERGE (en:Encounter {id: enc.id}) "
-                            "SET en.name = enc.name, "
-                            "    en.encounter_type = enc.encounter_type, "
-                            "    en.target_day = enc.target_day, "
-                            "    en.window_lower = enc.window_lower, "
-                            "    en.window_upper = enc.window_upper, "
-                            "    en.is_mandatory = enc.is_mandatory, "
-                            "    en.study_id = $study_id "
-                            "WITH en, enc "
-                            "WHERE enc.epoch_id IS NOT NULL "
-                            "MATCH (e:StudyEpoch {id: enc.epoch_id}) "
-                            "MERGE (e)-[:CONTAINS_ENCOUNTER]->(en)",
-                            {
-                                "encounters": encounters_data,
-                                "study_id": study_id,
-                            },
-                        )
+                        # 5. Merge Arms and HAS_ARM
+                        if arms_data:
+                            await tx.run(
+                                "UNWIND $arms AS ar "
+                                "MERGE (a:StudyArm {id: ar.id}) "
+                                "SET a.name = ar.name, "
+                                "    a.arm_type = ar.arm_type, "
+                                "    a.description = ar.description, "
+                                "    a.target_sample_size = ar.target_sample_size, "
+                                "    a.study_id = $study_id "
+                                "WITH a, ar "
+                                "MATCH (sd:StudyDesign {id: ar.design_id}) "
+                                "MERGE (sd)-[:HAS_ARM]->(a)",
+                                {"arms": arms_data, "study_id": study_id},
+                            )
 
-                    # 7. Merge Biomedical Concepts and HAS_CONCEPT
-                    if concepts_data:
-                        await tx.run(
-                            "UNWIND $concepts AS bc "
-                            "MERGE (b:BiomedicalConcept {id: bc.id}) "
-                            "SET b.name = bc.name, "
-                            "    b.label = bc.label, "
-                            "    b.concept_code = bc.concept_code, "
-                            "    b.display_name = bc.display_name, "
-                            "    b.definition = bc.definition, "
-                            "    b.cdash_domain = bc.cdash_domain, "
-                            "    b.cdash_variable = bc.cdash_variable, "
-                            "    b.data_type = bc.data_type, "
-                            "    b.allowable_units = bc.allowable_units, "
-                            "    b.codelist = bc.codelist, "
-                            "    b.study_id = $study_id "
-                            "WITH b, bc "
-                            "MATCH (sd:StudyDesign {id: bc.design_id}) "
-                            "MERGE (sd)-[:HAS_CONCEPT]->(b)",
-                            {"concepts": concepts_data, "study_id": study_id},
-                        )
+                        # 6. Merge Encounters and CONTAINS_ENCOUNTER
+                        if encounters_data:
+                            await tx.run(
+                                "UNWIND $encounters AS enc "
+                                "MERGE (en:Encounter {id: enc.id}) "
+                                "SET en.name = enc.name, "
+                                "    en.encounter_type = enc.encounter_type, "
+                                "    en.target_day = enc.target_day, "
+                                "    en.window_lower = enc.window_lower, "
+                                "    en.window_upper = enc.window_upper, "
+                                "    en.is_mandatory = enc.is_mandatory, "
+                                "    en.study_id = $study_id "
+                                "WITH en, enc "
+                                "WHERE enc.epoch_id IS NOT NULL "
+                                "MATCH (e:StudyEpoch {id: enc.epoch_id}) "
+                                "MERGE (e)-[:CONTAINS_ENCOUNTER]->(en)",
+                                {
+                                    "encounters": encounters_data,
+                                    "study_id": study_id,
+                                },
+                            )
 
-                    # 8. Merge Activities and HAS_ACTIVITY
-                    if activities_data:
-                        await tx.run(
-                            "UNWIND $activities AS act "
-                            "MERGE (ac:Activity {id: act.id}) "
-                            "SET ac.name = act.name, "
-                            "    ac.description = act.description, "
-                            "    ac.cdash_domain = act.cdash_domain, "
-                            "    ac.biomedical_concept_code = act.biomedical_concept_code, "
-                            "    ac.study_id = $study_id "
-                            "WITH ac, act "
-                            "MATCH (sd:StudyDesign {id: act.design_id}) "
-                            "MERGE (sd)-[:HAS_ACTIVITY]->(ac)",
-                            {
-                                "activities": activities_data,
-                                "study_id": study_id,
-                            },
-                        )
+                        # 7. Merge Biomedical Concepts and HAS_CONCEPT
+                        if concepts_data:
+                            await tx.run(
+                                "UNWIND $concepts AS bc "
+                                "MERGE (b:BiomedicalConcept {id: bc.id}) "
+                                "SET b.name = bc.name, "
+                                "    b.label = bc.label, "
+                                "    b.concept_code = bc.concept_code, "
+                                "    b.display_name = bc.display_name, "
+                                "    b.definition = bc.definition, "
+                                "    b.cdash_domain = bc.cdash_domain, "
+                                "    b.cdash_variable = bc.cdash_variable, "
+                                "    b.data_type = bc.data_type, "
+                                "    b.allowable_units = bc.allowable_units, "
+                                "    b.codelist = bc.codelist, "
+                                "    b.study_id = $study_id "
+                                "WITH b, bc "
+                                "MATCH (sd:StudyDesign {id: bc.design_id}) "
+                                "MERGE (sd)-[:HAS_CONCEPT]->(b)",
+                                {"concepts": concepts_data, "study_id": study_id},
+                            )
 
-                    # 9. Merge PERFORMS (Encounter -> Activity)
-                    if performs_links:
-                        await tx.run(
-                            "UNWIND $performs AS p "
-                            "MATCH (en:Encounter {id: p.encounter_id}), (ac:Activity {id: p.activity_id}) "
-                            "MERGE (en)-[:PERFORMS]->(ac)",
-                            {"performs": performs_links},
-                        )
+                        # 8. Merge Activities and HAS_ACTIVITY
+                        if activities_data:
+                            await tx.run(
+                                "UNWIND $activities AS act "
+                                "MERGE (ac:Activity {id: act.id}) "
+                                "SET ac.name = act.name, "
+                                "    ac.description = act.description, "
+                                "    ac.cdash_domain = act.cdash_domain, "
+                                "    ac.biomedical_concept_code = act.biomedical_concept_code, "
+                                "    ac.study_id = $study_id "
+                                "WITH ac, act "
+                                "MATCH (sd:StudyDesign {id: act.design_id}) "
+                                "MERGE (sd)-[:HAS_ACTIVITY]->(ac)",
+                                {
+                                    "activities": activities_data,
+                                    "study_id": study_id,
+                                },
+                            )
 
-                    # 10. Merge MEASURES_CONCEPT (Activity -> BiomedicalConcept)
-                    if measures_links:
-                        await tx.run(
-                            "UNWIND $measures AS m "
-                            "MATCH (ac:Activity {id: m.activity_id}), (bc:BiomedicalConcept {id: m.concept_id}) "
-                            "MERGE (ac)-[:MEASURES_CONCEPT]->(bc)",
-                            {"measures": measures_links},
-                        )
+                        # 9. Merge PERFORMS (Encounter -> Activity)
+                        if performs_links:
+                            await tx.run(
+                                "UNWIND $performs AS p "
+                                "MATCH (en:Encounter {id: p.encounter_id}), (ac:Activity {id: p.activity_id}) "
+                                "MERGE (en)-[:PERFORMS]->(ac)",
+                                {"performs": performs_links},
+                            )
 
-                    # 11. Merge EligibilityCriteria and HAS_CRITERION
-                    if criteria_data:
-                        await tx.run(
-                            "UNWIND $criteria AS cr "
-                            "MERGE (crit:EligibilityCriterion {id: cr.id}) "
-                            "SET crit.name = cr.name, "
-                            "    crit.identifier = cr.identifier, "
-                            "    crit.criterion_type = cr.criterion_type, "
-                            "    crit.category = cr.category, "
-                            "    crit.text = cr.text, "
-                            "    crit.text_expression = cr.text_expression, "
-                            "    crit.logical_expression = cr.logical_expression, "
-                            "    crit.study_id = $study_id "
-                            "WITH crit, cr "
-                            "MATCH (sd:StudyDesign {id: cr.design_id}) "
-                            "MERGE (sd)-[:HAS_CRITERION]->(crit) "
-                            "WITH crit "
-                            "MATCH (s:Study {id: $study_id}) "
-                            "MERGE (s)-[:HAS_CRITERION]->(crit)",
-                            {"criteria": criteria_data, "study_id": study_id},
-                        )
+                        # 10. Merge MEASURES_CONCEPT (Activity -> BiomedicalConcept)
+                        if measures_links:
+                            await tx.run(
+                                "UNWIND $measures AS m "
+                                "MATCH (ac:Activity {id: m.activity_id}), (bc:BiomedicalConcept {id: m.concept_id}) "
+                                "MERGE (ac)-[:MEASURES_CONCEPT]->(bc)",
+                                {"measures": measures_links},
+                            )
 
-                    # Commit transaction atomically
-                    if hasattr(tx, "commit"):
-                        commit_res = tx.commit()
-                        if asyncio.iscoroutine(commit_res):
-                            await commit_res
+                        # 11. Merge EligibilityCriteria and HAS_CRITERION
+                        if criteria_data:
+                            await tx.run(
+                                "UNWIND $criteria AS cr "
+                                "MERGE (crit:EligibilityCriterion {id: cr.id}) "
+                                "SET crit.name = cr.name, "
+                                "    crit.identifier = cr.identifier, "
+                                "    crit.criterion_type = cr.criterion_type, "
+                                "    crit.category = cr.category, "
+                                "    crit.text = cr.text, "
+                                "    crit.text_expression = cr.text_expression, "
+                                "    crit.logical_expression = cr.logical_expression, "
+                                "    crit.study_id = $study_id "
+                                "WITH crit, cr "
+                                "MATCH (sd:StudyDesign {id: cr.design_id}) "
+                                "MERGE (sd)-[:HAS_CRITERION]->(crit) "
+                                "WITH crit "
+                                "MATCH (s:Study {id: $study_id}) "
+                                "MERGE (s)-[:HAS_CRITERION]->(crit)",
+                                {"criteria": criteria_data, "study_id": study_id},
+                            )
+
+                        # Commit transaction atomically
+                        if hasattr(tx, "commit"):
+                            commit_res = tx.commit()
+                            if asyncio.iscoroutine(commit_res):
+                                await commit_res
+                    break  # Success
                 except Exception as exc:
+                    err_name = exc.__class__.__name__
+                    err_msg = str(exc).lower()
+                    is_transient = (
+                        err_name in ("TransientError", "LockError", "OperationalError")
+                        or "lock" in err_msg
+                        or "transient" in err_msg
+                        or "deadlock" in err_msg
+                    )
+                    if is_transient and attempt < max_retries - 1:
+                        if hasattr(tx, "rollback"):
+                            try:
+                                rb_res = tx.rollback()
+                                if asyncio.iscoroutine(rb_res):
+                                    await rb_res
+                            except Exception:
+                                pass
+                        await asyncio.sleep(initial_delay * (backoff_factor**attempt))
+                        continue
                     logger.error("Transactional Neo4j import failed: %s", exc)
                     if hasattr(tx, "rollback"):
                         try:
