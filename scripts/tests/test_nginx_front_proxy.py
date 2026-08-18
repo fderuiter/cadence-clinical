@@ -153,7 +153,7 @@ def test_trace17_header_forwarding_contract():
     incoming_headers = {
         "authorization": "Bearer eyJhbGciOiJSUzI1NiIs...",
         "x-sig-token": "sig-v2-token-abc123xyz",
-        "x-gateway-secret": "internal-gateway-secret-12345",
+        "x-gateway-secret": "internal-gateway-secret-12345",  # pragma: allowlist secret
         "cookie": "session_id=sess_998877",
         "x-trace-id": "trace-uuid-11223344",
         "x-custom-app-header": "test-value",
