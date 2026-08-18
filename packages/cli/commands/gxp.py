@@ -87,3 +87,38 @@ def validate_gxp(ctx: typer.Context) -> None:
             "RTM documentation is out of date! Run 'cadence gxp sync' to update."
         )
         sys.exit(1)
+
+
+@gxp_app.command("verify")
+def verify_gxp(
+    ctx: typer.Context,
+    target_path: str = typer.Option(
+        "docs/SDLC", "--path", "-p", help="Target Markdown file or directory to verify"
+    ),
+) -> None:
+    """Verify electronic signatures and document integrity of signed GxP reports."""
+    json_mode = is_json_mode(ctx.obj)
+    repo_root = Path(__file__).resolve().parents[3]
+
+    cmd = ["uv", "run", "python", "scripts/verify_gxp_signatures.py", target_path]
+    res = subprocess.run(cmd, cwd=str(repo_root), capture_output=True, text=True)
+    success = res.returncode == 0
+
+    if json_mode:
+        output_json(
+            {
+                "command": "gxp verify",
+                "valid": success,
+                "stdout": res.stdout.strip(),
+                "stderr": res.stderr.strip(),
+            }
+        )
+        sys.exit(0 if success else 1)
+
+    if success:
+        console.print(res.stdout)
+        print_success("All GxP electronic signatures verified successfully.")
+    else:
+        print_error("GxP signature verification failed:")
+        console.print(res.stderr or res.stdout)
+        sys.exit(1)

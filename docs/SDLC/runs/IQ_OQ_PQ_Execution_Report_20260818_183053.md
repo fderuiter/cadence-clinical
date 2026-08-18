@@ -1,5 +1,5 @@
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
-*Execution Date:* 2026-07-23 22:38:25 UTC
+*Execution Date:* 2026-08-18 18:30:53 UTC
 *Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B
 
 ## 1. Executive Summary & Verification Declaration
@@ -7,11 +7,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2730
-- **Passed:** 2716 🟢
+- **Total Automated Test Cases Run:** 2733
+- **Passed:** 2714 🟢
 - **Failed/Errors:** 0 🔴
-- **Skipped:** 14 ⚪
-- **Overall Operational Pass Rate:** 99.49%
+- **Skipped:** 19 ⚪
+- **Overall Operational Pass Rate:** 99.30%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -927,7 +927,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_advs_missing_baseline_behavior` | `apps.execution.tests.test_advs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_advs_no_coercion_of_missing_numeric_values` | `apps.execution.tests.test_advs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_amendment_cloning_preserves_base_version` | `apps.execution.tests.test_amendment_migration` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_bulk_subject_reconsent_endpoint` | `apps.execution.tests.test_amendment_migration` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_modular_coordinate_matching_and_collision_logging` | `apps.execution.tests.test_amendment_migration` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reconsent_gating_blocks_form_submission` | `apps.execution.tests.test_amendment_migration` | PRD-SUB-007 | 🟢 PASSED | < 1s |
 | `test_reconsent_unlock_enables_v2_entry` | `apps.execution.tests.test_amendment_migration` | PRD-SUB-007 | 🟢 PASSED | < 1s |
@@ -935,8 +934,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_endpoints_offload_to_threadpool` | `apps.execution.tests.test_anonymization_router` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_redact_pdf_post_endpoint` | `apps.execution.tests.test_anonymization_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_phi_post_endpoint` | `apps.execution.tests.test_anonymization_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_abstract_consent_client_interface_and_graceful_network_failure` | `apps.execution.tests.test_audit_metadata_filtering` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_shared_session_coexistence_auditing` | `apps.execution.tests.test_audit_metadata_filtering` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_batch_sign_off_all_locks` | `apps.execution.tests.test_batch_sign_off` | Trace-14 | 🟢 PASSED | < 1s |
 | `test_batch_sign_off_audit_manifestation_capture` | `apps.execution.tests.test_batch_sign_off` | Trace-14 | 🟢 PASSED | < 1s |
 | `test_batch_sign_off_happy_path_form` | `apps.execution.tests.test_batch_sign_off` | Trace-14, Trace-17 | 🟢 PASSED | < 1s |
@@ -2659,20 +2656,26 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_parse_sqlalchemy_schema_execution` | `scripts.tests.test_generate_schema_documentation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_schemas_halts_in_production` | `scripts.tests.test_generate_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_schemas_omits_sensitive_tables` | `scripts.tests.test_generate_schemas` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_is_logical_code` | `scripts.tests.test_git_merge_driver` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_merge_generic_json` | `scripts.tests.test_git_merge_driver` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_merge_markdown_text` | `scripts.tests.test_git_merge_driver` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_merge_secrets_baseline` | `scripts.tests.test_git_merge_driver` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_is_logical_code` | `scripts.tests.test_git_merge_driver` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_merge_generic_json` | `scripts.tests.test_git_merge_driver` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_merge_markdown_text` | `scripts.tests.test_git_merge_driver` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_merge_secrets_baseline` | `scripts.tests.test_git_merge_driver` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gxp_generation_and_runs_splitting` | `scripts.tests.test_gxp_decomposed_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sign_and_verify_rsa_and_ecdsa` | `scripts.tests.test_gxp_decomposed_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_tamper_detection_body_modification` | `scripts.tests.test_gxp_decomposed_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_tamper_detection_metadata_modification` | `scripts.tests.test_gxp_decomposed_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_tamper_detection_signature_bytes_modification` | `scripts.tests.test_gxp_decomposed_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_verification_performance_under_five_seconds` | `scripts.tests.test_gxp_decomposed_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_fail_fast_without_report_and_draft_flag` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_missing_report_gxp_sync_dry_run` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_success_with_draft_flag` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_layout_gating_approved_and_logged` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_layout_gating_missing_justification_rejected` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_integration` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_invisible` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_overlap` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_scrambled_sequence` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_valid` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_integration` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_invisible` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_overlap` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_scrambled_sequence` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_valid` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_aggregate_eligibility_evaluation_scenarios` | `scripts.tests.test_m4_challenger1_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_document_renderer_fallback` | `scripts.tests.test_m4_challenger1_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_sync_reconciliation_signature_enforcement_errors` | `scripts.tests.test_m4_challenger1_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2984,31 +2987,31 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 
 ## Electronic Signature Block
 
-- **Signer Identity:** fred
-- **Timestamp:** 2026-07-23 22:38:25 UTC
-- **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 088b6ccfec9fe2add03fb67997b86d8467d196c5efed9d9fdeaf9c54e5ae131e
+- **Signer Identity:** jules
+- **Timestamp:** 2026-08-18 18:30:53 UTC
+- **Meaning / Purpose:** GxP Dynamic Execution Run Record
+- **Cryptographic Hash (SHA-256):** 3899f20778728314f3be32e933b5be615d344fef82570045e23d0ada1cd20489
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUG2BiO7suC8QaPnLRbdKDryRMkMgwDQYJKoZIhvcNAQEL
-BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
-ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgx
-NzIwNTcwMVoXDTI3MDgxODIwNTcwMVowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
-VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAukcS
-N1SseQLO8NTacwK9YEb9y8O6UoLhZgs9DRgEm4GZCqXnlsDZzbBKdK2cPjgfTZtL
-wBYAQTocoPzqQhCwN2D+73Tyh/MxSuY3568vEn1wcrlfy9w+9h+Pq3AiVbk7LhNQ
-QCRZEbN94Q5Q19RXlgUk6qXumMEhGjfwazWnzfWnxXRwzicdfx80MveH6p4bDCgA
-wBe/va5GfC4OXJZwEVApjx4wIo/ht44zJ2ejRsYb8BjJCaRqZcC9kD6RVOJfQ/9G
-0X/EBtu8NmW2uEyUbqGLyQFhOQZNYMJLnklzh6M3O5sXZZE2MX55WOXy1oc5/sB7
-gkOC1Xb+H5YeACp8EwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQCi3eq8ImmjN0sv
-TtsSwDMM+NnrZkvAgZwr8ICNKT9IIAVaAGaJZ20+IqckyMKI+eW6g2tvHm5N9pTd
-uPX8phVsrNACrnqPsrDncyNFRfDomiEyuVATnbCWgDjYjEvts2cOaTZdSUlB6D1A
-5YPS/agmk6UHTGOpmtOFTf0m2Hd/5Nie1o6bhmEJXQy8z06P18eKE02+d3lZ/QPX
-snlQ6rmitWumjL4z7LmY7WHhpB2Gbjawt6oM3qtoQm2sRFk+mNgFE5P3wpRucMG8
-qpPxtHtwKYoyu/COOGmeO3vQgIbpDv461s57uh9TPRVCZrroIskjj+44P3bP2E+1
-eHZgvm6i
+MIIDNDCCAhygAwIBAgIUdY3A7f6ZefZOnmJQzObsWlv3UaUwDQYJKoZIhvcNAQEL
+BQAwVDEuMCwGA1UEAwwlQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGp1
+bGVzKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTAeFw0yNjA4
+MTcxODMwNTRaFw0yNzA4MTgxODMwNTRaMFQxLjAsBgNVBAMMJUNhZGVuY2UgR3hQ
+IFZhbGlkYXRpb24gUnVubmVyIChqdWxlcykxIjAgBgNVBAoMGUNhZGVuY2UgQ2xp
+bmljYWwgU29mdHdhcmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC+
++7YxdnJrjJcEEzAczjLVtm5hpLeUkyPNMcwpZqh/p4osNYkJRlp9DhCimKw+Y5x+
+RZC2cQBIMuM9ptsk44C9o5RXZic9pWLjlbx2U/+SUNMspb2DChTEdDk+DcaRsjUE
+H0lIoUwvIzMz7FA1Fxvpyq41vYWY+wJzrJbHk6baQLkF4JYJoMjIL1S5Zx/6drIx
+p52U6QEJqwr4NqOJMS9XGREBWOrfuG6IGjZMER64dz/bXiR8i6XGtQTXMGBvZh+u
+dVA98AOv5CfVEVlYl0iY1dAnl2gRTY9gZV+I6rV8R7Y4e5dFVbmuTt77Tg34AuyW
+DoCg2IlKkPzJoGzA3jYvAgMBAAEwDQYJKoZIhvcNAQELBQADggEBALm47VFM0SRH
+MO+1JmhoKpjMCmnNTkYBaykIYrMXkI+pPFkVdE0gQINkDR9kr3nwOimg0Xcg+z/j
+tD4mlT5t/EqZmA078UMj2q391d2n16088NapfHvJM9wELaCSzJa+WrHXD+qhLpOq
+jNfEuHDVtrT13UYs7Ad/TX2hbttQrgyomQVPlwTasVmqQpWfy6Lrz+4kLRSJAVBN
+Jr6KZ9aN/+6V/LAfqOYSYlMlXMNUnyVg7XcJhROtxlWoWCodwGme6Ks/vUaftezD
+vGpSJpmtC5Yl6mB9b62ukRBRBqq5nHNRXXInbi81fFKBl/zk6evegpax0r/AxKkI
+XOTMo8aNmyo=
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-nEd9EHVSlzG0W7TUVeHg7F5TZ3KjNaHu6ZDUlVaGVlFCVY8ynOByAtl/t1FKTnVwC67RSdlovctx8ST5bkviaqdxD8b+WHAnbacnAB+r7btcfJ4cXnZTpFIfhTNVHyonBGi24k296E69zQYXYVCoYOz1gg633Z4ZaFzC9OIAL2Kk/LHBwIdai8yCfeGDZT992B1gZhMcR3SF4nUhWCe9cgwsZkxgxwBNYMWnjy+viarOwKjgUaG48dkD9/pApTrbYXRMdhrX+7MTrF241aGTJFN2ICMFUhqP1x+HhCZp8jMk2PegfZURIS5wdtgFKUb4w6tUyVzM8oxnT3z5mKwQiQ==
+SfR3oC0qf/C3obnWgv/T8Omtbqq3rGwlu2yffkJyTj7DWlK0DP4KwzF0cn8pUUtjxWRb3B61i6SLENjUJNMfsAagbJzxOrbwsIQQReZj3Jktf4FMQo7i2F8llWdacF2Q56+2A0FrnJiK6TkZXAHy9cqgqKp81Q+zAuhWOA3KQzn3tKJIfk3oAE7P/ET0lTEkWoK8t6MU5SirULY2ljem34pNzzpYiCMupCmk1qL+9h7x+F13/N5vpYKsnkZPhrLiar9naNUnNu+GIlP5MvqIhFKZRiZpb3lxdPfbMUtDPvBqv/gP6kUPI1a9DJbVz7GAhBHDfwpx6+RJmit794J37w==
 -----END SIGNATURE-----
