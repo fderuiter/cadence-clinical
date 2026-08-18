@@ -93,31 +93,29 @@ def validate_ast_port_contracts(files: list[str], root: Path) -> list[str]:
             if isinstance(node, ast.ClassDef):
                 # If class ends with 'Port', check that it has at least one abstract method or subclasses ABC/Port
                 if node.name.endswith("Port") and not node.name.startswith("I"):
+                    allowed_bases = {
+                        "ABC",
+                        "RepositoryPort",
+                        "UseCasePort",
+                        "ExternalServiceClientPort",
+                        "AuditLoggerPort",
+                        "EventDispatcherPort",
+                    }
+
+                    def get_base_name(b) -> str | None:
+                        if isinstance(b, ast.Subscript):
+                            b = b.value
+                        if isinstance(b, ast.Name):
+                            return b.id
+                        if isinstance(b, ast.Attribute):
+                            return b.attr
+                        return None
+
                     has_abc_base = any(
-                        isinstance(base, ast.Name)
-                        and base.id
-                        in (
-                            "ABC",
-                            "RepositoryPort",
-                            "UseCasePort",
-                            "ExternalServiceClientPort",
-                            "AuditLoggerPort",
-                            "EventDispatcherPort",
-                        )
-                        or isinstance(base, ast.Attribute)
-                        and base.attr
-                        in (
-                            "ABC",
-                            "RepositoryPort",
-                            "UseCasePort",
-                            "ExternalServiceClientPort",
-                            "AuditLoggerPort",
-                            "EventDispatcherPort",
-                        )
-                        for base in node.bases
+                        get_base_name(base) in allowed_bases for base in node.bases
                     )
                     # Abstract or base port verification
-                    if not node.bases and not has_abc_base:
+                    if not has_abc_base:
                         violations.append(
                             f"{rel_path}: Class '{node.name}' is designated as a Port but does not inherit from ABC or a base Port interface."
                         )

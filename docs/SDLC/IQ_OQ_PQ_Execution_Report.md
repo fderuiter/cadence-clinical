@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2646
-- **Passed:** 2627 🟢
+- **Total Automated Test Cases Run:** 2650
+- **Passed:** 2631 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.28%
@@ -2592,6 +2592,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_get_designer_schema`                                                              | `scripts.tests.test_generate_schema_documentation`                          | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_parse_sqlalchemy_schema_etmf`                                                     | `scripts.tests.test_generate_schema_documentation`                          | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_parse_sqlalchemy_schema_execution`                                                | `scripts.tests.test_generate_schema_documentation`                          | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_generate_schemas_halts_in_production`                                             | `scripts.tests.test_generate_schemas`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_generate_schemas_omits_sensitive_tables`                                          | `scripts.tests.test_generate_schemas`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_is_logical_code`                                                                  | `scripts.tests.test_git_merge_driver`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_merge_generic_json`                                                               | `scripts.tests.test_git_merge_driver`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_merge_markdown_text`                                                              | `scripts.tests.test_git_merge_driver`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
@@ -2775,6 +2777,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_execution_validation_error_rfc7807`                                               | `scripts.tests.test_validation_problem_details`                             | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_generate_alignment_report`                                                        | `scripts.tests.test_validator`                                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_generate_alignment_report_with_mappings`                                          | `scripts.tests.test_validator`                                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_validate_ast_port_contracts_fails`                                                | `scripts.tests.test_verify_contracts`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_validate_ast_port_contracts_passes`                                               | `scripts.tests.test_verify_contracts`                                       | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_cli_bypass_blocking`                                                              | `scripts.tests.test_vulnerabilities`                                        | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_execute_pip_audit_success`                                                        | `scripts.tests.test_vulnerabilities`                                        | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_execute_pnpm_audit_success`                                                       | `scripts.tests.test_vulnerabilities`                                        | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |

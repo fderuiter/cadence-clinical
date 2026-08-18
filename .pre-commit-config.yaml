@@ -131,6 +131,13 @@ repos:
         files: ^(pyproject\.toml|uv\.lock|pnpm-lock\.yaml|package\.json)$
         pass_filenames: false
 
+      - id: validate-dependencies
+        name: Frontend Dependency Cryptographic Check
+        entry: uv run python scripts/validate_dependencies.py
+        language: system
+        files: package\.json$
+        pass_filenames: false
+
       - id: prettier-check
         name: Prettier Formatting Check
         entry: pnpm exec prettier --check
