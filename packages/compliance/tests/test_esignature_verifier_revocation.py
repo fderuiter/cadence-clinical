@@ -72,7 +72,7 @@ def test_revoked_certs_normalization_helper():
     assert "0x1000" in serials_str
 
     assert (
-        "a1b2c3d4e5f61234567890abcdef1234567890abcdef1234567890abcdef1234"
+        "a1b2c3d4e5f61234567890abcdef1234567890abcdef1234567890abcdef1234"  # pragma: allowlist secret
         in fingerprints
     )
     assert cert_fp in fingerprints

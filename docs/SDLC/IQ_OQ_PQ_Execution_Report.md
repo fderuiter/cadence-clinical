@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2727
-- **Passed:** 2708 🟢
+- **Total Automated Test Cases Run:** 2732
+- **Passed:** 2713 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.30%
@@ -1444,10 +1444,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_mock_signatures_blocked`                                                          | `apps.execution.tests.test_part11_compliance_engine`                        | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_rsassa_pss_succeeds`                                                              | `apps.execution.tests.test_part11_compliance_engine`                        | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_unapproved_self_signed_certificate_fails`                                         | `apps.execution.tests.test_part11_compliance_engine`                        | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_certificate_revocation_string_serial_formats`                                     | `apps.execution.tests.test_part11_esignatures`                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_certificate_revocation_verification`                                              | `apps.execution.tests.test_part11_esignatures`                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_esignature_duplicate_serial_rejection`                                            | `apps.execution.tests.test_part11_esignatures`                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_esignature_tamper_detection_e2e`                                                  | `apps.execution.tests.test_part11_esignatures`                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_tampered_pdf_fails_verification`                                                  | `apps.execution.tests.test_part11_esignatures`                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_valid_certificate_pem_substring_no_false_positive`                                | `apps.execution.tests.test_part11_esignatures`                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_valid_part11_signature_verification`                                              | `apps.execution.tests.test_part11_esignatures`                              | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_pdf_redaction_engine_bounding_box`                                                | `apps.execution.tests.test_pdf_redactor`                                    | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
 | `test_pdf_redaction_engine_purges_metadata_and_fields`                                  | `apps.execution.tests.test_pdf_redactor`                                    | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
@@ -2234,6 +2236,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_security_audit_script`                                                            | `packages.compliance.tests.test_compliance_security`                        | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_security_audit_targeted_files`                                                    | `packages.compliance.tests.test_compliance_security`                        | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_signing_raises_runtime_error_if_email_secret_missing`                             | `packages.compliance.tests.test_compliance_security`                        | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_revocation_blocks_when_serial_matches`                                            | `packages.compliance.tests.test_esignature_verifier_revocation`             | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_revocation_exact_match_prevents_false_positives`                                  | `packages.compliance.tests.test_esignature_verifier_revocation`             | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_revoked_certs_normalization_helper`                                               | `packages.compliance.tests.test_esignature_verifier_revocation`             | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_clean_neo4j_graph_calls_run`                                                      | `packages.database.tests.test_asgi_live_db`                                 | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_clean_postgres_databases_calls_truncate`                                          | `packages.database.tests.test_asgi_live_db`                                 | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_live_db_halt_when_neo4j_unreachable`                                              | `packages.database.tests.test_asgi_live_db`                                 | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
