@@ -8,7 +8,7 @@ from apps.designer.db import (
     is_concept_referenced_by_active_recruiting_study,
 )
 from apps.designer.main import app
-from apps.execution.tests.test_soa_endpoints import get_auth_headers
+from apps.designer.tests.test_soa_endpoints import get_auth_headers
 
 
 def test_check_dict_for_value():

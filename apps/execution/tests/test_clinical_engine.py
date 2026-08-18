@@ -21,7 +21,6 @@ from apps.execution.outliers import (
     identify_outliers,
 )
 from apps.execution.ucum import convert_unit, get_normalized_representation
-from apps.gateway.main import app as gateway_app
 
 GATEWAY_SECRET = os.getenv(
     "GATEWAY_SECRET", "internal-gateway-secret-12345"
@@ -304,9 +303,7 @@ async def test_api_gateway_routing(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
 
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=gateway_app), base_url="http://gateway"
-    ) as client:
+    async with httpx.AsyncClient(base_url="http://gateway") as client:
         # Test routing for dictionary unit conversion
         res_conv = await client.post(
             "/dictionary/unit-conversion",

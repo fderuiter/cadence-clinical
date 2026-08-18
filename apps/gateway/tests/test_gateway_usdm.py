@@ -113,3 +113,42 @@ async def test_usdm_export_schema_validation_gateway() -> None:
     assert res.study_id == "study_test_usdm_01"
     assert res.usdm_json["id"] == "study_test_usdm_01"
     assert res.usdm_json["usdmVersion"] == "3.0"
+
+
+def test_gateway_proxying_v2_studies(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify that the Gateway router proxies /api/v2/studies correctly."""
+    import time
+
+    import httpx
+    from jose import jwt
+
+    from apps.gateway.main import app as gateway_app
+
+    sent_request_url = None
+
+    async def mock_send(self, request, *args, **kwargs):
+        nonlocal sent_request_url
+        sent_request_url = str(request.url)
+        return httpx.Response(200, json={"status": "success"})
+
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+    monkeypatch.setenv("JWT_TEST_SECRET", "internal-gateway-secret-12345")
+
+    claims = {
+        "sub": "test-user-gateway",
+        "username": "test-user-gateway",
+        "realm_access": {"roles": ["sponsor_designer"]},
+        "exp": time.time() + 3600,
+    }
+    token = jwt.encode(claims, "internal-gateway-secret-12345", algorithm="HS256")
+
+    with TestClient(gateway_app) as gateway_client:
+        response = gateway_client.get(
+            "/api/v2/studies/study_1/usdm",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 200
+        assert (
+            sent_request_url
+            == "http://localhost:8001/api/v2/studies/study_1/usdm"
+        )
