@@ -632,7 +632,6 @@ onMounted(() => {
   loadEcrfSession();
 });
 
-
 function getValidationError(field) {
   const value = store.formValues[field.id];
   const res = validateField(field, value, store.formValues, evaluateAST);

@@ -50,7 +50,9 @@ describe("Shared Clinical Store State & Reactive Subject Re-Consent Gating Speci
       global: { plugins: [pinia] },
     });
 
-    const amendmentSubjectIds = amendmentWrapper.vm.subjectsList.map((s: any) => s.id);
+    const amendmentSubjectIds = amendmentWrapper.vm.subjectsList.map(
+      (s: any) => s.id
+    );
     const ecrfSubjectIds = ecrfWrapper.vm.availableSubjects;
 
     expect(amendmentSubjectIds).toEqual(storeSubjectIds);
@@ -120,11 +122,14 @@ describe("Shared Clinical Store State & Reactive Subject Re-Consent Gating Speci
 
     expect(clinicalStore.ledgerBlocks.length).toBe(initialLedgerCount + 1);
 
-    const latestBlock = clinicalStore.ledgerBlocks[clinicalStore.ledgerBlocks.length - 1];
+    const latestBlock =
+      clinicalStore.ledgerBlocks[clinicalStore.ledgerBlocks.length - 1];
     expect(latestBlock.action).toBe("RECONSENT_COMPLETED");
     expect(latestBlock.details.subject_id).toBe(testSubjectId);
     expect(latestBlock.details.method).toBe("ECONSENT");
-    expect(latestBlock.reason).toBe("Subject completed digital eConsent v2.0.0");
+    expect(latestBlock.reason).toBe(
+      "Subject completed digital eConsent v2.0.0"
+    );
     expect(latestBlock.hash).toBeDefined();
   });
 });

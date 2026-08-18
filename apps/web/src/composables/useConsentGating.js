@@ -37,7 +37,11 @@ export function useConsentGating(selectedSubjectId) {
           `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`
         );
       }
-      if (storeInstance && storeInstance !== store && typeof storeInstance.addLedgerBlock === "function") {
+      if (
+        storeInstance &&
+        storeInstance !== store &&
+        typeof storeInstance.addLedgerBlock === "function"
+      ) {
         await storeInstance.addLedgerBlock(
           "RECONSENT_COMPLETED",
           {

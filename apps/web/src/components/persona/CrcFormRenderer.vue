@@ -33,7 +33,7 @@
             "
           >
             <option
-              v-for="sub in (store?.subjects || clinicalStore.subjects)"
+              v-for="sub in store?.subjects || clinicalStore.subjects"
               :key="sub.id"
               :value="sub.id"
             >

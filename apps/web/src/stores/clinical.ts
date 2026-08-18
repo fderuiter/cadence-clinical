@@ -761,10 +761,7 @@ const useClinicalStoreInner = defineStore("clinical", {
 
       // Save persistent fields to localStorage
       if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.setItem(
-          "subjects",
-          JSON.stringify(this.subjects)
-        );
+        window.localStorage.setItem("subjects", JSON.stringify(this.subjects));
         window.localStorage.setItem(
           "formValues",
           JSON.stringify(this.formValues)
