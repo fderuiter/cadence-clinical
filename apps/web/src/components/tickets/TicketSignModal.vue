@@ -1,18 +1,37 @@
 <template>
   <div v-if="isOpen" class="modal-backdrop" @click.self="close">
-    <div class="modal-dialog ticket-sign-modal" role="dialog" aria-modal="true" aria-labelledby="sign-modal-title">
+    <div
+      class="modal-dialog ticket-sign-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sign-modal-title"
+    >
       <div class="modal-header">
         <div class="modal-header-icon">✍️</div>
         <div>
-          <h3 id="sign-modal-title" class="modal-title">21 CFR Part 11 Electronic Signature</h3>
-          <p class="modal-subtitle">Legally binding electronic signature sign-off on ticket resolution</p>
+          <h3 id="sign-modal-title" class="modal-title">
+            21 CFR Part 11 Electronic Signature
+          </h3>
+          <p class="modal-subtitle">
+            Legally binding electronic signature sign-off on ticket resolution
+          </p>
         </div>
-        <button type="button" class="btn-close" aria-label="Close" @click="close">✕</button>
+        <button
+          type="button"
+          class="btn-close"
+          aria-label="Close"
+          @click="close"
+        >
+          ✕
+        </button>
       </div>
 
       <div class="modal-body">
         <div class="compliance-alert">
-          <strong>GxP Regulatory Manifestation:</strong> Executing this action is equivalent to a handwritten signature under 21 CFR Part 11. Your identity, timestamp, role, and intent will be immutably recorded in the audit trail.
+          <strong>GxP Regulatory Manifestation:</strong> Executing this action
+          is equivalent to a handwritten signature under 21 CFR Part 11. Your
+          identity, timestamp, role, and intent will be immutably recorded in
+          the audit trail.
         </div>
 
         <div class="form-group">
@@ -38,25 +57,41 @@
         </div>
 
         <div class="form-group">
-          <label for="signature-meaning" class="form-label">Signature Meaning / Intent <span class="text-danger">*</span></label>
+          <label for="signature-meaning" class="form-label"
+            >Signature Meaning / Intent
+            <span class="text-danger">*</span></label
+          >
           <select id="signature-meaning" v-model="meaning" class="form-control">
-            <option value="I approve the clinical assessment and corrective medical action.">
+            <option
+              value="I approve the clinical assessment and corrective medical action."
+            >
               I approve the clinical assessment and corrective medical action.
             </option>
-            <option value="I authoritatively verify and close this clinical deviation/query.">
+            <option
+              value="I authoritatively verify and close this clinical deviation/query."
+            >
               I authoritatively verify and close this clinical deviation/query.
             </option>
-            <option value="I confirm that all root-cause analyses and CAPA actions are fulfilled.">
-              I confirm that all root-cause analyses and CAPA actions are fulfilled.
+            <option
+              value="I confirm that all root-cause analyses and CAPA actions are fulfilled."
+            >
+              I confirm that all root-cause analyses and CAPA actions are
+              fulfilled.
             </option>
-            <option value="I acknowledge and endorse this technical/system operational resolution.">
-              I acknowledge and endorse this technical/system operational resolution.
+            <option
+              value="I acknowledge and endorse this technical/system operational resolution."
+            >
+              I acknowledge and endorse this technical/system operational
+              resolution.
             </option>
           </select>
         </div>
 
         <div class="form-group">
-          <label for="signature-password" class="form-label">Re-Authenticate Password / Security Token <span class="text-danger">*</span></label>
+          <label for="signature-password" class="form-label"
+            >Re-Authenticate Password / Security Token
+            <span class="text-danger">*</span></label
+          >
           <input
             id="signature-password"
             v-model="password"
@@ -74,7 +109,14 @@
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" :disabled="loading" @click="close">Cancel</button>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="loading"
+          @click="close"
+        >
+          Cancel
+        </button>
         <button
           type="button"
           class="btn btn-primary btn-sign-action"
@@ -107,7 +149,9 @@ const props = defineProps({
 const emit = defineEmits(["close", "signed"]);
 
 const authStore = useAuthStore();
-const meaning = ref("I approve the clinical assessment and corrective medical action.");
+const meaning = ref(
+  "I approve the clinical assessment and corrective medical action."
+);
 const password = ref("");
 const loading = ref(false);
 const errorMessage = ref("");
@@ -128,7 +172,8 @@ const close = () => {
 
 const handleSign = async () => {
   if (!password.value.trim()) {
-    errorMessage.value = "Password is required for 21 CFR Part 11 re-authentication.";
+    errorMessage.value =
+      "Password is required for 21 CFR Part 11 re-authentication.";
     return;
   }
   loading.value = true;
@@ -142,7 +187,8 @@ const handleSign = async () => {
     });
     close();
   } catch (err) {
-    errorMessage.value = err.message || "Failed to capture electronic signature.";
+    errorMessage.value =
+      err.message || "Failed to capture electronic signature.";
   } finally {
     loading.value = false;
   }

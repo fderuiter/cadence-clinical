@@ -45,7 +45,9 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
           },
           soaDiff: {
             addedVisits: [{ id: "v_week_16", name: "Week 16 Follow-up" }],
-            modifiedProcedures: [{ id: "proc_biomarker", name: "PK Blood Sampling" }],
+            modifiedProcedures: [
+              { id: "proc_biomarker", name: "PK Blood Sampling" },
+            ],
           },
           eligibilityDiff: {
             addedCriteria: [{ id: "crit_alt_01", text: "ALT/AST <= 2.5x ULN" }],
@@ -68,7 +70,9 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
       global: { plugins: [pinia] },
     });
 
-    expect(wrapper.text()).toContain("Protocol Amendments & In-Flight Subject Migration");
+    expect(wrapper.text()).toContain(
+      "Protocol Amendments & In-Flight Subject Migration"
+    );
     expect(wrapper.find("#btn-create-amendment").exists()).toBe(true);
     expect(wrapper.find("#base-version-select").exists()).toBe(true);
     expect(wrapper.find("#amended-version-select").exists()).toBe(true);
@@ -79,7 +83,9 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
       global: { plugins: [pinia] },
     });
 
-    expect(wrapper.text()).toContain("In-Flight Subject Migration & Re-Consent Analyzer");
+    expect(wrapper.text()).toContain(
+      "In-Flight Subject Migration & Re-Consent Analyzer"
+    );
     expect(wrapper.text()).toContain("Re-Consent Mandated");
     expect(wrapper.text()).toContain("IMMUTABLE BRANCH");
   });
