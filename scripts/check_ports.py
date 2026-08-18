@@ -39,6 +39,7 @@ STATIC_DEFAULTS = {
         {"name": "Keycloak Identity Provider", "ports": [8080]},
     ],
     "Application Services": [
+        {"name": "Gateway Front Proxy", "ports": [8000]},
         {"name": "Gateway API", "ports": [8000]},
         {"name": "Designer Service", "ports": [8001]},
         {"name": "Execution Service", "ports": [8002]},
@@ -77,7 +78,9 @@ COMPOSE_SERVICE_MAPPING = {
     "postgres": ("Infrastructure & Databases", "Postgres Database"),
     "neo4j": ("Infrastructure & Databases", "Neo4j Database"),
     "keycloak": ("Infrastructure & Databases", "Keycloak Identity Provider"),
+    "front-proxy": ("Application Services", "Gateway Front Proxy"),
     "gateway": ("Application Services", "Gateway API"),
+    "gateway-rewrite": ("Application Services", "Gateway Rewrite"),
     "designer": ("Application Services", "Designer Service"),
     "execution": ("Application Services", "Execution Service"),
     "etmf": ("Application Services", "eTMF Service"),
@@ -164,17 +167,18 @@ def load_categorized_ports() -> dict[str, list[dict]]:
                                 "ports": sorted(list(set(ports))),
                             }
                         )
-                    else:
+                    elif "front-proxy" not in services:
                         # Fallback for this service if defined in compose but has no ports configured
                         # Get default ports from static defaults
                         default_ports = []
-                        for default_item in STATIC_DEFAULTS[category]:
+                        for default_item in STATIC_DEFAULTS.get(category, []):
                             if default_item["name"] == display_name:
                                 default_ports = default_item["ports"]
                                 break
-                        categorized_ports[category].append(
-                            {"name": display_name, "ports": default_ports}
-                        )
+                        if default_ports:
+                            categorized_ports[category].append(
+                                {"name": display_name, "ports": default_ports}
+                            )
                 else:
                     # Service not defined in compose -> it might be running host-native!
                     # Load from static defaults

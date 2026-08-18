@@ -458,6 +458,38 @@ services:
       gateway:
         condition: service_started
 
+  front-proxy:
+    image: nginx:1.25-alpine
+    container_name: cadence-front-proxy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      gateway:
+        condition: service_started
+
+  gateway-rewrite:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: cadence-gateway-rewrite
+    command:
+      [
+        "node",
+        "packages/gateway-rewrite/dist/index.js",
+      ]
+    volumes:
+      - ..:/app
+    environment:
+      - BRAND_NAME=Cadence Clinical Research Software
+    expose:
+      - "3000"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
   gateway:
     build:
       context: ..
@@ -490,8 +522,8 @@ services:
       - EISF_URL=http://eisf:8010
       - ECONSENT_URL=http://econsent:8011
       - BRAND_NAME=Cadence Clinical Research Software
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     depends_on:
       designer:
         condition: service_started
