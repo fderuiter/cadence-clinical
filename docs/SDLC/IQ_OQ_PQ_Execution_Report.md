@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2729
-- **Passed:** 2710 🟢
+- **Total Automated Test Cases Run:** 2730
+- **Passed:** 2711 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.30%
@@ -936,6 +936,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_advs_missing_baseline_behavior`                                                   | `apps.execution.tests.test_advs`                                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_advs_no_coercion_of_missing_numeric_values`                                       | `apps.execution.tests.test_advs`                                            | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_amendment_cloning_preserves_base_version`                                         | `apps.execution.tests.test_amendment_migration`                             | PRD-SYS-001                                                                        | 🟢 PASSED  | < 1s     |
+| `test_bulk_subject_reconsent_endpoint`                                                  | `apps.execution.tests.test_amendment_migration`                             | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_modular_coordinate_matching_and_collision_logging`                                | `apps.execution.tests.test_amendment_migration`                             | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_reconsent_gating_blocks_form_submission`                                          | `apps.execution.tests.test_amendment_migration`                             | PRD-SUB-007                                                                        | 🟢 PASSED  | < 1s     |
 | `test_reconsent_unlock_enables_v2_entry`                                                | `apps.execution.tests.test_amendment_migration`                             | PRD-SUB-007                                                                        | 🟢 PASSED  | < 1s     |
