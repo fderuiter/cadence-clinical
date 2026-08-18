@@ -64,6 +64,79 @@ def is_logical_code(pathname: str) -> bool:
     return False
 
 
+def _has_dict_collision(curr: dict, oth: dict) -> bool:
+    """Check for structural mismatches or scalar value collisions between two dictionaries."""
+    common_keys = set(curr.keys()).intersection(set(oth.keys()))
+    for k in common_keys:
+        val_c = curr[k]
+        val_o = oth[k]
+        if type(val_c) is not type(val_o) and not (
+            isinstance(val_c, (int, float)) and isinstance(val_o, (int, float))
+        ):
+            return True  # Structural mismatch
+        if isinstance(val_c, dict):
+            if _has_dict_collision(val_c, val_o):
+                return True
+        elif isinstance(val_c, list):
+            if _has_list_collision(val_c, val_o):
+                return True
+        else:
+            if val_c != val_o:
+                return True  # Scalar value collision
+    return False
+
+
+def _has_list_collision(curr_list: list, oth_list: list) -> bool:
+    """Check for collisions or mismatches between two lists."""
+    curr_dicts = [x for x in curr_list if isinstance(x, dict)]
+    oth_dicts = [x for x in oth_list if isinstance(x, dict)]
+
+    if curr_dicts or oth_dicts:
+        if len(curr_dicts) != len(curr_list) or len(oth_dicts) != len(oth_list):
+            return True  # Structural mismatch (mixed types)
+
+        id_fields = ["name", "id", "path", "hashed_secret", "key"]
+        id_field = None
+        for f in id_fields:
+            if all(f in d for d in curr_dicts) and all(f in d for d in oth_dicts):
+                id_field = f
+                break
+
+        if id_field:
+            map_c = {d[id_field]: d for d in curr_dicts}
+            map_o = {d[id_field]: d for d in oth_dicts}
+            common_ids = set(map_c.keys()).intersection(set(map_o.keys()))
+            for cid in common_ids:
+                if _has_dict_collision(map_c[cid], map_o[cid]):
+                    return True
+    return False
+
+
+def _deep_merge_dicts(curr: dict, oth: dict) -> dict:
+    """Recursively merge two dictionaries assuming no collisions exist."""
+    res = curr.copy()
+    for k, v in oth.items():
+        if k in res:
+            if isinstance(res[k], dict) and isinstance(v, dict):
+                res[k] = _deep_merge_dicts(res[k], v)
+            elif isinstance(res[k], list) and isinstance(v, list):
+                res[k] = _merge_lists(res[k], v)
+            else:
+                res[k] = v
+        else:
+            res[k] = v
+    return res
+
+
+def _merge_lists(curr_list: list, oth_list: list) -> list:
+    """Merge two lists while preserving uniqueness."""
+    combined = list(curr_list)
+    for item in oth_list:
+        if item not in combined:
+            combined.append(item)
+    return combined
+
+
 def merge_secrets_baseline(ancestor, current, other) -> bool:
     """Specialized merge logic for .secrets.baseline JSON."""
     try:
@@ -75,63 +148,185 @@ def merge_secrets_baseline(ancestor, current, other) -> bool:
         print(f"Error loading secrets baseline JSON files: {e}", file=sys.stderr)
         return False
 
-    try:
-        merged_data = curr_data.copy()
+    if not isinstance(curr_data, dict) or not isinstance(oth_data, dict):
+        return False
 
-        # Merge filters_used
-        filters = {f["path"]: f for f in curr_data.get("filters_used", [])}
-        for f in oth_data.get("filters_used", []):
-            filters[f["path"]] = f
-        merged_data["filters_used"] = sorted(
-            list(filters.values()), key=lambda x: x.get("path", "")
+    # Make copies and scrub generated_at timestamp to avoid friction
+    curr_clean = curr_data.copy()
+    oth_clean = oth_data.copy()
+    curr_clean.pop("generated_at", None)
+    oth_clean.pop("generated_at", None)
+
+    # 1. Check top-level scalar & sub-dict collisions/mismatches
+    special_keys = {"filters_used", "plugins_used", "results"}
+    all_top_keys = set(curr_clean.keys()).union(set(oth_clean.keys()))
+
+    for key in all_top_keys:
+        if key in special_keys:
+            continue
+        in_curr = key in curr_clean
+        in_oth = key in oth_clean
+
+        if in_curr and in_oth:
+            val_c = curr_clean[key]
+            val_o = oth_clean[key]
+
+            # Structural type mismatch
+            if type(val_c) is not type(val_o) and not (
+                isinstance(val_c, (int, float)) and isinstance(val_o, (int, float))
+            ):
+                return False
+
+            if isinstance(val_c, dict):
+                if _has_dict_collision(val_c, val_o):
+                    return False
+            elif isinstance(val_c, list):
+                if _has_list_collision(val_c, val_o):
+                    return False
+            else:
+                if val_c != val_o:
+                    return False  # Scalar value collision
+
+    # 2. Check filters_used
+    filters_c_raw = curr_clean.get("filters_used", [])
+    filters_o_raw = oth_clean.get("filters_used", [])
+    if not isinstance(filters_c_raw, list) or not isinstance(filters_o_raw, list):
+        return False
+
+    filters_c = {
+        f["path"]: f for f in filters_c_raw if isinstance(f, dict) and "path" in f
+    }
+    filters_o = {
+        f["path"]: f for f in filters_o_raw if isinstance(f, dict) and "path" in f
+    }
+
+    # Check for scalar collisions in matching filters
+    for path in set(filters_c.keys()).intersection(set(filters_o.keys())):
+        if _has_dict_collision(filters_c[path], filters_o[path]):
+            return False
+
+    # 3. Check plugins_used
+    plugins_c_raw = curr_clean.get("plugins_used", [])
+    plugins_o_raw = oth_clean.get("plugins_used", [])
+    if not isinstance(plugins_c_raw, list) or not isinstance(plugins_o_raw, list):
+        return False
+
+    plugins_c = {
+        p["name"]: p for p in plugins_c_raw if isinstance(p, dict) and "name" in p
+    }
+    plugins_o = {
+        p["name"]: p for p in plugins_o_raw if isinstance(p, dict) and "name" in p
+    }
+
+    # Check for scalar collisions in matching plugins
+    for name in set(plugins_c.keys()).intersection(set(plugins_o.keys())):
+        if _has_dict_collision(plugins_c[name], plugins_o[name]):
+            return False
+
+    # 4. Check results
+    curr_results = curr_clean.get("results", {})
+    oth_results = oth_clean.get("results", {})
+    if not isinstance(curr_results, dict) or not isinstance(oth_results, dict):
+        return False
+
+    all_files = set(curr_results.keys()).union(set(oth_results.keys()))
+    for filename in all_files:
+        curr_list = curr_results.get(filename, [])
+        oth_list = oth_results.get(filename, [])
+        if not isinstance(curr_list, list) or not isinstance(oth_list, list):
+            return False
+
+        secrets_by_hash_c = {}
+        for secret in curr_list:
+            if not isinstance(secret, dict):
+                return False
+            h = secret.get("hashed_secret")
+            if h:
+                sec_copy = secret.copy()
+                sec_copy.pop("line_number", None)
+                secrets_by_hash_c[h] = sec_copy
+
+        secrets_by_hash_o = {}
+        for secret in oth_list:
+            if not isinstance(secret, dict):
+                return False
+            h = secret.get("hashed_secret")
+            if h:
+                sec_copy = secret.copy()
+                sec_copy.pop("line_number", None)
+                secrets_by_hash_o[h] = sec_copy
+
+        # Check secret metadata collisions for common hashed_secrets
+        common_hashes = set(secrets_by_hash_c.keys()).intersection(
+            set(secrets_by_hash_o.keys())
         )
+        for h in common_hashes:
+            if _has_dict_collision(secrets_by_hash_c[h], secrets_by_hash_o[h]):
+                return False
 
-        # Merge plugins_used
-        plugins = {p["name"]: p for p in curr_data.get("plugins_used", [])}
-        for p in oth_data.get("plugins_used", []):
-            plugins[p["name"]] = p
-        merged_data["plugins_used"] = sorted(
-            list(plugins.values()), key=lambda x: x.get("name", "")
-        )
+    # Build merged data since no collisions were detected
+    merged_data = {}
+    for key in all_top_keys:
+        if key in special_keys:
+            continue
+        in_curr = key in curr_clean
+        in_oth = key in oth_clean
 
-        # Merge results
-        curr_results = curr_data.get("results", {})
-        oth_results = oth_data.get("results", {})
-        all_files = set(curr_results.keys()).union(oth_results.keys())
+        if in_curr and in_oth:
+            if isinstance(curr_clean[key], dict):
+                merged_data[key] = _deep_merge_dicts(curr_clean[key], oth_clean[key])
+            elif isinstance(curr_clean[key], list):
+                merged_data[key] = _merge_lists(curr_clean[key], oth_clean[key])
+            else:
+                merged_data[key] = curr_clean[key]
+        elif in_curr:
+            merged_data[key] = curr_clean[key]
+        else:
+            merged_data[key] = oth_clean[key]
 
-        merged_results = {}
-        for filename in all_files:
-            curr_list = curr_results.get(filename, [])
-            oth_list = oth_results.get(filename, [])
+    merged_filters = dict(filters_c)
+    for p_path, p_obj in filters_o.items():
+        if p_path not in merged_filters:
+            merged_filters[p_path] = p_obj
+    merged_data["filters_used"] = sorted(
+        list(merged_filters.values()), key=lambda x: x.get("path", "")
+    )
 
-            # Deduplicate by hashed_secret
-            secrets_by_hash = {}
-            for secret in curr_list + oth_list:
-                h = secret.get("hashed_secret")
-                if h:
-                    # Scrub line_number to avoid merge conflicts
-                    clean_sec = secret.copy()
-                    if "line_number" in clean_sec:
-                        del clean_sec["line_number"]
+    merged_plugins = dict(plugins_c)
+    for p_name, p_obj in plugins_o.items():
+        if p_name not in merged_plugins:
+            merged_plugins[p_name] = p_obj
+    merged_data["plugins_used"] = sorted(
+        list(merged_plugins.values()), key=lambda x: x.get("name", "")
+    )
+
+    merged_results = {}
+    for filename in all_files:
+        curr_list = curr_results.get(filename, [])
+        oth_list = oth_results.get(filename, [])
+
+        secrets_by_hash = {}
+        for secret in curr_list + oth_list:
+            h = secret.get("hashed_secret")
+            if h:
+                clean_sec = secret.copy()
+                clean_sec.pop("line_number", None)
+                if h not in secrets_by_hash:
                     secrets_by_hash[h] = clean_sec
 
-            merged_results[filename] = sorted(
-                list(secrets_by_hash.values()), key=lambda x: x.get("hashed_secret", "")
-            )
+        merged_results[filename] = sorted(
+            list(secrets_by_hash.values()), key=lambda x: x.get("hashed_secret", "")
+        )
 
-        merged_data["results"] = merged_results
+    merged_data["results"] = merged_results
 
-        # Clean generated_at to avoid timestamp friction
-        if "generated_at" in merged_data:
-            del merged_data["generated_at"]
-
+    try:
         with open(current, "w", encoding="utf-8") as f:
             json.dump(merged_data, f, indent=2, sort_keys=True)
             f.write("\n")
-
         return True
     except Exception as e:
-        print(f"Error processing secrets baseline merge logic: {e}", file=sys.stderr)
+        print(f"Error writing merged secrets baseline: {e}", file=sys.stderr)
         return False
 
 
@@ -151,18 +346,24 @@ def merge_generic_json(ancestor, current, other) -> bool:
         for k, v in dict_b.items():
             if k in result:
                 if isinstance(result[k], dict) and isinstance(v, dict):
-                    result[k] = deep_merge(result[k], v)
+                    sub = deep_merge(result[k], v)
+                    if sub is None:
+                        return None
+                    result[k] = sub
                 elif isinstance(result[k], list) and isinstance(v, list):
-                    # Combine lists and deduplicate primitives/simple dicts
                     combined = result[k] + v
                     unique = []
                     for item in combined:
                         if item not in unique:
                             unique.append(item)
                     result[k] = unique
+                elif type(result[k]) is type(v) and not isinstance(
+                    result[k], (dict, list)
+                ):
+                    if result[k] != v:
+                        return None  # Scalar value collision
                 else:
-                    # Conflict: default to keeping ours or theirs
-                    pass
+                    return None  # Structural mismatch
             else:
                 result[k] = v
         return result
@@ -170,6 +371,8 @@ def merge_generic_json(ancestor, current, other) -> bool:
     try:
         if isinstance(curr_data, dict) and isinstance(oth_data, dict):
             merged = deep_merge(curr_data, oth_data)
+            if merged is None:
+                return False
         elif isinstance(curr_data, list) and isinstance(oth_data, list):
             combined = curr_data + oth_data
             merged = []
@@ -275,7 +478,8 @@ def main():
         sys.exit(1)
 
     # 2. Handle secrets baseline
-    if os.path.basename(pathname) == ".secrets.baseline":
+    filename = os.path.basename(pathname)
+    if filename == ".secrets.baseline" or filename.endswith(".secrets.baseline"):
         print(
             f"[Merge-Driver] Auto-resolving secrets baseline in '{pathname}'",
             file=sys.stderr,
