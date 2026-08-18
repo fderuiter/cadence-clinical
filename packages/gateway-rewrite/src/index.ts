@@ -14,5 +14,8 @@ export {
 } from "./ingress-header-sanitizer.middleware.js";
 export { IngressHeaderSanitizerService } from "./ingress-header-sanitizer.service.js";
 export { IngressHeaderSanitizerModule } from "./ingress-header-sanitizer.module.js";
-
+export { RateLimiterService } from "./rate-limiter.service.js";
+export { RateLimiterModule } from "./rate-limiter.module.js";
+export { RateLimitMiddleware } from "./rate-limiter.middleware.js";
+export { RateLimitGuard } from "./rate-limiter.guard.js";
 

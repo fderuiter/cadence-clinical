@@ -118,6 +118,11 @@ def serialize_to_odm_xml(
     now_iso = datetime.now(UTC).isoformat().replace("+00:00", "Z")
     actual_file_oid = file_oid or f"ODM.{study_id}.{int(datetime.now(UTC).timestamp())}"
 
+    # Ensure namespaces are registered in ElementTree
+    ET.register_namespace("", ODM_NS)
+    ET.register_namespace("ds", DS_NS)
+    ET.register_namespace("xsi", XSI_NS)
+
     # Root <ODM>
     root = ET.Element(
         f"{{{ODM_NS}}}ODM",
