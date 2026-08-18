@@ -18,6 +18,7 @@ from packages.testing.security import (
     create_test_auth_headers,
     create_test_security_context,
     create_test_token,
+    generate_signature,
 )
 
 __all__ = [
@@ -32,4 +33,5 @@ __all__ = [
     "create_test_auth_headers",
     "create_test_security_context",
     "create_test_token",
+    "generate_signature",
 ]

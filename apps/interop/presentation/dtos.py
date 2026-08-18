@@ -98,6 +98,9 @@ class EPROSubmissionPayload(BaseModel):
 
     subject_id: str = Field(..., description="Pseudonymized identifier of the subject")
     diary_id: str = Field(..., description="Unique identifier for the diary or survey")
+    version_index: int = Field(
+        1, description="The version index of the instrument used for compilation"
+    )
     device_timestamp: datetime = Field(
         ..., description="ISO 8601 timestamp when the entry was created on device"
     )

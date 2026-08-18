@@ -3,12 +3,12 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from apps.gateway.main import generate_signature
-from apps.quality.database import db_manager
-from apps.quality.main import app
-from apps.quality.models import (
+from apps.quality.adapters.database import db_manager
+from apps.quality.adapters.models import (
     Base,
 )
+from apps.quality.main import app
+from packages.security.rbac_helpers import build_gateway_headers
 
 
 def make_step_up_token(
@@ -21,7 +21,6 @@ def make_step_up_token(
     wrong_action: bool = False,
     wrong_semantic: bool = False,
 ) -> str:
-    import time
 
     from jose import jwt
 
@@ -60,19 +59,11 @@ def get_auth_headers(
     """
     Helper to generate valid gateway V2 signed headers for testing.
     """
-    timestamp = str(time.time())
-    user_id = "quality_test_user"
-    sig = generate_signature(
-        user_id, roles, timestamp, version="2", change_reason=change_reason
+    return build_gateway_headers(
+        user_id="quality_test_user",
+        roles=roles,
+        change_reason=change_reason,
     )
-    return {
-        "X-User-Id": user_id,
-        "X-User-Roles": roles,
-        "X-Gateway-Timestamp": timestamp,
-        "X-Gateway-Signature": sig,
-        "X-Signature-Version": "2",
-        "X-Change-Reason": change_reason,
-    }
 
 
 def test_create_and_list_deviations():
@@ -760,6 +751,8 @@ def test_permission_failure_leaves_no_misleading_audit_entry():
 def test_transition_capa_sig_token_matrix():
     """
     Test missing, valid, mismatched, expired, and replayed tokens for CAPA status transitions.
+
+    @req:PRD-QLT-009
     """
     client = TestClient(app)
     headers = get_auth_headers(

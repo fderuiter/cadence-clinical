@@ -325,6 +325,14 @@ def main():
             run_git_merge_file(ancestor, current, other)
             sys.exit(1)
 
+    # 5. Handle snapshot or binary .tar.gz files cleanly by keeping our version
+    if pathname.lower().endswith(".tar.gz"):
+        print(
+            f"[Merge-Driver] Auto-resolving binary snapshot in '{pathname}' by preserving current branch version.",
+            file=sys.stderr,
+        )
+        sys.exit(0)
+
     # Fallback to standard merge with conflict markers
     print(
         f"[Merge-Driver] Unhandled file type for '{pathname}' - Escalating to manual review.",

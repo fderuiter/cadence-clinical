@@ -2361,6 +2361,367 @@ async def approve_study_version_endpoint(
     }
 
 
+import asyncio
+
+_publish_locks: dict[str, asyncio.Lock] = {}
+
+
+class PublishStudyVersionRequest(BaseModel):
+    description: str | None = Field(None, description="Amendment description")
+    baseline_snapshot: dict[str, Any] | None = Field(
+        None, description="Optional baseline snapshot overrides"
+    )
+    amended_snapshot: dict[str, Any] | None = Field(
+        None, description="Optional amended snapshot overrides"
+    )
+
+
+class PublishStudyVersionResponse(BaseModel):
+    status: str
+    version_id: str
+    amendment_id: str | None = None
+    summary_of_changes: str | None = None
+
+
+def make_snapshot_from_projection(
+    projection: dict[str, Any] | None, version_tag: str
+) -> dict[str, Any]:
+    if not projection:
+        return {"version": version_tag, "activities": []}
+
+    activities_list = []
+    seen_ids = set()
+    arms = projection.get("arms", [])
+    for arm in arms:
+        visits = arm.get("visits", [])
+        for visit in visits:
+            activities = visit.get("activities", [])
+            for act in activities:
+                act_id = act.get("id") or act.get("activity_id")
+                if act_id and act_id not in seen_ids:
+                    seen_ids.add(act_id)
+                    activities_list.append(
+                        {
+                            "id": act_id,
+                            "name": act.get("name"),
+                            "description": act.get("description", ""),
+                        }
+                    )
+    return {"version": version_tag, "activities": activities_list}
+
+
+def update_mock_version_status(study_id: str, version_id: str, new_status: str) -> str:
+    import os
+
+    from apps.designer.db import MOCK_STUDY_VERSIONS
+    from packages.security.signing import generate_canonical_signature
+
+    versions = MOCK_STUDY_VERSIONS.get(study_id, [])
+    for v in versions:
+        if v.get("id") == version_id:
+            old_status = v.get("status", "DRAFT")
+            v["status"] = new_status
+
+            payload_to_sign = {
+                "id": v.get("id") or "legacy_ver",
+                "version_tag": v.get("version_tag") or "1.0",
+                "status": new_status,
+                "version_index": v.get("version_index") or 1,
+                "created_by": v.get("created_by") or "system",
+            }
+            if "created_at" in v:
+                payload_to_sign["created_at"] = str(v["created_at"])
+            if "parent_version" in v:
+                payload_to_sign["parent_version"] = v["parent_version"]
+            if "branch_name" in v and v["branch_name"] is not None:
+                payload_to_sign["branch_name"] = v["branch_name"]
+            if "base_version" in v and v["base_version"] is not None:
+                payload_to_sign["base_version"] = v["base_version"]
+
+            secret_env = os.getenv("SIGNING_SECRET") or "mock_secret"
+            secret = secret_env.encode("utf-8")
+            v["signature"] = generate_canonical_signature(payload_to_sign, secret)
+            return old_status
+    return "DRAFT"
+
+
+async def update_neo4j_version_status(
+    driver, study_id: str, version_id: str, new_status: str
+) -> str:
+    import os
+
+    from packages.security.signing import generate_canonical_signature
+
+    async with driver.session() as session:
+        ver_query = """
+        MATCH (sv:StudyVersion {id: $version_id})
+        RETURN sv {.*} AS version_props
+        """
+        ver_res = await session.run(ver_query, version_id=version_id)
+        record = await ver_res.single()
+        if not record:
+            return "DRAFT"
+        version_props = dict(record["version_props"])
+        old_status = version_props.get("status", "DRAFT")
+
+        payload_to_sign = {
+            "id": version_props.get("id") or "legacy_ver",
+            "version_tag": version_props.get("version_tag") or "1.0",
+            "status": new_status,
+            "version_index": version_props.get("version_index") or 1,
+            "created_by": version_props.get("created_by") or "system",
+        }
+        created_at = version_props.get("created_at")
+        if created_at is not None:
+            if hasattr(created_at, "isoformat"):
+                payload_to_sign["created_at"] = created_at.isoformat()
+            else:
+                payload_to_sign["created_at"] = str(created_at)
+        if "parent_version" in version_props:
+            payload_to_sign["parent_version"] = version_props["parent_version"]
+        if "branch_name" in version_props and version_props["branch_name"] is not None:
+            payload_to_sign["branch_name"] = version_props["branch_name"]
+        if (
+            "base_version" in version_props
+            and version_props["base_version"] is not None
+        ):
+            payload_to_sign["base_version"] = version_props["base_version"]
+
+        secret_env = os.getenv("SIGNING_SECRET") or "mock_secret"
+        secret = secret_env.encode("utf-8")
+        new_signature = generate_canonical_signature(payload_to_sign, secret)
+
+        update_query = """
+        MATCH (sv:StudyVersion {id: $version_id})
+        SET sv.status = $new_status,
+            sv.signature = $new_signature
+        """
+        await session.run(
+            update_query,
+            version_id=version_id,
+            new_status=new_status,
+            new_signature=new_signature,
+        )
+        return old_status
+
+
+@router.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/publish",
+    response_model=PublishStudyVersionResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def publish_study_version_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: PublishStudyVersionRequest,
+    request: Request,
+) -> PublishStudyVersionResponse:
+    """
+    Two-Phase Study Version State Machine:
+    1. transition target version status to 'PENDING_PUBLISH'
+    2. synchronously call downstream execution setup / clinical migration
+    3. if downstream succeeds, transition target version status to 'ACTIVE'
+    4. if downstream fails or times out (15s window), rollback status to 'DRAFT',
+       record exact execution error to audit trail, release lock resources,
+       and return validation error to initiating researcher.
+    """
+    import os
+    import uuid
+    from datetime import UTC, datetime
+
+    import httpx
+
+    from apps.designer.db import (
+        MOCK_DESIGNER_AUDIT_LOGS,
+        MOCK_STUDY_PROJECTIONS_BY_VERSION,
+        MOCK_STUDY_VERSIONS,
+    )
+
+    driver = await get_neo4j_driver(request) if request else None
+    user_id = getattr(request.state, "user_id", "designer_01")
+
+    # Enforce concurrency/locking
+    if version_id not in _publish_locks:
+        _publish_locks[version_id] = asyncio.Lock()
+
+    if _publish_locks[version_id].locked():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="CONCURRENT_PUBLISHING_CONFLICT: This version is already in the process of being published.",
+        )
+
+    async with _publish_locks[version_id]:
+        # Step 1: Transition status to PENDING_PUBLISH and save previous status
+        if driver is None:
+            # Check if version exists first
+            versions = MOCK_STUDY_VERSIONS.get(study_id, [])
+            ver_record = None
+            for v in versions:
+                if v.get("id") == version_id:
+                    ver_record = v
+                    break
+            if not ver_record:
+                raise HTTPException(status_code=404, detail="StudyVersion not found")
+
+            update_mock_version_status(study_id, version_id, "PENDING_PUBLISH")
+            version_tag = ver_record.get("version_tag")
+            parent_version_tag = ver_record.get("parent_version")
+        else:
+            async with driver.session() as session:
+                ver_query = """
+                MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion {id: $version_id})
+                RETURN sv {.*} AS version_props
+                """
+                ver_res = await session.run(
+                    ver_query, study_id=study_id, version_id=version_id
+                )
+                record = await ver_res.single()
+                if not record:
+                    raise HTTPException(
+                        status_code=404, detail="StudyVersion not found"
+                    )
+                version_props = record["version_props"]
+                version_tag = version_props.get("version_tag")
+                parent_version_tag = version_props.get("parent_version")
+
+            await update_neo4j_version_status(
+                driver, study_id, version_id, "PENDING_PUBLISH"
+            )
+
+        try:
+            # Step 2: Build Snapshots for downstream
+            baseline_snapshot = payload.baseline_snapshot
+            if not baseline_snapshot:
+                baseline_key = f"{study_id}:{parent_version_tag}"
+                baseline_proj = MOCK_STUDY_PROJECTIONS_BY_VERSION.get(baseline_key)
+                baseline_snapshot = make_snapshot_from_projection(
+                    baseline_proj, parent_version_tag or "1.0"
+                )
+
+            amended_snapshot = payload.amended_snapshot
+            if not amended_snapshot:
+                amended_key = f"{study_id}:{version_tag}"
+                amended_proj = MOCK_STUDY_PROJECTIONS_BY_VERSION.get(amended_key)
+                if not amended_proj and driver is None:
+                    from apps.designer.db import get_study_projection
+
+                    amended_proj = get_study_projection(study_id)
+                amended_snapshot = make_snapshot_from_projection(
+                    amended_proj, version_tag or "2.0"
+                )
+
+            # Step 3: Call downstream execution setup synchronously (with strict 15-second timeout)
+            execution_url = os.getenv("EXECUTION_SERVICE_URL", "http://localhost:8001")
+            client_kwargs = {
+                "timeout": httpx.Timeout(15.0),
+                "base_url": execution_url,
+            }
+
+            headers = {}
+            for key, val in request.headers.items():
+                if key.lower() in (
+                    "authorization",
+                    "x-user-id",
+                    "x-user-roles",
+                    "x-tenant-id",
+                    "content-type",
+                ):
+                    headers[key] = val
+            if "x-user-id" not in {k.lower() for k in headers}:
+                headers["X-User-Id"] = user_id
+
+            pub_request_body = {
+                "study_id": study_id,
+                "version_number": version_tag or "2.0",
+                "description": payload.description or f"Publish version {version_tag}",
+                "baseline_snapshot": baseline_snapshot,
+                "amended_snapshot": amended_snapshot,
+            }
+
+            with httpx.Client(**client_kwargs) as client_instance:
+                response = client_instance.post(
+                    "/api/v1/execution/amendments/publish",
+                    json=pub_request_body,
+                    headers=headers,
+                )
+                response.raise_for_status()
+                res_data = response.json()
+
+            # Step 4: Downstream call succeeded, transition target version status to ACTIVE
+            if driver is None:
+                update_mock_version_status(study_id, version_id, "ACTIVE")
+            else:
+                await update_neo4j_version_status(
+                    driver, study_id, version_id, "ACTIVE"
+                )
+
+            return PublishStudyVersionResponse(
+                status="ACTIVE",
+                version_id=version_id,
+                amendment_id=res_data.get("amendment_id"),
+                summary_of_changes=res_data.get("summary_of_changes"),
+            )
+
+        except Exception as exc:
+            # Step 5: Downstream call failed (timeout or non-200), trigger automated compensating rollback to 'DRAFT'
+            error_msg = str(exc)
+            if isinstance(exc, httpx.HTTPStatusError):
+                try:
+                    error_msg = exc.response.json().get("detail", str(exc))
+                except Exception:
+                    error_msg = exc.response.text or str(exc)
+
+            # Revert state to DRAFT
+            if driver is None:
+                update_mock_version_status(study_id, version_id, "DRAFT")
+            else:
+                await update_neo4j_version_status(driver, study_id, version_id, "DRAFT")
+
+            # Write Audit Trail entry
+            audit_event = {
+                "id": str(uuid.uuid4()),
+                "actor": user_id,
+                "timestamp": datetime.now(UTC).isoformat(),
+                "change_reason": f"Rollback aborted publish: {error_msg}",
+                "study_id": study_id,
+                "version_id": version_id,
+                "error_message": error_msg,
+                "type": "PUBLISH_ROLLBACK",
+            }
+            MOCK_DESIGNER_AUDIT_LOGS.append(audit_event)
+
+            if driver is not None:
+                action_id = str(uuid.uuid4())
+                query = """
+                MATCH (s:Study {id: $study_id})
+                CREATE (s)-[:HAS_ACTION]->(a:Action {
+                    id: $action_id,
+                    actor: $actor,
+                    timestamp: $timestamp,
+                    change_reason: $change_reason,
+                    type: $type,
+                    error_message: $error_message
+                })
+                """
+                async with driver.session() as session:
+                    await session.run(
+                        query,
+                        study_id=study_id,
+                        action_id=action_id,
+                        actor=user_id,
+                        timestamp=datetime.now(UTC).isoformat(),
+                        change_reason=f"Rollback aborted publish: {error_msg}",
+                        type="PUBLISH_ROLLBACK",
+                        error_message=error_msg,
+                    )
+
+            # Propagate clear validation error notification to user
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"PUBLISH_FAILED: {error_msg}",
+            )
+
+
 # ==========================================
 # Eligibility Criteria API Models and Routes
 # ==========================================

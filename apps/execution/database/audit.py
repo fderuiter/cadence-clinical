@@ -130,6 +130,7 @@ def receive_before_flush(session: Session, flush_context, instances):
             "tickets",
             "ticket_audit_logs",
             "ticket_comments",
+            "ticket_attachments",
             "integration_outbox",
             "security_audit_logs",
             "test_user_records",
@@ -403,7 +404,8 @@ def receive_before_flush(session: Session, flush_context, instances):
                                     stmt_user_consents = select(SubjectConsent).where(
                                         SubjectConsent.subject_id == subject_id,
                                         SubjectConsent.study_id == study_id,
-                                        SubjectConsent.icf_signed.is_(True),
+                                        (SubjectConsent.icf_signed.is_(True))
+                                        | (SubjectConsent.is_paper_override.is_(True)),
                                     )
                                     user_consents = (
                                         session.execute(stmt_user_consents)
@@ -426,8 +428,14 @@ def receive_before_flush(session: Session, flush_context, instances):
                                             == subject_id
                                             and getattr(new_obj, "study_id", None)
                                             == study_id
-                                            and getattr(new_obj, "icf_signed", False)
-                                            is True
+                                            and (
+                                                getattr(new_obj, "icf_signed", False)
+                                                is True
+                                                or getattr(
+                                                    new_obj, "is_paper_override", False
+                                                )
+                                                is True
+                                            )
                                         ):
                                             user_consented_indices.add(
                                                 new_obj.version_index
@@ -514,7 +522,45 @@ def receive_before_flush(session: Session, flush_context, instances):
                                         if higher_reconsent_db:
                                             higher_reconsent = True
 
-                                    if (
+                                    # Check for any active paper override
+                                    has_any_paper_override = False
+                                    for new_obj in (
+                                        list(session.new)
+                                        + list(session.dirty)
+                                        + list(session.identity_map.values())
+                                    ):
+                                        if (
+                                            hasattr(new_obj, "__tablename__")
+                                            and new_obj.__tablename__
+                                            == "subject_consents"
+                                            and getattr(new_obj, "subject_id", None)
+                                            == subject_id
+                                            and getattr(new_obj, "study_id", None)
+                                            == study_id
+                                            and getattr(
+                                                new_obj, "is_paper_override", False
+                                            )
+                                            is True
+                                        ):
+                                            has_any_paper_override = True
+                                            break
+                                    if not has_any_paper_override:
+                                        stmt_paper = select(SubjectConsent).where(
+                                            SubjectConsent.subject_id == subject_id,
+                                            SubjectConsent.study_id == study_id,
+                                            SubjectConsent.is_paper_override.is_(True),
+                                        )
+                                        paper_db = (
+                                            session.execute(stmt_paper)
+                                            .scalars()
+                                            .first()
+                                        )
+                                        if paper_db:
+                                            has_any_paper_override = True
+
+                                    if has_any_paper_override:
+                                        pass
+                                    elif (
                                         max_consented_v == 0
                                         or direct_reconsent
                                         or higher_reconsent
@@ -814,7 +860,14 @@ def receive_before_flush(session: Session, flush_context, instances):
 
     # Track Inserts
     for obj in session.new:
-        if not hasattr(obj, "__tablename__") or obj.__tablename__ == "audit_logs":
+        if (
+            not hasattr(obj, "__tablename__")
+            or obj.__tablename__ in ("audit_logs", "audit_ledger_seals")
+            or not (
+                getattr(obj, "__module__", "").startswith("apps.execution")
+                or isinstance(obj, AuditedModel)
+            )
+        ):
             continue
 
         new_values = {}
@@ -843,7 +896,14 @@ def receive_before_flush(session: Session, flush_context, instances):
 
     # Track Updates
     for obj in session.dirty:
-        if not hasattr(obj, "__tablename__") or obj.__tablename__ == "audit_logs":
+        if (
+            not hasattr(obj, "__tablename__")
+            or obj.__tablename__ in ("audit_logs", "audit_ledger_seals")
+            or not (
+                getattr(obj, "__module__", "").startswith("apps.execution")
+                or isinstance(obj, AuditedModel)
+            )
+        ):
             continue
         if not session.is_modified(obj, include_collections=False):
             continue
@@ -920,7 +980,14 @@ def receive_before_flush(session: Session, flush_context, instances):
                 f"Hard deletion of {obj.__class__.__name__} is forbidden. Use soft deletes by setting is_deleted=True."
             )
 
-        if not hasattr(obj, "__tablename__") or obj.__tablename__ == "audit_logs":
+        if (
+            not hasattr(obj, "__tablename__")
+            or obj.__tablename__ in ("audit_logs", "audit_ledger_seals")
+            or not (
+                getattr(obj, "__module__", "").startswith("apps.execution")
+                or isinstance(obj, AuditedModel)
+            )
+        ):
             continue
 
         # If it's another non-audited model, capture its deletion? The requirement says "all clinical records must be versioned..."

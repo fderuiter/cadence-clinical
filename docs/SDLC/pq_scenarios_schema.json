@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PQScenarios",
+  "type": "object",
+  "properties": {
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "pattern": "^TC-VAL-LOG-\\d+$" },
+          "name": { "type": "string" },
+          "reqs": { "type": "string" },
+          "test": { "type": "string" },
+          "desc": { "type": "string" }
+        },
+        "required": ["id", "name", "reqs", "test", "desc"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["scenarios"],
+  "additionalProperties": false
+}

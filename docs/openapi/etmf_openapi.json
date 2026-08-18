@@ -132,6 +132,173 @@
         }
       }
     },
+    "/api/v1/etmf/studies/{study_id}/inspection-readiness": {
+      "get": {
+        "tags": [
+          "Inspection & EMS"
+        ],
+        "summary": "Get Study Inspection Readiness",
+        "description": "Calculates and returns a comprehensive inspection readiness assessment for a study.\n\nEvaluates Expected Document List (EDL) completion, zone matrix distribution,\nQC review bottlenecks, Part 11 electronic signature compliance, and expiration risks.",
+        "operationId": "get_study_inspection_readiness_api_v1_etmf_studies__study_id__inspection_readiness_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectionReadinessResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/studies/{study_id}/ems-export": {
+      "get": {
+        "tags": [
+          "Inspection & EMS"
+        ],
+        "summary": "Export Study Tmf Ems",
+        "description": "Exports the eTMF in standard DIA TMF Exchange Mechanism Standard (EMS) format.\n\nGenerates a compliant ZIP package containing `tmf-ems.xml`, `tmf-ems.json`,\n`checksums.sha256`, and all document version assets organized in standard DIA hierarchy.",
+        "operationId": "export_study_tmf_ems_api_v1_etmf_studies__study_id__ems_export_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "study_title",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional study title",
+              "title": "Study Title"
+            },
+            "description": "Optional study title"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/audit-logs/verify-chain": {
+      "post": {
+        "tags": [
+          "Inspection & EMS"
+        ],
+        "summary": "Verify Audit Ledger Chain",
+        "description": "Cryptographically inspects and verifies the full Merkle block ledger chain for tampering detection.",
+        "operationId": "verify_audit_ledger_chain_api_v1_etmf_audit_logs_verify_chain_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditChainVerificationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/verify-signature": {
+      "post": {
+        "tags": [
+          "Inspection & EMS"
+        ],
+        "summary": "Verify Document Signature Endpoint",
+        "description": "Verifies the electronic signature and SHA-256 cryptographic digest integrity on a document.",
+        "operationId": "verify_document_signature_endpoint_api_v1_etmf_documents__document_id__verify_signature_post",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignatureVerificationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/etmf/taxonomy": {
       "get": {
         "tags": [
@@ -2116,6 +2283,68 @@
         ],
         "title": "ArtifactDetail"
       },
+      "AuditChainVerificationResponse": {
+        "properties": {
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          },
+          "total_sealed_blocks": {
+            "type": "integer",
+            "title": "Total Sealed Blocks"
+          },
+          "total_sealed_records": {
+            "type": "integer",
+            "title": "Total Sealed Records"
+          },
+          "latest_block_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Block Hash"
+          },
+          "genesis_block_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Genesis Block Hash"
+          },
+          "unsealed_records_count": {
+            "type": "integer",
+            "title": "Unsealed Records Count"
+          },
+          "tamper_detected": {
+            "type": "boolean",
+            "title": "Tamper Detected"
+          },
+          "details": {
+            "type": "string",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_valid",
+          "total_sealed_blocks",
+          "total_sealed_records",
+          "latest_block_hash",
+          "genesis_block_hash",
+          "unsealed_records_count",
+          "tamper_detected",
+          "details"
+        ],
+        "title": "AuditChainVerificationResponse"
+      },
       "AuditLogResponse": {
         "properties": {
           "id": {
@@ -3399,6 +3628,93 @@
         ],
         "title": "IngestionRequest"
       },
+      "InspectionReadinessResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "overall_readiness_score": {
+            "type": "number",
+            "title": "Overall Readiness Score"
+          },
+          "readiness_rating": {
+            "type": "string",
+            "title": "Readiness Rating"
+          },
+          "total_documents": {
+            "type": "integer",
+            "title": "Total Documents"
+          },
+          "total_expected": {
+            "type": "integer",
+            "title": "Total Expected"
+          },
+          "approved_documents_count": {
+            "type": "integer",
+            "title": "Approved Documents Count"
+          },
+          "pending_qc_count": {
+            "type": "integer",
+            "title": "Pending Qc Count"
+          },
+          "unsigned_documents_count": {
+            "type": "integer",
+            "title": "Unsigned Documents Count"
+          },
+          "expired_documents_count": {
+            "type": "integer",
+            "title": "Expired Documents Count"
+          },
+          "expiring_soon_count": {
+            "type": "integer",
+            "title": "Expiring Soon Count"
+          },
+          "milestones": {
+            "items": {
+              "$ref": "#/components/schemas/MilestoneReadinessDetail"
+            },
+            "type": "array",
+            "title": "Milestones"
+          },
+          "zones": {
+            "items": {
+              "$ref": "#/components/schemas/ZoneReadinessDetail"
+            },
+            "type": "array",
+            "title": "Zones"
+          },
+          "action_items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Action Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "generated_at",
+          "overall_readiness_score",
+          "readiness_rating",
+          "total_documents",
+          "total_expected",
+          "approved_documents_count",
+          "pending_qc_count",
+          "unsigned_documents_count",
+          "expired_documents_count",
+          "expiring_soon_count",
+          "milestones",
+          "zones",
+          "action_items"
+        ],
+        "title": "InspectionReadinessResponse"
+      },
       "ManualRedactRequest": {
         "properties": {
           "spans": {
@@ -3494,6 +3810,52 @@
           "manifest"
         ],
         "title": "ManualRedactResponse"
+      },
+      "MilestoneReadinessDetail": {
+        "properties": {
+          "milestone": {
+            "type": "string",
+            "title": "Milestone"
+          },
+          "is_complete": {
+            "type": "boolean",
+            "title": "Is Complete"
+          },
+          "expected_count": {
+            "type": "integer",
+            "title": "Expected Count"
+          },
+          "present_count": {
+            "type": "integer",
+            "title": "Present Count"
+          },
+          "approved_count": {
+            "type": "integer",
+            "title": "Approved Count"
+          },
+          "missing_artifacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Artifacts"
+          },
+          "completeness_percentage": {
+            "type": "number",
+            "title": "Completeness Percentage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "milestone",
+          "is_complete",
+          "expected_count",
+          "present_count",
+          "approved_count",
+          "missing_artifacts",
+          "completeness_percentage"
+        ],
+        "title": "MilestoneReadinessDetail"
       },
       "PaginatedAuditLogResponse": {
         "properties": {
@@ -3670,6 +4032,87 @@
           "signing_reason"
         ],
         "title": "SignDocumentRequest"
+      },
+      "SignatureVerificationResponse": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          },
+          "signer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signer"
+          },
+          "signing_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signing Timestamp"
+          },
+          "signing_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signing Reason"
+          },
+          "certificate_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certificate Fingerprint"
+          },
+          "content_hash_matched": {
+            "type": "boolean",
+            "title": "Content Hash Matched"
+          },
+          "details": {
+            "type": "string",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "version_index",
+          "is_valid",
+          "signer",
+          "signing_timestamp",
+          "signing_reason",
+          "certificate_fingerprint",
+          "content_hash_matched",
+          "details"
+        ],
+        "title": "SignatureVerificationResponse"
       },
       "SigningReason": {
         "type": "string",
@@ -4040,6 +4483,59 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ZoneReadinessDetail": {
+        "properties": {
+          "zone_code": {
+            "type": "integer",
+            "title": "Zone Code"
+          },
+          "zone_name": {
+            "type": "string",
+            "title": "Zone Name"
+          },
+          "expected_count": {
+            "type": "integer",
+            "title": "Expected Count"
+          },
+          "present_count": {
+            "type": "integer",
+            "title": "Present Count"
+          },
+          "approved_count": {
+            "type": "integer",
+            "title": "Approved Count"
+          },
+          "pending_qc_count": {
+            "type": "integer",
+            "title": "Pending Qc Count"
+          },
+          "rejected_count": {
+            "type": "integer",
+            "title": "Rejected Count"
+          },
+          "missing_count": {
+            "type": "integer",
+            "title": "Missing Count"
+          },
+          "completeness_percentage": {
+            "type": "number",
+            "title": "Completeness Percentage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "zone_code",
+          "zone_name",
+          "expected_count",
+          "present_count",
+          "approved_count",
+          "pending_qc_count",
+          "rejected_count",
+          "missing_count",
+          "completeness_percentage"
+        ],
+        "title": "ZoneReadinessDetail"
       }
     }
   }

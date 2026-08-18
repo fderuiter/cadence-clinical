@@ -167,7 +167,14 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                     RAISE EXCEPTION 'GxP Compliance Violation: Write operations lacking session-level user identifiers are strictly prohibited.';
                 END IF;
 
-                v_change_reason := COALESCE(NULLIF(current_setting('cadence.current_change_reason', true), ''), 'Automated system operation');
+                IF (TG_OP IN ('UPDATE', 'DELETE')) THEN
+                    v_change_reason := current_setting('cadence.current_change_reason', true);
+                    IF (v_change_reason IS NULL OR v_change_reason = '') THEN
+                        RAISE EXCEPTION 'GxP Compliance Violation: Write operations lacking session-level change justification are strictly prohibited.';
+                    END IF;
+                ELSE
+                    v_change_reason := COALESCE(NULLIF(current_setting('cadence.current_change_reason', true), ''), 'Automated system operation');
+                END IF;
 
                 IF (TG_OP = 'INSERT') THEN
                     v_action := 'INSERT';
@@ -344,6 +351,8 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                         SELECT CASE
                             WHEN (current_setting('cadence.current_user_id', 1) IS NULL OR current_setting('cadence.current_user_id', 1) = '')
                             THEN RAISE(FAIL, 'GxP Compliance Violation: Write operations lacking session-level user identifiers are strictly prohibited.')
+                            WHEN (current_setting('cadence.current_change_reason', 1) IS NULL OR current_setting('cadence.current_change_reason', 1) = '')
+                            THEN RAISE(FAIL, 'GxP Compliance Violation: Write operations lacking session-level change justification are strictly prohibited.')
                         END;
 
                         INSERT INTO audit_logs (

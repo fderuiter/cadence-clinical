@@ -530,6 +530,461 @@ class CTMSDelegation(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
+class CountryRegulatoryMilestone(Base):
+    """Tracks country-level regulatory submissions and approvals."""
+
+    __tablename__ = "ctms_country_regulatory_milestones"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    country_code: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
+    milestone_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    planned_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    actual_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    status: Mapped[str] = mapped_column(String(50), default="PLANNED", nullable=False)
+    approval_number: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    authority_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class EssentialDocument(Base):
+    """Tracks site-level essential documents required for regulatory compliance."""
+
+    __tablename__ = "ctms_essential_documents"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    document_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    expiration_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    status: Mapped[str] = mapped_column(String(50), default="DRAFT", nullable=False)
+    review_notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    reviewed_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class SiteGreenlightGate(Base):
+    """Manages site greenlight gatekeeper validation for study startup."""
+
+    __tablename__ = "ctms_site_greenlight_gates"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, unique=True, index=True
+    )
+    overall_status: Mapped[str] = mapped_column(
+        String(50), default="PENDING", nullable=False
+    )
+    contract_approved: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    irb_approved: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    form_1572_approved: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    doa_signed_off: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    ip_ready: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    greenlight_certified_by: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    greenlight_certified_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
+    rejection_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class ProtocolDeviation(Base):
+    """Tracks protocol deviations, root cause analyses, and CAPA escalations."""
+
+    __tablename__ = "ctms_protocol_deviations"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    subject_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    visit_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    deviation_category: Mapped[str] = mapped_column(String(100), nullable=False)
+    severity: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # MINOR, MAJOR, CRITICAL
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(String(2000), nullable=False)
+    date_occurred: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    date_identified: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(50), default="IDENTIFIED", nullable=False
+    )
+    root_cause_5whys: Mapped[list[str]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    root_cause_summary: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    corrective_action_plan: Mapped[str | None] = mapped_column(
+        String(2000), nullable=True
+    )
+    preventive_action_plan: Mapped[str | None] = mapped_column(
+        String(2000), nullable=True
+    )
+    quality_capa_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reported_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    resolved_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class DeviationActionItem(Base):
+    """Tracks action items and remediation tasks assigned from protocol deviations."""
+
+    __tablename__ = "ctms_deviation_action_items"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    deviation_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("ctms_protocol_deviations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    description: Mapped[str] = mapped_column(String(1000), nullable=False)
+    assignee_user_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    assignee_role: Mapped[str] = mapped_column(String(100), nullable=False)
+    due_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="OPEN", nullable=False)
+    resolution_notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    completed_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class RBQMKRIMetric(Base):
+    """Tracks Key Risk Indicator (KRI) calculations and QTL breaches under ICH E6(R2)/(R3)."""
+
+    __tablename__ = "ctms_rbqm_kri_metrics"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    metric_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    metric_value: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    threshold_low: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    threshold_high: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    breach_status: Mapped[str] = mapped_column(
+        String(50), default="NORMAL", nullable=False
+    )
+    calculation_date: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class SiteRiskScore(Base):
+    """Tracks composite site risk scoring and adaptive monitoring recommendations."""
+
+    __tablename__ = "ctms_site_risk_scores"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    composite_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    risk_level: Mapped[str] = mapped_column(String(50), default="LOW", nullable=False)
+    assessment_date: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    recommended_monitoring_type: Mapped[str] = mapped_column(
+        String(100), default="ROUTINE_ON_SITE", nullable=False
+    )
+    monitoring_interval_days: Mapped[int] = mapped_column(
+        Integer, default=30, nullable=False
+    )
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class ProcedurePaymentGrid(Base):
+    """Tracks visit and procedure payment matrices for investigator grants."""
+
+    __tablename__ = "ctms_procedure_payment_grids"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    grant_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("ctms_investigator_grants.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    visit_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    procedure_code: Mapped[str] = mapped_column(String(100), nullable=False)
+    procedure_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    base_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    overhead_percentage: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    withholding_percentage: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class FinancialInvoice(Base):
+    """Tracks batch invoices and payment disbursements for investigator sites."""
+
+    __tablename__ = "ctms_financial_invoices"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    grant_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("ctms_investigator_grants.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    invoice_number: Mapped[str] = mapped_column(
+        String(100), nullable=False, unique=True, index=True
+    )
+    invoice_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    gross_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    withholding_amount: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    net_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="DRAFT", nullable=False)
+    payable_ids: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    approved_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    disbursed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class IPKitRecord(Base):
+    """Tracks Investigational Product (IP) kit inventories, lots, and subject dispensations."""
+
+    __tablename__ = "ctms_ip_kit_records"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    kit_number: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    lot_number: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    kit_type: Mapped[str] = mapped_column(
+        String(50), default="ACTIVE_DRUG", nullable=False
+    )
+    shipment_tracking_number: Mapped[str] = mapped_column(String(100), nullable=False)
+    expiration_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(50), default="RECEIVED_AVAILABLE", nullable=False
+    )
+    received_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    dispensed_subject_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    dispensed_visit_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    dispensed_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    returned_units_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    expected_units_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    compliance_percentage: Mapped[float | None] = mapped_column(Float, nullable=True)
+    notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class IPTemperatureExcursion(Base):
+    """Tracks temperature excursions, quarantine holds, and QA stability assessments."""
+
+    __tablename__ = "ctms_ip_temperature_excursions"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    kit_ids: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    excursion_type: Mapped[str] = mapped_column(
+        String(50), default="STORAGE", nullable=False
+    )
+    min_temp_celsius: Mapped[float] = mapped_column(Float, nullable=False)
+    max_temp_celsius: Mapped[float] = mapped_column(Float, nullable=False)
+    duration_hours: Mapped[float] = mapped_column(Float, nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    disposition_status: Mapped[str] = mapped_column(
+        String(50), default="QUARANTINED", nullable=False
+    )
+    qa_reviewed_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    qa_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    qa_rationale: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class IPDestructionCertificate(Base):
+    """Tracks witnessed on-site or depot destruction of investigational products."""
+
+    __tablename__ = "ctms_ip_destruction_certificates"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    certificate_number: Mapped[str] = mapped_column(
+        String(100), nullable=False, unique=True, index=True
+    )
+    kit_ids: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    destruction_method: Mapped[str] = mapped_column(String(100), nullable=False)
+    destruction_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    witness_user_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    witness_role: Mapped[str] = mapped_column(String(100), nullable=False)
+    pi_signature_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    pi_signed_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    reason_for_destruction: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class ETMFSyncRecord(Base):
+    """Tracks automated synchronization of CTMS artifacts with eTMF DIA Reference Model."""
+
+    __tablename__ = "ctms_etmf_sync_records"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    artifact_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    source_record_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
+    etmf_document_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
+    dia_zone: Mapped[str] = mapped_column(String(50), nullable=False)
+    dia_section: Mapped[str] = mapped_column(String(50), nullable=False)
+    dia_artifact: Mapped[str] = mapped_column(String(100), nullable=False)
+    sync_status: Mapped[str] = mapped_column(
+        String(50), default="SYNCED", nullable=False
+    )
+    error_message: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    synced_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
 async def write_audit_log(
     session: AsyncSession,
     user_id: str,

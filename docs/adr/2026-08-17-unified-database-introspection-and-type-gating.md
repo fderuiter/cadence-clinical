@@ -14,7 +14,7 @@ In multi-service systems with distinct databases—such as Clinical Trial Manage
 Previously, we established an offline schema generator. However, we lacked:
 1. **Consolidation:** Aggregating schemas across CTMS, eISF, and execution services into a single unified client types file (`apps/web/src/types/db_schemas.ts`).
 2. **Automated Gating:** A mechanism in the continuous integration (CI) pipeline to ensure that developers do not modify SQLAlchemy/SQLModel backend schemas without also committing the updated client-side TypeScript definitions.
-3. **Collision Resilience:** Gracefully handling matching model/table names (e.g., `lab_test_master` vs `LabTestMaster`) across decoupled microservice domain boundaries.
+3. **Collision Resilience:** Gracefully handling matching model or table names (e.g., `lab_test_master` vs `LabTestMaster`) across decoupled microservice domain boundaries.
 
 This decision addresses requirements under Trace-8 and PRD-SYS-001.
 

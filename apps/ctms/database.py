@@ -1,3 +1,3 @@
-from packages.database import RelationalDatabaseManager
+from apps.ctms.adapters.database import db_manager
 
-db_manager = RelationalDatabaseManager(service_name="CTMS")
+__all__ = ["db_manager"]

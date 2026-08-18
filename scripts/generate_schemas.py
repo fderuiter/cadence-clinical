@@ -84,6 +84,29 @@ def python_type_to_zod(py_type: Any) -> str:
 
 
 def main():
+    # Halt on production-level environments
+    for env_var in ["NODE_ENV", "APP_ENV", "ENVIRONMENT", "STAGE"]:
+        val = os.getenv(env_var, "").lower()
+        if "prod" in val or val == "production":
+            sys.stderr.write(
+                f"Error: Schema generation is blocked in production environment ({env_var}={os.getenv(env_var)}).\n"
+            )
+            sys.exit(1)
+
+    # Filter out sensitive internal/audit tables
+    allowed_models = []
+    for model in MODELS:
+        name = model.__name__.lower()
+        if (
+            "audit" in name
+            or "seal" in name
+            or "credential" in name
+            or "secret" in name
+            or "private" in name
+        ):
+            continue
+        allowed_models.append(model)
+
     output_dir = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "../packages/usdm-schemas/src")
     )
@@ -97,7 +120,7 @@ def main():
     lines.append('import { z } from "zod";')
     lines.append("")
 
-    for model in MODELS:
+    for model in allowed_models:
         name = model.__name__
         lines.append(f"export const {name}Schema = z.object({{")
         for field_name, field_info in model.model_fields.items():

@@ -141,4 +141,48 @@ export const etmfService = {
       options
     );
   },
+
+  /**
+   * Retrieves comprehensive multi-dimensional inspection readiness report for a study.
+   * @param {string} studyId - Unique clinical study identifier.
+   * @param {Object} [options] - Additional request options.
+   * @returns {Promise<Object>} Inspection readiness evaluation metrics.
+   */
+  getInspectionReadiness(studyId, options = {}) {
+    return apiClient.get(`/api/v1/etmf/studies/${studyId}/inspection-readiness`, options);
+  },
+
+  /**
+   * Exports eTMF in standard DIA TMF Exchange Mechanism Standard (EMS) format.
+   * @param {string} studyId - Unique clinical study identifier.
+   * @param {Object} [params] - Optional parameters like study_title.
+   * @returns {string} The download URL for the EMS ZIP package.
+   */
+  getEmsExportUrl(studyId, params = {}) {
+    const query = new URLSearchParams();
+    if (params.study_title) query.append("study_title", params.study_title);
+    const queryString = query.toString();
+    return queryString
+      ? `/api/v1/etmf/studies/${studyId}/ems-export?${queryString}`
+      : `/api/v1/etmf/studies/${studyId}/ems-export`;
+  },
+
+  /**
+   * Cryptographically verifies the full Merkle block ledger chain for tampering detection.
+   * @param {Object} [options] - Additional request options.
+   * @returns {Promise<Object>} Verification report and integrity status.
+   */
+  verifyAuditChain(options = {}) {
+    return apiClient.post("/api/v1/etmf/audit-logs/verify-chain", {}, options);
+  },
+
+  /**
+   * Verifies electronic signature and SHA-256 digest on an eTMF document.
+   * @param {string} documentId - Unique document identifier.
+   * @param {Object} [options] - Additional request options.
+   * @returns {Promise<Object>} Signature verification outcome.
+   */
+  verifyDocumentSignature(documentId, options = {}) {
+    return apiClient.post(`/api/v1/etmf/documents/${documentId}/verify-signature`, {}, options);
+  },
 };

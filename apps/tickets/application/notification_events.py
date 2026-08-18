@@ -15,13 +15,14 @@ def generate_ticket_notification_payloads(
     old_status: str | None = None,
     new_status: str | None = None,
     comment_body: str | None = None,
+    comment_visibility: str | None = None,
 ) -> list[dict]:
     """
     Generates list of notification payloads based on ticket state, event type, and recipient policy.
 
     Recipient policy:
     - Target assignee_user when set, else assignee_role.
-    - Also notify reporter.
+    - Also notify reporter (unless internal sponsor comment on a site-reported ticket).
     - Exclude acting principal (current X-User-Id) from recipients.
     - Emit one payload per distinct recipient.
     """
@@ -39,7 +40,9 @@ def generate_ticket_notification_payloads(
             {"recipient_user_id": None, "recipient_role": ticket.assignee_role}
         )
 
-    if ticket.reporter and ticket.reporter != actor:
+    # For internal sponsor comments, do not dispatch to regular site reporter unless explicitly assigned
+    is_internal_note = comment_visibility == "INTERNAL_SPONSOR"
+    if ticket.reporter and ticket.reporter != actor and not is_internal_note:
         if not any(r["recipient_user_id"] == ticket.reporter for r in recipients):
             recipients.append(
                 {"recipient_user_id": ticket.reporter, "recipient_role": None}
@@ -61,15 +64,16 @@ def generate_ticket_notification_payloads(
     elif event_type == "comment":
         category = "ACTION_ITEMS"
         priority = "MEDIUM"
+        prefix = "[Internal Note] " if is_internal_note else ""
         if comment_body:
             snippet = (
                 comment_body[:60] + "..." if len(comment_body) > 60 else comment_body
             )
             message_content = (
-                f"New comment added to ticket {ticket.reference}: '{snippet}'."
+                f"{prefix}New comment added to ticket {ticket.reference}: '{snippet}'."
             )
         else:
-            message_content = f"New comment added to ticket {ticket.reference}."
+            message_content = f"{prefix}New comment added to ticket {ticket.reference}."
     elif event_type == "transition":
         category = "SYSTEM"
         priority = "MEDIUM"
@@ -81,6 +85,22 @@ def generate_ticket_notification_payloads(
             )
         else:
             message_content = f"Ticket {ticket.reference} status transitioned."
+    elif event_type == "sla_warning":
+        category = "ACTION_ITEMS"
+        priority = "HIGH"
+        message_content = f"SLA Amber Warning: Ticket {ticket.reference} has reached 75% of its SLA duration."
+    elif event_type == "sla_breach":
+        category = "ACTION_ITEMS"
+        priority = "CRITICAL"
+        message_content = f"SLA Breach Alert: Ticket {ticket.reference} has breached its resolution SLA target."
+    elif event_type == "signature":
+        category = "SYSTEM"
+        priority = "MEDIUM"
+        message_content = f"21 CFR Part 11 Electronic Signature captured on ticket {ticket.reference}."
+    elif event_type == "critical_deviation":
+        category = "ACTION_ITEMS"
+        priority = "CRITICAL"
+        message_content = f"Critical Protocol Deviation logged: {ticket.reference}."
     else:
         category = "ACTION_ITEMS"
         priority = "MEDIUM"

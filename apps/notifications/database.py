@@ -1,3 +1,3 @@
-from apps.notifications.infrastructure.database import db_manager
+from apps.notifications.adapters.database import db_manager
 
 __all__ = ["db_manager"]

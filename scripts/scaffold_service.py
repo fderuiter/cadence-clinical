@@ -67,7 +67,7 @@ def main():
                     )
                     continue
                 break
-            except KeyboardInterrupt, EOFError:
+            except (KeyboardInterrupt, EOFError) as _:
                 print("\nOperation cancelled.")
                 sys.exit(0)
 
@@ -82,7 +82,7 @@ def main():
             features_input = input(
                 "Enter extra features (comma-separated, e.g. audit-logging, auth) [none]: "
             ).strip()
-        except KeyboardInterrupt, EOFError:
+        except (KeyboardInterrupt, EOFError) as _:
             print("\nOperation cancelled.")
             sys.exit(0)
 
@@ -119,7 +119,7 @@ def main():
                 sys.exit(0)
             print(f"Cleaning existing directory '{service_dir}'...")
             shutil.rmtree(service_dir)
-        except KeyboardInterrupt, EOFError:
+        except (KeyboardInterrupt, EOFError) as _:
             print("\nOperation cancelled.")
             sys.exit(0)
 

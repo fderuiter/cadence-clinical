@@ -257,6 +257,142 @@ async def validate_etmf_ledger_integrity(db: AsyncSession) -> bool:
         raise ValueError(f"eTMF GxP Data Integrity Breach: {str(e)}") from e
 
 
+async def verify_etmf_ledger_chain_report(db: AsyncSession) -> dict[str, Any]:
+    """Inspects the eTMF cryptographic ledger chain and returns a structured verification report.
+
+    Verifies every block from genesis to the latest sealed block without throwing,
+    summarizing block count, record count, and any data integrity discrepancies.
+    """
+    seals_query = await db.execute(
+        text(
+            "SELECT block_index, previous_block_hash, current_block_hash, sealed_record_count, merkle_root_hash "
+            "FROM tmf_audit_ledger_seals ORDER BY block_index ASC;"
+        )
+    )
+    seals = seals_query.fetchall()
+
+    unsealed_count_res = await db.execute(
+        text("SELECT COUNT(*) FROM tmf_audit_logs WHERE cryptographic_seal IS NULL;")
+    )
+    unsealed_count = unsealed_count_res.scalar() or 0
+
+    if not seals:
+        return {
+            "is_valid": True,
+            "total_sealed_blocks": 0,
+            "total_sealed_records": 0,
+            "latest_block_hash": None,
+            "genesis_block_hash": None,
+            "unsealed_records_count": unsealed_count,
+            "tamper_detected": False,
+            "details": "Ledger is empty or newly initialized with 0 sealed blocks.",
+        }
+
+    total_records = 0
+    expected_prev = "0" * 64
+    for seal in seals:
+        block_idx = seal.block_index
+        if seal.previous_block_hash != expected_prev:
+            return {
+                "is_valid": False,
+                "total_sealed_blocks": len(seals),
+                "total_sealed_records": total_records,
+                "latest_block_hash": seals[-1].current_block_hash,
+                "genesis_block_hash": seals[0].current_block_hash,
+                "unsealed_records_count": unsealed_count,
+                "tamper_detected": True,
+                "details": f"Chain broken at block index {block_idx}: previous hash mismatch.",
+            }
+
+        records_query = await db.execute(
+            text(
+                "SELECT id, timestamp, user_id, user_role, action, document_id, details, reason_for_change "
+                "FROM tmf_audit_logs WHERE cryptographic_seal = :seal ORDER BY timestamp ASC, id ASC;"
+            ),
+            {"seal": seal.current_block_hash},
+        )
+        records = records_query.fetchall()
+        if len(records) != seal.sealed_record_count:
+            return {
+                "is_valid": False,
+                "total_sealed_blocks": len(seals),
+                "total_sealed_records": total_records,
+                "latest_block_hash": seals[-1].current_block_hash,
+                "genesis_block_hash": seals[0].current_block_hash,
+                "unsealed_records_count": unsealed_count,
+                "tamper_detected": True,
+                "details": f"Record count mismatch at block {block_idx}: expected {seal.sealed_record_count}, found {len(records)}.",
+            }
+
+        rec_hashes = []
+        for r in records:
+            ts_str = (
+                r.timestamp.isoformat()
+                if hasattr(r.timestamp, "isoformat")
+                else str(r.timestamp)
+            )
+            payload = {
+                "id": str(r.id),
+                "timestamp": ts_str,
+                "user_id": str(r.user_id),
+                "user_role": str(r.user_role),
+                "action": str(r.action),
+                "document_id": str(r.document_id)
+                if r.document_id is not None
+                else None,
+                "details": str(r.details),
+            }
+            if hasattr(r, "reason_for_change") and r.reason_for_change is not None:
+                payload["reason_for_change"] = str(r.reason_for_change)
+            elif (
+                "reason_for_change" in r._mapping
+                and r._mapping["reason_for_change"] is not None
+            ):
+                payload["reason_for_change"] = str(r._mapping["reason_for_change"])
+            serialized = json.dumps(payload, sort_keys=True).encode("utf-8")
+            rec_hashes.append(hashlib.sha256(serialized).hexdigest())
+
+        computed_merkle = compute_merkle_root(rec_hashes)
+        if computed_merkle != seal.merkle_root_hash:
+            return {
+                "is_valid": False,
+                "total_sealed_blocks": len(seals),
+                "total_sealed_records": total_records,
+                "latest_block_hash": seals[-1].current_block_hash,
+                "genesis_block_hash": seals[0].current_block_hash,
+                "unsealed_records_count": unsealed_count,
+                "tamper_detected": True,
+                "details": f"Merkle root mismatch at block {block_idx}.",
+            }
+
+        computed_block = compute_block_hash(expected_prev, computed_merkle)
+        if computed_block != seal.current_block_hash:
+            return {
+                "is_valid": False,
+                "total_sealed_blocks": len(seals),
+                "total_sealed_records": total_records,
+                "latest_block_hash": seals[-1].current_block_hash,
+                "genesis_block_hash": seals[0].current_block_hash,
+                "unsealed_records_count": unsealed_count,
+                "tamper_detected": True,
+                "details": f"Block hash mismatch at block {block_idx}.",
+            }
+
+        expected_prev = seal.current_block_hash
+        total_records += len(records)
+
+    return {
+        "is_valid": True,
+        "total_sealed_blocks": len(seals),
+        "total_sealed_records": total_records,
+        "latest_block_hash": seals[-1].current_block_hash,
+        "genesis_block_hash": seals[0].current_block_hash,
+        "unsealed_records_count": unsealed_count,
+        "tamper_detected": False,
+        "details": f"Cryptographic audit ledger verified across {len(seals)} block(s) and {total_records} sealed record(s).",
+    }
+
+
 async def start_background_etmf_sealer(
     session_maker: Any, interval: float | None = None
 ) -> None:

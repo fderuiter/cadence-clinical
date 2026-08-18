@@ -143,6 +143,61 @@ async def _resolve_and_save_submission(
     change_reason: str | None = None,
 ) -> dict[str, Any]:
     """Save a new ePRO submission or reconcile existing ones based on conflict strategy."""
+    # Fast version-check with immediate quarantine
+    stmt_inst = select(Instrument).where(Instrument.id == payload.diary_id)
+    res_inst = await session.execute(stmt_inst)
+    inst = res_inst.scalars().first()
+
+    if inst and payload.version_index != inst.version_index:
+        version_error = "Version mismatch: client version index does not match the active instrument version."
+        validation_errors = [version_error]
+        markers_dict = payload.offline_sync_markers.model_dump(mode="json")
+        quarantine_entry = EPROSubmissionQuarantine(
+            subject_id=payload.subject_id,
+            diary_id=payload.diary_id,
+            device_timestamp=payload.device_timestamp,
+            answers=payload.answers,
+            original_answers=payload.answers,
+            offline_sync_markers=markers_dict,
+            validation_errors=validation_errors,
+            status="QUARANTINED",
+            triage_history=[
+                {
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "user_id": user_id,
+                    "action": "QUARANTINED",
+                    "details": f"Automatically quarantined due to version mismatch: {version_error}",
+                }
+            ],
+        )
+        session.add(quarantine_entry)
+        await session.flush()
+
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_role,
+            action="EPRO_QUARANTINED",
+            details=f"Quarantined submission for Subject '{payload.subject_id}', Diary '{payload.diary_id}' due to version mismatch: client index {payload.version_index}, server active index {inst.version_index}.",
+            change_reason=change_reason or "Automated version mismatch quarantine",
+        )
+
+        return {
+            "status": "QUARANTINED",
+            "id": quarantine_entry.id,
+            "subject_id": payload.subject_id,
+            "diary_id": payload.diary_id,
+            "answers": payload.answers,
+            "validation_errors": validation_errors,
+            "sync_status": "QUARANTINED",
+            "signature_validation": {"status": "SKIPPED", "detail": None},
+            "reconciliation_result": {"status": "QUARANTINED", "metadata": None},
+            "audit_details": {
+                "action": "EPRO_QUARANTINED",
+                "details": f"Automatically quarantined due to version mismatch: {validation_errors}",
+            },
+        }
+
     validation_errors = validate_epro_payload(payload.answers)
     if validation_errors:
         markers_dict = payload.offline_sync_markers.model_dump(mode="json")

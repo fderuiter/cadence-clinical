@@ -165,10 +165,15 @@ async def test_out_of_band_update_triggers_audit_entry():
     # Direct out-of-band SQL update (simulating direct DB admin change, app_writing is default 'false')
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
-            # Set session-level current_user_id to satisfy fail-safe GxP trigger constraints on direct writes
+            # Set session-level current_user_id and current_change_reason to satisfy fail-safe GxP trigger constraints on direct writes
             await session.execute(
                 text(
                     "SELECT set_config('cadence.current_user_id', 'system_process', true);"
+                )
+            )
+            await session.execute(
+                text(
+                    "SELECT set_config('cadence.current_change_reason', 'system_operation', true);"
                 )
             )
             await session.execute(

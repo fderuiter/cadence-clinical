@@ -1,4 +1,4 @@
-from apps.quality.infrastructure.database import (
+from apps.quality.adapters.database import (
     current_session,
     db_manager,
     get_session,

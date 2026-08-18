@@ -123,6 +123,10 @@ class ETMFRepositoryPort(RepositoryPort[Any]):
         pass
 
     @abstractmethod
+    async def get_all_audit_logs(self) -> Sequence[Any]:
+        pass
+
+    @abstractmethod
     async def get_audit_log_by_id(self, log_id: str) -> Any | None:
         pass
 
@@ -159,5 +163,64 @@ class ETMFRepositoryPort(RepositoryPort[Any]):
         pass
 
     @abstractmethod
-    async def get_document_by_message_id(self, message_id: str) -> Any | None:
+    async def get_all_audit_ledger_seals(self) -> Sequence[Any]:
+        pass
+
+    @abstractmethod
+    async def create_document(
+        self,
+        study_id: str,
+        artifact_type: str,
+        filename: str,
+        content: str,
+        mime_type: str,
+        created_by: str,
+        version_index: int,
+        status: str,
+        taxonomy_version: str,
+        artifact_code: str,
+        zone: int,
+        section: str,
+        site_id: str | None = None,
+        reason_for_change: str | None = None,
+        metadata_json: dict[str, Any] | None = None,
+        document_owner_id: str | None = None,
+    ) -> Any:
+        pass
+
+    @abstractmethod
+    async def create_audit_log(
+        self,
+        user_id: str,
+        user_role: str,
+        action: str,
+        document_id: str | None = None,
+        details: str | None = None,
+        reason_for_change: str | None = None,
+    ) -> Any:
+        pass
+
+    @abstractmethod
+    async def create_qc_transition(
+        self,
+        document_id: str,
+        from_status: str,
+        to_status: str,
+        actor_id: str,
+        actor_role: str,
+        reason_for_change: str,
+    ) -> Any:
+        pass
+
+    @abstractmethod
+    async def create_redacted_document(
+        self,
+        source_doc: Any,
+        redacted_filename: str,
+        redacted_content: str,
+        new_version_index: int,
+        actor_id: str,
+        reason_for_change: str,
+        manifest_data: dict[str, Any],
+    ) -> Any:
         pass

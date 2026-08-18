@@ -6,23 +6,27 @@ import os
 
 from fastapi import FastAPI
 
+from apps.tickets.adapters.database import db_manager, get_db_session
+from apps.tickets.adapters.models import Base
+from apps.tickets.adapters.notifications_client import publish_notification
 from apps.tickets.escalation import (
     start_background_ticket_escalation,
     stop_background_ticket_escalation,
 )
-from apps.tickets.infrastructure.database import db_manager, get_db_session
-from apps.tickets.infrastructure.models import Base
-from apps.tickets.infrastructure.notifications_client import publish_notification
 from apps.tickets.presentation.dtos import (
+    AttachmentResponse,
     CommentCreate,
     CommentResponse,
+    CrossAppEventCreate,
     PaginatedTicketAuditLogResponse,
     RegulatoryRiskAssessment,
     SettingDiffEntry,
     TicketAssignPayload,
     TicketAuditLogResponse,
     TicketCreate,
+    TicketKPISummaryResponse,
     TicketResponse,
+    TicketSignaturePayload,
     TicketTransitionPayload,
     TicketUpdate,
 )
@@ -73,15 +77,19 @@ async def health_check() -> dict[str, str]:
 
 __all__ = [
     "TICKET_ESCALATE",
+    "AttachmentResponse",
     "CommentCreate",
     "CommentResponse",
+    "CrossAppEventCreate",
     "PaginatedTicketAuditLogResponse",
     "RegulatoryRiskAssessment",
     "SettingDiffEntry",
     "TicketAssignPayload",
     "TicketAuditLogResponse",
     "TicketCreate",
+    "TicketKPISummaryResponse",
     "TicketResponse",
+    "TicketSignaturePayload",
     "TicketTransitionPayload",
     "TicketUpdate",
     "app",

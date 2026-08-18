@@ -368,6 +368,18 @@ def validate_path(
         pass
 
     if not resolved.exists():
+        # Allow dynamically generated/ephemeral test reports and build outputs
+        if path_str in (
+            "report.xml",
+            "report_main.xml",
+            "report_sequential.xml",
+            "report_notif.xml",
+            "report_integration.xml",
+            "report_qualification.xml",
+            "coverage.xml",
+            ".coverage",
+        ):
+            return
         add_error(
             md_file_path, line_no, f"Referenced {ref_type} '{path_str}' does not exist."
         )

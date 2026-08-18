@@ -332,6 +332,30 @@
                 </router-link>
               </li>
               <li
+                id="tab-btn-quality"
+                class="nav-item"
+                :class="{ active: $route.name === 'quality' }"
+              >
+                <router-link v-slot="{ navigate }" to="/quality" custom>
+                  <button type="button" @click="navigate">
+                    <span class="nav-icon">🎯</span>
+                    <span class="nav-label">Quality &amp; RBQM Cockpit</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
+                id="tab-btn-tickets"
+                class="nav-item"
+                :class="{ active: $route.name === 'tickets' }"
+              >
+                <router-link v-slot="{ navigate }" to="/tickets" custom>
+                  <button type="button" @click="navigate">
+                    <span class="nav-icon">🎫</span>
+                    <span class="nav-label">Clinical Issues &amp; Tickets</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
                 v-if="canAccess(['auditor', 'tmf_auditor', 'sponsor_admin'])"
                 id="tab-btn-audit"
                 class="nav-item"

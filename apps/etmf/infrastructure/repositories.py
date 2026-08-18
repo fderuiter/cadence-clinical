@@ -9,6 +9,7 @@ from apps.etmf.infrastructure.database import get_session
 from apps.etmf.infrastructure.models import (
     DocumentQCTransition,
     ExpectedDocument,
+    TMFAuditLedgerSeal,
     TMFAuditLog,
     TMFDocument,
 )
@@ -272,6 +273,14 @@ class SQLETMFRepository(ETMFRepositoryPort):
         return result.scalars().all()
 
     @map_database_exceptions
+    async def get_all_audit_logs(self) -> Sequence[TMFAuditLog]:
+        stmt = select(TMFAuditLog).order_by(
+            TMFAuditLog.timestamp.asc(), TMFAuditLog.id.asc()
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
+    @map_database_exceptions
     async def get_audit_log_by_id(self, log_id: str) -> TMFAuditLog | None:
         stmt = select(TMFAuditLog).where(TMFAuditLog.id == log_id)
         result = await self.session.execute(stmt)
@@ -373,3 +382,136 @@ class SQLETMFRepository(ETMFRepositoryPort):
         )
         result = await self.session.execute(stmt)
         return result.scalars().first()
+
+    @map_database_exceptions
+    async def get_all_audit_ledger_seals(self) -> Sequence[TMFAuditLedgerSeal]:
+        stmt = select(TMFAuditLedgerSeal).order_by(TMFAuditLedgerSeal.block_index.asc())
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
+    @map_database_exceptions
+    async def create_document(
+        self,
+        study_id: str,
+        artifact_type: str,
+        filename: str,
+        content: str,
+        mime_type: str,
+        created_by: str,
+        version_index: int,
+        status: str,
+        taxonomy_version: str,
+        artifact_code: str,
+        zone: int,
+        section: str,
+        site_id: str | None = None,
+        reason_for_change: str | None = None,
+        metadata_json: dict[str, Any] | None = None,
+        document_owner_id: str | None = None,
+    ) -> TMFDocument:
+        doc = TMFDocument(
+            study_id=study_id,
+            site_id=site_id,
+            zone=zone,
+            section=section,
+            artifact_type=artifact_type,
+            filename=filename,
+            content=content,
+            mime_type=mime_type,
+            created_by=created_by,
+            version_index=version_index,
+            status=status,
+            taxonomy_version=taxonomy_version,
+            artifact_code=artifact_code,
+            reason_for_change=reason_for_change,
+            metadata_json=metadata_json,
+            document_owner_id=document_owner_id,
+        )
+        self.session.add(doc)
+        await self.session.flush()
+        return doc
+
+    @map_database_exceptions
+    async def create_audit_log(
+        self,
+        user_id: str,
+        user_role: str,
+        action: str,
+        document_id: str | None = None,
+        details: str | None = None,
+        reason_for_change: str | None = None,
+    ) -> TMFAuditLog:
+        log = TMFAuditLog(
+            user_id=user_id,
+            user_role=user_role,
+            action=action,
+            document_id=document_id,
+            details=details,
+            reason_for_change=reason_for_change,
+        )
+        self.session.add(log)
+        await self.session.flush()
+        return log
+
+    @map_database_exceptions
+    async def create_qc_transition(
+        self,
+        document_id: str,
+        from_status: str,
+        to_status: str,
+        actor_id: str,
+        actor_role: str,
+        reason_for_change: str,
+    ) -> DocumentQCTransition:
+        stmt_seq = select(func.max(DocumentQCTransition.transition_sequence)).where(
+            DocumentQCTransition.document_id == document_id
+        )
+        res = await self.session.execute(stmt_seq)
+        max_seq = res.scalar() or 0
+        next_seq = max_seq + 1
+
+        tr = DocumentQCTransition(
+            document_id=document_id,
+            transition_sequence=next_seq,
+            from_status=from_status,
+            to_status=to_status,
+            actor_id=actor_id,
+            actor_role=actor_role,
+            reason_for_change=reason_for_change,
+        )
+        self.session.add(tr)
+        await self.session.flush()
+        return tr
+
+    @map_database_exceptions
+    async def create_redacted_document(
+        self,
+        source_doc: TMFDocument,
+        redacted_filename: str,
+        redacted_content: str,
+        new_version_index: int,
+        actor_id: str,
+        reason_for_change: str,
+        manifest_data: dict[str, Any],
+    ) -> TMFDocument:
+        doc = TMFDocument(
+            study_id=source_doc.study_id,
+            site_id=source_doc.site_id,
+            zone=source_doc.zone,
+            section=source_doc.section,
+            artifact_type=source_doc.artifact_type,
+            filename=redacted_filename,
+            content=redacted_content,
+            mime_type=source_doc.mime_type,
+            created_by=actor_id,
+            version_index=new_version_index,
+            taxonomy_version=source_doc.taxonomy_version,
+            artifact_code=source_doc.artifact_code,
+            metadata_json={"change_reason": reason_for_change, "is_redacted": True},
+            is_redacted=True,
+            redaction_source_id=source_doc.id,
+            redaction_manifest_json=manifest_data,
+        )
+        self.session.add(doc)
+        await self.session.flush()
+        return doc

@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
-import apps.econsent.etmf_client as etmf_client_module
+import apps.econsent.adapters.etmf_client as etmf_client_module
 from apps.econsent.infrastructure.database import db_manager
 from apps.econsent.infrastructure.models import (
     ConsentAuditLog,

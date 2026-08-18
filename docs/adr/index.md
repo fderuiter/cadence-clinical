@@ -11,6 +11,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 1. Core Platform & Execution Engine
 
+- [2026-08-15: Comprehensive Enterprise eConsent Architecture and Multi-Party Signature Pipeline](2026-08-15-comprehensive-enterprise-econsent-architecture-and-multi-party-signature-pipeline.md)
+- [2026-08-14: Comprehensive Hexagonal Architecture Standardization and Frontend Modularization](2026-08-14-comprehensive-hexagonal-architecture-standardization-and-frontend-modularization.md)
 - [2026-08-14: Standardized Hexagonal Architecture and Unified Developer Experience Suite](2026-08-14-standardized-hexagonal-architecture-and-unified-developer-experience-suite.md)
 
 - [2026-08-14: Standardized Hexagonal Architecture and Unified Developer CLI](2026-08-14-standardized-hexagonal-architecture-and-unified-developer-cli.md)
@@ -134,6 +136,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-01: Cryptographic Signature Verification Engine for Part 11 eSignatures](2026-08-01-cryptographic-signature-verification-engine-for-esignatures.md)
 
 ### 3. Clinical Data Interoperability & Standards
+- [2026-08-17: Fast Version-Check with Immediate Quarantine and Client Alerting](2026-08-17-fast-version-check-with-immediate-quarantine-and-client-alerting.md)
 
 - [2026-08-14: Offline TypeScript Schema Generator using SQLModel Base Metadata](2026-08-14-offline-typescript-schema-generator-using-sqlmodel-base-metadata.md)
 
@@ -165,6 +168,9 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+- [2026-08-15: Comprehensive Clinical Issue and Operations Hub Architecture](2026-08-15-comprehensive-clinical-issue-and-operations-hub-architecture.md)
+
+- [2026-08-15: Comprehensive CTMS Modular Architecture and Ecosystem Synchronization](2026-08-15-comprehensive-ctms-modular-architecture-and-ecosystem-synchronization.md)
 
 - [2026-07-31: Expose CRA Monitoring SDV Transport Models and Shared Sign-Off Logic](2026-07-31-expose-cra-monitoring-sdv-transport-models-and-shared-sign-off-logic.md)
 - [2026-08-03: ADR-147: Task-Driven CRA Workspace Routing & Multi-Select Batch SDV](2026-08-03-task-driven-cra-workspace-and-batch-sdv-verification.md)
@@ -199,6 +205,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 5. Compliance, Audit & Governance
 
+- [2026-08-15: Comprehensive Clinical Quality and RBQM eQMS Architecture](2026-08-15-comprehensive-clinical-quality-and-rbqm-eqms-architecture.md)
+
 - [2026-08-04: Enforce Fail-Fast Environment Validation for GxP Compliance](2026-08-04-enforce-fail-fast-environment-validation-for-gxp-compliance.md)
 - [2026-08-03: Fail-Safe GxP Document Generation and Draft Warning Banners](2026-08-03-fail-safe-gxp-document-generation-and-draft-warning-banners.md)
 - [2026-07-31: GxP 21 CFR Part 11 eConsent Audit Trails](2026-07-31-gxp-21-cfr-part-11-econsent-audit-trails.md)
@@ -216,6 +224,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-12: Deterministic GxP Report Generation and Signature Verification Rectification](2026-08-12-deterministic-gxp-report-generation-and-signature-verification.md)
 - [2026-08-12: Python-Native Isolated Architecture (Strict Compliance)](2026-08-12-python-native-isolated-architecture-strict-compliance.md)
 - [2026-08-17: Unified De-identification Compliance Scan CLI, Pre-commit Hook, and Blocking CI Gate](2026-08-17-unified-deid-compliance-scan-cli.md)
+- [2026-08-17: Standardized PostgreSQL Write Verification and eTMF Immutability Triggers](2026-08-17-standardized-postgresql-write-verification-and-etmf-immutability-triggers.md)
 - [2026-08-18: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](2026-08-18-document-redaction-architecture.md)
 - [2026-08-03: Native Interval Filtering and Custom Name Matching](2026-08-03-native-interval-filtering-and-custom-name-matching.md)
 

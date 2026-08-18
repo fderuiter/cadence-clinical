@@ -1,3 +1,3 @@
-from apps.org.infrastructure.database import db_manager
+from apps.org.adapters.database import db_manager
 
 __all__ = ["db_manager"]

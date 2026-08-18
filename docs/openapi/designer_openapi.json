@@ -3243,6 +3243,65 @@
         }
       }
     },
+    "/api/v1/studies/{study_id}/versions/{version_id}/publish": {
+      "post": {
+        "summary": "Publish Study Version Endpoint",
+        "description": "Two-Phase Study Version State Machine:\n1. transition target version status to 'PENDING_PUBLISH'\n2. synchronously call downstream execution setup / clinical migration\n3. if downstream succeeds, transition target version status to 'ACTIVE'\n4. if downstream fails or times out (15s window), rollback status to 'DRAFT',\n   record exact execution error to audit trail, release lock resources,\n   and return validation error to initiating researcher.",
+        "operationId": "publish_study_version_endpoint_api_v1_studies__study_id__versions__version_id__publish_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishStudyVersionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishStudyVersionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/studies/{study_id}/eligibility-criteria": {
       "get": {
         "summary": "List Eligibility Criteria",
@@ -9915,6 +9974,90 @@
         ],
         "title": "ProtocolQualityScore",
         "description": "Protocol Quality Sentinel evaluation summary report.\n\nRequirements: PRD-SYS-001"
+      },
+      "PublishStudyVersionRequest": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Amendment description"
+          },
+          "baseline_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Snapshot",
+            "description": "Optional baseline snapshot overrides"
+          },
+          "amended_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amended Snapshot",
+            "description": "Optional amended snapshot overrides"
+          }
+        },
+        "type": "object",
+        "title": "PublishStudyVersionRequest"
+      },
+      "PublishStudyVersionResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "version_id": {
+            "type": "string",
+            "title": "Version Id"
+          },
+          "amendment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amendment Id"
+          },
+          "summary_of_changes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary Of Changes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version_id"
+        ],
+        "title": "PublishStudyVersionResponse"
       },
       "QualityRuleFinding": {
         "properties": {

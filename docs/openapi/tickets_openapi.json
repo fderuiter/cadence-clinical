@@ -8,7 +8,7 @@
     "/api/v1/tickets": {
       "post": {
         "summary": "Create Ticket",
-        "description": "Create and persist a new Ticket record.",
+        "description": "Create and persist a new Ticket record with SLA computation and audit logging.",
         "operationId": "create_ticket_api_v1_tickets_post",
         "requestBody": {
           "required": true,
@@ -94,6 +94,38 @@
                 }
               ],
               "title": "Priority"
+            }
+          },
+          {
+            "name": "gxp_severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/GxPSeverity"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Gxp Severity"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
             }
           },
           {
@@ -221,6 +253,124 @@
                     "$ref": "#/components/schemas/TicketResponse"
                   },
                   "title": "Response List Tickets Api V1 Tickets Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/cross-app/events": {
+      "post": {
+        "summary": "Create Cross App Ticket",
+        "description": "Automated REST ingestion endpoint for sibling microservices (EDC, Safety, CTMS, Quality).\nCreates a ticket linked directly to domain entity with full contextual metadata.",
+        "operationId": "create_cross_app_ticket_api_v1_tickets_cross_app_events_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrossAppEventCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/analytics/kpi": {
+      "get": {
+        "summary": "Get Ticket Kpis",
+        "description": "Retrieve real-time clinical KPI and KRI metrics.",
+        "operationId": "get_ticket_kpis_api_v1_tickets_analytics_kpi_get",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Org Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketKPISummaryResponse"
                 }
               }
             }
@@ -433,7 +583,7 @@
     "/api/v1/tickets/{id}/transition": {
       "post": {
         "summary": "Transition Ticket",
-        "description": "Transition a ticket's status explicitly with optimistic locking and transitions check.",
+        "description": "Transition a ticket's status explicitly with optimistic locking, RCA check, and SLA pause handling.",
         "operationId": "transition_ticket_api_v1_tickets__id__transition_post",
         "parameters": [
           {
@@ -533,7 +683,7 @@
     "/api/v1/tickets/{id}/comments": {
       "post": {
         "summary": "Create Ticket Comment",
-        "description": "Append an auditable comment/note to a specific ticket.",
+        "description": "Append an auditable comment/note to a specific ticket with public or internal visibility.",
         "operationId": "create_ticket_comment_api_v1_tickets__id__comments_post",
         "parameters": [
           {
@@ -581,7 +731,7 @@
       },
       "get": {
         "summary": "List Ticket Comments",
-        "description": "Retrieve all comments for a specific ticket in ascending chronological order.",
+        "description": "Retrieve comments for a ticket filtered by role persona visibility boundaries.",
         "operationId": "list_ticket_comments_api_v1_tickets__id__comments_get",
         "parameters": [
           {
@@ -606,6 +756,204 @@
                   },
                   "title": "Response List Ticket Comments Api V1 Tickets  Id  Comments Get"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/attachments": {
+      "post": {
+        "summary": "Upload Ticket Attachment",
+        "description": "Upload an audited evidence attachment with SHA-256 integrity hash.",
+        "operationId": "upload_ticket_attachment_api_v1_tickets__id__attachments_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_ticket_attachment_api_v1_tickets__id__attachments_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Ticket Attachments",
+        "description": "List all attachments for a ticket.",
+        "operationId": "list_ticket_attachments_api_v1_tickets__id__attachments_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AttachmentResponse"
+                  },
+                  "title": "Response List Ticket Attachments Api V1 Tickets  Id  Attachments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/sign": {
+      "post": {
+        "summary": "Sign Ticket",
+        "description": "Capture a 21 CFR Part 11 Electronic Signature on a ticket.",
+        "operationId": "sign_ticket_api_v1_tickets__id__sign_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketSignaturePayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/export/audit-trail": {
+      "get": {
+        "summary": "Export Audit Trail",
+        "description": "Export regulatory Part 11 immutable audit trail records in JSON or CSV format.",
+        "operationId": "export_audit_trail_api_v1_tickets_export_audit_trail_get",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(json|csv)$",
+              "default": "json",
+              "title": "Format"
+            }
+          },
+          {
+            "name": "ticket_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -687,12 +1035,100 @@
   },
   "components": {
     "schemas": {
+      "AttachmentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "ticket_id": {
+            "type": "string",
+            "title": "Ticket Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "file_size_bytes": {
+            "type": "integer",
+            "title": "File Size Bytes"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type"
+          },
+          "storage_uri": {
+            "type": "string",
+            "title": "Storage Uri"
+          },
+          "sha256_hash": {
+            "type": "string",
+            "title": "Sha256 Hash"
+          },
+          "uploaded_by": {
+            "type": "string",
+            "title": "Uploaded By"
+          },
+          "uploaded_at": {
+            "type": "string",
+            "title": "Uploaded At"
+          },
+          "deid_scrubbed": {
+            "type": "boolean",
+            "title": "Deid Scrubbed"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "ticket_id",
+          "filename",
+          "file_size_bytes",
+          "mime_type",
+          "storage_uri",
+          "sha256_hash",
+          "uploaded_by",
+          "uploaded_at",
+          "deid_scrubbed",
+          "version_index"
+        ],
+        "title": "AttachmentResponse",
+        "description": "Pydantic schema for returning ticket attachment metadata."
+      },
+      "Body_upload_ticket_attachment_api_v1_tickets__id__attachments_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "default": "Uploaded evidence attachment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_ticket_attachment_api_v1_tickets__id__attachments_post"
+      },
       "CommentCreate": {
         "properties": {
           "body": {
             "type": "string",
             "title": "Body",
             "description": "The comment body text"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/CommentVisibility",
+            "description": "Visibility boundary for comment",
+            "default": "PUBLIC"
           }
         },
         "type": "object",
@@ -715,6 +1151,11 @@
           "body": {
             "type": "string",
             "title": "Body"
+          },
+          "visibility": {
+            "type": "string",
+            "title": "Visibility",
+            "default": "PUBLIC"
           },
           "created_at": {
             "type": "string",
@@ -745,6 +1186,123 @@
         ],
         "title": "CommentResponse",
         "description": "Pydantic schema for returning ticket comment details."
+      },
+      "CommentVisibility": {
+        "type": "string",
+        "enum": [
+          "PUBLIC",
+          "INTERNAL_SPONSOR"
+        ],
+        "title": "CommentVisibility",
+        "description": "Enum representing visibility boundaries for ticket comments."
+      },
+      "CrossAppEventCreate": {
+        "properties": {
+          "event_type": {
+            "type": "string",
+            "title": "Event Type",
+            "description": "Event type, e.g. PROTOCOL_DEVIATION, DATA_QUERY, SAFETY_ALERT"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Ticket title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Ticket description"
+          },
+          "category": {
+            "$ref": "#/components/schemas/TicketCategory",
+            "description": "Ticket category",
+            "default": "PROTOCOL_DEVIATION"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/TicketPriority",
+            "description": "Priority level",
+            "default": "HIGH"
+          },
+          "gxp_severity": {
+            "$ref": "#/components/schemas/GxPSeverity",
+            "description": "GxP Severity rating",
+            "default": "MAJOR"
+          },
+          "source_service": {
+            "type": "string",
+            "title": "Source Service",
+            "description": "Source microservice, e.g. execution, safety, ctms, quality"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Study scope ID"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Site scope ID"
+          },
+          "related_entity_type": {
+            "type": "string",
+            "title": "Related Entity Type",
+            "description": "Linked entity type (e.g. Subject, Form, AE, CAPA)"
+          },
+          "related_entity_id": {
+            "type": "string",
+            "title": "Related Entity Id",
+            "description": "Linked entity primary key"
+          },
+          "context_payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Payload",
+            "description": "Structured contextual JSON payload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_type",
+          "title",
+          "description",
+          "source_service",
+          "related_entity_type",
+          "related_entity_id"
+        ],
+        "title": "CrossAppEventCreate",
+        "description": "Pydantic schema for cross-app automated ticket ingestion from sibling microservices."
+      },
+      "GxPSeverity": {
+        "type": "string",
+        "enum": [
+          "NOT_APPLICABLE",
+          "MINOR",
+          "MAJOR",
+          "CRITICAL"
+        ],
+        "title": "GxPSeverity",
+        "description": "Enum representing GxP and ICH GCP compliance impact severity."
       },
       "HTTPValidationError": {
         "properties": {
@@ -859,6 +1417,35 @@
         ],
         "title": "RegulatoryRiskAssessment",
         "description": "Schema representing a clinical and regulatory risk assessment for a setting change."
+      },
+      "ResolutionCode": {
+        "type": "string",
+        "enum": [
+          "RESOLVED_AS_EXPECTED",
+          "PROTOCOL_CLARIFICATION_ISSUED",
+          "DATA_AMENDED",
+          "CAPA_INITIATED",
+          "FALSE_POSITIVE_VOIDED",
+          "WORKAROUND_APPLIED",
+          "CLOSED_UNRESOLVED"
+        ],
+        "title": "ResolutionCode",
+        "description": "Enum representing formal resolution outcome codes for clinical tickets."
+      },
+      "RootCauseCategory": {
+        "type": "string",
+        "enum": [
+          "HUMAN_ERROR",
+          "PROTOCOL_DESIGN",
+          "PROCESS_WORKFLOW",
+          "SYSTEM_TECHNICAL",
+          "INVESTIGATIONAL_PRODUCT",
+          "VENDOR_LAB",
+          "TRAINING_GAP",
+          "OTHER"
+        ],
+        "title": "RootCauseCategory",
+        "description": "Enum representing Root Cause Analysis (RCA) 5-Whys classification."
       },
       "SettingDiffEntry": {
         "properties": {
@@ -1007,10 +1594,17 @@
           "CLINICAL",
           "HARDWARE",
           "ACCESS",
+          "PROTOCOL_DEVIATION",
+          "DATA_QUERY",
+          "SAFETY_ADVERSE_EVENT",
+          "SUPPLY_EXCURSION",
+          "SITE_OPERATIONS",
+          "REGULATORY_ETMF",
+          "CHANGE_REQUEST",
           "OTHER"
         ],
         "title": "TicketCategory",
-        "description": "Enum representing categories of support tickets."
+        "description": "Enum representing categories of support and clinical operational tickets."
       },
       "TicketCreate": {
         "properties": {
@@ -1033,6 +1627,11 @@
             "$ref": "#/components/schemas/TicketPriority",
             "description": "Priority level of the ticket",
             "default": "LOW"
+          },
+          "gxp_severity": {
+            "$ref": "#/components/schemas/GxPSeverity",
+            "description": "GxP compliance severity impact",
+            "default": "NOT_APPLICABLE"
           },
           "reporter": {
             "anyOf": [
@@ -1130,6 +1729,18 @@
             "title": "Related Entity Id",
             "description": "Related entity ID"
           },
+          "context_payload": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Payload",
+            "description": "Serialized contextual metadata JSON"
+          },
           "due_date": {
             "anyOf": [
               {
@@ -1142,6 +1753,54 @@
             ],
             "title": "Due Date",
             "description": "Optional due date"
+          },
+          "custom_sla_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Sla Hours",
+            "description": "Optional study-specific SLA target override in hours"
+          },
+          "workflow_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Type",
+            "description": "Workflow type"
+          },
+          "action_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Type",
+            "description": "Action type"
+          },
+          "signature_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Action",
+            "description": "Signature action"
           }
         },
         "type": "object",
@@ -1150,7 +1809,108 @@
           "description"
         ],
         "title": "TicketCreate",
-        "description": "Pydantic schema for creating a support ticket."
+        "description": "Pydantic schema for creating a support or clinical operations ticket."
+      },
+      "TicketKPISummaryResponse": {
+        "properties": {
+          "total_tickets": {
+            "type": "integer",
+            "title": "Total Tickets"
+          },
+          "active_tickets": {
+            "type": "integer",
+            "title": "Active Tickets"
+          },
+          "open_tickets": {
+            "type": "integer",
+            "title": "Open Tickets"
+          },
+          "in_progress_tickets": {
+            "type": "integer",
+            "title": "In Progress Tickets"
+          },
+          "waiting_tickets": {
+            "type": "integer",
+            "title": "Waiting Tickets"
+          },
+          "resolved_tickets": {
+            "type": "integer",
+            "title": "Resolved Tickets"
+          },
+          "closed_tickets": {
+            "type": "integer",
+            "title": "Closed Tickets"
+          },
+          "critical_deviations": {
+            "type": "integer",
+            "title": "Critical Deviations"
+          },
+          "sla_breaches": {
+            "type": "integer",
+            "title": "Sla Breaches"
+          },
+          "sla_amber_warnings": {
+            "type": "integer",
+            "title": "Sla Amber Warnings"
+          },
+          "sla_compliance_rate": {
+            "type": "number",
+            "title": "Sla Compliance Rate"
+          },
+          "mean_time_to_resolution_hours": {
+            "type": "number",
+            "title": "Mean Time To Resolution Hours"
+          },
+          "category_distribution": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Category Distribution"
+          },
+          "severity_distribution": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Severity Distribution"
+          },
+          "rca_distribution": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Rca Distribution"
+          },
+          "site_distribution": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Site Distribution"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_tickets",
+          "active_tickets",
+          "open_tickets",
+          "in_progress_tickets",
+          "waiting_tickets",
+          "resolved_tickets",
+          "closed_tickets",
+          "critical_deviations",
+          "sla_breaches",
+          "sla_amber_warnings",
+          "sla_compliance_rate",
+          "mean_time_to_resolution_hours",
+          "category_distribution",
+          "severity_distribution",
+          "rca_distribution",
+          "site_distribution"
+        ],
+        "title": "TicketKPISummaryResponse",
+        "description": "Schema representing aggregated clinical KPI and KRI metrics."
       },
       "TicketPriority": {
         "type": "string",
@@ -1192,6 +1952,44 @@
           "status": {
             "type": "string",
             "title": "Status"
+          },
+          "gxp_severity": {
+            "type": "string",
+            "title": "Gxp Severity",
+            "default": "NOT_APPLICABLE"
+          },
+          "root_cause_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Root Cause Category"
+          },
+          "root_cause_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Root Cause Summary"
+          },
+          "resolution_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Code"
           },
           "reporter": {
             "type": "string",
@@ -1274,6 +2072,17 @@
             ],
             "title": "Related Entity Id"
           },
+          "context_payload": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Payload"
+          },
           "due_date": {
             "anyOf": [
               {
@@ -1284,6 +2093,87 @@
               }
             ],
             "title": "Due Date"
+          },
+          "sla_target_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sla Target At"
+          },
+          "sla_paused_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sla Paused At"
+          },
+          "sla_total_paused_seconds": {
+            "type": "integer",
+            "title": "Sla Total Paused Seconds",
+            "default": 0
+          },
+          "sla_breached": {
+            "type": "boolean",
+            "title": "Sla Breached",
+            "default": false
+          },
+          "sla_amber_warned": {
+            "type": "boolean",
+            "title": "Sla Amber Warned",
+            "default": false
+          },
+          "signature_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Token"
+          },
+          "signature_meaning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Meaning"
+          },
+          "signature_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Timestamp"
+          },
+          "signature_user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature User"
           },
           "is_deleted": {
             "type": "boolean",
@@ -1325,18 +2215,48 @@
         "title": "TicketResponse",
         "description": "Pydantic schema for returning support ticket details."
       },
+      "TicketSignaturePayload": {
+        "properties": {
+          "signature_token": {
+            "type": "string",
+            "title": "Signature Token",
+            "description": "Cryptographic signature token"
+          },
+          "meaning": {
+            "type": "string",
+            "title": "Meaning",
+            "description": "Signature meaning statement"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Expected version index for optimistic locking"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signature_token",
+          "meaning",
+          "version_index"
+        ],
+        "title": "TicketSignaturePayload",
+        "description": "Pydantic schema for capturing a 21 CFR Part 11 Electronic Signature."
+      },
       "TicketStatus": {
         "type": "string",
         "enum": [
           "OPEN",
           "IN_PROGRESS",
+          "WAITING_ON_SITE",
+          "WAITING_ON_SPONSOR",
+          "PENDING_REGULATORY_REVIEW",
           "RESOLVED",
           "CLOSED",
           "REOPENED",
           "CANCELLED"
         ],
         "title": "TicketStatus",
-        "description": "Enum representing statuses of support tickets."
+        "description": "Enum representing statuses of support and clinical tickets."
       },
       "TicketTransitionPayload": {
         "properties": {
@@ -1348,6 +2268,64 @@
             "type": "integer",
             "title": "Version Index",
             "description": "Expected version index for optimistic locking"
+          },
+          "root_cause_category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RootCauseCategory"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "RCA 5-Whys classification (mandatory for Major/Critical closure)"
+          },
+          "root_cause_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Root Cause Summary",
+            "description": "Detailed root cause explanation"
+          },
+          "resolution_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResolutionCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Formal resolution outcome code"
+          },
+          "signature_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Token",
+            "description": "21 CFR Part 11 signature token"
+          },
+          "signature_meaning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Meaning",
+            "description": "Electronic signature justification meaning"
           }
         },
         "type": "object",
@@ -1405,6 +2383,17 @@
               }
             ],
             "description": "Updated priority"
+          },
+          "gxp_severity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GxPSeverity"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Updated GxP severity"
           },
           "status": {
             "anyOf": [
@@ -1500,6 +2489,18 @@
             ],
             "title": "Related Entity Id",
             "description": "Updated related entity ID"
+          },
+          "context_payload": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Payload",
+            "description": "Updated contextual payload"
           },
           "due_date": {
             "anyOf": [

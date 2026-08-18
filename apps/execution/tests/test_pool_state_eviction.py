@@ -3,8 +3,7 @@
 @req:PRD-SYS-001
 """
 
-import contextlib
-import os
+from pathlib import Path
 
 import pytest
 from sqlalchemy import text
@@ -13,17 +12,15 @@ from apps.execution.database.core import db_manager
 
 
 @pytest.mark.asyncio
-async def test_pool_connection_state_eviction() -> None:
+async def test_pool_connection_state_eviction(tmp_path: Path) -> None:
     """Validate SQLite session context keys are evicted and reset properly on connect, checkout, and close.
 
     @req:PRD-SYS-001
     """
-    db_file = "test_eviction.db"
-    if os.path.exists(db_file):
-        with contextlib.suppress(Exception):
-            os.remove(db_file)
+    db_file = str(tmp_path / "test_eviction.db")
 
-    # 1. Initialize test database
+    await db_manager.close()
+    db_manager._sqlite_settings.clear()
     db_manager.init_db(f"sqlite+aiosqlite:///{db_file}")
 
     # 2. Open a connection and set custom config
@@ -73,22 +70,19 @@ async def test_pool_connection_state_eviction() -> None:
     # The settings for our closed connection must be completely evicted from our tracking dict
     assert conn_id not in db_manager._sqlite_settings
 
-    if os.path.exists(db_file):
-        with contextlib.suppress(Exception):
-            os.remove(db_file)
-
 
 @pytest.mark.asyncio
-async def test_concurrent_connection_isolation_and_no_weakref_errors() -> None:
+async def test_concurrent_connection_isolation_and_no_weakref_errors(
+    tmp_path: Path,
+) -> None:
     """Verify concurrent connection settings maintain separate isolation and avoid weakref TypeErrors.
 
     @req:PRD-SYS-001
     """
-    db_file = "test_isolation.db"
-    if os.path.exists(db_file):
-        with contextlib.suppress(Exception):
-            os.remove(db_file)
+    db_file = str(tmp_path / "test_isolation.db")
 
+    await db_manager.close()
+    db_manager._sqlite_settings.clear()
     db_manager.init_db(f"sqlite+aiosqlite:///{db_file}")
 
     # We will open two connections concurrently
@@ -123,7 +117,3 @@ async def test_concurrent_connection_isolation_and_no_weakref_errors() -> None:
         await conn1.close()
         await conn2.close()
         await db_manager.close()
-
-        if os.path.exists(db_file):
-            with contextlib.suppress(Exception):
-                os.remove(db_file)
