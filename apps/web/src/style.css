@@ -894,7 +894,9 @@ main {
   border-radius: 12px;
   width: 90%;
   max-width: 680px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.2),
+    0 10px 10px -5px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   border: 1px solid #cbd5e1;
   max-height: 90vh;

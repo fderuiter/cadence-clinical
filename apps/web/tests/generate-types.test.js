@@ -10,8 +10,12 @@ describe("Type-Array Union Generator (translateProperty)", () => {
   });
 
   it("translates arrays of types into union types", () => {
-    expect(translateProperty({ type: ["string", "null"] })).toBe("string | null");
-    expect(translateProperty({ type: ["integer", "boolean", "null"] })).toBe("number | boolean | null");
+    expect(translateProperty({ type: ["string", "null"] })).toBe(
+      "string | null"
+    );
+    expect(translateProperty({ type: ["integer", "boolean", "null"] })).toBe(
+      "number | boolean | null"
+    );
   });
 
   it("translates array of empty types to any", () => {
@@ -21,7 +25,7 @@ describe("Type-Array Union Generator (translateProperty)", () => {
   it("translates array-based types recursively with internal structures", () => {
     const complexType = {
       type: ["array", "null"],
-      items: { type: "string" }
+      items: { type: "string" },
     };
     expect(translateProperty(complexType)).toBe("string[] | null");
   });
@@ -29,7 +33,7 @@ describe("Type-Array Union Generator (translateProperty)", () => {
   it("translates array-based types with enum values correctly", () => {
     const enumType = {
       type: ["string", "null"],
-      enum: ["ACTIVE", "INACTIVE", null]
+      enum: ["ACTIVE", "INACTIVE", null],
     };
     expect(translateProperty(enumType)).toBe('"ACTIVE" | "INACTIVE" | null');
   });

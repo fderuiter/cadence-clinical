@@ -63,8 +63,8 @@ def run_check(
         (
             "ruff-lint",
             [
-                "uv",
-                "run",
+                sys.executable,
+                "-m",
                 "ruff",
                 "check",
                 ".",
@@ -75,8 +75,8 @@ def run_check(
         (
             "ruff-format",
             [
-                "uv",
-                "run",
+                sys.executable,
+                "-m",
                 "ruff",
                 "format",
                 "--check",
@@ -93,8 +93,8 @@ def run_check(
         (
             "security-audit",
             [
-                "uv",
-                "run",
+                sys.executable,
+                "-m",
                 "bandit",
                 "-c",
                 "pyproject.toml",

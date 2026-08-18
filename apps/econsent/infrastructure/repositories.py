@@ -790,24 +790,35 @@ class SQLReconsentRepository(IReconsentRepository):
     async def save(
         self, entity: ReconsentRequirementEntity
     ) -> ReconsentRequirementEntity:
-        model = ReconsentRequirement(
-            id=entity.id,
-            study_id=entity.study_id,
-            site_id=entity.site_id,
-            template_id=entity.template_id,
-            prior_version_index=entity.prior_version_index,
-            new_version_index=entity.new_version_index,
-            subject_pseudonym=entity.subject_pseudonym,
-            status=str(entity.status),
-            change_summary=entity.change_summary,
-            substantive_changes=entity.substantive_changes,
-            deadline_at=entity.deadline_at,
-            completed_consent_id=entity.completed_consent_id,
-            created_at=entity.created_at,
-            created_by=entity.created_by,
-            reason_for_change=entity.reason_for_change,
-        )
-        self.session.add(model)
+        stmt = select(ReconsentRequirement).where(ReconsentRequirement.id == entity.id)
+        res = await self.session.execute(stmt)
+        existing = res.scalars().first()
+        if existing:
+            existing.status = str(entity.status)
+            existing.completed_consent_id = entity.completed_consent_id
+            existing.change_summary = entity.change_summary
+            existing.substantive_changes = entity.substantive_changes
+            existing.reason_for_change = entity.reason_for_change
+            model = existing
+        else:
+            model = ReconsentRequirement(
+                id=entity.id,
+                study_id=entity.study_id,
+                site_id=entity.site_id,
+                template_id=entity.template_id,
+                prior_version_index=entity.prior_version_index,
+                new_version_index=entity.new_version_index,
+                subject_pseudonym=entity.subject_pseudonym,
+                status=str(entity.status),
+                change_summary=entity.change_summary,
+                substantive_changes=entity.substantive_changes,
+                deadline_at=entity.deadline_at,
+                completed_consent_id=entity.completed_consent_id,
+                created_at=entity.created_at,
+                created_by=entity.created_by,
+                reason_for_change=entity.reason_for_change,
+            )
+            self.session.add(model)
         await self.session.flush()
         return self._to_entity(model)
 

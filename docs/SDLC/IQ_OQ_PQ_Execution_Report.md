@@ -10,8 +10,8 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 
-- **Total Automated Test Cases Run:** 2725
-- **Passed:** 2706 🟢
+- **Total Automated Test Cases Run:** 2727
+- **Passed:** 2708 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 19 ⚪
 - **Overall Operational Pass Rate:** 99.30%
@@ -1977,6 +1977,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_notifications_negative_security_paths`                                            | `apps.notifications.tests.test_notifications`                               | PRD-SYS-004                                                                        | 🟢 PASSED  | < 1s     |
 | `test_webhook_delivery_channel_failure_and_retry_backoff`                               | `apps.notifications.tests.test_notifications`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_webhook_delivery_channel_success`                                                 | `apps.notifications.tests.test_notifications`                               | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_reconsent_template_mapping_and_rendering`                                         | `apps.notifications.tests.test_reconsent_notifications`                     | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
+| `test_reconsent_worker_recipient_resolution`                                            | `apps.notifications.tests.test_reconsent_notifications`                     | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_complete_doa_workflow_lifecycle`                                                  | `apps.org.tests.test_doa_workflow`                                          | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_doa_signoff_automatic_archival_handoff`                                           | `apps.org.tests.test_org_integration_e2e`                                   | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |
 | `test_doa_signoff_tampered_payload_rejected`                                            | `apps.org.tests.test_org_integration_e2e`                                   | _Regression/Helper_                                                                | 🟢 PASSED  | < 1s     |

@@ -1632,6 +1632,65 @@
         }
       }
     },
+    "/api/v1/econsent/reconsent/complete/{requirement_id}": {
+      "post": {
+        "tags": [
+          "Re-Consent"
+        ],
+        "summary": "Complete Reconsent",
+        "description": "Marks a re-consent requirement as completed following subject e-signature.",
+        "operationId": "complete_reconsent_api_v1_econsent_reconsent_complete__requirement_id__post",
+        "parameters": [
+          {
+            "name": "requirement_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Requirement Id"
+            }
+          },
+          {
+            "name": "completed_consent_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Completed Consent Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconsentRequirementResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/econsent/withdrawal": {
       "post": {
         "tags": [

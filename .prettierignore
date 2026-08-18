@@ -17,3 +17,4 @@ docs/openapi/
 
 # Keep CDASH type definition pristine to prevent ADR gating
 **/cdash.ts
+**/db_schemas.ts

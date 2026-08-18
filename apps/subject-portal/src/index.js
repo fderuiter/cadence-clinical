@@ -20,6 +20,7 @@ import {
   bulkUpdateSubmissionStatuses,
   clearAllSubmissions,
   initSessionKey,
+  setActiveUserId,
   clearSessionKey,
   clearInMemoryKey,
   getInMemorySessionKey,
@@ -197,6 +198,15 @@ const state = reactive({
     isOpen: false,
     pin: "",
     error: "",
+  },
+  pendingReconsent: null,
+  reconsentModalOpen: false,
+  reconsentModalError: "",
+  reconsentForm: {
+    username: "",
+    password: "",
+    reason: "Protocol Amendment Re-Consent Acknowledgment",
+    customReason: "",
   },
 });
 
@@ -1264,20 +1274,35 @@ function renderInbox() {
     .map((notif) => {
       const isUnread = !notif.is_read;
       const unreadClass = isUnread ? "unread" : "";
-      const dueText = new Date(notif.due_at).toLocaleString();
+      const dueText = notif.due_at
+        ? new Date(notif.due_at).toLocaleString()
+        : new Date().toLocaleString();
+      const isReconsent =
+        notif.related_entity_type === "RECONSENT_REQUIRED" ||
+        (notif.message_content &&
+          notif.message_content
+            .toLowerCase()
+            .includes("re-consent required")) ||
+        (notif.message &&
+          notif.message.toLowerCase().includes("re-consent required"));
+
+      let actionHtml = `<span class="status-pill completed">Read</span>`;
+      if (isUnread) {
+        if (isReconsent) {
+          actionHtml = `<button type="button" class="btn btn-primary btn-reconsent-action" data-id="${notif.id}">Review & Sign</button>`;
+        } else {
+          actionHtml = `<button type="button" class="btn btn-secondary btn-acknowledge" data-id="${notif.id}">Acknowledge & Read</button>`;
+        }
+      }
 
       return `
         <div class="inbox-item ${unreadClass}" id="notif-card-${notif.id}">
           <div class="inbox-meta">
-            <span class="inbox-name">${notif.message || `Scheduled trial survey reminder (channel: ${notif.channel})`}</span>
-            <span class="inbox-due">Due reminder timestamp: ${dueText} (Channel: ${notif.channel})</span>
+            <span class="inbox-name">${notif.message_content || notif.message || `Scheduled trial survey reminder (channel: ${notif.channel})`}</span>
+            <span class="inbox-due">Timestamp: ${dueText} (Channel: ${notif.channel || "IN_APP"})</span>
           </div>
           <div class="inbox-actions">
-            ${
-              isUnread
-                ? `<button type="button" class="btn btn-secondary btn-acknowledge" data-id="${notif.id}">Acknowledge & Read</button>`
-                : `<span class="status-pill completed">Read</span>`
-            }
+            ${actionHtml}
           </div>
         </div>
       `;
@@ -1289,6 +1314,15 @@ function renderInbox() {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-id");
       acknowledgeNotification(id);
+    });
+  });
+
+  // Attach reconsent action click events
+  container.querySelectorAll(".btn-reconsent-action").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-id");
+      acknowledgeNotification(id);
+      openReconsentModal();
     });
   });
 }
@@ -1644,6 +1678,152 @@ async function submitConsentAnswers() {
   }
 }
 
+// Re-Consent Modal Controls & Handlers
+function openReconsentModal() {
+  if (!state.pendingReconsent) {
+    state.pendingReconsent = {
+      id: "req_default",
+      study_id: "STUDY-01",
+      protocol_version: "2.0",
+      change_summary:
+        "Protocol amendment updates requiring active subject re-consent.",
+    };
+  }
+  state.reconsentModalError = "";
+  state.reconsentForm.username = state.session.userId || "subject_001";
+  state.reconsentForm.password = "";
+  state.reconsentForm.reason = "Protocol Amendment Re-Consent Acknowledgment";
+  state.reconsentForm.customReason = "";
+  state.reconsentModalOpen = true;
+
+  nextTick(() => {
+    const pwdInput = document.getElementById("reconsent-sign-password");
+    if (pwdInput) pwdInput.focus();
+  });
+}
+
+function closeReconsentModal() {
+  state.reconsentModalOpen = false;
+  state.reconsentModalError = "";
+}
+
+async function checkPendingReconsent() {
+  if (!state.session.userId) return;
+
+  try {
+    if (isAuthenticatedSession()) {
+      const pendingReqs = await dispatchApi(
+        `api/v1/econsent/reconsent/pending/STUDY-01?subject_pseudonym=${state.session.userId}`
+      );
+      if (Array.isArray(pendingReqs) && pendingReqs.length > 0) {
+        state.pendingReconsent = pendingReqs[0];
+        openReconsentModal();
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn(
+      "Could not query pending re-consent requirements from server:",
+      err
+    );
+  }
+
+  // Fallback check: check if state.notifications contains a reconsent alert
+  const reconsentNotif = state.notifications.find(
+    (n) =>
+      n.related_entity_type === "RECONSENT_REQUIRED" ||
+      (n.message_content &&
+        n.message_content.toLowerCase().includes("re-consent required")) ||
+      (n.message && n.message.toLowerCase().includes("re-consent required"))
+  );
+
+  if (reconsentNotif) {
+    state.pendingReconsent = {
+      id: reconsentNotif.related_entity_id || "req_notif",
+      study_id: "STUDY-01",
+      protocol_version: "2.0",
+      change_summary:
+        reconsentNotif.message_content ||
+        reconsentNotif.message ||
+        "Protocol amendment re-consent required.",
+    };
+    openReconsentModal();
+  }
+}
+
+async function submitReconsentSignature() {
+  if (!state.reconsentForm.username) {
+    state.reconsentModalError = "Please enter your User ID / Username.";
+    return;
+  }
+  if (!state.reconsentForm.password) {
+    state.reconsentModalError = "Please enter your Security PIN / Password.";
+    return;
+  }
+
+  const studyId = state.pendingReconsent?.study_id || "STUDY-01";
+  const protocolVersion = state.pendingReconsent?.protocol_version || "2.0";
+  const requirementId = state.pendingReconsent?.id;
+  const declReason =
+    state.reconsentForm.reason === "Other" && state.reconsentForm.customReason
+      ? state.reconsentForm.customReason
+      : state.reconsentForm.reason;
+
+  try {
+    if (isAuthenticatedSession()) {
+      await dispatchApi("api/v1/execution/amendments/reconsent", {
+        method: "POST",
+        body: JSON.stringify({
+          subject_id: state.reconsentForm.username,
+          study_id: studyId,
+          protocol_version: protocolVersion,
+          version_index: state.pendingReconsent?.new_version_index || 2,
+          icf_signed: true,
+          signature_type: "ECONSENT",
+        }),
+        change_reason: declReason,
+      });
+
+      if (requirementId && !requirementId.startsWith("req_")) {
+        try {
+          await dispatchApi(
+            `api/v1/econsent/reconsent/complete/${requirementId}`,
+            {
+              method: "POST",
+              change_reason: declReason,
+            }
+          );
+        } catch (e) {
+          console.warn("Could not mark reconsent requirement complete:", e);
+        }
+      }
+    }
+
+    // 21 CFR Part 11 Audit Log entry
+    await logAuditRecord(
+      "RECONSENT_EXECUTED",
+      {
+        subject_id: state.reconsentForm.username,
+        study_id: studyId,
+        protocol_version: protocolVersion,
+        signature_type: "ECONSENT",
+      },
+      `Subject e-signature executed for Protocol Amendment Re-Consent (${declReason})`
+    );
+
+    state.pendingReconsent = null;
+    state.consentSigned = true;
+    state.reconsentModalOpen = false;
+    state.reconsentModalError = "";
+
+    showToast(
+      "Re-Consent signed and submitted successfully. Submissions unlocked."
+    );
+  } catch (err) {
+    state.reconsentModalError = `Re-Consent submission failed: ${err.message || err}`;
+  }
+}
+
 function checkOnline() {
   if (typeof window !== "undefined" && window.__MOCK_TEST_ENV__) {
     return !state.session.isOfflineMode;
@@ -1928,11 +2108,12 @@ async function initializeApp() {
   if (cachedUserId) {
     state.session.userId = cachedUserId;
   }
+  setActiveUserId(state.session.userId);
 
   const sessionMaterial =
     state.session.token || state.session.userId || "demo-material";
   try {
-    await initSessionKey(sessionMaterial);
+    await initSessionKey(sessionMaterial, state.session.userId);
   } catch (err) {
     console.warn("Failed to initialize session key:", err);
   }
@@ -2176,6 +2357,9 @@ async function initializeApp() {
   renderTasks();
   renderCompliance();
   renderInbox();
+
+  // Check for pending active re-consent
+  await checkPendingReconsent();
 
   // Graceful Service Worker Registration
   if (
@@ -2540,10 +2724,11 @@ async function initializeApp() {
         console.log(
           `[Auth] User identity changed from ${oldUid} to ${newUid}. Re-deriving encryption key.`
         );
+        setActiveUserId(newUid);
         const sessionMaterial =
           state.session.token || newUid || "demo-material";
         try {
-          await initSessionKey(sessionMaterial);
+          await initSessionKey(sessionMaterial, newUid);
         } catch (err) {
           console.warn(
             "Failed to re-derive session key on identity change:",
@@ -2725,6 +2910,10 @@ export {
   checkPINWrapper,
   handlePINSetupSubmit,
   handlePINUnlockSubmit,
+  openReconsentModal,
+  closeReconsentModal,
+  checkPendingReconsent,
+  submitReconsentSignature,
 };
 
 function createClinicalInput(

@@ -57,22 +57,39 @@ async function getOrGenerateSalt() {
   });
 }
 
-export async function initSessionKey(sessionMaterial) {
+let currentUserId = null;
+
+export function setActiveUserId(userId) {
+  currentUserId = userId || null;
+}
+
+export function getActiveUserId() {
+  return currentUserId;
+}
+
+export async function initSessionKey(sessionMaterial, userId) {
+  if (userId) {
+    setActiveUserId(userId);
+  }
   const salt = await getOrGenerateSalt();
   const info = "cadence-subject-portal-offline-v1";
   inMemorySessionKey = await deriveSessionKey(sessionMaterial, salt, info);
 }
 
-export function openDatabase() {
+export function openDatabase(userId) {
+  const targetUserId = userId || currentUserId;
+  const dbName = targetUserId
+    ? `SubjectPortalSyncDB_${targetUserId}`
+    : "SubjectPortalSyncDB";
   return new Promise((resolve, reject) => {
     try {
-      const request = indexedDB.open("SubjectPortalSyncDB", 2);
+      const request = indexedDB.open(dbName, 2);
       /* v8 ignore start */
       request.onupgradeneeded = (event) => {
         try {
           const db = event.target.result;
           console.log(
-            `[IndexedDB] Upgrading SubjectPortalSyncDB from version ${event.oldVersion} to ${event.newVersion}`
+            `[IndexedDB] Upgrading ${dbName} from version ${event.oldVersion} to ${event.newVersion}`
           );
           if (!db.objectStoreNames.contains("submissions")) {
             db.createObjectStore("submissions", { keyPath: "sequence_number" });
@@ -105,7 +122,7 @@ export function openDatabase() {
       request.onsuccess = (event) => {
         const db = event.target.result;
         console.log(
-          `[IndexedDB] Opened SubjectPortalSyncDB at version ${db.version} containing stores:`,
+          `[IndexedDB] Opened ${dbName} at version ${db.version} containing stores:`,
           Array.from(db.objectStoreNames)
         );
         resolve(db);
