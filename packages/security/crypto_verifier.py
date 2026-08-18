@@ -9,6 +9,7 @@ Requirements: PRD-SYS-001, 21 CFR Part 11
 import base64
 import hashlib
 import hmac
+import os
 import re
 from typing import Any
 
@@ -371,9 +372,10 @@ def verify_electronic_signature(
     Supports both RSA/ECDSA asymmetric verification and symmetric HMAC fallback verification.
     """
     if secret_key is None:
-        from packages.security.audit_logger import AUDIT_LOG_SECRET_KEY
-
-        secret_key = AUDIT_LOG_SECRET_KEY
+        secret_key = (
+            os.getenv("SIGNING_SECRET", "").strip()
+            or os.getenv("AUDIT_LOG_SECRET_KEY", "").strip()
+        )
     if not request.signer_id:
         return SignatureVerificationResult(
             is_valid=False,

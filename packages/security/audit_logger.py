@@ -14,9 +14,18 @@ import uuid
 from typing import Any
 
 from pydantic import BaseModel, Field
-from sqlalchemy import JSON, select, text
-from sqlmodel import Field as SQLField
-from sqlmodel import SQLModel
+
+try:
+    from sqlalchemy import JSON, select, text
+    from sqlmodel import Field as SQLField
+    from sqlmodel import SQLModel
+
+    HAS_SQLMODEL = True
+except ImportError:
+    HAS_SQLMODEL = False
+    JSON = select = text = None  # type: ignore
+    SQLField = None  # type: ignore
+    SQLModel = object  # type: ignore
 
 AUDIT_LOG_SECRET_KEY = os.getenv("AUDIT_LOG_SECRET_KEY", "").strip()
 if not AUDIT_LOG_SECRET_KEY:
@@ -110,27 +119,38 @@ def compute_audit_digest(
     ).hexdigest()
 
 
-class DbAuditLogRecord(SQLModel, table=True):
-    """SQLModel schema for durable audit log persistence."""
+if HAS_SQLMODEL:
 
-    __tablename__ = "security_audit_logs"
+    class DbAuditLogRecord(SQLModel, table=True):
+        """SQLModel schema for durable audit log persistence."""
 
-    event_id: str = SQLField(
-        default_factory=lambda: str(uuid.uuid4()), primary_key=True
-    )
-    service_name: str = SQLField(index=True)
-    action_type: str
-    entity_name: str
-    entity_id: str
-    user_id: str
-    tenant_id: str = "tenant_default"
-    reason_for_change: str
-    details: dict[str, Any] = SQLField(default_factory=dict, sa_type=JSON)
-    timestamp: datetime.datetime = SQLField(
-        default_factory=lambda: datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
-    )
-    previous_digest: str
-    sha256_digest: str
+        __tablename__ = "security_audit_logs"
+
+        event_id: str = SQLField(
+            default_factory=lambda: str(uuid.uuid4()), primary_key=True
+        )
+        service_name: str = SQLField(index=True)
+        action_type: str
+        entity_name: str
+        entity_id: str
+        user_id: str
+        tenant_id: str = "tenant_default"
+        reason_for_change: str
+        details: dict[str, Any] = SQLField(default_factory=dict, sa_type=JSON)
+        timestamp: datetime.datetime = SQLField(
+            default_factory=lambda: datetime.datetime.now(datetime.UTC).replace(
+                tzinfo=None
+            )
+        )
+        previous_digest: str
+        sha256_digest: str
+
+else:
+
+    class DbAuditLogRecord:  # type: ignore
+        """Placeholder when sqlmodel is not available."""
+
+        pass
 
 
 def resolve_current_session() -> Any | None:
@@ -208,6 +228,10 @@ class SQLModelAuditStore(AuditStoreAdapter):
     """Durable relational database audit store using SQLModel."""
 
     def __init__(self, engine: Any, session_maker: Any = None) -> None:
+        if not HAS_SQLMODEL:
+            raise RuntimeError(
+                "SQLModel and SQLAlchemy are required to use SQLModelAuditStore."
+            )
         self.engine = engine
         self.session_maker = session_maker
         try:
