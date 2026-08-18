@@ -151,9 +151,21 @@ export interface IngestionJob {
   errors: string[] | null;
 }
 
+export interface SubjectFixture {
+  id: string;
+  status: string;
+  active_protocol_version: string;
+  consentText: string;
+  consentColor: string;
+  category: string;
+  isGated: boolean;
+  label?: string;
+}
+
 export interface ClinicalState {
   currentUsdm: NormalizedUsdm;
   currentCtmsData: CtmsData;
+  subjects: SubjectFixture[];
   ecrfFields: ClinicalField[];
   formValues: Record<string, string | number | boolean | null | undefined>;
   fieldVisibility: Record<string, boolean>;
@@ -192,8 +204,13 @@ const useClinicalStoreInner = defineStore("clinical", {
     let savedFormQueries: Record<string, ClinicalQuery> | null = null;
     let savedLedgerBlocks: LedgerBlock[] | null = null;
     let savedUsdm: unknown = null;
+    let savedSubjects: SubjectFixture[] | null = null;
     if (typeof window !== "undefined" && window.localStorage) {
       try {
+        const storedSubjects = window.localStorage.getItem("subjects");
+        if (storedSubjects) {
+          savedSubjects = JSON.parse(storedSubjects);
+        }
         const storedFormValues = window.localStorage.getItem("formValues");
         if (storedFormValues) {
           savedFormValues = JSON.parse(storedFormValues);
@@ -437,6 +454,88 @@ const useClinicalStoreInner = defineStore("clinical", {
           { siteId: "Site-02", screened: 8, enrolled: 4, target: 15 },
         ],
       },
+      subjects: savedSubjects || [
+        {
+          id: "SUBJ-101",
+          status: "ACTIVE",
+          active_protocol_version: "2.0.0",
+          consentText: "Signed ICF v2.0.0",
+          consentColor: "green",
+          category: "migrated",
+          isGated: false,
+          label: "SUBJ-101 (Active - Migrated v2.0.0)",
+        },
+        {
+          id: "SUBJ-102",
+          status: "ACTIVE",
+          active_protocol_version: "1.0.0",
+          consentText: "Pending ICF v2.0.0",
+          consentColor: "yellow",
+          category: "pending",
+          isGated: true,
+          label: "SUBJ-102 (Active - Pending Re-Consent)",
+        },
+        {
+          id: "SUBJ-103",
+          status: "ENROLLED",
+          active_protocol_version: "1.0.0",
+          consentText: "Pending ICF v2.0.0",
+          consentColor: "yellow",
+          category: "pending",
+          isGated: true,
+          label: "SUBJ-103 (Enrolled - Pending Re-Consent)",
+        },
+        {
+          id: "SUBJ-104",
+          status: "COMPLETED",
+          active_protocol_version: "1.0.0",
+          consentText: "Historical v1.0.0",
+          consentColor: "gray",
+          category: "completedPrev",
+          isGated: false,
+          label: "SUBJ-104 (Completed - Historical v1.0.0)",
+        },
+        {
+          id: "SUBJ-105",
+          status: "ACTIVE",
+          active_protocol_version: "2.0.0",
+          consentText: "Signed ICF v2.0.0",
+          consentColor: "green",
+          category: "migrated",
+          isGated: false,
+          label: "SUBJ-105 (Active - Migrated v2.0.0)",
+        },
+        {
+          id: "SUBJ-001",
+          status: "ACTIVE",
+          active_protocol_version: "2.0.0",
+          consentText: "Signed ICF v2.0.0",
+          consentColor: "green",
+          category: "migrated",
+          isGated: false,
+          label: "SUBJ-001 (Mock Subject)",
+        },
+        {
+          id: "SUBJ-002",
+          status: "ACTIVE",
+          active_protocol_version: "1.0.0",
+          consentText: "Pending ICF v2.0.0",
+          consentColor: "yellow",
+          category: "pending",
+          isGated: true,
+          label: "SUBJ-002 (Screened Cohort - Pending Re-Consent)",
+        },
+        {
+          id: "SUBJ-003",
+          status: "ENROLLED",
+          active_protocol_version: "2.0.0",
+          consentText: "Signed ICF v2.0.0",
+          consentColor: "green",
+          category: "migrated",
+          isGated: false,
+          label: "SUBJ-003 (Post-Randomization)",
+        },
+      ],
       ecrfFields: [
         {
           id: "concept_code",
@@ -699,6 +798,13 @@ const useClinicalStoreInner = defineStore("clinical", {
         return status;
       };
     },
+    gatedSubjectIds: (state) => {
+      return state.subjects.filter((s) => s.isGated).map((s) => s.id);
+    },
+    isSubjectGated: (state) => (subjectId: string) => {
+      const sub = state.subjects.find((s) => s.id === subjectId);
+      return sub ? sub.isGated : false;
+    },
   },
   actions: {
     async evaluateRules() {
@@ -803,6 +909,7 @@ const useClinicalStoreInner = defineStore("clinical", {
 
       // Save persistent fields to localStorage
       if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem("subjects", JSON.stringify(this.subjects));
         window.localStorage.setItem(
           "formValues",
           JSON.stringify(this.formValues)
@@ -822,6 +929,50 @@ const useClinicalStoreInner = defineStore("clinical", {
       }
 
       return block;
+    },
+    async clearReconsentGate(
+      subjectId: string,
+      method: string = "ECONSENT",
+      reason?: string
+    ) {
+      let sub = this.subjects.find((s) => s.id === subjectId);
+      if (!sub) {
+        sub = {
+          id: subjectId,
+          status: "ACTIVE",
+          active_protocol_version: "2.0.0",
+          consentText: "Signed ICF v2.0.0",
+          consentColor: "green",
+          category: "migrated",
+          isGated: false,
+          label: `${subjectId} (Re-Consented)`,
+        };
+        this.subjects.push(sub);
+      } else {
+        sub.isGated = false;
+        sub.active_protocol_version = "2.0.0";
+        sub.consentText = "Signed ICF v2.0.0";
+        sub.consentColor = "green";
+        sub.category = "migrated";
+      }
+
+      const customReason =
+        reason ||
+        `Subject ${subjectId} re-consent recorded via ${method}. Gating unlocked.`;
+
+      await this.addLedgerBlock(
+        "RECONSENT_COMPLETED",
+        {
+          subject_id: subjectId,
+          protocol_version: "2.0.0",
+          method: method,
+        },
+        customReason
+      );
+
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem("subjects", JSON.stringify(this.subjects));
+      }
     },
     clearLedger() {
       this.ledgerBlocks = [];

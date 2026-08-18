@@ -609,11 +609,9 @@ onMounted(() => {
     if (route.query.studyId) store.activeStudyId = route.query.studyId;
     if (route.query.siteId) store.activeSiteId = route.query.siteId;
     if (route.query.subjectId) {
-      store.activeSubjectId = route.query.subjectId;
       const sId = String(route.query.subjectId);
-      if (sId.includes("002")) selectedSubjectId.value = "SUBJ-002";
-      else if (sId.includes("003")) selectedSubjectId.value = "SUBJ-003";
-      else selectedSubjectId.value = "SUBJ-001";
+      store.activeSubjectId = sId;
+      selectedSubjectId.value = sId;
     }
     if (route.query.visitId) {
       store.activeVisitId = route.query.visitId;

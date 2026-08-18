@@ -1,10 +1,14 @@
 import { ref, computed } from "vue";
+import { useClinicalStore } from "../stores/clinical";
 
 export function useConsentGating(selectedSubjectId) {
-  const reconsentGatedSubjects = ref(new Set(["SUBJ-002"]));
+  const store = useClinicalStore();
 
   const isReconsentGated = computed(() => {
-    return reconsentGatedSubjects.value.has(selectedSubjectId.value);
+    if (store && typeof store.isSubjectGated === "function") {
+      return store.isSubjectGated(selectedSubjectId.value);
+    }
+    return false;
   });
 
   const showEconsentModal = ref(false);
@@ -22,15 +26,31 @@ export function useConsentGating(selectedSubjectId) {
     showPaperIcfModal.value = true;
   }
 
-  async function handleCompleteReconsent(method, store) {
+  async function handleCompleteReconsent(method, storeInstance) {
     reconsentSubmitting.value = true;
     try {
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      reconsentGatedSubjects.value.delete(selectedSubjectId.value);
-      showEconsentModal.value = false;
-      showPaperIcfModal.value = false;
-      if (store && store.addLedgerBlock) {
-        await store.addLedgerBlock(
+      if (store && typeof store.clearReconsentGate === "function") {
+        await store.clearReconsentGate(
+          selectedSubjectId.value,
+          method,
+          `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`
+        );
+      } else if (
+        storeInstance &&
+        typeof storeInstance.clearReconsentGate === "function"
+      ) {
+        await storeInstance.clearReconsentGate(
+          selectedSubjectId.value,
+          method,
+          `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`
+        );
+      }
+      if (
+        storeInstance &&
+        storeInstance !== store &&
+        typeof storeInstance.addLedgerBlock === "function"
+      ) {
+        await storeInstance.addLedgerBlock(
           "RECONSENT_COMPLETED",
           {
             subject_id: selectedSubjectId.value,
@@ -40,13 +60,14 @@ export function useConsentGating(selectedSubjectId) {
           `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`
         );
       }
+      showEconsentModal.value = false;
+      showPaperIcfModal.value = false;
     } finally {
       reconsentSubmitting.value = false;
     }
   }
 
   return {
-    reconsentGatedSubjects,
     isReconsentGated,
     showEconsentModal,
     showPaperIcfModal,

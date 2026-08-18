@@ -1,4 +1,4 @@
-import { ref } from "vue";
+import { ref, computed } from "vue";
 
 export function usePiSignoff(store, authStore) {
   const signoffTargetType = ref("FORM");
@@ -6,7 +6,12 @@ export function usePiSignoff(store, authStore) {
   const customTargetId = ref("");
   const signoffReason = ref("PI approval and sign-off.");
 
-  const availableSubjects = ref(["SUBJ-001", "SUBJ-002", "SUBJ-003"]);
+  const availableSubjects = computed(() => {
+    if (store && Array.isArray(store.subjects)) {
+      return store.subjects.map((s) => s.id);
+    }
+    return ["SUBJ-001", "SUBJ-002", "SUBJ-003"];
+  });
   const availableVisits = ref(["V-SCR", "V-TRT-A1", "V-TRT-A2", "V-TRT-B1"]);
   const availableFormSubmissions = ref(["FSUB-001", "FSUB-002", "FSUB-003"]);
 

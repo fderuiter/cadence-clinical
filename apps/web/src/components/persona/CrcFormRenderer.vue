@@ -32,9 +32,13 @@
               $emit('load-ecrf-session');
             "
           >
-            <option value="SUBJ-001">SUBJ-001 (Mock Subject)</option>
-            <option value="SUBJ-002">SUBJ-002 (Screened Cohort)</option>
-            <option value="SUBJ-003">SUBJ-003 (Post-Randomization)</option>
+            <option
+              v-for="sub in store?.subjects || clinicalStore.subjects"
+              :key="sub.id"
+              :value="sub.id"
+            >
+              {{ sub.label || `${sub.id} (${sub.status})` }}
+            </option>
           </select>
         </div>
         <div class="form-group" style="flex: 1">

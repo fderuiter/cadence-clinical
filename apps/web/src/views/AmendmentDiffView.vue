@@ -931,6 +931,9 @@ import { ref, computed, onMounted } from "vue";
 import { apiClient } from "../api/apiClient";
 import { useClinicalStore } from "../stores/clinical";
 
+const store = useClinicalStore();
+const clinicalStore = store;
+
 // Mode & Tab Navigation State
 const activeMode = ref("manager"); // 'manager' | 'coordinator'
 const activeTab = ref("dashboard"); // 'dashboard' | 'graph' | 'wizard'
@@ -974,72 +977,8 @@ const showReconsentModal = ref(false);
 const reconsentMode = ref("ECONSENT");
 const activeModalSubject = ref(null);
 
-// Clinical Store Instance
-const clinicalStore = useClinicalStore();
-
 // Cohort Subjects Data
-const subjectsList = ref([
-  {
-    id: "SUBJ-101",
-    site_id: "SITE-101",
-    status: "ACTIVE",
-    active_protocol_version: "2.0.0",
-    consentText: "Signed ICF v2.0.0",
-    consentColor: "green",
-    category: "migrated",
-    isGated: false,
-  },
-  {
-    id: "SUBJ-102",
-    site_id: "SITE-101",
-    status: "ACTIVE",
-    active_protocol_version: "1.0.0",
-    consentText: "Pending ICF v2.0.0",
-    consentColor: "yellow",
-    category: "pending",
-    isGated: true,
-  },
-  {
-    id: "SUBJ-103",
-    site_id: "SITE-102",
-    status: "ENROLLED",
-    active_protocol_version: "1.0.0",
-    consentText: "Pending ICF v2.0.0",
-    consentColor: "yellow",
-    category: "pending",
-    isGated: true,
-  },
-  {
-    id: "SUBJ-104",
-    site_id: "SITE-102",
-    status: "COMPLETED",
-    active_protocol_version: "1.0.0",
-    consentText: "Historical v1.0.0",
-    consentColor: "gray",
-    category: "completedPrev",
-    isGated: false,
-  },
-  {
-    id: "SUBJ-105",
-    site_id: "SITE-103",
-    status: "ACTIVE",
-    active_protocol_version: "2.0.0",
-    consentText: "Signed ICF v2.0.0",
-    consentColor: "green",
-    category: "migrated",
-    isGated: false,
-  },
-  {
-    id: "SUBJ-106",
-    site_id: "SITE-103",
-    status: "ACTIVE",
-    active_protocol_version: "1.0.0",
-    consentText: "Pending ICF v2.0.0",
-    consentColor: "yellow",
-    category: "pending",
-    isGated: true,
-  },
-]);
+const subjectsList = computed(() => store.subjects);
 
 // Computed Metrics
 const activeSubjectCount = computed(() => subjectsList.value.length);
@@ -1321,16 +1260,11 @@ async function submitReconsent() {
       console.warn("Reconsent API error, using local fallback:", err);
     }
 
-    const targetSub = subjectsList.value.find(
-      (s) => s.id === activeModalSubject.value.id
+    await store.clearReconsentGate(
+      activeModalSubject.value.id,
+      reconsentMode.value,
+      `Subject ${activeModalSubject.value.id} re-consent recorded via ${reconsentMode.value} in Amendment Management. Gating unlocked.`
     );
-    if (targetSub) {
-      targetSub.active_protocol_version = selectedAmendedVersion.value;
-      targetSub.consentText = `Signed ICF v${selectedAmendedVersion.value}`;
-      targetSub.consentColor = "green";
-      targetSub.category = "migrated";
-      targetSub.isGated = false;
-    }
 
     notificationBanner.value = {
       type: "success",
