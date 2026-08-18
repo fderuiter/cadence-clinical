@@ -20,6 +20,7 @@ import {
   bulkUpdateSubmissionStatuses,
   clearAllSubmissions,
   initSessionKey,
+  setActiveUserId,
   clearSessionKey,
   clearInMemoryKey,
   getInMemorySessionKey,
@@ -1928,11 +1929,12 @@ async function initializeApp() {
   if (cachedUserId) {
     state.session.userId = cachedUserId;
   }
+  setActiveUserId(state.session.userId);
 
   const sessionMaterial =
     state.session.token || state.session.userId || "demo-material";
   try {
-    await initSessionKey(sessionMaterial);
+    await initSessionKey(sessionMaterial, state.session.userId);
   } catch (err) {
     console.warn("Failed to initialize session key:", err);
   }
@@ -2540,10 +2542,11 @@ async function initializeApp() {
         console.log(
           `[Auth] User identity changed from ${oldUid} to ${newUid}. Re-deriving encryption key.`
         );
+        setActiveUserId(newUid);
         const sessionMaterial =
           state.session.token || newUid || "demo-material";
         try {
-          await initSessionKey(sessionMaterial);
+          await initSessionKey(sessionMaterial, newUid);
         } catch (err) {
           console.warn(
             "Failed to re-derive session key on identity change:",
