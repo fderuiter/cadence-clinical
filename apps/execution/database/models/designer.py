@@ -19,6 +19,7 @@ class TranslationJob(AuditedModel):
     odm_payload: Mapped[str] = mapped_column(String, nullable=True)
     openrosa_payload: Mapped[str] = mapped_column(String, nullable=True)
     error_message: Mapped[str] = mapped_column(String, nullable=True)
+    warnings: Mapped[list | dict] = mapped_column(JSON, nullable=True, default=list)
 
 
 class StudyAuthoredRule(AuditedModel):
