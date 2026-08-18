@@ -861,6 +861,35 @@ class ReconsentService:
                 )
             )
 
+        # Dispatch automated notification events to immediate email worker
+        try:
+            from apps.notifications.domain.event_models import SystemDomainEvent
+            from apps.notifications.workers.notification_worker import (
+                publish_domain_event,
+            )
+
+            for req in requirements:
+                event = SystemDomainEvent(
+                    event_id=str(uuid.uuid4()),
+                    event_type="RECONSENT_REQUIRED",
+                    study_id=study_id,
+                    source_service="econsent",
+                    timestamp_utc=now.isoformat(),
+                    payload={
+                        "template_id": template_id,
+                        "prior_version_index": prior_version_index,
+                        "new_version_index": new_version_index,
+                        "version_number": f"{new_version_index}.0",
+                        "subject_pseudonym": req.subject_pseudonym,
+                        "subject_id": req.subject_pseudonym,
+                        "change_summary": change_summary,
+                        "requirement_id": req.id,
+                    },
+                )
+                await publish_domain_event(event)
+        except Exception:
+            pass
+
         return requirements
 
     async def get_pending_reconsents(
@@ -869,6 +898,39 @@ class ReconsentService:
         return await self.reconsent_repo.get_pending_requirements(
             study_id, subject_pseudonym
         )
+
+    async def complete_reconsent_requirement(
+        self,
+        requirement_id: str,
+        completed_consent_id: str | None = None,
+        created_by: str = "system",
+        reason_for_change: str = "Subject completed protocol re-consent signature",
+    ) -> ReconsentRequirementEntity:
+        req = await self.reconsent_repo.get_by_id(requirement_id)
+        if not req:
+            raise ValueError(f"Re-consent requirement '{requirement_id}' not found.")
+
+        req.status = "COMPLETED"
+        if completed_consent_id:
+            req.completed_consent_id = completed_consent_id
+
+        saved = await self.reconsent_repo.save(req)
+
+        if self.audit_repo:
+            await self.audit_repo.save(
+                ConsentAuditLogEntity(
+                    id=str(uuid.uuid4()),
+                    timestamp=datetime.now(UTC),
+                    actor_id=created_by,
+                    actor_role="subject",
+                    action="COMPLETE_RECONSENT",
+                    document_id=saved.id,
+                    details=f"Subject '{saved.subject_pseudonym}' completed re-consent requirement '{saved.id}'.",
+                    reason_for_change=reason_for_change,
+                )
+            )
+
+        return saved
 
 
 # =========================================================================

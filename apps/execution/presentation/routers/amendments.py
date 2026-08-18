@@ -123,6 +123,61 @@ async def publish_amendment_endpoint(
     key = f"{payload.study_id}:{payload.version_number}"
     _AMENDMENT_STORE[key] = record
 
+    # Set re-consent requirements and dispatch immediate email notifications to active subjects
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(ClinicalSubject).where(
+            ClinicalSubject.study_id == payload.study_id,
+            ClinicalSubject.is_deleted.is_(False),
+        )
+        res = await session.execute(stmt)
+        subjects = res.scalars().all()
+
+        impacted_subject_ids = []
+        for sub in subjects:
+            sub_id = sub.subject_id or sub.id
+            if sub.status not in ("COMPLETED", "WITHDRAWN", "SCREEN_FAILED"):
+                impacted_subject_ids.append(sub_id)
+
+                # Set pending consent requirement flag
+                stmt_c = select(SubjectConsent).where(
+                    SubjectConsent.subject_id == sub_id,
+                    SubjectConsent.study_id == payload.study_id,
+                    SubjectConsent.is_deleted.is_(False),
+                )
+                c_res = await session.execute(stmt_c)
+                consents = c_res.scalars().all()
+                for c in consents:
+                    c.requires_reconsent = True
+
+        await session.commit()
+
+        if impacted_subject_ids:
+            try:
+                from apps.notifications.domain.event_models import SystemDomainEvent
+                from apps.notifications.workers.notification_worker import (
+                    publish_domain_event,
+                )
+
+                for sid in impacted_subject_ids:
+                    event = SystemDomainEvent(
+                        event_id=str(uuid.uuid4()),
+                        event_type="RECONSENT_REQUIRED",
+                        study_id=payload.study_id,
+                        source_service="execution",
+                        timestamp_utc=now_iso,
+                        payload={
+                            "version_number": payload.version_number,
+                            "protocol_version": payload.version_number,
+                            "subject_id": sid,
+                            "subject_pseudonym": sid,
+                            "change_summary": diff["summary_of_changes"],
+                            "summary_of_changes": diff["summary_of_changes"],
+                        },
+                    )
+                    await publish_domain_event(event)
+            except Exception:
+                pass
+
     return PublishAmendmentResponse(
         amendment_id=amendment_id,
         study_id=payload.study_id,

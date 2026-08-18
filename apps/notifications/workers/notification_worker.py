@@ -178,6 +178,17 @@ class NotificationWorker:
                         "email": f"designer_john@{brand_domain}",  # deid-ignore
                     }
                 )
+            elif event_type in ("RECONSENT_REQUIRED", "PROTOCOL_AMENDMENT_RECONSENT"):
+                target_ids = payload.get("impacted_subjects") or [
+                    payload.get("subject_pseudonym") or payload.get("subject_id") or payload.get("user_id") or "subject_001"
+                ]
+                for tid in target_ids:
+                    resolved.append(
+                        {
+                            "user_id": tid,
+                            "email": payload.get("email") or f"{tid}@{brand_domain}",
+                        }
+                    )
 
         unique_resolved = []
         seen = set()
@@ -218,6 +229,13 @@ class NotificationWorker:
             priority = NotificationPriority.LOW
             summary_message = (
                 f"Protocol amendment submitted: {event.payload.get('amendment_tag')}"
+            )
+        elif event.event_type in ("RECONSENT_REQUIRED", "PROTOCOL_AMENDMENT_RECONSENT"):
+            category = NotificationCategory.ALERTS
+            priority = NotificationPriority.CRITICAL
+            summary_message = (
+                f"URGENT: Protocol amendment re-consent required for study {event.study_id}. "
+                f"Version: {event.payload.get('version_number') or event.payload.get('protocol_version') or event.payload.get('new_version_index') or '2.0'}"
             )
         else:
             summary_message = f"Event received: {event.event_type}"

@@ -202,6 +202,60 @@
 
       <!-- Main Viewport -->
       <main class="portal-main">
+        <!-- Urgent Re-Consent Notification Banner -->
+        <div
+          v-if="state.pendingReconsent"
+          id="reconsent-urgent-banner"
+          class="card urgent-reconsent-banner"
+          style="
+            border: 2px solid #eab308;
+            background-color: #fefce8;
+            color: #854d0e;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+          "
+          role="alert"
+        >
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 24px;">⚠️</span>
+            <div>
+              <h3
+                style="
+                  margin: 0 0 4px 0;
+                  font-size: 16px;
+                  font-weight: 700;
+                  color: #713f12;
+                "
+              >
+                Action Required: Protocol Amendment Re-Consent
+              </h3>
+              <p style="margin: 0; font-size: 14px;">
+                A study protocol amendment requires your review and electronic
+                signature before diary submission.
+              </p>
+            </div>
+          </div>
+          <button
+            id="btn-open-reconsent-modal"
+            type="button"
+            class="btn btn-primary"
+            style="
+              white-space: nowrap;
+              background-color: #ca8a04;
+              border-color: #a16207;
+            "
+            @click="openReconsentModal"
+          >
+            Review & Sign Now
+          </button>
+        </div>
+
         <!-- Version mismatch banner -->
         <div
           v-if="state.autoSyncSuspended"
@@ -859,6 +913,135 @@
       </div>
     </div>
 
+    <!-- Interactive Re-Consent E-Signature Modal -->
+    <div
+      v-if="state.reconsentModalOpen"
+      id="portal-reconsent-modal"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="portal-reconsent-modal-title"
+      tabindex="-1"
+      @keydown="handleReconsentModalKeyDown"
+    >
+      <div class="modal" style="max-width: 600px;">
+        <div id="portal-reconsent-modal-title" class="modal-header">
+          Protocol Amendment Re-Consent Review
+        </div>
+        <div class="modal-body">
+          <p style="font-size: 14px; margin-bottom: 12px;">
+            A new protocol amendment has been published for your clinical study.
+            Please review the change summary below and execute your electronic
+            signature to complete re-consent.
+          </p>
+
+          <div
+            v-if="state.reconsentModalError"
+            id="reconsent-modal-error-banner"
+            style="
+              padding: 8px 12px;
+              border-radius: 4px;
+              background-color: #fee2e2;
+              color: #b91c1c;
+              margin-bottom: 12px;
+              font-size: 13px;
+              font-weight: 600;
+            "
+            role="status"
+            aria-live="polite"
+          >
+            {{ state.reconsentModalError }}
+          </div>
+
+          <div
+            id="reconsent-change-summary"
+            class="card"
+            style="
+              background-color: #f8fafc;
+              border: 1px solid #e2e8f0;
+              padding: 12px 16px;
+              margin-bottom: 16px;
+              border-radius: 6px;
+            "
+          >
+            <h4 style="margin: 0 0 6px 0; font-size: 14px; color: #1e293b;">
+              Summary of Protocol Amendments:
+            </h4>
+            <p style="margin: 0; font-size: 13px; color: #475569;">
+              {{
+                state.pendingReconsent?.change_summary ||
+                state.pendingReconsent?.summary_of_changes ||
+                "Updated study consent document terms."
+              }}
+            </p>
+          </div>
+
+          <div class="form-group mb-12">
+            <label for="reconsent-sign-reason"
+              >Reason for Action / Declaration</label
+            >
+            <select id="reconsent-sign-reason" v-model="state.reconsentForm.reason">
+              <option value="Protocol Amendment Re-Consent Acknowledgment">
+                Protocol Amendment Re-Consent Acknowledgment
+              </option>
+              <option value="Acknowledge updated clinical study consent">
+                Acknowledge updated clinical study consent
+              </option>
+              <option value="Other">Other (specify below)</option>
+            </select>
+          </div>
+          <div class="form-group mb-12">
+            <label for="reconsent-sign-reason-custom"
+              >Custom Reason Detail (Optional)</label
+            >
+            <textarea
+              id="reconsent-sign-reason-custom"
+              v-model="state.reconsentForm.customReason"
+              placeholder="Provide extra detail if 'Other' selected..."
+            ></textarea>
+          </div>
+          <div class="form-group mb-12">
+            <label for="reconsent-sign-username">User ID / Username</label>
+            <input
+              id="reconsent-sign-username"
+              type="text"
+              v-model="state.reconsentForm.username"
+              placeholder="Enter your participant identifier..."
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="reconsent-sign-password">Security PIN / Password</label>
+            <input
+              id="reconsent-sign-password"
+              type="password"
+              v-model="state.reconsentForm.password"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            id="btn-reconsent-cancel"
+            type="button"
+            class="btn btn-secondary"
+            @click="closeReconsentModal"
+          >
+            Cancel
+          </button>
+          <button
+            id="btn-reconsent-submit"
+            type="button"
+            class="btn btn-primary"
+            @click="submitReconsentSignature"
+          >
+            Sign and Confirm Re-Consent
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Local Security PIN Setup Modal -->
     <div
       v-if="state.pinSetup.isOpen"
@@ -1015,7 +1198,34 @@ import {
   syncOfflineQueue,
   handlePINSetupSubmit,
   handlePINUnlockSubmit,
+  openReconsentModal,
+  closeReconsentModal,
+  submitReconsentSignature,
 } from "./index.js";
+
+function handleReconsentModalKeyDown(e) {
+  if (e.key !== "Tab") return;
+  const modal = document.getElementById("portal-reconsent-modal");
+  if (!modal) return;
+  const selectors = ["input", "select", "textarea", "button"]
+    .map((tag) => `${tag}:not([disabled])`)
+    .join(", ");
+  const elList = Array.from(modal.querySelectorAll(selectors));
+  if (!elList.length) return;
+  const firstEl = elList[0];
+  const lastEl = elList[elList.length - 1];
+  if (e.shiftKey) {
+    if (document.activeElement === firstEl) {
+      lastEl.focus();
+      e.preventDefault();
+    }
+  } else {
+    if (document.activeElement === lastEl) {
+      firstEl.focus();
+      e.preventDefault();
+    }
+  }
+}
 
 function handleSetupModalKeyDown(e) {
   if (e.key !== "Tab") return;
