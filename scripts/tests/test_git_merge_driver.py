@@ -182,4 +182,3 @@ def test_merge_markdown_text_overlapping():
         assert ">>>>>>>" in merged
         assert "Line edited by HEAD" in merged
         assert "Line edited by OTHER" in merged
-
