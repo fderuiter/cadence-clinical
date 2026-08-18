@@ -1,24 +1,17 @@
 <template>
   <div class="pi-signature-drawer">
     <!-- PI Sign-Off Worklist and Verification Card -->
-    <div
-      class="card"
-      style="display: flex; flex-direction: column; gap: 16px"
-    >
-      <div class="card-title">
-        PI Sign-Off Worklist &amp; Verification
-      </div>
+    <div class="card" style="display: flex; flex-direction: column; gap: 16px">
+      <div class="card-title">PI Sign-Off Worklist &amp; Verification</div>
       <p style="font-size: 0.85rem; color: #475569; margin-bottom: 4px">
-        Perform a 21 CFR Part 11 compliant electronic signature. This
-        action requires re-authenticating the Principal Investigator
-        credentials to obtain a secure single-use signature token.
+        Perform a 21 CFR Part 11 compliant electronic signature. This action
+        requires re-authenticating the Principal Investigator credentials to
+        obtain a secure single-use signature token.
       </p>
 
       <div style="display: flex; flex-direction: column; gap: 12px">
         <div class="form-group">
-          <label for="signoff-target-type"
-            >Sign-Off Scope (Granularity)</label
-          >
+          <label for="signoff-target-type">Sign-Off Scope (Granularity)</label>
           <select
             id="signoff-target-type"
             :value="signoffTargetType"
@@ -51,11 +44,7 @@
           >
             <option value="">-- Choose ID --</option>
             <template v-if="signoffTargetType === 'SUBJECT'">
-              <option
-                v-for="sub in availableSubjects"
-                :key="sub"
-                :value="sub"
-              >
+              <option v-for="sub in availableSubjects" :key="sub" :value="sub">
                 {{ sub }}
               </option>
             </template>
@@ -82,9 +71,7 @@
         </div>
 
         <div v-if="signoffTargetId === 'custom'" class="form-group">
-          <label for="signoff-custom-target-id"
-            >Custom Target ID Value</label
-          >
+          <label for="signoff-custom-target-id">Custom Target ID Value</label>
           <input
             id="signoff-custom-target-id"
             type="text"
@@ -124,9 +111,7 @@
         </div>
       </div>
 
-      <div
-        style="display: flex; justify-content: flex-end; margin-top: 8px"
-      >
+      <div style="display: flex; justify-content: flex-end; margin-top: 8px">
         <button
           id="btn-pi-signoff"
           class="btn btn-primary"
@@ -214,7 +199,11 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button id="btn-cancel-reauth" class="btn" @click="$emit('cancel-reauth')">
+          <button
+            id="btn-cancel-reauth"
+            class="btn"
+            @click="$emit('cancel-reauth')"
+          >
             Cancel
           </button>
           <button

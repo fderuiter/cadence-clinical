@@ -94,7 +94,9 @@
           @load-ecrf-session="loadEcrfSession"
           @open-econsent-modal="openEconsentModal"
           @open-paper-icf-modal="openPaperIcfModal"
-          @handle-complete-reconsent="(method) => handleCompleteReconsent(method, store)"
+          @handle-complete-reconsent="
+            (method) => handleCompleteReconsent(method, store)
+          "
           @handle-lookup-input="handleLookupInput"
           @handle-field-change="handleFieldChange"
           @create-query="createQuery"
@@ -198,8 +200,8 @@
                 mmHg.
               </li>
               <li>
-                <strong>Diastolic BP:</strong> Numeric value between 30 and
-                150 mmHg.
+                <strong>Diastolic BP:</strong> Numeric value between 30 and 150
+                mmHg.
               </li>
               <li>
                 <strong>Pulse Rate:</strong> Numeric value between 30 and 200
@@ -405,14 +407,17 @@ const {
 } = usePiSignoff(store, authStore);
 
 function handleSignOffSubmit() {
-  composableHandleSignOffSubmit((config) => {
-    reauthAction.value = config.action;
-    reauthUsername.value = config.username;
-    reauthPassword.value = "";
-    reauthTotp.value = "";
-    reauthError.value = "";
-    showReauthModal.value = true;
-  }, store.user.username || authStore.identity?.username || "fderuiter");
+  composableHandleSignOffSubmit(
+    (config) => {
+      reauthAction.value = config.action;
+      reauthUsername.value = config.username;
+      reauthPassword.value = "";
+      reauthTotp.value = "";
+      reauthError.value = "";
+      showReauthModal.value = true;
+    },
+    store.user.username || authStore.identity?.username || "fderuiter"
+  );
 }
 
 // Domain Composable 4: Protocol Schema Ingestion & Review (Study Designer)

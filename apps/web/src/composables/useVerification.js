@@ -34,12 +34,20 @@ export function useVerification(activeUserRole) {
     if (openReauthModalFn) {
       openReauthModalFn({
         action: "BULK_SDV",
-        username: store.user?.username || authStore.identity?.username || "fderuiter",
+        username:
+          store.user?.username || authStore.identity?.username || "fderuiter",
       });
     }
   }
 
-  function handleVerificationInvalidationOnEdit(field, oldValue, newValue, selectedSubjectId, selectedVisitId, store) {
+  function handleVerificationInvalidationOnEdit(
+    field,
+    oldValue,
+    newValue,
+    selectedSubjectId,
+    selectedVisitId,
+    store
+  ) {
     const sKey = getSdvKey(selectedSubjectId, selectedVisitId, field.id);
     if (sdvStates[sKey] === true) {
       sdvStates[sKey] = false;

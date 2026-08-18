@@ -13,10 +13,10 @@
         Ultimate CRF Builder: Protocol Ingestion &amp; Review
       </div>
       <p style="font-size: 0.85rem; color: #475569">
-        Upload a clinical protocol document (PDF/DOCX) to automatically
-        generate candidate SoA visits and form fields with trace citations
-        and confidence levels. Accept, edit, or reject each item before
-        promoting reviewed candidates into a formal study draft.
+        Upload a clinical protocol document (PDF/DOCX) to automatically generate
+        candidate SoA visits and form fields with trace citations and confidence
+        levels. Accept, edit, or reject each item before promoting reviewed
+        candidates into a formal study draft.
       </p>
 
       <!-- Upload File Section -->
@@ -112,11 +112,7 @@
         </div>
 
         <div
-          style="
-            font-size: 0.85rem;
-            font-weight: bold;
-            color: var(--primary);
-          "
+          style="font-size: 0.85rem; font-weight: bold; color: var(--primary)"
         >
           Candidate Items Under Review:
         </div>
@@ -172,10 +168,7 @@
               <!-- Confidence badge and citations -->
               <div style="display: flex; align-items: center; gap: 6px">
                 <span
-                  :class="[
-                    'badge',
-                    getConfidenceClass(item.confidence_level),
-                  ]"
+                  :class="['badge', getConfidenceClass(item.confidence_level)]"
                   style="font-size: 0.7rem"
                   class="item-confidence"
                 >
@@ -243,9 +236,7 @@
                   @input="$emit('update:editItemReason', $event.target.value)"
                 />
               </div>
-              <div
-                style="display: flex; justify-content: flex-end; gap: 6px"
-              >
+              <div style="display: flex; justify-content: flex-end; gap: 6px">
                 <button class="btn btn-sm" @click="$emit('cancel-edit-item')">
                   Cancel
                 </button>
@@ -273,11 +264,7 @@
             >
               <div class="form-group">
                 <label
-                  style="
-                    font-size: 0.75rem;
-                    color: #ef4444;
-                    font-weight: bold;
-                  "
+                  style="font-size: 0.75rem; color: #ef4444; font-weight: bold"
                   >Provide Rejection Reason (Mandatory)</label
                 >
                 <input
@@ -295,9 +282,7 @@
                   @input="$emit('update:rejectItemReason', $event.target.value)"
                 />
               </div>
-              <div
-                style="display: flex; justify-content: flex-end; gap: 6px"
-              >
+              <div style="display: flex; justify-content: flex-end; gap: 6px">
                 <button class="btn btn-sm" @click="$emit('cancel-reject-item')">
                   Cancel
                 </button>

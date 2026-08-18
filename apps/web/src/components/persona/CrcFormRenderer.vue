@@ -27,7 +27,10 @@
               border: 1px solid var(--border);
               border-radius: 4px;
             "
-            @change="$emit('update:selectedSubjectId', $event.target.value); $emit('load-ecrf-session')"
+            @change="
+              $emit('update:selectedSubjectId', $event.target.value);
+              $emit('load-ecrf-session');
+            "
           >
             <option value="SUBJ-001">SUBJ-001 (Mock Subject)</option>
             <option value="SUBJ-002">SUBJ-002 (Screened Cohort)</option>
@@ -47,7 +50,10 @@
               border: 1px solid var(--border);
               border-radius: 4px;
             "
-            @change="$emit('update:selectedVisitId', $event.target.value); $emit('load-ecrf-session')"
+            @change="
+              $emit('update:selectedVisitId', $event.target.value);
+              $emit('load-ecrf-session');
+            "
           >
             <option value="Screening">Screening / Day -7</option>
             <option value="Week2">Week 2 Treatment</option>
@@ -87,8 +93,7 @@
           >
             <span>⚠️</span>
             <span
-              >Protocol Amendment Active (v2.0.0) — Re-Consent
-              Required</span
+              >Protocol Amendment Active (v2.0.0) — Re-Consent Required</span
             >
           </div>
           <p style="margin: 4px 0 0 0; font-size: 0.875rem; color: #7f1d1d">
@@ -162,13 +167,12 @@
                 :error="getValidationError(field)"
                 :lookup-status="lookupStatuses[field.id]"
                 :can-manage-queries="store.canManageQueries"
-                :query-label="
-                  store.getQueryLabel(store.formQueries[field.id])
-                "
+                :query-label="store.getQueryLabel(store.formQueries[field.id])"
                 @update:model-value="store.formValues[field.id] = $event"
                 @input="$emit('handle-lookup-input', field, $event)"
                 @change="
-                  (val, target) => $emit('handle-field-change', field, val, target)
+                  (val, target) =>
+                    $emit('handle-field-change', field, val, target)
                 "
                 @create-query="$emit('create-query', field.id, $event)"
                 @respond-query="$emit('respond-query', field.id, $event)"
@@ -196,7 +200,9 @@
                   type="checkbox"
                   :checked="sdvStates[getSdvKey(field.id)] === true"
                   style="cursor: pointer"
-                  @change="$emit('handle-sdv-toggle', field.id, $event.target.checked)"
+                  @change="
+                    $emit('handle-sdv-toggle', field.id, $event.target.checked)
+                  "
                 />
                 <label
                   :for="`sdv-${field.id}`"
@@ -342,7 +348,10 @@
             padding: 12px 16px;
           "
         >
-          <button class="btn btn-secondary" @click="$emit('update:showEconsentModal', false)">
+          <button
+            class="btn btn-secondary"
+            @click="$emit('update:showEconsentModal', false)"
+          >
             Cancel
           </button>
           <button
@@ -421,7 +430,10 @@
             padding: 12px 16px;
           "
         >
-          <button class="btn btn-secondary" @click="$emit('update:showPaperIcfModal', false)">
+          <button
+            class="btn btn-secondary"
+            @click="$emit('update:showPaperIcfModal', false)"
+          >
             Cancel
           </button>
           <button

@@ -85,7 +85,11 @@ describe("Persona Sub-Components & Domain Composables Unit Tests", () => {
       expect(sdvStates[key]).toBe(false);
       expect(mockStore.addLedgerBlock).toHaveBeenCalledWith(
         "SDV_CLEAR",
-        expect.objectContaining({ fieldId: "vssbp", oldValue: "120", newValue: "130" }),
+        expect.objectContaining({
+          fieldId: "vssbp",
+          oldValue: "120",
+          newValue: "130",
+        }),
         expect.any(String)
       );
     });

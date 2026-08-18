@@ -18,8 +18,8 @@
       "
     >
       <div style="font-size: 0.9rem; font-weight: 600; color: #1e40af">
-        Selected {{ selectedBatchFields.length }} fields for Batch Source
-        Data Verification
+        Selected {{ selectedBatchFields.length }} fields for Batch Source Data
+        Verification
       </div>
       <button
         id="btn-batch-verify"
