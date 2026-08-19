@@ -168,4 +168,46 @@ export const econsentService = {
       : `/api/v1/econsent/templates/${templateId}/approved-content`;
     return apiClient.get(path, options);
   },
+
+  // --- Comprehension Evaluation & Signature Capture ---
+  submitAnswers(templateId, versionIndex, body, options = {}) {
+    return apiClient.post(
+      `/api/v1/econsent/templates/${templateId}/versions/${versionIndex}/submit-answers`,
+      body,
+      options
+    );
+  },
+
+  signTemplate(templateId, versionIndex, body, options = {}) {
+    return apiClient.post(
+      `/api/v1/econsent/templates/${templateId}/versions/${versionIndex}/sign`,
+      body,
+      options
+    );
+  },
+
+  captureConsent(templateId, versionIndex, body, options = {}) {
+    return apiClient.post(
+      `/api/v1/econsent/templates/${templateId}/versions/${versionIndex}/capture-consent`,
+      body,
+      options
+    );
+  },
+
+  getSubjectConsentStatus(subjectPseudonym, params = {}, options = {}) {
+    const query = new URLSearchParams();
+    if (params.study_id) query.append("study_id", params.study_id);
+    const queryString = query.toString();
+    const path = queryString
+      ? `/api/v1/econsent/subjects/${subjectPseudonym}/consent-status?${queryString}`
+      : `/api/v1/econsent/subjects/${subjectPseudonym}/consent-status`;
+    return apiClient.get(path, options);
+  },
+
+  diffTemplateVersions(templateId, baseVersion, targetVersion, options = {}) {
+    return apiClient.get(
+      `/api/v1/econsent/templates/${templateId}/diff/${baseVersion}/${targetVersion}`,
+      options
+    );
+  },
 };

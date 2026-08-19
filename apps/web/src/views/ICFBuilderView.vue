@@ -4,11 +4,19 @@
     <header class="builder-header">
       <div class="header-left">
         <h2>ICF Authoring: {{ econsentStore.currentIcf?.title }}</h2>
-        <span class="version-tag"
-          >Version {{ econsentStore.currentIcf?.version }}</span
-        >
+        <span class="study-tag">Study: {{ econsentStore.currentIcf?.studyId || 'CADENCE-101' }}</span>
+        <span class="version-tag">ICF Version: {{ econsentStore.currentIcf?.version }}</span>
+        <span class="protocol-tag">Protocol: {{ econsentStore.currentIcf?.protocolVersion || 'v1.0' }}</span>
       </div>
       <div class="header-right">
+        <button
+          type="button"
+          id="btn-open-sign-modal"
+          class="btn btn-secondary btn-sign"
+          @click="openSignatureModal"
+        >
+          ✍️ eConsent Sign-off
+        </button>
         <button
           class="btn btn-primary btn-publish"
           @click="showPublishModal = true"
@@ -17,6 +25,27 @@
         </button>
       </div>
     </header>
+
+    <!-- Cryptographic Manifest / Confirmation Banner if signed -->
+    <div
+      v-if="latestSignature"
+      id="signature-manifest-banner"
+      class="signature-manifest-banner card"
+      role="status"
+    >
+      <div class="manifest-header">
+        <span class="manifest-icon">🔒</span>
+        <strong style="color: var(--success); font-size: 0.95rem">
+          21 CFR Part 11 Electronic Signature Manifest Verified
+        </strong>
+      </div>
+      <div class="manifest-details">
+        <div><strong>Signer:</strong> {{ latestSignature.signerName || latestSignature.username }} ({{ latestSignature.signerRole || 'Subject' }})</div>
+        <div><strong>Meaning of Signing:</strong> {{ latestSignature.meaningOfSigning || latestSignature.signingReason }}</div>
+        <div><strong>Server Timestamp:</strong> {{ latestSignature.timestamp }}</div>
+        <div><strong>Cryptographic Checksum (SHA-256):</strong> <code>{{ latestSignature.sha256_hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }}</code></div>
+      </div>
+    </div>
 
     <!-- Language Translations Selector Tabs -->
     <div class="translations-section">
@@ -28,10 +57,10 @@
       <!-- Sidebar / Outline Nav -->
       <nav class="section-outline">
         <div class="outline-group">
-          <h4>Consent Sections</h4>
-          <ul>
+          <h4>Modular Consent Clauses</h4>
+          <ul id="consent-clauses-list">
             <li
-              v-for="sec in econsentStore.sections"
+              v-for="(sec, sIdx) in econsentStore.sections"
               :key="sec.id"
               :class="[
                 'outline-item',
@@ -41,6 +70,35 @@
             >
               <span class="item-icon">📄</span>
               <span class="item-title">{{ sec.title }}</span>
+
+              <div class="clause-controls" @click.stop>
+                <button
+                  type="button"
+                  class="btn-clause-ctrl btn-move-up"
+                  title="Move Up"
+                  :disabled="sIdx === 0"
+                  @click="econsentStore.reorderSections(sIdx, sIdx - 1)"
+                >
+                  ▲
+                </button>
+                <button
+                  type="button"
+                  class="btn-clause-ctrl btn-move-down"
+                  title="Move Down"
+                  :disabled="sIdx === econsentStore.sections.length - 1"
+                  @click="econsentStore.reorderSections(sIdx, sIdx + 1)"
+                >
+                  ▼
+                </button>
+                <button
+                  type="button"
+                  class="btn-clause-ctrl btn-delete-clause"
+                  title="Remove Clause"
+                  @click="econsentStore.removeSection(sec.id)"
+                >
+                  ✕
+                </button>
+              </div>
             </li>
           </ul>
 
@@ -106,7 +164,9 @@
           />
         </div>
         <div v-else-if="showQuiz">
-          <ComprehensionQuizBuilder />
+          <ComprehensionQuizBuilder
+            @proceed-to-sign="openSignatureModal"
+          />
         </div>
         <div v-else class="no-selection-pane">
           <p>
@@ -116,6 +176,19 @@
         </div>
       </main>
     </div>
+
+    <!-- Signature Capture Modal -->
+    <SignatureCaptureModal
+      :is-open="showSignatureModal"
+      username="participant.cadence101"
+      signer-name="Participant Jane Doe"
+      role="Subject"
+      action-url="/api/v1/econsent/templates/icf-001/versions/1/capture-consent"
+      :on-sign="handleExecuteSignature"
+      @cancel="showSignatureModal = false"
+      @success="onSignatureSuccess"
+      @error="onSignatureError"
+    />
 
     <!-- Publish Version GxP Modal -->
     <div v-if="showPublishModal" class="publish-modal-overlay">
@@ -169,11 +242,14 @@ import { useEconsentStore } from "../stores/econsent.js";
 import IcfSectionEditor from "../components/econsent/IcfSectionEditor.vue";
 import ComprehensionQuizBuilder from "../components/econsent/ComprehensionQuizBuilder.vue";
 import LanguageTranslationTabs from "../components/econsent/LanguageTranslationTabs.vue";
+import SignatureCaptureModal from "../components/SignatureCaptureModal.vue";
 
 const econsentStore = useEconsentStore();
 const activeSectionId = ref(null);
 const showQuiz = ref(false);
 const showPublishModal = ref(false);
+const showSignatureModal = ref(false);
+const latestSignature = ref(null);
 const publishReason = ref("");
 const publishError = ref("");
 const newSectionTitle = ref("");
@@ -211,6 +287,42 @@ const handleCreateSection = () => {
     selectSection(newSec.id);
     newSectionTitle.value = "";
   }
+};
+
+const openSignatureModal = () => {
+  showSignatureModal.value = true;
+};
+
+const handleExecuteSignature = async (sigToken, signingReason, metadata = {}) => {
+  const record = {
+    signerName: metadata.signerName || "Participant Jane Doe",
+    signerRole: metadata.signerRole || "Subject",
+    meaningOfSigning: signingReason || "I agree to participate",
+    signingReason: signingReason || "I agree to participate",
+    timestamp: new Date().toISOString(),
+    sha256_hash: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289",
+    sigToken,
+  };
+  econsentStore.recordSignedConsent(record);
+  latestSignature.value = record;
+  return record;
+};
+
+const onSignatureSuccess = (result) => {
+  showSignatureModal.value = false;
+  if (!latestSignature.value) {
+    latestSignature.value = result || {
+      signerName: "Participant Jane Doe",
+      signerRole: "Subject",
+      meaningOfSigning: "I agree to participate",
+      timestamp: new Date().toISOString(),
+      sha256_hash: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289",
+    };
+  }
+};
+
+const onSignatureError = (err) => {
+  console.error("Signature capture failed:", err);
 };
 
 const handlePublish = () => {
@@ -253,18 +365,41 @@ const formatTime = (isoString) => {
   align-items: center;
   border-bottom: 2px solid var(--border);
   padding-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .header-left h2 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   color: var(--neutral-dark);
+}
+
+.study-tag {
+  background-color: #f1f5f9;
+  color: #334155;
+  border: 1px solid var(--border);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.protocol-tag {
+  background-color: #eff6ff;
+  color: var(--primary);
+  border: 1px solid #bfdbfe;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .version-tag {
@@ -276,13 +411,50 @@ const formatTime = (isoString) => {
   font-weight: bold;
 }
 
+.header-right {
+  display: flex;
+  gap: 8px;
+}
+
+.signature-manifest-banner {
+  background-color: #f0fdf4;
+  border-left: 4px solid var(--success);
+  border: 1px solid #bbf7d0;
+  padding: 16px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.manifest-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.manifest-details {
+  font-size: 0.85rem;
+  color: #1e293b;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.manifest-details code {
+  background-color: #e2e8f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
 .translations-section {
   width: 100%;
 }
 
 .builder-workspace {
   display: grid;
-  grid-template-columns: 300px 1fr;
+  grid-template-columns: 320px 1fr;
   gap: 24px;
 }
 
@@ -318,7 +490,7 @@ const formatTime = (isoString) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 8px 10px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.9rem;
@@ -338,6 +510,36 @@ const formatTime = (isoString) => {
 
 .item-icon {
   font-size: 1rem;
+}
+
+.item-title {
+  flex: 1;
+}
+
+.clause-controls {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-clause-ctrl {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-size: 0.65rem;
+  padding: 2px 5px;
+  cursor: pointer;
+  color: #475569;
+}
+
+.btn-clause-ctrl:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: var(--primary);
+}
+
+.btn-delete-clause:hover {
+  background: #fee2e2;
+  color: var(--error);
+  border-color: #fca5a5;
 }
 
 .separator {

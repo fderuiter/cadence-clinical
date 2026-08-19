@@ -1,5 +1,5 @@
 // Auto-generated from OpenAPI schema definition
-// Generated on: 2026-08-19T15:49:24.286Z
+// Generated on: 2026-08-19T16:08:03.979Z
 
 export interface ActivityAssignmentRequest {
   visit_id: string;
@@ -33,6 +33,21 @@ export interface AmendmentImpactReport {
   estimated_cost_usd?: number;
   burden_change?: number;
   explanation: string;
+}
+
+export interface AmendmentImpactSummary {
+  base_version: string;
+  amended_version: string;
+  burden_delta?: number;
+  affected_visits_count?: number;
+  affected_visits?: string[];
+  affected_activities_count?: number;
+  affected_activities?: string[];
+  schema_revisions?: SchemaRevisionSummary;
+  is_substantial?: boolean;
+  requires_reconsent?: boolean;
+  estimated_cost_usd?: number;
+  narrative_summary?: string;
 }
 
 export interface ApproveProtocolRequest {
@@ -109,6 +124,28 @@ export interface Body_upload_mapping_csv_api_v1_mappings_upload_post {
 
 export interface Body_upload_protocol_ingestion_api_v1_designer_ingestion_upload_post {
   file: string;
+}
+
+export interface BranchAmendmentRequest {
+  study_id: string;
+  base_version_tag?: string;
+  amendment_type?: string;
+  requires_reconsent?: boolean;
+  change_reason: string;
+  branch_name?: string | null;
+}
+
+export interface BranchAmendmentResponse {
+  study_id: string;
+  branch_id: string;
+  branch_name: string;
+  base_version_tag: string;
+  new_version_tag: string;
+  version_id: string;
+  status: string;
+  requires_reconsent: boolean;
+  created_by: string;
+  created_at: string;
 }
 
 export interface BurdenTraceItem {
@@ -390,6 +427,18 @@ export interface EligibilityCriterion {
   condition?: ExpressionNode_Output;
 }
 
+export interface EntityDiff {
+  entity_id: string;
+  entity_type: string;
+  name: string;
+  change_type: string;
+  spec?: string | null;
+  schedule?: string | null;
+  delta_note?: string | null;
+  old_value?: any | null;
+  new_value?: any | null;
+}
+
 export interface EpochProperties {
   name?: string | null;
   epoch_name?: string | null;
@@ -599,6 +648,14 @@ export interface LinkVisitProcedureRequest {
 
 export type LogicalOperator = "and" | "or" | "not";
 
+export interface MigrationDirective {
+  directive_id: string;
+  action: string;
+  description: string;
+  affected_cohort?: string;
+  target_version: string;
+}
+
 export type ObjectType = "FORM" | "DATA_ELEMENT" | "ARM" | "VISIT";
 
 export interface ProblemDetails {
@@ -692,6 +749,15 @@ export interface RulePreviewResponse {
   circular_cycles: string[];
 }
 
+export interface SchemaRevisionSummary {
+  arms?: Record<string, any>;
+  epochs?: Record<string, any>;
+  encounters?: Record<string, any>;
+  activities?: Record<string, any>;
+  eligibility_criteria?: Record<string, any>;
+  forms?: Record<string, any>;
+}
+
 export type SectionReviewStatus = "DRAFT" | "IN_REVIEW" | "LOCKED" | "APPROVED";
 
 export interface SectionReviewTransition {
@@ -712,6 +778,26 @@ export interface SectionTransitionRequest {
   username?: string | null;
   password?: string | null;
   signing_reason?: SigningReason | null;
+}
+
+export interface SemanticDiffRequest {
+  study_id: string;
+  base_version_tag: string;
+  amended_version_tag: string;
+  base_payload?: Record<string, any> | null;
+  draft_payload?: Record<string, any> | null;
+}
+
+export interface SemanticDiffResponse {
+  study_id: string;
+  base_version_tag: string;
+  amended_version_tag: string;
+  usdm_graph_diffs?: EntityDiff[];
+  soa_matrix_diffs?: EntityDiff[];
+  eligibility_diffs?: EntityDiff[];
+  ecrf_form_diffs?: EntityDiff[];
+  impact_summary: AmendmentImpactSummary;
+  migration_directives?: MigrationDirective[];
 }
 
 export type SigningReason = "AUTHOR" | "REVIEW" | "APPROVAL" | "SPONSOR_APPROVAL" | "INVESTIGATOR_SIGNATURE" | "TECHNICAL_QC" | "CLINICAL_QC" | "DATA_LOCK" | "SYSTEM_SEAL" | "PROTOCOL_APPROVAL" | "REGULATORY_FORM_SIGNATURE" | "TRAINING_ACKNOWLEDGEMENT" | "SITE_VISIT_SIGN_OFF";

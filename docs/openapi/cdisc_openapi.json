@@ -861,118 +861,10 @@
       }
     },
     "/{path}": {
-      "get": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__get",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__get",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
       "post": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__get",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "options": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__get",
+        "operationId": "proxy_requests__path__post",
         "parameters": [
           {
             "name": "path",
@@ -1008,7 +900,7 @@
       "head": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__get",
+        "operationId": "proxy_requests__path__post",
         "parameters": [
           {
             "name": "path",
@@ -1044,7 +936,7 @@
       "put": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__get",
+        "operationId": "proxy_requests__path__post",
         "parameters": [
           {
             "name": "path",
@@ -1080,7 +972,115 @@
       "delete": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__get",
+        "operationId": "proxy_requests__path__post",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__post",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__post",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__post",
         "parameters": [
           {
             "name": "path",
@@ -5297,6 +5297,195 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Designer_CommitUSDMResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/designer/api/v1/designer/amendments/branch": {
+      "post": {
+        "tags": [
+          "DesignerAmendments"
+        ],
+        "summary": "Branch Protocol Amendment Endpoint",
+        "description": "Create an isolated, immutable protocol amendment working branch from an approved baseline.\n\nRequirements: PRD-SYS-001, PRD-SUB-007",
+        "operationId": "branch_protocol_amendment_endpoint_api_v1_designer_amendments_branch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Designer_BranchAmendmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_BranchAmendmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/designer/api/v1/designer/amendments/diff": {
+      "post": {
+        "tags": [
+          "DesignerAmendments"
+        ],
+        "summary": "Compute Semantic Diff Endpoint",
+        "description": "Compute multi-layer visual and semantic protocol diff across USDM Graph, SoA, Eligibility, and eCRF forms.\n\nRequirements: PRD-SYS-001, PRD-SUB-007",
+        "operationId": "compute_semantic_diff_endpoint_api_v1_designer_amendments_diff_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Designer_SemanticDiffRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_SemanticDiffResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/designer/api/v1/designer/amendments/{study_id}/diff": {
+      "get": {
+        "tags": [
+          "DesignerAmendments"
+        ],
+        "summary": "Get Study Semantic Diff Endpoint",
+        "description": "Get multi-layer semantic diff for a study between two version tags.\n\nRequirements: PRD-SYS-001, PRD-SUB-007",
+        "operationId": "get_study_semantic_diff_endpoint_api_v1_designer_amendments__study_id__diff_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "base_version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "1.0.0",
+              "title": "Base Version"
+            }
+          },
+          {
+            "name": "amended_version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "2.0.0",
+              "title": "Amended Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_SemanticDiffResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/designer/api/v1/designer/amendments/impact": {
+      "post": {
+        "tags": [
+          "DesignerAmendments"
+        ],
+        "summary": "Compute Amendment Impact Endpoint",
+        "description": "Compute quantitative Amendment Impact Summary (burden delta, affected visits, schema revisions).\n\nRequirements: PRD-SYS-001, PRD-SUB-007",
+        "operationId": "compute_amendment_impact_endpoint_api_v1_designer_amendments_impact_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Designer_SemanticDiffRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_AmendmentImpactSummary"
                 }
               }
             }
@@ -34898,6 +35087,89 @@
         "title": "AmendmentImpactReport",
         "description": "Analysis of changes and cost estimates of a study amendment."
       },
+      "Designer_AmendmentImpactSummary": {
+        "properties": {
+          "base_version": {
+            "type": "string",
+            "title": "Base Version",
+            "description": "Baseline protocol version tag"
+          },
+          "amended_version": {
+            "type": "string",
+            "title": "Amended Version",
+            "description": "Amended protocol version tag"
+          },
+          "burden_delta": {
+            "type": "number",
+            "title": "Burden Delta",
+            "description": "Quantitative burden score delta (+/- burden index)",
+            "default": 0.0
+          },
+          "affected_visits_count": {
+            "type": "integer",
+            "title": "Affected Visits Count",
+            "description": "Total affected visits count",
+            "default": 0
+          },
+          "affected_visits": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Affected Visits",
+            "description": "Names of affected visits/encounters"
+          },
+          "affected_activities_count": {
+            "type": "integer",
+            "title": "Affected Activities Count",
+            "description": "Total affected procedures count",
+            "default": 0
+          },
+          "affected_activities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Affected Activities",
+            "description": "Names of affected activities/procedures"
+          },
+          "schema_revisions": {
+            "$ref": "#/components/schemas/Designer_SchemaRevisionSummary",
+            "description": "Detailed schema revision breakdown"
+          },
+          "is_substantial": {
+            "type": "boolean",
+            "title": "Is Substantial",
+            "description": "Whether amendment is substantial vs administrative",
+            "default": false
+          },
+          "requires_reconsent": {
+            "type": "boolean",
+            "title": "Requires Reconsent",
+            "description": "Whether mandatory subject re-consent is mandated (PRD-SUB-007)",
+            "default": false
+          },
+          "estimated_cost_usd": {
+            "type": "number",
+            "title": "Estimated Cost Usd",
+            "description": "Estimated total cost impact in USD",
+            "default": 0.0
+          },
+          "narrative_summary": {
+            "type": "string",
+            "title": "Narrative Summary",
+            "description": "Executive clinical narrative summary of changes",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "base_version",
+          "amended_version"
+        ],
+        "title": "AmendmentImpactSummary",
+        "description": "Calculated operational and clinical burden impact of a protocol amendment.\n\nRequirements: PRD-SYS-001, PRD-SUB-007"
+      },
       "Designer_ApproveProtocolRequest": {
         "properties": {
           "signing_reason": {
@@ -35252,6 +35524,126 @@
           "file"
         ],
         "title": "Body_upload_protocol_ingestion_api_v1_designer_ingestion_upload_post"
+      },
+      "Designer_BranchAmendmentRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target study ID"
+          },
+          "base_version_tag": {
+            "type": "string",
+            "title": "Base Version Tag",
+            "description": "Base approved version tag to branch from",
+            "default": "1.0.0"
+          },
+          "amendment_type": {
+            "type": "string",
+            "title": "Amendment Type",
+            "description": "Amendment classification: 'major' or 'minor'",
+            "default": "minor"
+          },
+          "requires_reconsent": {
+            "type": "boolean",
+            "title": "Requires Reconsent",
+            "description": "Flag indicating if subject re-consent is mandated",
+            "default": false
+          },
+          "change_reason": {
+            "type": "string",
+            "title": "Change Reason",
+            "description": "GxP 21 CFR Part 11 change justification reason"
+          },
+          "branch_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch Name",
+            "description": "Optional custom branch name (e.g. amendment-v2.0-draft)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "change_reason"
+        ],
+        "title": "BranchAmendmentRequest",
+        "description": "Payload to create an immutable amendment branch.\n\nRequirements: PRD-SYS-001, PRD-SUB-007"
+      },
+      "Designer_BranchAmendmentResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target study ID"
+          },
+          "branch_id": {
+            "type": "string",
+            "title": "Branch Id",
+            "description": "Unique branch identifier"
+          },
+          "branch_name": {
+            "type": "string",
+            "title": "Branch Name",
+            "description": "Branch name"
+          },
+          "base_version_tag": {
+            "type": "string",
+            "title": "Base Version Tag",
+            "description": "Base version tag"
+          },
+          "new_version_tag": {
+            "type": "string",
+            "title": "New Version Tag",
+            "description": "New draft version tag"
+          },
+          "version_id": {
+            "type": "string",
+            "title": "Version Id",
+            "description": "New version node identifier"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Lifecycle status (e.g. DRAFT_AMENDMENT)"
+          },
+          "requires_reconsent": {
+            "type": "boolean",
+            "title": "Requires Reconsent",
+            "description": "Re-consent requirement flag"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "User ID who created branch"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "UTC ISO creation timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "branch_id",
+          "branch_name",
+          "base_version_tag",
+          "new_version_tag",
+          "version_id",
+          "status",
+          "requires_reconsent",
+          "created_by",
+          "created_at"
+        ],
+        "title": "BranchAmendmentResponse",
+        "description": "Response after creating an immutable amendment branch.\n\nRequirements: PRD-SYS-001"
       },
       "Designer_BurdenTraceItem": {
         "properties": {
@@ -36714,6 +37106,95 @@
         "title": "EligibilityCriterion",
         "description": "Represents a single inclusion or exclusion criterion with full GxP audit metadata."
       },
+      "Designer_EntityDiff": {
+        "properties": {
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id",
+            "description": "Unique entity identifier"
+          },
+          "entity_type": {
+            "type": "string",
+            "title": "Entity Type",
+            "description": "Entity type: Arm, Epoch, Encounter, Activity, Criterion, Form, Rule"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Display name of the entity"
+          },
+          "change_type": {
+            "type": "string",
+            "title": "Change Type",
+            "description": "Diff status: ADDED, REMOVED, MODIFIED, PRESERVED, UNCHANGED"
+          },
+          "spec": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spec",
+            "description": "Specification or subtitle details"
+          },
+          "schedule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule",
+            "description": "Schedule timing / epoch details"
+          },
+          "delta_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Note",
+            "description": "Specific note describing the delta"
+          },
+          "old_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old Value",
+            "description": "Previous baseline value"
+          },
+          "new_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Value",
+            "description": "Amended new value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entity_id",
+          "entity_type",
+          "name",
+          "change_type"
+        ],
+        "title": "EntityDiff",
+        "description": "Entity-level visual diff with semantic tokens.\n\nRequirements: PRD-SYS-001"
+      },
       "Designer_EpochProperties": {
         "properties": {
           "name": {
@@ -37898,6 +38379,45 @@
         "title": "LogicalOperator",
         "description": "Allowed logical connectors for composite criteria expressions."
       },
+      "Designer_MigrationDirective": {
+        "properties": {
+          "directive_id": {
+            "type": "string",
+            "title": "Directive Id",
+            "description": "Unique migration directive ID"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action",
+            "description": "Directive action: RECONSENT_GATE, SCHEMA_UPGRADE, PRESERVE_HISTORICAL"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Detailed directive description"
+          },
+          "affected_cohort": {
+            "type": "string",
+            "title": "Affected Cohort",
+            "description": "Target subject cohort: ACTIVE, COMPLETED, ALL",
+            "default": "ACTIVE"
+          },
+          "target_version": {
+            "type": "string",
+            "title": "Target Version",
+            "description": "Target protocol version tag"
+          }
+        },
+        "type": "object",
+        "required": [
+          "directive_id",
+          "action",
+          "description",
+          "target_version"
+        ],
+        "title": "MigrationDirective",
+        "description": "Directive for in-flight subject migration and version transition.\n\nRequirements: PRD-SYS-001, PRD-SUB-007"
+      },
       "Designer_ObjectType": {
         "type": "string",
         "enum": [
@@ -38407,6 +38927,55 @@
         "title": "RulePreviewResponse",
         "description": "Response for rule preview/validation request."
       },
+      "Designer_SchemaRevisionSummary": {
+        "properties": {
+          "arms": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Arms"
+          },
+          "epochs": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Epochs"
+          },
+          "encounters": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Encounters"
+          },
+          "activities": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Activities"
+          },
+          "eligibility_criteria": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Eligibility Criteria"
+          },
+          "forms": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Forms"
+          }
+        },
+        "type": "object",
+        "title": "SchemaRevisionSummary",
+        "description": "Breakdown of schema revisions across USDM domain layers.\n\nRequirements: PRD-SYS-001"
+      },
       "Designer_SectionReviewStatus": {
         "type": "string",
         "enum": [
@@ -38526,6 +39095,131 @@
           "reason_for_change"
         ],
         "title": "SectionTransitionRequest"
+      },
+      "Designer_SemanticDiffRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Protocol study identifier"
+          },
+          "base_version_tag": {
+            "type": "string",
+            "title": "Base Version Tag",
+            "description": "Base version tag"
+          },
+          "amended_version_tag": {
+            "type": "string",
+            "title": "Amended Version Tag",
+            "description": "Amended target version tag"
+          },
+          "base_payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Payload",
+            "description": "Optional explicit base protocol payload"
+          },
+          "draft_payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Payload",
+            "description": "Optional explicit amended protocol payload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "base_version_tag",
+          "amended_version_tag"
+        ],
+        "title": "SemanticDiffRequest",
+        "description": "Request to compute semantic multi-layer amendment diff.\n\nRequirements: PRD-SYS-001"
+      },
+      "Designer_SemanticDiffResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Protocol study identifier"
+          },
+          "base_version_tag": {
+            "type": "string",
+            "title": "Base Version Tag",
+            "description": "Baseline version tag"
+          },
+          "amended_version_tag": {
+            "type": "string",
+            "title": "Amended Version Tag",
+            "description": "Amended version tag"
+          },
+          "usdm_graph_diffs": {
+            "items": {
+              "$ref": "#/components/schemas/Designer_EntityDiff"
+            },
+            "type": "array",
+            "title": "Usdm Graph Diffs",
+            "description": "USDM Graph node diffs"
+          },
+          "soa_matrix_diffs": {
+            "items": {
+              "$ref": "#/components/schemas/Designer_EntityDiff"
+            },
+            "type": "array",
+            "title": "Soa Matrix Diffs",
+            "description": "Schedule of Activities matrix diffs"
+          },
+          "eligibility_diffs": {
+            "items": {
+              "$ref": "#/components/schemas/Designer_EntityDiff"
+            },
+            "type": "array",
+            "title": "Eligibility Diffs",
+            "description": "Eligibility criteria diffs"
+          },
+          "ecrf_form_diffs": {
+            "items": {
+              "$ref": "#/components/schemas/Designer_EntityDiff"
+            },
+            "type": "array",
+            "title": "Ecrf Form Diffs",
+            "description": "eCRF form and field diffs"
+          },
+          "impact_summary": {
+            "$ref": "#/components/schemas/Designer_AmendmentImpactSummary",
+            "description": "Calculated amendment impact summary"
+          },
+          "migration_directives": {
+            "items": {
+              "$ref": "#/components/schemas/Designer_MigrationDirective"
+            },
+            "type": "array",
+            "title": "Migration Directives",
+            "description": "Automated in-flight migration directives"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "base_version_tag",
+          "amended_version_tag",
+          "impact_summary"
+        ],
+        "title": "SemanticDiffResponse",
+        "description": "Multi-layer visual and semantic protocol diff response.\n\nRequirements: PRD-SYS-001, PRD-SUB-007"
       },
       "Designer_SigningReason": {
         "type": "string",
@@ -53483,6 +54177,21 @@
               }
             ],
             "title": "Error Message"
+          },
+          "warnings": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warnings"
           }
         },
         "type": "object",

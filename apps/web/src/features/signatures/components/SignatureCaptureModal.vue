@@ -19,6 +19,32 @@
           to apply this digital signature.
         </p>
 
+        <!-- Signer Identity & Role Fields -->
+        <div class="form-group">
+          <label for="sig-signer-name">Signer Full Name</label>
+          <input
+            id="sig-signer-name"
+            v-model="signerNameVal"
+            type="text"
+            placeholder="e.g. John Doe"
+            :disabled="busy"
+            class="form-control"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="sig-role">Signer Role</label>
+          <select id="sig-role" v-model="signerRoleVal" :disabled="busy">
+            <option value="Subject">Subject / Participant</option>
+            <option value="PI">PI / Principal Investigator</option>
+            <option value="Site CRC">Site CRC</option>
+            <option value="Investigator">Investigator</option>
+            <option value="Sponsor Designer">Sponsor Designer</option>
+            <option value="Data Manager">Data Manager</option>
+            <option value="Auditor">Auditor</option>
+          </select>
+        </div>
+
         <!-- Reuse GxpCredentialsInput -->
         <!-- prettier-ignore -->
         <GxpCredentialsInput
@@ -30,9 +56,14 @@
         />
 
         <div class="form-group last-group">
-          <label for="sig-reason">Signing Reason</label>
-          <select id="sig-reason" v-model="signingReason" :disabled="busy">
-            <option value="" disabled>-- Select Reason --</option>
+          <label for="sig-reason">Meaning of Signing / Signing Reason</label>
+          <select
+            id="sig-reason"
+            v-model="signingReason"
+            data-testid="sig-meaning-select"
+            :disabled="busy"
+          >
+            <option value="" disabled>-- Select Meaning / Reason --</option>
             <option v-for="r in reasons" :key="r" :value="r">
               {{ r }}
             </option>
@@ -80,12 +111,20 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  signerName: {
+    type: String,
+    default: "",
+  },
+  role: {
+    type: String,
+    default: "Subject",
+  },
   actionUrl: {
     type: String,
     required: true,
   },
   // async callback to handle the final sign request using sigToken and signingReason
-  // e.g., (sigToken, signingReason) => Promise<any>
+  // e.g., (sigToken, signingReason, metadata) => Promise<any>
   onSign: {
     type: Function,
     default: null,
@@ -99,6 +138,8 @@ useFocusTrap(modalRef);
 useEscapeClose(() => emit("cancel"));
 
 const usernameVal = ref(props.username);
+const signerNameVal = ref(props.signerName || props.username || "");
+const signerRoleVal = ref(props.role || "Subject");
 const password = ref("");
 const totp = ref("");
 const signingReason = ref("");
@@ -109,6 +150,9 @@ const error = ref("");
 const signatureService = inject("signatureService", null);
 
 const reasons = [
+  "I agree to participate",
+  "Investigator Certification",
+  "I have read, understood, and agree to participate in this research study",
   "AUTHOR",
   "REVIEW",
   "APPROVAL",
@@ -125,6 +169,8 @@ watch(
   (newVal) => {
     if (newVal) {
       usernameVal.value = props.username;
+      signerNameVal.value = props.signerName || props.username || "";
+      signerRoleVal.value = props.role || "Subject";
       password.value = "";
       totp.value = "";
       signingReason.value = "";
@@ -138,6 +184,23 @@ watch(
   () => props.username,
   (newVal) => {
     usernameVal.value = newVal;
+    if (!signerNameVal.value) {
+      signerNameVal.value = newVal;
+    }
+  }
+);
+
+watch(
+  () => props.signerName,
+  (newVal) => {
+    if (newVal) signerNameVal.value = newVal;
+  }
+);
+
+watch(
+  () => props.role,
+  (newVal) => {
+    if (newVal) signerRoleVal.value = newVal;
   }
 );
 
@@ -167,6 +230,8 @@ async function confirm() {
   const p = password.value;
   const t = totp.value || null;
   const r = signingReason.value;
+  const sName = signerNameVal.value || u;
+  const sRole = signerRoleVal.value || "Subject";
 
   // IMMEDIATELY clear sensitive fields to comply with GxP no-leak mandates
   password.value = "";
@@ -192,8 +257,15 @@ async function confirm() {
 
     // Step 2: Call document sign-off (either via props callback or internal client)
     let signoffResult;
+    const metadata = {
+      signerName: sName,
+      signerRole: sRole,
+      meaningOfSigning: r,
+      signingReason: r,
+    };
+
     if (props.onSign) {
-      signoffResult = await props.onSign(sigToken, r);
+      signoffResult = await props.onSign(sigToken, r, metadata);
     } else {
       // Extract document ID from actionUrl if possible, or assume it's handled by caller
       const docIdMatch = props.actionUrl.match(
@@ -206,7 +278,10 @@ async function confirm() {
       signoffResult = await service.signDocument(
         documentId,
         { signingReason: r },
-        { changeReason: `Part 11 Document Sign-off: Reason - ${r}`, sigToken }
+        {
+          changeReason: `Part 11 Document Sign-off: Reason - ${r}`,
+          sigToken,
+        }
       );
     }
 
@@ -260,6 +335,9 @@ async function confirm() {
 defineExpose({
   password,
   totp,
+  signerNameVal,
+  signerRoleVal,
+  signingReason,
 });
 </script>
 

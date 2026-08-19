@@ -119,6 +119,9 @@ from apps.designer.dependencies import (
     require_study_scope,
 )
 from apps.designer.domain.exceptions import ConceptLockedError
+from apps.designer.presentation.routers.amendments import (
+    router as amendments_router,
+)
 from apps.designer.presentation.routers.cascade import router as cascade_router
 from apps.designer.presentation.routers.comments import router as comments_router
 from apps.designer.presentation.routers.designer_routes import (
@@ -160,6 +163,7 @@ app.include_router(cascade_router)
 app.include_router(export_router)
 app.include_router(comments_router)
 app.include_router(digitization_router)
+app.include_router(amendments_router)
 app.include_router(designer_router)
 
 

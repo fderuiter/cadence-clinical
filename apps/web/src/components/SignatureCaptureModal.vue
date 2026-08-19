@@ -1,7 +1,7 @@
 <template>
   <SignatureCaptureModal
     ref="innerRef"
-    v-bind="$attrs"
+    v-bind="props"
     @cancel="$emit('cancel', $event)"
     @success="$emit('success', $event)"
     @error="$emit('error', $event)"
@@ -12,6 +12,33 @@
 import { ref, computed, provide } from "vue";
 import SignatureCaptureModal from "../features/signatures/components/SignatureCaptureModal.vue";
 import { etmfService } from "../api/etmf";
+
+const props = defineProps({
+  isOpen: {
+    type: Boolean,
+    default: false,
+  },
+  username: {
+    type: String,
+    default: "",
+  },
+  signerName: {
+    type: String,
+    default: "",
+  },
+  role: {
+    type: String,
+    default: "Subject",
+  },
+  actionUrl: {
+    type: String,
+    default: "",
+  },
+  onSign: {
+    type: Function,
+    default: null,
+  },
+});
 
 // Provide the eTMF-specific service to the decoupled FSD component via Dependency Injection
 provide("signatureService", etmfService);
@@ -39,8 +66,38 @@ const totp = computed({
   },
 });
 
+const signerName = computed({
+  get: () => innerRef.value?.signerNameVal || "",
+  set: (val) => {
+    if (innerRef.value) {
+      innerRef.value.signerNameVal = val;
+    }
+  },
+});
+
+const signerRole = computed({
+  get: () => innerRef.value?.signerRoleVal || "",
+  set: (val) => {
+    if (innerRef.value) {
+      innerRef.value.signerRoleVal = val;
+    }
+  },
+});
+
+const signingReason = computed({
+  get: () => innerRef.value?.signingReason || "",
+  set: (val) => {
+    if (innerRef.value) {
+      innerRef.value.signingReason = val;
+    }
+  },
+});
+
 defineExpose({
   password,
   totp,
+  signerName,
+  signerRole,
+  signingReason,
 });
 </script>

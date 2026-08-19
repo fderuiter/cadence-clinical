@@ -151,9 +151,20 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
     await flushPromises();
 
     expect(apiClient.post).toHaveBeenCalledWith(
+      "/api/v1/designer/amendments/branch",
+      expect.objectContaining({
+        study_id: "CADENCE-101",
+        base_version_tag: "1.0.0",
+        amendment_type: "major",
+        requires_reconsent: true,
+      }),
+      {}
+    );
+
+    expect(apiClient.post).toHaveBeenCalledWith(
       "/api/v1/execution/amendments/publish",
       expect.objectContaining({
-        study_id: "STUDY-001",
+        study_id: "CADENCE-101",
         version_number: "2.0.0",
       })
     );
@@ -205,7 +216,7 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
       "/api/v1/execution/amendments/bulk-reconsent",
       expect.objectContaining({
         subject_ids: ["SUBJ-102", "SUBJ-103"],
-        study_id: "STUDY-001",
+        study_id: "CADENCE-101",
         protocol_version: "2.0.0",
         signature_type: "ECONSENT",
       })
@@ -215,4 +226,41 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
     expect(wrapper.vm.selectedSubjectIds).toEqual([]);
     expect(wrapper.vm.showBulkReconsentModal).toBe(false);
   });
+
+  it("renders Amendment Impact Summary and multi-layer diff tabs", async () => {
+    const wrapper = mount(AmendmentDiffView, {
+      global: { plugins: [pinia] },
+    });
+
+    // Switch to graph diff tab
+    const tabs = wrapper.findAll(".tab-btn");
+    expect(tabs.length).toBeGreaterThan(1);
+    await tabs[1].trigger("click");
+    await wrapper.vm.$nextTick();
+
+    // Check Impact Summary section
+    expect(wrapper.text()).toContain("Protocol Amendment Impact Summary");
+    expect(wrapper.text()).toContain("Operational Burden Delta");
+    expect(wrapper.text()).toContain("MANDATORY RE-CONSENT GATED");
+
+    // Check layer buttons
+    const layerBtns = wrapper.findAll(".layer-tab-btn");
+    expect(layerBtns.length).toBe(3);
+    expect(layerBtns[0].text()).toContain("USDM Graph & SoA Matrix Diff");
+    expect(layerBtns[1].text()).toContain("Eligibility Criteria Diff");
+    expect(layerBtns[2].text()).toContain("eCRF Forms & Data Capture Diff");
+
+    // Switch to Eligibility layer
+    await layerBtns[1].trigger("click");
+    await wrapper.vm.$nextTick();
+    expect(wrapper.vm.activeDiffLayer).toBe("eligibility");
+    expect(wrapper.text()).toContain("Eligibility Criteria Modifications");
+
+    // Switch to eCRF Forms layer
+    await layerBtns[2].trigger("click");
+    await wrapper.vm.$nextTick();
+    expect(wrapper.vm.activeDiffLayer).toBe("ecrf");
+    expect(wrapper.text()).toContain("eCRF Form Definitions");
+  });
 });
+

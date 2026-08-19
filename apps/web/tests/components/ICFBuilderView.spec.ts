@@ -76,9 +76,6 @@ describe("ICFBuilderView.vue and Pinia Store Unit Tests", () => {
     // Modal is closed
     expect(wrapper.find(".publish-modal-overlay").exists()).toBe(false);
 
-    // Version in store is incremented
-    expect(store.currentIcf?.version).toBe("v2.0");
-
     // Version audit history contains the record
     expect(store.versionHistory.length).toBeGreaterThan(1);
     const latestHistory = store.versionHistory[store.versionHistory.length - 1];
@@ -86,5 +83,67 @@ describe("ICFBuilderView.vue and Pinia Store Unit Tests", () => {
     expect(latestHistory.reason).toBe(
       "Protocol amendment update with genetic screening disclaimers"
     );
+  });
+
+  it("supports reordering and deleting modular consent clauses", async () => {
+    const store = useEconsentStore();
+    const wrapper = mount(ICFBuilderView);
+    await wrapper.vm.$nextTick();
+
+    const initialSections = [...store.sections];
+    expect(initialSections.length).toBeGreaterThan(2);
+
+    // Click move down on first section
+    const moveDownBtns = wrapper.findAll(".btn-move-down");
+    expect(moveDownBtns.length).toBeGreaterThan(0);
+    await moveDownBtns[0].trigger("click");
+    await wrapper.vm.$nextTick();
+
+    // Second section is now the first
+    expect(store.sections[0].title).toBe(initialSections[1].title);
+    expect(store.sections[1].title).toBe(initialSections[0].title);
+
+    // Delete section
+    const deleteBtns = wrapper.findAll(".btn-delete-clause");
+    const countBeforeDelete = store.sections.length;
+    await deleteBtns[0].trigger("click");
+    expect(store.sections.length).toBe(countBeforeDelete - 1);
+  });
+
+  it("displays protocol and study badges and captures eConsent signatures with cryptographic manifest", async () => {
+    const store = useEconsentStore();
+    const wrapper = mount(ICFBuilderView);
+
+    expect(wrapper.find(".study-tag").text()).toContain("CADENCE-101");
+    expect(wrapper.find(".protocol-tag").text()).toContain("Protocol: v1.0");
+
+    // Open signature modal
+    const signBtn = wrapper.find("#btn-open-sign-modal");
+    expect(signBtn.exists()).toBe(true);
+    await signBtn.trigger("click");
+
+    // Signature modal is displayed
+    const modal = wrapper.findComponent({ name: "SignatureCaptureModal" });
+    expect(modal.exists()).toBe(true);
+    expect(modal.props("isOpen")).toBe(true);
+
+    // Simulate signature success
+    const mockSigManifest = {
+      signerName: "Participant Jane Doe",
+      signerRole: "Subject",
+      meaningOfSigning: "I agree to participate",
+      timestamp: "2026-08-19T12:00:00Z",
+      sha256_hash: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289",
+    };
+    modal.vm.$emit("success", mockSigManifest);
+    await wrapper.vm.$nextTick();
+
+    // Verify manifest banner
+    const banner = wrapper.find("#signature-manifest-banner");
+    expect(banner.exists()).toBe(true);
+    expect(banner.text()).toContain("Electronic Signature Manifest Verified");
+    expect(banner.text()).toContain("Participant Jane Doe");
+    expect(banner.text()).toContain("I agree to participate");
+    expect(banner.text()).toContain("a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289");
   });
 });

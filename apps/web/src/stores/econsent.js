@@ -8,16 +8,20 @@ export const useEconsentStore = defineStore("econsent", {
     activeLanguage: "en",
     versionHistory: [],
     passingThreshold: 80,
+    quizPassed: false,
+    quizScore: 0,
+    signedConsents: [],
   }),
 
   actions: {
     loadIcf(id) {
-      // Mock loading an ICF
+      // Mock loading an ICF linked to CADENCE-101 and active protocol version
       this.currentIcf = {
         id: id || "icf-001",
-        title: "Informed Consent for Hypertension Study",
+        title: "CADENCE-101 Informed Consent Form",
         version: "v1.0",
-        studyId: "STUDY-USDM-001",
+        protocolVersion: "v1.0",
+        studyId: "CADENCE-101",
       };
 
       // Set default version history
@@ -136,6 +140,8 @@ export const useEconsentStore = defineStore("econsent", {
 
       this.activeLanguage = "en";
       this.passingThreshold = 80;
+      this.quizPassed = false;
+      this.quizScore = 0;
     },
 
     addSection(title) {
@@ -167,6 +173,26 @@ export const useEconsentStore = defineStore("econsent", {
       return newSection;
     },
 
+    removeSection(sectionId) {
+      const idx = this.sections.findIndex((s) => s.id === sectionId);
+      if (idx !== -1) {
+        this.sections.splice(idx, 1);
+      }
+    },
+
+    reorderSections(fromIndex, toIndex) {
+      if (
+        fromIndex < 0 ||
+        fromIndex >= this.sections.length ||
+        toIndex < 0 ||
+        toIndex >= this.sections.length
+      ) {
+        return;
+      }
+      const item = this.sections.splice(fromIndex, 1)[0];
+      this.sections.splice(toIndex, 0, item);
+    },
+
     updateSectionContent(sectionId, html) {
       const sec = this.sections.find((s) => s.id === sectionId);
       if (sec) {
@@ -195,6 +221,53 @@ export const useEconsentStore = defineStore("econsent", {
       });
     },
 
+    evaluateQuiz(submittedAnswers = {}) {
+      if (this.quizQuestions.length === 0) {
+        this.quizScore = 100;
+        this.quizPassed = true;
+        return { score: 100, passed: true, correctCount: 0, total: 0 };
+      }
+
+      let correctCount = 0;
+      this.quizQuestions.forEach((q) => {
+        const submitted = submittedAnswers[q.id];
+        if (
+          submitted !== undefined &&
+          parseInt(submitted, 10) === q.correctAnswerIndex
+        ) {
+          correctCount++;
+        }
+      });
+
+      const total = this.quizQuestions.length;
+      const score = Math.round((correctCount / total) * 100);
+      const passed = score >= (this.passingThreshold || 80);
+
+      this.quizScore = score;
+      this.quizPassed = passed;
+
+      return {
+        score,
+        passed,
+        correctCount,
+        total,
+        passingThreshold: this.passingThreshold,
+      };
+    },
+
+    resetQuiz() {
+      this.quizPassed = false;
+      this.quizScore = 0;
+    },
+
+    recordSignedConsent(signatureRecord) {
+      this.signedConsents.push({
+        id: `sig-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        ...signatureRecord,
+      });
+    },
+
     publishIcfVersion(reason) {
       if (!this.currentIcf) return;
       const currentVerStr = this.currentIcf.version;
@@ -208,6 +281,7 @@ export const useEconsentStore = defineStore("econsent", {
       }
 
       this.currentIcf.version = nextVerStr;
+      this.currentIcf.protocolVersion = nextVerStr;
 
       const versionRecord = {
         version: nextVerStr,

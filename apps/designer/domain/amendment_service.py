@@ -26,6 +26,7 @@ async def create_protocol_amendment(
     requires_reconsent: bool,
     change_reason: str,
     user_id: str,
+    branch_name: str | None = None,
 ) -> dict[str, Any]:
     """Clones the active study metadata graph into a new mutable draft amendment version.
 
@@ -33,6 +34,9 @@ async def create_protocol_amendment(
     """
     new_version_tag = bump_version(base_version_tag, amendment_type)
     new_version_id = f"{study_id}_{new_version_tag}_{uuid.uuid4().hex[:8]}"
+    branch_id = f"br-{uuid.uuid4().hex[:8]}"
+    effective_branch_name = branch_name or f"amendment-v{new_version_tag}-draft"
+    now_iso = dt.datetime.now(dt.UTC).isoformat()
 
     # 1. Fallback for mock/in-memory environment
     if driver is None:
@@ -83,10 +87,12 @@ async def create_protocol_amendment(
             "requires_reconsent": requires_reconsent,
             "change_reason": change_reason,
             "created_by": user_id,
-            "created_at": dt.datetime.now(dt.UTC).isoformat(),
+            "created_at": now_iso,
             "parent_version": base_version_tag,
             "version_index": new_index,
             "study_id": study_id,
+            "branch_id": branch_id,
+            "branch_name": effective_branch_name,
         }
 
         if study_id not in MOCK_STUDY_VERSIONS:
@@ -118,8 +124,15 @@ async def create_protocol_amendment(
 
         return {
             "study_id": study_id,
+            "branch_id": branch_id,
+            "branch_name": effective_branch_name,
+            "base_version_tag": base_version_tag,
             "new_version_tag": new_version_tag,
             "version_id": new_version_id,
+            "status": "DRAFT_AMENDMENT",
+            "requires_reconsent": requires_reconsent,
+            "created_by": user_id,
+            "created_at": now_iso,
         }
 
     # 2. Live Neo4j Cypher implementation
@@ -134,6 +147,8 @@ async def create_protocol_amendment(
         tag: $new_version_tag,
         version_tag: $new_version_tag,
         status: 'DRAFT_AMENDMENT',
+        branch_id: $branch_id,
+        branch_name: $branch_name,
         requires_reconsent: $requires_reconsent,
         change_reason: $change_reason,
         created_by: $user_id,
@@ -197,6 +212,8 @@ async def create_protocol_amendment(
             base_version_tag=base_version_tag,
             new_version_tag=new_version_tag,
             new_version_id=new_version_id,
+            branch_id=branch_id,
+            branch_name=effective_branch_name,
             requires_reconsent=requires_reconsent,
             change_reason=change_reason,
             user_id=user_id,
@@ -208,6 +225,13 @@ async def create_protocol_amendment(
             )
         return {
             "study_id": study_id,
+            "branch_id": branch_id,
+            "branch_name": effective_branch_name,
+            "base_version_tag": base_version_tag,
             "new_version_tag": record["new_tag"],
             "version_id": record["new_version_id"],
+            "status": "DRAFT_AMENDMENT",
+            "requires_reconsent": requires_reconsent,
+            "created_by": user_id,
+            "created_at": now_iso,
         }

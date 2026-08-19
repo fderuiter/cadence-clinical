@@ -13940,6 +13940,21 @@
               }
             ],
             "title": "Error Message"
+          },
+          "warnings": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warnings"
           }
         },
         "type": "object",

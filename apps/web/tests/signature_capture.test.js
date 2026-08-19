@@ -43,6 +43,8 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
       props: {
         isOpen: true,
         username: "fderuiter",
+        signerName: "Frederick de Ruiter",
+        role: "PI",
         actionUrl: "/api/v1/etmf/documents/doc-123/sign-off",
       },
       global: {
@@ -52,11 +54,60 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
 
     expect(wrapper.find("#signature-capture-modal").exists()).toBe(true);
     expect(wrapper.find("#sig-username").element.value).toBe("fderuiter");
+    expect(wrapper.find("#sig-signer-name").element.value).toBe("Frederick de Ruiter");
+    expect(wrapper.find("#sig-role").element.value).toBe("PI");
     expect(wrapper.find("#sig-password").exists()).toBe(true);
     expect(wrapper.find("#sig-totp").exists()).toBe(true);
     expect(wrapper.find("#sig-reason").exists()).toBe(true);
     expect(wrapper.find("#btn-cancel-sig").exists()).toBe(true);
     expect(wrapper.find("#btn-confirm-sig").exists()).toBe(true);
+  });
+
+  it("captures 21 CFR Part 11 signature with Signer Name, Role (Subject), and Meaning ('I agree to participate')", async () => {
+    etmfService.verifySignature.mockResolvedValue({
+      sig_token: "mock-econsent-token",
+    });
+
+    const mockOnSign = vi.fn().mockResolvedValue({
+      id: "consent-rec-1",
+      status: "SIGNED",
+      sha256_hash: "mock-sha256-checksum",
+    });
+
+    const wrapper = mount(SignatureCaptureModal, {
+      props: {
+        isOpen: true,
+        username: "participant.cadence101",
+        signerName: "Jane Doe",
+        role: "Subject",
+        actionUrl: "/api/v1/econsent/templates/tpl-1/capture-consent",
+        onSign: mockOnSign,
+      },
+      global: {
+        plugins: [pinia],
+      },
+    });
+
+    await wrapper.find("#sig-signer-name").setValue("Jane Doe, Subject");
+    await wrapper.find("#sig-role").setValue("Subject");
+    await wrapper.find("#sig-password").setValue("ParticipantSecret123!"); // pragma: allowlist secret
+    await wrapper.find("#sig-reason").setValue("I agree to participate");
+
+    await wrapper.find("#btn-confirm-sig").trigger("click");
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await wrapper.vm.$nextTick();
+
+    expect(mockOnSign).toHaveBeenCalledWith(
+      "mock-econsent-token",
+      "I agree to participate",
+      expect.objectContaining({
+        signerName: "Jane Doe, Subject",
+        signerRole: "Subject",
+        meaningOfSigning: "I agree to participate",
+      })
+    );
+    expect(wrapper.emitted("success")).toBeTruthy();
   });
 
   it("triggers verifySignature and signDocument on happy path, emits success, and clears credentials", async () => {
