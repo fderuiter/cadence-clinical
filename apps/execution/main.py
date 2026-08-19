@@ -780,6 +780,8 @@ class SubjectCreate(BaseModel):
 
     subject_id: str
     study_id: str
+    site_id: str | None = None
+    arm_id: str | None = None
     demographics: Demographics | None = None
 
 
@@ -789,6 +791,10 @@ class SubjectResponse(BaseModel):
     id: str
     subject_id: str
     study_id: str
+    site_id: str | None = None
+    treatment_group: str | None = None
+    status: str | None = "SCREENING"
+    active_protocol_version: str | None = "1.0.0"
     encrypted_demographics: str | None = None
 
 
@@ -985,6 +991,8 @@ async def create_subject(
             subj = ClinicalSubject(
                 subject_id=payload.subject_id,
                 study_id=payload.study_id,
+                site_id=payload.site_id,
+                treatment_group=payload.arm_id,
                 encrypted_demographics=encrypted_demo,
                 enrollment_index=new_idx,
             )
@@ -997,6 +1005,10 @@ async def create_subject(
             id=subj_db.id,
             subject_id=subj_db.subject_id,
             study_id=subj_db.study_id,
+            site_id=subj_db.site_id,
+            treatment_group=subj_db.treatment_group,
+            status=subj_db.status,
+            active_protocol_version=subj_db.active_protocol_version,
             encrypted_demographics=subj_db.encrypted_demographics,
         )
 
@@ -3056,6 +3068,102 @@ async def create_form_submission(
             cloned_from_id=None,
         )
         session.add(sub)
+
+        # Persist observations if payload contains field values or observations
+        if payload.payload and isinstance(payload.payload, dict):
+            obs_list = payload.payload.get("observations")
+            if isinstance(obs_list, list):
+                for item in obs_list:
+                    if isinstance(item, dict):
+                        f_val = item.get("value")
+                        if f_val is not None:
+                            try:
+                                f_val = float(f_val)
+                            except ValueError, TypeError:
+                                f_val = None
+                        unit = item.get("unit")
+                        norm_val, norm_unit = (
+                            get_normalized_representation(f_val, unit)
+                            if f_val is not None and unit is not None
+                            else (None, None)
+                        )
+                        obs = ClinicalObservation(
+                            subject_id=payload.subject_id,
+                            study_id=payload.study_id,
+                            site_id=payload.site_id,
+                            visit_id=payload.visit_id,
+                            domain=item.get("domain", "VS"),
+                            test_code=item.get("test_code", "UNKNOWN"),
+                            test_name=item.get(
+                                "test_name", item.get("test_code", "UNKNOWN")
+                            ),
+                            value=f_val,
+                            value_string=str(
+                                item.get("value_string") or item.get("value") or ""
+                            ),
+                            unit=unit,
+                            normalized_value=norm_val,
+                            normalized_unit=norm_unit,
+                            protocol_version_tag=payload.protocol_version or "1.0.0",
+                            protocol_version_index=1,
+                        )
+                        session.add(obs)
+            else:
+                field_mapping = {
+                    "vssbp": ("VS", "VSSBP", "Systolic Blood Pressure", "mmHg"),
+                    "vsdpb": ("VS", "VSDPB", "Diastolic Blood Pressure", "mmHg"),
+                    "pulse": ("VS", "VSHR", "Pulse Rate", "bpm"),
+                    "vshr": ("VS", "VSHR", "Pulse Rate", "bpm"),
+                    "weight": ("VS", "WT", "Weight", "kg"),
+                    "wt": ("VS", "WT", "Weight", "kg"),
+                    "height": ("VS", "HT", "Height", "m"),
+                    "ht": ("VS", "HT", "Height", "m"),
+                    "temp": ("VS", "TEMP", "Body Temperature", "Cel"),
+                    "vstemp": ("VS", "TEMP", "Body Temperature", "Cel"),
+                    "wbc": ("LB", "WBC", "White Blood Cell Count", "10^9/L"),
+                    "lb_wbc": ("LB", "WBC", "White Blood Cell Count", "10^9/L"),
+                    "gluc": ("LB", "GLUC", "Glucose", "mg/dL"),
+                    "lb_gluc": ("LB", "GLUC", "Glucose", "mg/dL"),
+                    "alt": ("LB", "ALT", "Alanine Aminotransferase", "U/L"),
+                    "lb_alt": ("LB", "ALT", "Alanine Aminotransferase", "U/L"),
+                    "brthdt": ("DM", "BRTHDT", "Date of Birth", None),
+                    "sex": ("DM", "SEX", "Sex at Birth", None),
+                }
+                for k, v in payload.payload.items():
+                    k_clean = str(k).lower().replace(".", "_").replace("-", "_")
+                    if (
+                        k_clean in field_mapping
+                        and v is not None
+                        and str(v).strip() != ""
+                    ):
+                        dom, t_code, t_name, unit = field_mapping[k_clean]
+                        try:
+                            f_val = float(v)
+                        except ValueError, TypeError:
+                            f_val = None
+                        norm_val, norm_unit = (
+                            get_normalized_representation(f_val, unit)
+                            if f_val is not None and unit is not None
+                            else (None, None)
+                        )
+                        obs = ClinicalObservation(
+                            subject_id=payload.subject_id,
+                            study_id=payload.study_id,
+                            site_id=payload.site_id,
+                            visit_id=payload.visit_id,
+                            domain=dom,
+                            test_code=t_code,
+                            test_name=t_name,
+                            value=f_val,
+                            value_string=str(v),
+                            unit=unit,
+                            normalized_value=norm_val,
+                            normalized_unit=norm_unit,
+                            protocol_version_tag=payload.protocol_version or "1.0.0",
+                            protocol_version_index=1,
+                        )
+                        session.add(obs)
+
         await session.commit()
 
         # Query back to get the database values

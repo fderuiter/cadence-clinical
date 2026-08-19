@@ -138,7 +138,7 @@ RULES = {
             ".agents/**/*.md",
             ".scratch/**/*.md",
         ],
-        "description": "Markdown files (*.md) must reside in apps/, packages/, docs/, scripts/, tests/, verification/, or .github/.",
+        "description": "Markdown files (*.md) must reside in apps/, packages/, docs/, scripts/, tests/, verification/, .scratch/, or .github/.",
     },
     "*.yaml": {
         "allowed": [

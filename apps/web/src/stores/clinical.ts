@@ -153,6 +153,9 @@ export interface IngestionJob {
 
 export interface SubjectFixture {
   id: string;
+  siteId?: string;
+  consentDate?: string;
+  armId?: string;
   status: string;
   active_protocol_version: string;
   consentText: string;
@@ -971,6 +974,142 @@ const useClinicalStoreInner = defineStore("clinical", {
       if (typeof window !== "undefined" && window.localStorage) {
         window.localStorage.setItem("subjects", JSON.stringify(this.subjects));
       }
+    },
+    getEcrfFieldsForVersion(version: string = "1.0.0"): ClinicalField[] {
+      const baseFields = this.ecrfFields;
+      if (version.startsWith("2.") || version === "2.0.0") {
+        const v2Fields: ClinicalField[] = [
+          {
+            id: "vs_temp",
+            label: "Body Temperature (°C)",
+            type: "text",
+            gridSpan: 6,
+            cdash: "VS.TEMP",
+            value: "36.8",
+            validation: {
+              required: false,
+              min: 30,
+              max: 45,
+              message: "Temperature must be between 30 and 45 °C",
+            },
+          },
+          {
+            id: "lb_wbc",
+            label: "White Blood Cell Count (10^9/L)",
+            type: "text",
+            gridSpan: 6,
+            cdash: "LB.WBC",
+            value: "6.5",
+            validation: {
+              required: false,
+              min: 1.0,
+              max: 50.0,
+              message: "WBC reference range is 4.0 - 11.0 10^9/L",
+            },
+          },
+          {
+            id: "lb_gluc",
+            label: "Fasting Blood Glucose (mg/dL)",
+            type: "text",
+            gridSpan: 6,
+            cdash: "LB.GLUC",
+            value: "95",
+            validation: {
+              required: false,
+              min: 40,
+              max: 400,
+              message: "Fasting Glucose reference range is 70 - 99 mg/dL",
+            },
+          },
+          {
+            id: "lb_alt",
+            label: "Alanine Aminotransferase - ALT (U/L)",
+            type: "text",
+            gridSpan: 6,
+            cdash: "LB.ALT",
+            value: "25",
+            validation: {
+              required: false,
+              min: 1,
+              max: 500,
+              message: "ALT reference range is 7 - 56 U/L",
+            },
+          },
+        ];
+        const combined = [...baseFields];
+        for (const vf of v2Fields) {
+          if (!combined.some((f) => f.id === vf.id)) {
+            combined.push(vf);
+          }
+        }
+        return combined;
+      }
+      return baseFields;
+    },
+    async enrollSubject(enrollData: {
+      id: string;
+      siteId?: string;
+      consentDate?: string;
+      armId?: string;
+      protocolVersion?: string;
+      reason?: string;
+    }) {
+      const subjectId = enrollData.id.trim();
+      if (!subjectId) return null;
+
+      let sub = this.subjects.find((s) => s.id === subjectId);
+      const version = enrollData.protocolVersion || "1.0.0";
+      const siteId = enrollData.siteId || "SITE-101";
+      const armId = enrollData.armId || "ARM-A";
+      const consentDate =
+        enrollData.consentDate || new Date().toISOString().split("T")[0];
+
+      if (!sub) {
+        sub = {
+          id: subjectId,
+          siteId: siteId,
+          consentDate: consentDate,
+          armId: armId,
+          status: "ENROLLED",
+          active_protocol_version: version,
+          consentText: `Signed ICF v${version}`,
+          consentColor: "green",
+          category: version.startsWith("2.") ? "migrated" : "pending",
+          isGated: false,
+          label: `${subjectId} (Enrolled - ${armId})`,
+        };
+        this.subjects.push(sub);
+      } else {
+        sub.siteId = siteId;
+        sub.consentDate = consentDate;
+        sub.armId = armId;
+        sub.status = "ENROLLED";
+        sub.active_protocol_version = version;
+        sub.isGated = false;
+        sub.label = `${subjectId} (Enrolled - ${armId})`;
+      }
+
+      const customReason =
+        enrollData.reason ||
+        `Subject ${subjectId} enrolled at ${siteId} assigned to arm ${armId} under protocol v${version}.`;
+
+      await this.addLedgerBlock(
+        "SUBJECT_ENROLL",
+        {
+          subject_id: subjectId,
+          site_id: siteId,
+          arm_id: armId,
+          consent_date: consentDate,
+          protocol_version: version,
+        },
+        customReason
+      );
+
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem("subjects", JSON.stringify(this.subjects));
+      }
+
+      return sub;
     },
     clearLedger() {
       this.ledgerBlocks = [];
