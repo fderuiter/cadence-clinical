@@ -969,6 +969,7 @@ def is_whitelisted(method: str, path: str) -> bool:
     wildcards = [
         "/api/v1/admin/outbox",
         "/api/v1/archive",
+        "/api/v1/designer/amendments",
         "/api/v1/designer/cascade",
         "/api/v1/designer/export",
         "/api/v1/designer/sentinel",
@@ -1012,6 +1013,7 @@ def is_whitelisted(method: str, path: str) -> bool:
         "/execution/exports",
         "/synopsis/export",
         "/synopsis/render",
+        "/designer/amendments",
         "/designer/sentinel/evaluate",
         "/designer/cascade/propagate",
         "/designer/digitization",
