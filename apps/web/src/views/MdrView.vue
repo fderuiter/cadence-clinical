@@ -1050,6 +1050,21 @@
               <span>⚡</span> Ingest &amp; Synthesize USDM Protocol
             </button>
             <button
+              id="btn-export-usdm"
+              class="btn btn-secondary"
+              style="
+                font-size: 0.82rem;
+                padding: 6px 12px;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                font-weight: 700;
+              "
+              @click="exportUsdmJson"
+            >
+              <span>📥</span> Export USDM JSON
+            </button>
+            <button
               class="btn btn-secondary"
               style="font-size: 0.82rem; padding: 6px 12px"
               @click="showUsdmJson = !showUsdmJson"
@@ -2816,6 +2831,20 @@ function openUsdmModal() {
 function closeUsdmModal() {
   showUsdmModal.value = false;
   isDragging.value = false;
+}
+
+function exportUsdmJson() {
+  const payload = store.currentUsdm || {};
+  const jsonStr = JSON.stringify(payload, null, 2);
+  const blob = new Blob([jsonStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `protocol_${store.currentStudyId || "CADENCE-101"}_usdm.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function triggerFileInput() {
