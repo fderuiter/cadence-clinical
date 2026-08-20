@@ -4,6 +4,9 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: cadence-postgres
+    profiles:
+      - execution
+      - operations
     command: postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c max_connections=300
     environment:
       POSTGRES_USER: cadence
@@ -22,6 +25,8 @@ services:
   postgres-etmf:
     image: postgres:15-alpine
     container_name: cadence-postgres-etmf
+    profiles:
+      - operations
     command: postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c max_connections=300
     environment:
       POSTGRES_USER: cadence
@@ -40,6 +45,8 @@ services:
   postgres-ctms:
     image: postgres:15-alpine
     container_name: cadence-postgres-ctms
+    profiles:
+      - operations
     command: postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c max_connections=300
     environment:
       POSTGRES_USER: cadence
@@ -58,6 +65,8 @@ services:
   postgres-quality:
     image: postgres:15-alpine
     container_name: cadence-postgres-quality
+    profiles:
+      - operations
     command: postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c max_connections=300
     environment:
       POSTGRES_USER: cadence
@@ -76,6 +85,8 @@ services:
   neo4j:
     image: neo4j:5-community
     container_name: cadence-neo4j
+    profiles:
+      - designer
     environment:
       NEO4J_AUTH: neo4j/cadence_password
     ports:
@@ -122,6 +133,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: cadence-designer
+    profiles:
+      - designer
     command:
       [
         "python",
@@ -149,6 +162,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: cadence-execution
+    profiles:
+      - execution
     command:
       [
         "python",
@@ -179,6 +194,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: cadence-org
+    profiles:
+      - operations
     command:
       [
         "python",
@@ -204,6 +221,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: cadence-eisf
+    profiles:
+      - operations
     command:
       [
         "python",
@@ -229,6 +248,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: cadence-etmf
+    profiles:
+      - operations
     command:
       [
         "python",
@@ -257,6 +278,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: cadence-ctms
+    profiles:
+      - operations
     command:
       [
         "python",
@@ -282,6 +305,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: cadence-quality
+    profiles:
+      - operations
     command:
       [
         "python",
@@ -307,6 +332,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: cadence-interop
+    profiles:
+      - operations
     command:
       [
         "python",
@@ -332,6 +359,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: cadence-tickets
+    profiles:
+      - operations
     command:
       [
         "python",
@@ -357,6 +386,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: cadence-safety
+    profiles:
+      - operations
     command:
       [
         "python",
@@ -383,6 +414,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: cadence-notifications
+    profiles:
+      - operations
     command:
       [
         "python",
@@ -418,6 +451,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: cadence-econsent
+    profiles:
+      - operations
     command:
       [
         "python",
@@ -525,30 +560,6 @@ services:
     expose:
       - "8000"
     depends_on:
-      designer:
-        condition: service_started
-      execution:
-        condition: service_started
-      etmf:
-        condition: service_started
-      ctms:
-        condition: service_started
-      quality:
-        condition: service_started
-      interop:
-        condition: service_started
-      tickets:
-        condition: service_started
-      notifications:
-        condition: service_started
-      safety:
-        condition: service_started
-      org:
-        condition: service_started
-      eisf:
-        condition: service_started
-      econsent:
-        condition: service_started
       keycloak:
         condition: service_healthy
 

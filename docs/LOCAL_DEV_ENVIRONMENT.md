@@ -134,6 +134,27 @@ To spin up the containerized database and backend stack, run the following comma
 docker compose -f docker/docker-compose.yml up -d --build
 ```
 
+### Modular Orchestration via Subsystem Profiles
+
+To conserve workstation resources (RAM/CPU), services are grouped into subsystem profiles (`designer`, `execution`, `operations`). You can boot isolated subsystem profiles natively using Docker Compose or the CLI helper `scripts/dev_orchestrator.py`:
+
+- **Designer Profile:** Launches `designer` microservice and `neo4j` database alongside core auth and gateway infrastructure.
+  ```bash
+  python scripts/dev_orchestrator.py designer
+  ```
+- **Execution Profile:** Launches `execution` EDC microservice and primary `postgres` database.
+  ```bash
+  python scripts/dev_orchestrator.py execution
+  ```
+- **Operations Profile:** Launches operational domain microservices (`ctms`, `etmf`, `quality`, `org`, `eisf`, `tickets`, `safety`, `notifications`, `econsent`, `interop`) and domain databases.
+  ```bash
+  python scripts/dev_orchestrator.py operations
+  ```
+- **All Profiles:**
+  ```bash
+  python scripts/dev_orchestrator.py all
+  ```
+
 ### DB Migrations & Database Initialization
 
 On container startup, the automated database migration script (`apps/execution/database/migrate.py`) executes inside the execution service container to automatically build out relational structures, register GxP-protected write triggers, and seed Keycloak configurations without manual developer intervention.
