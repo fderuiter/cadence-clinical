@@ -54,7 +54,9 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
 
     expect(wrapper.find("#signature-capture-modal").exists()).toBe(true);
     expect(wrapper.find("#sig-username").element.value).toBe("fderuiter");
-    expect(wrapper.find("#sig-signer-name").element.value).toBe("Frederick de Ruiter");
+    expect(wrapper.find("#sig-signer-name").element.value).toBe(
+      "Frederick de Ruiter"
+    );
     expect(wrapper.find("#sig-role").element.value).toBe("PI");
     expect(wrapper.find("#sig-password").exists()).toBe(true);
     expect(wrapper.find("#sig-totp").exists()).toBe(true);

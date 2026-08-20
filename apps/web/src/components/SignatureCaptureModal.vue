@@ -66,7 +66,7 @@ const totp = computed({
   },
 });
 
-const signerName = computed({
+const signerNameVal = computed({
   get: () => innerRef.value?.signerNameVal || "",
   set: (val) => {
     if (innerRef.value) {
@@ -96,7 +96,7 @@ const signingReason = computed({
 defineExpose({
   password,
   totp,
-  signerName,
+  signerNameVal,
   signerRole,
   signingReason,
 });
