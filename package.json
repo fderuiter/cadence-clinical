@@ -14,7 +14,7 @@
     "fix": "uv run cadence fix",
     "cadence": "uv run cadence",
     "doctor": "uv run cadence doctor",
-    "db:reset": "uv run cadence db reset",
+    "db:reset": "uv run python scripts/db_lifecycle.py",
     "db:seed": "uv run cadence db seed",
     "db:status": "uv run cadence db status",
     "db:snapshot": "uv run cadence db snapshot",
