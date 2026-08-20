@@ -115,6 +115,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  signerRole: {
+    type: String,
+    default: "",
+  },
   role: {
     type: String,
     default: "Subject",
@@ -139,7 +143,7 @@ useEscapeClose(() => emit("cancel"));
 
 const usernameVal = ref(props.username);
 const signerNameVal = ref(props.signerName || props.username || "");
-const signerRoleVal = ref(props.role || "Subject");
+const signerRoleVal = ref(props.signerRole || props.role || "Subject");
 const password = ref("");
 const totp = ref("");
 const signingReason = ref("");
@@ -170,7 +174,7 @@ watch(
     if (newVal) {
       usernameVal.value = props.username;
       signerNameVal.value = props.signerName || props.username || "";
-      signerRoleVal.value = props.role || "Subject";
+      signerRoleVal.value = props.signerRole || props.role || "Subject";
       password.value = "";
       totp.value = "";
       signingReason.value = "";
@@ -198,7 +202,7 @@ watch(
 );
 
 watch(
-  () => props.role,
+  () => props.signerRole || props.role,
   (newVal) => {
     if (newVal) signerRoleVal.value = newVal;
   }

@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { gatewayHandlers } from "../src/mocks/handlers.js";
-import { generateGatewaySignature, GATEWAY_SECRET } from "ui";
 
 describe("Subject Portal MSW Mock Gateway Interceptor Integration Tests", () => {
   let consoleSpy;

@@ -140,8 +140,8 @@ def test_gxp_generation_and_runs_splitting(tmp_path):
     ]
 
     env = os.environ.copy()
-    env["AUDIT_LOG_SECRET_KEY"] = "test-secret-key"
-    env["INBOUND_EMAIL_HMAC_SECRET"] = "test-email-key"
+    env["AUDIT_LOG_SECRET_KEY"] = "test-secret-key"  # pragma: allowlist secret
+    env["INBOUND_EMAIL_HMAC_SECRET"] = "test-email-key"  # pragma: allowlist secret
 
     res = subprocess.run(
         cmd, capture_output=True, text=True, cwd=str(REPO_ROOT), env=env

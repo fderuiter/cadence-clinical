@@ -172,4 +172,21 @@ describe("Mock Gateway Simulator Unit Tests", () => {
       );
     });
   });
+
+  describe("Helper Functions", () => {
+    it("should identify signature-gated paths correctly", () => {
+      expect(isPathSignatureGated("execution/sign")).toBe(true);
+      expect(isPathSignatureGated("execution/approve")).toBe(true);
+      expect(isPathSignatureGated("execution/unblind")).toBe(true);
+      expect(isPathSignatureGated("execution/read")).toBe(false);
+      expect(isPathSignatureGated("")).toBe(false);
+    });
+
+    it("should check subject route whitelisting correctly", () => {
+      expect(isWhitelistedSubjectRoute("health", "GET")).toBe(true);
+      expect(isWhitelistedSubjectRoute("me", "GET")).toBe(true);
+      expect(isWhitelistedSubjectRoute("designer/studies", "GET")).toBe(false);
+      expect(isWhitelistedSubjectRoute("", "GET")).toBe(false);
+    });
+  });
 });
