@@ -22,6 +22,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 
 from packages.security.cert_store import get_active_cert_store
+from packages.security.signing import compute_sha256_hash
 
 
 def generate_gxp_signing_credentials(
@@ -127,10 +128,7 @@ def sign_gxp_markdown(
     cert_store.register_certificate(signer_id, cert_pem)
 
     # Compute SHA-256 digest of main Markdown content
-    content_bytes = content.strip().encode("utf-8")
-    content_digest = hashes.Hash(hashes.SHA256())
-    content_digest.update(content_bytes)
-    sha256_hash = content_digest.finalize().hex()
+    sha256_hash = compute_sha256_hash(content.strip())
 
     # Construct human-readable Electronic Signature Block header
     footer_text = (
