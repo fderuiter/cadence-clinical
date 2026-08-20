@@ -219,8 +219,7 @@ const useClinicalStoreInner = defineStore("clinical", {
         if (storedFormQueries) {
           savedFormQueries = JSON.parse(storedFormQueries);
         }
-        const storedLedgerBlocks =
-          window.localStorage.getItem("ledgerBlocks");
+        const storedLedgerBlocks = window.localStorage.getItem("ledgerBlocks");
         if (storedLedgerBlocks) {
           savedLedgerBlocks = JSON.parse(storedLedgerBlocks);
         }
@@ -237,8 +236,7 @@ const useClinicalStoreInner = defineStore("clinical", {
       currentUsdm: normalizeUsdm(
         savedUsdm || {
           studyId: "STUDY-USDM-001",
-          studyTitle:
-            "Phase II Trial of Cadence-001 in Essential Hypertension",
+          studyTitle: "Phase II Trial of Cadence-001 in Essential Hypertension",
           objectives: [
             {
               id: "OBJ-001",
@@ -1070,8 +1068,7 @@ const useClinicalStoreInner = defineStore("clinical", {
         this.labAlerts = alertsMap || {};
       } catch (err: unknown) {
         console.warn("Database connection failed", err);
-        this.labAlertsError =
-          err instanceof Error ? err.message : String(err);
+        this.labAlertsError = err instanceof Error ? err.message : String(err);
         // Suppress/Swallow the error (DO NOT re-throw)
       }
     },

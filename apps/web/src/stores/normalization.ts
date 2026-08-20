@@ -80,14 +80,14 @@ export function normalizeEpoch(
     typeof data.epochId === "string"
       ? data.epochId
       : typeof data.epoch_id === "string"
-      ? data.epoch_id
-      : "";
+        ? data.epoch_id
+        : "";
   const epoch_name =
     typeof data.epochName === "string"
       ? data.epochName
       : typeof data.epoch_name === "string"
-      ? data.epoch_name
-      : "";
+        ? data.epoch_name
+        : "";
   const sequence = typeof data.sequence === "number" ? data.sequence : 0;
   const rawArmId = data.armId ?? data.arm_id;
   const arm_id = typeof rawArmId === "string" ? rawArmId : null;
@@ -143,20 +143,20 @@ export function normalizeEncounter(
     typeof data.encounterId === "string"
       ? data.encounterId
       : typeof data.encounter_id === "string"
-      ? data.encounter_id
-      : "";
+        ? data.encounter_id
+        : "";
   const encounter_name =
     typeof data.encounterName === "string"
       ? data.encounterName
       : typeof data.encounter_name === "string"
-      ? data.encounter_name
-      : "";
+        ? data.encounter_name
+        : "";
   const epoch_id =
     typeof data.epochId === "string"
       ? data.epochId
       : typeof data.epoch_id === "string"
-      ? data.epoch_id
-      : "";
+        ? data.epoch_id
+        : "";
   const sequence = typeof data.sequence === "number" ? data.sequence : 0;
   const rawArmId = data.armId ?? data.arm_id;
   const arm_id = typeof rawArmId === "string" ? rawArmId : null;
@@ -223,14 +223,14 @@ export function normalizeArm(
     typeof data.armId === "string"
       ? data.armId
       : typeof data.arm_id === "string"
-      ? data.arm_id
-      : "";
+        ? data.arm_id
+        : "";
   const arm_name =
     typeof data.armName === "string"
       ? data.armName
       : typeof data.arm_name === "string"
-      ? data.arm_name
-      : "";
+        ? data.arm_name
+        : "";
   const sequence = typeof data.sequence === "number" ? data.sequence : 0;
 
   const result = {
@@ -274,26 +274,26 @@ export function normalizeCell(
     typeof data.activityId === "string"
       ? data.activityId
       : typeof data.activity_id === "string"
-      ? data.activity_id
-      : fallbackActivityId;
+        ? data.activity_id
+        : fallbackActivityId;
   const encounter_id =
     typeof data.encounterId === "string"
       ? data.encounterId
       : typeof data.encounter_id === "string"
-      ? data.encounter_id
-      : "";
+        ? data.encounter_id
+        : "";
   const epoch_id =
     typeof data.epochId === "string"
       ? data.epochId
       : typeof data.epoch_id === "string"
-      ? data.epoch_id
-      : "";
+        ? data.epoch_id
+        : "";
   const is_applicable =
     typeof data.isApplicable === "boolean"
       ? data.isApplicable
       : typeof data.is_applicable === "boolean"
-      ? data.is_applicable
-      : false;
+        ? data.is_applicable
+        : false;
   const details = typeof data.details === "string" ? data.details : "";
   const rawArmId = data.armId ?? data.arm_id;
   const arm_id = typeof rawArmId === "string" ? rawArmId : null;
@@ -301,8 +301,8 @@ export function normalizeCell(
     typeof data.derivedFromSoa === "boolean"
       ? data.derivedFromSoa
       : typeof data.derived_from_soa === "boolean"
-      ? data.derived_from_soa
-      : false;
+        ? data.derived_from_soa
+        : false;
 
   const result = {
     activity_id,
@@ -388,20 +388,20 @@ export function normalizeRow(
     typeof data.activityId === "string"
       ? data.activityId
       : typeof data.activity_id === "string"
-      ? data.activity_id
-      : "";
+        ? data.activity_id
+        : "";
   const activity_name =
     typeof data.activityName === "string"
       ? data.activityName
       : typeof data.activity_name === "string"
-      ? data.activity_name
-      : "";
+        ? data.activity_name
+        : "";
   const derived_from_soa =
     typeof data.derivedFromSoa === "boolean"
       ? data.derivedFromSoa
       : typeof data.derived_from_soa === "boolean"
-      ? data.derived_from_soa
-      : false;
+        ? data.derived_from_soa
+        : false;
 
   const rawCells = Array.isArray(data.cells) ? data.cells : [];
   const cells: NormalizedCell[] = rawCells.map((c) =>
@@ -472,9 +472,10 @@ export function normalizeUsdm(rawData: unknown): NormalizedUsdm {
 
   const rawObjectives = Array.isArray(data.objectives) ? data.objectives : [];
   const objectives: StudyObjective[] = rawObjectives.map((obj) => {
-    const o = (
-      typeof obj === "object" && obj !== null ? obj : {}
-    ) as Record<string, unknown>;
+    const o = (typeof obj === "object" && obj !== null ? obj : {}) as Record<
+      string,
+      unknown
+    >;
     return {
       id: typeof o.id === "string" ? o.id : "",
       type: typeof o.type === "string" ? o.type : "",
