@@ -266,8 +266,15 @@ async def seed_test_catalog(session: Any) -> None:
             reason_for_change="Test init",
         ),
     ]
+    existing_ranges = set(
+        (r.study_id, r.test_code, r.lab_source, r.sex)
+        for r in (await session.execute(select(LabReferenceRange))).scalars().all()
+    )
     for r in ref_ranges:
-        session.add(r)
+        key = (r.study_id, r.test_code, r.lab_source, r.sex)
+        if key not in existing_ranges:
+            session.add(r)
+            existing_ranges.add(key)
 
     # 2. MedDRA Terminology
     meddra_terms = [
@@ -351,8 +358,15 @@ async def seed_test_catalog(session: Any) -> None:
             level="PT",
         ),
     ]
+    existing_terms = set(
+        (t.dictionary_version, t.code, t.level)
+        for t in (await session.execute(select(MedDRATerm))).scalars().all()
+    )
     for term in meddra_terms:
-        session.add(term)
+        term_key = (term.dictionary_version, term.code, term.level)
+        if term_key not in existing_terms:
+            session.add(term)
+            existing_terms.add(term_key)
 
     # 3. WHODrug Records
     whodrug_drugs = [
@@ -369,8 +383,15 @@ async def seed_test_catalog(session: Any) -> None:
             drug_name="PARACETAMOL 500MG",
         ),
     ]
+    existing_drugs = set(
+        (d.dictionary_version, d.drug_code)
+        for d in (await session.execute(select(WHODrugRecord))).scalars().all()
+    )
     for drug in whodrug_drugs:
-        session.add(drug)
+        drug_key = (drug.dictionary_version, drug.drug_code)
+        if drug_key not in existing_drugs:
+            session.add(drug)
+            existing_drugs.add(drug_key)
 
     await session.commit()
 
