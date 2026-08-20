@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import {
   clearSessionKey,
   clearInMemoryKey,
@@ -7,17 +7,12 @@ import {
   openDatabase,
   queueSubmission,
   getQueuedSubmissions,
-  getAllSubmissions,
   clearAllSubmissions,
-  encryptAESGCM,
   getInMemorySessionKey,
-  updateSubmissionStatus,
 } from "../src/sync-queue.js";
 import { validateEproPayload, validateEproSubmission } from "usdm-schemas";
 
 describe("Centralized Zod ePRO Schema & Pre-Transmission Sync Guard", () => {
-  let sessionKey;
-
   beforeEach(async () => {
     clearInMemoryKey();
     clearSessionKey();
@@ -33,7 +28,7 @@ describe("Centralized Zod ePRO Schema & Pre-Transmission Sync Guard", () => {
     const rawMaterial = new Uint8Array(32);
     for (let i = 0; i < 32; i++) rawMaterial[i] = i + 1;
     await initSessionKey(rawMaterial);
-    sessionKey = getInMemorySessionKey();
+    getInMemorySessionKey();
   });
 
   describe("Requirement 1 & 3: Pre-Save Local Validation Gate", () => {
@@ -49,7 +44,9 @@ describe("Centralized Zod ePRO Schema & Pre-Transmission Sync Guard", () => {
           change_reason: "Daily diary entry",
           username: "patient_alice",
         })
-      ).rejects.toThrow("Demographic Validation Error: Participant age must be between 18 and 110.");
+      ).rejects.toThrow(
+        "Demographic Validation Error: Participant age must be between 18 and 110."
+      );
 
       const duration = performance.now() - startTime;
       expect(duration).toBeLessThan(50); // Performance constraint < 50ms
@@ -68,7 +65,9 @@ describe("Centralized Zod ePRO Schema & Pre-Transmission Sync Guard", () => {
           change_reason: "Daily diary entry",
           username: "patient_alice",
         })
-      ).rejects.toThrow("Demographic Validation Error: Participant age must be between 18 and 110.");
+      ).rejects.toThrow(
+        "Demographic Validation Error: Participant age must be between 18 and 110."
+      );
 
       const queued = await getQueuedSubmissions();
       expect(queued.length).toBe(0);
@@ -84,7 +83,9 @@ describe("Centralized Zod ePRO Schema & Pre-Transmission Sync Guard", () => {
           change_reason: "Daily diary entry",
           username: "patient_alice",
         })
-      ).rejects.toThrow("Demographic Validation Error: Gender must be one of M, F, or O.");
+      ).rejects.toThrow(
+        "Demographic Validation Error: Gender must be one of M, F, or O."
+      );
 
       const queued = await getQueuedSubmissions();
       expect(queued.length).toBe(0);
@@ -100,7 +101,9 @@ describe("Centralized Zod ePRO Schema & Pre-Transmission Sync Guard", () => {
           change_reason: "Daily diary entry",
           username: "patient_alice",
         })
-      ).rejects.toThrow("Clinical Validation Error: Pain score must be between 0 and 10.");
+      ).rejects.toThrow(
+        "Clinical Validation Error: Pain score must be between 0 and 10."
+      );
 
       const queued = await getQueuedSubmissions();
       expect(queued.length).toBe(0);
@@ -121,17 +124,29 @@ describe("Centralized Zod ePRO Schema & Pre-Transmission Sync Guard", () => {
 
       const queued = await getQueuedSubmissions();
       expect(queued.length).toBe(1);
-      expect(queued[0].answers).toEqual({ age: 35, gender: "FEMALE", pain_score: 4 });
+      expect(queued[0].answers).toEqual({
+        age: 35,
+        gender: "FEMALE",
+        pain_score: 4,
+      });
     });
   });
 
   describe("Requirement 2, 4, 5: Pre-Transmission Schema Gate & Sibling Sync Isolation", () => {
     it("should validate payloads via validateEproPayload helper directly", () => {
-      const validRes = validateEproPayload({ age: 40, gender: "M", pain_score: 0 });
+      const validRes = validateEproPayload({
+        age: 40,
+        gender: "M",
+        pain_score: 0,
+      });
       expect(validRes.valid).toBe(true);
       expect(validRes.errors).toHaveLength(0);
 
-      const invalidRes = validateEproPayload({ age: 10, gender: "X", pain_score: 11 });
+      const invalidRes = validateEproPayload({
+        age: 10,
+        gender: "X",
+        pain_score: 11,
+      });
       expect(invalidRes.valid).toBe(false);
       expect(invalidRes.errors.length).toBeGreaterThanOrEqual(3);
     });
