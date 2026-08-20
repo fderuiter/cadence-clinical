@@ -108,6 +108,7 @@ def _sweep_markdown_files(path_or_dir: str) -> list[str]:
     ignored_files = {
         "Requirements_Traceability_Matrix.md",
         "IQ_OQ_PQ_Execution_Report.md",
+        "RTM.md",
     }
     for root, dirs, files in os.walk(path_or_dir):
         dirs[:] = [d for d in dirs if d != "runs" and not d.startswith(".")]

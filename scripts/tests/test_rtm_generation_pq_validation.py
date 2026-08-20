@@ -215,3 +215,39 @@ def test_pq_test_missing_draft_mode(tmp_path):
         in qual_content
     )
     assert "Verification Status:** ⚪ Unverified (Draft Mode)" in qual_content
+
+
+def test_rtm_generation_creates_rtm_md_with_adr_table(tmp_path):
+    """Test executing generate_rtm.py deterministically updates RTM.md with the Architectural Decisions Traceability Table."""
+    xml_content = """<?xml version="1.0" encoding="utf-8"?>
+<testsuites>
+  <testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="0.100" timestamp="2026-08-17T12:00:00">
+    <testcase classname="apps.execution.tests.test_study_versions" name="test_api_protocol_approval_and_immutability" time="0.010" />
+  </testsuite>
+</testsuites>
+"""
+    report_file = tmp_path / "report.xml"
+    report_file.write_text(xml_content, encoding="utf-8")
+
+    output_dir = tmp_path / "reports_rtm"
+    cmd = [
+        sys.executable,
+        "scripts/generate_rtm.py",
+        "--report-path",
+        str(report_file),
+        "--output-dir",
+        str(output_dir),
+        "--draft",
+    ]
+
+    res = subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO_ROOT))
+    assert res.returncode == 0, f"Script failed with: {res.stderr}"
+
+    rtm_file = output_dir / "RTM.md"
+    assert rtm_file.is_file()
+    rtm_content = rtm_file.read_text(encoding="utf-8")
+
+    assert "## 4. Architectural Decisions Traceability Table" in rtm_content
+    assert "ADR Document" in rtm_content
+    assert "Decision Title" in rtm_content
+    assert "Mapped Requirement IDs" in rtm_content

@@ -85,6 +85,7 @@ os.environ.setdefault("ALLOW_MOCK_SIGNATURES", "1")
 GXP_DOCS = [
     "docs/SDLC/Requirements_Traceability_Matrix.md",
     "docs/SDLC/IQ_OQ_PQ_Execution_Report.md",
+    "docs/SDLC/RTM.md",
     "docs/SDLC/runs",
 ]
 JUNIT_REPORT = "report.xml"

@@ -26,6 +26,16 @@ if sys.version_info < (3, 14):
 import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
 
+# Import shared compliance utility
+try:
+    import compliance_utility
+except ImportError:
+    try:
+        from scripts import compliance_utility
+    except ImportError:
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        import compliance_utility
+
 from packages.compliance.services.gxp_signer import sign_gxp_markdown
 from scripts.runtime_guard import enforce_python_runtime, print_runtime_info
 
@@ -84,6 +94,7 @@ def _sweep_markdown_files(path_or_dir):
     ignored_files = {
         "Requirements_Traceability_Matrix.md",
         "IQ_OQ_PQ_Execution_Report.md",
+        "RTM.md",
     }
     for root, dirs, files in os.walk(path_or_dir):
         dirs[:] = [d for d in dirs if d != "runs" and not d.startswith(".")]
@@ -565,6 +576,59 @@ DRAFT_BANNER = """> ⚠️ **DRAFT ONLY — UNVERIFIED GxP COMPLIANCE DOCUMENT**
 """
 
 
+def scan_adrs(adr_dir="docs/adr", valid_requirements=None):
+    """Scan ADR records and compile verified requirement references."""
+    if valid_requirements is None:
+        valid_requirements = compliance_utility.get_valid_requirements()
+
+    if not os.path.exists(adr_dir):
+        return []
+
+    adr_records = []
+    ignore_files = {"TEMPLATE.md", "index.md"}
+
+    for filename in sorted(os.listdir(adr_dir)):
+        if not filename.endswith(".md") or filename in ignore_files:
+            continue
+        filepath = os.path.join(adr_dir, filename)
+        try:
+            with open(filepath, encoding="utf-8") as f:
+                content = f.read()
+        except Exception:
+            continue
+
+        refs = compliance_utility.extract_requirement_references(content)
+        # Filter refs to valid requirements
+        verified_refs = sorted(list(refs & valid_requirements))
+
+        lines = content.splitlines()
+        title = filename
+        if lines and lines[0].startswith("#"):
+            title = lines[0].lstrip("#").strip()
+
+        status = "Accepted"
+        status_match = re.search(r"Status:\s*([^\n]+)", content, re.IGNORECASE)
+        if not status_match:
+            status_match = re.search(
+                r"## Status\s*\n\s*([^\n]+)", content, re.IGNORECASE
+            )
+        if status_match:
+            status = status_match.group(1).strip()
+
+        is_post_2026 = compliance_utility.is_post_2026_adr(filename)
+
+        record = {
+            "filename": filename,
+            "title": title,
+            "status": status,
+            "refs": verified_refs,
+            "is_post_2026": is_post_2026,
+        }
+        adr_records.append(record)
+
+    return adr_records
+
+
 def generate_rtm_md(
     requirements,
     test_mappings,
@@ -573,6 +637,7 @@ def generate_rtm_md(
     output_path,
     timestamp=None,
     draft=False,
+    adr_records=None,
 ):
     if timestamp is None:
         timestamp = get_stable_timestamp()
@@ -738,6 +803,29 @@ def generate_rtm_md(
             f.write(
                 "All documented requirements have been successfully mapped to automated test cases.\n"
             )
+
+        f.write("\n## 4. Architectural Decisions Traceability Table\n\n")
+        if adr_records:
+            f.write(
+                "| ADR Document | Decision Title | Mapped Requirement IDs | Status |\n"
+            )
+            f.write("| :--- | :--- | :--- | :--- |\n")
+            traceable_adrs = [
+                adr for adr in adr_records if adr.get("refs") or adr.get("is_post_2026")
+            ]
+            if traceable_adrs:
+                for adr in sorted(traceable_adrs, key=lambda x: x["filename"]):
+                    reqs_str = (
+                        ", ".join(adr["refs"]) if adr["refs"] else "*Exempt (Legacy)*"
+                    )
+                    link = f"[{adr['filename']}](../adr/{adr['filename']})"
+                    f.write(
+                        f"| {link} | {adr['title']} | {reqs_str} | {adr['status']} |\n"
+                    )
+            else:
+                f.write("No architectural decision traceability records found.\n")
+        else:
+            f.write("No architectural decision traceability records found.\n")
 
 
 def generate_qualification_report(
@@ -1154,8 +1242,15 @@ def main():
         else get_stable_timestamp()
     )
 
+    # Scan ADRs across docs/adr
+    adr_records = scan_adrs("docs/adr", set(all_requirements.keys()))
+    print(
+        f"Scanned ADRs. Found {len(adr_records)} total ADR records ({sum(1 for a in adr_records if a['refs'])} mapped to requirements)."
+    )
+
     # 4. Generate RTM Markdown
     rtm_out = os.path.join(args.output_dir, "Requirements_Traceability_Matrix.md")
+    rtm_short_out = os.path.join(args.output_dir, "RTM.md")
     generate_rtm_md(
         all_requirements,
         test_mappings,
@@ -1164,9 +1259,23 @@ def main():
         rtm_out,
         timestamp=timestamp,
         draft=args.draft,
+        adr_records=adr_records,
     )
-    print(f"Requirements Traceability Matrix successfully written to {rtm_out}")
+    generate_rtm_md(
+        all_requirements,
+        test_mappings,
+        test_results,
+        test_cases_all,
+        rtm_short_out,
+        timestamp=timestamp,
+        draft=args.draft,
+        adr_records=adr_records,
+    )
+    print(
+        f"Requirements Traceability Matrix successfully written to {rtm_out} and {rtm_short_out}"
+    )
     format_file_with_prettier(rtm_out)
+    format_file_with_prettier(rtm_short_out)
 
     # 5. Generate Qualification Report
     qual_out = os.path.join(args.output_dir, "IQ_OQ_PQ_Execution_Report.md")
