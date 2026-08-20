@@ -143,6 +143,7 @@ def should_provision_postgres(config: Any = None) -> bool:
 
 def run_sync(coro, timeout: float = 30.0):
     """Execute an async coroutine synchronously with bounded timeout."""
+
     async def _runner():
         return await asyncio.wait_for(coro, timeout=timeout)
 
