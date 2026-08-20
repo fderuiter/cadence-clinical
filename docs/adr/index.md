@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-20: Unified Multi-Database Schema Lifecycle and Baseline Seeding CLI](2026-08-20-unified-multi-database-schema-lifecycle-and-baseline-seeding-cli.md)
 
 - [2026-08-15: Comprehensive Enterprise eConsent Architecture and Multi-Party Signature Pipeline](2026-08-15-comprehensive-enterprise-econsent-architecture-and-multi-party-signature-pipeline.md)
 - [2026-08-14: Comprehensive Hexagonal Architecture Standardization and Frontend Modularization](2026-08-14-comprehensive-hexagonal-architecture-standardization-and-frontend-modularization.md)
