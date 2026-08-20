@@ -28,6 +28,8 @@ def run_command(args: list[str]) -> tuple[int, str, str]:
 
 
 def main():
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
     # Set default environment variables for compliance / security checks if not already set
     os.environ.setdefault(
         "AUDIT_LOG_SECRET_KEY",
@@ -89,7 +91,7 @@ def main():
             "git",
             "config",
             "merge.custom-metadata-driver.driver",
-            "python3 /app/scripts/git_merge_driver.py %O %A %B %P",
+            f"python3 {os.path.join(repo_root, 'scripts/git_merge_driver.py')} %O %A %B %P",
         ]
     )
 
@@ -170,7 +172,12 @@ def main():
         "Step 3: Running Database Migration Rollback and Reverse Schema Integrity Validation"
     )
     mig_rc, mig_out, mig_err = run_command(
-        ["uv", "run", "python3", "/app/apps/execution/database/rollback.py"]
+        [
+            "uv",
+            "run",
+            "python3",
+            os.path.join(repo_root, "apps/execution/database/rollback.py"),
+        ]
     )
     if mig_rc == 0:
         print(
@@ -241,7 +248,7 @@ def main():
 
     # Run post_pr_comment.py
     comment_rc, comment_out, comment_err = run_command(
-        ["python3", "/app/scripts/post_pr_comment.py"]
+        ["python3", os.path.join(repo_root, "scripts/post_pr_comment.py")]
     )
     if comment_rc == 0:
         print(
