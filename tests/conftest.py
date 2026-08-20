@@ -143,20 +143,22 @@ def should_provision_postgres(config: Any = None) -> bool:
 
 def run_sync(coro, timeout: float = 30.0):
     """Execute an async coroutine synchronously with bounded timeout."""
+    async def _runner():
+        return await asyncio.wait_for(coro, timeout=timeout)
+
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        loop = None
 
-    if loop.is_running():
+    if loop and loop.is_running():
         import concurrent.futures
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(asyncio.run, coro)
+            future = executor.submit(asyncio.run, _runner())
             return future.result(timeout=timeout)
     else:
-        return loop.run_until_complete(asyncio.wait_for(coro, timeout=timeout))
+        return asyncio.run(_runner())
 
 
 async def create_databases_async(worker_suffix_val: str, timeout: float = 15.0):
