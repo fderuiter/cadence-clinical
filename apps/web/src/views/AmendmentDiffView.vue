@@ -226,9 +226,7 @@
               }}</span>
             </div>
             <p class="metric-label">
-              Historical Visits Preserved under v{{
-                selectedBaseVersion
-              }}
+              Historical Visits Preserved under v{{ selectedBaseVersion }}
               Schema
             </p>
             <div class="progress-bar-container">
@@ -388,9 +386,7 @@
               v-if="amendmentImpact.schema_revisions?.encounters?.modified"
             >
               🔄
-              {{
-                amendmentImpact.schema_revisions.encounters.modified
-              }}
+              {{ amendmentImpact.schema_revisions.encounters.modified }}
               Modified Visit(s)
             </span>
             <span
@@ -407,9 +403,7 @@
               "
             >
               📋
-              {{
-                amendmentImpact.schema_revisions.eligibility_criteria.added
-              }}
+              {{ amendmentImpact.schema_revisions.eligibility_criteria.added }}
               Added Criteria
             </span>
             <span
