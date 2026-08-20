@@ -438,7 +438,7 @@ async def main() -> None:
     )
     if "://" in postgres_url and "@" not in postgres_url.split("://", 1)[1]:
         scheme, remainder = postgres_url.split("://", 1)
-        postgres_url = f"{scheme}://cadence:cadence_password@{remainder}"
+        postgres_url = f"{scheme}://cadence:cadence_password@{remainder}"  # pragma: allowlist secret
     neo4j_uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
     neo4j_user = os.getenv("NEO4J_USER", "neo4j")
     neo4j_password = os.getenv(
