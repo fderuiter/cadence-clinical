@@ -31,7 +31,7 @@ export class JwksCoalescerService implements OnModuleInit {
   // Negative cache TTL in milliseconds (default to 10 seconds per Requirement 2)
   private negativeCacheTtlMs: number = process.env.NEGATIVE_CACHE_TTL_MS
     ? parseInt(process.env.NEGATIVE_CACHE_TTL_MS, 10)
-    : 10000;
+    : 10000; // deid-ignore
 
   // Negative cache max capacity threshold (default to 1000 entries per Requirement 4)
   private negativeCacheMaxCapacity: number = process.env

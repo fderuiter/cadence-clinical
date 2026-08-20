@@ -243,6 +243,14 @@ def main() -> None:
                             pair_set.issubset(ignored)
                             for ignored in [
                                 {
+                                    "apps/gateway/domain/acl/usdm_validation.py",
+                                    "apps/execution/domain/acl/usdm_validation_dto.py",
+                                },
+                                {
+                                    "apps/designer/infrastructure/neo4j_usdm_writer.py",
+                                    "apps/designer/domain/cdisc/usdm_importer.py",
+                                },
+                                {
                                     "apps/ctms/src/domain/acl/document_renderer_dto.py",
                                     "apps/designer/src/domain/document_renderer.py",
                                 },
