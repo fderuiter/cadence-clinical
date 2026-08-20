@@ -49,7 +49,7 @@
         <!-- prettier-ignore -->
         <GxpCredentialsInput
           v-model:username="usernameVal"
-          v-model:password="password" data-pragma="pragma: allowlist"
+          v-model:password="password"
           v-model:totp="totp"
           :disabled="busy"
           @keyup-enter="confirm"
@@ -144,7 +144,7 @@ useEscapeClose(() => emit("cancel"));
 const usernameVal = ref(props.username);
 const signerNameVal = ref(props.signerName || props.username || "");
 const signerRoleVal = ref(props.signerRole || props.role || "Subject");
-const password = ref("");
+const password = ref(""); // pragma: allowlist secret
 const totp = ref("");
 const signingReason = ref("");
 const busy = ref(false);
