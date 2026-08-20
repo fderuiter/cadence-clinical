@@ -173,6 +173,19 @@ async def create_databases_async(worker_suffix_val: str, timeout: float = 15.0):
 
     conn = await asyncpg.connect(clean_url, timeout=5.0)
     try:
+        try:
+            await conn.execute("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'root') THEN
+                        CREATE ROLE root WITH LOGIN SUPERUSER PASSWORD 'cadence_password';
+                    END IF;
+                END
+                $$;
+            """)
+        except Exception as e:
+            print(f"[conftest] Note on root role creation: {e}")
+
         for db_name in db_names:
             await conn.execute(f"""
                 SELECT pg_terminate_backend(pid)

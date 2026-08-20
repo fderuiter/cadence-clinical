@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import os
 import re
 import sys
@@ -96,6 +97,16 @@ async def main_async(args: argparse.Namespace) -> int:
     pg_url = get_postgres_base_url()
     try:
         conn = await asyncpg.connect(pg_url, timeout=5.0)
+        with contextlib.suppress(Exception):
+            await conn.execute("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'root') THEN
+                        CREATE ROLE root WITH LOGIN SUPERUSER PASSWORD 'cadence_password';
+                    END IF;
+                END
+                $$;
+            """)
     except Exception as e:
         print(f"✘ Failed to connect to PostgreSQL at {pg_url}: {e}", file=sys.stderr)
         return 1

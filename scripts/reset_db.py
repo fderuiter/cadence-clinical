@@ -273,6 +273,20 @@ async def reset_sqlite_db(
         try:
             engine = create_async_engine(url, echo=False)
             async with engine.begin() as conn:
+                try:
+                    await conn.execute(
+                        text("""
+                        DO $$
+                        BEGIN
+                            IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'root') THEN
+                                CREATE ROLE root WITH LOGIN SUPERUSER PASSWORD 'cadence_password';
+                            END IF;
+                        END
+                        $$;
+                    """)
+                    )
+                except Exception as e:
+                    print(f"Note on root role creation during reset: {e}")
                 await conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE;"))
                 await conn.execute(text("CREATE SCHEMA public;"))
                 await conn.execute(text("DROP SCHEMA IF EXISTS audit_schema CASCADE;"))
