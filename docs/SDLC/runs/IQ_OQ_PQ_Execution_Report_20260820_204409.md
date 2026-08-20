@@ -1,5 +1,5 @@
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
-*Execution Date:* 2026-07-23 22:38:25 UTC
+*Execution Date:* 2026-08-20 20:44:09 UTC
 *Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B
 
 ## 1. Executive Summary & Verification Declaration
@@ -3062,30 +3062,30 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 ## Electronic Signature Block
 
 - **Signer Identity:** jules
-- **Timestamp:** 2026-07-23 22:38:25 UTC
-- **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 9a34edcb5b8fd760357a12937b0bfd1b3c818d43d3eee6a9442c1df221c161bc
+- **Timestamp:** 2026-08-20 20:44:09 UTC
+- **Meaning / Purpose:** GxP Dynamic Execution Run Record
+- **Cryptographic Hash (SHA-256):** 7a11bd72a0cf37837f2a1c481f1d9841370801f8f74594a333120bd2b76582fc
 
 -----BEGIN CERTIFICATE-----
-MIIDNDCCAhygAwIBAgIUHMbYTiqx4owzPsOBobc/MsvBRvowDQYJKoZIhvcNAQEL
+MIIDNDCCAhygAwIBAgIUCJNcwPwu3mJ7Y6kcO1x9/oMEV8QwDQYJKoZIhvcNAQEL
 BQAwVDEuMCwGA1UEAwwlQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGp1
 bGVzKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTAeFw0yNjA4
-MTkyMDQ0MDlaFw0yNzA4MjAyMDQ0MDlaMFQxLjAsBgNVBAMMJUNhZGVuY2UgR3hQ
+MTkyMDQ0MTBaFw0yNzA4MjAyMDQ0MTBaMFQxLjAsBgNVBAMMJUNhZGVuY2UgR3hQ
 IFZhbGlkYXRpb24gUnVubmVyIChqdWxlcykxIjAgBgNVBAoMGUNhZGVuY2UgQ2xp
-bmljYWwgU29mdHdhcmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCe
-JuE4E4ADAGFfqdcRGqmluYoczINLxDPopE7trsfVWbfocax8EY6m1q0sCfZhB2ui
-pDPi5XYp56eo/HX7+JQqGfsNCKECvYCWscbOFg+rZV503NUBg6oNOIYt08e3lfy+
-/pGQ1r1hTnHmUk7YTY1eQg3ibFWP5bB0nKjZpvlDIsAo2gVxjL3qn389gfJnfPfy
-a8uCocEmsnEqN8J6OLJwbDVxWafRwPEYQV/BQLYknHv20yLmYAARB/aHjibP71Hb
-avuGflxfLvk0ZTJ4q51kKUlI+4UUBeHfr0sV6o6O/KtTb2A/PLRD9/h4BxfhTze5
-FbFvF1sTaZvVu75CDy81AgMBAAEwDQYJKoZIhvcNAQELBQADggEBAH5a+MUDzTVZ
-XJhUVoZj+F568xppKV7BX0bKoIpbYdQgWhBHH1kNukePgDNAjjI7npnNmxcL+4sw
-2SGp9gfD3nfVphDV3TTkBJFQYAHjvHeTbvyUdkuVw5AFpwctS1es6WFzY1Ajh5//
-aUVkW+IdVRTQ6cosJFJ3SXV1VErCgykOsuaM9RxWT+BzlcbRsgnNJGcu14hxzDqK
-3DRIlX1CvitiAj+YoQqYv7ueAwu9sOsy6pgRQX51Sjama1bI6QjwK56w9suXm4V7
-e+kXXiffBAJeTfUOWYOPPnjgWhodeJqZl84pdU9QPoNKsqEDX6yFYC2EfxhMD42+
-aQ4TACFzFMI=
+bmljYWwgU29mdHdhcmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDV
+Gl6TxcTMTrw4v/IW8J6EBmDXOKhDGUgFPyx4SLx+JZrsffOlIrzcpqm78wWQXZNk
+YQiNbsVpAYBtSKqmMk64bbN4oc+xwNM/trPNffIp7zdi+x+pWPyskiIdLVjjSq/L
+kqwLV2B5CKci3b24Vi4oAsnVwIrgX1eRnsvxREI/QfpzPGH2oFmmEycT/UeOpH8b
+qkzwpu3N78TfxCdPplIfNeCWtZnVaRPbZdxIIBjcF8NNWPQsoADqxYgDReNIAN0i
+HmBWkxJpQOi7YpPd4bNUEOW3UvSzGJs6KOHL0XuwMHjqR3Plu/Pu6FFjd+s1c2ZN
+Cc10N9fEthcJfiythQ3HAgMBAAEwDQYJKoZIhvcNAQELBQADggEBAH9+dup77824
+od8JhPjXusFhxQYOyS9ixC+eUpMS/XnaV970h5tZoqjf6WJT2GBumqgc5L+K29D2
+VxdeYDcxC1ahkQSZfC5Y5fV9kmhqm44qyImxEdJ8vbUuflpJv0NfrmzqpEntIB2A
+of5EA2wOEksMMVhCrTVMHoBrgDQq7MLQ5XARdCAph5TMLZvFT8qi4xQRsR013p5S
+sxEJgDRqyglZW1YLP3nFtSY5qYiJ7H3WoUMf9jvXr6nOpuBcqWicNTeVC5qlEQ9g
+0mf/Ussz1x1cR1Q1rqts3XpZdLt+MJpa/Lt5AV+Tb7pY4MdtA2qnKgbXkhNhjnep
+9cuOTiFZHFg=
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-K6pFHAE8ajZZ1JLdSVVGpsaEbd3X1r9Axb1fz9Cb1ghaWzCaoivwxXFw9waoxZneryqN6tGCOIlMk5a/way89++siPrdZU+2/ZB/CO1IRXnsyiw1YV9oRsna7PhTBfgu9qokClnAYO4u7VmHe9Wyp3z2tJT1G7AosY0/mG5KvQLSY+JSVFQeanDoCjwu8Gr7DJ+LwYjC2B+uV/ftVMOS0Qnv0uLR5peQ3hrTM5jI1xbCeFCFuyMBBND9E9PN5qS2sV8ZPOq2AFhVL5FIMjBdmWx9j9+p4RjyShfIiJb40z8d5kvjk8+IqjRWjq8Iy4myG8dP3YUjGCzcRSfd1WmjQA==
+JCeB3Zv2lGuqfKrLpttmZ71r+ZwfPnyg5MZSqTi+wH9kjkfz7n+M+elMdE8aI++vyfa3l1el2Np0UKdTLVJFTY9rZm9gAVWccGTv9v4P3JRfhVIIHW/zsMpWNJdbjvguSa78eRF749iiYQIrhkWURgRhfzjtTwWYGM4cPX2Pa0geq4nk0O6RWCqO/ucyeSAoTuRp/uOQUE8L31Lzmdw3JdXaCNF5Fw6RsBl6zKV7CkeFmaRyrt8XUS7ufn/gVezNWCQ0/uBJKSI+ddnZxKBTgVVttjzOLd9xs0at/FwgiBbVin6qfE0xJQRSVcl35vvLbeDsTWmn5VW6x32IaW7LMg==
 -----END SIGNATURE-----
