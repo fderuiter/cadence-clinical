@@ -495,6 +495,14 @@ def main() -> None:
                                     "apps/etmf/domain/etmf/eisf_transport_models.py",
                                 },
                                 {
+                                    "apps/designer/domain/cdisc/usdm_importer.py",
+                                    "apps/designer/infrastructure/neo4j_usdm_writer.py",
+                                },
+                                {
+                                    "apps/gateway/domain/acl/usdm_validation.py",
+                                    "apps/execution/domain/acl/usdm_validation_dto.py",
+                                },
+                                {
                                     "apps/etmf/domain/acl/protocol_version_ref.py",
                                     "apps/execution/domain/acl/protocol_version_ref_dto.py",
                                 },
