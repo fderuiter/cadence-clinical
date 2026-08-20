@@ -91,6 +91,24 @@ async def process_dictionary_import(
                                     if name.lower().endswith(".asc")
                                 ]
 
+                                existing_terms = await session.execute(
+                                    select(MedDRATerm.code, MedDRATerm.level).where(
+                                        MedDRATerm.dictionary_version == version
+                                    )
+                                )
+                                seen_terms = set(existing_terms.all())
+
+                                existing_hier = await session.execute(
+                                    select(
+                                        MedDRAHierarchy.llt_code,
+                                        MedDRAHierarchy.pt_code,
+                                        MedDRAHierarchy.hlt_code,
+                                        MedDRAHierarchy.hlgt_code,
+                                        MedDRAHierarchy.soc_code,
+                                    ).where(MedDRAHierarchy.dictionary_version == version)
+                                )
+                                seen_hierarchies = set(existing_hier.all())
+
                                 total_files = len(asc_files)
                                 for idx, file_name in enumerate(asc_files, start=1):
                                     try:
@@ -115,6 +133,13 @@ async def process_dictionary_import(
                                     ):
                                         for record in batch:
                                             if record["type"] == "term":
+                                                term_key = (
+                                                    record["data"]["code"],
+                                                    record["data"]["level"],
+                                                )
+                                                if term_key in seen_terms:
+                                                    continue
+                                                seen_terms.add(term_key)
                                                 term_obj = MedDRATerm(
                                                     dictionary_version=version,
                                                     code=record["data"]["code"],
@@ -125,6 +150,16 @@ async def process_dictionary_import(
                                                 )
                                                 session.add(term_obj)
                                             elif record["type"] == "hierarchy":
+                                                hier_key = (
+                                                    record["data"]["llt_code"],
+                                                    record["data"]["pt_code"],
+                                                    record["data"]["hlt_code"],
+                                                    record["data"]["hlgt_code"],
+                                                    record["data"]["soc_code"],
+                                                )
+                                                if hier_key in seen_hierarchies:
+                                                    continue
+                                                seen_hierarchies.add(hier_key)
                                                 hier_obj = MedDRAHierarchy(
                                                     dictionary_version=version,
                                                     llt_code=record["data"]["llt_code"],
@@ -164,6 +199,44 @@ async def process_dictionary_import(
                                     if name.lower().endswith((".txt", ".asc", ".csv"))
                                 ]
 
+                                existing_drugs = await session.execute(
+                                    select(WHODrugRecord.drug_code).where(
+                                        WHODrugRecord.dictionary_version == version
+                                    )
+                                )
+                                seen_drugs = set(existing_drugs.scalars().all())
+
+                                existing_ing = await session.execute(
+                                    select(WHODrugIngredient.ingredient_code).where(
+                                        WHODrugIngredient.dictionary_version == version
+                                    )
+                                )
+                                seen_ingredients = set(existing_ing.scalars().all())
+
+                                existing_atc = await session.execute(
+                                    select(WHODrugATC.atc_code).where(
+                                        WHODrugATC.dictionary_version == version
+                                    )
+                                )
+                                seen_atcs = set(existing_atc.scalars().all())
+
+                                existing_drug_atc = await session.execute(
+                                    select(
+                                        WHODrugDrugATC.drug_code, WHODrugDrugATC.atc_code
+                                    ).where(WHODrugDrugATC.dictionary_version == version)
+                                )
+                                seen_drug_atcs = set(existing_drug_atc.all())
+
+                                existing_drug_ing = await session.execute(
+                                    select(
+                                        WHODrugDrugIngredient.drug_code,
+                                        WHODrugDrugIngredient.ingredient_code,
+                                    ).where(
+                                        WHODrugDrugIngredient.dictionary_version == version
+                                    )
+                                )
+                                seen_drug_ings = set(existing_drug_ing.all())
+
                                 total_files = len(drug_files)
                                 for idx, file_name in enumerate(drug_files, start=1):
                                     try:
@@ -186,11 +259,13 @@ async def process_dictionary_import(
                                     ):
                                         for record in batch:
                                             if record["type"] == "drug_record":
+                                                drug_code = record["data"]["drug_code"]
+                                                if drug_code in seen_drugs:
+                                                    continue
+                                                seen_drugs.add(drug_code)
                                                 obj = WHODrugRecord(
                                                     dictionary_version=version,
-                                                    drug_code=record["data"][
-                                                        "drug_code"
-                                                    ],
+                                                    drug_code=drug_code,
                                                     preferred_name=record["data"][
                                                         "preferred_name"
                                                     ],
@@ -200,26 +275,39 @@ async def process_dictionary_import(
                                                 )
                                                 session.add(obj)
                                             elif record["type"] == "ingredient":
+                                                ing_code = record["data"]["ingredient_code"]
+                                                if ing_code in seen_ingredients:
+                                                    continue
+                                                seen_ingredients.add(ing_code)
                                                 obj = WHODrugIngredient(
                                                     dictionary_version=version,
-                                                    ingredient_code=record["data"][
-                                                        "ingredient_code"
-                                                    ],
+                                                    ingredient_code=ing_code,
                                                     ingredient_name=record["data"][
                                                         "ingredient_name"
                                                     ],
                                                 )
                                                 session.add(obj)
                                             elif record["type"] == "atc":
+                                                atc_code = record["data"]["atc_code"]
+                                                if atc_code in seen_atcs:
+                                                    continue
+                                                seen_atcs.add(atc_code)
                                                 obj = WHODrugATC(
                                                     dictionary_version=version,
-                                                    atc_code=record["data"]["atc_code"],
+                                                    atc_code=atc_code,
                                                     description=record["data"][
                                                         "description"
                                                     ],
                                                 )
                                                 session.add(obj)
                                             elif record["type"] == "drug_atc":
+                                                da_key = (
+                                                    record["data"]["drug_code"],
+                                                    record["data"]["atc_code"],
+                                                )
+                                                if da_key in seen_drug_atcs:
+                                                    continue
+                                                seen_drug_atcs.add(da_key)
                                                 obj = WHODrugDrugATC(
                                                     dictionary_version=version,
                                                     drug_code=record["data"][
@@ -229,6 +317,13 @@ async def process_dictionary_import(
                                                 )
                                                 session.add(obj)
                                             elif record["type"] == "drug_ingredient":
+                                                di_key = (
+                                                    record["data"]["drug_code"],
+                                                    record["data"]["ingredient_code"],
+                                                )
+                                                if di_key in seen_drug_ings:
+                                                    continue
+                                                seen_drug_ings.add(di_key)
                                                 obj = WHODrugDrugIngredient(
                                                     dictionary_version=version,
                                                     drug_code=record["data"][

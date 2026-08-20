@@ -53,6 +53,8 @@ def get_postgres_base_config() -> str:
             base_part, _ = remainder.rsplit("/", 1)
         else:
             base_part = remainder
+        if "@" not in base_part:
+            base_part = f"cadence:cadence_password@{base_part}"
         return f"{scheme}://{base_part}/"
     return "postgresql+asyncpg://cadence:cadence_password@localhost:5432/"  # pragma: allowlist secret
 
