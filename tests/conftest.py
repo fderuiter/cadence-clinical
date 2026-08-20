@@ -178,7 +178,7 @@ async def create_databases_async(worker_suffix_val: str, timeout: float = 15.0):
                 DO $$
                 BEGIN
                     IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'root') THEN
-                        CREATE ROLE root WITH LOGIN SUPERUSER PASSWORD 'cadence_password';
+                        CREATE ROLE root WITH LOGIN SUPERUSER PASSWORD 'cadence_password'; -- pragma: allowlist secret
                     END IF;
                 END
                 $$;
