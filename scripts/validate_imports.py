@@ -116,6 +116,8 @@ LEGACY_TESTS_EXEMPT_FROM_IMPORT_BOUNDARIES = {
     "packages/security/tests/test_audit.py",
     "packages/hexagonal/tests/test_hexagonal_domain.py",
     "packages/hexagonal/tests/test_hexagonal_ports_adapters.py",
+    "apps/web/tests/test_econsent.py",
+    "apps/web/tests/test_amendment_diff.py",
 }
 
 

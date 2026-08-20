@@ -129,6 +129,7 @@ async def setup_test_db():
     yield
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+    await db_manager.close()
     TrialLockManager.reset()
     token_consumption_cache.reset()
     coding_cache.clear()

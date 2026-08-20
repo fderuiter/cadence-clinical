@@ -395,6 +395,7 @@ async def setup_e2e_db() -> AsyncGenerator[None]:
 
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+    await db_manager.close()
     TrialLockManager.reset()
     coding_cache.clear()
 
