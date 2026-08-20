@@ -105,7 +105,9 @@ async def process_dictionary_import(
                                         MedDRAHierarchy.hlt_code,
                                         MedDRAHierarchy.hlgt_code,
                                         MedDRAHierarchy.soc_code,
-                                    ).where(MedDRAHierarchy.dictionary_version == version)
+                                    ).where(
+                                        MedDRAHierarchy.dictionary_version == version
+                                    )
                                 )
                                 seen_hierarchies = set(existing_hier.all())
 
@@ -222,8 +224,11 @@ async def process_dictionary_import(
 
                                 existing_drug_atc = await session.execute(
                                     select(
-                                        WHODrugDrugATC.drug_code, WHODrugDrugATC.atc_code
-                                    ).where(WHODrugDrugATC.dictionary_version == version)
+                                        WHODrugDrugATC.drug_code,
+                                        WHODrugDrugATC.atc_code,
+                                    ).where(
+                                        WHODrugDrugATC.dictionary_version == version
+                                    )
                                 )
                                 seen_drug_atcs = set(existing_drug_atc.all())
 
@@ -232,7 +237,8 @@ async def process_dictionary_import(
                                         WHODrugDrugIngredient.drug_code,
                                         WHODrugDrugIngredient.ingredient_code,
                                     ).where(
-                                        WHODrugDrugIngredient.dictionary_version == version
+                                        WHODrugDrugIngredient.dictionary_version
+                                        == version
                                     )
                                 )
                                 seen_drug_ings = set(existing_drug_ing.all())
@@ -275,7 +281,9 @@ async def process_dictionary_import(
                                                 )
                                                 session.add(obj)
                                             elif record["type"] == "ingredient":
-                                                ing_code = record["data"]["ingredient_code"]
+                                                ing_code = record["data"][
+                                                    "ingredient_code"
+                                                ]
                                                 if ing_code in seen_ingredients:
                                                     continue
                                                 seen_ingredients.add(ing_code)

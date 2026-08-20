@@ -429,10 +429,16 @@ async def main() -> None:
     args = parser.parse_args()
 
     # 1. Resolve Active Connection Strings
-    postgres_url = os.getenv(
-        "DATABASE_URL",
-        "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc",  # pragma: allowlist secret
+    postgres_url = (
+        os.getenv("TEST_DATABASE_URL")
+        or os.getenv(
+            "DATABASE_URL",
+            "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc",  # pragma: allowlist secret
+        )
     )
+    if "://" in postgres_url and "@" not in postgres_url.split("://", 1)[1]:
+        scheme, remainder = postgres_url.split("://", 1)
+        postgres_url = f"{scheme}://cadence:cadence_password@{remainder}"
     neo4j_uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
     neo4j_user = os.getenv("NEO4J_USER", "neo4j")
     neo4j_password = os.getenv(

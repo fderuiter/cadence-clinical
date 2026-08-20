@@ -183,7 +183,9 @@ async def _randomize_subject_tx(
         if not kit_reference:
             kit_reference = f"KIT-{secrets.token_hex(4).upper()}"
 
-        encrypted_alloc = key_mgr.encrypt({"allocation": allocated_arm}, session=session)
+        encrypted_alloc = key_mgr.encrypt(
+            {"allocation": allocated_arm}, session=session
+        )
 
         assignment = SubjectRandomization(
             study_id=study_id,
