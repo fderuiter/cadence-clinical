@@ -158,7 +158,7 @@ describe("Mock Gateway Simulator Unit Tests", () => {
           "X-User-Id": "usr-123",
           "X-User-Roles": "Sponsor Admin",
           "X-Gateway-Timestamp": "1700000000",
-          "X-Gateway-Signature": "deadbeef1234567890badc0de",
+          "X-Gateway-Signature": "deadbeef1234567890badc0de", // pragma: allowlist secret
           "X-Signature-Version": "2",
         },
       });

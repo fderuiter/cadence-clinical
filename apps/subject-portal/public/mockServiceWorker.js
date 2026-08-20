@@ -8,7 +8,7 @@
  */
 
 const PACKAGE_VERSION = '2.15.0'
-const INTEGRITY_CHECKSUM = '03cb67ac84128e63d7cd722a6e5b7f1e'
+const INTEGRITY_CHECKSUM = '03cb67ac84128e63d7cd722a6e5b7f1e' // pragma: allowlist secret
 const IS_MOCKED_RESPONSE = Symbol('isMockedResponse')
 const activeClientIds = new Set()
 

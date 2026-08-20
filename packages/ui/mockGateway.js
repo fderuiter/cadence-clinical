@@ -20,7 +20,7 @@ export {
   generateJwtHS256,
 };
 
-export const GATEWAY_SECRET = "internal-gateway-secret-12345";
+export const GATEWAY_SECRET = "internal-gateway-secret-12345"; // pragma: allowlist secret
 
 export const VALID_SERVICE_PREFIXES = [
   "designer/",
