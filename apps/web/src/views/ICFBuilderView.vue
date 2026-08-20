@@ -316,7 +316,7 @@ const onSignatureSuccess = (result) => {
       signerRole: "Subject",
       meaningOfSigning: "I agree to participate",
       timestamp: new Date().toISOString(),
-      sha256_hash: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289",
+      sha256_hash: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
     };
   }
 };

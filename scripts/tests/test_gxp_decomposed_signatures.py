@@ -175,8 +175,8 @@ def test_verification_performance_under_five_seconds():
     """
     cmd = [sys.executable, "scripts/verify_gxp_signatures.py", "docs/SDLC"]
     env = os.environ.copy()
-    env["AUDIT_LOG_SECRET_KEY"] = "test-secret-key"
-    env["INBOUND_EMAIL_HMAC_SECRET"] = "test-email-key"
+    env["AUDIT_LOG_SECRET_KEY"] = "test-secret-key"  # pragma: allowlist secret
+    env["INBOUND_EMAIL_HMAC_SECRET"] = "test-email-key"  # pragma: allowlist secret
 
     start_time = time.perf_counter()
     res = subprocess.run(
