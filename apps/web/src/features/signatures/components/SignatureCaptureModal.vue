@@ -46,13 +46,8 @@
         </div>
 
         <!-- Reuse GxpCredentialsInput -->
-        <GxpCredentialsInput
-          v-model:username="usernameVal"
-          v-model:password="password /* pragma: allowlist secret */"
-          v-model:totp="totp"
-          :disabled="busy"
-          @keyup-enter="confirm"
-        />
+        <!-- pragma: allowlist nextline secret --><!-- prettier-ignore -->
+        <GxpCredentialsInput v-model:password="password" v-model:username="usernameVal" v-model:totp="totp" :disabled="busy" @keyup-enter="confirm" />
 
         <div class="form-group last-group">
           <label for="sig-reason">Meaning of Signing / Signing Reason</label>
