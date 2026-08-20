@@ -84,6 +84,7 @@ os.environ.setdefault("ALLOW_MOCK_SIGNATURES", "1")
 # Files that must be committed to keep CI green and compliant.
 GXP_DOCS = [
     "docs/SDLC/Requirements_Traceability_Matrix.md",
+    "docs/SDLC/RTM.md",
     "docs/SDLC/IQ_OQ_PQ_Execution_Report.md",
     "docs/SDLC/runs",
 ]

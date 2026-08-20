@@ -215,3 +215,35 @@ def test_pq_test_missing_draft_mode(tmp_path):
         in qual_content
     )
     assert "Verification Status:** ⚪ Unverified (Draft Mode)" in qual_content
+
+
+def test_rtm_adr_traceability_table(tmp_path):
+    """Test that RTM generation outputs Architectural Decisions Traceability Table and writes RTM.md."""
+    output_dir = tmp_path / "reports_adr"
+    cmd = [
+        sys.executable,
+        "scripts/generate_rtm.py",
+        "--output-dir",
+        str(output_dir),
+        "--draft",
+    ]
+
+    res = subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO_ROOT))
+    assert res.returncode == 0, f"Script failed with: {res.stderr}"
+
+    rtm_matrix_file = output_dir / "Requirements_Traceability_Matrix.md"
+    rtm_short_file = output_dir / "RTM.md"
+
+    assert rtm_matrix_file.is_file()
+    assert rtm_short_file.is_file()
+
+    matrix_content = rtm_matrix_file.read_text(encoding="utf-8")
+    short_content = rtm_short_file.read_text(encoding="utf-8")
+
+    assert "## 3. Architectural Decisions Traceability Table" in matrix_content
+    assert "ADR File" in matrix_content
+    assert "Decision Title" in matrix_content
+    assert "2026-06-06-usdm-pydantic-models.md" in matrix_content
+    assert "PRD-MDR-001" in matrix_content
+    assert matrix_content == short_content
+
