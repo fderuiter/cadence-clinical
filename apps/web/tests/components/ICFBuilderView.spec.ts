@@ -134,7 +134,7 @@ describe("ICFBuilderView.vue and Pinia Store Unit Tests", () => {
       meaningOfSigning: "I agree to participate",
       timestamp: "2026-08-19T12:00:00Z",
       sha256_hash:
-        "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289",
+        "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
     };
     modal.vm.$emit("success", mockSigManifest);
     await wrapper.vm.$nextTick();
@@ -146,7 +146,7 @@ describe("ICFBuilderView.vue and Pinia Store Unit Tests", () => {
     expect(banner.text()).toContain("Participant Jane Doe");
     expect(banner.text()).toContain("I agree to participate");
     expect(banner.text()).toContain(
-      "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289"
+      "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289" // pragma: allowlist secret
     );
   });
 });

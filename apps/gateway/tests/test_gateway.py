@@ -2568,10 +2568,10 @@ def test_gateway_startup_staging_fails_with_bypass_configs() -> None:
 
     env = {
         "APP_ENV": "staging",
-        "JWT_TEST_SECRET": "some_test_secret",
-        "GATEWAY_SECRET": "internal-gateway-secret-12345",
-        "AUDIT_LOG_SECRET_KEY": "test-gxp-audit-secret-key-placeholder-abc",
-        "INBOUND_EMAIL_HMAC_SECRET": "test-email-hmac-secret-placeholder-xyz",
+        "JWT_TEST_SECRET": "some_test_secret",  # pragma: allowlist secret
+        "GATEWAY_SECRET": "internal-gateway-secret-12345",  # pragma: allowlist secret
+        "AUDIT_LOG_SECRET_KEY": "test-gxp-audit-secret-key-placeholder-abc",  # pragma: allowlist secret
+        "INBOUND_EMAIL_HMAC_SECRET": "test-email-hmac-secret-placeholder-xyz",  # pragma: allowlist secret
     }
     result = subprocess.run(
         [sys.executable, "-c", "import apps.gateway.main"],

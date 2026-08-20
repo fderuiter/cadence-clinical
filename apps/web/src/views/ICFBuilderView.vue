@@ -66,7 +66,7 @@
           <strong>Cryptographic Checksum (SHA-256):</strong>
           <code>{{
             latestSignature.sha256_hash ||
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" // pragma: allowlist secret
           }}</code>
         </div>
       </div>
@@ -330,7 +330,7 @@ const handleExecuteSignature = async (
     signingReason: signingReason || "I agree to participate",
     timestamp: new Date().toISOString(),
     sha256_hash:
-      "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289",
+      "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
     sigToken,
   };
   econsentStore.recordSignedConsent(record);
@@ -347,7 +347,7 @@ const onSignatureSuccess = (result) => {
       meaningOfSigning: "I agree to participate",
       timestamp: new Date().toISOString(),
       sha256_hash:
-        "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289",
+        "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
     };
   }
 };
