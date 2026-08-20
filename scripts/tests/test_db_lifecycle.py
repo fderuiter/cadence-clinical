@@ -8,7 +8,7 @@ from scripts.db_lifecycle import load_yaml_seed_config, validate_local_only
 def test_validate_local_only_valid():
     """Verify validate_local_only allows standard local URLs."""
     validate_local_only(
-        "Postgres", "postgresql+asyncpg://cadence:pwd@localhost:5432/db"
+        "Postgres", "postgresql+asyncpg://cadence:pwd@localhost:5432/db"  # pragma: allowlist secret
     )
     validate_local_only("Neo4j", "bolt://127.0.0.1:7687")
     validate_local_only("SQLite", "sqlite+aiosqlite:////app/tmf.db")
