@@ -815,7 +815,7 @@ def generate_rtm_md(
     if os.path.abspath(output_path) != os.path.abspath(rtm_short):
         try:
             with open(rtm_short, "w", encoding="utf-8") as f_short:
-                with open(output_path, "r", encoding="utf-8") as f_in:
+                with open(output_path, encoding="utf-8") as f_in:
                     f_short.write(f_in.read())
         except Exception:
             pass

@@ -4,9 +4,16 @@
     <header class="builder-header">
       <div class="header-left">
         <h2>ICF Authoring: {{ econsentStore.currentIcf?.title }}</h2>
-        <span class="study-tag">Study: {{ econsentStore.currentIcf?.studyId || 'CADENCE-101' }}</span>
-        <span class="version-tag">ICF Version: {{ econsentStore.currentIcf?.version }}</span>
-        <span class="protocol-tag">Protocol: {{ econsentStore.currentIcf?.protocolVersion || 'v1.0' }}</span>
+        <span class="study-tag"
+          >Study: {{ econsentStore.currentIcf?.studyId || "CADENCE-101" }}</span
+        >
+        <span class="version-tag"
+          >ICF Version: {{ econsentStore.currentIcf?.version }}</span
+        >
+        <span class="protocol-tag"
+          >Protocol:
+          {{ econsentStore.currentIcf?.protocolVersion || "v1.0" }}</span
+        >
       </div>
       <div class="header-right">
         <button
@@ -40,10 +47,28 @@
         </strong>
       </div>
       <div class="manifest-details">
-        <div><strong>Signer:</strong> {{ latestSignature.signerName || latestSignature.username }} ({{ latestSignature.signerRole || 'Subject' }})</div>
-        <div><strong>Meaning of Signing:</strong> {{ latestSignature.meaningOfSigning || latestSignature.signingReason }}</div>
-        <div><strong>Server Timestamp:</strong> {{ latestSignature.timestamp }}</div>
-        <div><strong>Cryptographic Checksum (SHA-256):</strong> <code>{{ latestSignature.sha256_hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }}</code></div>
+        <div>
+          <strong>Signer:</strong>
+          {{ latestSignature.signerName || latestSignature.username }} ({{
+            latestSignature.signerRole || "Subject"
+          }})
+        </div>
+        <div>
+          <strong>Meaning of Signing:</strong>
+          {{
+            latestSignature.meaningOfSigning || latestSignature.signingReason
+          }}
+        </div>
+        <div>
+          <strong>Server Timestamp:</strong> {{ latestSignature.timestamp }}
+        </div>
+        <div>
+          <strong>Cryptographic Checksum (SHA-256):</strong>
+          <code>{{
+            latestSignature.sha256_hash ||
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }}</code>
+        </div>
       </div>
     </div>
 
@@ -164,9 +189,7 @@
           />
         </div>
         <div v-else-if="showQuiz">
-          <ComprehensionQuizBuilder
-            @proceed-to-sign="openSignatureModal"
-          />
+          <ComprehensionQuizBuilder @proceed-to-sign="openSignatureModal" />
         </div>
         <div v-else class="no-selection-pane">
           <p>
@@ -182,7 +205,7 @@
       :is-open="showSignatureModal"
       username="participant.cadence101"
       signer-name="Participant Jane Doe"
-      role="Subject"
+      signer-role="Subject"
       action-url="/api/v1/econsent/templates/icf-001/versions/1/capture-consent"
       :on-sign="handleExecuteSignature"
       @cancel="showSignatureModal = false"
@@ -293,14 +316,19 @@ const openSignatureModal = () => {
   showSignatureModal.value = true;
 };
 
-const handleExecuteSignature = async (sigToken, signingReason, metadata = {}) => {
+const handleExecuteSignature = async (
+  sigToken,
+  signingReason,
+  metadata = {}
+) => {
   const record = {
     signerName: metadata.signerName || "Participant Jane Doe",
     signerRole: metadata.signerRole || "Subject",
     meaningOfSigning: signingReason || "I agree to participate",
     signingReason: signingReason || "I agree to participate",
     timestamp: new Date().toISOString(),
-    sha256_hash: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289",
+    sha256_hash:
+      "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289",
     sigToken,
   };
   econsentStore.recordSignedConsent(record);
@@ -316,7 +344,8 @@ const onSignatureSuccess = (result) => {
       signerRole: "Subject",
       meaningOfSigning: "I agree to participate",
       timestamp: new Date().toISOString(),
-      sha256_hash: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289",
+      sha256_hash:
+        "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289",
     };
   }
 };

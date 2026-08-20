@@ -246,4 +246,3 @@ def test_rtm_adr_traceability_table(tmp_path):
     assert "2026-06-06-usdm-pydantic-models.md" in matrix_content
     assert "PRD-MDR-001" in matrix_content
     assert matrix_content == short_content
-
