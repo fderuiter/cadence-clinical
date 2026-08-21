@@ -19,6 +19,8 @@ from apps.knowledge.domain.models import (
     ArticleSnapshot,
     ArticleStatus,
     ArticleTransitionError,
+    CategoryConflictError,
+    CategoryNotFoundError,
     validate_transition,
 )
 from apps.knowledge.infrastructure.models import (
@@ -79,7 +81,32 @@ class ArticleLifecycleService:
 
         Returns:
             The persisted KnowledgeCategory instance.
+
+        Raises:
+            CategoryNotFoundError: If parent_id does not exist or is deleted.
+            CategoryConflictError: If name or slug already exists.
         """
+        # Validate parent category existence if parent_id is specified
+        if parent_id:
+            parent = await self.get_category_by_id(parent_id)
+            if not parent:
+                raise CategoryNotFoundError(
+                    f"Parent category with id {parent_id!r} does not exist or has been deleted."
+                )
+
+        # Validate unique name and slug
+        existing_result = await self._session.execute(
+            select(KnowledgeCategory).where(
+                KnowledgeCategory.is_deleted.is_(False),
+                (KnowledgeCategory.name == name) | (KnowledgeCategory.slug == slug),
+            )
+        )
+        existing = existing_result.scalars().first()
+        if existing:
+            raise CategoryConflictError(
+                f"A category with name {name!r} or slug {slug!r} already exists."
+            )
+
         category = KnowledgeCategory(
             name=name,
             slug=slug,
@@ -92,6 +119,44 @@ class ArticleLifecycleService:
         self._session.add(category)
         await self._session.flush()
         return category
+
+    async def get_category_by_id(
+        self, category_id: str
+    ) -> KnowledgeCategory | None:
+        """
+        Retrieves an active KnowledgeCategory by its unique ID.
+
+        Args:
+            category_id: The UUID of the category.
+
+        Returns:
+            The KnowledgeCategory instance or None if not found or deleted.
+        """
+        result = await self._session.execute(
+            select(KnowledgeCategory).where(
+                KnowledgeCategory.id == category_id,
+                KnowledgeCategory.is_deleted.is_(False),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def get_category_by_slug(self, slug: str) -> KnowledgeCategory | None:
+        """
+        Retrieves an active KnowledgeCategory by its unique slug.
+
+        Args:
+            slug: The slug identifier of the category.
+
+        Returns:
+            The KnowledgeCategory instance or None if not found or deleted.
+        """
+        result = await self._session.execute(
+            select(KnowledgeCategory).where(
+                KnowledgeCategory.slug == slug,
+                KnowledgeCategory.is_deleted.is_(False),
+            )
+        )
+        return result.scalar_one_or_none()
 
     # ------------------------------------------------------------------
     # Article creation

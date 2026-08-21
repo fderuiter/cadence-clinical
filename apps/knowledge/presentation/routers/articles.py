@@ -20,6 +20,8 @@ from apps.knowledge.domain.models import (
     ArticleReasonRequiredError,
     ArticleStatus,
     ArticleTransitionError,
+    CategoryConflictError,
+    CategoryNotFoundError,
 )
 from apps.knowledge.infrastructure.models import (
     ContextualHelpMapping,
@@ -90,6 +92,7 @@ async def create_category(
         The created CategoryResponse.
 
     Raises:
+        HTTPException 404: If the specified parent_id does not exist.
         HTTPException 409: If the category name or slug already exists.
     """
     actor = current_user_id.get()
@@ -104,9 +107,17 @@ async def create_category(
             actor_user_id=actor,
             reason_for_change=payload.reason_for_change,
         )
-    except Exception as exc:
+    except CategoryNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except CategoryConflictError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         ) from exc
     return CategoryResponse.model_validate(category)
 
@@ -129,6 +140,37 @@ async def list_categories(
         select(KnowledgeCategory).where(KnowledgeCategory.is_deleted.is_(False))
     )
     return [CategoryResponse.model_validate(c) for c in result.scalars().all()]
+
+
+@router.get(
+    "/categories/{category_id}",
+    response_model=CategoryResponse,
+    dependencies=[Depends(require_roles(ALL_ROLES))],
+)
+async def get_category(
+    category_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> CategoryResponse:
+    """
+    Retrieves a single KnowledgeCategory by ID.
+
+    Args:
+        category_id: UUID of the category to retrieve.
+        session: Injected async database session.
+
+    Returns:
+        The CategoryResponse.
+
+    Raises:
+        HTTPException 404: If the category does not exist or is deleted.
+    """
+    svc = ArticleLifecycleService(session)
+    category = await svc.get_category_by_id(category_id)
+    if not category:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
+        )
+    return CategoryResponse.model_validate(category)
 
 
 # ---------------------------------------------------------------------------

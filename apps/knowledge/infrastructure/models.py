@@ -78,7 +78,13 @@ class KnowledgeCategory(Base):
         back_populates="category", cascade="all, delete-orphan"
     )
     parent: Mapped[KnowledgeCategory | None] = relationship(
-        "KnowledgeCategory", remote_side="KnowledgeCategory.id"
+        "KnowledgeCategory",
+        remote_side="KnowledgeCategory.id",
+        back_populates="children",
+    )
+    children: Mapped[list[KnowledgeCategory]] = relationship(
+        "KnowledgeCategory",
+        back_populates="parent",
     )
 
 

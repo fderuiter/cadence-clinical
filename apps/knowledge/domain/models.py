@@ -137,6 +137,18 @@ class ArticleReasonRequiredError(ValueError):
     """Raised when a regulated transition is attempted without a reason_for_change."""
 
 
+class CategoryNotFoundError(ValueError):
+    """Raised when a referenced category or parent category cannot be found."""
+
+
+class CategoryConflictError(ValueError):
+    """Raised when category name or slug is not unique."""
+
+
+class CategoryCircularParentError(ValueError):
+    """Raised when category parent creates a circular reference."""
+
+
 @dataclass
 class ArticleSnapshot:
     """
