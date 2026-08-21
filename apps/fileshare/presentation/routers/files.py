@@ -79,7 +79,7 @@ async def get_upload_url(
     user_id = current_user_id.get() or "system_user"
     tenant_id = current_tenant_id.get() or "tenant_default"
 
-    return await service.generate_upload_url(
+    session = await service.generate_upload_url(
         study_id=payload.study_id,
         filename=payload.filename,
         mime_type=payload.mime_type,
@@ -90,6 +90,14 @@ async def get_upload_url(
         site_id=payload.site_id,
         is_multipart=payload.is_multipart,
         parts_count=payload.parts_count,
+    )
+    return FileUploadUrlResponse(
+        file_id=session.file_id,
+        object_key=session.object_key,
+        upload_id=session.upload_id,
+        upload_url=session.upload_url,
+        upload_urls=session.upload_urls,
+        expires_in=session.expires_in,
     )
 
 
@@ -112,11 +120,19 @@ async def get_download_url(
     site_id = current_site_id.get()
 
     try:
-        return await service.generate_download_url(
+        session = await service.generate_download_url(
             file_id=file_id,
             caller_user_id=user_id,
             caller_roles=roles,
             caller_site_id=site_id,
+        )
+        return FileDownloadUrlResponse(
+            file_id=session.file_id,
+            filename=session.filename,
+            mime_type=session.mime_type,
+            download_url=session.download_url,
+            expires_in=session.expires_in,
+            is_watermarked=session.is_watermarked,
         )
     except FileNotFoundError as exc:
         raise HTTPException(
@@ -164,7 +180,9 @@ async def list_files(
 
     Requirements: PRD-SYS-001, PRD-DOC-001
     """
-    records = await service.file_repo.list_by_study(study_id=study_id, site_id=site_id)
+    records = await service.file_repo.list_by_study(
+        study_id=study_id, site_id=site_id
+    )
     return [FileRecordResponse.model_validate(r) for r in records]
 
 
@@ -187,7 +205,7 @@ async def create_share_grant(
     roles = extract_caller_roles(request)
 
     try:
-        return await service.create_share_grant(
+        grant = await service.create_share_grant(
             file_id=file_id,
             grantor_user_id=user_id,
             grantor_roles=roles,
@@ -197,6 +215,7 @@ async def create_share_grant(
             reason_for_change=payload.reason_for_change,
             expires_at=payload.expires_at,
         )
+        return ShareGrantResponse.model_validate(grant)
     except FileNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
@@ -224,11 +243,20 @@ async def create_guest_link(
     user_id = current_user_id.get() or "system_user"
 
     try:
-        return await service.create_guest_link(
+        link = await service.create_guest_link(
             file_id=file_id,
             creator_user_id=user_id,
             reason_for_change=payload.reason_for_change,
             expires_in_hours=payload.expires_in_hours,
+        )
+        return GuestLinkResponse(
+            id=link.id,
+            file_record_id=link.file_record_id,
+            guest_url=link.guest_url,
+            expires_at=link.expires_at,
+            created_by=link.created_by,
+            access_count=link.access_count,
+            is_valid=link.is_valid,
         )
     except FileNotFoundError as exc:
         raise HTTPException(
