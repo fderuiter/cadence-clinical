@@ -193,6 +193,10 @@ The system must provide 21 CFR Part 11 compliant digital signing of binary docum
 
 The platform web client and automated testing harness must support deterministic Persona Context Switching across all supported clinical roles (`super_admin`, `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `auditor`). Context switching must seamlessly adjust active auth headers, tenant scopes, role-based UI gate visibility, and de-identification filters, allowing complete automated validation of the end-to-end golden path workflow from study authoring to audit inspection.
 
+#### PRD-SYS-051: AI Gateway Microservice and Three-Tier Clinical Intelligence Architecture
+
+The platform must encapsulate all artificial intelligence model routing, rate-limiting, cost accounting, and prompt execution behind a dedicated internal microservice (`apps/ai-gateway`) protected by HMAC authentication. Outbound prompts must undergo in-flight de-identification of Protected Health Information (PHI) via `packages/deid`, and generated records must enter a `DRAFT_AI` state with dual-attribution metadata requiring human verification and 21 CFR Part 11 electronic signatures.
+
 ---
 
 ## 4. Study Design & Clinical Metadata Repository (MDR)

@@ -160,4 +160,58 @@ A compliance artifact caching mechanism that records test run outcomes and JUnit
 
 A modular architecture unifying repository sentinels (drift detection, duplication analysis, ADR validation, schema verification) under a typed, concurrent check interface that emits structured JSON telemetry and formatted terminal reports.
 
+### AI Gateway Microservice
 
+A dedicated internal routing and inference microservice (`apps/ai-gateway`) that encapsulates model provider orchestration, token rate-limiting, cost accounting, tier-based model selection, and prompt template execution behind a uniform HMAC-authenticated REST API.
+
+### Three-Tier Model Routing Strategy
+
+A cost-control and performance routing policy categorizing AI workloads into Tier 1 (local SLMs and embedded vector encoders), Tier 2 (fast, high-throughput cost-effective cloud LLMs), and Tier 3 (frontier multi-modal reasoning models reserved for complex clinical synthesis).
+
+### In-Flight De-Identification Air-Gap
+
+A privacy protection pattern where outbound prompts sent to external cloud model providers are automatically scrubbed of Protected Health Information (PHI) and Personally Identifiable Information (PII) using surrogate tokens, with reverse unmasking executed in ephemeral memory or short-lived encrypted cache upon response reception.
+
+### Dual-Attribution AI Compliance Ledger
+
+A 21 CFR Part 11 regulatory record pattern where entities generated or modified by AI are flagged in a draft state (`DRAFT_AI`) paired with generation metadata (model version, prompt hash, confidence score) and require human-in-the-loop review and cryptographic electronic signature verification before entering active clinical status.
+
+### Hybrid Semantic Medical Coding
+
+A clinical coding pattern combining exact and lexical hierarchy navigation with dense vector embeddings to match verbatim medical terms against authoritative MedDRA and WHODrug dictionaries, yielding deterministic candidate rankings with mathematical cosine similarity scores.
+
+### Grounded Protocol Citation Extraction
+
+A retrieval-augmented generation validation pattern that bounds AI responses to explicit source document coordinates (protocol version, section, page number) and suppresses generation when citation faithfulness or retrieval confidence falls below established regulatory safety thresholds.
+
+### eConsent Readability Harmonization
+
+An interactive Informed Consent Form (ICF) authoring workflow that calculates standardized readability metrics (Flesch-Kincaid, Dale-Chall) and generates patient-friendly vocabulary substitutions without mutating underlying legal provenance or IRB version indexing.
+
+### Multimodal DIA TMF Classifier
+
+A document processing pipeline combining optical character recognition (OCR), visual layout analysis, and DIA TMF Reference Model taxonomy matching to extract regulatory metadata, verify signature completeness, and stage classified artifacts for Clinical Research Associate (CRA) quality control.
+
+### Cross-Domain Clinical Discrepancy Worker
+
+An asynchronous background evaluation worker that detects contextual inconsistencies across correlated eCRF domains (e.g. Adverse Events, Concomitant Medications, Laboratory Diagnostics) and generates staged query drafts for human Data Manager adjudication.
+
+### Protocol Digitization Stage DAG
+
+An asynchronous multi-stage directed acyclic graph workflow in `apps/designer` that decomposes protocol PDF ingestion into checkpointed transformations (layout parsing, SoA extraction, biomedical concept mapping, and eCRF synthesis) with strict schema validation gates at each stage boundary.
+
+### Protocol Amendment Impact Assessment
+
+An automated analysis engine evaluating graph and narrative deltas between protocol revisions to quantify operational scope changes, calculate subject re-consent requirements, and generate domain-routed operational tickets.
+
+### Generative Pharmacovigilance Narrative
+
+A regulatory narrative drafting pipeline in `apps/safety` that compiles chronological de-identified clinical event streams from eCRF data into FDA MedWatch and CIOMS-I compliant narrative summaries gated behind physician electronic signatures.
+
+### Hybrid Interoperability Semantic Mapping
+
+An integration pattern in `apps/interop` combining pre-compiled deterministic FHIR-to-CDISC ConceptMaps with confidence-gated embedding and LLM fallbacks for unstructured electronic health record (EHR) data.
+
+### Embedded AI Action Primitive
+
+A standardized frontend component pattern (`<AiActionButton>`, `<AiSuggestionDrawer>`) providing contextual AI triggers, visual confidence indicators, diff inspections, and role-governed human review actions within high-density clinical workspaces.
