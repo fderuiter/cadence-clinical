@@ -117,6 +117,7 @@ RULES = {
             "docs/**/*.mjs",
             "tests/**/*.mjs",
             "verification/**/*.mjs",
+            ".jules/**/*.mjs",
         ],
         "description": "MJS files (*.mjs) must reside in apps/, packages/, scripts/, docs/, tests/, or verification/.",
     },

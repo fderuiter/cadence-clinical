@@ -798,3 +798,17 @@ Before submitting a PR, verify all items:
 - [ ] Local compliance and security sweeps run and pass, with any false positives bypassed using standard comment pragmas (restricted to mock/test files).
 - [ ] No code duplication failures (run `uv run python scripts/detect_duplication.py` locally to verify, or whitelist if exempt).
 - [ ] No binary `.docx` files, `report.xml`, or secrets are staged.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in **GitHub Issues** (canonical, via `gh` CLI) **and** `.scratch/<feature>/issues/` (local markdown drafts). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout: `CONTEXT.md` at the repo root + `docs/adr/`. See `docs/agents/domain.md`.

@@ -8,7 +8,6 @@ import {
   queueSubmission,
   getQueuedSubmissions,
   clearAllSubmissions,
-  getInMemorySessionKey,
 } from "../src/sync-queue.js";
 import { validateEproPayload, validateEproSubmission } from "usdm-schemas";
 
@@ -28,7 +27,6 @@ describe("Centralized Zod ePRO Schema & Pre-Transmission Sync Guard", () => {
     const rawMaterial = new Uint8Array(32);
     for (let i = 0; i < 32; i++) rawMaterial[i] = i + 1;
     await initSessionKey(rawMaterial);
-    getInMemorySessionKey();
   });
 
   describe("Requirement 1 & 3: Pre-Save Local Validation Gate", () => {

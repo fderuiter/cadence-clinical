@@ -96,7 +96,7 @@ const signingReason = computed({
 defineExpose({
   password,
   totp,
-  signerNameVal,
+  signerName: signerNameVal,
   signerRole,
   signingReason,
 });
