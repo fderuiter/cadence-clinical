@@ -177,6 +177,22 @@ Completeness audits and expected document list seeding must dynamically query ma
 
 The system must support server-side automated and manual redaction of personally identifiable information (PII) and protected health information (PHI) within clinical documents. It must apply de-identification profiles (e.g. HIPAA, GDPR, EU_CTR) and custom terms to redact and shift dates/ages deterministically without changing the original source document. A signed, tamper-evident manifest must be generated for each redaction operation, and signature validation must fail upon any manifest modification. Raw matched values must never be returned or stored in manifest summaries, and unauthorized/read-only roles (such as inspectors and auditors) must be blocked from performing redaction or accessing unredacted original files. (Traced to SRS Trace-12; cross-referenced with ADR-065/ADR-098).
 
+#### PRD-DOC-001: Object Storage Adapter & Metadata Envelope Pattern
+
+The system must decouple binary file payload storage from relational transaction state using a generic `StoragePort[T]` abstraction supporting MinIO and S3-compatible backends. All binary blobs (eTMF artifacts, eISF binders, site files, and multimedia attachments) must be stored under tenant-isolated paths (`/{tenant_id}/{study_id}/{doc_id}`). Document regulatory metadata, taxonomy classifications, version indices, and access control policies must reside in PostgreSQL. Pre-signed upload and download URLs must be generated only after validating caller authentication and permissions.
+
+#### PRD-DOC-002: Cryptographic File Integrity & SHA-256 Checksum Verification
+
+Every binary upload workflow must allocate a draft document envelope in PostgreSQL prior to issuing pre-signed upload URLs. Upon upload completion, the system must verify the file's SHA-256 checksum and mime-type against the committed database record before transitioning the document status to `COMMITTED`. Any payload failing checksum verification or virus scanning must be quarantined and marked as `REJECTED`.
+
+#### PRD-DOC-003: 21 CFR Part 11 Electronic Signatures on Binary Attachments & Legal Retention Hold
+
+The system must provide 21 CFR Part 11 compliant digital signing of binary documents requiring multi-factor re-authentication (username, password, and signing intent reason). Signed document manifests must bind the cryptographic SHA-256 hash of the binary file to the signer identity and timestamp. The system must also enforce Legal Retention Holds that programmatically prevent document soft-deletion, version pruning, or physical purging while an active hold is flagged.
+
+#### PRD-SYS-050: Multi-Persona Context Switching & End-to-End Golden Path Verification
+
+The platform web client and automated testing harness must support deterministic Persona Context Switching across all supported clinical roles (`super_admin`, `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `auditor`). Context switching must seamlessly adjust active auth headers, tenant scopes, role-based UI gate visibility, and de-identification filters, allowing complete automated validation of the end-to-end golden path workflow from study authoring to audit inspection.
+
 ---
 
 ## 4. Study Design & Clinical Metadata Repository (MDR)
