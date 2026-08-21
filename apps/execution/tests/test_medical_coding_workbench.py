@@ -81,6 +81,7 @@ async def setup_workbench_db() -> AsyncGenerator[None]:
     yield
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+    await db_manager.close()
     TrialLockManager.reset()
     coding_cache.clear()
 

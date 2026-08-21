@@ -2138,6 +2138,18 @@ async function initializeApp() {
     console.warn("Failed to initialize session key:", err);
   }
 
+  // Initialize MSW Mock Gateway Worker in development / offline browser mode
+  if (
+    typeof window !== "undefined" &&
+    (import.meta.env?.DEV ||
+      import.meta.env?.MODE === "demo" ||
+      import.meta.env?.VITE_ENABLE_MSW === "true")
+  ) {
+    import("./mocks/browser.js")
+      .then(({ startMswWorker }) => startMswWorker())
+      .catch((err) => console.warn("[MSW] Failed to initialize worker:", err));
+  }
+
   // Mount Vue application
   if (typeof document !== "undefined") {
     const appEl = document.getElementById("app");

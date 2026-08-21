@@ -108,6 +108,7 @@ RULES = {
             "tests/**/*.js",
             "verification/**/*.js",
             ".jules/**/*.js",
+            ".agents/**/*.js",
         ],
         "description": "JavaScript files (*.js) must reside in apps/, packages/, scripts/, docs/, tests/, verification/, or .jules/.",
     },
@@ -120,6 +121,7 @@ RULES = {
             "tests/**/*.mjs",
             "verification/**/*.mjs",
             ".jules/**/*.mjs",
+            ".agents/**/*.mjs",
         ],
         "description": "MJS files (*.mjs) must reside in apps/, packages/, scripts/, docs/, tests/, verification/, or .jules/.",
     },
@@ -137,6 +139,30 @@ RULES = {
             ".scratch/**/*.md",
         ],
         "description": "Markdown files (*.md) must reside in apps/, packages/, docs/, scripts/, tests/, verification/, .github/, .jules/, .agents/, or .scratch/.",
+    },
+    "*.yaml": {
+        "allowed": [
+            ".github/**/*.yaml",
+            ".agents/**/*.yaml",
+            ".jules/**/*.yaml",
+            ".cadence/**/*.yaml",
+            "docker/**/*.yaml",
+            "packages/**/*.yaml",
+            "apps/**/*.yaml",
+        ],
+        "description": "YAML files (*.yaml) must reside in permitted directories.",
+    },
+    "*.yml": {
+        "allowed": [
+            ".github/**/*.yml",
+            ".agents/**/*.yml",
+            ".jules/**/*.yml",
+            ".cadence/**/*.yml",
+            "docker/**/*.yml",
+            "packages/**/*.yml",
+            "apps/**/*.yml",
+        ],
+        "description": "YML files (*.yml) must reside in permitted directories.",
     },
 }
 

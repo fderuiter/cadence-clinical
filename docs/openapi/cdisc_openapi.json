@@ -901,6 +901,7 @@
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
         "operationId": "proxy_requests__path__delete",
+<<<<<<< HEAD
         "parameters": [
           {
             "name": "path",
@@ -937,6 +938,8 @@
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
         "operationId": "proxy_requests__path__delete",
+=======
+>>>>>>> origin/dev
         "parameters": [
           {
             "name": "path",
@@ -973,6 +976,81 @@
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
         "operationId": "proxy_requests__path__delete",
+<<<<<<< HEAD
+=======
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__delete",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__delete",
+>>>>>>> origin/dev
         "parameters": [
           {
             "name": "path",
@@ -1045,6 +1123,7 @@
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
         "operationId": "proxy_requests__path__delete",
+<<<<<<< HEAD
         "parameters": [
           {
             "name": "path",
@@ -1081,6 +1160,8 @@
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
         "operationId": "proxy_requests__path__delete",
+=======
+>>>>>>> origin/dev
         "parameters": [
           {
             "name": "path",
