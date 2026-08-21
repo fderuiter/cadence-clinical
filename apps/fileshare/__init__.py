@@ -1,2 +1,1 @@
 """Cadence Clinical Fileshare Microservice."""
-

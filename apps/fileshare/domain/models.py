@@ -3,9 +3,9 @@
 Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 """
 
+import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
-import uuid
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -44,7 +44,7 @@ class PermissionLevel(StrEnum):
         }
         return ranks[self]
 
-    def satisfies(self, required: "PermissionLevel") -> bool:
+    def satisfies(self, required: PermissionLevel) -> bool:
         """Check if this permission level is at least as permissive as the required level."""
         return self.rank >= required.rank
 
@@ -109,9 +109,7 @@ class ShareGrant(BaseModel):
         """Evaluates whether the grant is currently active, non-revoked, and unexpired."""
         if self.is_deleted or self.revoked_at is not None:
             return False
-        if self.expires_at is not None and datetime.now(UTC) > self.expires_at:
-            return False
-        return True
+        return not (self.expires_at is not None and datetime.now(UTC) > self.expires_at)
 
 
 class GuestLink(BaseModel):
@@ -140,7 +138,4 @@ class GuestLink(BaseModel):
         """Evaluates if the guest link is unrevoked and not expired."""
         if self.revoked_at is not None:
             return False
-        if datetime.now(UTC) > self.expires_at:
-            return False
-        return True
-
+        return datetime.now(UTC) <= self.expires_at

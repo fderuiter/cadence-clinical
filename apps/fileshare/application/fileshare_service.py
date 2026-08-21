@@ -3,14 +3,14 @@
 Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 """
 
-from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
 import hashlib
 import hmac
 import os
 import secrets
-from typing import Any
 import uuid
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from apps.fileshare.domain.exceptions import (
     FileNotFoundError,
@@ -191,23 +191,21 @@ class FileShareService:
         is_watermarked = False
 
         if not is_admin and not is_uploader:
-            grants = await self.grant_repo.list_by_file_id(
-                file_id, active_only=True
-            )
+            grants = await self.grant_repo.list_by_file_id(file_id, active_only=True)
             matching_grants: list[ShareGrant] = []
 
             for grant in grants:
                 if (
-                    grant.scope == ShareScope.INDIVIDUAL
-                    and grant.granted_to_user_id == caller_user_id
-                ):
-                    matching_grants.append(grant)
-                elif grant.scope == ShareScope.STUDY:
-                    matching_grants.append(grant)
-                elif (
-                    grant.scope == ShareScope.SITE
-                    and caller_site_id
-                    and file_record.site_id == caller_site_id
+                    (
+                        grant.scope == ShareScope.INDIVIDUAL
+                        and grant.granted_to_user_id == caller_user_id
+                    )
+                    or grant.scope == ShareScope.STUDY
+                    or (
+                        grant.scope == ShareScope.SITE
+                        and caller_site_id
+                        and file_record.site_id == caller_site_id
+                    )
                 ):
                     matching_grants.append(grant)
 
@@ -217,9 +215,7 @@ class FileShareService:
                 )
 
             # Determine highest granted permission level
-            max_grant = max(
-                matching_grants, key=lambda g: g.permission_level.rank
-            )
+            max_grant = max(matching_grants, key=lambda g: g.permission_level.rank)
             if max_grant.permission_level.requires_watermark():
                 is_watermarked = True
 
@@ -260,9 +256,7 @@ class FileShareService:
         is_uploader = file_record.uploaded_by == grantor_user_id
 
         if not is_admin and not is_uploader:
-            user_grant = await self.grant_repo.find_user_grant(
-                file_id, grantor_user_id
-            )
+            user_grant = await self.grant_repo.find_user_grant(file_id, grantor_user_id)
             if not user_grant or not user_grant.permission_level.satisfies(
                 PermissionLevel.RESHARE
             ):
@@ -338,4 +332,3 @@ class FileShareService:
             access_count=saved.access_count,
             is_valid=saved.is_valid,
         )
-

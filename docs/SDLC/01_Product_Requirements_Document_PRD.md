@@ -911,6 +911,24 @@ To coordinate cross-functional clinical trial issues, protocol deviations, site 
 - Ticket sign-offs on Critical/Major resolutions must support 21 CFR Part 11 compliant electronic signatures with user identity binding, re-authentication password/token verification, and immutable audit trail manifestation.
 - The platform must manage audited blob evidence attachments with SHA-256 integrity verification, DEID scrubbing flags, and dual-visibility comment streams (`PUBLIC` vs `INTERNAL_SPONSOR`).
 
+---
+
+### 7.8 Knowledge & Support Hub
+
+To provide a centralized, GxP-compliant, role-aware knowledge base, standard operating procedures (SOPs) repository, and contextual in-app guidance across the clinical platform.
+
+#### PRD-KNB-001: Knowledge Article Lifecycle & Two-Tier Immutability
+
+- The system must enforce a two-tier data model with `KnowledgeArticle` managing lifecycle states (`DRAFT`, `IN_REVIEW`, `APPROVED`, `PUBLISHED`, `SUPERSEDED`, `ARCHIVED`) and `KnowledgeArticleVersion` storing frozen, immutable content snapshots.
+- Four-eyes approval controls must be enforced such that the user who authored or edited a version cannot approve or publish it.
+- Publishing a new version must automatically supersede any previously active version without physical deletion of historical content.
+
+#### PRD-KNB-002: Multi-Channel Notifications and Contextual Guidance
+
+- The system must support multi-channel notifications (In-App, Email, and Webhook) for knowledge publication and ticketing events.
+- Safety-critical notifications (`CRITICAL` tickets and SLA escalations) must bypass user opt-out preferences under regulatory compliance mandates.
+- In-page contextual help mappings must dynamically resolve relevant SOPs by route pattern and user persona.
+
 ## 8. Definition of Done (DoD) & Bi-directional Traceability
 
 This Product Requirements Document represents the definitive, legally compliant system configuration for Cadence Clinical. To satisfy the Definition of Done (DoD) for GxP system validation:

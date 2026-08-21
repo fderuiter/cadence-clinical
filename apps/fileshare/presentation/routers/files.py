@@ -180,9 +180,7 @@ async def list_files(
 
     Requirements: PRD-SYS-001, PRD-DOC-001
     """
-    records = await service.file_repo.list_by_study(
-        study_id=study_id, site_id=site_id
-    )
+    records = await service.file_repo.list_by_study(study_id=study_id, site_id=site_id)
     return [FileRecordResponse.model_validate(r) for r in records]
 
 
@@ -262,4 +260,3 @@ async def create_guest_link(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
         ) from exc
-

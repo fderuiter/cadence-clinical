@@ -93,7 +93,7 @@ Key capabilities include:
    - Test 21 CFR Part 11 eSignature validation via `GatewayAuthMiddleware`.
 
 ### Prior Art
-- `apps/tickets/tests/test_ticket_lifecycle.py`
+- `apps/tickets/tests/test_tickets_service.py`
 - `packages/testing/factories.py` and `packages/testing/security.py`
 
 ## Out of Scope
@@ -105,7 +105,7 @@ Key capabilities include:
 
 ## Further Notes
 
-- Traceable to system requirements `PRD-SYS-KH-001` (Article Lifecycle) and `PRD-SYS-KH-002` (GxP Compliance & Immutability).
+- Traceable to system requirements `PRD-KNB-001` (Article Lifecycle) and `PRD-KNB-002` (Multi-Channel Notifications).
 - Scaffolds ADR-2188 (`docs/adr/2026-08-21-knowledge-hub-two-tier-immutable-data-model.md`).
-- All test functions must carry `@req:PRD-SYS-KH-001` or `@req:PRD-SYS-KH-002` docstrings for automated RTM sync via `scripts/sync_gxp.py`.
+- All test functions must carry `@req:PRD-KNB-001` or `@req:PRD-KNB-002` docstrings for automated RTM sync via `scripts/sync_gxp.py`.
 

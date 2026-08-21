@@ -9,7 +9,6 @@ from collections.abc import AsyncGenerator
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from apps.fileshare.adapters.database import db_manager
 from apps.fileshare.adapters.storage import set_storage_adapter
 from apps.fileshare.infrastructure.models import Base
 from packages.testing.fakes import InMemoryStoragePort
@@ -38,4 +37,3 @@ async def db_session() -> AsyncGenerator[AsyncSession]:
         await session.rollback()
 
     await engine.dispose()
-

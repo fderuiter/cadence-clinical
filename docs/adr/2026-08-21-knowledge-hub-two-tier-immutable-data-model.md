@@ -4,6 +4,7 @@
 * **Date:** 2026-08-21
 * **Authors:** @fderuiter
 * **Deciders:** @fderuiter
+* **Requirement Reference:** PRD-KNB-001 | 21 CFR Part 11 | Trace-8
 
 ---
 
@@ -17,7 +18,7 @@ Under 21 CFR Part 11 and ICH GCP E6(R2), operational guidance documents used by 
 3. Four-eyes authoring controls must be enforced;
 4. The service must remain decoupled from operational ticketing (which resides in `apps/tickets/`).
 
-This record formalizes the relational database schema, version snapshotting mechanics, foreign key deletion rules, and indexing strategy for `apps/knowledge/`. Reference requirements: `PRD-SYS-KH-001` (Article Lifecycle), `PRD-SYS-KH-002` (GxP Compliance & Immutability).
+This record formalizes the relational database schema, version snapshotting mechanics, foreign key deletion rules, and indexing strategy for `apps/knowledge/`. Reference requirements: `PRD-KNB-001` (Article Lifecycle & Two-Tier Immutability).
 
 ## 2. Decision Drivers & Constraints
 
@@ -34,7 +35,7 @@ This record formalizes the relational database schema, version snapshotting mech
 
 ## 4. Decision Outcome
 
-Chosen option: **Option A (Two-Tier Head + Immutable Version Snapshot)** because it satisfies `PRD-SYS-KH-001` and `PRD-SYS-KH-002` with optimal read performance, strict immutability, and clean microservice boundaries.
+Chosen option: **Option A (Two-Tier Head + Immutable Version Snapshot)** because it satisfies `PRD-KNB-001` with optimal read performance, strict immutability, and clean microservice boundaries.
 
 ### Key Architectural Specifications:
 * **Microservice Boundary**: `apps/knowledge/` exclusively manages categories, articles, version snapshots, contextual help mappings, and audit logs. Support tickets are delegated to `apps/tickets/` (port 8009).
@@ -60,5 +61,5 @@ Chosen option: **Option A (Two-Tier Head + Immutable Version Snapshot)** because
 
 * **Target Schema**: `apps/knowledge/infrastructure/models.py`
 * **Target Domain Logic**: `apps/knowledge/domain/models.py` and `apps/knowledge/application/article_service.py`
-* **Verification**: Test suite under `apps/knowledge/tests/` verifying lifecycle transitions, version snapshot immutability, 4-eyes enforcement, and search vector indexing. Traceable to `@req:PRD-SYS-KH-001` and `@req:PRD-SYS-KH-002`.
+* **Verification**: Test suite under `apps/knowledge/tests/` verifying lifecycle transitions, version snapshot immutability, 4-eyes enforcement, and search vector indexing. Traceable to `@req:PRD-KNB-001`.
 

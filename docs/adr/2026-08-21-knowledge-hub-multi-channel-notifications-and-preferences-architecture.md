@@ -4,7 +4,7 @@
 - **Date:** 2026-08-21
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter
-- **Requirement Reference:** PRD-SYS-KH-001 | 21 CFR Part 11 | Trace-8
+- **Requirement Reference:** PRD-KNB-002 | 21 CFR Part 11 | Trace-8
 
 ---
 
@@ -22,7 +22,17 @@ This decision settles the notification delivery channels, frontend polling model
 - **Regulatory Non-Opt-Out Mandate:** Safety-critical events (`CRITICAL` severity tickets, SLA breaches, direct protocol task assignments) must strictly bypass user opt-out preferences.
 - **Decoupled Asynchronous Reliability:** Transient SMTP or webhook outages must never block or roll back core knowledge or ticketing transactions.
 
-## 3. Architecture & Settled Decisions
+## 3. Options Considered
+
+1. **Option A (Decoupled Multi-Channel Engine with Preference Matrix)**: Centralized async dispatch in `apps/notifications/` supporting In-App, Email, and Webhook transports with GxP non-opt-out overrides.
+2. **Option B (Direct Service SMTP Dispatch)**: Each microservice dispatches emails directly using independent SMTP configurations.
+3. **Option C (Synchronous Webhook Calling)**: Invoke webhooks synchronously in the request path of mutating operations.
+
+## 4. Decision Outcome
+
+Chosen option: **Option A (Decoupled Multi-Channel Engine with Preference Matrix)** because it provides high availability, fault isolation, and centralized regulatory compliance tracking.
+
+### Key Architectural Specifications:
 
 ### 1. Delivery Channels
 The system supports three delivery transports:
@@ -60,7 +70,7 @@ The system supports three delivery transports:
 - Composite idempotency token format: `related_entity_id = f"{entity_type}:{entity_id}:{event_type}:{version_index}"`.
 - `apps/notifications` enforces a duplicate check on `(recipient_user_id, related_entity_id)` before queueing delivery tasks.
 
-## 4. Consequences & Trade-offs
+## 5. Consequences & Trade-offs
 
 - **Positive Impact:**
   - High availability with asynchronous, fault-isolated dispatch across all three channels.
@@ -72,7 +82,7 @@ The system supports three delivery transports:
 - **Mitigation Strategy:**
   - Comprehensive unit and integration test coverage across simulated SMTP servers and mock webhook receivers.
 
-## 5. Implementation & Verification
+## 6. Implementation & Verification
 
 - **Affected Services:** `apps/notifications`, `apps/knowledge`, `apps/tickets`, `apps/web`
 - **Verification Plan:**

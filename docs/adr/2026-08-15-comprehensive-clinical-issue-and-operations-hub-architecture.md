@@ -58,7 +58,7 @@ Chosen option: **Option 3 (Unified Clinical Issue & Operations Hub Microservice)
   - `apps/tickets/domain/models.py`: Enums for `GxPSeverity`, `RootCauseCategory`, `ResolutionCode`, `CommentVisibility`, `TicketCategory`, and SLA pause states.
   - `apps/tickets/domain/services.py`: SLA calculation, amber warning thresholds, and RCA resolution validators.
   - `apps/tickets/adapters/models.py`: SQLModel tables for `Ticket`, `TicketComment`, `TicketAttachment`, and `TicketAuditLog`.
-  - `apps/tickets/application/analytics.py`: KPI calculation (MTTR, SLA compliance, site breakdown).
+  - `apps/tickets/adapters/analytics.py`: KPI calculation (MTTR, SLA compliance, site breakdown).
 - **Presentation & REST Endpoints:**
   - `apps/tickets/presentation/routers/tickets.py`: REST routes for tickets, comments, cross-app ingestion, file attachments, eSignatures, analytics, and audit exports.
 - **Frontend Web Workspace:**

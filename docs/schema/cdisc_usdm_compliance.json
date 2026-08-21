@@ -12033,12 +12033,29 @@
                   }
                 },
                 {
+                  "id": "prop_etmf_tmf_documents_object_key",
+                  "name": "object_key",
+                  "label": "object_key (VARCHAR(500))",
+                  "cdashVariable": "OBJECT_KEY",
+                  "dataType": "VARCHAR(500)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "etmf",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
                   "id": "prop_etmf_tmf_documents_content",
                   "name": "content",
                   "label": "content (VARCHAR)",
                   "cdashVariable": "CONTENT",
                   "dataType": "VARCHAR",
-                  "mandatory": true,
+                  "mandatory": false,
                   "config": {
                     "primary_key": false,
                     "foreign_keys": [],
@@ -15173,12 +15190,29 @@
                   }
                 },
                 {
+                  "id": "prop_eisf_isf_documents_object_key",
+                  "name": "object_key",
+                  "label": "object_key (VARCHAR(500))",
+                  "cdashVariable": "OBJECT_KEY",
+                  "dataType": "VARCHAR(500)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "eisf",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
                   "id": "prop_eisf_isf_documents_content",
                   "name": "content",
                   "label": "content (VARCHAR)",
                   "cdashVariable": "CONTENT",
                   "dataType": "VARCHAR",
-                  "mandatory": true,
+                  "mandatory": false,
                   "config": {
                     "primary_key": false,
                     "foreign_keys": [],
@@ -45258,12 +45292,29 @@
               }
             },
             {
+              "id": "prop_etmf_tmf_documents_object_key",
+              "name": "object_key",
+              "label": "object_key (VARCHAR(500))",
+              "cdashVariable": "OBJECT_KEY",
+              "dataType": "VARCHAR(500)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "etmf",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
               "id": "prop_etmf_tmf_documents_content",
               "name": "content",
               "label": "content (VARCHAR)",
               "cdashVariable": "CONTENT",
               "dataType": "VARCHAR",
-              "mandatory": true,
+              "mandatory": false,
               "config": {
                 "primary_key": false,
                 "foreign_keys": [],
@@ -48398,12 +48449,29 @@
               }
             },
             {
+              "id": "prop_eisf_isf_documents_object_key",
+              "name": "object_key",
+              "label": "object_key (VARCHAR(500))",
+              "cdashVariable": "OBJECT_KEY",
+              "dataType": "VARCHAR(500)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "eisf",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
               "id": "prop_eisf_isf_documents_content",
               "name": "content",
               "label": "content (VARCHAR)",
               "cdashVariable": "CONTENT",
               "dataType": "VARCHAR",
-              "mandatory": true,
+              "mandatory": false,
               "config": {
                 "primary_key": false,
                 "foreign_keys": [],
@@ -78472,12 +78540,29 @@
           }
         },
         {
+          "id": "prop_etmf_tmf_documents_object_key",
+          "name": "object_key",
+          "label": "object_key (VARCHAR(500))",
+          "cdashVariable": "OBJECT_KEY",
+          "dataType": "VARCHAR(500)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "etmf",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
           "id": "prop_etmf_tmf_documents_content",
           "name": "content",
           "label": "content (VARCHAR)",
           "cdashVariable": "CONTENT",
           "dataType": "VARCHAR",
-          "mandatory": true,
+          "mandatory": false,
           "config": {
             "primary_key": false,
             "foreign_keys": [],
@@ -81612,12 +81697,29 @@
           }
         },
         {
+          "id": "prop_eisf_isf_documents_object_key",
+          "name": "object_key",
+          "label": "object_key (VARCHAR(500))",
+          "cdashVariable": "OBJECT_KEY",
+          "dataType": "VARCHAR(500)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "eisf",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
           "id": "prop_eisf_isf_documents_content",
           "name": "content",
           "label": "content (VARCHAR)",
           "cdashVariable": "CONTENT",
           "dataType": "VARCHAR",
-          "mandatory": true,
+          "mandatory": false,
           "config": {
             "primary_key": false,
             "foreign_keys": [],

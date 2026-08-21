@@ -4,4 +4,3 @@ from packages.database import DatabaseSessionDependency, RelationalDatabaseManag
 
 db_manager = RelationalDatabaseManager("fileshare")
 get_db_session = DatabaseSessionDependency(db_manager)
-
