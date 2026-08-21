@@ -5,6 +5,8 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 
+from packages.security.signing import compute_sha256_hash
+
 
 class TamperDetectedError(Exception):
     """Exception raised when post-signature document tampering is detected.
@@ -450,9 +452,7 @@ class ESignatureVerifier:
                         .encode("utf-8")
                     )
 
-                digest = hashes.Hash(hashes.SHA256())
-                digest.update(body_content)
-                computed_hash = digest.finalize().hex().lower()
+                computed_hash = compute_sha256_hash(body_content).lower()
 
                 if computed_hash != expected_hash:
                     return VerificationResult(

@@ -268,8 +268,7 @@
                 border: '1px solid #cbd5e1',
                 borderRadius: '4px',
                 fontSize: '13px',
-              }"
-            /><!-- pragma: allowlist secret -->
+              }"/><!-- pragma: allowlist secret -->
 
             <!-- Error Notification Banner -->
             <div

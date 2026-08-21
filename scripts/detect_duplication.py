@@ -572,6 +572,14 @@ def main() -> None:
                                     "apps/etmf/infrastructure/models.py",
                                     "apps/etmf/database/migrate.py",
                                 },
+                                {
+                                    "apps/designer/infrastructure/neo4j_usdm_writer.py",
+                                    "apps/designer/domain/cdisc/usdm_importer.py",
+                                },
+                                {
+                                    "apps/gateway/domain/acl/usdm_validation.py",
+                                    "apps/execution/domain/acl/usdm_validation_dto.py",
+                                },
                             ]
                         ):
                             continue

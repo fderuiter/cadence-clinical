@@ -381,7 +381,7 @@ def compute_merkle_root(record_hashes: list[str]) -> str:
     Computes the Merkle Root hash from a list of record hashes.
     """
     combined_records_payload = "".join(record_hashes).encode("utf-8")
-    return hashlib.sha256(combined_records_payload).hexdigest()
+    return compute_sha256_hash(combined_records_payload)
 
 
 def compute_block_hash(previous_hash: str, merkle_root: str) -> str:
@@ -389,7 +389,7 @@ def compute_block_hash(previous_hash: str, merkle_root: str) -> str:
     Computes a sequential block-level chaining hash using the previous block hash and the current Merkle root.
     """
     block_input = (previous_hash + merkle_root).encode("utf-8")
-    return hashlib.sha256(block_input).hexdigest()
+    return compute_sha256_hash(block_input)
 
 
 class InboundEmailReplayCache:

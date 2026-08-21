@@ -52,8 +52,7 @@
           v-model:password="password" data-pragma="pragma: allowlist secret"
           v-model:totp="totp"
           :disabled="busy"
-          @keyup-enter="confirm"
-        /><!-- pragma: allowlist secret -->
+          @keyup-enter="confirm"/><!-- pragma: allowlist secret -->
 
         <div class="form-group last-group">
           <label for="sig-reason">Meaning of Signing / Signing Reason</label>

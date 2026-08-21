@@ -46,6 +46,11 @@ jobs:
         run: |
           uv run python scripts/validate_vulnerabilities.py
 
+      # Run Code Duplication Gate
+      - name: Run Code Duplication Check
+        run: |
+          uv run python scripts/detect_duplication.py
+
       - name: Generate Reports with Overrides
         run: |
           uv run python scripts/generate_rtm.py --output-dir tmp_etmf --dynamic-timestamp

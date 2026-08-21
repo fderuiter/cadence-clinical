@@ -4,7 +4,6 @@ Requirements: PRD-SYS-001
 """
 
 import base64
-import hashlib
 import json
 from datetime import UTC, datetime
 from typing import Any
@@ -15,6 +14,8 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_pem_public_key,
 )
+
+from packages.security.signing import compute_sha256_hash
 
 
 class CryptographicSignatureBuilder:
@@ -37,7 +38,7 @@ class CryptographicSignatureBuilder:
         else:
             serialized = str(content)
 
-        return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+        return compute_sha256_hash(serialized)
 
     def build_signature_payload(
         self,

@@ -20,18 +20,24 @@ describe("Mock Gateway Simulator Unit Tests", () => {
 
   describe("Path Prefix Validation and Stripping", () => {
     it("should accept valid service path prefixes and strip them", async () => {
-      const req = new Request("http://localhost:8000/designer/studies/STUDY-01", {
-        method: "GET",
-      });
+      const req = new Request(
+        "http://localhost:8000/designer/studies/STUDY-01",
+        {
+          method: "GET",
+        }
+      );
       const result = await validateGatewayRequest(req);
       expect(result.valid).toBe(true);
       expect(result.strippedPath).toBe("studies/STUDY-01");
     });
 
     it("should reject invalid path prefixes and log console error", async () => {
-      const req = new Request("http://localhost:8000/invalid-service/endpoint", {
-        method: "GET",
-      });
+      const req = new Request(
+        "http://localhost:8000/invalid-service/endpoint",
+        {
+          method: "GET",
+        }
+      );
       const result = await validateGatewayRequest(req);
       expect(result.valid).toBe(false);
       expect(result.status).toBe(400);
@@ -69,20 +75,27 @@ describe("Mock Gateway Simulator Unit Tests", () => {
       const result = await validateGatewayRequest(req);
       expect(result.valid).toBe(false);
       expect(result.status).toBe(403);
-      expect(result.body.detail).toContain("Access denied: Subject principal is not authorized");
+      expect(result.body.detail).toContain(
+        "Access denied: Subject principal is not authorized"
+      );
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("403 Forbidden: Subject role attempted to access administrative route")
+        expect.stringContaining(
+          "403 Forbidden: Subject role attempted to access administrative route"
+        )
       );
     });
 
     it("should block administrative eCRF mutation attempts from Subject principal", async () => {
-      const req = new Request("http://localhost:8000/api/v1/execution/subjects", {
-        method: "POST",
-        headers: {
-          "X-User-Roles": "subject",
-          "X-User-Id": "sub-001",
-        },
-      });
+      const req = new Request(
+        "http://localhost:8000/api/v1/execution/subjects",
+        {
+          method: "POST",
+          headers: {
+            "X-User-Roles": "subject",
+            "X-User-Id": "sub-001",
+          },
+        }
+      );
       const result = await validateGatewayRequest(req);
       expect(result.valid).toBe(false);
       expect(result.status).toBe(403);
@@ -91,31 +104,39 @@ describe("Mock Gateway Simulator Unit Tests", () => {
 
   describe("Dual-Signature Header Validation", () => {
     it("should reject signature-gated mutations missing X-Sig-Token and log console error", async () => {
-      const req = new Request("http://localhost:8000/api/v1/execution/queries/sync", {
-        method: "POST",
-        headers: {
-          "X-User-Roles": "Data Manager",
-          "X-User-Id": "user-001",
-        },
-      });
+      const req = new Request(
+        "http://localhost:8000/api/v1/execution/queries/sync",
+        {
+          method: "POST",
+          headers: {
+            "X-User-Roles": "Data Manager",
+            "X-User-Id": "user-001",
+          },
+        }
+      );
       const result = await validateGatewayRequest(req);
       expect(result.valid).toBe(false);
       expect(result.status).toBe(401);
       expect(result.body.detail).toBe("REAUTHENTICATION_REQUIRED");
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Missing or invalid e-signature header (X-Sig-Token)")
+        expect.stringContaining(
+          "Missing or invalid e-signature header (X-Sig-Token)"
+        )
       );
     });
 
     it("should accept signature-gated mutations when valid X-Sig-Token is supplied", async () => {
-      const req = new Request("http://localhost:8000/api/v1/execution/queries/sync", {
-        method: "POST",
-        headers: {
-          "X-User-Roles": "Data Manager",
-          "X-User-Id": "user-001",
-          "X-Sig-Token": "valid-reauth-sig-token-jwt",
-        },
-      });
+      const req = new Request(
+        "http://localhost:8000/api/v1/execution/queries/sync",
+        {
+          method: "POST",
+          headers: {
+            "X-User-Roles": "Data Manager",
+            "X-User-Id": "user-001",
+            "X-Sig-Token": "valid-reauth-sig-token-jwt",
+          },
+        }
+      );
       const result = await validateGatewayRequest(req);
       expect(result.valid).toBe(true);
     });
@@ -168,7 +189,9 @@ describe("Mock Gateway Simulator Unit Tests", () => {
       expect(result.status).toBe(401);
       expect(result.body.detail).toBe("Invalid gateway signature");
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Invalid or tampered X-Gateway-Signature header")
+        expect.stringContaining(
+          "Invalid or tampered X-Gateway-Signature header"
+        )
       );
     });
   });
