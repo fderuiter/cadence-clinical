@@ -7,6 +7,11 @@ const repoRoot = path.resolve(__dirname, "..");
 // Automatically set RTM_DRAFT to true for docs compilation to ensure the process is fail-safe when report.xml is absent.
 process.env.RTM_DRAFT = "true";
 
+// Ensure adequate heap allocation for large documentation bundles under VitePress
+if (!process.env.NODE_OPTIONS || !process.env.NODE_OPTIONS.includes("--max-old-space-size")) {
+  process.env.NODE_OPTIONS = `${process.env.NODE_OPTIONS || ""} --max-old-space-size=8192`.trim();
+}
+
 let pnpmCmd = "pnpm";
 
 /**
