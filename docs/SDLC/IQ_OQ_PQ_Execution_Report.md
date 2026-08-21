@@ -2727,16 +2727,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_fail_fast_without_report_and_draft_flag` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_missing_report_gxp_sync_dry_run` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_success_with_draft_flag` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-<<<<<<< HEAD
-| `test_layout_gating_approved_and_logged` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_gating_missing_justification_rejected` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_integration` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
-| `test_layout_validation_invisible` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
-| `test_layout_validation_overlap` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
-| `test_layout_validation_scrambled_sequence` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
-| `test_layout_validation_valid` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
-=======
->>>>>>> origin/dev
 | `test_aggregate_eligibility_evaluation_scenarios` | `scripts.tests.test_m4_challenger1_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_document_renderer_fallback` | `scripts.tests.test_m4_challenger1_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_sync_reconciliation_signature_enforcement_errors` | `scripts.tests.test_m4_challenger1_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3021,60 +3011,35 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 
 ---
 
+---
+
 ## Electronic Signature Block
 
 - **Signer Identity:** jules
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-<<<<<<< HEAD
-- **Cryptographic Hash (SHA-256):** 9a34edcb5b8fd760357a12937b0bfd1b3c818d43d3eee6a9442c1df221c161bc
+- **Cryptographic Hash (SHA-256):** 15cd8f4b8c601404e02cf716f306fb3fe0aa19b8b9ff6ecafcbb15428e473c47
 
 -----BEGIN CERTIFICATE-----
-MIIDNDCCAhygAwIBAgIURiOrZRoce2bQ+kyETTThky6SVJ4wDQYJKoZIhvcNAQEL
+MIIDNDCCAhygAwIBAgIUWkf7mqOxRVEfZcPgTd/v61DEIcswDQYJKoZIhvcNAQEL
 BQAwVDEuMCwGA1UEAwwlQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGp1
 bGVzKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTAeFw0yNjA4
-MjAwMDA0MzRaFw0yNzA4MjEwMDA0MzRaMFQxLjAsBgNVBAMMJUNhZGVuY2UgR3hQ
+MjAxNjA2MDhaFw0yNzA4MjExNjA2MDhaMFQxLjAsBgNVBAMMJUNhZGVuY2UgR3hQ
 IFZhbGlkYXRpb24gUnVubmVyIChqdWxlcykxIjAgBgNVBAoMGUNhZGVuY2UgQ2xp
-bmljYWwgU29mdHdhcmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDh
-ghDJkcRd0h12uAqIvDjKPVeRFQaoaFesp56oppSx/1+alRV3r/7Fsx6Uf/+uVcRr
-1cuQInI8co2rjDymQdC1vU6vML1NM473psXMUJQJIBqt+ZS+yL8IAD9wJvwDG2ls
-++bFWn73szzvLlT2y4A1KMt6+KgQUmwXmmU30HxwltDtD4YS2Mrq3vTbEy47IPmo
-9jtuZSClMlOq0iZRVx6iY4J9uk1YPSqkRoGYbda3LcxpvwNQN9H/FQBynAMPMMlD
-7MDTITH7aKgHAE9e2IdBEFqf+2PyBcs2W7OQGuxx4Z9cdxwNIAk8n58YnyOTnB02
-5i4AlhFEIrzA8Af1Q5pjAgMBAAEwDQYJKoZIhvcNAQELBQADggEBAMTCZlLhkDqO
-NZ4tC0XbbVidTQ8Hu7AgNEqSXQXzbQ9NwRPvyJDKgl/Y6DdBlnABd27yKqBfZNWl
-pBhUsoV4pUMUxFvMkmkHr0oUN9PiRVsnuSoP1yV7CEzFvsww/Ln8oSAUqxRhLg6j
-ucW8T60HWB9rzyFkfjGbVTimSTYt4+dorNWDLv4qHQ80ebBGeXvmX2IacyBWla7t
-MuHkt0PyU48JCKe2RQKe2KG7r0/GYgblB7ozAAdo+Y46DDQr7/wfBhMNdg0gP4w+
-hWYCk7/zRhF4oHA36FbiRkT5qUhuDRvX5LKQoN2LQMM40rLxsnjKNmNl8emyx4Ni
-UAzPESmLHvU=
+bmljYWwgU29mdHdhcmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC1
+f4ZXaPphFuCMeEdE4h4Dbog4idBd4izKo127zMEYUB+iW43axQdkKFLk4qg66TCH
+ReWjp7VY9HW4fw001GDr5LcCRqvllARQPZ5fWLzVVWa4LNL/8QsufYVJrxF4vKTS
+bvsNJ/yo1Ut7iyTOpzvoh6Xqvoke0kFskv60QV49Y9m9GEf5sIP30sOYSg+SyESz
+aODOXLjR/UxFiT8uoIk2jn7h85JS5e2RWJ5O7LTUmsbI5vIpW+aHkpo4qc0afTos
+YXUxpiRfixEX0jIhK0F9jAflqr7IBNohg7FNYLsf8QmrrtPzXcWGJl8QK9qV641q
+jS5Jz3BbxiGjMSWjtZotAgMBAAEwDQYJKoZIhvcNAQELBQADggEBAB8DiGbXeu5G
+NW5MdQA8VhFZ+SGi9vMcHYeP47x9J7DSNAOc3SfT0dVUhJLZhRIPcvafCSPqwlZJ
+9fnaZUF/lPXehXOlsdZbtplBEsZ+D+9InymtUp8YzGPuHU9K73d2hT85GlsZhBDQ
+7summbOpaL83G1eKROsG4EhijkOO5MxKsqCzixPcOFzjFLaoBA5G5VFGImACu1u8
+WPAZOk0zDXCw1WPGaGOYVhRbQ0ELcvZdAuATqpvug2mh7/FnMy7xU0OkUizwfrmz
+vYuFXF4+DvAx6B3/EROJ3jdtczTo8JdS+NM5/BjdM+vQVhvctDwrA4OzFn6iI3GI
+m+nJuTGXZN0=
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-tv4s3AB+aM8kvcbuB+R6JWB212Ect+0heVir/48A8wtS4ZHkpIHdPuj/pG9m5jkxVTHfwLsW9tjlo8oKtOz1Mg7IbM636QdNDrqza9InDUj4ZsaD5TFH6FnefSilshvZrfUNEgoysSnuEgceNoMqW/g6+YUn8YeHWQep2bG5kWinWeqY2zbnJots7TVU3+tSfGSLgmU9AP45/ZxmMICNsR84MyNVJStXaYfoHLT6VEdHxLhecY+qgVS1jUvyp5sIEku/jqfDEMtdsMCgCMJdpq6JeQXPit2F+lrcy1qBM5nX8k94OTEifz3o8QELJ3pfsgAPPu1bP3KX4242kUNSyA==
-=======
-- **Cryptographic Hash (SHA-256):** 0fc3fd0a8884f7980d58361fb2c7be24520daaa9a3383f7d507a66096a9e3c0f
-
------BEGIN CERTIFICATE-----
-MIIDNDCCAhygAwIBAgIUe67EMV7QJT0A5kEHo5Gp+T7ozikwDQYJKoZIhvcNAQEL
-BQAwVDEuMCwGA1UEAwwlQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGp1
-bGVzKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTAeFw0yNjA4
-MjAxNTAxNTZaFw0yNzA4MjExNTAxNTZaMFQxLjAsBgNVBAMMJUNhZGVuY2UgR3hQ
-IFZhbGlkYXRpb24gUnVubmVyIChqdWxlcykxIjAgBgNVBAoMGUNhZGVuY2UgQ2xp
-bmljYWwgU29mdHdhcmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC2
-rBIixz/kq0QBJyOznjk3p5Qx6twLu5hD1q28xS4xHPkya2tQfHEn9WUd6i7v/Shn
-I4bq+uPXg+Zm+Bp8i4AWNA3E/ESwA87s/XgnEnNYdXloGbRo4r3ezKiLwkxUrBE4
-CKGBmpHALPWM+8idSDuwOepo6sGQckvFak+628+SAkGqKhxoSGubhRiHiHKVEBgr
-YzVUSfFYTUKyQJvcwk4mfwuKnYf/QtOJ0uCzhwDOhxhYX7R8lVxdEXOI5WKPSvD0
-d37uvIIoipXRKiCWTrsYd9vnoKLjV4NgvRoLzHxCeNxfpow5YRhxmkLOmTFfq29C
-PPM7Ps4t+lDqv5dtlFXZAgMBAAEwDQYJKoZIhvcNAQELBQADggEBAD8qVGd2zLeI
-TJ1HMdOtxtkbKbcuUsw/cnQ7oodC0nG4pBAz/mN1EsZc0GAQARpEf5g8Dl5nudCM
-LY8JsZIOlbNXtgAN8PpVORJUIuGuKL5VDGkydgICdsXIeZ3nenxrReMWc/RltP93
-cZBZtzpI/uR650u6nAdOK1kcIThhG8Oc3sGeWON2kwm2FLmiDVCtGnbnbnKlXS71
-R1V+pZ9yliwhiohbFivTKCYpNrDJlxRX1NpTZ75BWqfLWg9LkP0hkGzziw9Oryfp
-b6PBN/yk22z7lFqAoExFNzRStBvburgeHjDqReoJD+edyHiourZ/HIStZWImWXSI
-WJwRwZ2UdNo=
------END CERTIFICATE-----
------BEGIN SIGNATURE-----
-qRueDwDtLS87T5h/5qNjBG7D638oC+O+znIRQtrvnAD7MINCVhnxtmM24JbRrS2SnZ9GO51/hSABuLrjjBm3784O1P0G2yJ+nTuNACCOciOJYWWwA8QC4Mkt4oKLOq14zCMBAlvBq+GIPt8mYyuxIN1zeq3GZboBOQhrQBdUlUj4ptOknnDuJAIlcUPWTvFBQuQ36ZqvCY02k2jSs7loJoyQDsasT501/ebMeZ/Oi6/NMit1We90OCQC12hVuWCS+MsgQKLAnsMVrL30F0CoX0s8BBYjk5nS8JWPqHBV656Tq7Aa6aS33gpZuZrMdrHRf2qBsoRNE9XsKn0v0cMm/w==
->>>>>>> origin/dev
+Yqm0rDF/HNeLv79B1oxtiAmZ62AZhoQEoqztCKqVLwK8pmIMtVCTp7iGslJ6L5LhKkqlVNrjVLt/jV70jeCYtRpOLcg40KBsOvw39YJ2hBZuG+i/uvYyNcL45v1nS/Q9vPjoHwRGdU9zJFadhGNszd4rXBDyyWGwSNDA6JLTR72Tk4aPmTx77T9r8YztDU7LSSih/ShuHQ57tOZ5Ex+ve+/RRj707yDKlhXt+6AMqX8zvv3nl27jyeahHbU4/VM8+Tinv5mbdaWMz45M5zR8dmyKz8ANEmdW8IGE8T2O6RAzf8LL0mqMiV/2GMZr2XoDPgC2aerD1Ekyv5EvQ/g4vw==
 -----END SIGNATURE-----
