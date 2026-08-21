@@ -18,7 +18,6 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from apps.knowledge.infrastructure.services import ArticleLifecycleService
 from apps.knowledge.domain.models import (
     ArticleApprovalConflictError,
     ArticleReasonRequiredError,
@@ -30,6 +29,7 @@ from apps.knowledge.infrastructure.models import (
     KnowledgeArticleAuditLog,
     KnowledgeCategory,
 )
+from apps.knowledge.infrastructure.services import ArticleLifecycleService
 
 # ---------------------------------------------------------------------------
 # Helpers

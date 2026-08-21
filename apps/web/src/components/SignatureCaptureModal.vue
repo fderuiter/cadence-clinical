@@ -34,10 +34,6 @@ const props = defineProps({
     type: String,
     default: "Subject",
   },
-  signerRole: {
-    type: String,
-    default: "",
-  },
   actionUrl: {
     type: String,
     default: "",
