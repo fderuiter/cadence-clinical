@@ -17,6 +17,9 @@ from packages.security.context import (
     current_signature_context,
     current_timestamp,
     current_user_id,
+    current_user_roles,
+    get_current_context,
+    run_in_thread_with_context,
     service_audit_context,
 )
 from packages.security.crypto_verifier import (
@@ -93,6 +96,7 @@ from packages.security.sig_token_verifier import (
     token_consumption_cache,
     verify_and_consume_sig_token,
 )
+from packages.security.step_up import require_step_up
 from packages.security.signing import (
     asymmetric_sign,
     asymmetric_verify,
@@ -114,6 +118,7 @@ __all__ = [
     "TokenConsumptionCache",
     "token_consumption_cache",
     "verify_and_consume_sig_token",
+    "require_step_up",
     "TrialRole",
     "check_trial_role",
     "enforce_site_isolation",
@@ -124,6 +129,9 @@ __all__ = [
     "current_ip_address",
     "current_timestamp",
     "current_signature_context",
+    "current_user_roles",
+    "get_current_context",
+    "run_in_thread_with_context",
     "audit_context",
     "audit_context_decorator",
     "service_audit_context",

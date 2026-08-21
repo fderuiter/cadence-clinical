@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.knowledge.adapters.database import get_db_session
-from apps.knowledge.application.article_service import ArticleLifecycleService
+from apps.knowledge.services.article_service import ArticleLifecycleService
 from apps.knowledge.domain.models import (
     ArticleApprovalConflictError,
     ArticleReasonRequiredError,

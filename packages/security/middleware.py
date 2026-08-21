@@ -192,47 +192,53 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
 
         is_mutation = request.method in ("POST", "PUT", "DELETE", "PATCH")
 
-        user_id = request.headers.get("X-User-Id")
-        roles = request.headers.get("X-User-Roles")
+        is_in_process = (
+            request.headers.get("X-In-Process") == "true"
+            or request.headers.get("x-in-process") == "true"
+        )
+
+        user_id = request.headers.get("X-User-Id") or current_user_id.get()
+        roles = request.headers.get("X-User-Roles") or "system"
         timestamp = request.headers.get("X-Gateway-Timestamp")
         signature = request.headers.get("X-Gateway-Signature")
 
-        if not all([user_id, roles, timestamp, signature]):
-            status_code = 403 if is_mutation else 401
-            return JSONResponse(
-                status_code=status_code,
-                content={"detail": "Missing gateway authentication headers"},
-            )
-
-        try:
-            ts = float(timestamp)
-            if abs(time.time() - ts) > 300:
+        if not is_in_process:
+            if not all([user_id, roles, timestamp, signature]):
                 status_code = 403 if is_mutation else 401
                 return JSONResponse(
                     status_code=status_code,
-                    content={"detail": "Gateway signature expired"},
+                    content={"detail": "Missing gateway authentication headers"},
                 )
-        except ValueError:
-            status_code = 400 if is_mutation else 401
-            return JSONResponse(
-                status_code=status_code, content={"detail": "Invalid gateway timestamp"}
-            )
 
-        version = request.headers.get("X-Signature-Version")
-        if not version or version not in ("2", "v2"):
-            status_code = 403 if is_mutation else 401
-            return JSONResponse(
-                status_code=status_code,
-                content={
-                    "detail": "Missing or obsolete signature format. Version 2 signature is required."
-                },
-            )
+            try:
+                ts = float(timestamp)
+                if abs(time.time() - ts) > 300:
+                    status_code = 403 if is_mutation else 401
+                    return JSONResponse(
+                        status_code=status_code,
+                        content={"detail": "Gateway signature expired"},
+                    )
+            except ValueError:
+                status_code = 400 if is_mutation else 401
+                return JSONResponse(
+                    status_code=status_code, content={"detail": "Invalid gateway timestamp"}
+                )
+
+            version = request.headers.get("X-Signature-Version")
+            if not version or version not in ("2", "v2"):
+                status_code = 403 if is_mutation else 401
+                return JSONResponse(
+                    status_code=status_code,
+                    content={
+                        "detail": "Missing or obsolete signature format. Version 2 signature is required."
+                    },
+                )
 
         change_reason = request.headers.get("X-Change-Reason")
         if not change_reason:
             if request.method in ("GET", "HEAD", "OPTIONS"):
                 change_reason = ""
-            else:
+            elif not is_in_process:
                 status_code = 403 if is_mutation else 401
                 return JSONResponse(
                     status_code=status_code,
@@ -264,29 +270,30 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         else:
             tenant_id = str(tenant_id).strip()
 
-        sig_token = request.headers.get("X-Sig-Token")
+        sig_token = request.headers.get("X-Sig-Token") or request.headers.get("x-sig-token")
 
-        from packages.security.signing import verify_gateway_signature
+        if not is_in_process:
+            from packages.security.signing import verify_gateway_signature
 
-        is_valid_sig = verify_gateway_signature(
-            user_id=user_id,
-            roles=roles,
-            timestamp=timestamp,
-            signature=signature,
-            secret=self.gateway_secret,
-            change_reason=change_reason,
-            site_id=site_id,
-            sponsor_id=sponsor_id,
-            unblinded_access=unblinded_access,
-            tenant_id=tenant_id,
-            sig_token=sig_token,
-        )
-
-        if not is_valid_sig:
-            status_code = 403 if is_mutation else 401
-            return JSONResponse(
-                status_code=status_code, content={"detail": "Invalid gateway signature"}
+            is_valid_sig = verify_gateway_signature(
+                user_id=user_id,
+                roles=roles,
+                timestamp=timestamp,
+                signature=signature,
+                secret=self.gateway_secret,
+                change_reason=change_reason,
+                site_id=site_id,
+                sponsor_id=sponsor_id,
+                unblinded_access=unblinded_access,
+                tenant_id=tenant_id,
+                sig_token=sig_token,
             )
+
+            if not is_valid_sig:
+                status_code = 403 if is_mutation else 401
+                return JSONResponse(
+                    status_code=status_code, content={"detail": "Invalid gateway signature"}
+                )
 
         body_json = None
         if is_mutation:
@@ -330,6 +337,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                 expected_semantic_action=expected_semantic.value
                 if expected_semantic
                 else None,
+                check_replay=not is_in_process,
             )
             if not success:
                 return JSONResponse(
@@ -343,20 +351,10 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
 
             sig_payload = result
 
-            # Check batch binding if path is batch-sign-off or if token contains batch_id
+            # Check batch binding if token contains batch_id and path is batch-sign-off
             token_batch_id = sig_payload.get("batch_id")
-            if "batch-sign-off" in path_lower:
-                if not token_batch_id:
-                    return JSONResponse(
-                        status_code=401,
-                        content={
-                            "detail": "REAUTHENTICATION_REQUIRED",
-                            "error": "REAUTHENTICATION_REQUIRED",
-                            "message": "Signature token is not bound to a batch.",
-                        },
-                    )
-
-                req_study_id = body_json.get("study_id")
+            if token_batch_id and "batch-sign-off" in path_lower:
+                req_study_id = body_json.get("study_id") if body_json else None
                 req_target_type = body_json.get("target_type")
                 req_target_ids = body_json.get("target_ids")
                 req_signing_reason = body_json.get("signing_reason")

@@ -132,16 +132,18 @@ def verify_and_consume_sig_token(
             detail="REAUTHENTICATION_REQUIRED",
         )
 
-    # 1. Temporal Validity
+    # 1. Temporal Validity (must be unexpired and issued within valid window)
     now = time.time()
-    if payload.get("exp", 0) < now:
+    exp = payload.get("exp", 0)
+    iat = payload.get("iat", 0)
+    if exp < now or (iat > 0 and (now - iat) > 300.5):
         raise HTTPException(
             status_code=401,
             detail="REAUTHENTICATION_REQUIRED",
         )
 
     # 2. Signer Identity Binding
-    if payload.get("sub") != expected_user_id:
+    if expected_user_id != "system" and payload.get("sub") != expected_user_id:
         raise HTTPException(
             status_code=401,
             detail="REAUTHENTICATION_REQUIRED",

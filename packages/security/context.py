@@ -1,3 +1,4 @@
+import concurrent.futures
 import contextvars
 import functools
 import inspect
@@ -22,11 +23,52 @@ current_unblinded_access = contextvars.ContextVar(
     "current_unblinded_access", default=False
 )
 current_tenant_id = contextvars.ContextVar("current_tenant_id", default=None)
+current_user_roles = contextvars.ContextVar("current_user_roles", default=None)
 
 # Context variable for propagating the current Part 11 signature manifestation context
 current_signature_context = contextvars.ContextVar(
     "current_signature_context", default=None
 )
+
+
+def get_current_context() -> dict[str, Any]:
+    """Capture snapshot of current security and execution context variables.
+
+    Returns:
+        dict[str, Any]: Dictionary containing all context variable states.
+    """
+    return {
+        "user_id": current_user_id.get(),
+        "change_reason": current_change_reason.get(),
+        "ip_address": current_ip_address.get(),
+        "timestamp": current_timestamp.get(),
+        "site_id": current_site_id.get(),
+        "sponsor_id": current_sponsor_id.get(),
+        "unblinded_access": current_unblinded_access.get(),
+        "tenant_id": current_tenant_id.get(),
+        "user_roles": current_user_roles.get(),
+        "signature_context": current_signature_context.get(),
+    }
+
+
+def run_in_thread_with_context(
+    func: Callable[P, R], *args: P.args, **kwargs: P.kwargs
+) -> R:
+    """Execute callable in a worker thread while preserving contextvars context.
+
+    Ensures zero authorization context loss across thread pool boundaries.
+
+    Args:
+        func: Callable to execute.
+        *args: Positional arguments.
+        **kwargs: Keyword arguments.
+
+    Returns:
+        R: Result of function execution.
+    """
+    ctx = contextvars.copy_context()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        return executor.submit(ctx.run, func, *args, **kwargs).result()
 
 
 @contextmanager
@@ -40,6 +82,7 @@ def audit_context(
     sponsor_id: str | None = None,
     unblinded_access: bool = False,
     tenant_id: str | None = None,
+    user_roles: str | list[str] | None = None,
 ) -> Generator[None]:
     """Context manager to bind user identity, change reason, IP address, timestamp, signature context, and tenant ID.
 
@@ -53,6 +96,11 @@ def audit_context(
         ip_address (str | None): The network IP address of the client.
         timestamp (datetime | None): The timestamp of the operation.
         signature_context (Any | None): Optional electronic signature manifestation context.
+        site_id (str | None): Optional clinical site scope identifier.
+        sponsor_id (str | None): Optional sponsor scope identifier.
+        unblinded_access (bool): Flag indicating unblinded access permission.
+        tenant_id (str | None): Optional tenant identifier.
+        user_roles (str | list[str] | None): Optional user roles.
 
     Yields:
         None
@@ -61,6 +109,11 @@ def audit_context(
     r = change_reason if change_reason is not None else "system_operation"
     ip = ip_address if ip_address is not None else "127.0.0.1"
     ts = timestamp if timestamp is not None else datetime.now(UTC).replace(tzinfo=None)
+    roles_str = (
+        ",".join(user_roles)
+        if isinstance(user_roles, list)
+        else (user_roles if user_roles is not None else None)
+    )
 
     user_token = current_user_id.set(u)
     reason_token = current_change_reason.set(r)
@@ -71,6 +124,7 @@ def audit_context(
     sponsor_token = current_sponsor_id.set(sponsor_id)
     unblinded_token = current_unblinded_access.set(unblinded_access)
     tenant_token = current_tenant_id.set(tenant_id)
+    roles_token = current_user_roles.set(roles_str)
     try:
         yield
     finally:
@@ -83,6 +137,7 @@ def audit_context(
         current_sponsor_id.reset(sponsor_token)
         current_unblinded_access.reset(unblinded_token)
         current_tenant_id.reset(tenant_token)
+        current_user_roles.reset(roles_token)
 
 
 def audit_context_decorator(
