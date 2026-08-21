@@ -93,6 +93,24 @@ export const PERSONA_PRESETS = [
   },
 ];
 
+export function normalizeRole(role) {
+  const normalized = (role || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-_]+/g, "_");
+  if (
+    normalized === "study_designer" ||
+    normalized === "designer" ||
+    normalized === "sponsor_designer"
+  ) {
+    return "sponsor_designer";
+  }
+  if (normalized === "admin" || normalized === "super_admin") {
+    return "sponsor_admin";
+  }
+  return normalized;
+}
+
 export const useAuthStore = defineStore("auth", {
   state: () => {
     let saved = {};
@@ -143,53 +161,27 @@ export const useAuthStore = defineStore("auth", {
     token: (state) => state.accessToken,
     normalizedRoles: (state) => {
       // Normalize raw roles to UI roles
-      return (state.rawRoles || []).map((role) => {
-        const normalized = role
-          .trim()
-          .toLowerCase()
-          .replace(/[\s-_]+/g, "_");
-        if (
-          normalized === "study_designer" ||
-          normalized === "designer" ||
-          normalized === "sponsor_designer"
-        ) {
-          return "sponsor_designer";
-        }
-        if (normalized === "admin" || normalized === "super_admin") {
-          return "sponsor_admin";
-        }
-        return normalized;
-      });
+      return (state.rawRoles || []).map(normalizeRole);
     },
     hasRole: (state) => (role) => {
       if (!role) return false;
-      const normalized = role.trim().toLowerCase().replace(/[\s-_]+/g, "_");
-      const allowedAliases = ROLE_ALIASES[normalized] || [normalized];
-      const currentRoles = (state.rawRoles || []).map((r) =>
-        r.trim().toLowerCase().replace(/[\s-_]+/g, "_")
-      );
-      if (
-        currentRoles.some(
-          (r) => r === "admin" || r === "super_admin" || r === "sponsor_admin"
-        )
-      ) {
-        return true;
-      }
-      return allowedAliases.some((alias) => currentRoles.includes(alias));
+      const normalized = normalizeRole(role);
+      const targetRoles = ROLE_ALIASES[normalized] || [normalized];
+      const userRoles = (state.rawRoles || []).map(normalizeRole);
+      return userRoles.some((uRole) => {
+        if (targetRoles.includes(uRole)) return true;
+        const aliases = ROLE_ALIASES[uRole] || [];
+        return aliases.some((alias) => targetRoles.includes(alias));
+      });
     },
     isCrc: (state) => {
-      const currentRoles = (state.rawRoles || []).map((r) =>
-        r.trim().toLowerCase().replace(/[\s-_]+/g, "_")
-      );
-      if (
-        currentRoles.some(
-          (r) => r === "admin" || r === "super_admin" || r === "sponsor_admin"
-        )
-      ) {
-        return true;
-      }
-      const crcAliases = ["crc", "site_investigator", "site_crc"];
-      return crcAliases.some((alias) => currentRoles.includes(alias));
+      const userRoles = (state.rawRoles || []).map(normalizeRole);
+      const crcTargets = ["crc", "site_investigator"];
+      return userRoles.some((uRole) => {
+        if (crcTargets.includes(uRole)) return true;
+        const aliases = ROLE_ALIASES[uRole] || [];
+        return aliases.some((alias) => crcTargets.includes(alias));
+      });
     },
   },
   actions: {

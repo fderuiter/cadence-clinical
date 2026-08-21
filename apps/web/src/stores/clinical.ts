@@ -1,10 +1,10 @@
-import { defineStore, getActivePinia } from "pinia";
+import { defineStore, getActivePinia, type StateTree } from "pinia";
 import "pinia";
 import { stateTrackingPlugin } from "./plugins.js";
 
 declare module "pinia" {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  export interface DefineStoreOptionsBase<_S, _Store> {
+  export interface DefineStoreOptionsBase<S extends StateTree, Store> {
     trackActions?: Record<string, { loading?: string; error?: string }>;
   }
 }
