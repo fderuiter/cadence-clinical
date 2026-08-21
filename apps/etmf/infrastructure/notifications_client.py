@@ -1,74 +1,64 @@
+"""
+HTTP client adapter for dispatching document expiration notifications from the eTMF microservice.
+
+Delegates to the unified NotificationDispatcher in packages/security/notifications.py.
+"""
+
 import logging
 import os
-import time
+from typing import Any
 
-import httpx
-
-from packages.security.signing import generate_gateway_signature
+from packages.security import GatewayBaseClient
 
 logger = logging.getLogger("etmf-notifications-client")
 
 
 async def publish_expiration_notification(
-    payload: dict,
+    payload: dict[str, Any],
 ) -> tuple[bool, str | None, str | None]:
-    try:
-        notifications_url = os.getenv(
-            "NOTIFICATIONS_URL", "http://localhost:8006"
-        ).rstrip("/")
-        url = f"{notifications_url}/api/v1/notifications"
+    """
+    Publishes an eTMF document expiration notification event.
 
+    Args:
+        payload: Notification payload dictionary.
+
+    Returns:
+        Tuple of (success_bool, notification_id_or_none, error_message_or_none).
+    """
+    try:
+        notifications_url = os.getenv("NOTIFICATIONS_URL", "http://localhost:8006")
         timeout_env = os.getenv("ETMF_NOTIFICATIONS_CLIENT_TIMEOUT", "2.0")
         try:
             timeout = float(timeout_env)
         except ValueError:
             timeout = 2.0
 
-        gateway_secret_env = os.getenv(
-            "GATEWAY_SECRET", "internal-gateway-secret-12345"
-        )
-        gateway_secret = (
-            gateway_secret_env.encode("utf-8")
-            if isinstance(gateway_secret_env, str)
-            else gateway_secret_env
-        )
-
-        user_id = "etmf-service"
-        change_reason = "System-initiated expiration alert generation"
-        roles = "admin"
-        timestamp = str(time.time())
-
-        signature = generate_gateway_signature(
-            user_id=user_id,
-            roles=roles,
-            timestamp=timestamp,
-            secret=gateway_secret,
-            change_reason=change_reason,
+        client = GatewayBaseClient(base_url=notifications_url, timeout=timeout)
+        response = await client.request(
+            method="POST",
+            path="/api/v1/notifications",
+            user_id="etmf-service",
+            roles="admin",
+            change_reason="System-initiated expiration alert generation",
+            json=payload,
         )
 
-        headers = {
-            "X-User-Id": user_id,
-            "X-User-Roles": roles,
-            "X-Gateway-Timestamp": timestamp,
-            "X-Gateway-Signature": signature,
-            "X-Signature-Version": "2",
-            "X-Change-Reason": change_reason,
-        }
+        if response.status_code == 201:
+            res_data = response.json()
+            return True, res_data.get("id"), None
 
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(url, json=payload, headers=headers)
-            if response.status_code == 201:
-                res_data = response.json()
-                return True, res_data.get("id"), None
-            error_msg = f"HTTP {response.status_code}: {response.text}"
-            logger.error("Failed to publish notification: %s", error_msg)
-            return False, None, error_msg
+        error_msg = f"HTTP {response.status_code}: {response.text}"
+        logger.error("Failed to publish notification: %s", error_msg)
+        return False, None, error_msg
 
-    except Exception as e:
-        error_msg = str(e)
+    except Exception as exc:
+        error_msg = str(exc)
         logger.error(
             "Exception occurred during notification publication: %s",
             error_msg,
             exc_info=True,
         )
         return False, None, error_msg
+
+
+__all__ = ["publish_expiration_notification"]

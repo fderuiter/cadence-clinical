@@ -1,52 +1,29 @@
-import logging
-import os
+"""
+HTTP client adapter for dispatching notification events from the eConsent microservice.
 
-from packages.security import GatewayBaseClient
-from packages.security.context import current_change_reason, current_user_id
+Delegates to the unified NotificationDispatcher in packages/security/notifications.py.
+"""
 
-logger = logging.getLogger("econsent-notifications-client")
+from typing import Any
+
+from packages.security.notifications import (
+    NotificationEvent,
+)
+from packages.security.notifications import (
+    publish_notification as _publish_notification,
+)
 
 
-async def publish_notification(payload: dict) -> bool:
+async def publish_notification(payload: NotificationEvent | dict[str, Any]) -> bool:
     """
     Sends a POST request to {NOTIFICATIONS_URL}/api/v1/notifications.
     Uses HMAC-SHA256 Gateway signature V2 for secure internal service authentication.
     Logs and swallows all transport or non-2xx errors.
     """
-    try:
-        notifications_url = os.getenv("NOTIFICATIONS_URL", "http://localhost:8006")
-        client = GatewayBaseClient(base_url=notifications_url, timeout=2.0)
+    return await _publish_notification(
+        payload,
+        service_name="econsent-service",
+    )
 
-        user_id = current_user_id.get()
-        if not user_id or user_id == "system":
-            user_id = "econsent-service"
 
-        change_reason = current_change_reason.get()
-        if not change_reason or change_reason == "system_operation":
-            change_reason = "Clinical workflow event publication"
-
-        roles = "admin"
-
-        response = await client.request(
-            method="POST",
-            path="/api/v1/notifications",
-            user_id=user_id,
-            roles=roles,
-            change_reason=change_reason,
-            json=payload,
-        )
-        if response.status_code != 201:
-            logger.error(
-                "Failed to publish notification, status code: %s, response: %s",
-                response.status_code,
-                response.text,
-            )
-            return False
-        return True
-    except Exception as e:
-        logger.error(
-            "Exception occurred during notification publication: %s",
-            e,
-            exc_info=True,
-        )
-        return False
+__all__ = ["publish_notification"]

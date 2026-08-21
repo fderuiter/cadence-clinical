@@ -13,7 +13,11 @@ from packages.testing.factories import (
     QueryDiscrepancyFactory,
     SubjectFactory,
 )
-from packages.testing.fakes import InMemoryRepository, InMemoryStoragePort
+from packages.testing.fakes import (
+    InMemoryNotificationDispatcher,
+    InMemoryRepository,
+    InMemoryStoragePort,
+)
 from packages.testing.security import (
     create_test_auth_headers,
     create_test_security_context,
@@ -26,6 +30,7 @@ __all__ = [
     "ClinicalObservationFactory",
     "ConsentRecordFactory",
     "DocumentMetadataFactory",
+    "InMemoryNotificationDispatcher",
     "InMemoryRepository",
     "InMemoryStoragePort",
     "ProtocolDefinitionFactory",

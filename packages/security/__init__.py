@@ -46,6 +46,16 @@ from packages.security.middleware import (
     GatewayAuthMiddleware,
     require_gateway_permission,
 )
+from packages.security.notifications import (
+    GatewayNotificationDispatcher,
+    InMemoryNotificationDispatcher,
+    NotificationCategory,
+    NotificationDispatcherPort,
+    NotificationEvent,
+    NotificationPriority,
+    get_notification_dispatcher,
+    publish_notification,
+)
 from packages.security.permissions import (
     PermissionEnum,
     RoleEnum,
@@ -197,4 +207,12 @@ __all__ = [
     "validate_timezone_aware_datetime",
     "assert_secure_secrets",
     "validate_branding",
+    "NotificationCategory",
+    "NotificationPriority",
+    "NotificationEvent",
+    "NotificationDispatcherPort",
+    "GatewayNotificationDispatcher",
+    "InMemoryNotificationDispatcher",
+    "get_notification_dispatcher",
+    "publish_notification",
 ]

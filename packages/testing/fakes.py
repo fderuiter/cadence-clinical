@@ -5,6 +5,7 @@ import uuid
 from typing import Any
 
 from packages.hexagonal import RepositoryPort
+from packages.security.notifications import InMemoryNotificationDispatcher
 from packages.storage.blob_store import (
     StorageIntegrityError,
     StorageObjectNotFoundError,
@@ -179,3 +180,10 @@ class InMemoryStoragePort(StoragePort[dict[str, Any]]):
         self._objects.clear()
         self._metadata.clear()
         self._multipart_sessions.clear()
+
+
+__all__ = [
+    "InMemoryNotificationDispatcher",
+    "InMemoryRepository",
+    "InMemoryStoragePort",
+]
