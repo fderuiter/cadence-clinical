@@ -3,7 +3,7 @@
 import asyncio
 import contextlib
 import os
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import and_, or_, select
@@ -80,7 +80,7 @@ async def poll_and_dispatch() -> None:
         return
     session_maker = db_manager.get_session_maker()
     async with session_maker() as session:
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         stmt = select(NotificationDelivery).where(
             or_(
                 NotificationDelivery.status == "PENDING",
@@ -172,14 +172,14 @@ async def deliver_channel(delivery_id: str) -> None:
         try:
             if delivery.channel == "IN_APP":
                 delivery.status = "SUCCESS"
-                delivery.completed_at = datetime.utcnow()
+                delivery.completed_at = datetime.now(UTC)
                 notification.delivery_state = "DELIVERED"
 
             elif delivery.channel == "EMAIL":
                 print("DEBUG: deliver_channel calling send_email_notification...")
                 await send_email_notification(notification)
                 delivery.status = "SUCCESS"
-                delivery.completed_at = datetime.utcnow()
+                delivery.completed_at = datetime.now(UTC)
                 print(
                     "DEBUG: deliver_channel send_email_notification finished successfully"
                 )
@@ -188,7 +188,7 @@ async def deliver_channel(delivery_id: str) -> None:
                 print("DEBUG: deliver_channel calling send_webhook_notification...")
                 await send_webhook_notification(notification)
                 delivery.status = "SUCCESS"
-                delivery.completed_at = datetime.utcnow()
+                delivery.completed_at = datetime.now(UTC)
                 print(
                     "DEBUG: deliver_channel send_webhook_notification finished successfully"
                 )
@@ -217,7 +217,7 @@ async def deliver_channel(delivery_id: str) -> None:
                 backoff_delay = min(
                     max_delay, base_delay * (2 ** (delivery.attempts - 1))
                 )
-                delivery.next_retry_at = datetime.utcnow() + timedelta(
+                delivery.next_retry_at = datetime.now(UTC) + timedelta(
                     seconds=backoff_delay
                 )
                 delivery.retry_eligible = True

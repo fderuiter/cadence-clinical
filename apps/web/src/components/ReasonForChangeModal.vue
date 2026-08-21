@@ -1,5 +1,9 @@
 <template>
-  <ReasonModal v-bind="$props" @confirm="onConfirm" @cancel="onCancel" />
+  <ReasonModal
+    v-bind="$props"
+    @confirm="onConfirm"
+    @cancel="onCancel"
+  />
 </template>
 
 <script setup>

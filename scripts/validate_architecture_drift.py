@@ -150,6 +150,13 @@ def validate_feature_matrix(matrix_path: Path, active_services: list[str]) -> bo
         "notifications": ["Notifications Service"],
         "econsent": ["Electronic Consent"],
         "subject-portal": ["Subject Portal"],
+        "fileshare": [
+            "FileShare Service",
+            "FileShare",
+            "Fileshare",
+            "Fileshare & Media Service",
+            "Secure File Share & Object Storage",
+        ],
     }
 
     # Filter out active services to only include those that have an application folder

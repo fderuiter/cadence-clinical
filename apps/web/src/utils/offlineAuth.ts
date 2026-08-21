@@ -247,7 +247,9 @@ export class OfflineAuthManager {
       });
 
       if (locked) {
-        throw new Error("Key recovery locked. Too many failed attempts.");
+        throw new Error("Key recovery locked. Too many failed attempts.", {
+          cause: err,
+        });
       }
 
       throw err;

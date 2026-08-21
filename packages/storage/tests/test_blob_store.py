@@ -74,7 +74,9 @@ async def test_local_storage_provider_lifecycle():
         assert not await provider.exists(key)
 
         # Write data
-        calculated_hash = await provider.put_object(key, data, expected_hash)
+        calculated_hash = await provider.put_object(
+            key, data, expected_sha256=expected_hash
+        )
         assert calculated_hash == expected_hash
 
         # Check exists
@@ -104,7 +106,7 @@ async def test_local_storage_provider_integrity_failure():
 
         # Integrity failure on write
         with pytest.raises(StorageIntegrityError):
-            await provider.put_object(key, data, incorrect_hash)
+            await provider.put_object(key, data, expected_sha256=incorrect_hash)
 
         # File should not exist because replace was never called
         assert not await provider.exists(key)
@@ -177,7 +179,9 @@ async def test_s3_storage_provider_lifecycle():
         )
 
         # 1. Put Object
-        calculated_hash = await provider.put_object(key, data, expected_hash)
+        calculated_hash = await provider.put_object(
+            key, data, expected_sha256=expected_hash
+        )
         assert calculated_hash == expected_hash
 
         # Verify aioboto3 put_object call parameters
@@ -232,7 +236,7 @@ async def test_s3_storage_provider_integrity_failure():
 
         # Failure on write (expected_sha256 doesn't match actual data)
         with pytest.raises(StorageIntegrityError):
-            await provider.put_object(key, data, incorrect_hash)
+            await provider.put_object(key, data, expected_sha256=incorrect_hash)
 
         # Failure on read (metadata expected_sha256 doesn't match retrieved data)
         with pytest.raises(StorageIntegrityError):

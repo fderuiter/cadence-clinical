@@ -1,5 +1,8 @@
 <template>
-  <div id="section-rules" class="dashboard-section active">
+  <div
+    id="section-rules"
+    class="dashboard-section active"
+  >
     <div class="section-header">
       <h2>Interactive Rules Designer</h2>
       <p>
@@ -23,7 +26,10 @@
         class="rules-gating-content"
         style="display: flex; gap: 16px; align-items: flex-start"
       >
-        <span class="rules-gating-icon" style="font-size: 2rem">🚫</span>
+        <span
+          class="rules-gating-icon"
+          style="font-size: 2rem"
+        >🚫</span>
         <div>
           <h3 class="rules-gating-title">
             21 CFR Part 11 Role Gating - Access Denied
@@ -77,7 +83,10 @@
       </div>
 
       <!-- Tab 1: Rules Designer -->
-      <div v-if="activeTab === 'rules'" class="grid-2-responsive">
+      <div
+        v-if="activeTab === 'rules'"
+        class="grid-2-responsive"
+      >
         <!-- Active Ruleset List -->
         <div
           class="card"
@@ -96,8 +105,7 @@
             <span
               v-if="loadingRules"
               style="font-size: 0.85rem; color: #64748b; font-weight: normal"
-              >Loading...</span
-            >
+            >Loading...</span>
           </div>
 
           <!-- Connection Error Banner if any -->
@@ -151,8 +159,7 @@
                       font-size: 0.95rem;
                       font-family: monospace;
                     "
-                    >{{ rule.id }}</strong
-                  >
+                  >{{ rule.id }}</strong>
                   <div style="display: flex; gap: 6px">
                     <button
                       class="btn"
@@ -203,8 +210,7 @@
                         font-size: 0.7rem;
                         padding: 2px 6px;
                       "
-                      >{{ rule.type }}</span
-                    >
+                    >{{ rule.type }}</span>
                   </div>
                   <div v-if="rule.type === 'skip_logic'">
                     <strong>Action:</strong> {{ rule.action }} field
@@ -212,17 +218,13 @@
                   </div>
                   <div v-else-if="rule.type === 'constraint'">
                     <strong>Target Field:</strong>
-                    <code>{{ rule.target_field }}</code> <br />
+                    <code>{{ rule.target_field }}</code> <br>
                     <strong>Discrepancy Message:</strong>
-                    <span style="font-style: italic; color: var(--primary)"
-                      >"{{ rule.query_message }}"</span
-                    >
+                    <span style="font-style: italic; color: var(--primary)">"{{ rule.query_message }}"</span>
                   </div>
                   <div v-else-if="rule.type === 'cross_form_check'">
                     <strong>Discrepancy Message:</strong>
-                    <span style="font-style: italic; color: var(--primary)"
-                      >"{{ rule.query_message }}"</span
-                    >
+                    <span style="font-style: italic; color: var(--primary)">"{{ rule.query_message }}"</span>
                   </div>
                 </div>
                 <div
@@ -267,7 +269,10 @@
           class="card"
           style="display: flex; flex-direction: column"
         >
-          <div class="card-title" style="margin-bottom: 16px">
+          <div
+            class="card-title"
+            style="margin-bottom: 16px"
+          >
             {{ editingRuleId ? "Edit Clinical Rule" : "Compose Clinical Rule" }}
           </div>
 
@@ -351,7 +356,10 @@
                     margin-bottom: 8px;
                   "
                 >
-                  <div v-for="(f, i) in previewFailures" :key="i">
+                  <div
+                    v-for="(f, i) in previewFailures"
+                    :key="i"
+                  >
                     ⚠️ {{ f }}
                   </div>
                 </div>
@@ -370,7 +378,10 @@
                   v-if="previewCircularCycles.length > 0"
                   style="color: var(--error); font-weight: 600"
                 >
-                  <div v-for="(c, i) in previewCircularCycles" :key="i">
+                  <div
+                    v-for="(c, i) in previewCircularCycles"
+                    :key="i"
+                  >
                     🚨 {{ c }}
                   </div>
                 </div>
@@ -408,7 +419,10 @@
       </div>
 
       <!-- Tab 2: Query Life-Cycle Dashboard & History Viewer (Sub-Issue 11) -->
-      <div v-else-if="activeTab === 'queries'" class="card">
+      <div
+        v-else-if="activeTab === 'queries'"
+        class="card"
+      >
         <div
           class="card-title"
           style="
@@ -474,7 +488,7 @@
                 border-radius: 4px;
                 font-size: 0.85rem;
               "
-            />
+            >
             <button
               class="btn btn-primary"
               style="font-size: 0.85rem"
@@ -483,7 +497,10 @@
               Search Dictionary
             </button>
           </div>
-          <div v-if="dictSearching" style="font-size: 0.8rem; color: #64748b">
+          <div
+            v-if="dictSearching"
+            style="font-size: 0.8rem; color: #64748b"
+          >
             Querying dictionaries...
           </div>
           <div
@@ -513,19 +530,37 @@
         </div>
 
         <!-- Queries Table -->
-        <table class="clinical-visit-matrix" style="width: 100%">
+        <table
+          class="clinical-visit-matrix"
+          style="width: 100%"
+        >
           <thead>
             <tr>
-              <th scope="col">ID</th>
-              <th scope="col">Subject / Visit</th>
-              <th scope="col">Field</th>
-              <th scope="col">Discrepancy Message / Responses</th>
-              <th scope="col">Status</th>
-              <th scope="col">Actions</th>
+              <th scope="col">
+                ID
+              </th>
+              <th scope="col">
+                Subject / Visit
+              </th>
+              <th scope="col">
+                Field
+              </th>
+              <th scope="col">
+                Discrepancy Message / Responses
+              </th>
+              <th scope="col">
+                Status
+              </th>
+              <th scope="col">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="q in dashboardQueries" :key="q.id">
+            <tr
+              v-for="q in dashboardQueries"
+              :key="q.id"
+            >
               <td>
                 <strong style="font-family: monospace">{{ q.id }}</strong>
               </td>
@@ -535,17 +570,26 @@
               </td>
               <td>
                 <div><strong>Query:</strong> {{ q.message }}</div>
-                <div v-if="q.response" style="color: #0369a1; margin-top: 4px">
+                <div
+                  v-if="q.response"
+                  style="color: #0369a1; margin-top: 4px"
+                >
                   <strong>Response:</strong> "{{ q.response }}" (Responded by:
                   {{ q.respondedBy }} on {{ q.respondedAt }})
                 </div>
-                <div v-if="q.closedBy" style="color: #15803d; margin-top: 4px">
+                <div
+                  v-if="q.closedBy"
+                  style="color: #15803d; margin-top: 4px"
+                >
                   <strong>Closed:</strong> by {{ q.closedBy }} on
                   {{ q.closedAt }}
                 </div>
               </td>
               <td>
-                <span class="badge" :class="getBadgeClass(q.status)">{{
+                <span
+                  class="badge"
+                  :class="getBadgeClass(q.status)"
+                >{{
                   q.status
                 }}</span>
               </td>
@@ -581,7 +625,9 @@
                     Add Response
                   </button>
                 </div>
-                <div v-else>-</div>
+                <div v-else>
+                  -
+                </div>
               </td>
             </tr>
           </tbody>

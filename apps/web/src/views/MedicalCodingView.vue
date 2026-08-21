@@ -1,5 +1,8 @@
 <template>
-  <div id="section-medical-coding" class="dashboard-section active">
+  <div
+    id="section-medical-coding"
+    class="dashboard-section active"
+  >
     <!-- View Header -->
     <div class="section-header">
       <div class="header-text-group">
@@ -30,7 +33,10 @@
     </div>
 
     <!-- 21 CFR Part 11 Role Gating Notice if unauthorized -->
-    <div v-if="!hasAccess" class="card gating-banner">
+    <div
+      v-if="!hasAccess"
+      class="card gating-banner"
+    >
       <div class="gating-content">
         <span class="gating-icon">🚫</span>
         <div>
@@ -45,7 +51,10 @@
     </div>
 
     <!-- Authorized Coding Workspace -->
-    <div v-else class="coding-workspace-container">
+    <div
+      v-else
+      class="coding-workspace-container"
+    >
       <!-- 5 Summary Stat Metric Cards -->
       <div class="stats-overview-grid">
         <div
@@ -53,8 +62,12 @@
           :class="{ 'stat-active': codingStore.filters.status === 'ALL' }"
           @click="setStatusFilter('ALL')"
         >
-          <div class="stat-number">{{ codingStore.totalCount }}</div>
-          <div class="stat-title">Total Verbatims</div>
+          <div class="stat-number">
+            {{ codingStore.totalCount }}
+          </div>
+          <div class="stat-title">
+            Total Verbatims
+          </div>
         </div>
 
         <div
@@ -62,8 +75,12 @@
           :class="{ 'stat-active': codingStore.filters.status === 'UNCODED' }"
           @click="setStatusFilter('UNCODED')"
         >
-          <div class="stat-number">{{ codingStore.uncodedCount }}</div>
-          <div class="stat-title">Uncoded</div>
+          <div class="stat-number">
+            {{ codingStore.uncodedCount }}
+          </div>
+          <div class="stat-title">
+            Uncoded
+          </div>
         </div>
 
         <div
@@ -71,8 +88,12 @@
           :class="{ 'stat-active': codingStore.filters.status === 'SUGGESTED' }"
           @click="setStatusFilter('SUGGESTED')"
         >
-          <div class="stat-number">{{ codingStore.suggestedCount }}</div>
-          <div class="stat-title">Suggested Matches</div>
+          <div class="stat-number">
+            {{ codingStore.suggestedCount }}
+          </div>
+          <div class="stat-title">
+            Suggested Matches
+          </div>
         </div>
 
         <div
@@ -80,8 +101,12 @@
           :class="{ 'stat-active': codingStore.filters.status === 'CODED_ALL' }"
           @click="setStatusFilter('CODED_ALL')"
         >
-          <div class="stat-number">{{ codingStore.codedCount }}</div>
-          <div class="stat-title">Coded</div>
+          <div class="stat-number">
+            {{ codingStore.codedCount }}
+          </div>
+          <div class="stat-title">
+            Coded
+          </div>
         </div>
 
         <div
@@ -91,8 +116,12 @@
           }"
           @click="setStatusFilter('QUERY_PENDING')"
         >
-          <div class="stat-number">{{ codingStore.queryPendingCount }}</div>
-          <div class="stat-title">Query Pending</div>
+          <div class="stat-number">
+            {{ codingStore.queryPendingCount }}
+          </div>
+          <div class="stat-title">
+            Query Pending
+          </div>
         </div>
       </div>
 
@@ -152,9 +181,15 @@
               class="form-control-sm"
               title="Filter by dictionary system"
             >
-              <option value="ALL">All Dictionaries</option>
-              <option value="MEDDRA">MedDRA</option>
-              <option value="WHODRUG">WHODrug</option>
+              <option value="ALL">
+                All Dictionaries
+              </option>
+              <option value="MEDDRA">
+                MedDRA
+              </option>
+              <option value="WHODRUG">
+                WHODrug
+              </option>
             </select>
           </div>
         </div>
@@ -166,7 +201,7 @@
             type="text"
             class="form-control-sm search-input"
             placeholder="Search verbatim, code, or field..."
-          />
+          >
         </div>
       </div>
 

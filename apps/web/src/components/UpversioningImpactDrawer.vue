@@ -14,7 +14,13 @@
             migrating active study dictionary versions.
           </p>
         </div>
-        <button type="button" class="btn-close" @click="close">✕</button>
+        <button
+          type="button"
+          class="btn-close"
+          @click="close"
+        >
+          ✕
+        </button>
       </div>
 
       <!-- Drawer Content -->
@@ -24,30 +30,36 @@
           <h4>Analysis Target Parameters</h4>
           <div class="config-grid">
             <div class="drawer-input-block">
-              <label for="impact-dict-type" class="drawer-input-label"
-                >Target Dictionary</label
-              >
+              <label
+                for="impact-dict-type"
+                class="drawer-input-label"
+              >Target Dictionary</label>
               <select
                 id="impact-dict-type"
                 v-model="dictType"
                 class="drawer-select-input"
               >
-                <option value="MEDDRA">MedDRA</option>
-                <option value="WHODRUG">WHODrug</option>
+                <option value="MEDDRA">
+                  MedDRA
+                </option>
+                <option value="WHODRUG">
+                  WHODrug
+                </option>
               </select>
             </div>
 
             <div class="drawer-input-block">
-              <label for="impact-target-version" class="drawer-input-label"
-                >Target Migration Version</label
-              >
+              <label
+                for="impact-target-version"
+                class="drawer-input-label"
+              >Target Migration Version</label>
               <input
                 id="impact-target-version"
                 v-model="targetVersion"
                 type="text"
                 class="drawer-text-input"
                 placeholder="e.g. 27.0 or 2024-09"
-              />
+              >
             </div>
           </div>
 
@@ -70,7 +82,10 @@
         </div>
 
         <!-- Error State -->
-        <div v-if="codingStore.impactAnalysis.error" class="error-banner">
+        <div
+          v-if="codingStore.impactAnalysis.error"
+          class="error-banner"
+        >
           <span class="error-icon">⚠️</span>
           <span>{{ codingStore.impactAnalysis.error }}</span>
         </div>
@@ -80,12 +95,11 @@
           v-if="codingStore.impactAnalysis.isLoading"
           class="analysis-loading-state"
         >
-          <div class="spinner"></div>
+          <div class="spinner" />
           <h4>Running Up-Versioning Delta Engine...</h4>
           <p>
             Scanning all active coded assignments against target dictionary
-            version <strong>{{ targetVersion }}</strong
-            >.
+            version <strong>{{ targetVersion }}</strong>.
           </p>
         </div>
 
@@ -107,7 +121,9 @@
               <div class="metric-value">
                 {{ metrics.unchanged }}
               </div>
-              <div class="metric-label">Unchanged Terms</div>
+              <div class="metric-label">
+                Unchanged Terms
+              </div>
               <div class="metric-desc">
                 Terms and hierarchies remain 100% valid in new version.
               </div>
@@ -117,7 +133,9 @@
               <div class="metric-value">
                 {{ metrics.reclassified }}
               </div>
-              <div class="metric-label">Reclassified Terms</div>
+              <div class="metric-label">
+                Reclassified Terms
+              </div>
               <div class="metric-desc">
                 Primary SOC or parent hierarchy shifted; recoding review
                 advised.
@@ -128,7 +146,9 @@
               <div class="metric-value">
                 {{ metrics.deprecated }}
               </div>
-              <div class="metric-label">Deprecated Terms</div>
+              <div class="metric-label">
+                Deprecated Terms
+              </div>
               <div class="metric-desc">
                 Codes dropped or invalidated; mandatory re-assignment required.
               </div>
@@ -138,7 +158,9 @@
               <div class="metric-value">
                 {{ metrics.skipped }}
               </div>
-              <div class="metric-label">Skipped / Uncoded</div>
+              <div class="metric-label">
+                Skipped / Uncoded
+              </div>
               <div class="metric-desc">
                 Uncoded verbatims or query-pending entries bypassed.
               </div>
@@ -153,29 +175,29 @@
                 class="delta-seg seg-unchanged"
                 :style="{ width: unchangedPct + '%' }"
                 :title="`Unchanged: ${metrics.unchanged} (${unchangedPct}%)`"
-              ></div>
+              />
               <div
                 class="delta-seg seg-reclassified"
                 :style="{ width: reclassifiedPct + '%' }"
                 :title="`Reclassified: ${metrics.reclassified} (${reclassifiedPct}%)`"
-              ></div>
+              />
               <div
                 class="delta-seg seg-deprecated"
                 :style="{ width: deprecatedPct + '%' }"
                 :title="`Deprecated: ${metrics.deprecated} (${deprecatedPct}%)`"
-              ></div>
+              />
             </div>
             <div class="delta-legend">
               <div class="legend-item">
-                <span class="legend-dot dot-unchanged"></span>
+                <span class="legend-dot dot-unchanged" />
                 <span>Unchanged ({{ unchangedPct }}%)</span>
               </div>
               <div class="legend-item">
-                <span class="legend-dot dot-reclassified"></span>
+                <span class="legend-dot dot-reclassified" />
                 <span>Reclassified ({{ reclassifiedPct }}%)</span>
               </div>
               <div class="legend-item">
-                <span class="legend-dot dot-deprecated"></span>
+                <span class="legend-dot dot-deprecated" />
                 <span>Deprecated ({{ deprecatedPct }}%)</span>
               </div>
             </div>
@@ -205,8 +227,13 @@
         </div>
 
         <!-- Initial Placeholder State -->
-        <div v-else class="initial-placeholder-state">
-          <div class="placeholder-icon">📊</div>
+        <div
+          v-else
+          class="initial-placeholder-state"
+        >
+          <div class="placeholder-icon">
+            📊
+          </div>
           <h4>Ready for Impact Analysis</h4>
           <p>
             Select a target dictionary and version above and click "Run Impact
@@ -217,7 +244,11 @@
 
       <!-- Drawer Footer -->
       <div class="drawer-footer">
-        <button type="button" class="btn btn-secondary" @click="close">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="close"
+        >
           Close
         </button>
       </div>

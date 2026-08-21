@@ -129,7 +129,7 @@ const handleSelectedFile = async (file) => {
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
     status.value = "idle";
-  } catch (err) {
+  } catch {
     status.value = "idle";
     calculatedSha256.value = null;
   }
@@ -242,7 +242,9 @@ watch(
         :aria-label="title"
       >
         <div class="modal-header">
-          <h2 class="modal-title">{{ title }}</h2>
+          <h2 class="modal-title">
+            {{ title }}
+          </h2>
           <button
             class="close-btn"
             aria-label="Close dialog"
@@ -254,7 +256,11 @@ watch(
 
         <div class="modal-body">
           <!-- Error alert -->
-          <div v-if="errorMessage" class="error-alert" role="alert">
+          <div
+            v-if="errorMessage"
+            class="error-alert"
+            role="alert"
+          >
             ⚠️ {{ errorMessage }}
           </div>
 
@@ -276,28 +282,45 @@ watch(
               ref="fileInputRef"
               type="file"
               class="hidden-file-input"
+              aria-label="Upload file"
               @change="onFileChange"
             />
 
-            <div v-if="!selectedFile" class="dropzone-empty">
+            <div
+              v-if="!selectedFile"
+              class="dropzone-empty"
+            >
               <span class="upload-icon">📁</span>
-              <p class="dropzone-title">Click to select or drag and drop file</p>
+              <p class="dropzone-title">
+                Click to select or drag and drop file
+              </p>
               <p class="dropzone-hint">
                 Max size: {{ Math.round(maxSizeBytes / 1048576) }} MB
               </p>
             </div>
 
-            <div v-else class="dropzone-file-info">
+            <div
+              v-else
+              class="dropzone-file-info"
+            >
               <span class="file-icon">📄</span>
               <div class="file-details">
-                <p class="file-name">{{ selectedFile.name }}</p>
+                <p class="file-name">
+                  {{ selectedFile.name }}
+                </p>
                 <p class="file-meta">
                   {{ formattedFileSize }} • {{ selectedFile.type || "binary" }}
                 </p>
-                <p v-if="calculatedSha256" class="file-checksum">
+                <p
+                  v-if="calculatedSha256"
+                  class="file-checksum"
+                >
                   SHA-256: <code>{{ calculatedSha256.substring(0, 16) }}...</code>
                 </p>
-                <p v-else-if="status === 'hashing'" class="file-hashing">
+                <p
+                  v-else-if="status === 'hashing'"
+                  class="file-hashing"
+                >
                   ⏳ Calculating cryptographic SHA-256...
                 </p>
               </div>
@@ -306,7 +329,10 @@ watch(
 
           <!-- Reason for change (21 CFR Part 11 Mandate) -->
           <div class="form-group">
-            <label for="upload-reason" class="form-label">
+            <label
+              for="upload-reason"
+              class="form-label"
+            >
               Reason for Change (21 CFR Part 11 Mandate)
               <span class="required-star">*</span>
             </label>
@@ -322,9 +348,15 @@ watch(
           </div>
 
           <!-- Progress Indicator -->
-          <div v-if="status === 'uploading' || status === 'verifying'" class="progress-bar-wrapper">
+          <div
+            v-if="status === 'uploading' || status === 'verifying'"
+            class="progress-bar-wrapper"
+          >
             <div class="progress-track">
-              <div class="progress-fill" :style="{ width: `${progress}%` }"></div>
+              <div
+                class="progress-fill"
+                :style="{ width: `${progress}%` }"
+              ></div>
             </div>
             <span class="progress-text">{{ status === 'uploading' ? 'Uploading...' : 'Verifying SHA-256...' }}</span>
           </div>

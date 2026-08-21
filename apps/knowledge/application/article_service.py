@@ -1,26 +1,35 @@
 """
 Application-layer service for the Knowledge & Support Hub article lifecycle.
 
-Orchestrates state transitions, audit log emission, version snapshotting,
-and notification dispatch per the settled design decisions from wayfinder
-ticket #4237.
+Orchestrates state transitions, four-eyes review validation, immutable version
+snapshotting, GxP audit logging, and notification dispatch per ADR-2188.
 
-Requirements: PRD-SYS-KH-001, PRD-SYS-KH-002
+Requirements: PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002, ADR-2188
 """
 
 import logging
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.knowledge.adapters.notifications_client import publish_notification
+from apps.knowledge.adapters.repositories import (
+    SQLAlchemyContextualHelpMappingRepository,
+    SQLAlchemyKnowledgeArticleRepository,
+    SQLAlchemyKnowledgeAuditLogRepository,
+    SQLAlchemyKnowledgeCategoryRepository,
+)
+from apps.knowledge.domain.exceptions import (
+    ArticleNotFoundError,
+    ArticleReasonRequiredError,
+    ArticleTransitionError,
+    CategoryConflictError,
+    CategoryNotFoundError,
+)
+from apps.knowledge.domain.markdown_renderer import render_markdown_to_html
 from apps.knowledge.domain.models import (
     ArticleAuditAction,
     ArticleSnapshot,
     ArticleStatus,
-    ArticleTransitionError,
-    CategoryConflictError,
-    CategoryNotFoundError,
     validate_transition,
 )
 from apps.knowledge.infrastructure.models import (
@@ -28,6 +37,12 @@ from apps.knowledge.infrastructure.models import (
     KnowledgeArticleAuditLog,
     KnowledgeArticleVersion,
     KnowledgeCategory,
+)
+from apps.knowledge.ports.repository_port import (
+    ContextualHelpMappingRepositoryPort,
+    KnowledgeArticleRepositoryPort,
+    KnowledgeAuditLogRepositoryPort,
+    KnowledgeCategoryRepositoryPort,
 )
 
 logger = logging.getLogger("knowledge-article-service")
@@ -39,18 +54,34 @@ class ArticleLifecycleService:
 
     Responsibilities:
     - Validates and executes state machine transitions via domain.models.validate_transition.
-    - Creates immutable KnowledgeArticleVersion snapshots on Approved transitions.
-    - Auto-supersedes any currently Published version when a new version is Published.
-    - Emits KnowledgeArticleAuditLog records for every action (SHA-256 digest chain
-      via packages.security.audit_logger must be called by the router/presenter).
-    - Dispatches notifications via apps/notifications/ for all triggering events.
-
-    Args:
-        session: An active async SQLAlchemy session for the knowledge database.
+    - Manages working drafts updating a single KnowledgeArticleVersion row during DRAFT status.
+    - Enforces Four-Eyes principle: article cannot be approved by author_user_id or last_edited_by.
+    - Locks KnowledgeArticleVersion records permanently on APPROVED transition.
+    - Auto-supersedes prior published version on publication of version N+1.
+    - Maintains KnowledgeArticle.current_published_version_id for O(1) published lookups.
+    - Emits KnowledgeArticleAuditLog records for every action.
+    - Dispatches notifications via apps/notifications/ for triggering events.
     """
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        article_repo: KnowledgeArticleRepositoryPort | None = None,
+        category_repo: KnowledgeCategoryRepositoryPort | None = None,
+        audit_repo: KnowledgeAuditLogRepositoryPort | None = None,
+        help_repo: ContextualHelpMappingRepositoryPort | None = None,
+    ) -> None:
         self._session = session
+        self._article_repo = article_repo or SQLAlchemyKnowledgeArticleRepository(
+            session
+        )
+        self._category_repo = category_repo or SQLAlchemyKnowledgeCategoryRepository(
+            session
+        )
+        self._audit_repo = audit_repo or SQLAlchemyKnowledgeAuditLogRepository(session)
+        self._help_repo = help_repo or SQLAlchemyContextualHelpMappingRepository(
+            session
+        )
 
     # ------------------------------------------------------------------
     # Category operations
@@ -86,25 +117,23 @@ class ArticleLifecycleService:
             CategoryNotFoundError: If parent_id does not exist or is deleted.
             CategoryConflictError: If name or slug already exists.
         """
-        # Validate parent category existence if parent_id is specified
         if parent_id:
-            parent = await self.get_category_by_id(parent_id)
+            parent = await self._category_repo.get_by_id(parent_id)
             if not parent:
                 raise CategoryNotFoundError(
                     f"Parent category with id {parent_id!r} does not exist or has been deleted."
                 )
 
-        # Validate unique name and slug
-        existing_result = await self._session.execute(
-            select(KnowledgeCategory).where(
-                KnowledgeCategory.is_deleted.is_(False),
-                (KnowledgeCategory.name == name) | (KnowledgeCategory.slug == slug),
-            )
-        )
-        existing = existing_result.scalars().first()
-        if existing:
+        existing_by_slug = await self._category_repo.get_by_slug(slug)
+        if existing_by_slug:
             raise CategoryConflictError(
-                f"A category with name {name!r} or slug {slug!r} already exists."
+                f"A category with slug {slug!r} already exists."
+            )
+
+        all_cats = await self._category_repo.list_categories()
+        if any(c.name == name for c in all_cats):
+            raise CategoryConflictError(
+                f"A category with name {name!r} already exists."
             )
 
         category = KnowledgeCategory(
@@ -116,70 +145,22 @@ class ArticleLifecycleService:
             created_by=actor_user_id,
             reason_for_change=reason_for_change,
         )
-        self._session.add(category)
-        await self._session.flush()
-        return category
+        return await self._category_repo.save(category)
 
     async def get_category_by_id(self, category_id: str) -> KnowledgeCategory | None:
-        """
-        Retrieves an active KnowledgeCategory by its unique ID.
-
-        Args:
-            category_id: The UUID of the category.
-
-        Returns:
-            The KnowledgeCategory instance or None if not found or deleted.
-        """
-        result = await self._session.execute(
-            select(KnowledgeCategory).where(
-                KnowledgeCategory.id == category_id,
-                KnowledgeCategory.is_deleted.is_(False),
-            )
-        )
-        return result.scalar_one_or_none()
+        """Retrieves an active KnowledgeCategory by its unique ID."""
+        return await self._category_repo.get_by_id(category_id)
 
     async def get_category_by_slug(self, slug: str) -> KnowledgeCategory | None:
-        """
-        Retrieves an active KnowledgeCategory by its unique slug.
-
-        Args:
-            slug: The slug identifier of the category.
-
-        Returns:
-            The KnowledgeCategory instance or None if not found or deleted.
-        """
-        result = await self._session.execute(
-            select(KnowledgeCategory).where(
-                KnowledgeCategory.slug == slug,
-                KnowledgeCategory.is_deleted.is_(False),
-            )
-        )
-        return result.scalar_one_or_none()
+        """Retrieves an active KnowledgeCategory by its unique slug."""
+        return await self._category_repo.get_by_slug(slug)
 
     async def list_categories(
         self,
         user_roles: list[str] | None = None,
     ) -> list[KnowledgeCategory]:
-        """
-        Lists all active KnowledgeCategories, filtered by persona visibility.
-
-        Admin users see all active categories. Non-admin users only receive
-        categories permitted for their active persona context (or where
-        persona_visibility is null/empty).
-
-        Args:
-            user_roles: List of normalized roles/personas for the requesting user.
-
-        Returns:
-            List of visible KnowledgeCategory instances.
-        """
-        result = await self._session.execute(
-            select(KnowledgeCategory)
-            .where(KnowledgeCategory.is_deleted.is_(False))
-            .order_by(KnowledgeCategory.name.asc())
-        )
-        categories = list(result.scalars().all())
-
+        """Lists active KnowledgeCategories, filtered by persona visibility."""
+        categories = await self._category_repo.list_categories()
         if user_roles is None:
             return categories
 
@@ -196,20 +177,7 @@ class ArticleLifecycleService:
         actor_user_id: str,
         reason_for_change: str,
     ) -> KnowledgeCategory:
-        """
-        Soft-deletes a KnowledgeCategory by setting is_deleted=True.
-
-        Args:
-            category_id: UUID of the category to soft-delete.
-            actor_user_id: Authenticated user initiating the deletion.
-            reason_for_change: GxP justification string.
-
-        Returns:
-            The soft-deleted KnowledgeCategory instance.
-
-        Raises:
-            CategoryNotFoundError: If the category does not exist or has already been deleted.
-        """
+        """Soft-deletes a KnowledgeCategory."""
         category = await self.get_category_by_id(category_id)
         if not category:
             raise CategoryNotFoundError(
@@ -218,39 +186,29 @@ class ArticleLifecycleService:
 
         category.is_deleted = True
         category.reason_for_change = reason_for_change
-        await self._session.flush()
+        await self._category_repo.save(category)
         return category
 
     @staticmethod
     def _is_category_visible_for_roles(
         persona_visibility: str | None, user_roles: list[str]
     ) -> bool:
-        """
-        Evaluates whether a category is visible to a user with the given roles.
-
-        Rules:
-        - If persona_visibility is None or blank -> visible to all authenticated personas.
-        - If user has super_admin, sysadmin, admin, or sponsor_admin role -> visible to admin.
-        - Otherwise, user must possess at least one persona role matching persona_visibility.
-        """
+        """Evaluates whether a category is visible to a user with the given roles."""
         if not persona_visibility or not persona_visibility.strip():
             return True
 
         norm_user_roles = [r.strip().lower() for r in user_roles]
 
-        # Admin roles see everything
         if any(
             r in ("super_admin", "sysadmin", "admin", "sponsor_admin")
             for r in norm_user_roles
         ):
             return True
 
-        # Parse allowed personas
         allowed = {
             p.strip().lower() for p in persona_visibility.split(",") if p.strip()
         }
 
-        # Match direct or with role synonyms
         from packages.security.rbac import ROLE_EXPANSIONS, normalize_role
 
         expanded_allowed = set(allowed)
@@ -278,7 +236,7 @@ class ArticleLifecycleService:
         return False
 
     # ------------------------------------------------------------------
-    # Article creation
+    # Article creation & Draft Storage (Issue #4325)
     # ------------------------------------------------------------------
 
     async def create_article(
@@ -288,15 +246,16 @@ class ArticleLifecycleService:
         slug: str,
         category_id: str,
         body_markdown: str,
-        version_label: str,
+        version_label: str = "1.0",
+        tags: str | None = None,
         actor_user_id: str,
         reason_for_change: str,
     ) -> KnowledgeArticle:
         """
         Creates a new KnowledgeArticle in DRAFT status.
 
-        Also appends the first KnowledgeArticleVersion snapshot and emits
-        a CREATED audit log entry.
+        Appends the single working KnowledgeArticleVersion snapshot for version 1
+        with auto-rendered HTML and GxP audit fields, and emits CREATED audit log.
 
         Args:
             title: Article title.
@@ -304,15 +263,21 @@ class ArticleLifecycleService:
             category_id: UUID of the KnowledgeCategory this article belongs to.
             body_markdown: Initial draft body in Markdown.
             version_label: Human-readable version label (e.g. "1.0").
+            tags: Optional tags string or JSON array.
             actor_user_id: Authenticated user creating the article.
             reason_for_change: GxP justification string.
 
         Returns:
             The persisted KnowledgeArticle instance.
-
-        Raises:
-            sqlalchemy.exc.IntegrityError: If slug is not unique.
         """
+        existing = await self._article_repo.get_by_slug(slug)
+        if existing:
+            raise ArticleTransitionError(
+                f"An article with slug {slug!r} already exists."
+            )
+
+        rendered_html = render_markdown_to_html(body_markdown)
+
         article = KnowledgeArticle(
             title=title,
             slug=slug,
@@ -320,27 +285,29 @@ class ArticleLifecycleService:
             status=ArticleStatus.DRAFT,
             version_index=1,
             version_label=version_label,
+            tags=tags,
             author_user_id=actor_user_id,
             last_edited_by=actor_user_id,
             created_by=actor_user_id,
             reason_for_change=reason_for_change,
         )
-        self._session.add(article)
-        await self._session.flush()
+        article = await self._article_repo.save(article)
 
-        # Snapshot initial draft body
+        # Working draft version row (DRAFT status, is_locked=False)
         version = KnowledgeArticleVersion(
             article_id=article.id,
             version_index=1,
             version_label=version_label,
-            status_at_snapshot=ArticleStatus.DRAFT,
+            status_at_snapshot=ArticleStatus.DRAFT.value,
             body_markdown=body_markdown,
+            body_html=rendered_html,
+            is_locked=False,
             created_by=actor_user_id,
             reason_for_change=reason_for_change,
         )
-        self._session.add(version)
+        await self._article_repo.save_version(version)
 
-        # Audit log
+        # Append audit log
         await self._write_audit_log(
             article_id=article.id,
             action=ArticleAuditAction.CREATED,
@@ -351,12 +318,156 @@ class ArticleLifecycleService:
             details=f"Article created with title={title!r} slug={slug!r}",
         )
 
-        await self._session.flush()
         return article
 
-    # ------------------------------------------------------------------
-    # Draft body update
-    # ------------------------------------------------------------------
+    async def get_article_by_id(self, article_id: str) -> KnowledgeArticle | None:
+        """Retrieves an active KnowledgeArticle by its unique ID."""
+        return await self._article_repo.get_by_id(article_id)
+
+    async def get_article_by_slug(self, slug: str) -> KnowledgeArticle | None:
+        """Retrieves an active KnowledgeArticle by its unique slug."""
+        return await self._article_repo.get_by_slug(slug)
+
+    async def get_working_draft_version(
+        self, article_id: str
+    ) -> KnowledgeArticleVersion | None:
+        """Retrieves the active working draft version for an article."""
+        return await self._article_repo.get_working_draft_version(article_id)
+
+    async def get_current_published_version(
+        self, article_id: str
+    ) -> KnowledgeArticleVersion | None:
+        """
+        Retrieves the current published version snapshot in O(1) via
+        KnowledgeArticle.current_published_version_id pointer.
+        """
+        article = await self.get_article_by_id(article_id)
+        if not article or not article.current_published_version_id:
+            return None
+        return await self._article_repo.get_version_by_id(
+            article.current_published_version_id
+        )
+
+    async def list_articles(
+        self,
+        status: ArticleStatus | None = None,
+        category_id: str | None = None,
+    ) -> list[KnowledgeArticle]:
+        """Lists active knowledge articles with optional status and category filters."""
+        return await self._article_repo.list_articles(
+            status=status, category_id=category_id
+        )
+
+    async def list_article_versions(
+        self, article_id: str
+    ) -> list[KnowledgeArticleVersion]:
+        """Lists all version snapshots for an article ordered by version index."""
+        return await self._article_repo.list_versions(article_id)
+
+    async def update_draft(
+        self,
+        *,
+        article_id: str,
+        body_markdown: str,
+        actor_user_id: str,
+        title: str | None = None,
+        slug: str | None = None,
+        category_id: str | None = None,
+        tags: str | None = None,
+        reason_for_change: str | None = None,
+    ) -> tuple[KnowledgeArticle, KnowledgeArticleVersion]:
+        """
+        Updates the working draft of an article (Issue #4325).
+
+        Updates the single KnowledgeArticleVersion row during DRAFT status with
+        markdown body, auto-rendered HTML, and GxP audit fields (created_by,
+        reason_for_change, version_index). Updates last_edited_by on KnowledgeArticle.
+
+        Args:
+            article_id: UUID of the article to update.
+            body_markdown: Updated Markdown body.
+            actor_user_id: Authenticated user updating the draft.
+            title: Optional updated title.
+            slug: Optional updated slug.
+            category_id: Optional updated category ID.
+            tags: Optional updated tags.
+            reason_for_change: GxP reason for change.
+
+        Returns:
+            Tuple of (KnowledgeArticle, KnowledgeArticleVersion).
+
+        Raises:
+            ArticleNotFoundError: If article does not exist.
+            ArticleTransitionError: If article is not in DRAFT status.
+        """
+        article = await self.get_article_by_id(article_id)
+        if not article:
+            raise ArticleNotFoundError(
+                f"Article with id {article_id!r} does not exist."
+            )
+
+        if article.status != ArticleStatus.DRAFT:
+            raise ArticleTransitionError(
+                f"Cannot update draft body on article with status {article.status!r}. "
+                "Article must be in DRAFT status."
+            )
+
+        # Update article metadata if provided
+        if title:
+            article.title = title
+        if slug and slug != article.slug:
+            existing = await self._article_repo.get_by_slug(slug)
+            if existing and existing.id != article.id:
+                raise ArticleTransitionError(
+                    f"An article with slug {slug!r} already exists."
+                )
+            article.slug = slug
+        if category_id:
+            article.category_id = category_id
+        if tags is not None:
+            article.tags = tags
+
+        article.last_edited_by = actor_user_id
+        article.reason_for_change = reason_for_change or "Draft body updated"
+        await self._article_repo.save(article)
+
+        rendered_html = render_markdown_to_html(body_markdown)
+
+        # Find existing working draft version row or create if none exists
+        draft_version = await self._article_repo.get_working_draft_version(article.id)
+        if draft_version:
+            # Update the single existing working draft row in-place
+            draft_version.body_markdown = body_markdown
+            draft_version.body_html = rendered_html
+            draft_version.created_by = actor_user_id
+            draft_version.reason_for_change = reason_for_change or "Draft body updated"
+            draft_version = await self._article_repo.save_version(draft_version)
+        else:
+            draft_version = KnowledgeArticleVersion(
+                article_id=article.id,
+                version_index=article.version_index,
+                version_label=article.version_label,
+                status_at_snapshot=ArticleStatus.DRAFT.value,
+                body_markdown=body_markdown,
+                body_html=rendered_html,
+                is_locked=False,
+                created_by=actor_user_id,
+                reason_for_change=reason_for_change or "Draft body updated",
+            )
+            draft_version = await self._article_repo.save_version(draft_version)
+
+        # Emit audit log
+        await self._write_audit_log(
+            article_id=article.id,
+            action=ArticleAuditAction.DRAFT_SAVED,
+            previous_status=ArticleStatus.DRAFT,
+            new_status=ArticleStatus.DRAFT,
+            actor_user_id=actor_user_id,
+            reason_for_change=reason_for_change,
+            details=f"Draft body updated by {actor_user_id!r}",
+        )
+
+        return article, draft_version
 
     async def save_draft(
         self,
@@ -366,59 +477,319 @@ class ArticleLifecycleService:
         actor_user_id: str,
         reason_for_change: str | None = None,
     ) -> KnowledgeArticleVersion:
-        """
-        Saves updated body content on a DRAFT article.
-
-        Creates a new KnowledgeArticleVersion snapshot. Updates last_edited_by
-        to support the four-eyes principle on subsequent approval.
-
-        Args:
-            article: The KnowledgeArticle to update (must be in DRAFT status).
-            body_markdown: New Markdown body content.
-            actor_user_id: Authenticated user saving the draft.
-            reason_for_change: Optional justification (not required for drafts).
-
-        Returns:
-            The new KnowledgeArticleVersion snapshot.
-
-        Raises:
-            ArticleTransitionError: If article is not in DRAFT status.
-        """
-        if article.status != ArticleStatus.DRAFT:
-            raise ArticleTransitionError(
-                f"Cannot save draft body on article with status {article.status!r}. "
-                "Article must be in DRAFT status."
-            )
-
-        article.last_edited_by = actor_user_id
-        article.reason_for_change = reason_for_change or "Draft body updated"
-
-        version = KnowledgeArticleVersion(
+        """Convenience method to save draft body on an existing KnowledgeArticle instance."""
+        _, version = await self.update_draft(
             article_id=article.id,
-            version_index=article.version_index,
-            version_label=article.version_label,
-            status_at_snapshot=ArticleStatus.DRAFT,
             body_markdown=body_markdown,
-            created_by=actor_user_id,
-            reason_for_change=reason_for_change or "Draft body updated",
-        )
-        self._session.add(version)
-
-        await self._write_audit_log(
-            article_id=article.id,
-            action=ArticleAuditAction.DRAFT_SAVED,
-            previous_status=ArticleStatus.DRAFT,
-            new_status=ArticleStatus.DRAFT,
             actor_user_id=actor_user_id,
             reason_for_change=reason_for_change,
-            details=f"Draft body saved by {actor_user_id!r}",
         )
-
-        await self._session.flush()
         return version
 
     # ------------------------------------------------------------------
-    # State transitions
+    # Four-Eyes Review & Snapshots (Issue #4326)
+    # ------------------------------------------------------------------
+
+    async def submit_for_review(
+        self,
+        *,
+        article_id: str,
+        actor_user_id: str,
+        reason_for_change: str | None = None,
+    ) -> KnowledgeArticle:
+        """
+        Submits a DRAFT article for peer/quality review (Issue #4326).
+
+        Transitions status from DRAFT -> IN_REVIEW.
+
+        Args:
+            article_id: UUID of the article.
+            actor_user_id: User initiating review submission.
+            reason_for_change: Optional justification.
+
+        Returns:
+            The updated KnowledgeArticle.
+        """
+        article = await self.get_article_by_id(article_id)
+        if not article:
+            raise ArticleNotFoundError(
+                f"Article with id {article_id!r} does not exist."
+            )
+
+        validate_transition(
+            current_status=article.status,
+            target_status=ArticleStatus.IN_REVIEW,
+            reason_for_change=reason_for_change,
+            actor_user_id=actor_user_id,
+            last_edited_by=article.last_edited_by,
+            author_user_id=article.author_user_id,
+        )
+
+        article.status = ArticleStatus.IN_REVIEW
+        article.reason_for_change = reason_for_change or "Submitted for peer review"
+        await self._article_repo.save(article)
+
+        await self._write_audit_log(
+            article_id=article.id,
+            action=ArticleAuditAction.SUBMITTED_FOR_REVIEW,
+            previous_status=ArticleStatus.DRAFT,
+            new_status=ArticleStatus.IN_REVIEW,
+            actor_user_id=actor_user_id,
+            reason_for_change=reason_for_change,
+            details=f"Submitted for review by {actor_user_id!r}",
+        )
+
+        await self._dispatch_notification(
+            article=article,
+            action=ArticleAuditAction.SUBMITTED_FOR_REVIEW,
+            actor_user_id=actor_user_id,
+        )
+
+        return article
+
+    async def approve_article(
+        self,
+        *,
+        article_id: str,
+        actor_user_id: str,
+        reason_for_change: str,
+    ) -> KnowledgeArticle:
+        """
+        Approves an article in IN_REVIEW status (Issue #4326).
+
+        Enforces Four-Eyes principle:
+        - Approver cannot be the original creator (author_user_id).
+        - Approver cannot be the last editor (last_edited_by).
+
+        On APPROVED:
+        - Locks the working KnowledgeArticleVersion record as permanently immutable (is_locked=True).
+        - Sets status_at_snapshot to APPROVED.
+        - Records approved_by.
+
+        Args:
+            article_id: UUID of the article.
+            actor_user_id: User approving the article.
+            reason_for_change: Required GxP justification string.
+
+        Returns:
+            The approved KnowledgeArticle.
+
+        Raises:
+            ArticleNotFoundError: If article does not exist.
+            ArticleApprovalConflictError: If four-eyes principle is violated.
+            ArticleReasonRequiredError: If reason_for_change is missing.
+        """
+        article = await self.get_article_by_id(article_id)
+        if not article:
+            raise ArticleNotFoundError(
+                f"Article with id {article_id!r} does not exist."
+            )
+
+        validate_transition(
+            current_status=article.status,
+            target_status=ArticleStatus.APPROVED,
+            reason_for_change=reason_for_change,
+            actor_user_id=actor_user_id,
+            last_edited_by=article.last_edited_by,
+            author_user_id=article.author_user_id,
+        )
+
+        # Lock the working draft version snapshot permanently
+        draft_version = await self._article_repo.get_working_draft_version(article.id)
+        if not draft_version:
+            draft_version = await self._article_repo.get_latest_version(article.id)
+
+        if draft_version:
+            draft_version.status_at_snapshot = ArticleStatus.APPROVED.value
+            draft_version.is_locked = True
+            draft_version.reason_for_change = reason_for_change
+            await self._article_repo.save_version(draft_version)
+
+        article.status = ArticleStatus.APPROVED
+        article.approved_by = actor_user_id
+        article.reason_for_change = reason_for_change
+        await self._article_repo.save(article)
+
+        await self._write_audit_log(
+            article_id=article.id,
+            action=ArticleAuditAction.APPROVED,
+            previous_status=ArticleStatus.IN_REVIEW,
+            new_status=ArticleStatus.APPROVED,
+            actor_user_id=actor_user_id,
+            reason_for_change=reason_for_change,
+            details=f"Article approved by {actor_user_id!r}",
+        )
+
+        await self._dispatch_notification(
+            article=article,
+            action=ArticleAuditAction.APPROVED,
+            actor_user_id=actor_user_id,
+        )
+
+        return article
+
+    async def reject_article(
+        self,
+        *,
+        article_id: str,
+        actor_user_id: str,
+        reason_for_change: str | None = None,
+    ) -> KnowledgeArticle:
+        """
+        Rejects an article in IN_REVIEW status (Issue #4326).
+
+        Transitions status from IN_REVIEW -> REJECTED.
+
+        Args:
+            article_id: UUID of the article.
+            actor_user_id: User rejecting the article.
+            reason_for_change: Optional review comments/reasons.
+
+        Returns:
+            The rejected KnowledgeArticle.
+        """
+        article = await self.get_article_by_id(article_id)
+        if not article:
+            raise ArticleNotFoundError(
+                f"Article with id {article_id!r} does not exist."
+            )
+
+        validate_transition(
+            current_status=article.status,
+            target_status=ArticleStatus.REJECTED,
+            reason_for_change=reason_for_change,
+            actor_user_id=actor_user_id,
+            last_edited_by=article.last_edited_by,
+            author_user_id=article.author_user_id,
+        )
+
+        article.status = ArticleStatus.REJECTED
+        article.reason_for_change = reason_for_change or "Rejected by reviewer"
+        await self._article_repo.save(article)
+
+        await self._write_audit_log(
+            article_id=article.id,
+            action=ArticleAuditAction.REJECTED,
+            previous_status=ArticleStatus.IN_REVIEW,
+            new_status=ArticleStatus.REJECTED,
+            actor_user_id=actor_user_id,
+            reason_for_change=reason_for_change,
+            details=f"Article rejected by {actor_user_id!r}",
+        )
+
+        await self._dispatch_notification(
+            article=article,
+            action=ArticleAuditAction.REJECTED,
+            actor_user_id=actor_user_id,
+        )
+
+        return article
+
+    # ------------------------------------------------------------------
+    # Publication & Auto-Supersede (Issue #4327)
+    # ------------------------------------------------------------------
+
+    async def publish_article(
+        self,
+        *,
+        article_id: str,
+        actor_user_id: str,
+        reason_for_change: str,
+        version_label: str | None = None,
+    ) -> KnowledgeArticle:
+        """
+        Publishes an APPROVED article (Issue #4327).
+
+        - Sets fast O(1) lookup pointer KnowledgeArticle.current_published_version_id.
+        - Publishing version N+1 automatically sets prior active version N to SUPERSEDED
+          status without data loss.
+        - Increments version index metadata for subsequent draft cycle.
+
+        Args:
+            article_id: UUID of the article.
+            actor_user_id: User publishing the article.
+            reason_for_change: Required GxP justification string.
+            version_label: Optional human-readable version label.
+
+        Returns:
+            The published KnowledgeArticle.
+        """
+        article = await self.get_article_by_id(article_id)
+        if not article:
+            raise ArticleNotFoundError(
+                f"Article with id {article_id!r} does not exist."
+            )
+
+        validate_transition(
+            current_status=article.status,
+            target_status=ArticleStatus.PUBLISHED,
+            reason_for_change=reason_for_change,
+            actor_user_id=actor_user_id,
+            last_edited_by=article.last_edited_by,
+            author_user_id=article.author_user_id,
+        )
+
+        # Retrieve the latest approved version snapshot
+        approved_version = await self._article_repo.get_latest_version(article.id)
+
+        # Auto-supersede prior published version snapshot if one exists
+        if (
+            article.current_published_version_id
+            and approved_version
+            and article.current_published_version_id != approved_version.id
+        ):
+            prior_version = await self._article_repo.get_version_by_id(
+                article.current_published_version_id
+            )
+            if prior_version:
+                prior_version.status_at_snapshot = ArticleStatus.SUPERSEDED.value
+                await self._article_repo.save_version(prior_version)
+                await self._write_audit_log(
+                    article_id=article.id,
+                    action=ArticleAuditAction.SUPERSEDED,
+                    previous_status=ArticleStatus.PUBLISHED,
+                    new_status=ArticleStatus.SUPERSEDED,
+                    actor_user_id=actor_user_id,
+                    reason_for_change="Auto-superseded on publication of newer version",
+                    details=f"Version index {prior_version.version_index} superseded by version index {approved_version.version_index}",
+                )
+
+        if approved_version:
+            approved_version.status_at_snapshot = ArticleStatus.PUBLISHED.value
+            approved_version.is_locked = True
+            if version_label:
+                approved_version.version_label = version_label
+            await self._article_repo.save_version(approved_version)
+            article.current_published_version_id = approved_version.id
+
+        if version_label:
+            article.version_label = version_label
+
+        article.status = ArticleStatus.PUBLISHED
+        article.version_index += 1
+        article.reason_for_change = reason_for_change
+        await self._article_repo.save(article)
+
+        await self._write_audit_log(
+            article_id=article.id,
+            action=ArticleAuditAction.PUBLISHED,
+            previous_status=ArticleStatus.APPROVED,
+            new_status=ArticleStatus.PUBLISHED,
+            actor_user_id=actor_user_id,
+            reason_for_change=reason_for_change,
+            details=f"Article published as active version {article.version_label}",
+        )
+
+        await self._dispatch_notification(
+            article=article,
+            action=ArticleAuditAction.PUBLISHED,
+            actor_user_id=actor_user_id,
+        )
+
+        return article
+
+    # ------------------------------------------------------------------
+    # Generic State Machine Transition Dispatcher
     # ------------------------------------------------------------------
 
     async def transition(
@@ -433,86 +804,91 @@ class ArticleLifecycleService:
         """
         Executes a validated state machine transition on a KnowledgeArticle.
 
-        Handles all transition side effects:
-        - APPROVED: records approved_by, creates immutable version snapshot.
-        - PUBLISHED: auto-supersedes the existing PUBLISHED version of this article.
-        - All: emits audit log, dispatches notification.
-
-        Args:
-            article: The article to transition.
-            target_status: The desired new ArticleStatus.
-            actor_user_id: The user triggering the transition.
-            reason_for_change: Justification; required on regulated transitions.
-            version_label: Optional new human-readable version label (e.g. "2.0").
-
-        Returns:
-            The updated KnowledgeArticle.
-
-        Raises:
-            ArticleTransitionError: Invalid transition.
-            ArticleApprovalConflictError: Four-eyes violation.
-            ArticleReasonRequiredError: Missing reason on regulated transition.
+        Delegates to dedicated methods for specialized actions (review submission,
+        approval, rejection, publication) or handles reopening to DRAFT.
         """
-        previous_status = article.status
+        if target_status == ArticleStatus.IN_REVIEW:
+            return await self.submit_for_review(
+                article_id=article.id,
+                actor_user_id=actor_user_id,
+                reason_for_change=reason_for_change,
+            )
 
-        # Validate via pure domain function
+        if target_status == ArticleStatus.APPROVED:
+            if not reason_for_change:
+                raise ArticleReasonRequiredError(
+                    "A reason_for_change is required when transitioning to 'APPROVED'."
+                )
+            return await self.approve_article(
+                article_id=article.id,
+                actor_user_id=actor_user_id,
+                reason_for_change=reason_for_change,
+            )
+
+        if target_status == ArticleStatus.REJECTED:
+            return await self.reject_article(
+                article_id=article.id,
+                actor_user_id=actor_user_id,
+                reason_for_change=reason_for_change,
+            )
+
+        if target_status == ArticleStatus.PUBLISHED:
+            if not reason_for_change:
+                raise ArticleReasonRequiredError(
+                    "A reason_for_change is required when transitioning to 'PUBLISHED'."
+                )
+            return await self.publish_article(
+                article_id=article.id,
+                actor_user_id=actor_user_id,
+                reason_for_change=reason_for_change,
+                version_label=version_label,
+            )
+
+        # Standard transition (e.g. ARCHIVED, or reopen to DRAFT)
+        previous_status = article.status
         validate_transition(
             current_status=previous_status,
             target_status=target_status,
             reason_for_change=reason_for_change,
             actor_user_id=actor_user_id,
             last_edited_by=article.last_edited_by,
+            author_user_id=article.author_user_id,
         )
 
-        # Determine audit action
         action_map: dict[ArticleStatus, ArticleAuditAction] = {
-            ArticleStatus.IN_REVIEW: ArticleAuditAction.SUBMITTED_FOR_REVIEW,
-            ArticleStatus.APPROVED: ArticleAuditAction.APPROVED,
-            ArticleStatus.REJECTED: ArticleAuditAction.REJECTED,
-            ArticleStatus.PUBLISHED: ArticleAuditAction.PUBLISHED,
             ArticleStatus.ARCHIVED: ArticleAuditAction.ARCHIVED,
             ArticleStatus.SUPERSEDED: ArticleAuditAction.SUPERSEDED,
             ArticleStatus.DRAFT: ArticleAuditAction.DRAFT_SAVED,
         }
-        audit_action = action_map[target_status]
+        audit_action = action_map.get(target_status, ArticleAuditAction.DRAFT_SAVED)
 
-        # -- Side effects per target state --
+        if target_status == ArticleStatus.DRAFT:
+            # Reopening article as a new working draft
+            article.last_edited_by = actor_user_id
+            latest_version = await self._article_repo.get_latest_version(article.id)
+            body_md = latest_version.body_markdown if latest_version else "# New Draft"
+            rendered_html = render_markdown_to_html(body_md)
 
-        if target_status == ArticleStatus.APPROVED:
-            article.approved_by = actor_user_id
-            # Snapshot body content at approval (immutable version record)
-            latest_version = await self._get_latest_version(article.id)
-            if latest_version:
-                snapshot = KnowledgeArticleVersion(
-                    article_id=article.id,
-                    version_index=article.version_index,
-                    version_label=article.version_label,
-                    status_at_snapshot=ArticleStatus.APPROVED,
-                    body_markdown=latest_version.body_markdown,
-                    body_html=latest_version.body_html,
-                    created_by=actor_user_id,
-                    reason_for_change=reason_for_change or "Article approved",
-                )
-                self._session.add(snapshot)
-
-        if target_status == ArticleStatus.PUBLISHED:
-            if version_label:
-                article.version_label = version_label
-            article.version_index += 1
-            # Auto-supersede any currently PUBLISHED version of the same article
-            await self._supersede_published_version(
+            new_version = KnowledgeArticleVersion(
                 article_id=article.id,
-                actor_user_id=actor_user_id,
-                reason_for_change="Auto-superseded on publication of new version",
+                version_index=article.version_index,
+                version_label=article.version_label,
+                status_at_snapshot=ArticleStatus.DRAFT.value,
+                body_markdown=body_md,
+                body_html=rendered_html,
+                is_locked=False,
+                created_by=actor_user_id,
+                reason_for_change=reason_for_change
+                or f"Reopened to DRAFT from {previous_status}",
             )
+            await self._article_repo.save_version(new_version)
 
-        # Apply transition
         article.status = target_status
         article.reason_for_change = (
             reason_for_change or f"Transitioned to {target_status}"
         )
+        await self._article_repo.save(article)
 
-        # Audit log
         await self._write_audit_log(
             article_id=article.id,
             action=audit_action,
@@ -520,20 +896,15 @@ class ArticleLifecycleService:
             new_status=target_status,
             actor_user_id=actor_user_id,
             reason_for_change=reason_for_change,
-            details=(
-                f"Transition {previous_status!r} -> {target_status!r} "
-                f"by {actor_user_id!r}"
-            ),
+            details=f"Transition {previous_status!r} -> {target_status!r} by {actor_user_id!r}",
         )
 
-        await self._session.flush()
-
-        # Dispatch notifications (fire-and-forget; errors logged, not raised)
-        await self._dispatch_notification(
-            article=article,
-            action=audit_action,
-            actor_user_id=actor_user_id,
-        )
+        if target_status == ArticleStatus.ARCHIVED:
+            await self._dispatch_notification(
+                article=article,
+                action=ArticleAuditAction.ARCHIVED,
+                actor_user_id=actor_user_id,
+            )
 
         return article
 
@@ -547,13 +918,7 @@ class ArticleLifecycleService:
         article: KnowledgeArticle,
         actor_user_id: str,
     ) -> None:
-        """
-        Records a READ_BY_AUDITOR audit event when an auditor persona reads an article.
-
-        Args:
-            article: The article being read.
-            actor_user_id: The auditor user ID.
-        """
+        """Records a READ_BY_AUDITOR audit event when an auditor persona reads an article."""
         await self._write_audit_log(
             article_id=article.id,
             action=ArticleAuditAction.READ_BY_AUDITOR,
@@ -563,91 +928,52 @@ class ArticleLifecycleService:
             reason_for_change=None,
             details=f"Article read by auditor {actor_user_id!r}",
         )
-        await self._session.flush()
 
     # ------------------------------------------------------------------
-    # Private helpers
+    # Audit log writing
     # ------------------------------------------------------------------
-
-    async def _get_latest_version(
-        self, article_id: str
-    ) -> KnowledgeArticleVersion | None:
-        """Returns the most recent KnowledgeArticleVersion for an article."""
-        result = await self._session.execute(
-            select(KnowledgeArticleVersion)
-            .where(KnowledgeArticleVersion.article_id == article_id)
-            .order_by(KnowledgeArticleVersion.version_index.desc())
-            .limit(1)
-        )
-        return result.scalar_one_or_none()
-
-    async def _supersede_published_version(
-        self,
-        *,
-        article_id: str,
-        actor_user_id: str,
-        reason_for_change: str,
-    ) -> None:
-        """
-        Auto-transitions any currently PUBLISHED version of this article to SUPERSEDED.
-
-        Called as a side effect when a new article version is Published, preventing
-        two Published versions of the same article existing simultaneously.
-        """
-        result = await self._session.execute(
-            select(KnowledgeArticle).where(
-                KnowledgeArticle.id == article_id,
-                KnowledgeArticle.status == ArticleStatus.PUBLISHED.value,
-            )
-        )
-        published = result.scalar_one_or_none()
-        if published and published.id != article_id:
-            # In a multi-version model, supersede the sibling
-            published.status = ArticleStatus.SUPERSEDED
-            published.reason_for_change = reason_for_change
-            await self._write_audit_log(
-                article_id=published.id,
-                action=ArticleAuditAction.SUPERSEDED,
-                previous_status=ArticleStatus.PUBLISHED,
-                new_status=ArticleStatus.SUPERSEDED,
-                actor_user_id=actor_user_id,
-                reason_for_change=reason_for_change,
-                details="Auto-superseded on publication of newer version",
-            )
 
     async def _write_audit_log(
         self,
         *,
         article_id: str,
-        action: ArticleAuditAction,
-        previous_status: ArticleStatus | None,
-        new_status: ArticleStatus | None,
+        action: ArticleAuditAction | str,
+        previous_status: ArticleStatus | str | None,
+        new_status: ArticleStatus | str | None,
         actor_user_id: str,
         reason_for_change: str | None,
         details: str | None = None,
     ) -> None:
-        """
-        Appends an immutable KnowledgeArticleAuditLog record.
-
-        Args:
-            article_id: UUID of the article the event relates to.
-            action: The ArticleAuditAction enum value.
-            previous_status: Article status before the action.
-            new_status: Article status after the action.
-            actor_user_id: The acting user.
-            reason_for_change: GxP justification; may be None for non-regulated actions.
-            details: Optional human-readable details string.
-        """
+        """Appends an immutable KnowledgeArticleAuditLog record."""
+        action_val = action.value if hasattr(action, "value") else str(action)
+        prev_val = (
+            previous_status.value
+            if hasattr(previous_status, "value")
+            else str(previous_status)
+            if previous_status is not None
+            else None
+        )
+        new_val = (
+            new_status.value
+            if hasattr(new_status, "value")
+            else str(new_status)
+            if new_status is not None
+            else None
+        )
         log_entry = KnowledgeArticleAuditLog(
             article_id=article_id,
-            action=action.value,
-            previous_status=previous_status.value if previous_status else None,
-            new_status=new_status.value if new_status else None,
+            action=action_val,
+            previous_status=prev_val,
+            new_status=new_val,
             details=details,
             created_by=actor_user_id,
             reason_for_change=reason_for_change,
         )
-        self._session.add(log_entry)
+        await self._audit_repo.append_log(log_entry)
+
+    # ------------------------------------------------------------------
+    # Notifications dispatch
+    # ------------------------------------------------------------------
 
     async def _dispatch_notification(
         self,
@@ -656,21 +982,7 @@ class ArticleLifecycleService:
         action: ArticleAuditAction,
         actor_user_id: str,
     ) -> None:
-        """
-        Dispatches an event notification to apps/notifications/ for article lifecycle events.
-
-        Notification routing per settled design:
-        - SUBMITTED_FOR_REVIEW  -> super_admin reviewers
-        - APPROVED              -> author
-        - REJECTED              -> author (last_edited_by)
-        - PUBLISHED             -> all personas in the article's category visibility
-        - ARCHIVED              -> super_admin only
-
-        Args:
-            article: The article whose lifecycle event triggered the notification.
-            action: The ArticleAuditAction that was performed.
-            actor_user_id: The user who performed the action.
-        """
+        """Dispatches an event notification to apps/notifications/ for article lifecycle events."""
         event_map: dict[ArticleAuditAction, str] = {
             ArticleAuditAction.SUBMITTED_FOR_REVIEW: "knowledge.article.submitted_for_review",
             ArticleAuditAction.APPROVED: "knowledge.article.approved",
@@ -680,7 +992,7 @@ class ArticleLifecycleService:
         }
         event_type = event_map.get(action)
         if not event_type:
-            return  # No notification for CREATED, DRAFT_SAVED, SUPERSEDED, READ_BY_AUDITOR
+            return
 
         snapshot = ArticleSnapshot(
             id=article.id,
@@ -715,3 +1027,6 @@ class ArticleLifecycleService:
                 event_type,
                 article.id,
             )
+
+
+__all__ = ["ArticleLifecycleService"]

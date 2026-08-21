@@ -322,6 +322,12 @@ class AuditLogResponse(BaseModel):
     action: str
     document_id: str | None
     details: str
+    reason_for_change: str | None = None
+    cryptographic_seal: str | None = None
+    old_value: Any | None = None
+    new_value: Any | None = None
+    entity_type: str | None = None
+    sha256_hash: str | None = None
 
 
 class PaginatedAuditLogResponse(BaseModel):

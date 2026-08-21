@@ -1,6 +1,7 @@
 """Pydantic schemas for Quality service presentation layer."""
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -655,6 +656,11 @@ class AuditLogResponse(BaseModel):
     user_role: str
     action: str
     details: str
+    entity_type: str | None = None
     record_id: str | None = None
+    old_value: Any | None = None
+    new_value: Any | None = None
     change_reason: str | None = None
     merkle_hash: str | None = None
+    sha256_hash: str | None = None
+    signature_hash: str | None = None

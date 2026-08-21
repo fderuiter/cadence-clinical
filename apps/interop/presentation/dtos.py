@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class FHIRPrefillRequest(BaseModel):
@@ -134,8 +134,7 @@ class SubjectNotificationResponse(BaseModel):
     reason_for_change: str
     version_index: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AcknowledgeNotificationRequest(BaseModel):
@@ -158,8 +157,7 @@ class QuarantinedSubmissionResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EditQuarantinedSubmissionRequest(BaseModel):

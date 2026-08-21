@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
@@ -123,7 +123,7 @@ class DatasetJSON(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     datasetJSONCreationDateTime: str = Field(
-        default_factory=lambda: datetime.utcnow().isoformat() + "Z",
+        default_factory=lambda: datetime.now(UTC).isoformat(),
         serialization_alias="datasetJSONCreationDateTime",
         validation_alias=AliasChoices(
             "datasetJSONCreationDateTime", "creationDateTime"

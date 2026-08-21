@@ -170,7 +170,7 @@ class OfflineSyncEngine:
                             action="CONFLICT",
                             user_id="offline_sync",
                             ip_address="127.0.0.1",
-                            timestamp=datetime.utcnow(),
+                            timestamp=datetime.now(UTC),
                             old_values={
                                 "status": existing_submission.status,
                                 "version": existing_submission.version,
@@ -289,7 +289,7 @@ class OfflineSyncEngine:
         processed = ProcessedOfflineBatch(
             client_batch_id=batch.client_batch_id,
             device_id=batch.device_id,
-            synced_at=datetime.utcnow(),
+            synced_at=datetime.now(UTC),
         )
         self.session.add(processed)
 

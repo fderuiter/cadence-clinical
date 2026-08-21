@@ -15,8 +15,12 @@ export const auditorService = {
     if (params.user_id) query.append("user_id", params.user_id);
     if (params.action) query.append("action", params.action);
     if (params.document_id) query.append("document_id", params.document_id);
-    if (params.start_time) query.append("start_time", params.start_time);
-    if (params.end_time) query.append("end_time", params.end_time);
+    if (params.record_id) query.append("record_id", params.record_id);
+    if (params.entity_type) query.append("entity_type", params.entity_type);
+    if (params.start_time || params.start_date)
+      query.append("start_time", params.start_time || params.start_date);
+    if (params.end_time || params.end_date)
+      query.append("end_time", params.end_time || params.end_date);
     if (params.limit !== undefined) query.append("limit", params.limit);
     if (params.offset !== undefined) query.append("offset", params.offset);
 
@@ -24,6 +28,29 @@ export const auditorService = {
     const path = queryString
       ? `/api/v1/etmf/audit-logs?${queryString}`
       : "/api/v1/etmf/audit-logs";
+    return apiClient.get(path);
+  },
+
+  /**
+   * Retrieves Quality EQMS audit log events.
+   */
+  getQualityAuditLogs(params = {}) {
+    const query = new URLSearchParams();
+    if (params.user_id) query.append("user_id", params.user_id);
+    if (params.action) query.append("action", params.action);
+    if (params.entity_type) query.append("entity_type", params.entity_type);
+    if (params.start_date || params.start_time)
+      query.append("start_date", params.start_date || params.start_time);
+    if (params.end_date || params.end_time)
+      query.append("end_date", params.end_date || params.end_time);
+    if (params.record_id) query.append("record_id", params.record_id);
+    if (params.limit !== undefined) query.append("limit", params.limit);
+    if (params.offset !== undefined) query.append("offset", params.offset);
+
+    const queryString = query.toString();
+    const path = queryString
+      ? `/api/v1/quality/audit-logs?${queryString}`
+      : "/api/v1/quality/audit-logs";
     return apiClient.get(path);
   },
 

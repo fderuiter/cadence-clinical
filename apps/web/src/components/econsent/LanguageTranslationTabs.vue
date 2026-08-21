@@ -2,7 +2,11 @@
   <div class="language-translation-tabs-container card">
     <div class="tabs-header">
       <span class="tabs-label">🌍 Localized Consent Translations:</span>
-      <div class="tabs-list" role="tablist" ref="tabsListRef">
+      <div
+        ref="tabsListRef"
+        class="tabs-list"
+        role="tablist"
+      >
         <button
           v-for="lang in availableLanguages"
           :key="lang.code"
@@ -26,8 +30,7 @@
     <!-- Active Language Banner/Info -->
     <div class="active-lang-banner">
       <p>
-        Currently editing content in <strong>{{ activeLanguageName }}</strong
-        >. All modifications to the section content will be saved under the
+        Currently editing content in <strong>{{ activeLanguageName }}</strong>. All modifications to the section content will be saved under the
         <strong>{{ econsentStore.activeLanguage }}</strong> translation locale.
       </p>
       <div class="completion-metrics">

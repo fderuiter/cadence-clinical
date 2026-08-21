@@ -8,7 +8,9 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "pnpm -r test && uv run cadence test",
+    "test": "vitest run",
+    "test:all": "pnpm -r test && uv run cadence test",
+    "check-docs-drift": "uv run python scripts/validate_architecture_drift.py",
     "lint": "uv run python scripts/validate_path_patterns.py --all && pnpm -r lint && uv run ruff check .",
     "format": "pnpm -r format && uv run ruff format --target-version py313 . && pnpm exec prettier --write \"**/*.{json,css,md}\"",
     "fix": "uv run cadence fix",

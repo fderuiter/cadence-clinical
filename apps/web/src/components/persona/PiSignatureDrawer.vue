@@ -1,8 +1,13 @@
 <template>
   <div class="pi-signature-drawer">
     <!-- PI Sign-Off Worklist and Verification Card -->
-    <div class="card" style="display: flex; flex-direction: column; gap: 16px">
-      <div class="card-title">PI Sign-Off Worklist &amp; Verification</div>
+    <div
+      class="card"
+      style="display: flex; flex-direction: column; gap: 16px"
+    >
+      <div class="card-title">
+        PI Sign-Off Worklist &amp; Verification
+      </div>
       <p style="font-size: 0.85rem; color: #475569; margin-bottom: 4px">
         Perform a 21 CFR Part 11 compliant electronic signature. This action
         requires re-authenticating the Principal Investigator credentials to
@@ -23,9 +28,15 @@
             "
             @change="$emit('update:signoffTargetType', $event.target.value)"
           >
-            <option value="FORM">FORM Level</option>
-            <option value="VISIT">VISIT Level</option>
-            <option value="SUBJECT">SUBJECT Level</option>
+            <option value="FORM">
+              FORM Level
+            </option>
+            <option value="VISIT">
+              VISIT Level
+            </option>
+            <option value="SUBJECT">
+              SUBJECT Level
+            </option>
           </select>
         </div>
 
@@ -42,9 +53,15 @@
             "
             @change="$emit('update:signoffTargetId', $event.target.value)"
           >
-            <option value="">-- Choose ID --</option>
+            <option value="">
+              -- Choose ID --
+            </option>
             <template v-if="signoffTargetType === 'SUBJECT'">
-              <option v-for="sub in availableSubjects" :key="sub" :value="sub">
+              <option
+                v-for="sub in availableSubjects"
+                :key="sub"
+                :value="sub"
+              >
                 {{ sub }}
               </option>
             </template>
@@ -66,11 +83,16 @@
                 {{ form }}
               </option>
             </template>
-            <option value="custom">-- Enter Custom --</option>
+            <option value="custom">
+              -- Enter Custom --
+            </option>
           </select>
         </div>
 
-        <div v-if="signoffTargetId === 'custom'" class="form-group">
+        <div
+          v-if="signoffTargetId === 'custom'"
+          class="form-group"
+        >
           <label for="signoff-custom-target-id">Custom Target ID Value</label>
           <input
             id="signoff-custom-target-id"
@@ -84,7 +106,7 @@
               border-radius: 4px;
             "
             @input="$emit('update:customTargetId', $event.target.value)"
-          />
+          >
         </div>
 
         <div class="form-group">
@@ -131,7 +153,9 @@
       style="display: flex"
     >
       <div class="modal">
-        <div class="modal-header">Identity Re-Authentication Required</div>
+        <div class="modal-header">
+          Identity Re-Authentication Required
+        </div>
         <div class="modal-body">
           <p>
             To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>,
@@ -140,7 +164,22 @@
           </p>
           <!-- Reuse GxpCredentialsInput for GxP re-authentication -->
           <!-- prettier-ignore -->
-          <GxpCredentialsInput :username="reauthUsername" :password="reauthPassword" :totp="reauthTotp" username-id="reauth-username" password-id="reauth-password" totp-id="reauth-totp" :disabled="false" :password-required="true" :group-style="{ marginBottom: '12px' }" :input-style="{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '4px' }" @update:username="$emit('update:reauthUsername', $event)" @update:password="$emit('update:reauthPassword', $event)" @update:totp="$emit('update:reauthTotp', $event)" @keyup-enter="$emit('confirm-reauth')"/><!-- pragma: allowlist secret -->
+          <GxpCredentialsInput
+            :username="reauthUsername"
+            :password="reauthPassword"
+            :totp="reauthTotp"
+            username-id="reauth-username"
+            password-id="reauth-password"
+            totp-id="reauth-totp"
+            :disabled="false"
+            :password-required="true"
+            :group-style="{ marginBottom: '12px' }"
+            :input-style="{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '4px' }"
+            @update:username="$emit('update:reauthUsername', $event)"
+            @update:password="$emit('update:reauthPassword', $event)"
+            @update:totp="$emit('update:reauthTotp', $event)"
+            @keyup-enter="$emit('confirm-reauth')"
+          /><!-- pragma: allowlist secret -->
           <div
             class="form-group"
             style="
@@ -156,7 +195,7 @@
               type="checkbox"
               style="cursor: pointer"
               @change="$emit('update:simulateDelay', $event.target.checked)"
-            />
+            >
             <label
               for="reauth-simulate-delay"
               style="

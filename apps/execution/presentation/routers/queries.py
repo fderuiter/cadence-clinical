@@ -6,7 +6,7 @@ Requirements: PRD-SYS-007
 import json
 import uuid
 from contextlib import suppress
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -908,7 +908,7 @@ async def sync_queries(
                     QueryService.validate_transition(q.status, "CLOSED")
                     q.status = "CLOSED"
                     q.resolver = request.state.user_id
-                    q.resolved_at = datetime.utcnow()
+                    q.resolved_at = datetime.now(UTC)
                     session.add(q)
                     processed_count += 1
 

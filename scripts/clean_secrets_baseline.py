@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -24,6 +25,10 @@ if sys.version_info < (3, 14):
 
 from scripts.runtime_guard import enforce_python_runtime
 
+EXCLUDE_REGEX = re.compile(
+    r"(pnpm-lock\.yaml|uv\.lock|tests/fixtures/keys/|docs/CDISC/|docs/NCI/)"
+)
+
 
 def clean_baseline(filepath):
     if not os.path.exists(filepath):
@@ -38,12 +43,24 @@ def clean_baseline(filepath):
         if "generated_at" in data:
             del data["generated_at"]
 
-        # Remove line_number from all detected secret results
+        # Ensure exclude section is configured
+        if "exclude" not in data or not data["exclude"]:
+            data["exclude"] = {
+                "files": r"(pnpm-lock\.yaml|uv\.lock|tests/fixtures/keys/|docs/CDISC/|docs/NCI/)",
+                "lines": None,
+            }
+
+        # Remove line_number from all detected secret results and filter excluded files
         results = data.get("results", {})
-        for file_results in results.values():
+        cleaned_results = {}
+        for filename, file_results in results.items():
+            if EXCLUDE_REGEX.search(filename):
+                continue
             for result in file_results:
                 if "line_number" in result:
                     del result["line_number"]
+            cleaned_results[filename] = file_results
+        data["results"] = cleaned_results
 
         with open(filepath, "w", encoding="utf-8") as f:
             # Sort keys to ensure deterministic ordering of properties

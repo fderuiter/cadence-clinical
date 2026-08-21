@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -86,8 +86,7 @@ class TSDVConfigResponse(BaseModel):
     trial_random_seed: int | None = None
     version: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TSDVEvaluationResponse(BaseModel):

@@ -1338,7 +1338,7 @@ async def sync_documents(
                     except Exception:
                         pass
             if not t_inc:
-                t_inc = datetime.utcnow()
+                t_inc = datetime.now(UTC).replace(tzinfo=None)
 
             t_exist = None
             if latest_existing.metadata_json:
@@ -1356,7 +1356,7 @@ async def sync_documents(
                 t_exist = (
                     latest_existing.created_at.replace(tzinfo=None)
                     if latest_existing.created_at
-                    else datetime.utcnow()
+                    else datetime.now(UTC).replace(tzinfo=None)
                 )
 
             inc_mod_by = (

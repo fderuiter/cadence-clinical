@@ -18,7 +18,7 @@
         z-index: 998;
       "
       @click="onboardingStore.dismissTour()"
-    ></div>
+    />
 
     <!-- The Popover Box -->
     <div
@@ -52,7 +52,7 @@
           border-right: 10px solid transparent;
           border-bottom: 10px solid var(--accent);
         "
-      ></div>
+      />
 
       <!-- Popover Header -->
       <div

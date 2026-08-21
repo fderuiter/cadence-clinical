@@ -1,10 +1,10 @@
 """
 SQLAlchemy ORM models for the Knowledge & Support Hub microservice.
 
-Implements GxP audit fields, immutable audit log enforcement, and the
-article controlled-document lifecycle per 21 CFR Part 11.
+Implements GxP audit fields, immutable audit log enforcement, two-tier version
+snapshotting, and the article controlled-document lifecycle per 21 CFR Part 11.
 
-Requirements: PRD-SYS-KH-001, PRD-SYS-KH-002
+Requirements: PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002, ADR-2188
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ from sqlalchemy import (
     Text,
     event,
     func,
+    inspect,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
@@ -75,7 +76,9 @@ class KnowledgeCategory(Base):
 
     # Relationships
     articles: Mapped[list[KnowledgeArticle]] = relationship(
-        back_populates="category", cascade="all, delete-orphan"
+        back_populates="category",
+        cascade="all, delete-orphan",
+        foreign_keys="[KnowledgeArticle.category_id]",
     )
     parent: Mapped[KnowledgeCategory | None] = relationship(
         "KnowledgeCategory",
@@ -124,11 +127,27 @@ class KnowledgeArticle(Base):
         String(50), default="1.0", nullable=False
     )
 
+    # Pointer to the currently active published version for O(1) reads
+    current_published_version_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey(
+            "knowledge_article_versions.id",
+            ondelete="SET NULL",
+            use_alter=True,
+            name="fk_knowledge_article_current_version",
+        ),
+        nullable=True,
+        index=True,
+    )
+
+    # Tags for indexing and discovery (stored as JSON/comma-separated string)
+    tags: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # Four-eyes authorship tracking
     # author_user_id: original creator; never changes.
     author_user_id: Mapped[str] = mapped_column(String(255), nullable=False)
     # last_edited_by: the user who last saved the article body.
-    # The approver must differ from this field (four-eyes principle).
+    # The approver must differ from this field AND author_user_id (four-eyes principle).
     last_edited_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # approved_by: recorded on APPROVED transition.
     approved_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -144,17 +163,28 @@ class KnowledgeArticle(Base):
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
 
     # Relationships
-    category: Mapped[KnowledgeCategory] = relationship(back_populates="articles")
+    category: Mapped[KnowledgeCategory] = relationship(
+        back_populates="articles", foreign_keys=[category_id]
+    )
     versions: Mapped[list[KnowledgeArticleVersion]] = relationship(
         back_populates="article",
         cascade="all, delete-orphan",
         order_by="KnowledgeArticleVersion.version_index",
+        foreign_keys="[KnowledgeArticleVersion.article_id]",
+    )
+    current_published_version: Mapped[KnowledgeArticleVersion | None] = relationship(
+        "KnowledgeArticleVersion",
+        foreign_keys=[current_published_version_id],
+        post_update=True,
     )
     audit_logs: Mapped[list[KnowledgeArticleAuditLog]] = relationship(
-        back_populates="article"
+        back_populates="article",
+        foreign_keys="[KnowledgeArticleAuditLog.article_id]",
     )
     contextual_mappings: Mapped[list[ContextualHelpMapping]] = relationship(
-        back_populates="article", cascade="all, delete-orphan"
+        back_populates="article",
+        cascade="all, delete-orphan",
+        foreign_keys="[ContextualHelpMapping.article_id]",
     )
 
 
@@ -163,8 +193,8 @@ class KnowledgeArticleVersion(Base):
     An immutable snapshot of a KnowledgeArticle's body at a specific version.
 
     Once an article reaches APPROVED status, the body content is snapshotted
-    here. All version snapshots are retained permanently (non-destructive
-    historical retention per 21 CFR Part 11 and CONTEXT.md).
+    here and locked permanently (non-destructive historical retention per
+    21 CFR Part 11 and ADR-2188).
     """
 
     __tablename__ = "knowledge_article_versions"
@@ -174,7 +204,7 @@ class KnowledgeArticleVersion(Base):
     )
     article_id: Mapped[str] = mapped_column(
         String(36),
-        ForeignKey("knowledge_articles.id", ondelete="CASCADE"),
+        ForeignKey("knowledge_articles.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
     )
@@ -188,6 +218,9 @@ class KnowledgeArticleVersion(Base):
     body_markdown: Mapped[str] = mapped_column(Text, nullable=False)
     body_html: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Immutability lock flag
+    is_locked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
     # GxP audit fields
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
@@ -196,7 +229,9 @@ class KnowledgeArticleVersion(Base):
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
 
     # Relationships
-    article: Mapped[KnowledgeArticle] = relationship(back_populates="versions")
+    article: Mapped[KnowledgeArticle] = relationship(
+        back_populates="versions", foreign_keys=[article_id]
+    )
 
 
 class KnowledgeArticleAuditLog(Base):
@@ -233,7 +268,9 @@ class KnowledgeArticleAuditLog(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # Relationships
-    article: Mapped[KnowledgeArticle | None] = relationship(back_populates="audit_logs")
+    article: Mapped[KnowledgeArticle | None] = relationship(
+        back_populates="audit_logs", foreign_keys=[article_id]
+    )
 
 
 class ContextualHelpMapping(Base):
@@ -276,23 +313,25 @@ class ContextualHelpMapping(Base):
 
     # Relationships
     article: Mapped[KnowledgeArticle] = relationship(
-        back_populates="contextual_mappings"
+        back_populates="contextual_mappings", foreign_keys=[article_id]
     )
 
 
 # ---------------------------------------------------------------------------
-# Immutability guard — prevents any update or deletion of audit log records.
-# Mirrors the pattern in apps/tickets/infrastructure/models.py.
+# Immutability guards — prevents update or deletion of audit logs and locked version snapshots.
 # ---------------------------------------------------------------------------
 
 
 @event.listens_for(Session, "before_flush")
-def prevent_audit_log_modification(session: Session, flush_context, instances) -> None:
+def prevent_audit_log_and_locked_version_modification(
+    session: Session, flush_context, instances
+) -> None:
     """
-    Ensures that KnowledgeArticleAuditLog records can never be updated or deleted.
+    Ensures that KnowledgeArticleAuditLog and locked KnowledgeArticleVersion
+    records can never be updated or deleted.
 
     Raises:
-        ValueError: On any attempt to modify or delete an audit log record,
+        ValueError: On any attempt to modify or delete a locked or audit record,
             enforcing 21 CFR Part 11 immutability requirements.
     """
     for obj in session.dirty:
@@ -301,12 +340,32 @@ def prevent_audit_log_modification(session: Session, flush_context, instances) -
                 "Updates to KnowledgeArticleAuditLog are strictly forbidden "
                 "to comply with 21 CFR Part 11."
             )
+        if isinstance(obj, KnowledgeArticleVersion):
+            insp = inspect(obj)
+            locked_hist = insp.attrs.is_locked.history
+            was_locked = (obj.is_locked and not locked_hist.has_changes()) or (
+                True in locked_hist.deleted
+            )
+            if was_locked and (
+                insp.attrs.body_markdown.history.has_changes()
+                or insp.attrs.body_html.history.has_changes()
+                or insp.attrs.version_index.history.has_changes()
+            ):
+                raise ValueError(
+                    "Modifications to locked KnowledgeArticleVersion snapshots "
+                    "are strictly forbidden to comply with 21 CFR Part 11."
+                )
 
     for obj in session.deleted:
         if isinstance(obj, KnowledgeArticleAuditLog):
             raise ValueError(
                 "Deletions from KnowledgeArticleAuditLog are strictly forbidden "
                 "to comply with 21 CFR Part 11."
+            )
+        if isinstance(obj, KnowledgeArticleVersion) and obj.is_locked:
+            raise ValueError(
+                "Deletions of locked KnowledgeArticleVersion snapshots "
+                "are strictly forbidden to comply with 21 CFR Part 11."
             )
 
 

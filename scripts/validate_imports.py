@@ -104,6 +104,7 @@ LEGACY_TESTS_EXEMPT_FROM_IMPORT_BOUNDARIES = {
     "apps/gateway/tests/test_gateway.py",
     "apps/gateway/tests/test_auditor_router.py",
     "apps/web/tests/test_amendment_diff.py",
+    "apps/web/tests/test_audit.py",
     "apps/web/tests/test_ctms.py",
     "apps/web/tests/test_econsent.py",
     "apps/web/tests/test_ecrf_renderer.py",

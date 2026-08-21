@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
@@ -255,7 +255,7 @@ def receive_before_flush(session: Session, flush_context, instances):
                                                 version_tag=protocol_version,
                                                 version_index=version_index,
                                                 icf_signed=True,
-                                                icf_signed_date=datetime.utcnow(),
+                                                icf_signed_date=datetime.now(UTC),
                                                 requires_reconsent=requires_reconsent,
                                             )
                                             session.add(consent_db)
@@ -683,7 +683,7 @@ def receive_before_flush(session: Session, flush_context, instances):
     user_id = current_user_id.get()
     reason = current_change_reason.get()
     timestamp = current_timestamp.get()
-    ts_val = timestamp or datetime.utcnow()
+    ts_val = timestamp or datetime.now(UTC)
 
     for obj in list(session.dirty):
         if (

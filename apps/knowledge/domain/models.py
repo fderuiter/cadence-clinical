@@ -1,11 +1,23 @@
 """
 Pure domain models, enums, and state machine for the Knowledge & Support Hub microservice.
 
-Requirements: PRD-SYS-KH-001 (article lifecycle), PRD-SYS-KH-002 (GxP compliance)
+Requirements: PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002
 """
 
 from dataclasses import dataclass
 from enum import StrEnum
+
+from apps.knowledge.domain.exceptions import (
+    ArticleApprovalConflictError,
+    ArticleNotFoundError,
+    ArticleReasonRequiredError,
+    ArticleTransitionError,
+    ArticleVersionImmutableError,
+    CategoryCircularParentError,
+    CategoryConflictError,
+    CategoryNotFoundError,
+)
+from apps.knowledge.domain.markdown_renderer import render_markdown_to_html
 
 
 class ArticleStatus(StrEnum):
@@ -73,7 +85,6 @@ REASON_REQUIRED_TRANSITIONS: set[ArticleStatus] = {
 }
 
 # Terminal states: once reached, no further transitions are expected without deliberate action.
-# (Note: SUPERSEDED and ARCHIVED both allow revert to DRAFT, so neither is truly terminal.)
 PUBLISHED_STATE = ArticleStatus.PUBLISHED
 
 
@@ -82,7 +93,8 @@ def validate_transition(
     target_status: ArticleStatus,
     reason_for_change: str | None,
     actor_user_id: str,
-    last_edited_by: str | None,
+    last_edited_by: str | None = None,
+    author_user_id: str | None = None,
 ) -> None:
     """
     Validates an article status transition against the state machine and GxP rules.
@@ -90,7 +102,7 @@ def validate_transition(
     Enforces:
     - Allowed transition graph (ARTICLE_TRANSITIONS)
     - reason_for_change requirement on regulated transitions
-    - Four-eyes principle: the actor who last edited cannot approve
+    - Four-eyes principle: the actor who authored or last edited cannot approve
 
     Args:
         current_status: The article's current ArticleStatus.
@@ -98,6 +110,7 @@ def validate_transition(
         reason_for_change: Justification string; required on regulated transitions.
         actor_user_id: The user initiating the transition.
         last_edited_by: The user who last saved the article body (for four-eyes check).
+        author_user_id: The user who originally created the article (for four-eyes check).
 
     Raises:
         ArticleTransitionError: If the transition is not permitted.
@@ -112,6 +125,11 @@ def validate_transition(
         )
 
     if target_status == ArticleStatus.APPROVED:
+        if author_user_id and author_user_id == actor_user_id:
+            raise ArticleApprovalConflictError(
+                "The original author of this article cannot approve it. "
+                "A different user must perform the approval (four-eyes principle, 21 CFR Part 11)."
+            )
         if last_edited_by and last_edited_by == actor_user_id:
             raise ArticleApprovalConflictError(
                 "The user who last edited this article cannot also approve it. "
@@ -123,30 +141,6 @@ def validate_transition(
             raise ArticleReasonRequiredError(
                 f"A reason_for_change is required when transitioning to {target_status!r}."
             )
-
-
-class ArticleTransitionError(ValueError):
-    """Raised when an article status transition is not permitted by the state machine."""
-
-
-class ArticleApprovalConflictError(PermissionError):
-    """Raised when the four-eyes principle is violated: editor cannot also approve."""
-
-
-class ArticleReasonRequiredError(ValueError):
-    """Raised when a regulated transition is attempted without a reason_for_change."""
-
-
-class CategoryNotFoundError(ValueError):
-    """Raised when a referenced category or parent category cannot be found."""
-
-
-class CategoryConflictError(ValueError):
-    """Raised when category name or slug is not unique."""
-
-
-class CategoryCircularParentError(ValueError):
-    """Raised when category parent creates a circular reference."""
 
 
 @dataclass
@@ -164,3 +158,23 @@ class ArticleSnapshot:
     author_user_id: str
     last_edited_by: str | None
     approved_by: str | None
+
+
+__all__ = [
+    "ARTICLE_TRANSITIONS",
+    "PUBLISHED_STATE",
+    "REASON_REQUIRED_TRANSITIONS",
+    "ArticleApprovalConflictError",
+    "ArticleAuditAction",
+    "ArticleNotFoundError",
+    "ArticleReasonRequiredError",
+    "ArticleSnapshot",
+    "ArticleStatus",
+    "ArticleTransitionError",
+    "ArticleVersionImmutableError",
+    "CategoryCircularParentError",
+    "CategoryConflictError",
+    "CategoryNotFoundError",
+    "render_markdown_to_html",
+    "validate_transition",
+]

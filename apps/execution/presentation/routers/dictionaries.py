@@ -8,7 +8,7 @@ import shutil
 import tempfile
 import uuid
 import zipfile
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import (
     APIRouter,
@@ -179,7 +179,7 @@ async def import_dictionary(
             dictionary_type=db_type,
             dictionary_version=version,
             status=ImportState.PENDING,
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(UTC),
             progress_percentage=0,
             records_imported=0,
             errors_encountered=0,

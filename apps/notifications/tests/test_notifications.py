@@ -1,6 +1,6 @@
 import asyncio
 import time
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -587,7 +587,7 @@ async def test_webhook_delivery_channel_failure_and_retry_backoff():
         assert delivery_1.next_retry_at is not None
 
         # Manually alter next_retry_at to past to simulate time travel
-        delivery_1.next_retry_at = datetime.utcnow() - timedelta(seconds=1)
+        delivery_1.next_retry_at = datetime.now(UTC) - timedelta(seconds=1)
         await session.commit()
 
     # 2nd Attempt: Fails again
@@ -611,7 +611,7 @@ async def test_webhook_delivery_channel_failure_and_retry_backoff():
 
         # Manually max out attempts (e.g. set attempts to 4, limit is 5)
         delivery_2.attempts = 4
-        delivery_2.next_retry_at = datetime.utcnow() - timedelta(seconds=1)
+        delivery_2.next_retry_at = datetime.now(UTC) - timedelta(seconds=1)
         await session.commit()
 
     # 3rd Attempt: Reaches maximum allowed attempts
@@ -689,7 +689,7 @@ async def test_email_delivery_channel_failure_and_exhaustion():
 
             # Advance next_retry_at and max attempts close to cap (4)
             d.attempts = 4
-            d.next_retry_at = datetime.utcnow() - timedelta(seconds=1)
+            d.next_retry_at = datetime.now(UTC) - timedelta(seconds=1)
             await session.commit()
 
         # Final attempt -> Exhaustion
@@ -781,7 +781,7 @@ async def test_multi_channel_edge_case_in_app_succeeds_email_exhausts():
             d_email = res_email.scalars().first()
             assert d_email.attempts == 1
             d_email.attempts = 4
-            d_email.next_retry_at = datetime.utcnow() - timedelta(seconds=1)
+            d_email.next_retry_at = datetime.now(UTC) - timedelta(seconds=1)
             await session.commit()
 
         # 2nd dispatch tick -> EMAIL exhausts (reaches 5 attempts)

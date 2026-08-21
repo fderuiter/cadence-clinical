@@ -41,8 +41,15 @@
     </div>
 
     <!-- Standalone Workspace / Form Inspection Mode (Rendered when standalone or embedded in CTMS tab) -->
-    <div v-if="showInspectionWorkspace" class="cra-workspace card" style="margin-top: 12px">
-      <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
+    <div
+      v-if="showInspectionWorkspace"
+      class="cra-workspace card"
+      style="margin-top: 12px"
+    >
+      <div
+        class="card-title"
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px"
+      >
         <span>CRA Verification Console &amp; Source Data Verification (SDV)</span>
         <div style="display: flex; gap: 8px; align-items: center">
           <span
@@ -74,8 +81,14 @@
           align-items: center;
         "
       >
-        <div class="form-group" style="margin: 0; min-width: 180px">
-          <label for="cra-subject-selector" style="font-weight: bold; font-size: 0.75rem">Subject ID</label>
+        <div
+          class="form-group"
+          style="margin: 0; min-width: 180px"
+        >
+          <label
+            for="cra-subject-selector"
+            style="font-weight: bold; font-size: 0.75rem"
+          >Subject ID</label>
           <select
             id="cra-subject-selector"
             v-model="currentSubjectId"
@@ -91,16 +104,28 @@
           </select>
         </div>
 
-        <div class="form-group" style="margin: 0; min-width: 180px">
-          <label for="cra-visit-selector" style="font-weight: bold; font-size: 0.75rem">Encounter / Visit</label>
+        <div
+          class="form-group"
+          style="margin: 0; min-width: 180px"
+        >
+          <label
+            for="cra-visit-selector"
+            style="font-weight: bold; font-size: 0.75rem"
+          >Encounter / Visit</label>
           <select
             id="cra-visit-selector"
             v-model="currentVisitId"
             style="width: 100%; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 4px"
           >
-            <option value="Screening">Screening / Day -7</option>
-            <option value="Week2">Week 2 Treatment</option>
-            <option value="Week4">Week 4 Treatment</option>
+            <option value="Screening">
+              Screening / Day -7
+            </option>
+            <option value="Week2">
+              Week 2 Treatment
+            </option>
+            <option value="Week4">
+              Week 4 Treatment
+            </option>
           </select>
         </div>
 
@@ -118,23 +143,54 @@
 
       <!-- eCRF Source Data Verification Inspection Table -->
       <div class="table-responsive">
-        <table class="clinical-visit-matrix" style="width: 100%; border-collapse: collapse">
+        <table
+          class="clinical-visit-matrix"
+          style="width: 100%; border-collapse: collapse"
+        >
           <thead>
             <tr>
-              <th scope="col" style="width: 40px; text-align: center">Batch</th>
-              <th scope="col">Field / Parameter</th>
-              <th scope="col">CDASH Variable</th>
-              <th scope="col">Reported eCRF Value</th>
-              <th scope="col">Source Record (EMR/Lab)</th>
-              <th scope="col" style="text-align: center">SDV Verified</th>
-              <th scope="col">Query Discrepancy Status</th>
-              <th scope="col">Monitoring Actions</th>
+              <th
+                scope="col"
+                style="width: 40px; text-align: center"
+              >
+                Batch
+              </th>
+              <th scope="col">
+                Field / Parameter
+              </th>
+              <th scope="col">
+                CDASH Variable
+              </th>
+              <th scope="col">
+                Reported eCRF Value
+              </th>
+              <th scope="col">
+                Source Record (EMR/Lab)
+              </th>
+              <th
+                scope="col"
+                style="text-align: center"
+              >
+                SDV Verified
+              </th>
+              <th scope="col">
+                Query Discrepancy Status
+              </th>
+              <th scope="col">
+                Monitoring Actions
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="field in currentFields" :key="field.id">
+            <tr
+              v-for="field in currentFields"
+              :key="field.id"
+            >
               <!-- Batch SDV Checkbox -->
-              <td style="text-align: center" class="batch-sdv-box">
+              <td
+                style="text-align: center"
+                class="batch-sdv-box"
+              >
                 <input
                   :id="`batch-sdv-${field.id}`"
                   type="checkbox"
@@ -144,7 +200,7 @@
                   :disabled="!isAuthorizedForBulkSdv"
                   style="cursor: pointer"
                   @change="toggleBatchField(field.id, $event.target.checked)"
-                />
+                >
               </td>
 
               <!-- Field Label -->
@@ -172,7 +228,10 @@
               </td>
 
               <!-- Single Field SDV Toggle Checkbox -->
-              <td style="text-align: center" class="sdv-box">
+              <td
+                style="text-align: center"
+                class="sdv-box"
+              >
                 <input
                   :id="`sdv-${field.id}`"
                   type="checkbox"
@@ -180,8 +239,11 @@
                   :checked="isFieldSdvVerified(field.id)"
                   style="cursor: pointer; width: 18px; height: 18px; accent-color: #16a34a"
                   @change="handleSingleSdvToggle(field.id, $event.target.checked)"
-                />
-                <label :for="`sdv-${field.id}`" style="display: none">SDV {{ field.label }}</label>
+                >
+                <label
+                  :for="`sdv-${field.id}`"
+                  style="display: none"
+                >SDV {{ field.label }}</label>
               </td>
 
               <!-- Query Discrepancy Visual Badge & Info -->
@@ -198,7 +260,10 @@
                   <div style="font-size: 0.75rem; color: #334155; margin-top: 2px">
                     {{ getFieldQuery(field.id).text || getFieldQuery(field.id).query_text || getFieldQuery(field.id).message }}
                   </div>
-                  <div v-if="getFieldQuery(field.id).response || getFieldQuery(field.id).response_text" style="font-size: 0.72rem; color: #1e40af; margin-top: 2px">
+                  <div
+                    v-if="getFieldQuery(field.id).response || getFieldQuery(field.id).response_text"
+                    style="font-size: 0.72rem; color: #1e40af; margin-top: 2px"
+                  >
                     <em>Ans: {{ getFieldQuery(field.id).response || getFieldQuery(field.id).response_text }}</em>
                   </div>
                 </template>
@@ -254,9 +319,19 @@
     </div>
 
     <!-- Modal 1: Raise Discrepancy Query -->
-    <div v-if="showRaiseModal" class="modal-overlay" style="display: flex">
-      <div class="modal" style="max-width: 480px">
-        <div class="modal-header" style="background-color: #b45309">
+    <div
+      v-if="showRaiseModal"
+      class="modal-overlay"
+      style="display: flex"
+    >
+      <div
+        class="modal"
+        style="max-width: 480px"
+      >
+        <div
+          class="modal-header"
+          style="background-color: #b45309"
+        >
           ⚠️ Raise Clinical Discrepancy Query
         </div>
         <div class="modal-body">
@@ -270,15 +345,30 @@
               v-model="queryReasonText"
               style="width: 100%; height: 80px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px"
               placeholder="e.g. Systolic blood pressure out of expected physiological range."
-            ></textarea>
+            />
           </div>
-          <div v-if="modalError" class="error-msg" style="color: #dc2626; font-size: 0.8rem">
+          <div
+            v-if="modalError"
+            class="error-msg"
+            style="color: #dc2626; font-size: 0.8rem"
+          >
             ⚠️ {{ modalError }}
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-cancel" @click="showRaiseModal = false">Cancel</button>
-          <button type="button" class="btn btn-primary" style="background-color: #b45309; color: white" @click="confirmRaiseQuery">
+          <button
+            type="button"
+            class="btn btn-cancel"
+            @click="showRaiseModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            style="background-color: #b45309; color: white"
+            @click="confirmRaiseQuery"
+          >
             Issue Query (OPEN)
           </button>
         </div>
@@ -286,9 +376,19 @@
     </div>
 
     <!-- Modal 2: Submit Site CRC Response / Answer -->
-    <div v-if="showAnswerModal" class="modal-overlay" style="display: flex">
-      <div class="modal" style="max-width: 480px">
-        <div class="modal-header" style="background-color: #1e40af">
+    <div
+      v-if="showAnswerModal"
+      class="modal-overlay"
+      style="display: flex"
+    >
+      <div
+        class="modal"
+        style="max-width: 480px"
+      >
+        <div
+          class="modal-header"
+          style="background-color: #1e40af"
+        >
           💬 Site CRC Query Response
         </div>
         <div class="modal-body">
@@ -302,15 +402,30 @@
               v-model="queryAnswerText"
               style="width: 100%; height: 80px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px"
               placeholder="e.g. Value confirmed with medical record"
-            ></textarea>
+            />
           </div>
-          <div v-if="modalError" class="error-msg" style="color: #dc2626; font-size: 0.8rem">
+          <div
+            v-if="modalError"
+            class="error-msg"
+            style="color: #dc2626; font-size: 0.8rem"
+          >
             ⚠️ {{ modalError }}
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-cancel" @click="showAnswerModal = false">Cancel</button>
-          <button type="button" class="btn btn-primary" style="background-color: #1e40af; color: white" @click="confirmAnswerQuery">
+          <button
+            type="button"
+            class="btn btn-cancel"
+            @click="showAnswerModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            style="background-color: #1e40af; color: white"
+            @click="confirmAnswerQuery"
+          >
             Submit Response (ANSWERED)
           </button>
         </div>
@@ -318,9 +433,19 @@
     </div>
 
     <!-- Modal 3: Close Discrepancy Query -->
-    <div v-if="showCloseModal" class="modal-overlay" style="display: flex">
-      <div class="modal" style="max-width: 480px">
-        <div class="modal-header" style="background-color: #166534">
+    <div
+      v-if="showCloseModal"
+      class="modal-overlay"
+      style="display: flex"
+    >
+      <div
+        class="modal"
+        style="max-width: 480px"
+      >
+        <div
+          class="modal-header"
+          style="background-color: #166534"
+        >
           ✅ CRA Monitor Close Query
         </div>
         <div class="modal-body">
@@ -334,15 +459,30 @@
               v-model="closeRationaleText"
               style="width: 100%; height: 80px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px"
               placeholder="e.g. Verified with source hospital chart and accepted by CRA."
-            ></textarea>
+            />
           </div>
-          <div v-if="modalError" class="error-msg" style="color: #dc2626; font-size: 0.8rem">
+          <div
+            v-if="modalError"
+            class="error-msg"
+            style="color: #dc2626; font-size: 0.8rem"
+          >
             ⚠️ {{ modalError }}
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-cancel" @click="showCloseModal = false">Cancel</button>
-          <button type="button" class="btn btn-primary" style="background-color: #166534; color: white" @click="confirmCloseQuery">
+          <button
+            type="button"
+            class="btn btn-cancel"
+            @click="showCloseModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            style="background-color: #166534; color: white"
+            @click="confirmCloseQuery"
+          >
             Close Query (CLOSED)
           </button>
         </div>

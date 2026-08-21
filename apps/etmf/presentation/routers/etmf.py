@@ -670,6 +670,14 @@ async def get_audit_trail(
             action=log.action,
             document_id=log.document_id,
             details=log.details,
+            reason_for_change=getattr(log, "reason_for_change", None),
+            cryptographic_seal=getattr(log, "cryptographic_seal", None),
+            old_value=getattr(log, "old_value", None),
+            new_value=getattr(log, "new_value", None),
+            entity_type=getattr(log, "entity_type", None),
+            sha256_hash=getattr(
+                log, "sha256_hash", getattr(log, "cryptographic_seal", None)
+            ),
         )
         for log in logs
     ]

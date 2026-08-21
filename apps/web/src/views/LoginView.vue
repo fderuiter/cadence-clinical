@@ -4,7 +4,10 @@
     class="dashboard-section active"
     style="max-width: 600px; margin: 40px auto; font-family: sans-serif"
   >
-    <div class="section-header" style="text-align: center; margin-bottom: 24px">
+    <div
+      class="section-header"
+      style="text-align: center; margin-bottom: 24px"
+    >
       <h2>System Authentication</h2>
       <p style="color: #64748b">
         Identity Gateway and Security Assertion Portal
@@ -68,7 +71,10 @@
         </div>
 
         <!-- 2. PIN SETUP FLOW -->
-        <div v-else-if="showPinSetup" style="max-width: 400px; margin: 0 auto">
+        <div
+          v-else-if="showPinSetup"
+          style="max-width: 400px; margin: 0 auto"
+        >
           <h3 style="margin-bottom: 12px; text-align: center; color: #1e293b">
             Set Up Personalized Recovery PIN
           </h3>
@@ -114,7 +120,7 @@
                 letter-spacing: 0.25em;
               "
               @input="pinInput = pinInput.replace(/\D/g, '')"
-            />
+            >
           </div>
 
           <div style="margin-bottom: 20px">
@@ -146,7 +152,7 @@
                 letter-spacing: 0.25em;
               "
               @input="pinConfirmInput = pinConfirmInput.replace(/\D/g, '')"
-            />
+            >
           </div>
 
           <div
@@ -195,7 +201,10 @@
         </div>
 
         <!-- 3. PIN UNLOCK / INTERACTIVE CHALLENGE -->
-        <div v-else-if="showPinUnlock" style="max-width: 400px; margin: 0 auto">
+        <div
+          v-else-if="showPinUnlock"
+          style="max-width: 400px; margin: 0 auto"
+        >
           <h3 style="margin-bottom: 12px; text-align: center; color: #1e293b">
             Unlock Session Key Escrow
           </h3>
@@ -235,7 +244,11 @@
               "
               @change="checkUserLockStatus"
             >
-              <option v-for="user in existingUsers" :key="user" :value="user">
+              <option
+                v-for="user in existingUsers"
+                :key="user"
+                :value="user"
+              >
                 User: {{ user }}
               </option>
             </select>
@@ -271,7 +284,7 @@
                 letter-spacing: 0.25em;
               "
               @input="unlockPin = unlockPin.replace(/\D/g, '')"
-            />
+            >
           </div>
 
           <div

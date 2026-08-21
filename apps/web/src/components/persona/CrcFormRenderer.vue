@@ -9,7 +9,10 @@
           margin-bottom: var(--spacing-sm);
         "
       >
-        <div class="card-title" style="margin-bottom: 0">
+        <div
+          class="card-title"
+          style="margin-bottom: 0"
+        >
           Subject eCRF Data Entry Form
         </div>
         <div style="display: flex; align-items: center; gap: 8px">
@@ -60,10 +63,14 @@
           padding-bottom: 12px;
         "
       >
-        <div class="form-group" style="flex: 1">
-          <label for="ecrf-subject-selector" style="font-weight: bold"
-            >Active Subject ID</label
-          >
+        <div
+          class="form-group"
+          style="flex: 1"
+        >
+          <label
+            for="ecrf-subject-selector"
+            style="font-weight: bold"
+          >Active Subject ID</label>
           <select
             id="ecrf-subject-selector"
             :value="selectedSubjectId"
@@ -87,10 +94,14 @@
             </option>
           </select>
         </div>
-        <div class="form-group" style="flex: 1">
-          <label for="ecrf-visit-selector" style="font-weight: bold"
-            >Active Visit / Encounter</label
-          >
+        <div
+          class="form-group"
+          style="flex: 1"
+        >
+          <label
+            for="ecrf-visit-selector"
+            style="font-weight: bold"
+          >Active Visit / Encounter</label>
           <select
             id="ecrf-visit-selector"
             :value="selectedVisitId"
@@ -105,9 +116,15 @@
               $emit('load-ecrf-session');
             "
           >
-            <option value="Screening">Screening / Day -7</option>
-            <option value="Week2">Week 2 Treatment</option>
-            <option value="Week4">Week 4 Treatment</option>
+            <option value="Screening">
+              Screening / Day -7
+            </option>
+            <option value="Week2">
+              Week 2 Treatment
+            </option>
+            <option value="Week4">
+              Week 4 Treatment
+            </option>
           </select>
         </div>
       </div>
@@ -142,9 +159,7 @@
             "
           >
             <span>⚠️</span>
-            <span
-              >Protocol Amendment Active (v2.0.0) — Re-Consent Required</span
-            >
+            <span>Protocol Amendment Active (v2.0.0) — Re-Consent Required</span>
           </div>
           <p style="margin: 4px 0 0 0; font-size: 0.875rem; color: #7f1d1d">
             This subject must complete re-consent for Protocol Version 2.0.0
@@ -254,7 +269,7 @@
       </div>
 
       <!-- Batch Verification Action Bar (CRA Persona Integration Slot / Element) -->
-      <slot name="batch-sdv-bar"></slot>
+      <slot name="batch-sdv-bar" />
 
       <form
         id="form-VS_DEMO"
@@ -266,7 +281,10 @@
           style="border: none; padding: 0; margin: 0; display: contents"
           @click="handleFieldsetInteraction"
         >
-          <template v-for="field in renderedFields" :key="field.id">
+          <template
+            v-for="field in renderedFields"
+            :key="field.id"
+          >
             <div
               v-show="store.fieldVisibility[field.id] !== false"
               :style="`grid-column: span ${field.gridSpan || 12}; display: flex; flex-direction: column; gap: 8px;`"
@@ -382,7 +400,7 @@
                   @change="
                     $emit('handle-sdv-toggle', field.id, $event.target.checked)
                   "
-                />
+                >
                 <label
                   :for="`sdv-${field.id}`"
                   style="
@@ -420,7 +438,7 @@
                   style="cursor: pointer"
                   class="batch-sdv-checkbox"
                   @change="toggleBatchField(field.id, $event.target.checked)"
-                />
+                >
                 <label
                   :for="`batch-sdv-${field.id}`"
                   style="
@@ -473,19 +491,26 @@
       class="modal-overlay"
       style="display: flex"
     >
-      <div class="modal" style="max-width: 520px">
-        <div class="modal-header">➕ Enroll New Clinical Subject</div>
+      <div
+        class="modal"
+        style="max-width: 520px"
+      >
+        <div class="modal-header">
+          ➕ Enroll New Clinical Subject
+        </div>
         <div class="modal-body">
           <p style="font-size: 0.9rem; color: var(--text-muted)">
             Assign subject identifier, study site, initial protocol consent
             date, and treatment arm (PRD-SYS-001).
           </p>
-          <div class="form-group" style="margin-bottom: 12px">
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
             <label
               for="enroll-subject-id"
               style="font-size: 0.85rem; font-weight: 600"
-              >Subject ID:</label
-            >
+            >Subject ID:</label>
             <input
               id="enroll-subject-id"
               v-model="enrollForm.subjectId"
@@ -499,14 +524,16 @@
                 box-sizing: border-box;
               "
               placeholder="e.g. SUBJ-101-011"
-            />
+            >
           </div>
-          <div class="form-group" style="margin-bottom: 12px">
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
             <label
               for="enroll-site-id"
               style="font-size: 0.85rem; font-weight: 600"
-              >Site ID:</label
-            >
+            >Site ID:</label>
             <select
               id="enroll-site-id"
               v-model="enrollForm.siteId"
@@ -519,7 +546,9 @@
                 box-sizing: border-box;
               "
             >
-              <option value="SITE-101">SITE-101 (Main Clinical Center)</option>
+              <option value="SITE-101">
+                SITE-101 (Main Clinical Center)
+              </option>
               <option value="SITE-102">
                 SITE-102 (Regional Oncology Center)
               </option>
@@ -528,12 +557,14 @@
               </option>
             </select>
           </div>
-          <div class="form-group" style="margin-bottom: 12px">
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
             <label
               for="enroll-consent-date"
               style="font-size: 0.85rem; font-weight: 600"
-              >Informed Consent Date:</label
-            >
+            >Informed Consent Date:</label>
             <input
               id="enroll-consent-date"
               v-model="enrollForm.consentDate"
@@ -546,14 +577,16 @@
                 border-radius: 4px;
                 box-sizing: border-box;
               "
-            />
+            >
           </div>
-          <div class="form-group" style="margin-bottom: 12px">
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
             <label
               for="enroll-arm-id"
               style="font-size: 0.85rem; font-weight: 600"
-              >Assigned Study Arm:</label
-            >
+            >Assigned Study Arm:</label>
             <select
               id="enroll-arm-id"
               v-model="enrollForm.armId"
@@ -566,16 +599,22 @@
                 box-sizing: border-box;
               "
             >
-              <option value="ARM-A">Arm A: Active Cadence-001 (10mg/day)</option>
-              <option value="ARM-B">Arm B: Placebo Control</option>
+              <option value="ARM-A">
+                Arm A: Active Cadence-001 (10mg/day)
+              </option>
+              <option value="ARM-B">
+                Arm B: Placebo Control
+              </option>
             </select>
           </div>
-          <div class="form-group" style="margin-bottom: 12px">
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
             <label
               for="enroll-change-reason"
               style="font-size: 0.85rem; font-weight: 600"
-              >GxP Reason for Change:</label
-            >
+            >GxP Reason for Change:</label>
             <input
               id="enroll-change-reason"
               v-model="enrollForm.changeReason"
@@ -589,7 +628,7 @@
                 box-sizing: border-box;
               "
               placeholder="Initial subject enrollment"
-            />
+            >
           </div>
         </div>
         <div
@@ -628,7 +667,10 @@
       class="modal-overlay"
       style="display: flex"
     >
-      <div class="modal" style="max-width: 520px">
+      <div
+        class="modal"
+        style="max-width: 520px"
+      >
         <div
           class="modal-header"
           style="
@@ -699,7 +741,10 @@
       class="modal-overlay"
       style="display: flex"
     >
-      <div class="modal" style="max-width: 520px">
+      <div
+        class="modal"
+        style="max-width: 520px"
+      >
         <div class="modal-header">
           Execute Electronic Re-Consent (ICF v2.0.0)
         </div>
@@ -709,10 +754,11 @@
             Subject <strong>{{ selectedSubjectId }}</strong> under Protocol
             Version <strong>2.0.0</strong>.
           </p>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label style="font-size: 0.85rem; font-weight: 600"
-              >Signer Printed Name:</label
-            >
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
+            <label style="font-size: 0.85rem; font-weight: 600">Signer Printed Name:</label>
             <input
               :value="econsentSignerName"
               type="text"
@@ -726,12 +772,13 @@
               "
               placeholder="Full legal name of subject"
               @input="$emit('update:econsentSignerName', $event.target.value)"
-            />
-          </div>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label style="font-size: 0.85rem; font-weight: 600"
-              >Consent Declaration:</label
             >
+          </div>
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
+            <label style="font-size: 0.85rem; font-weight: 600">Consent Declaration:</label>
             <div
               style="
                 background: #f8fafc;
@@ -783,18 +830,23 @@
       class="modal-overlay"
       style="display: flex"
     >
-      <div class="modal" style="max-width: 520px">
-        <div class="modal-header">Register Signed Paper ICF (v2.0.0)</div>
+      <div
+        class="modal"
+        style="max-width: 520px"
+      >
+        <div class="modal-header">
+          Register Signed Paper ICF (v2.0.0)
+        </div>
         <div class="modal-body">
           <p>
             Upload or register site-verified paper Informed Consent Form for
-            Subject <strong>{{ selectedSubjectId }}</strong
-            >.
+            Subject <strong>{{ selectedSubjectId }}</strong>.
           </p>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label style="font-size: 0.85rem; font-weight: 600"
-              >Date ICF Signed by Subject:</label
-            >
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
+            <label style="font-size: 0.85rem; font-weight: 600">Date ICF Signed by Subject:</label>
             <input
               :value="paperIcfDate"
               type="date"
@@ -807,12 +859,13 @@
                 box-sizing: border-box;
               "
               @input="$emit('update:paperIcfDate', $event.target.value)"
-            />
-          </div>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label style="font-size: 0.85rem; font-weight: 600"
-              >Investigator Verification Note:</label
             >
+          </div>
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
+            <label style="font-size: 0.85rem; font-weight: 600">Investigator Verification Note:</label>
             <input
               :value="paperIcfNote"
               type="text"
@@ -826,7 +879,7 @@
               "
               placeholder="Paper ICF verified and archived in ISF binder."
               @input="$emit('update:paperIcfNote', $event.target.value)"
-            />
+            >
           </div>
         </div>
         <div

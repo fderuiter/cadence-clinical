@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import Depends
@@ -1191,7 +1191,7 @@ class SQLAlchemyETMFSyncRepository(IETMFSyncRepository):
             synced_at=(
                 datetime.fromisoformat(record.synced_at)
                 if record.synced_at
-                else datetime.utcnow()
+                else datetime.now(UTC)
             ),
             created_by=record.created_by,
             reason_for_change=record.reason_for_change,

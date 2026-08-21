@@ -109,7 +109,6 @@ const videoRef = ref(null);
 const isPlaying = ref(false);
 const currentTime = ref(0);
 const duration = ref(0);
-const volume = ref(1);
 const isMuted = ref(false);
 const playbackRate = ref(1);
 
@@ -219,10 +218,15 @@ onUnmounted(() => {
     <!-- Header Bar -->
     <div class="player-header">
       <div class="media-title-wrapper">
-        <span class="media-badge" :class="`badge-${mediaCategory}`">
+        <span
+          class="media-badge"
+          :class="`badge-${mediaCategory}`"
+        >
           {{ mediaCategory.toUpperCase() }}
         </span>
-        <h3 class="media-title">{{ title }}</h3>
+        <h3 class="media-title">
+          {{ title }}
+        </h3>
       </div>
 
       <!-- Controls Toolbar -->
@@ -267,8 +271,12 @@ onUnmounted(() => {
     </div>
 
     <!-- Media Viewport Container -->
+    <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
     <div
       class="player-viewport"
+      role="region"
+      aria-label="Media preview viewport"
+      tabindex="0"
       @mousedown="handleMouseDown"
       @mousemove="handleMouseMove"
     >
@@ -279,7 +287,11 @@ onUnmounted(() => {
         aria-hidden="true"
         data-testid="watermark-overlay"
       >
-        <div v-for="n in 16" :key="n" class="watermark-label">
+        <div
+          v-for="n in 16"
+          :key="n"
+          class="watermark-label"
+        >
           {{ watermarkText }}
         </div>
       </div>
@@ -356,10 +368,15 @@ onUnmounted(() => {
           @timeupdate="onTimeUpdate"
           @loadedmetadata="onLoadedMetadata"
           @ended="onEnded"
-        ></audio>
+        >
+          <track kind="captions" />
+        </audio>
 
         <div class="waveform-box">
-          <div class="waveform-bars" :class="{ 'is-playing': isPlaying }">
+          <div
+            class="waveform-bars"
+            :class="{ 'is-playing': isPlaying }"
+          >
             <span
               v-for="bar in 32"
               :key="bar"
@@ -419,7 +436,9 @@ onUnmounted(() => {
           @timeupdate="onTimeUpdate"
           @loadedmetadata="onLoadedMetadata"
           @ended="onEnded"
-        ></video>
+        >
+          <track kind="captions" />
+        </video>
 
         <div class="video-controls-bar">
           <button
@@ -470,11 +489,19 @@ onUnmounted(() => {
       </div>
 
       <!-- 5. Unsupported Media Fallback -->
-      <div v-else class="unsupported-viewer" data-testid="unsupported-viewer">
+      <div
+        v-else
+        class="unsupported-viewer"
+        data-testid="unsupported-viewer"
+      >
         <p class="unsupported-msg">
           Unsupported media format ({{ mimeType || "unknown" }}).
         </p>
-        <a :href="src" download class="btn btn-secondary">Download Raw File</a>
+        <a
+          :href="src"
+          download
+          class="btn btn-secondary"
+        >Download Raw File</a>
       </div>
     </div>
   </div>

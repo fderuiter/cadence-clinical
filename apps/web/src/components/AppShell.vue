@@ -1,12 +1,17 @@
 <template>
   <div id="vue-app-root">
     <!-- Skip Link (WCAG 2.4.1 Bypass Blocks) -->
-    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <a
+      href="#main-content"
+      class="skip-link"
+    >Skip to main content</a>
 
     <!-- Header -->
     <header class="app-header">
       <div class="header-left">
-        <div class="brand-logo-mark">⚡</div>
+        <div class="brand-logo-mark">
+          ⚡
+        </div>
         <div class="header-title-area">
           <h1 class="brand-title">
             {{ brandNameFirst }}
@@ -41,7 +46,10 @@
 
         <!-- Role / Persona Switcher for Instant Testing -->
         <div class="persona-switcher-box">
-          <label for="persona-select" class="sr-only">Switch Active Role</label>
+          <label
+            for="persona-select"
+            class="sr-only"
+          >Switch Active Role</label>
           <select
             id="persona-select"
             v-model="activePersonaKey"
@@ -49,7 +57,11 @@
             title="Switch active user role & permissions"
             @change="onPersonaSelect"
           >
-            <option v-for="p in PERSONA_PRESETS" :key="p.key" :value="p.key">
+            <option
+              v-for="p in PERSONA_PRESETS"
+              :key="p.key"
+              :value="p.key"
+            >
               {{ p.label }}
             </option>
           </select>
@@ -100,7 +112,9 @@
         <div class="sidebar-nav-scroll">
           <!-- Section 1: Study Design & MDR -->
           <div class="nav-category">
-            <div class="nav-category-title">Design &amp; Metadata</div>
+            <div class="nav-category-title">
+              Design &amp; Metadata
+            </div>
             <ul class="nav-menu">
               <li
                 v-if="
@@ -114,8 +128,15 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'digitization' }"
               >
-                <router-link v-slot="{ navigate }" to="/digitization" custom>
-                  <button type="button" @click="navigate">
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/digitization"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
                     <span class="nav-icon">⚡</span>
                     <span class="nav-label">Protocol AI Digitizer</span>
                   </button>
@@ -136,8 +157,15 @@
                     $route.name === 'mdr' && $route.query.tab !== 'canvas',
                 }"
               >
-                <router-link v-slot="{ navigate }" to="/mdr" custom>
-                  <button type="button" @click="navigate">
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/mdr"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
                     <span class="nav-icon">📋</span>
                     <span class="nav-label">Protocol &amp; SoA Designer</span>
                   </button>
@@ -158,8 +186,15 @@
                     $route.name === 'mdr' && $route.query.tab === 'canvas',
                 }"
               >
-                <router-link v-slot="{ navigate }" to="/mdr?tab=canvas" custom>
-                  <button type="button" @click="navigate">
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/mdr?tab=canvas"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
                     <span class="nav-icon">🎨</span>
                     <span class="nav-label">eCRF Visual Canvas</span>
                   </button>
@@ -181,8 +216,15 @@
                     $route.name === 'econsent-authoring',
                 }"
               >
-                <router-link v-slot="{ navigate }" to="/icf-builder" custom>
-                  <button type="button" @click="navigate">
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/icf-builder"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
                     <span class="nav-icon">📝</span>
                     <span class="nav-label">eConsent &amp; ICF Builder</span>
                   </button>
@@ -200,8 +242,15 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'rules' }"
               >
-                <router-link v-slot="{ navigate }" to="/rules" custom>
-                  <button type="button" @click="navigate">
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/rules"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
                     <span class="nav-icon">⚙️</span>
                     <span class="nav-label">Study Rules &amp; Queries</span>
                   </button>
@@ -223,8 +272,15 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'amendment-diff' }"
               >
-                <router-link v-slot="{ navigate }" to="/amendment-diff" custom>
-                  <button type="button" @click="navigate">
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/amendment-diff"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
                     <span class="nav-icon">🔀</span>
                     <span class="nav-label">Amendments &amp; Migration</span>
                   </button>
@@ -235,7 +291,9 @@
 
           <!-- Section 2: Study Execution & EDC -->
           <div class="nav-category">
-            <div class="nav-category-title">Execution &amp; EDC</div>
+            <div class="nav-category-title">
+              Execution &amp; EDC
+            </div>
             <ul class="nav-menu">
               <li
                 v-if="
@@ -252,8 +310,15 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'ecrf' }"
               >
-                <router-link v-slot="{ navigate }" to="/ecrf" custom>
-                  <button type="button" @click="navigate">
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/ecrf"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
                     <span class="nav-icon">🩺</span>
                     <span class="nav-label">eCRF Data Capture</span>
                   </button>
@@ -271,8 +336,15 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'coding' }"
               >
-                <router-link v-slot="{ navigate }" to="/coding" custom>
-                  <button type="button" @click="navigate">
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/coding"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
                     <span class="nav-icon">🏷️</span>
                     <span class="nav-label">Medical Coding</span>
                   </button>
@@ -290,8 +362,15 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'data-lock' }"
               >
-                <router-link v-slot="{ navigate }" to="/data-lock" custom>
-                  <button type="button" @click="navigate">
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/data-lock"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
                     <span class="nav-icon">🔐</span>
                     <span class="nav-label">Data Lock Console</span>
                   </button>
@@ -303,8 +382,15 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'ctms' }"
               >
-                <router-link v-slot="{ navigate }" to="/ctms" custom>
-                  <button type="button" @click="navigate">
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/ctms"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
                     <span class="nav-icon">📊</span>
                     <span class="nav-label">CTMS Operations</span>
                   </button>
@@ -324,8 +410,15 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'etmf' }"
               >
-                <router-link v-slot="{ navigate }" to="/etmf" custom>
-                  <button type="button" @click="navigate">
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/etmf"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
                     <span class="nav-icon">📁</span>
                     <span class="nav-label">eTMF Document Vault</span>
                   </button>
@@ -336,8 +429,15 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'quality' }"
               >
-                <router-link v-slot="{ navigate }" to="/quality" custom>
-                  <button type="button" @click="navigate">
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/quality"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
                     <span class="nav-icon">🎯</span>
                     <span class="nav-label">Quality &amp; RBQM Cockpit</span>
                   </button>
@@ -348,8 +448,15 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'tickets' }"
               >
-                <router-link v-slot="{ navigate }" to="/tickets" custom>
-                  <button type="button" @click="navigate">
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/tickets"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
                     <span class="nav-icon">🎫</span>
                     <span class="nav-label">Clinical Issues &amp; Tickets</span>
                   </button>
@@ -363,8 +470,15 @@
                   active: $route.name === 'audit' || $route.name === 'auditor',
                 }"
               >
-                <router-link v-slot="{ navigate }" to="/audit" custom>
-                  <button type="button" @click="navigate">
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/audit"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
                     <span class="nav-icon">🔒</span>
                     <span class="nav-label">Part 11 Audit Ledger</span>
                   </button>
@@ -382,8 +496,15 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'exports' }"
               >
-                <router-link v-slot="{ navigate }" to="/exports" custom>
-                  <button type="button" @click="navigate">
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/exports"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
                     <span class="nav-icon">📤</span>
                     <span class="nav-label">Data Export Wizard</span>
                   </button>
@@ -394,8 +515,15 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'notifications' }"
               >
-                <router-link v-slot="{ navigate }" to="/notifications" custom>
-                  <button type="button" @click="navigate">
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/notifications"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
                     <span class="nav-icon">🔔</span>
                     <span class="nav-label">Notifications</span>
                   </button>
@@ -406,7 +534,9 @@
 
           <!-- Section 3: Decentralized Patient Portals -->
           <div class="nav-category">
-            <div class="nav-category-title">Decentralized &amp; ePRO</div>
+            <div class="nav-category-title">
+              Decentralized &amp; ePRO
+            </div>
             <ul class="nav-menu">
               <li class="nav-item portal-nav-item">
                 <a
@@ -426,7 +556,7 @@
 
         <!-- Sidebar Footer Status -->
         <div class="sidebar-bottom-status">
-          <div class="status-indicator-dot"></div>
+          <div class="status-indicator-dot" />
           <div class="status-text">
             <strong>Engine:</strong> Active Sandbox Mode
           </div>
@@ -434,7 +564,10 @@
       </aside>
 
       <!-- Main Workspace -->
-      <main id="main-content" tabindex="-1">
+      <main
+        id="main-content"
+        tabindex="-1"
+      >
         <slot />
       </main>
     </div>
@@ -482,9 +615,7 @@
     >
       <div>
         <span>System Status: </span>
-        <span style="color: var(--accent-light); font-weight: 600"
-          >Active Sandbox Mode</span
-        >
+        <span style="color: var(--accent-light); font-weight: 600">Active Sandbox Mode</span>
       </div>
       <div>
         <button
@@ -642,7 +773,10 @@
           >
             {{ ev.target }}
           </div>
-          <div v-if="ev.details" style="color: #475569; font-size: 0.7rem">
+          <div
+            v-if="ev.details"
+            style="color: #475569; font-size: 0.7rem"
+          >
             {{ ev.details }}
           </div>
         </div>

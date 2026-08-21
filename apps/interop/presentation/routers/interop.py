@@ -1,7 +1,7 @@
 """FastAPI Router for Interop microservice (FHIR / eSource & eCOA Sync Gateway)."""
 
 import os
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -1147,11 +1147,7 @@ async def get_subject_compliance(
                 assignment_submission_map[assign.id] = inst_subs[sub_idx]
                 sub_idx += 1
 
-    now = (
-        datetime.now(UTC).replace(tzinfo=None)
-        if hasattr(timezone, "utc")
-        else datetime.utcnow()
-    )
+    now = datetime.now(UTC).replace(tzinfo=None)
     details = []
     completed_cnt = 0
     pending_cnt = 0
@@ -1250,11 +1246,7 @@ async def compute_reminders(
                 completed_assignment_ids.add(assign.id)
                 sub_idx += 1
 
-    now = (
-        datetime.now(UTC).replace(tzinfo=None)
-        if hasattr(timezone, "utc")
-        else datetime.utcnow()
-    )
+    now = datetime.now(UTC).replace(tzinfo=None)
     created_count = 0
 
     stmt_notifs = select(SubjectNotification)
@@ -1371,11 +1363,7 @@ async def acknowledge_notification(
         request.state, "change_reason", "system_operation"
     )
 
-    now = (
-        datetime.now(UTC).replace(tzinfo=None)
-        if hasattr(timezone, "utc")
-        else datetime.utcnow()
-    )
+    now = datetime.now(UTC).replace(tzinfo=None)
     notification.is_read = True
     notification.read_at = now
     notification.version_index += 1

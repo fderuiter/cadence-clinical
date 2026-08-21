@@ -1,5 +1,8 @@
 <template>
-  <div class="card" style="margin-top: 24px; padding: 20px">
+  <div
+    class="card"
+    style="margin-top: 24px; padding: 20px"
+  >
     <div
       style="
         display: flex;
@@ -48,7 +51,10 @@
             markerHeight="6"
             orient="auto-start-reverse"
           >
-            <path d="M 0 1 L 10 5 L 0 9 z" fill="#ec4899" />
+            <path
+              d="M 0 1 L 10 5 L 0 9 z"
+              fill="#ec4899"
+            />
           </marker>
         </defs>
 
@@ -68,7 +74,10 @@
 
         <g v-else>
           <!-- Epoch Column Transition Delineator Boundaries & Headers -->
-          <g v-for="(seq, index) in sortedEpochSeqs" :key="`header-${seq}`">
+          <g
+            v-for="(seq, index) in sortedEpochSeqs"
+            :key="`header-${seq}`"
+          >
             <!-- Header Label -->
             <text
               :x="getColumnCenter(seq)"
@@ -95,7 +104,10 @@
           </g>
 
           <!-- Study Arm Tracks (Lanes) -->
-          <g v-for="(arm, armIdx) in lanes" :key="arm.arm_id">
+          <g
+            v-for="(arm, armIdx) in lanes"
+            :key="arm.arm_id"
+          >
             <!-- Horizontal lane pathway background track -->
             <line
               :x1="laneXOffset"
@@ -125,7 +137,10 @@
               font-size="11px"
               fill="#1e293b"
             >
-              <tspan x="20" dy="0">{{ truncate(arm.arm_name, 22) }}</tspan>
+              <tspan
+                x="20"
+                dy="0"
+              >{{ truncate(arm.arm_name, 22) }}</tspan>
             </text>
 
             <!-- Epoch Blocks and Encounter Nodes in each lane -->
@@ -277,7 +292,10 @@
                     style="pointer-events: none"
                   >
                     Day {{ getPlannedDay(visit) }}
-                    <tspan fill="#64748b" font-weight="normal">
+                    <tspan
+                      fill="#64748b"
+                      font-weight="normal"
+                    >
                       ({{ getOffsetString(visit) }})
                     </tspan>
                   </text>
@@ -294,7 +312,7 @@
             <g
               v-if="
                 nodePositions[cross.from_visit_id] &&
-                nodePositions[cross.to_visit_id]
+                  nodePositions[cross.to_visit_id]
               "
             >
               <path
@@ -375,9 +393,9 @@
             ⚙️ Edit Encounter Timing Property
           </h3>
           <button
-            @click="closeModal"
             style="background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: #94a3b8; hover:color:#475569"
             aria-label="Close modal"
+            @click="closeModal"
           >
             &times;
           </button>
@@ -424,8 +442,8 @@
               Target Day Offset
             </label>
             <input
-              type="number"
               v-model.number="form.planned_day"
+              type="number"
               min="0"
               style="
                 width: 100%;
@@ -435,7 +453,7 @@
                 font-size: 0.9rem;
               "
               placeholder="e.g. 14"
-            />
+            >
           </div>
 
           <!-- Min/Max Offsets -->
@@ -453,8 +471,8 @@
                 Min Offset (Days)
               </label>
               <input
-                type="number"
                 v-model.number="form.min_offset"
+                type="number"
                 min="0"
                 style="
                   width: 100%;
@@ -464,7 +482,7 @@
                   font-size: 0.9rem;
                 "
                 placeholder="e.g. 1"
-              />
+              >
             </div>
             <div class="form-group">
               <label
@@ -479,8 +497,8 @@
                 Max Offset (Days)
               </label>
               <input
-                type="number"
                 v-model.number="form.max_offset"
+                type="number"
                 min="0"
                 style="
                   width: 100%;
@@ -490,7 +508,7 @@
                   font-size: 0.9rem;
                 "
                 placeholder="e.g. 3"
-              />
+              >
             </div>
           </div>
 
@@ -508,8 +526,8 @@
               Anchor Reference Milestone
             </label>
             <input
-              type="text"
               v-model="form.anchor_reference"
+              type="text"
               style="
                 width: 100%;
                 padding: 8px;
@@ -518,7 +536,7 @@
                 font-size: 0.9rem;
               "
               placeholder="e.g. Screening, Day 1, baseline_visit"
-            />
+            >
           </div>
 
           <!-- Required Justification (21 CFR Part 11) -->
@@ -552,7 +570,7 @@
                 font-size: 0.85rem;
               "
               placeholder="Specify the scientific, regulatory, or operational reason for this schedule alteration..."
-            ></textarea>
+            />
             <span
               style="
                 font-size: 0.75rem;
@@ -593,15 +611,14 @@
           >
             <button
               class="btn btn-secondary"
-              @click="closeModal"
               style="padding: 8px 14px; font-size: 0.85rem"
+              @click="closeModal"
             >
               Cancel
             </button>
             <button
               class="btn btn-primary"
               :disabled="!isFormValid"
-              @click="saveTiming"
               style="
                 padding: 8px 16px;
                 font-size: 0.85rem;
@@ -609,6 +626,7 @@
                 align-items: center;
                 gap: 6px;
               "
+              @click="saveTiming"
             >
               💾 Save Changes
             </button>

@@ -170,6 +170,17 @@ Traditional clinical trial builds require manual, error-prone translation of pro
   - Enforcement of strict execution validation gates, specifically throwing a `PermissionError` and an HTTP 403 Forbidden status if a subject allocation request is made for a subject not in the `ENROLLED` state.
   - Preservation of trial blinding integrity during randomized treatment allocation.
 
+### Q. Fileshare & Media Storage Service (`apps/fileshare`)
+
+- **Role:** GxP-compliant binary payload storage, pre-signed URL broker, and direct client transfer manager.
+- **Datastore:** SQLite / PostgreSQL Relational Database (`fileshare.db` in local development) & S3/MinIO Object Storage (`minio`).
+- **Core Responsibilities:**
+  - Implements the Hexagonal `StoragePort[T]` protocol for tenant-isolated object storage operations (`/{tenant_id}/{study_id}/{doc_id}`).
+  - Generates secure, short-lived presigned upload and download URLs for direct browser transfer, bypassing application memory.
+  - Enforces mandatory SHA-256 Merkle root verification before transitioning draft document envelopes to `COMMITTED`.
+  - Manages internal file sharing grants, time-bounded guest access links with cryptographic token validation, and legal retention holds.
+  - Maintains a 21 CFR Part 11 compliant audit trail (`FileshareAuditLog`) capturing all transfer requests, link creations, and document mutations.
+
 ---
 
 ## 2.2 Local Developer Runtime Topology
@@ -180,11 +191,12 @@ Unlike the Production-Specific Architecture (which utilizes AWS infrastructure, 
 
 - **Relational Database:** A single PostgreSQL container (`postgres`) is utilized for the core EDC execution runtime (`execution`) and organization service (`org`). Dedicated PostgreSQL containers (`postgres-etmf`, `postgres-ctms`, and `postgres-quality`) are used for `etmf`, `ctms`, and `quality` respectively.
 - **Graph Database:** A community-edition Neo4j container (`neo4j`) is utilized for the trial designer (`designer`).
+- **Object Storage:** A local MinIO container (`minio`) is utilized for S3-compatible binary payload storage and presigned direct client uploads for the fileshare service (`fileshare`).
 - **Local Identity & Access Management:** Keycloak (`keycloak`) runs locally in a development mode using an in-memory database (`dev-mem`).
-- **SQLite File Databases:** Microservices like Electronic Investigator Site File (`eisf`), EHR/ePRO Interoperability Gateway (`interop`), Ticket Tracking (`tickets`), Clinical Safety (`safety`), and Notifications Dispatcher (`notifications`) utilize local independent SQLite databases to maximize performance and isolation during local testing, avoiding the need for complex database migrations.
+- **SQLite File Databases:** Microservices like Electronic Investigator Site File (`eisf`), EHR/ePRO Interoperability Gateway (`interop`), Ticket Tracking (`tickets`), Clinical Safety (`safety`), Notifications Dispatcher (`notifications`), and Fileshare & Media (`fileshare`) utilize local independent SQLite databases to maximize performance and isolation during local testing, avoiding the need for complex database migrations.
 - **In-Memory Messaging/Queues:** Local integrations utilize synchronous HTTP loops or lightweight in-memory queues instead of full enterprise brokers (e.g., RabbitMQ, AWS SQS) or caching layers (e.g., Redis clusters) which are reserved exclusively for production environments.
 
-The diagram below represents the local development runtime and mapping of all 20 active local services:
+The diagram below represents the local development runtime and mapping of all 24 active local services:
 
 ```mermaid
 flowchart TD
@@ -206,13 +218,15 @@ flowchart TD
         safety[safety - Clinical safety microservice]
         notifications[notifications - Notifications & Webhooks Dispatcher]
         econsent[econsent - Electronic Consent Service]
+        fileshare[fileshare - Fileshare & Media Service]
 
-        %% Databases
+        %% Databases & Object Storage
         postgres[(postgres - Relational Database)]
         postgres-etmf[(postgres-etmf - Relational Database)]
         postgres-ctms[(postgres-ctms - Relational Database)]
         postgres-quality[(postgres-quality - Relational Database)]
         neo4j[(neo4j - Graph Database)]
+        minio[(minio - Object Storage MinIO)]
 
         %% SQLite file boundaries
         sqlite_eisf[(eisf.db - local SQLite)]
@@ -221,6 +235,7 @@ flowchart TD
         sqlite_safety[(safety.db - local SQLite)]
         sqlite_notifications[(notifications.db - local SQLite)]
         sqlite_econsent[(econsent.db - local SQLite)]
+        sqlite_fileshare[(fileshare.db - local SQLite)]
     end
 
     %% Routing Flow
@@ -240,6 +255,7 @@ flowchart TD
     gateway --> safety
     gateway --> notifications
     gateway --> econsent
+    gateway --> fileshare
 
     %% Shared storage connections
     designer --> neo4j
@@ -256,6 +272,10 @@ flowchart TD
     safety --> sqlite_safety
     notifications --> sqlite_notifications
     econsent --> sqlite_econsent
+    fileshare --> sqlite_fileshare
+
+    %% Object Storage
+    fileshare --> minio
 
     %% Inter-service events
     etmf -->|Sync Webhooks / Email| notifications

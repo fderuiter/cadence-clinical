@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -118,7 +118,7 @@ async def evaluate_milestones_for_grant(
 
         if not existing_payable:
             ms.is_triggered = True
-            ms.triggered_at = datetime.utcnow()
+            ms.triggered_at = datetime.now(UTC)
             ms.version_index += 1
             ms.reason_for_change = f"Automated trigger on condition: {condition}"
             session.add(ms)
@@ -434,7 +434,7 @@ async def complete_monitoring_visit(
         visit_type=visit.visit_type,
         actual_date=visit.actual_date,
         findings=findings_list,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
     )
 
     letter = GeneratedLetter(
@@ -739,7 +739,7 @@ async def record_recruitment(
     if not has_permission(principal, "ctms_recruitment:create"):
         raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
-    as_of = payload.as_of_date or datetime.utcnow()
+    as_of = payload.as_of_date or datetime.now(UTC)
 
     record = RecruitmentRecord(
         site_id=payload.site_id,
@@ -1033,7 +1033,7 @@ async def allocate_cra(
     result = await session.execute(stmt)
     existing_active = result.scalars().all()
 
-    start_date = payload.effective_start_date or datetime.utcnow()
+    start_date = payload.effective_start_date or datetime.now(UTC)
 
     for old_alloc in existing_active:
         old_alloc.status = "INACTIVE"
@@ -1801,7 +1801,7 @@ async def trigger_manual_milestone(
             )
 
         ms.is_triggered = True
-        ms.triggered_at = datetime.utcnow()
+        ms.triggered_at = datetime.now(UTC)
         ms.version_index += 1
         ms.reason_for_change = change_reason
         session.add(ms)

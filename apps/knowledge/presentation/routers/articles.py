@@ -1,10 +1,11 @@
 """
 FastAPI router for Knowledge article lifecycle endpoints.
 
-Implements the REST API for article CRUD and lifecycle transitions.
+Implements the REST API for article CRUD, Four-Eyes Review, Immutable Version
+Snapshotting, and Auto-Supersede per ADR-2188.
 All routes are protected by GatewayAuthMiddleware.
 
-Requirements: PRD-SYS-KH-001, PRD-SYS-KH-002
+Requirements: PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002, ADR-2188
 """
 
 import logging
@@ -15,14 +16,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.knowledge.adapters.database import get_db_session
 from apps.knowledge.application.article_service import ArticleLifecycleService
-from apps.knowledge.domain.models import (
+from apps.knowledge.domain.exceptions import (
     ArticleApprovalConflictError,
+    ArticleNotFoundError,
     ArticleReasonRequiredError,
-    ArticleStatus,
     ArticleTransitionError,
     CategoryConflictError,
     CategoryNotFoundError,
 )
+from apps.knowledge.domain.models import ArticleStatus
 from apps.knowledge.infrastructure.models import (
     ContextualHelpMapping,
     KnowledgeArticle,
@@ -30,10 +32,15 @@ from apps.knowledge.infrastructure.models import (
     KnowledgeArticleVersion,
 )
 from apps.knowledge.presentation.dtos import (
+    ArticleApproveRequest,
     ArticleCreate,
     ArticleDraftSave,
+    ArticlePublishRequest,
+    ArticleRejectRequest,
     ArticleResponse,
+    ArticleSubmitReviewRequest,
     ArticleTransitionRequest,
+    ArticleUpdate,
     ArticleVersionResponse,
     AuditLogResponse,
     CategoryCreate,
@@ -80,20 +87,7 @@ async def create_category(
     payload: CategoryCreate,
     session: AsyncSession = Depends(get_db_session),
 ) -> CategoryResponse:
-    """
-    Creates a new knowledge article category. Requires super_admin role.
-
-    Args:
-        payload: Category creation data.
-        session: Injected async database session.
-
-    Returns:
-        The created CategoryResponse.
-
-    Raises:
-        HTTPException 404: If the specified parent_id does not exist.
-        HTTPException 409: If the category name or slug already exists.
-    """
+    """Creates a new knowledge article category. Requires super_admin role."""
     actor = current_user_id.get()
     svc = ArticleLifecycleService(session)
     try:
@@ -130,16 +124,7 @@ async def list_categories(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
 ) -> list[CategoryResponse]:
-    """
-    Lists active knowledge categories, filtered by caller's persona visibility.
-
-    Args:
-        request: FastAPI Request instance.
-        session: Injected async database session.
-
-    Returns:
-        List of CategoryResponse objects.
-    """
+    """Lists active knowledge categories, filtered by caller's persona visibility."""
     roles = get_normalized_roles(request)
     svc = ArticleLifecycleService(session)
     categories = await svc.list_categories(user_roles=roles)
@@ -155,19 +140,7 @@ async def get_category(
     category_id: str,
     session: AsyncSession = Depends(get_db_session),
 ) -> CategoryResponse:
-    """
-    Retrieves a single KnowledgeCategory by ID.
-
-    Args:
-        category_id: UUID of the category to retrieve.
-        session: Injected async database session.
-
-    Returns:
-        The CategoryResponse.
-
-    Raises:
-        HTTPException 404: If the category does not exist or is deleted.
-    """
+    """Retrieves a single KnowledgeCategory by ID."""
     svc = ArticleLifecycleService(session)
     category = await svc.get_category_by_id(category_id)
     if not category:
@@ -187,20 +160,7 @@ async def delete_category(
     reason_for_change: str = "Category soft-deleted",
     session: AsyncSession = Depends(get_db_session),
 ) -> CategoryResponse:
-    """
-    Soft-deletes a KnowledgeCategory by ID. Requires super_admin or sysadmin role.
-
-    Args:
-        category_id: UUID of the category to soft-delete.
-        reason_for_change: GxP reason for soft deletion.
-        session: Injected async database session.
-
-    Returns:
-        The soft-deleted CategoryResponse.
-
-    Raises:
-        HTTPException 404: If the category does not exist or is already deleted.
-    """
+    """Soft-deletes a KnowledgeCategory by ID. Requires super_admin or sysadmin role."""
     actor = current_user_id.get()
     svc = ArticleLifecycleService(session)
     try:
@@ -217,7 +177,7 @@ async def delete_category(
 
 
 # ---------------------------------------------------------------------------
-# Article endpoints
+# Article CRUD & Draft Storage (Issue #4325)
 # ---------------------------------------------------------------------------
 
 
@@ -232,17 +192,8 @@ async def create_article(
     session: AsyncSession = Depends(get_db_session),
 ) -> ArticleResponse:
     """
-    Creates a new KnowledgeArticle in DRAFT status. Requires super_admin role.
-
-    Args:
-        payload: Article creation data including initial body_markdown.
-        session: Injected async database session.
-
-    Returns:
-        The created ArticleResponse.
-
-    Raises:
-        HTTPException 409: If the article slug is already in use.
+    Creates a new KnowledgeArticle in DRAFT status with an initial working draft version.
+    Requires super_admin role.
     """
     actor = current_user_id.get()
     svc = ArticleLifecycleService(session)
@@ -253,6 +204,7 @@ async def create_article(
             category_id=payload.category_id,
             body_markdown=payload.body_markdown,
             version_label=payload.version_label,
+            tags=payload.tags,
             actor_user_id=actor,
             reason_for_change=payload.reason_for_change,
         )
@@ -260,7 +212,55 @@ async def create_article(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
-    return ArticleResponse.model_validate(article)
+
+    resp = ArticleResponse.model_validate(article)
+    resp.body_markdown = payload.body_markdown
+    return resp
+
+
+@router.put(
+    "/articles/{article_id}",
+    response_model=ArticleResponse,
+    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
+)
+async def update_article_draft(
+    article_id: str,
+    payload: ArticleUpdate,
+    session: AsyncSession = Depends(get_db_session),
+) -> ArticleResponse:
+    """
+    Updates the working draft of an article (Issue #4325).
+
+    Updates the single KnowledgeArticleVersion row during DRAFT status with markdown
+    body, auto-rendered HTML, and GxP audit fields (created_by, reason_for_change, version_index).
+    Requires super_admin role.
+    """
+    actor = current_user_id.get()
+    svc = ArticleLifecycleService(session)
+    try:
+        article, version = await svc.update_draft(
+            article_id=article_id,
+            body_markdown=payload.body_markdown,
+            actor_user_id=actor,
+            title=payload.title,
+            slug=payload.slug,
+            category_id=payload.category_id,
+            tags=payload.tags,
+            reason_for_change=payload.reason_for_change,
+        )
+    except ArticleNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except ArticleTransitionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+    resp = ArticleResponse.model_validate(article)
+    resp.body_markdown = version.body_markdown
+    resp.body_html = version.body_html
+    return resp
 
 
 @router.get(
@@ -273,28 +273,10 @@ async def list_articles(
     category_id: str | None = None,
     session: AsyncSession = Depends(get_db_session),
 ) -> list[ArticleResponse]:
-    """
-    Lists knowledge articles, optionally filtered by status and/or category.
-
-    Non-admin users only receive PUBLISHED articles. Admins receive all.
-
-    Args:
-        status_filter: Optional ArticleStatus to filter by.
-        category_id: Optional category UUID to filter by.
-        session: Injected async database session.
-
-    Returns:
-        List of ArticleResponse objects.
-    """
-    stmt = select(KnowledgeArticle).where(KnowledgeArticle.is_deleted.is_(False))
-
-    if status_filter:
-        stmt = stmt.where(KnowledgeArticle.status == status_filter.value)
-    if category_id:
-        stmt = stmt.where(KnowledgeArticle.category_id == category_id)
-
-    result = await session.execute(stmt)
-    return [ArticleResponse.model_validate(a) for a in result.scalars().all()]
+    """Lists knowledge articles, optionally filtered by status and/or category."""
+    svc = ArticleLifecycleService(session)
+    articles = await svc.list_articles(status=status_filter, category_id=category_id)
+    return [ArticleResponse.model_validate(a) for a in articles]
 
 
 @router.get(
@@ -304,49 +286,47 @@ async def list_articles(
 )
 async def get_article(
     article_id: str,
+    request: Request,
     session: AsyncSession = Depends(get_db_session),
 ) -> ArticleResponse:
     """
-    Retrieves a single KnowledgeArticle by ID.
-
+    Retrieves a single KnowledgeArticle by ID along with its active body content.
     If the requesting user has an auditor role, records a READ_BY_AUDITOR audit event.
-
-    Args:
-        article_id: UUID of the article to retrieve.
-        session: Injected async database session.
-
-    Returns:
-        The ArticleResponse.
-
-    Raises:
-        HTTPException 404: If the article does not exist.
     """
     from packages.security.context import current_user_id as uid_ctx
-    from packages.security.rbac import get_current_user_roles
 
-    result = await session.execute(
-        select(KnowledgeArticle).where(
-            KnowledgeArticle.id == article_id,
-            KnowledgeArticle.is_deleted.is_(False),
-        )
-    )
-    article = result.scalar_one_or_none()
+    svc = ArticleLifecycleService(session)
+    article = await svc.get_article_by_id(article_id)
     if not article:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
         )
 
-    # Emit auditor read event
+    # Fetch relevant version snapshot
+    version: KnowledgeArticleVersion | None = None
+    if article.status == ArticleStatus.PUBLISHED:
+        version = await svc.get_current_published_version(article.id)
+    if not version:
+        version = await svc.get_working_draft_version(article.id)
+    if not version:
+        versions = await svc.list_article_versions(article.id)
+        if versions:
+            version = versions[-1]
+
+    # Emit auditor read event if auditor persona
     actor = uid_ctx.get()
     try:
-        roles = get_current_user_roles()
+        roles = get_normalized_roles(request)
         if any(r in roles for r in AUDITOR_ROLES):
-            svc = ArticleLifecycleService(session)
             await svc.record_auditor_read(article=article, actor_user_id=actor)
     except Exception:
-        pass  # Never block a read due to audit log failure
+        pass
 
-    return ArticleResponse.model_validate(article)
+    resp = ArticleResponse.model_validate(article)
+    if version:
+        resp.body_markdown = version.body_markdown
+        resp.body_html = version.body_html
+    return resp
 
 
 @router.patch(
@@ -359,44 +339,178 @@ async def save_article_draft(
     payload: ArticleDraftSave,
     session: AsyncSession = Depends(get_db_session),
 ) -> ArticleVersionResponse:
-    """
-    Saves updated body content to a DRAFT article. Requires super_admin role.
-
-    Args:
-        article_id: UUID of the article to update.
-        payload: Draft save payload with body_markdown.
-        session: Injected async database session.
-
-    Returns:
-        The new ArticleVersionResponse snapshot.
-
-    Raises:
-        HTTPException 404: Article not found.
-        HTTPException 409: Article is not in DRAFT status.
-    """
-    result = await session.execute(
-        select(KnowledgeArticle).where(KnowledgeArticle.id == article_id)
-    )
-    article = result.scalar_one_or_none()
-    if not article:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
-        )
-
+    """Saves updated body content to a DRAFT article. Requires super_admin role."""
     actor = current_user_id.get()
     svc = ArticleLifecycleService(session)
     try:
-        version = await svc.save_draft(
-            article=article,
+        _, version = await svc.update_draft(
+            article_id=article_id,
             body_markdown=payload.body_markdown,
             actor_user_id=actor,
             reason_for_change=payload.reason_for_change,
         )
+    except ArticleNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
     except ArticleTransitionError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
     return ArticleVersionResponse.model_validate(version)
+
+
+# ---------------------------------------------------------------------------
+# Four-Eyes Review & Snapshots Endpoints (Issue #4326)
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/articles/{article_id}/submit-review",
+    response_model=ArticleResponse,
+    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
+)
+async def submit_article_review(
+    article_id: str,
+    payload: ArticleSubmitReviewRequest = ArticleSubmitReviewRequest(),
+    session: AsyncSession = Depends(get_db_session),
+) -> ArticleResponse:
+    """Submits a DRAFT article for peer review (DRAFT -> IN_REVIEW)."""
+    actor = current_user_id.get()
+    svc = ArticleLifecycleService(session)
+    try:
+        article = await svc.submit_for_review(
+            article_id=article_id,
+            actor_user_id=actor,
+            reason_for_change=payload.reason_for_change,
+        )
+    except ArticleNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except ArticleTransitionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    return ArticleResponse.model_validate(article)
+
+
+@router.post(
+    "/articles/{article_id}/approve",
+    response_model=ArticleResponse,
+    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
+)
+async def approve_article(
+    article_id: str,
+    payload: ArticleApproveRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> ArticleResponse:
+    """
+    Approves an article in IN_REVIEW status (IN_REVIEW -> APPROVED).
+
+    Enforces Four-Eyes check: approver cannot be author_user_id or last_edited_by.
+    Locks current KnowledgeArticleVersion record as permanently immutable.
+    """
+    actor = current_user_id.get()
+    svc = ArticleLifecycleService(session)
+    try:
+        article = await svc.approve_article(
+            article_id=article_id,
+            actor_user_id=actor,
+            reason_for_change=payload.reason_for_change,
+        )
+    except ArticleNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except ArticleApprovalConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+    except ArticleReasonRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+    except ArticleTransitionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    return ArticleResponse.model_validate(article)
+
+
+@router.post(
+    "/articles/{article_id}/reject",
+    response_model=ArticleResponse,
+    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
+)
+async def reject_article(
+    article_id: str,
+    payload: ArticleRejectRequest = ArticleRejectRequest(),
+    session: AsyncSession = Depends(get_db_session),
+) -> ArticleResponse:
+    """Rejects an article in IN_REVIEW status (IN_REVIEW -> REJECTED)."""
+    actor = current_user_id.get()
+    svc = ArticleLifecycleService(session)
+    try:
+        article = await svc.reject_article(
+            article_id=article_id,
+            actor_user_id=actor,
+            reason_for_change=payload.reason_for_change,
+        )
+    except ArticleNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except ArticleTransitionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    return ArticleResponse.model_validate(article)
+
+
+# ---------------------------------------------------------------------------
+# Publication & Auto-Supersede (Issue #4327)
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/articles/{article_id}/publish",
+    response_model=ArticleResponse,
+    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
+)
+async def publish_article(
+    article_id: str,
+    payload: ArticlePublishRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> ArticleResponse:
+    """
+    Publishes an APPROVED article (APPROVED -> PUBLISHED).
+
+    - Updates fast O(1) lookup pointer KnowledgeArticle.current_published_version_id.
+    - Publishing version N+1 automatically sets prior active version N to SUPERSEDED.
+    """
+    actor = current_user_id.get()
+    svc = ArticleLifecycleService(session)
+    try:
+        article = await svc.publish_article(
+            article_id=article_id,
+            actor_user_id=actor,
+            reason_for_change=payload.reason_for_change,
+            version_label=payload.version_label,
+        )
+    except ArticleNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except ArticleReasonRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+    except ArticleTransitionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    return ArticleResponse.model_validate(article)
 
 
 @router.post(
@@ -409,23 +523,7 @@ async def transition_article(
     payload: ArticleTransitionRequest,
     session: AsyncSession = Depends(get_db_session),
 ) -> ArticleResponse:
-    """
-    Executes a lifecycle state machine transition on a KnowledgeArticle.
-    Requires super_admin role.
-
-    Args:
-        article_id: UUID of the article to transition.
-        payload: Transition request with target_status and reason_for_change.
-        session: Injected async database session.
-
-    Returns:
-        The updated ArticleResponse.
-
-    Raises:
-        HTTPException 404: Article not found.
-        HTTPException 409: Invalid transition, four-eyes violation.
-        HTTPException 422: Missing reason_for_change on a regulated transition.
-    """
+    """Generic lifecycle state machine transition endpoint."""
     result = await session.execute(
         select(KnowledgeArticle).where(KnowledgeArticle.id == article_id)
     )
@@ -469,22 +567,10 @@ async def list_article_versions(
     article_id: str,
     session: AsyncSession = Depends(get_db_session),
 ) -> list[ArticleVersionResponse]:
-    """
-    Lists all immutable version snapshots for an article (chronological order).
-
-    Args:
-        article_id: UUID of the article.
-        session: Injected async database session.
-
-    Returns:
-        List of ArticleVersionResponse objects, oldest first.
-    """
-    result = await session.execute(
-        select(KnowledgeArticleVersion)
-        .where(KnowledgeArticleVersion.article_id == article_id)
-        .order_by(KnowledgeArticleVersion.version_index.asc())
-    )
-    return [ArticleVersionResponse.model_validate(v) for v in result.scalars().all()]
+    """Lists all immutable version snapshots for an article (chronological order)."""
+    svc = ArticleLifecycleService(session)
+    versions = await svc.list_article_versions(article_id)
+    return [ArticleVersionResponse.model_validate(v) for v in versions]
 
 
 @router.get(
@@ -496,17 +582,7 @@ async def get_article_audit_log(
     article_id: str,
     session: AsyncSession = Depends(get_db_session),
 ) -> list[AuditLogResponse]:
-    """
-    Returns the immutable audit trail for a specific article.
-    Requires auditor or super_admin role.
-
-    Args:
-        article_id: UUID of the article.
-        session: Injected async database session.
-
-    Returns:
-        List of AuditLogResponse objects, oldest first.
-    """
+    """Returns the immutable audit trail for a specific article."""
     result = await session.execute(
         select(KnowledgeArticleAuditLog)
         .where(KnowledgeArticleAuditLog.article_id == article_id)
@@ -530,17 +606,7 @@ async def create_contextual_help_mapping(
     payload: ContextualHelpMappingCreate,
     session: AsyncSession = Depends(get_db_session),
 ) -> ContextualHelpMappingResponse:
-    """
-    Creates a contextual help mapping (route pattern + persona -> article).
-    Requires super_admin role.
-
-    Args:
-        payload: Mapping creation payload.
-        session: Injected async database session.
-
-    Returns:
-        The created ContextualHelpMappingResponse.
-    """
+    """Creates a contextual help mapping (route pattern + persona -> article)."""
     actor = current_user_id.get()
     mapping = ContextualHelpMapping(
         route_pattern=payload.route_pattern,
@@ -565,24 +631,13 @@ async def lookup_contextual_help(
     persona: str | None = None,
     session: AsyncSession = Depends(get_db_session),
 ) -> ContextualHelpLookupResponse:
-    """
-    Returns the most relevant Published article for a given route and persona.
-
-    Matches the highest-priority mapping (lowest priority number) for the route
-    pattern that also matches the requesting persona (or has no persona filter).
-
-    Args:
-        route: The frontend route path (e.g. "/ecrf", "/tickets").
-        persona: The requesting user's persona role, or None.
-        session: Injected async database session.
-
-    Returns:
-        ContextualHelpLookupResponse with the matching article and current version,
-        or null fields if no match is found.
-    """
+    """Returns the most relevant Published article for a given route and persona."""
     stmt = (
         select(ContextualHelpMapping)
-        .join(KnowledgeArticle, ContextualHelpMapping.article_id == KnowledgeArticle.id)
+        .join(
+            KnowledgeArticle,
+            ContextualHelpMapping.article_id == KnowledgeArticle.id,
+        )
         .where(
             ContextualHelpMapping.route_pattern == route,
             KnowledgeArticle.status == ArticleStatus.PUBLISHED.value,
@@ -593,7 +648,6 @@ async def lookup_contextual_help(
     result = await session.execute(stmt)
     mappings = result.scalars().all()
 
-    # Find the best match for the persona
     best: ContextualHelpMapping | None = None
     for m in mappings:
         if m.persona is None or m.persona == persona:
@@ -603,25 +657,19 @@ async def lookup_contextual_help(
     if not best:
         return ContextualHelpLookupResponse(article=None, version=None)
 
-    art_result = await session.execute(
-        select(KnowledgeArticle).where(KnowledgeArticle.id == best.article_id)
-    )
-    article = art_result.scalar_one_or_none()
+    svc = ArticleLifecycleService(session)
+    article = await svc.get_article_by_id(best.article_id)
     if not article:
         return ContextualHelpLookupResponse(article=None, version=None)
 
-    ver_result = await session.execute(
-        select(KnowledgeArticleVersion)
-        .where(
-            KnowledgeArticleVersion.article_id == article.id,
-            KnowledgeArticleVersion.status_at_snapshot == ArticleStatus.APPROVED.value,
-        )
-        .order_by(KnowledgeArticleVersion.version_index.desc())
-        .limit(1)
-    )
-    version = ver_result.scalar_one_or_none()
+    version = await svc.get_current_published_version(article.id)
+    if not version:
+        version = await svc.get_latest_version(article.id)
 
     return ContextualHelpLookupResponse(
         article=ArticleResponse.model_validate(article) if article else None,
         version=ArticleVersionResponse.model_validate(version) if version else None,
     )
+
+
+__all__ = ["router"]

@@ -42,7 +42,12 @@ class S3StorageProvider(BlobStorageProvider):
         return self.session.client("s3", endpoint_url=self.endpoint_url)
 
     async def put_object(
-        self, key: str, data: bytes, expected_sha256: str | None = None
+        self,
+        key: str,
+        data: bytes,
+        content_type: str | None = None,
+        metadata: dict[str, str] | None = None,
+        expected_sha256: str | None = None,
     ) -> str:
         """Write binary blob to storage and return verified SHA-256 digest.
 
@@ -66,14 +71,21 @@ class S3StorageProvider(BlobStorageProvider):
                 f"Storage integrity verification failed! Expected {expected_sha256}, got {calculated_hash}"
             )
 
+        tags = dict(metadata or {})
+        tags["sha256"] = calculated_hash
+
+        put_kwargs = {
+            "Bucket": self.bucket_name,
+            "Key": key,
+            "Body": data,
+            "Metadata": tags,
+            "ServerSideEncryption": self.sse_algorithm,
+        }
+        if content_type:
+            put_kwargs["ContentType"] = content_type
+
         async with self._get_client() as client:
-            await client.put_object(
-                Bucket=self.bucket_name,
-                Key=key,
-                Body=data,
-                Metadata={"sha256": calculated_hash},
-                ServerSideEncryption=self.sse_algorithm,
-            )
+            await client.put_object(**put_kwargs)
         return calculated_hash
 
     async def get_object(self, key: str) -> tuple[bytes, str]:

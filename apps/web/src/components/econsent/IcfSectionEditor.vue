@@ -99,7 +99,10 @@
     />
 
     <!-- Glossary Term Annotation Dialog/Modal -->
-    <div v-if="showGlossaryModal" class="glossary-modal-overlay">
+    <div
+      v-if="showGlossaryModal"
+      class="glossary-modal-overlay"
+    >
       <div class="glossary-modal card">
         <h4>Annotate Selected Text as Glossary Term</h4>
         <p class="selected-text-preview">
@@ -140,10 +143,11 @@
       class="glossary-popover"
       :style="{ top: popoverY + 'px', left: popoverX + 'px' }"
     >
-      <div class="popover-title">Glossary Definition</div>
+      <div class="popover-title">
+        Glossary Definition
+      </div>
       <div class="popover-body">
-        <strong>{{ hoveredGlossaryTerm }}</strong
-        >: {{ hoveredGlossaryDefinition }}
+        <strong>{{ hoveredGlossaryTerm }}</strong>: {{ hoveredGlossaryDefinition }}
       </div>
     </div>
   </div>

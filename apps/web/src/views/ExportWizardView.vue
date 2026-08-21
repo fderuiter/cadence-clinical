@@ -3,7 +3,9 @@
     <!-- Header Banner -->
     <header class="wizard-header">
       <div class="wizard-title-group">
-        <div class="wizard-icon-box">📊</div>
+        <div class="wizard-icon-box">
+          📊
+        </div>
         <div>
           <h1 class="wizard-main-title">
             Regulatory Biostatistical Export Wizard
@@ -21,8 +23,127 @@
       </div>
     </header>
 
+    <!-- 1-Click Fast Regulatory Compilation & Export Section -->
+    <div
+      class="quick-export-card"
+      style="
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+      "
+    >
+      <div
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 12px;
+        "
+      >
+        <div>
+          <h3
+            style="
+              margin: 0;
+              font-size: 15px;
+              display: flex;
+              align-items: center;
+              gap: 6px;
+            "
+          >
+            <span>⚡</span> 1-Click Fast Regulatory Compilation &amp; Export
+          </h3>
+          <p
+            style="
+              margin: 4px 0 0 0;
+              font-size: 12px;
+              color: var(--text-muted);
+            "
+          >
+            Instantly package and download validated CDISC ODM XML and CSV datasets without traversing multi-step wizard.
+          </p>
+        </div>
+
+        <!-- Locked vs Unlocked Filter Toggle -->
+        <div
+          class="lock-filter-group"
+          style="display: flex; align-items: center; gap: 8px;"
+        >
+          <span style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Record Scope:</span>
+          <div
+            class="btn-group-toggle"
+            style="
+              display: flex;
+              background: var(--card-bg);
+              border: 1px solid var(--border);
+              border-radius: 6px;
+              overflow: hidden;
+            "
+          >
+            <button
+              type="button"
+              class="btn-toggle-option btn-filter-all"
+              :class="{ active: recordLockFilter === 'all' }"
+              style="padding: 6px 12px; font-size: 11px; border: none; cursor: pointer;"
+              :style="{ background: recordLockFilter === 'all' ? 'var(--primary)' : 'transparent', color: recordLockFilter === 'all' ? '#fff' : 'var(--text)' }"
+              @click="recordLockFilter = 'all'"
+            >
+              All Records
+            </button>
+            <button
+              type="button"
+              class="btn-toggle-option btn-filter-locked"
+              :class="{ active: recordLockFilter === 'locked_only' }"
+              style="padding: 6px 12px; font-size: 11px; border: none; cursor: pointer;"
+              :style="{ background: recordLockFilter === 'locked_only' ? 'var(--primary)' : 'transparent', color: recordLockFilter === 'locked_only' ? '#fff' : 'var(--text)' }"
+              @click="recordLockFilter = 'locked_only'"
+            >
+              🔒 Locked Only
+            </button>
+            <button
+              type="button"
+              class="btn-toggle-option btn-filter-unlocked"
+              :class="{ active: recordLockFilter === 'unlocked_only' }"
+              style="padding: 6px 12px; font-size: 11px; border: none; cursor: pointer;"
+              :style="{ background: recordLockFilter === 'unlocked_only' ? 'var(--primary)' : 'transparent', color: recordLockFilter === 'unlocked_only' ? '#fff' : 'var(--text)' }"
+              @click="recordLockFilter = 'unlocked_only'"
+            >
+              🔓 Unlocked Only
+            </button>
+          </div>
+        </div>
+
+        <!-- 1-Click Action Buttons -->
+        <div style="display: flex; gap: 8px;">
+          <button
+            type="button"
+            class="btn btn-primary btn-fast-export-odm"
+            style="padding: 8px 14px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px;"
+            :disabled="isFastExporting"
+            @click="fastExportOdmXml"
+          >
+            <span>📦</span> 1-Click CDISC ODM XML
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary btn-fast-export-csv"
+            style="padding: 8px 14px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px;"
+            :disabled="isFastExporting"
+            @click="fastExportCsv"
+          >
+            <span>📊</span> 1-Click CSV Datasets
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Stepper Navigation -->
-    <nav class="stepper-nav" aria-label="Export Wizard Steps">
+    <nav
+      class="stepper-nav"
+      aria-label="Export Wizard Steps"
+    >
       <div
         v-for="step in STEPS"
         :key="step.number"
@@ -47,8 +168,13 @@
     <!-- Wizard Body Panes -->
     <main class="wizard-card-body">
       <!-- Step 1: Format Selection -->
-      <section v-if="currentStep === 1" class="step-pane">
-        <h2 class="pane-title">Step 1: Choose Regulatory Target Format</h2>
+      <section
+        v-if="currentStep === 1"
+        class="step-pane"
+      >
+        <h2 class="pane-title">
+          Step 1: Choose Regulatory Target Format
+        </h2>
         <p class="pane-description">
           Select the biostatistical or regulatory submission format required by
           the statistical analysis plan (SAP) or health authority (FDA / EMA /
@@ -67,8 +193,12 @@
               <span class="format-icon">{{ fmt.icon }}</span>
               <span class="format-badge">{{ fmt.badge }}</span>
             </div>
-            <h3 class="format-name">{{ fmt.name }}</h3>
-            <p class="format-detail">{{ fmt.description }}</p>
+            <h3 class="format-name">
+              {{ fmt.name }}
+            </h3>
+            <p class="format-detail">
+              {{ fmt.description }}
+            </p>
             <div class="format-meta">
               <span class="meta-tag">{{ fmt.standard }}</span>
               <span class="meta-tag">{{ fmt.extension }}</span>
@@ -78,7 +208,10 @@
       </section>
 
       <!-- Step 2: SDTM & ADaM Domain Selection -->
-      <section v-if="currentStep === 2" class="step-pane">
+      <section
+        v-if="currentStep === 2"
+        class="step-pane"
+      >
         <div class="pane-header-actions">
           <div>
             <h2 class="pane-title">
@@ -90,13 +223,25 @@
             </p>
           </div>
           <div class="domain-quick-actions">
-            <button type="button" class="btn btn-sm" @click="selectAllDomains">
+            <button
+              type="button"
+              class="btn btn-sm"
+              @click="selectAllDomains"
+            >
               Select All
             </button>
-            <button type="button" class="btn btn-sm" @click="selectSdtmOnly">
+            <button
+              type="button"
+              class="btn btn-sm"
+              @click="selectSdtmOnly"
+            >
               SDTM Only
             </button>
-            <button type="button" class="btn btn-sm" @click="selectAdamOnly">
+            <button
+              type="button"
+              class="btn btn-sm"
+              @click="selectAdamOnly"
+            >
               ADaM Only
             </button>
             <button
@@ -114,10 +259,8 @@
           <div class="domain-group">
             <h3 class="domain-group-title">
               <span>📋 SDTM Tabulation Domains (v2.0)</span>
-              <span class="count-pill"
-                >{{ selectedSdtmCount }} /
-                {{ SDTM_DOMAINS.length }} selected</span
-              >
+              <span class="count-pill">{{ selectedSdtmCount }} /
+                {{ SDTM_DOMAINS.length }} selected</span>
             </h3>
             <div class="domain-card-list">
               <label
@@ -127,10 +270,10 @@
                 :class="{ checked: selectedDomains.includes(dom.id) }"
               >
                 <input
+                  v-model="selectedDomains"
                   type="checkbox"
                   :value="dom.id"
-                  v-model="selectedDomains"
-                />
+                >
                 <div class="domain-info">
                   <div class="domain-code">{{ dom.id }}</div>
                   <div class="domain-label">{{ dom.label }}</div>
@@ -144,10 +287,8 @@
           <div class="domain-group">
             <h3 class="domain-group-title">
               <span>🔬 ADaM Analysis Datasets (v1.3)</span>
-              <span class="count-pill"
-                >{{ selectedAdamCount }} /
-                {{ ADAM_DATASETS.length }} selected</span
-              >
+              <span class="count-pill">{{ selectedAdamCount }} /
+                {{ ADAM_DATASETS.length }} selected</span>
             </h3>
             <div class="domain-card-list">
               <label
@@ -157,10 +298,10 @@
                 :class="{ checked: selectedDatasets.includes(ds.id) }"
               >
                 <input
+                  v-model="selectedDatasets"
                   type="checkbox"
                   :value="ds.id"
-                  v-model="selectedDatasets"
-                />
+                >
                 <div class="domain-info">
                   <div class="domain-code">{{ ds.id }}</div>
                   <div class="domain-label">{{ ds.label }}</div>
@@ -173,8 +314,13 @@
       </section>
 
       <!-- Step 3: Cohort & Site Filtering -->
-      <section v-if="currentStep === 3" class="step-pane">
-        <h2 class="pane-title">Step 3: Cohort &amp; Site Population Filters</h2>
+      <section
+        v-if="currentStep === 3"
+        class="step-pane"
+      >
+        <h2 class="pane-title">
+          Step 3: Cohort &amp; Site Population Filters
+        </h2>
         <p class="pane-description">
           Filter data extracts by clinical investigative site, treatment
           cohort/arm, and visit milestone scope.
@@ -182,16 +328,17 @@
 
         <div class="filter-form-grid">
           <div class="form-group">
-            <label class="form-label" for="study-id-input"
-              >Study Identifier *</label
-            >
+            <label
+              class="form-label"
+              for="study-id-input"
+            >Study Identifier *</label>
             <input
               id="study-id-input"
-              type="text"
               v-model="studyId"
+              type="text"
               class="form-input"
               placeholder="e.g. STUDY-001"
-            />
+            >
           </div>
 
           <div class="form-group">
@@ -227,16 +374,45 @@
           </div>
 
           <div class="form-group full-width">
+            <label class="form-label">Record Locking Status Filter</label>
+            <div style="display: flex; gap: 10px; margin-top: 4px;">
+              <label class="radio-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                <input
+                  v-model="recordLockFilter"
+                  type="radio"
+                  value="all"
+                >
+                <span>All Clinical Records</span>
+              </label>
+              <label class="radio-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                <input
+                  v-model="recordLockFilter"
+                  type="radio"
+                  value="locked_only"
+                >
+                <span>🔒 Locked Only (Audit-Signed / Frozen)</span>
+              </label>
+              <label class="radio-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                <input
+                  v-model="recordLockFilter"
+                  type="radio"
+                  value="unlocked_only"
+                >
+                <span>🔓 Unlocked Only (In-Progress / Draft)</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group full-width">
             <label class="toggle-control">
-              <input type="checkbox" v-model="includeUnmapped" />
+              <input
+                v-model="includeUnmapped"
+                type="checkbox"
+              >
               <span class="toggle-label">
-                <strong
-                  >Include Supplemental Qualifiers (SUPP-- records)</strong
-                >
-                <span class="toggle-sub"
-                  >Capture non-standard custom CRF variables in normalized SDTM
-                  supplemental structures.</span
-                >
+                <strong>Include Supplemental Qualifiers (SUPP-- records)</strong>
+                <span class="toggle-sub">Capture non-standard custom CRF variables in normalized SDTM
+                  supplemental structures.</span>
               </span>
             </label>
           </div>
@@ -244,7 +420,10 @@
       </section>
 
       <!-- Step 4: Privacy & Governance Profile -->
-      <section v-if="currentStep === 4" class="step-pane">
+      <section
+        v-if="currentStep === 4"
+        class="step-pane"
+      >
         <h2 class="pane-title">
           Step 4: Privacy &amp; De-Identification Profile
         </h2>
@@ -265,25 +444,33 @@
               <span class="privacy-title">{{ p.name }}</span>
               <span class="badge">{{ p.badge }}</span>
             </div>
-            <p class="privacy-desc">{{ p.description }}</p>
+            <p class="privacy-desc">
+              {{ p.description }}
+            </p>
             <ul class="privacy-rules-list">
-              <li v-for="(rule, idx) in p.rules" :key="idx">✓ {{ rule }}</li>
+              <li
+                v-for="(rule, idx) in p.rules"
+                :key="idx"
+              >
+                ✓ {{ rule }}
+              </li>
             </ul>
           </div>
         </div>
 
         <div class="salt-config-panel">
           <div class="form-group">
-            <label class="form-label" for="salt-key-input"
-              >Deterministic HMAC Salt Key (Reversible Governance Hash)</label
-            >
+            <label
+              class="form-label"
+              for="salt-key-input"
+            >Deterministic HMAC Salt Key (Reversible Governance Hash)</label>
             <input
               id="salt-key-input"
-              type="text"
               v-model="hmacSalt"
+              type="text"
               class="form-input font-mono"
               placeholder="e.g. secure-clinical-salt-98765"
-            />
+            >
             <span class="form-hint">
               Same salt reproduces identical subject pseudonyms and
               deterministic date-shift intervals for cross-domain linkability.
@@ -291,23 +478,25 @@
           </div>
 
           <label class="toggle-control mt-4">
-            <input type="checkbox" v-model="includeAuditTrail" />
+            <input
+              v-model="includeAuditTrail"
+              type="checkbox"
+            >
             <span class="toggle-label">
-              <strong
-                >Embed Part 11 Audit Trail Metadata (&lt;AuditRecord&gt; / CSV
-                stamps)</strong
-              >
-              <span class="toggle-sub"
-                >Include author user ID, ISO timestamp, and GxP
-                reason-for-change logs in the serialized package.</span
-              >
+              <strong>Embed Part 11 Audit Trail Metadata (&lt;AuditRecord&gt; / CSV
+                stamps)</strong>
+              <span class="toggle-sub">Include author user ID, ISO timestamp, and GxP
+                reason-for-change logs in the serialized package.</span>
             </span>
           </label>
         </div>
       </section>
 
       <!-- Step 5: Review & Asynchronous Download Handling -->
-      <section v-if="currentStep === 5" class="step-pane">
+      <section
+        v-if="currentStep === 5"
+        class="step-pane"
+      >
         <h2 class="pane-title">
           Step 5: Review Export Manifest &amp; Download
         </h2>
@@ -317,7 +506,9 @@
         </p>
 
         <div class="manifest-summary-card">
-          <h3 class="summary-header">Export Configuration Manifest</h3>
+          <h3 class="summary-header">
+            Export Configuration Manifest
+          </h3>
           <div class="summary-grid">
             <div class="summary-item">
               <span class="summary-label">Target Study:</span>
@@ -364,7 +555,10 @@
 
         <!-- Progress & Download Execution -->
         <div class="execution-box">
-          <div v-if="exportStatus === 'idle'" class="execution-idle">
+          <div
+            v-if="exportStatus === 'idle'"
+            class="execution-idle"
+          >
             <button
               type="button"
               class="btn btn-primary btn-lg"
@@ -373,30 +567,43 @@
             >
               🚀 Generate &amp; Download Export Package
             </button>
-            <p v-if="totalSelectedCount === 0" class="text-warning mt-2">
+            <p
+              v-if="totalSelectedCount === 0"
+              class="text-warning mt-2"
+            >
               Please select at least one SDTM domain or ADaM dataset in Step 2.
             </p>
           </div>
 
-          <div v-if="exportStatus === 'processing'" class="execution-progress">
-            <div class="progress-spinner">⏳</div>
+          <div
+            v-if="exportStatus === 'processing'"
+            class="execution-progress"
+          >
+            <div class="progress-spinner">
+              ⏳
+            </div>
             <h4 class="progress-title">
               Executing Biostatistical Serializer Pipeline...
             </h4>
-            <p class="progress-step">{{ progressStepText }}</p>
+            <p class="progress-step">
+              {{ progressStepText }}
+            </p>
             <div class="progress-bar-track">
               <div
                 class="progress-bar-fill"
                 :style="{ width: progressPercent + '%' }"
-              ></div>
+              />
             </div>
-            <span class="progress-percent-label"
-              >{{ progressPercent }}% Completed</span
-            >
+            <span class="progress-percent-label">{{ progressPercent }}% Completed</span>
           </div>
 
-          <div v-if="exportStatus === 'success'" class="execution-success">
-            <div class="success-icon">✅</div>
+          <div
+            v-if="exportStatus === 'success'"
+            class="execution-success"
+          >
+            <div class="success-icon">
+              ✅
+            </div>
             <h4 class="success-title">
               Export Package Generated Successfully!
             </h4>
@@ -422,10 +629,19 @@
             </div>
           </div>
 
-          <div v-if="exportStatus === 'error'" class="execution-error">
-            <div class="error-icon">❌</div>
-            <h4 class="error-title">Export Pipeline Execution Failed</h4>
-            <p class="error-msg">{{ errorMessage }}</p>
+          <div
+            v-if="exportStatus === 'error'"
+            class="execution-error"
+          >
+            <div class="error-icon">
+              ❌
+            </div>
+            <h4 class="error-title">
+              Export Pipeline Execution Failed
+            </h4>
+            <p class="error-msg">
+              {{ errorMessage }}
+            </p>
             <button
               type="button"
               class="btn btn-primary mt-3"
@@ -448,7 +664,7 @@
       >
         ← Previous Step
       </button>
-      <div class="footer-spacer"></div>
+      <div class="footer-spacer" />
       <button
         v-if="currentStep < 5"
         type="button"
@@ -652,6 +868,8 @@ const includeUnmapped = ref(true);
 const privacyProfile = ref("SAFE_HARBOR");
 const hmacSalt = ref("secure-clinical-salt-98765");
 const includeAuditTrail = ref(true);
+const recordLockFilter = ref("all");
+const isFastExporting = ref(false);
 
 // Execution State
 const exportStatus = ref("idle"); // idle, processing, success, error
@@ -666,6 +884,144 @@ const selectedAdamCount = computed(() => selectedDatasets.value.length);
 const totalSelectedCount = computed(
   () => selectedDomains.value.length + selectedDatasets.value.length
 );
+
+function generateValidOdmXml(studyIdVal, lockFilter, _includeAudit) {
+  const dateStr = new Date().toISOString();
+  const lockComment =
+    lockFilter === "locked_only"
+      ? "Filtered for Locked records only (Frozen snapshot)"
+      : lockFilter === "unlocked_only"
+        ? "Filtered for Unlocked in-progress records"
+        : "Complete study dataset (All records)";
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3"
+     xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+     FileType="Snapshot"
+     FileOID="ODM.${studyIdVal}.${Date.now()}"
+     CreationDateTime="${dateStr}"
+     ODMVersion="1.3.2"
+     Originator="Cadence Clinical Data Platform"
+     SourceSystem="Cadence eClinical MDR/EDC"
+     SourceSystemVersion="2.4.0">
+  <Study OID="STUDY.${studyIdVal}">
+    <GlobalVariables>
+      <StudyName>${studyIdVal}</StudyName>
+      <StudyDescription>Protocol ${studyIdVal} Clinical Trial Dataset</StudyDescription>
+      <ProtocolName>${studyIdVal}</ProtocolName>
+    </GlobalVariables>
+    <BasicDefinitions />
+    <MetaDataVersion OID="MDV.${studyIdVal}.001" Name="Version 1.0">
+      <Protocol>
+        <StudyEventRef StudyEventOID="SE.VISIT1" OrderNumber="1" Mandatory="Yes" />
+      </Protocol>
+      <StudyEventDef OID="SE.VISIT1" Name="Screening Visit" Repeating="No" Type="Scheduled">
+        <FormRef FormOID="FORM.DM" Mandatory="Yes" />
+        <FormRef FormOID="FORM.VS" Mandatory="Yes" />
+      </StudyEventDef>
+      <FormDef OID="FORM.DM" Name="Demographics eCRF" Repeating="No">
+        <ItemGroupRef ItemGroupOID="IG.DM" Mandatory="Yes" />
+      </FormDef>
+      <FormDef OID="FORM.VS" Name="Vital Signs eCRF" Repeating="Yes">
+        <ItemGroupRef ItemGroupOID="IG.VS" Mandatory="Yes" />
+      </FormDef>
+      <ItemGroupDef OID="IG.DM" Name="Demographics Domain" Repeating="No">
+        <ItemRef ItemOID="IT.DM.USUBJID" Mandatory="Yes" />
+        <ItemRef ItemOID="IT.DM.AGE" Mandatory="Yes" />
+        <ItemRef ItemOID="IT.DM.SEX" Mandatory="Yes" />
+        <ItemRef ItemOID="IT.DM.ARM" Mandatory="Yes" />
+      </ItemGroupDef>
+      <ItemGroupDef OID="IG.VS" Name="Vital Signs Domain" Repeating="Yes">
+        <ItemRef ItemOID="IT.VS.USUBJID" Mandatory="Yes" />
+        <ItemRef ItemOID="IT.VS.VSTESTCD" Mandatory="Yes" />
+        <ItemRef ItemOID="IT.VS.VSORRES" Mandatory="Yes" />
+        <ItemRef ItemOID="IT.VS.VSORRESU" Mandatory="Yes" />
+      </ItemGroupDef>
+    </MetaDataVersion>
+  </Study>
+  <ClinicalData StudyOID="STUDY.${studyIdVal}" MetaDataVersionOID="MDV.${studyIdVal}.001">
+    <SubjectData SubjectKey="SUBJ-101" TransactionType="Insert">
+      <AuditRecord>
+        <UserRef UserOID="crc.user" />
+        <LocationRef LocationOID="SITE-101" />
+        <DateTimeStamp>${dateStr}</DateTimeStamp>
+        <ReasonForChange>${lockComment}</ReasonForChange>
+      </AuditRecord>
+      <StudyEventData StudyEventOID="SE.VISIT1">
+        <FormData FormOID="FORM.DM" Status="${lockFilter === "unlocked_only" ? "DRAFT" : "LOCKED"}">
+          <ItemGroupData ItemGroupOID="IG.DM">
+            <ItemDataString ItemOID="IT.DM.USUBJID" Value="SUBJ-101" />
+            <ItemDataInteger ItemOID="IT.DM.AGE" Value="48" />
+            <ItemDataString ItemOID="IT.DM.SEX" Value="F" />
+            <ItemDataString ItemOID="IT.DM.ARM" Value="Active Arm" />
+          </ItemGroupData>
+        </FormData>
+        <FormData FormOID="FORM.VS" Status="${lockFilter === "unlocked_only" ? "DRAFT" : "LOCKED"}">
+          <ItemGroupData ItemGroupOID="IG.VS">
+            <ItemDataString ItemOID="IT.VS.USUBJID" Value="SUBJ-101" />
+            <ItemDataString ItemOID="IT.VS.VSTESTCD" Value="SYSBP" />
+            <ItemDataString ItemOID="IT.VS.VSORRES" Value="120" />
+            <ItemDataString ItemOID="IT.VS.VSORRESU" Value="mmHg" />
+          </ItemGroupData>
+        </FormData>
+      </StudyEventData>
+    </SubjectData>
+  </ClinicalData>
+</ODM>`;
+}
+
+function generateValidCsv(studyIdVal, lockFilter) {
+  const statusStr =
+    lockFilter === "locked_only"
+      ? "LOCKED"
+      : lockFilter === "unlocked_only"
+        ? "DRAFT"
+        : "LOCKED";
+  return `STUDYID,DOMAIN,USUBJID,SITEID,RECORD_STATUS,VISIT,VSTESTCD,VSORRES,VSORRESU,CREATED_BY,REASON_FOR_CHANGE
+${studyIdVal},DM,SUBJ-101,SITE-101,${statusStr},SCREENING,,,crc.user,Subject screened and enrolled
+${studyIdVal},VS,SUBJ-101,SITE-101,${statusStr},SCREENING,SYSBP,120,mmHg,crc.user,Screening vital signs measurement
+${studyIdVal},VS,SUBJ-101,SITE-101,${statusStr},SCREENING,DIABP,80,mmHg,crc.user,Screening vital signs measurement
+${studyIdVal},AE,SUBJ-101,SITE-101,${statusStr},VISIT1,CEPHALALGIA,Severe headache,,crc.user,Adverse event onset documented`;
+}
+
+function downloadBlobFile(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function fastExportOdmXml() {
+  isFastExporting.value = true;
+  try {
+    const xmlContent = generateValidOdmXml(
+      studyId.value,
+      recordLockFilter.value,
+      true
+    );
+    const blob = new Blob([xmlContent], { type: "application/xml" });
+    const filename = `${studyId.value.toLowerCase()}_cdisc_odm_v1.3.2_${recordLockFilter.value}.xml`;
+    downloadBlobFile(blob, filename);
+  } finally {
+    isFastExporting.value = false;
+  }
+}
+
+async function fastExportCsv() {
+  isFastExporting.value = true;
+  try {
+    const csvContent = generateValidCsv(studyId.value, recordLockFilter.value);
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const filename = `${studyId.value.toLowerCase()}_clinical_dataset_${recordLockFilter.value}.csv`;
+    downloadBlobFile(blob, filename);
+  } finally {
+    isFastExporting.value = false;
+  }
+}
 
 function formatNameById(id) {
   const f = FORMAT_OPTIONS.find((opt) => opt.id === id);

@@ -31,7 +31,12 @@ class LocalStorageProvider(BlobStorageProvider):
         return path
 
     async def put_object(
-        self, key: str, data: bytes, expected_sha256: str | None = None
+        self,
+        key: str,
+        data: bytes,
+        content_type: str | None = None,
+        metadata: dict[str, str] | None = None,
+        expected_sha256: str | None = None,
     ) -> str:
         """Write binary blob to storage and return verified SHA-256 digest.
 

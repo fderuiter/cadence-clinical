@@ -4,7 +4,7 @@ Compliance tests for the Execution service.
 
 import os
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 
 import fitz
 import httpx
@@ -131,7 +131,7 @@ def test_fda_compliant_pdf_generation_econsent():
     econsent_pdf_bytes = _render_pdf_certificate(
         payload=dummy_payload,
         sig_hash="8f4e69b2d9a3b4e78a2e1d0f5c6b7e8d9a0c1b2a3f4e5d6c7b8a9f0e1d2c3b4a",  # pragma: allowlist secret
-        now=datetime.utcnow(),
+        now=datetime.now(UTC),
     )
 
     assert isinstance(econsent_pdf_bytes, bytes)

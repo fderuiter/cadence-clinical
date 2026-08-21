@@ -15,6 +15,9 @@ export default [
       "**/.pytest_cache/**",
       "**/playwright-report/**",
       "**/test-results/**",
+      "scripts/**",
+      "docs/.vitepress/**",
+      "**/mockServiceWorker.js",
     ],
   },
   js.configs.recommended,
@@ -29,6 +32,27 @@ export default [
         sourceType: "module",
         ecmaVersion: 2022,
       },
+    },
+  },
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        sourceType: "module",
+        ecmaVersion: 2022,
+      },
+    },
+    plugins: {
+      "@typescript-eslint": tseslint.plugin,
+    },
+    rules: {
+      "no-undef": "off",
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
     },
   },
   {
@@ -98,6 +122,20 @@ export default [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
+    },
+  },
+  {
+    files: [
+      "**/tests/**",
+      "tests/**",
+      "**/*.test.*",
+      "**/*.spec.*",
+    ],
+    rules: {
+      "vue/one-component-per-file": "off",
+      "vue/require-prop-types": "off",
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": "off",
     },
   },
 ];

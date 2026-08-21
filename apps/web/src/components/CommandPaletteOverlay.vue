@@ -1,6 +1,10 @@
 <template>
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div v-if="isOpen" class="command-palette-backdrop" @click.self="close">
+  <div
+    v-if="isOpen"
+    class="command-palette-backdrop"
+    @click.self="close"
+  >
     <div
       ref="modalRef"
       class="command-palette-container"
@@ -9,7 +13,10 @@
       aria-label="Searchable Command Palette"
     >
       <div class="command-palette-header">
-        <span class="command-palette-search-icon" aria-hidden="true">🔍</span>
+        <span
+          class="command-palette-search-icon"
+          aria-hidden="true"
+        >🔍</span>
         <input
           ref="inputRef"
           v-model="query"
@@ -18,7 +25,7 @@
           placeholder="Type to search modules..."
           aria-label="Search modules"
           @keydown="handleKeyDown"
-        />
+        >
         <button
           class="command-palette-close-btn"
           aria-label="Close command palette"
@@ -45,7 +52,10 @@
           @click="navigateTo(dest)"
           @mouseenter="selectedIndex = index"
         >
-          <span class="command-icon" aria-hidden="true">{{ dest.icon }}</span>
+          <span
+            class="command-icon"
+            aria-hidden="true"
+          >{{ dest.icon }}</span>
           <div class="command-details">
             <div class="command-name">
               {{ dest.name }}
@@ -56,7 +66,10 @@
           </div>
         </div>
       </div>
-      <div v-else class="command-palette-no-results">
+      <div
+        v-else
+        class="command-palette-no-results"
+      >
         No matching modules found.
       </div>
 

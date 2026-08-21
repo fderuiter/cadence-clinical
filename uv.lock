@@ -2099,6 +2099,7 @@ source = { editable = "packages/testing" }
 dependencies = [
     { name = "packages-hexagonal" },
     { name = "packages-security" },
+    { name = "packages-storage" },
     { name = "pydantic" },
 ]
 
@@ -2106,6 +2107,7 @@ dependencies = [
 requires-dist = [
     { name = "packages-hexagonal", editable = "packages/hexagonal" },
     { name = "packages-security", editable = "packages/security" },
+    { name = "packages-storage", editable = "packages/storage" },
     { name = "pydantic", specifier = ">=2.6.0" },
 ]
 

@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
@@ -201,7 +201,7 @@ async def test_monitoring_visit_workflow_happy_path():
     get_auth_headers(roles="Monitor", change_reason="Monitor operations")
 
     # 1. Schedule a Visit (CRA role)
-    scheduled_date = datetime.utcnow() + timedelta(days=5)
+    scheduled_date = datetime.now(UTC) + timedelta(days=5)
     payload = {
         "study_id": "study_001",
         "site_id": "site_99",
@@ -241,7 +241,7 @@ async def test_monitoring_visit_workflow_happy_path():
     assert response_letter_type.json()["id"] == letters[0]["id"]
 
     # 2. Complete the Visit (CRA role) with findings
-    actual_date = datetime.utcnow()
+    actual_date = datetime.now(UTC)
     completion_payload = {
         "actual_date": actual_date.isoformat(),
         "findings": [
@@ -358,7 +358,7 @@ async def test_monitoring_visit_workflow_rbac_denials():
 
     # Pre-populate a scheduled visit using System/CRA role
     cra_headers = get_auth_headers(roles="CRA")
-    scheduled_date = datetime.utcnow() + timedelta(days=2)
+    scheduled_date = datetime.now(UTC) + timedelta(days=2)
     payload = {
         "study_id": "study_001",
         "site_id": "site_99",
@@ -388,7 +388,7 @@ async def test_monitoring_visit_workflow_rbac_denials():
 
     # 3. Monitor attempting to complete visit -> 403 (Only CRA / Admin)
     completion_payload = {
-        "actual_date": datetime.utcnow().isoformat(),
+        "actual_date": datetime.now(UTC).isoformat(),
         "findings": [],
     }
     response_m_complete = client.post(
@@ -439,7 +439,7 @@ async def test_monitoring_visit_invalid_state_and_findings():
     get_auth_headers(roles="Monitor")
 
     # Schedule a visit
-    scheduled_date = datetime.utcnow() + timedelta(days=2)
+    scheduled_date = datetime.now(UTC) + timedelta(days=2)
     payload = {
         "study_id": "study_001",
         "site_id": "site_99",
@@ -466,7 +466,7 @@ async def test_monitoring_visit_invalid_state_and_findings():
 
     # Try completing with invalid severity -> 400
     bad_completion_payload = {
-        "actual_date": datetime.utcnow().isoformat(),
+        "actual_date": datetime.now(UTC).isoformat(),
         "findings": [
             {
                 "text": "Bad severity finding",
@@ -484,7 +484,7 @@ async def test_monitoring_visit_invalid_state_and_findings():
 
     # Complete it properly
     good_completion_payload = {
-        "actual_date": datetime.utcnow().isoformat(),
+        "actual_date": datetime.now(UTC).isoformat(),
         "findings": [],
     }
     response_ok_completion = client.post(
@@ -583,7 +583,7 @@ async def test_site_milestones_crud_and_audit():
         "site_id": "site_A",
         "study_id": "study_X",
         "milestone_type": "SITE_ACTIVATION",
-        "planned_date": (datetime.utcnow() + timedelta(days=30)).isoformat(),
+        "planned_date": (datetime.now(UTC) + timedelta(days=30)).isoformat(),
         "status": "PLANNED",
     }
     response = client.post(
@@ -600,7 +600,7 @@ async def test_site_milestones_crud_and_audit():
         roles="Monitor", change_reason="Site is activated"
     )
     update_payload = {
-        "actual_date": datetime.utcnow().isoformat(),
+        "actual_date": datetime.now(UTC).isoformat(),
         "status": "ACHIEVED",
     }
     update_response = client.put(
@@ -770,7 +770,7 @@ async def test_monitoring_visit_scheduling_respects_cra_allocation():
     assert alloc_res.status_code == 201
 
     # 2. Try to schedule visit for study_Y / site_B using cra_charlie -> 400 Bad Request
-    visit_date = datetime.utcnow() + timedelta(days=5)
+    visit_date = datetime.now(UTC) + timedelta(days=5)
     visit_payload = {
         "study_id": "study_Y",
         "site_id": "site_B",
@@ -980,7 +980,7 @@ async def test_ctms_sync_happy_path_and_reloads():
     cra_headers = get_auth_headers(roles="CRA", change_reason="Offline sync test")
 
     # 1. Schedule a Visit first so we have a target
-    scheduled_date = datetime.utcnow() + timedelta(days=5)
+    scheduled_date = datetime.now(UTC) + timedelta(days=5)
     create_payload = {
         "study_id": "study_sync_01",
         "site_id": "site_sync_01",
@@ -1007,7 +1007,7 @@ async def test_ctms_sync_happy_path_and_reloads():
     visit_id = response_create.json()["id"]
 
     # 2. Sync Offline Completed Visit & Findings
-    actual_date = datetime.utcnow() - timedelta(hours=1)
+    actual_date = datetime.now(UTC) - timedelta(hours=1)
     sync_payload = {
         "visit_id": visit_id,
         "actual_date": actual_date.isoformat(),
@@ -1018,7 +1018,7 @@ async def test_ctms_sync_happy_path_and_reloads():
                 "resolution_status": "OPEN",
             }
         ],
-        "device_timestamp": datetime.utcnow().isoformat(),
+        "device_timestamp": datetime.now(UTC).isoformat(),
         "offline_sync_markers": {
             "sequence_number": 101,
             "client_id": "device_client_abc",
@@ -1099,21 +1099,21 @@ async def test_ctms_sync_conflict_server_wins():
             "site_id": "site_sync_02",
             "cra_id": "test_user",
             "visit_type": "IMV",
-            "scheduled_date": datetime.utcnow().isoformat(),
+            "scheduled_date": datetime.now(UTC).isoformat(),
         },
         headers=cra_headers,
     )
     visit_id = create_res.json()["id"]
 
     # Sync complete first with CLIENT_WINS to set actual date
-    actual_date_server = datetime.utcnow() - timedelta(hours=5)
+    actual_date_server = datetime.now(UTC) - timedelta(hours=5)
     client.post(
         "/api/v1/ctms/monitoring-visits/sync",
         json={
             "visit_id": visit_id,
             "actual_date": actual_date_server.isoformat(),
             "findings": [],
-            "device_timestamp": datetime.utcnow().isoformat(),
+            "device_timestamp": datetime.now(UTC).isoformat(),
             "offline_sync_markers": {
                 "sequence_number": 201,
                 "client_id": "device_server",
@@ -1124,12 +1124,12 @@ async def test_ctms_sync_conflict_server_wins():
     )
 
     # Sync new completion with SERVER_WINS
-    actual_date_client = datetime.utcnow() - timedelta(hours=1)
+    actual_date_client = datetime.now(UTC) - timedelta(hours=1)
     sync_payload = {
         "visit_id": visit_id,
         "actual_date": actual_date_client.isoformat(),
         "findings": [{"text": "Losing Finding", "severity": "MINOR"}],
-        "device_timestamp": datetime.utcnow().isoformat(),
+        "device_timestamp": datetime.now(UTC).isoformat(),
         "offline_sync_markers": {
             "sequence_number": 202,
             "client_id": "device_client_losing",
@@ -1195,21 +1195,21 @@ async def test_ctms_sync_conflict_merge():
             "site_id": "site_sync_03",
             "cra_id": "test_user",
             "visit_type": "IMV",
-            "scheduled_date": datetime.utcnow().isoformat(),
+            "scheduled_date": datetime.now(UTC).isoformat(),
         },
         headers=cra_headers,
     )
     visit_id = create_res.json()["id"]
 
     # First completion
-    date_initial = datetime.utcnow() - timedelta(hours=10)
+    date_initial = datetime.now(UTC) - timedelta(hours=10)
     client.post(
         "/api/v1/ctms/monitoring-visits/sync",
         json={
             "visit_id": visit_id,
             "actual_date": date_initial.isoformat(),
             "findings": [],
-            "device_timestamp": datetime.utcnow().isoformat(),
+            "device_timestamp": datetime.now(UTC).isoformat(),
             "offline_sync_markers": {
                 "sequence_number": 301,
                 "client_id": "dev_initial",
@@ -1221,12 +1221,12 @@ async def test_ctms_sync_conflict_merge():
     )
 
     # Merge sync with a newer actual_date
-    date_newer = datetime.utcnow() - timedelta(hours=1)
+    date_newer = datetime.now(UTC) - timedelta(hours=1)
     payload_merge = {
         "visit_id": visit_id,
         "actual_date": date_newer.isoformat(),
         "findings": [],
-        "device_timestamp": datetime.utcnow().isoformat(),
+        "device_timestamp": datetime.now(UTC).isoformat(),
         "offline_sync_markers": {
             "sequence_number": 302,
             "client_id": "dev_merge",
@@ -1258,9 +1258,9 @@ async def test_ctms_sync_structural_conflict():
         "visit_id": non_existent_visit_id,
         "study_id": "study_missing",
         "site_id": "site_missing",
-        "actual_date": datetime.utcnow().isoformat(),
+        "actual_date": datetime.now(UTC).isoformat(),
         "findings": [],
-        "device_timestamp": datetime.utcnow().isoformat(),
+        "device_timestamp": datetime.now(UTC).isoformat(),
         "offline_sync_markers": {
             "sequence_number": 999,
             "client_id": "device_lost",
@@ -1319,9 +1319,9 @@ async def test_ctms_sync_rbac_denial():
 
     payload = {
         "visit_id": "some-visit-id",
-        "actual_date": datetime.utcnow().isoformat(),
+        "actual_date": datetime.now(UTC).isoformat(),
         "findings": [],
-        "device_timestamp": datetime.utcnow().isoformat(),
+        "device_timestamp": datetime.now(UTC).isoformat(),
         "offline_sync_markers": {
             "sequence_number": 1,
             "client_id": "device_hacker",
@@ -1491,7 +1491,7 @@ async def test_milestone_trigger_visit_completed_automated():
     )
 
     # Schedule visit
-    scheduled_date = datetime.utcnow() + timedelta(days=2)
+    scheduled_date = datetime.now(UTC) + timedelta(days=2)
     visit_payload = {
         "study_id": "study_visit",
         "site_id": "site_visit",
@@ -1506,7 +1506,7 @@ async def test_milestone_trigger_visit_completed_automated():
 
     # Complete the visit -> Should automatically trigger evaluation of VISIT_COMPLETED milestone
     completion_payload = {
-        "actual_date": datetime.utcnow().isoformat(),
+        "actual_date": datetime.now(UTC).isoformat(),
         "findings": [],
     }
     client.post(

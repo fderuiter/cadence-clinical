@@ -1,5 +1,8 @@
 <template>
-  <div id="section-ctms" class="dashboard-section active">
+  <div
+    id="section-ctms"
+    class="dashboard-section active"
+  >
     <!-- Header Section -->
     <div class="section-header">
       <h2>Clinical Trial Management System (CTMS)</h2>
@@ -19,7 +22,11 @@
         margin-bottom: 24px;
       "
     >
-      <div id="kpi-total-subjects" class="stat-card card" style="padding: 16px">
+      <div
+        id="kpi-total-subjects"
+        class="stat-card card"
+        style="padding: 16px"
+      >
         <div
           class="stat-label"
           style="
@@ -50,7 +57,11 @@
         </div>
       </div>
 
-      <div id="kpi-enrollment-rate" class="stat-card card" style="padding: 16px">
+      <div
+        id="kpi-enrollment-rate"
+        class="stat-card card"
+        style="padding: 16px"
+      >
         <div
           class="stat-label"
           style="
@@ -81,7 +92,11 @@
         </div>
       </div>
 
-      <div id="kpi-sdv-percentage" class="stat-card card" style="padding: 16px">
+      <div
+        id="kpi-sdv-percentage"
+        class="stat-card card"
+        style="padding: 16px"
+      >
         <div
           class="stat-label"
           style="
@@ -112,7 +127,11 @@
         </div>
       </div>
 
-      <div id="kpi-open-queries" class="stat-card card" style="padding: 16px">
+      <div
+        id="kpi-open-queries"
+        class="stat-card card"
+        style="padding: 16px"
+      >
         <div
           class="stat-label"
           style="
@@ -244,7 +263,10 @@
         style="margin-left: auto; display: flex; align-items: center; gap: 8px"
       >
         <strong>eTMF Compliance Status:</strong>
-        <span v-if="loadingCompliance" style="color: #64748b">Loading...</span>
+        <span
+          v-if="loadingCompliance"
+          style="color: #64748b"
+        >Loading...</span>
         <span
           v-else
           class="badge"
@@ -271,19 +293,32 @@
       <div class="grid-2-responsive">
         <!-- Site Milestones Card -->
         <div class="card">
-          <div class="card-title">Site Operational Milestones</div>
+          <div class="card-title">
+            Site Operational Milestones
+          </div>
           <div id="ctms-milestones-container">
             <table class="clinical-visit-matrix">
               <thead>
                 <tr>
-                  <th scope="col">Milestone Type</th>
-                  <th scope="col">Planned Date</th>
-                  <th scope="col">Actual Date</th>
-                  <th scope="col">Status</th>
+                  <th scope="col">
+                    Milestone Type
+                  </th>
+                  <th scope="col">
+                    Planned Date
+                  </th>
+                  <th scope="col">
+                    Actual Date
+                  </th>
+                  <th scope="col">
+                    Status
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="m in milestones" :key="m.id">
+                <tr
+                  v-for="m in milestones"
+                  :key="m.id"
+                >
                   <td>
                     <strong>{{ m.milestone_type }}</strong>
                   </td>
@@ -297,8 +332,7 @@
                     <span
                       class="badge"
                       :class="{ gxp: m.status === 'ACHIEVED' }"
-                      >{{ m.status }}</span
-                    >
+                    >{{ m.status }}</span>
                   </td>
                 </tr>
                 <tr v-if="milestones.length === 0">
@@ -332,21 +366,38 @@
 
         <!-- Monitoring Visits Card -->
         <div class="card">
-          <div class="card-title">CRA Site Monitoring Visits (MVR)</div>
+          <div class="card-title">
+            CRA Site Monitoring Visits (MVR)
+          </div>
           <div id="ctms-visits-container">
             <table class="clinical-visit-matrix">
               <thead>
                 <tr>
-                  <th scope="col">Visit Type</th>
-                  <th scope="col">Scheduled Date</th>
-                  <th scope="col">Actual Date</th>
-                  <th scope="col">CRA Assigned</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Actions</th>
+                  <th scope="col">
+                    Visit Type
+                  </th>
+                  <th scope="col">
+                    Scheduled Date
+                  </th>
+                  <th scope="col">
+                    Actual Date
+                  </th>
+                  <th scope="col">
+                    CRA Assigned
+                  </th>
+                  <th scope="col">
+                    Status
+                  </th>
+                  <th scope="col">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="v in visits" :key="v.id">
+                <tr
+                  v-for="v in visits"
+                  :key="v.id"
+                >
                   <td>
                     <strong>{{ v.visit_type }}</strong>
                   </td>
@@ -363,8 +414,7 @@
                     <span
                       class="badge"
                       :class="{ gxp: v.status === 'SIGNED_OFF' }"
-                      >{{ v.status }}</span
-                    >
+                    >{{ v.status }}</span>
                   </td>
                   <td>
                     <button
@@ -396,29 +446,49 @@
             >
               Schedule New Visit
             </button>
-            <button id="btn-complete-visit" class="btn" @click="completeVisit">
+            <button
+              id="btn-complete-visit"
+              class="btn"
+              @click="completeVisit"
+            >
               Complete Current Visit
             </button>
           </div>
         </div>
       </div>
 
-      <div class="grid-2-responsive" style="margin-top: var(--spacing-xl)">
+      <div
+        class="grid-2-responsive"
+        style="margin-top: var(--spacing-xl)"
+      >
         <!-- CRA Allocations & Workload Card -->
         <div class="card">
-          <div class="card-title">CRA Allocation & Workload Summaries</div>
+          <div class="card-title">
+            CRA Allocation & Workload Summaries
+          </div>
           <div id="ctms-workload-container">
             <table class="clinical-visit-matrix">
               <thead>
                 <tr>
-                  <th scope="col">CRA</th>
-                  <th scope="col">Active Allocations</th>
-                  <th scope="col">Allocated Sites</th>
-                  <th scope="col">Allocated Studies</th>
+                  <th scope="col">
+                    CRA
+                  </th>
+                  <th scope="col">
+                    Active Allocations
+                  </th>
+                  <th scope="col">
+                    Allocated Sites
+                  </th>
+                  <th scope="col">
+                    Allocated Studies
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="a in allocations" :key="a.cra_id">
+                <tr
+                  v-for="a in allocations"
+                  :key="a.cra_id"
+                >
                   <td>
                     <strong>{{ a.cra_id }}</strong>
                   </td>
@@ -450,20 +520,35 @@
 
         <!-- Site Recruitment Metrics Card -->
         <div class="card">
-          <div class="card-title">Site Recruitment Metrics</div>
+          <div class="card-title">
+            Site Recruitment Metrics
+          </div>
           <div id="ctms-recruitment-container">
             <table class="clinical-visit-matrix">
               <thead>
                 <tr>
-                  <th scope="col">Site ID</th>
-                  <th scope="col">Screened</th>
-                  <th scope="col">Enrolled</th>
-                  <th scope="col">Target</th>
-                  <th scope="col">Progress</th>
+                  <th scope="col">
+                    Site ID
+                  </th>
+                  <th scope="col">
+                    Screened
+                  </th>
+                  <th scope="col">
+                    Enrolled
+                  </th>
+                  <th scope="col">
+                    Target
+                  </th>
+                  <th scope="col">
+                    Progress
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="r in recruitment" :key="r.id">
+                <tr
+                  v-for="r in recruitment"
+                  :key="r.id"
+                >
                   <td>
                     <strong>{{ r.site_id }}</strong>
                   </td>
@@ -551,18 +636,37 @@
           <table class="clinical-visit-matrix">
             <thead>
               <tr>
-                <th scope="col">Active Site Staff</th>
-                <th scope="col">Training Certificates</th>
-                <th scope="col">Delegated Protocol Roles &amp; Duties</th>
-                <th scope="col">Start Date</th>
-                <th scope="col">End Date</th>
-                <th scope="col">Status</th>
-                <th scope="col">Signed Off</th>
-                <th scope="col">Actions</th>
+                <th scope="col">
+                  Active Site Staff
+                </th>
+                <th scope="col">
+                  Training Certificates
+                </th>
+                <th scope="col">
+                  Delegated Protocol Roles &amp; Duties
+                </th>
+                <th scope="col">
+                  Start Date
+                </th>
+                <th scope="col">
+                  End Date
+                </th>
+                <th scope="col">
+                  Status
+                </th>
+                <th scope="col">
+                  Signed Off
+                </th>
+                <th scope="col">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="d in effectiveDelegatedStaff" :key="d.record_id || d.staff_user_id">
+              <tr
+                v-for="d in effectiveDelegatedStaff"
+                :key="d.record_id || d.staff_user_id"
+              >
                 <td>
                   <strong>{{ d.staff_user_id }}</strong>
                   <div style="font-size: 11px; color: #64748b">
@@ -596,12 +700,18 @@
                 <td>{{ d.start_date }}</td>
                 <td>{{ d.end_date || "—" }}</td>
                 <td>
-                  <span class="badge" :class="{ gxp: d.is_active }">{{
+                  <span
+                    class="badge"
+                    :class="{ gxp: d.is_active }"
+                  >{{
                     d.is_active ? "ACTIVE" : "INACTIVE"
                   }}</span>
                 </td>
                 <td>
-                  <span class="badge" :class="{ gxp: d.signed_off }">{{
+                  <span
+                    class="badge"
+                    :class="{ gxp: d.signed_off }"
+                  >{{
                     d.signed_off ? "YES" : "PENDING PI"
                   }}</span>
                 </td>
@@ -653,21 +763,39 @@
       </div>
 
       <!-- Audit History Card -->
-      <div class="card" style="margin-top: var(--spacing-xl)">
-        <div class="card-title">Site DoA Audit Trail (Immutable GxP Log)</div>
+      <div
+        class="card"
+        style="margin-top: var(--spacing-xl)"
+      >
+        <div class="card-title">
+          Site DoA Audit Trail (Immutable GxP Log)
+        </div>
         <div id="ctms-audit-container">
           <table class="clinical-visit-matrix">
             <thead>
               <tr>
-                <th scope="col">Timestamp</th>
-                <th scope="col">User</th>
-                <th scope="col">Role</th>
-                <th scope="col">Action</th>
-                <th scope="col">Justification Details</th>
+                <th scope="col">
+                  Timestamp
+                </th>
+                <th scope="col">
+                  User
+                </th>
+                <th scope="col">
+                  Role
+                </th>
+                <th scope="col">
+                  Action
+                </th>
+                <th scope="col">
+                  Justification Details
+                </th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="audit in auditHistory" :key="audit.id">
+              <tr
+                v-for="audit in auditHistory"
+                :key="audit.id"
+              >
                 <td style="white-space: nowrap; font-size: 12px">
                   {{ new Date(audit.timestamp).toLocaleString() }}
                 </td>
@@ -677,10 +805,11 @@
                   <span
                     class="badge"
                     style="background: #e2e8f0; color: #334155"
-                    >{{ audit.action }}</span
-                  >
+                  >{{ audit.action }}</span>
                 </td>
-                <td style="font-size: 12px">{{ audit.details }}</td>
+                <td style="font-size: 12px">
+                  {{ audit.details }}
+                </td>
               </tr>
               <tr v-if="auditHistory.length === 0">
                 <td
@@ -697,7 +826,10 @@
     </div>
 
     <!-- Modal 1: General Change Justification -->
-    <div v-if="showJustificationModal" class="modal-overlay">
+    <div
+      v-if="showJustificationModal"
+      class="modal-overlay"
+    >
       <div class="modal">
         <div class="modal-header">
           {{ justificationTitle }}
@@ -715,15 +847,16 @@
             you must document a valid GxP justification reason for this action.
           </p>
           <div class="form-group">
-            <label for="modal-justification-reason"
-              >Change Justification Reason</label
-            >
+            <label for="modal-justification-reason">Change Justification Reason</label>
             <textarea
               id="modal-justification-reason"
               v-model="justificationReason"
               :placeholder="justificationPlaceholder"
-            ></textarea>
-            <div v-if="justificationError" class="error-msg">
+            />
+            <div
+              v-if="justificationError"
+              class="error-msg"
+            >
               ⚠️ {{ justificationError }}
             </div>
           </div>
@@ -735,7 +868,10 @@
           >
             Cancel
           </button>
-          <button class="btn btn-primary" @click="confirmJustification">
+          <button
+            class="btn btn-primary"
+            @click="confirmJustification"
+          >
             Confirm Change
           </button>
         </div>
@@ -743,7 +879,10 @@
     </div>
 
     <!-- Modal 2: FDA Part 11 Electronic Signature & Re-Authentication -->
-    <div v-if="showSignatureModal" class="modal-overlay">
+    <div
+      v-if="showSignatureModal"
+      class="modal-overlay"
+    >
       <div class="modal">
         <div class="modal-header">
           Electronic Signature & Identity Verification (Part 11)
@@ -770,7 +909,7 @@
               type="text"
               placeholder="Username"
               :disabled="sigBusy"
-            />
+            >
           </div>
 
           <div class="form-group">
@@ -781,7 +920,7 @@
               type="password"
               placeholder="Password"
               :disabled="sigBusy"
-            />
+            >
           </div>
 
           <div class="form-group">
@@ -792,7 +931,7 @@
               type="text"
               placeholder="MFA Token"
               :disabled="sigBusy"
-            />
+            >
           </div>
 
           <div class="form-group">
@@ -805,24 +944,31 @@
               <option value="INVESTIGATOR_SIGNATURE">
                 INVESTIGATOR_SIGNATURE (PI Endorsement)
               </option>
-              <option value="APPROVAL">APPROVAL (Supervisory Approval)</option>
-              <option value="TECHNICAL_QC">TECHNICAL_QC</option>
+              <option value="APPROVAL">
+                APPROVAL (Supervisory Approval)
+              </option>
+              <option value="TECHNICAL_QC">
+                TECHNICAL_QC
+              </option>
             </select>
           </div>
 
           <div class="form-group">
-            <label for="sig-reason-for-change"
-              >Reason for Change / Justification</label
-            >
+            <label for="sig-reason-for-change">Reason for Change / Justification</label>
             <textarea
               id="sig-reason-for-change"
               v-model="sigReasonForChange"
               placeholder="State your justification reason..."
               :disabled="sigBusy"
-            ></textarea>
+            />
           </div>
 
-          <div v-if="sigError" class="error-msg">⚠️ {{ sigError }}</div>
+          <div
+            v-if="sigError"
+            class="error-msg"
+          >
+            ⚠️ {{ sigError }}
+          </div>
         </div>
         <div class="modal-footer">
           <button
@@ -844,16 +990,30 @@
     </div>
 
     <!-- Modal 3: Schedule Monitoring Visit -->
-    <div v-if="showScheduleVisitModal" class="modal-overlay">
+    <div
+      v-if="showScheduleVisitModal"
+      class="modal-overlay"
+    >
       <div class="modal">
-        <div class="modal-header">Schedule Clinical Monitoring Visit</div>
+        <div class="modal-header">
+          Schedule Clinical Monitoring Visit
+        </div>
         <div class="modal-body">
           <div class="form-group">
             <label for="sched-visit-type">Visit Type</label>
-            <select id="sched-visit-type" v-model="newVisitType">
-              <option value="SIV">Site Initiation Visit (SIV)</option>
-              <option value="IMV">Interim Monitoring Visit (IMV)</option>
-              <option value="COV">Close Out Visit (COV)</option>
+            <select
+              id="sched-visit-type"
+              v-model="newVisitType"
+            >
+              <option value="SIV">
+                Site Initiation Visit (SIV)
+              </option>
+              <option value="IMV">
+                Interim Monitoring Visit (IMV)
+              </option>
+              <option value="COV">
+                Close Out Visit (COV)
+              </option>
             </select>
           </div>
 
@@ -863,7 +1023,7 @@
               id="sched-visit-date"
               v-model="newVisitScheduledDate"
               type="date"
-            />
+            >
           </div>
 
           <div class="form-group">
@@ -873,21 +1033,22 @@
               v-model="newVisitCra"
               type="text"
               placeholder="e.g. cra_fderuiter"
-            />
+            >
           </div>
 
           <div class="form-group">
-            <label for="sched-visit-reason"
-              >Reason for Change / Setup Justification</label
-            >
+            <label for="sched-visit-reason">Reason for Change / Setup Justification</label>
             <textarea
               id="sched-visit-reason"
               v-model="newVisitReason"
               placeholder="State the regulatory justification for scheduling this visit..."
-            ></textarea>
+            />
           </div>
 
-          <div v-if="scheduleError" class="error-msg">
+          <div
+            v-if="scheduleError"
+            class="error-msg"
+          >
             ⚠️ {{ scheduleError }}
           </div>
         </div>
@@ -898,7 +1059,10 @@
           >
             Cancel
           </button>
-          <button class="btn btn-primary" @click="confirmScheduleVisit">
+          <button
+            class="btn btn-primary"
+            @click="confirmScheduleVisit"
+          >
             Schedule & Issue confirmation
           </button>
         </div>
@@ -906,9 +1070,14 @@
     </div>
 
     <!-- Modal 4: Reallocate CRA Workload -->
-    <div v-if="showReallocateModal" class="modal-overlay">
+    <div
+      v-if="showReallocateModal"
+      class="modal-overlay"
+    >
       <div class="modal">
-        <div class="modal-header">Allocate CRA to Site</div>
+        <div class="modal-header">
+          Allocate CRA to Site
+        </div>
         <div class="modal-body">
           <div class="form-group">
             <label for="alloc-cra-id">CRA ID</label>
@@ -917,35 +1086,51 @@
               v-model="allocCraId"
               type="text"
               placeholder="e.g. cra_alice"
-            />
+            >
           </div>
 
           <div class="form-group">
             <label for="alloc-status">Allocation Status</label>
-            <select id="alloc-status" v-model="allocStatus">
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="INACTIVE">INACTIVE</option>
+            <select
+              id="alloc-status"
+              v-model="allocStatus"
+            >
+              <option value="ACTIVE">
+                ACTIVE
+              </option>
+              <option value="INACTIVE">
+                INACTIVE
+              </option>
             </select>
           </div>
 
           <div class="form-group">
-            <label for="alloc-reason"
-              >Reason for Change / Allocation Justification</label
-            >
+            <label for="alloc-reason">Reason for Change / Allocation Justification</label>
             <textarea
               id="alloc-reason"
               v-model="allocReason"
               placeholder="Explain the allocation change context..."
-            ></textarea>
+            />
           </div>
 
-          <div v-if="allocError" class="error-msg">⚠️ {{ allocError }}</div>
+          <div
+            v-if="allocError"
+            class="error-msg"
+          >
+            ⚠️ {{ allocError }}
+          </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-cancel" @click="showReallocateModal = false">
+          <button
+            class="btn btn-cancel"
+            @click="showReallocateModal = false"
+          >
             Cancel
           </button>
-          <button class="btn btn-primary" @click="confirmReallocate">
+          <button
+            class="btn btn-primary"
+            @click="confirmReallocate"
+          >
             Save Allocation
           </button>
         </div>
@@ -953,43 +1138,69 @@
     </div>
 
     <!-- Modal 5: Recruitment Metrics Update -->
-    <div v-if="showRecruitmentModal" class="modal-overlay">
+    <div
+      v-if="showRecruitmentModal"
+      class="modal-overlay"
+    >
       <div class="modal">
-        <div class="modal-header">Log Site Recruitment Metrics Update</div>
+        <div class="modal-header">
+          Log Site Recruitment Metrics Update
+        </div>
         <div class="modal-body">
           <div class="form-group">
             <label for="rec-screened">Screened Subject Count</label>
-            <input id="rec-screened" v-model="recScreened" type="number" />
+            <input
+              id="rec-screened"
+              v-model="recScreened"
+              type="number"
+            >
           </div>
 
           <div class="form-group">
             <label for="rec-enrolled">Enrolled Subject Count</label>
-            <input id="rec-enrolled" v-model="recEnrolled" type="number" />
+            <input
+              id="rec-enrolled"
+              v-model="recEnrolled"
+              type="number"
+            >
           </div>
 
           <div class="form-group">
             <label for="rec-target">Target Enrollment Count</label>
-            <input id="rec-target" v-model="recTarget" type="number" />
+            <input
+              id="rec-target"
+              v-model="recTarget"
+              type="number"
+            >
           </div>
 
           <div class="form-group">
-            <label for="rec-reason"
-              >Reason for Change / Update Justification</label
-            >
+            <label for="rec-reason">Reason for Change / Update Justification</label>
             <textarea
               id="rec-reason"
               v-model="recReason"
               placeholder="State the compliance justification for updating recruitment statistics..."
-            ></textarea>
+            />
           </div>
 
-          <div v-if="recError" class="error-msg">⚠️ {{ recError }}</div>
+          <div
+            v-if="recError"
+            class="error-msg"
+          >
+            ⚠️ {{ recError }}
+          </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-cancel" @click="showRecruitmentModal = false">
+          <button
+            class="btn btn-cancel"
+            @click="showRecruitmentModal = false"
+          >
             Cancel
           </button>
-          <button class="btn btn-primary" @click="confirmRecruitment">
+          <button
+            class="btn btn-primary"
+            @click="confirmRecruitment"
+          >
             Submit Metrics
           </button>
         </div>
@@ -997,9 +1208,14 @@
     </div>
 
     <!-- Modal 6: Delegate New Authority Task -->
-    <div v-if="showDelegateModal" class="modal-overlay">
+    <div
+      v-if="showDelegateModal"
+      class="modal-overlay"
+    >
       <div class="modal">
-        <div class="modal-header">Delegate Site Trial Task</div>
+        <div class="modal-header">
+          Delegate Site Trial Task
+        </div>
         <div class="modal-body">
           <div class="form-group">
             <label for="del-staff-id">Staff User ID</label>
@@ -1008,12 +1224,16 @@
               v-model="delStaffId"
               type="text"
               placeholder="e.g. kc-crc-001"
-            />
+            >
           </div>
 
           <div class="form-group">
             <label for="del-start-date">Start Date</label>
-            <input id="del-start-date" v-model="delStartDate" type="date" />
+            <input
+              id="del-start-date"
+              v-model="delStartDate"
+              type="date"
+            >
           </div>
 
           <div class="form-group">
@@ -1038,35 +1258,43 @@
                 "
               >
                 <input
+                  v-model="delTaskCodes"
                   type="checkbox"
                   :value="task.value"
-                  v-model="delTaskCodes"
                   style="width: auto; margin: 0"
-                />
-                {{ task.text }} (<code>{{ task.value }}</code
-                >)
+                >
+                {{ task.text }} (<code>{{ task.value }}</code>)
               </label>
             </div>
           </div>
 
           <div class="form-group">
-            <label for="del-reason"
-              >Reason for Change / Delegation Justification</label
-            >
+            <label for="del-reason">Reason for Change / Delegation Justification</label>
             <textarea
               id="del-reason"
               v-model="delReason"
               placeholder="Justification for creating this task delegation assignment..."
-            ></textarea>
+            />
           </div>
 
-          <div v-if="delError" class="error-msg">⚠️ {{ delError }}</div>
+          <div
+            v-if="delError"
+            class="error-msg"
+          >
+            ⚠️ {{ delError }}
+          </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-cancel" @click="showDelegateModal = false">
+          <button
+            class="btn btn-cancel"
+            @click="showDelegateModal = false"
+          >
             Cancel
           </button>
-          <button class="btn btn-primary" @click="confirmDelegate">
+          <button
+            class="btn btn-primary"
+            @click="confirmDelegate"
+          >
             Submit Delegation
           </button>
         </div>
@@ -1074,20 +1302,36 @@
     </div>
 
     <!-- Modal 7: Create Site Milestone -->
-    <div v-if="showCreateMilestoneModal" class="modal-overlay">
+    <div
+      v-if="showCreateMilestoneModal"
+      class="modal-overlay"
+    >
       <div class="modal">
-        <div class="modal-header">Add Site Milestone</div>
+        <div class="modal-header">
+          Add Site Milestone
+        </div>
         <div class="modal-body">
           <div class="form-group">
             <label for="ms-type">Milestone Type</label>
-            <select id="ms-type" v-model="newMsType">
-              <option value="SITE_SELECTION">SITE_SELECTION</option>
-              <option value="INITIATION_VISIT">INITIATION_VISIT</option>
-              <option value="SITE_ACTIVATION">SITE_ACTIVATION</option>
+            <select
+              id="ms-type"
+              v-model="newMsType"
+            >
+              <option value="SITE_SELECTION">
+                SITE_SELECTION
+              </option>
+              <option value="INITIATION_VISIT">
+                INITIATION_VISIT
+              </option>
+              <option value="SITE_ACTIVATION">
+                SITE_ACTIVATION
+              </option>
               <option value="FIRST_SUBJECT_ENROLLED">
                 FIRST_SUBJECT_ENROLLED
               </option>
-              <option value="DB_LOCK">DB_LOCK</option>
+              <option value="DB_LOCK">
+                DB_LOCK
+              </option>
             </select>
           </div>
 
@@ -1097,14 +1341,21 @@
               id="ms-planned-date"
               v-model="newMsPlannedDate"
               type="date"
-            />
+            >
           </div>
 
           <div class="form-group">
             <label for="ms-status">Status</label>
-            <select id="ms-status" v-model="newMsStatus">
-              <option value="PLANNED">PLANNED</option>
-              <option value="ACHIEVED">ACHIEVED</option>
+            <select
+              id="ms-status"
+              v-model="newMsStatus"
+            >
+              <option value="PLANNED">
+                PLANNED
+              </option>
+              <option value="ACHIEVED">
+                ACHIEVED
+              </option>
             </select>
           </div>
 
@@ -1114,10 +1365,15 @@
               id="ms-reason"
               v-model="newMsReason"
               placeholder="State the justification reason for creating this milestone..."
-            ></textarea>
+            />
           </div>
 
-          <div v-if="msError" class="error-msg">⚠️ {{ msError }}</div>
+          <div
+            v-if="msError"
+            class="error-msg"
+          >
+            ⚠️ {{ msError }}
+          </div>
         </div>
         <div class="modal-footer">
           <button
@@ -1126,7 +1382,10 @@
           >
             Cancel
           </button>
-          <button class="btn btn-primary" @click="confirmCreateMilestone">
+          <button
+            class="btn btn-primary"
+            @click="confirmCreateMilestone"
+          >
             Add Milestone
           </button>
         </div>

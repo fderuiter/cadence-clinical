@@ -4,7 +4,8 @@ import os
 import sys
 import time
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
+from contextlib import asynccontextmanager
 from typing import Any
 
 import httpx
@@ -62,6 +63,34 @@ BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
 BRAND_DOMAIN = os.getenv("BRAND_DOMAIN", "cadenceclinical.com")
 KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "cadence")
 KEYCLOAK_CLIENT_ID = os.getenv("KEYCLOAK_CLIENT_ID", "cadence-clinical")
+JWKS_URL = os.getenv(
+    "JWKS_URL",
+    f"http://keycloak:8080/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs",  # deid-ignore
+)
+
+jwks_cache: dict[str, Any] | None = None
+http_client: httpx.AsyncClient | None = None
+jwks_fetch_lock = asyncio.Lock()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+    """Handle lifecycle events for the API Gateway application."""
+    global jwks_cache, http_client
+    http_client = httpx.AsyncClient()
+    if not os.getenv("SKIP_JWKS_FETCH"):
+        try:
+            resp = await http_client.get(JWKS_URL, timeout=5.0)
+            if resp.status_code == 200:
+                jwks_cache = resp.json()
+        except Exception:
+            pass
+
+    yield
+
+    if http_client:
+        await http_client.aclose()
+
 
 validate_branding("gateway", is_gateway=True)
 
@@ -71,6 +100,7 @@ app = FastAPI(
     openapi_url=None,
     docs_url=None,
     redoc_url=None,
+    lifespan=lifespan,
 )
 
 app.include_router(cdisc_router, prefix="/api/v1/cdisc", tags=["CDISC Standards"])
@@ -308,10 +338,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(RateLimitMiddleware)
 
-JWKS_URL = os.getenv(
-    "JWKS_URL",
-    f"http://keycloak:8080/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs",  # deid-ignore
-)
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "RS256")
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET")
 if not GATEWAY_SECRET:
@@ -335,10 +361,6 @@ SERVICES = {
     "fileshare": os.getenv("FILESHARE_URL", "http://localhost:8013"),
 }
 
-jwks_cache: dict[str, Any] | None = None
-http_client: httpx.AsyncClient | None = None
-jwks_fetch_lock = asyncio.Lock()
-
 
 def _is_kid_cached(kid: str | None) -> bool:
     if not kid or not jwks_cache:
@@ -347,37 +369,6 @@ def _is_kid_cached(kid: str | None) -> bool:
     if not isinstance(keys, list):
         return False
     return any(isinstance(k, dict) and k.get("kid") == kid for k in keys)
-
-
-@app.on_event("startup")
-async def startup() -> None:
-    """
-    Initialize resources on gateway startup.
-
-    Creates an HTTP client instance and attempts to fetch Keycloak JWKS
-    public keys for local caching, unless SKIP_JWKS_FETCH is enabled.
-    """
-    global jwks_cache, http_client
-    http_client = httpx.AsyncClient()
-    if not os.getenv("SKIP_JWKS_FETCH"):
-        try:
-            resp = await http_client.get(JWKS_URL, timeout=5.0)
-            if resp.status_code == 200:
-                jwks_cache = resp.json()
-        except Exception:
-            pass
-
-
-@app.on_event("shutdown")
-async def shutdown() -> None:
-    """
-    Clean up resources on gateway shutdown.
-
-    Closes the global asynchronous HTTP client to prevent resource leaks.
-    """
-    global http_client
-    if http_client:
-        await http_client.aclose()
 
 
 async def verify_token(token: str) -> dict[str, Any]:

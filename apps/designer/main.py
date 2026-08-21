@@ -6,6 +6,8 @@ This module handles the design and management of clinical studies and MDR compon
 """
 
 import os
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.encoders import jsonable_encoder
@@ -146,10 +148,37 @@ from packages.security.middleware import GatewayAuthMiddleware
 BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+    """Handle lifespan events for Designer FastAPI application."""
+    uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+    auth = (
+        os.getenv("NEO4J_USER", "neo4j"),
+        os.getenv("NEO4J_PASSWORD", default="cadence_secret_pass"),
+    )
+
+    try:
+        driver = AsyncGraphDatabase.driver(uri, auth=auth)
+        app.state.driver = driver
+    except Exception as e:
+        print(
+            f"[NEO4J] Warning: Failed to connect to Neo4j database at {uri}: {e}. Operating in mock mode."
+        )
+        app.state.driver = None
+
+    yield
+
+    driver = getattr(app.state, "driver", None)
+    if driver:
+        await driver.close()
+    app.state.driver = None
+
+
 validate_branding("designer")
 app = FastAPI(
     title=f"{BRAND_NAME} - Designer (MDR/SDR)",
     version="0.1.0",
+    lifespan=lifespan,
     dependencies=[Depends(gxp_audit_enforcement_filter)],
 )
 
@@ -316,32 +345,6 @@ async def template_rendering_error_handler(
             "instance": request.url.path,
         },
     )
-
-
-@app.on_event("startup")
-async def startup() -> None:
-    uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
-    auth = (
-        os.getenv("NEO4J_USER", "neo4j"),
-        os.getenv("NEO4J_PASSWORD", default="cadence_secret_pass"),
-    )
-
-    try:
-        driver = AsyncGraphDatabase.driver(uri, auth=auth)
-        app.state.driver = driver
-    except Exception as e:
-        print(
-            f"[NEO4J] Warning: Failed to connect to Neo4j database at {uri}: {e}. Operating in mock mode."
-        )
-        app.state.driver = None
-
-
-@app.on_event("shutdown")
-async def shutdown() -> None:
-    driver = getattr(app.state, "driver", None)
-    if driver:
-        await driver.close()
-    app.state.driver = None
 
 
 @app.get("/health")

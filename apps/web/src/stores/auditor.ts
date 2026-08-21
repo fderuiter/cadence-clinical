@@ -10,6 +10,8 @@ export interface AuditorFilters {
   dateRange: DateRange;
   user: string;
   eventType: string;
+  entityType?: string;
+  documentId?: string;
 }
 
 export interface InspectionSession {
@@ -25,11 +27,19 @@ export interface AuditEvent {
   action: string;
   details?: string;
   message?: string;
+  entity_type?: string | null;
+  record_id?: string | null;
   document_id?: string | null;
+  old_value?: any;
+  new_value?: any;
   reason_for_change?: string;
   reasonForChange?: string;
   version_index?: number;
   versionIndex?: number;
+  merkle_hash?: string | null;
+  sha256_hash?: string | null;
+  signature_hash?: string | null;
+  cryptographic_seal?: string | null;
 }
 
 export const useAuditorStore = defineStore("auditor", {
@@ -46,6 +56,8 @@ export const useAuditorStore = defineStore("auditor", {
       },
       user: "",
       eventType: "",
+      entityType: "",
+      documentId: "",
     } as AuditorFilters,
     loading: false,
     error: null as string | null,
@@ -65,6 +77,12 @@ export const useAuditorStore = defineStore("auditor", {
         if (this.filters.eventType) {
           params.action = this.filters.eventType;
         }
+        if (this.filters.entityType) {
+          params.entity_type = this.filters.entityType;
+        }
+        if (this.filters.documentId) {
+          params.document_id = this.filters.documentId;
+        }
         if (this.filters.dateRange?.start) {
           params.start_time = this.filters.dateRange.start;
         }
@@ -83,11 +101,15 @@ export const useAuditorStore = defineStore("auditor", {
     async exportAuditTrail(format: "CSV" | "JSON" | "PDF") {
       const filename = `audit_trail_export.${format.toLowerCase()}`;
       let content = "";
-      let mimeType = "text/plain";
+      const mimeType =
+        format === "JSON"
+          ? "application/json"
+          : format === "CSV"
+            ? "text/csv"
+            : "application/pdf";
 
       if (format === "JSON") {
         content = JSON.stringify(this.auditEvents, null, 2);
-        mimeType = "application/json";
       } else if (format === "CSV") {
         const headers = [
           "Timestamp",
@@ -115,14 +137,12 @@ export const useAuditorStore = defineStore("auditor", {
             r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")
           ),
         ].join("\n");
-        mimeType = "text/csv";
       } else {
         // PDF format Mock representation
         content = `%PDF-1.4\n%...\nAudit Trail Export\nGenerated: ${new Date().toISOString()}\n\n`;
         this.auditEvents.forEach((event) => {
           content += `[${event.timestamp}] User: ${event.user_id || event.user} - Action: ${event.action}\nDetails: ${event.details || event.message}\nReason: ${event.reason_for_change || event.reasonForChange || ""}\n\n`;
         });
-        mimeType = "application/pdf";
       }
 
       const blob = new Blob([content], { type: mimeType });

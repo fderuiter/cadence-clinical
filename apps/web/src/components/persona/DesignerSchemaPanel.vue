@@ -35,7 +35,7 @@
           accept=".pdf,.docx"
           style="display: none"
           @change="$emit('trigger-document-upload', $event)"
-        />
+        >
         <button
           class="btn"
           type="button"
@@ -94,8 +94,7 @@
                 border-radius: 4px;
               "
               class="candidate-id"
-              >{{ store.candidateDraft.id }}</code
-            >
+            >{{ store.candidateDraft.id }}</code>
           </span>
           <span
             :class="[
@@ -200,9 +199,7 @@
               class="item-edit-section"
             >
               <div class="form-group">
-                <label style="font-size: 0.75rem"
-                  >Modify Candidate Name/Label</label
-                >
+                <label style="font-size: 0.75rem">Modify Candidate Name/Label</label>
                 <input
                   :value="editItemValue"
                   type="text"
@@ -215,12 +212,10 @@
                   "
                   class="edit-item-input"
                   @input="$emit('update:editItemValue', $event.target.value)"
-                />
+                >
               </div>
               <div class="form-group">
-                <label style="font-size: 0.75rem"
-                  >Change Reason Justification (Mandatory)</label
-                >
+                <label style="font-size: 0.75rem">Change Reason Justification (Mandatory)</label>
                 <input
                   :value="editItemReason"
                   type="text"
@@ -234,10 +229,13 @@
                   "
                   class="edit-item-reason"
                   @input="$emit('update:editItemReason', $event.target.value)"
-                />
+                >
               </div>
               <div style="display: flex; justify-content: flex-end; gap: 6px">
-                <button class="btn btn-sm" @click="$emit('cancel-edit-item')">
+                <button
+                  class="btn btn-sm"
+                  @click="$emit('cancel-edit-item')"
+                >
                   Cancel
                 </button>
                 <button
@@ -265,8 +263,7 @@
               <div class="form-group">
                 <label
                   style="font-size: 0.75rem; color: #ef4444; font-weight: bold"
-                  >Provide Rejection Reason (Mandatory)</label
-                >
+                >Provide Rejection Reason (Mandatory)</label>
                 <input
                   :value="rejectItemReason"
                   type="text"
@@ -280,10 +277,13 @@
                   "
                   class="reject-item-reason"
                   @input="$emit('update:rejectItemReason', $event.target.value)"
-                />
+                >
               </div>
               <div style="display: flex; justify-content: flex-end; gap: 6px">
-                <button class="btn btn-sm" @click="$emit('cancel-reject-item')">
+                <button
+                  class="btn btn-sm"
+                  @click="$emit('cancel-reject-item')"
+                >
                   Cancel
                 </button>
                 <button
@@ -371,9 +371,10 @@
           "
         >
           <div class="form-group">
-            <label for="promote-change-reason" style="font-weight: bold"
-              >Promotion Change Reason (Mandatory)</label
-            >
+            <label
+              for="promote-change-reason"
+              style="font-weight: bold"
+            >Promotion Change Reason (Mandatory)</label>
             <input
               id="promote-change-reason"
               :value="promoteChangeReason"
@@ -387,7 +388,7 @@
               "
               class="promote-change-reason"
               @input="$emit('update:promoteChangeReason', $event.target.value)"
-            />
+            >
           </div>
 
           <div
@@ -413,8 +414,8 @@
               type="button"
               :disabled="
                 unreviewedCount > 0 ||
-                !promoteChangeReason.trim() ||
-                store.ingestionLoading
+                  !promoteChangeReason.trim() ||
+                  store.ingestionLoading
               "
               @click="$emit('promote-candidate')"
             >

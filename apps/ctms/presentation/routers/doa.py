@@ -4,7 +4,7 @@ Requirements: PRD-SYS-001
 """
 
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -284,7 +284,7 @@ async def export_site_doa_pdf(
         <h1>Delegation of Authority (DOA) Log</h1>
         <p><strong>Site ID:</strong> {log_data.site_id}</p>
         <p><strong>Principal Investigator:</strong> {log_data.pi_name}</p>
-        <p><strong>Generated At:</strong> {datetime.utcnow().isoformat()}</p>
+        <p><strong>Generated At:</strong> {datetime.now(UTC).isoformat()}</p>
 
         <h2>Delegated Staff Matrix</h2>
         <table>

@@ -1,5 +1,8 @@
 <template>
-  <div id="section-quality-cockpit" class="dashboard-section active">
+  <div
+    id="section-quality-cockpit"
+    class="dashboard-section active"
+  >
     <!-- Header -->
     <div class="section-header">
       <div class="header-content-group">
@@ -9,7 +12,9 @@
           <span class="badge badge-standard">TransCelerate eQMS</span>
           <span class="badge badge-standard">ISO 9001 / GAMP 5</span>
         </div>
-        <h2 class="view-title">Clinical Quality &amp; RBQM Cockpit</h2>
+        <h2 class="view-title">
+          Clinical Quality &amp; RBQM Cockpit
+        </h2>
         <p class="view-subtitle">
           End-to-end clinical quality management system synthesizing automated
           deviation ingestion, multi-methodology root cause analysis (5-Whys
@@ -22,14 +27,21 @@
       <div class="header-action-group">
         <!-- Study Switcher -->
         <div class="study-selector-box">
-          <label for="study-select" class="sr-only">Select Active Study</label>
+          <label
+            for="study-select"
+            class="sr-only"
+          >Select Active Study</label>
           <select
             id="study-select"
             v-model="selectedStudyId"
             class="study-select"
             @change="onStudyChange"
           >
-            <option v-for="s in availableStudies" :key="s" :value="s">
+            <option
+              v-for="s in availableStudies"
+              :key="s"
+              :value="s"
+            >
               Study: {{ s }}
             </option>
           </select>
@@ -61,41 +73,78 @@
 
     <!-- Quick Stats Cards Grid -->
     <div class="stats-grid">
-      <div class="stat-card" @click="activeTab = 'deviations'">
-        <div class="stat-icon alert-icon">⚠️</div>
+      <div
+        class="stat-card"
+        @click="activeTab = 'deviations'"
+      >
+        <div class="stat-icon alert-icon">
+          ⚠️
+        </div>
         <div class="stat-details">
-          <div class="stat-value">{{ deviations.length }}</div>
+          <div class="stat-value">
+            {{ deviations.length }}
+          </div>
           <div class="stat-label">
             Total Deviations ({{ criticalDeviationsCount }} Crit /
             {{ majorDeviationsCount }} Maj)
           </div>
         </div>
       </div>
-      <div class="stat-card" @click="activeTab = 'capa'">
-        <div class="stat-icon capa-icon">🔄</div>
+      <div
+        class="stat-card"
+        @click="activeTab = 'capa'"
+      >
+        <div class="stat-icon capa-icon">
+          🔄
+        </div>
         <div class="stat-details">
-          <div class="stat-value">{{ activeCapasCount }}</div>
-          <div class="stat-label">Active CAPAs (6-Stage Gates)</div>
+          <div class="stat-value">
+            {{ activeCapasCount }}
+          </div>
+          <div class="stat-label">
+            Active CAPAs (6-Stage Gates)
+          </div>
         </div>
       </div>
-      <div class="stat-card" @click="activeTab = 'rbqm'">
-        <div class="stat-icon rbqm-icon">🎯</div>
+      <div
+        class="stat-card"
+        @click="activeTab = 'rbqm'"
+      >
+        <div class="stat-icon rbqm-icon">
+          🎯
+        </div>
         <div class="stat-details">
           <div class="stat-value">
             {{ highRiskSitesCount }} / {{ siteRiskProfiles.length || 4 }}
           </div>
-          <div class="stat-label">High-Risk Sites (Z &ge; 2.0)</div>
+          <div class="stat-label">
+            High-Risk Sites (Z &ge; 2.0)
+          </div>
         </div>
       </div>
-      <div class="stat-card" @click="activeTab = 'rbqm'">
-        <div class="stat-icon qtl-icon">📊</div>
+      <div
+        class="stat-card"
+        @click="activeTab = 'rbqm'"
+      >
+        <div class="stat-icon qtl-icon">
+          📊
+        </div>
         <div class="stat-details">
-          <div class="stat-value">{{ qtlBreaches.length }}</div>
-          <div class="stat-label">QTL Breaches (CSR 9.6 Alerts)</div>
+          <div class="stat-value">
+            {{ qtlBreaches.length }}
+          </div>
+          <div class="stat-label">
+            QTL Breaches (CSR 9.6 Alerts)
+          </div>
         </div>
       </div>
-      <div class="stat-card" @click="activeTab = 'serious-breaches'">
-        <div class="stat-icon breach-icon">🚨</div>
+      <div
+        class="stat-card"
+        @click="activeTab = 'serious-breaches'"
+      >
+        <div class="stat-icon breach-icon">
+          🚨
+        </div>
         <div class="stat-details">
           <div
             class="stat-value"
@@ -112,14 +161,25 @@
                 : "0 Active"
             }}
           </div>
-          <div class="stat-label">7-Day Serious Breach Clock</div>
+          <div class="stat-label">
+            7-Day Serious Breach Clock
+          </div>
         </div>
       </div>
-      <div class="stat-card" @click="openDossierModal">
-        <div class="stat-icon seal-icon">🔒</div>
+      <div
+        class="stat-card"
+        @click="openDossierModal"
+      >
+        <div class="stat-icon seal-icon">
+          🔒
+        </div>
         <div class="stat-details">
-          <div class="stat-value text-success">100% GxP</div>
-          <div class="stat-label">Inspection Readiness Seal</div>
+          <div class="stat-value text-success">
+            100% GxP
+          </div>
+          <div class="stat-label">
+            Inspection Readiness Seal
+          </div>
         </div>
       </div>
     </div>
@@ -164,7 +224,10 @@
     </div>
 
     <!-- Tab 1: RBQM & Risk Index -->
-    <div v-if="activeTab === 'rbqm'" class="tab-content">
+    <div
+      v-if="activeTab === 'rbqm'"
+      class="tab-content"
+    >
       <div class="panel-card">
         <div class="panel-header">
           <div>
@@ -176,13 +239,20 @@
               with weighted risk aggregation.
             </p>
           </div>
-          <button class="btn btn-primary btn-sm" @click="runKriBatchScoring">
+          <button
+            class="btn btn-primary btn-sm"
+            @click="runKriBatchScoring"
+          >
             <span class="btn-icon">⚡</span> Run Batch KRI Evaluation
           </button>
         </div>
 
         <div class="kri-cards-grid">
-          <div v-for="kri in kriDefinitions" :key="kri.code" class="kri-card">
+          <div
+            v-for="kri in kriDefinitions"
+            :key="kri.code"
+            class="kri-card"
+          >
             <div class="kri-header">
               <span class="kri-code">{{ kri.code }}</span>
               <span
@@ -190,27 +260,22 @@
                 :class="
                   'badge-' + (kri.category || 'DATA_INTEGRITY').toLowerCase()
                 "
-                >{{ kri.category }}</span
-              >
+              >{{ kri.category }}</span>
             </div>
-            <div class="kri-name">{{ kri.name }}</div>
-            <div class="kri-desc">{{ kri.description }}</div>
+            <div class="kri-name">
+              {{ kri.name }}
+            </div>
+            <div class="kri-desc">
+              {{ kri.description }}
+            </div>
             <div class="kri-thresholds">
-              <span class="threshold-pill green"
-                >🟢 &lt; {{ kri.green_threshold }}</span
-              >
-              <span class="threshold-pill amber"
-                >🟡 &lt; {{ kri.amber_threshold }}</span
-              >
-              <span class="threshold-pill red"
-                >🔴 &ge; {{ kri.red_threshold }}</span
-              >
+              <span class="threshold-pill green">🟢 &lt; {{ kri.green_threshold }}</span>
+              <span class="threshold-pill amber">🟡 &lt; {{ kri.amber_threshold }}</span>
+              <span class="threshold-pill red">🔴 &ge; {{ kri.red_threshold }}</span>
             </div>
             <div class="kri-footer">
               <span class="kri-weight">Weight: {{ kri.weight }}x</span>
-              <span class="kri-formula"
-                ><code>{{ kri.calculation_formula }}</code></span
-              >
+              <span class="kri-formula"><code>{{ kri.calculation_formula }}</code></span>
             </div>
           </div>
         </div>
@@ -240,7 +305,9 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th style="width: 80px">Rank</th>
+                <th style="width: 80px">
+                  Rank
+                </th>
                 <th>Site ID</th>
                 <th>High KRI Count</th>
                 <th>Active Deviations</th>
@@ -250,11 +317,15 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="profile in siteRiskProfiles" :key="profile.site_id">
+              <tr
+                v-for="profile in siteRiskProfiles"
+                :key="profile.site_id"
+              >
                 <td>
-                  <span class="rank-badge" :class="'rank-' + profile.risk_rank"
-                    >#{{ profile.risk_rank }}</span
-                  >
+                  <span
+                    class="rank-badge"
+                    :class="'rank-' + profile.risk_rank"
+                  >#{{ profile.risk_rank }}</span>
                 </td>
                 <td>
                   <strong>{{ profile.site_id }}</strong>
@@ -294,7 +365,7 @@
                           profile.composite_risk_score
                         ),
                       }"
-                    ></div>
+                    />
                     <span class="score-val">{{
                       profile.composite_risk_score
                     }}</span>
@@ -346,13 +417,20 @@
               regulatory summary narrative generator.
             </p>
           </div>
-          <button class="btn btn-primary btn-sm" @click="openNewQtlModal">
+          <button
+            class="btn btn-primary btn-sm"
+            @click="openNewQtlModal"
+          >
             <span class="btn-icon">➕</span> Add QTL Parameter
           </button>
         </div>
 
         <div class="qtl-list">
-          <div v-for="qtl in qtls" :key="qtl.id" class="qtl-item-card">
+          <div
+            v-for="qtl in qtls"
+            :key="qtl.id"
+            class="qtl-item-card"
+          >
             <div class="qtl-main-info">
               <div class="qtl-title-row">
                 <h4>{{ qtl.parameter_name }}</h4>
@@ -361,15 +439,11 @@
               <div class="qtl-metrics-row">
                 <div class="metric-item">
                   <span class="metric-label">Target Value:</span>
-                  <span class="metric-value"
-                    >{{ qtl.target_value }}{{ qtl.unit }}</span
-                  >
+                  <span class="metric-value">{{ qtl.target_value }}{{ qtl.unit }}</span>
                 </div>
                 <div class="metric-item">
                   <span class="metric-label">Tolerance Limit:</span>
-                  <span class="metric-value text-danger"
-                    >&le; {{ qtl.tolerance_limit }}{{ qtl.unit }}</span
-                  >
+                  <span class="metric-value text-danger">&le; {{ qtl.tolerance_limit }}{{ qtl.unit }}</span>
                 </div>
                 <div class="metric-item">
                   <span class="metric-label">Latest Observed:</span>
@@ -412,11 +486,16 @@
     </div>
 
     <!-- Tab 2: Protocol Deviations & RCA -->
-    <div v-if="activeTab === 'deviations'" class="tab-content">
+    <div
+      v-if="activeTab === 'deviations'"
+      class="tab-content"
+    >
       <div class="panel-card">
         <div class="panel-header">
           <div>
-            <h3 class="panel-title">Protocol Deviations Ledger</h3>
+            <h3 class="panel-title">
+              Protocol Deviations Ledger
+            </h3>
             <p class="panel-subtitle">
               Auditable deviation events with 21 CFR Part 11 change
               justification and multi-methodology root cause analysis.
@@ -427,10 +506,18 @@
               v-model="deviationSeverityFilter"
               class="form-select form-select-sm"
             >
-              <option value="ALL">All Severities</option>
-              <option value="CRITICAL">Critical</option>
-              <option value="MAJOR">Major</option>
-              <option value="MINOR">Minor</option>
+              <option value="ALL">
+                All Severities
+              </option>
+              <option value="CRITICAL">
+                Critical
+              </option>
+              <option value="MAJOR">
+                Major
+              </option>
+              <option value="MINOR">
+                Minor
+              </option>
             </select>
           </div>
         </div>
@@ -449,22 +536,30 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="dev in filteredDeviations" :key="dev.id">
+              <tr
+                v-for="dev in filteredDeviations"
+                :key="dev.id"
+              >
                 <td>
                   <div class="deviation-title">
                     <strong>{{ dev.title }}</strong>
                   </div>
-                  <div class="deviation-desc">{{ dev.description }}</div>
+                  <div class="deviation-desc">
+                    {{ dev.description }}
+                  </div>
                   <div class="deviation-meta">
-                    <span v-if="dev.source_system" class="source-tag"
-                      >Source: {{ dev.source_system }}</span
-                    >
-                    <span v-if="dev.source_reference_id" class="ref-tag"
-                      >Ref: {{ dev.source_reference_id }}</span
-                    >
-                    <span v-if="dev.impact_safety" class="impact-tag safety"
-                      >⚠️ Safety Impact</span
-                    >
+                    <span
+                      v-if="dev.source_system"
+                      class="source-tag"
+                    >Source: {{ dev.source_system }}</span>
+                    <span
+                      v-if="dev.source_reference_id"
+                      class="ref-tag"
+                    >Ref: {{ dev.source_reference_id }}</span>
+                    <span
+                      v-if="dev.impact_safety"
+                      class="impact-tag safety"
+                    >⚠️ Safety Impact</span>
                   </div>
                 </td>
                 <td>{{ dev.site_id || "Global" }}</td>
@@ -490,10 +585,16 @@
                   </span>
                 </td>
                 <td>
-                  <span v-if="dev.rca" class="badge badge-rca">
+                  <span
+                    v-if="dev.rca"
+                    class="badge badge-rca"
+                  >
                     {{ dev.rca.methodology }}
                   </span>
-                  <span v-else class="text-muted text-xs">No RCA Attached</span>
+                  <span
+                    v-else
+                    class="text-muted text-xs"
+                  >No RCA Attached</span>
                 </td>
                 <td>
                   <div class="action-buttons-inline">
@@ -520,17 +621,25 @@
     </div>
 
     <!-- Tab 3: CAPA 6-Stage Gate Kanban -->
-    <div v-if="activeTab === 'capa'" class="tab-content">
+    <div
+      v-if="activeTab === 'capa'"
+      class="tab-content"
+    >
       <div class="panel-card">
         <div class="panel-header">
           <div>
-            <h3 class="panel-title">6-Stage Gate CAPA Kanban Board</h3>
+            <h3 class="panel-title">
+              6-Stage Gate CAPA Kanban Board
+            </h3>
             <p class="panel-subtitle">
               Strict stage-gated corrective and preventive action lifecycle with
               sub-action item gating and e-signature step-up.
             </p>
           </div>
-          <button class="btn btn-primary btn-sm" @click="openNewCapaModal">
+          <button
+            class="btn btn-primary btn-sm"
+            @click="openNewCapaModal"
+          >
             <span class="btn-icon">➕</span> New CAPA Record
           </button>
         </div>
@@ -561,11 +670,12 @@
                     :class="
                       'badge-' + (capa.risk_level || 'medium').toLowerCase()
                     "
-                    >{{ capa.risk_level }} Risk</span
-                  >
+                  >{{ capa.risk_level }} Risk</span>
                   <span class="capa-type-tag">{{ capa.capa_type }}</span>
                 </div>
-                <div class="kanban-card-title">{{ capa.action_plan }}</div>
+                <div class="kanban-card-title">
+                  {{ capa.action_plan }}
+                </div>
                 <div class="kanban-card-preventive">
                   {{ capa.preventive_measures }}
                 </div>
@@ -577,17 +687,15 @@
                 >
                   <div class="progress-label">
                     <span>Action Items:</span>
-                    <span
-                      >{{ getCompletedActionItemsCount(capa) }}/{{
-                        capa.action_items.length
-                      }}</span
-                    >
+                    <span>{{ getCompletedActionItemsCount(capa) }}/{{
+                      capa.action_items.length
+                    }}</span>
                   </div>
                   <div class="progress-bar-bg">
                     <div
                       class="progress-bar-fill"
                       :style="{ width: getActionItemsPercentage(capa) + '%' }"
-                    ></div>
+                    />
                   </div>
                 </div>
 
@@ -614,17 +722,25 @@
     </div>
 
     <!-- Tab 4: Clinical Audits & Findings -->
-    <div v-if="activeTab === 'audits'" class="tab-content">
+    <div
+      v-if="activeTab === 'audits'"
+      class="tab-content"
+    >
       <div class="panel-card">
         <div class="panel-header">
           <div>
-            <h3 class="panel-title">Clinical Audit Engagements</h3>
+            <h3 class="panel-title">
+              Clinical Audit Engagements
+            </h3>
             <p class="panel-subtitle">
               Investigator site, vendor, process, and TMF audit schedule with
               1-click CAPA promotion.
             </p>
           </div>
-          <button class="btn btn-primary btn-sm" @click="openNewAuditModal">
+          <button
+            class="btn btn-primary btn-sm"
+            @click="openNewAuditModal"
+          >
             <span class="btn-icon">➕</span> Schedule Audit
           </button>
         </div>
@@ -644,7 +760,10 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="audit in audits" :key="audit.id">
+              <tr
+                v-for="audit in audits"
+                :key="audit.id"
+              >
                 <td>
                   <strong>{{ audit.audit_number }}</strong>
                 </td>
@@ -697,7 +816,10 @@
     </div>
 
     <!-- Tab 5: Serious Breach & Regulatory Clock -->
-    <div v-if="activeTab === 'serious-breaches'" class="tab-content">
+    <div
+      v-if="activeTab === 'serious-breaches'"
+      class="tab-content"
+    >
       <div class="panel-card">
         <div class="panel-header">
           <div>
@@ -709,7 +831,10 @@
               clock calculation and authority dispatches.
             </p>
           </div>
-          <button class="btn btn-danger btn-sm" @click="openNewBreachModal">
+          <button
+            class="btn btn-danger btn-sm"
+            @click="openNewBreachModal"
+          >
             <span class="btn-icon">🚨</span> Report Serious Breach
           </button>
         </div>
@@ -723,10 +848,17 @@
             <div class="breach-header">
               <div class="breach-title-area">
                 <span class="badge badge-critical">SERIOUS BREACH</span>
-                <h4 class="breach-title">{{ breach.title }}</h4>
+                <h4 class="breach-title">
+                  {{ breach.title }}
+                </h4>
               </div>
-              <div class="breach-clock-display" :class="getClockClass(breach)">
-                <div class="clock-icon">⏱️</div>
+              <div
+                class="breach-clock-display"
+                :class="getClockClass(breach)"
+              >
+                <div class="clock-icon">
+                  ⏱️
+                </div>
                 <div class="clock-text">
                   <div class="clock-hours">
                     {{
@@ -735,30 +867,28 @@
                         : "168.0 Hours"
                     }}
                   </div>
-                  <div class="clock-label">Mandatory Notification Window</div>
+                  <div class="clock-label">
+                    Mandatory Notification Window
+                  </div>
                 </div>
               </div>
             </div>
 
             <div class="breach-body">
-              <p class="breach-summary">{{ breach.summary }}</p>
+              <p class="breach-summary">
+                {{ breach.summary }}
+              </p>
               <div class="breach-meta-row">
-                <span
-                  ><strong>Site:</strong>
-                  {{ breach.site_id || "All Study Sites" }}</span
-                >
-                <span
-                  ><strong>Discovered:</strong>
-                  {{ formatDate(breach.discovery_date) }}</span
-                >
-                <span
-                  ><strong>Authorities:</strong>
+                <span><strong>Site:</strong>
+                  {{ breach.site_id || "All Study Sites" }}</span>
+                <span><strong>Discovered:</strong>
+                  {{ formatDate(breach.discovery_date) }}</span>
+                <span><strong>Authorities:</strong>
                   <span
                     v-for="auth in breach.affected_authorities"
                     :key="auth"
                     class="authority-tag"
-                    >{{ auth }}</span
-                  >
+                  >{{ auth }}</span>
                 </span>
               </div>
             </div>
@@ -768,7 +898,7 @@
                 class="status-pill"
                 :class="
                   'status-' +
-                  (breach.status || 'under_evaluation').toLowerCase()
+                    (breach.status || 'under_evaluation').toLowerCase()
                 "
               >
                 Status: {{ breach.status }}
@@ -798,13 +928,21 @@
     <!-- Modals -->
 
     <!-- Modal 1: 5-Whys & 6M Ishikawa RCA Visualizer Modal -->
-    <div v-if="isRcaModalOpen" class="modal-backdrop">
+    <div
+      v-if="isRcaModalOpen"
+      class="modal-backdrop"
+    >
       <div class="modal-content modal-lg">
         <div class="modal-header">
           <h3 class="modal-title">
             Multi-Methodology Root Cause Analysis (RCA)
           </h3>
-          <button class="modal-close" @click="isRcaModalOpen = false">✕</button>
+          <button
+            class="modal-close"
+            @click="isRcaModalOpen = false"
+          >
+            ✕
+          </button>
         </div>
         <div class="modal-body">
           <div class="rca-deviation-summary">
@@ -834,51 +972,67 @@
           </div>
 
           <!-- 5-Whys Tree Visualizer -->
-          <div v-if="rcaMethod === 'FIVE_WHYS'" class="five-whys-container">
+          <div
+            v-if="rcaMethod === 'FIVE_WHYS'"
+            class="five-whys-container"
+          >
             <div class="why-step">
-              <div class="why-badge">Why 1</div>
+              <div class="why-badge">
+                Why 1
+              </div>
               <input
                 v-model="rcaForm.five_whys.why_1"
                 class="form-input"
                 placeholder="Primary direct symptom / immediate cause"
-              />
+              >
             </div>
             <div class="why-step">
-              <div class="why-badge">Why 2</div>
+              <div class="why-badge">
+                Why 2
+              </div>
               <input
                 v-model="rcaForm.five_whys.why_2"
                 class="form-input"
                 placeholder="Second causal layer"
-              />
+              >
             </div>
             <div class="why-step">
-              <div class="why-badge">Why 3</div>
+              <div class="why-badge">
+                Why 3
+              </div>
               <input
                 v-model="rcaForm.five_whys.why_3"
                 class="form-input"
                 placeholder="Third causal layer"
-              />
+              >
             </div>
             <div class="why-step">
-              <div class="why-badge">Why 4</div>
+              <div class="why-badge">
+                Why 4
+              </div>
               <input
                 v-model="rcaForm.five_whys.why_4"
                 class="form-input"
                 placeholder="Fourth causal layer"
-              />
+              >
             </div>
             <div class="why-step">
-              <div class="why-badge">Why 5</div>
+              <div class="why-badge">
+                Why 5
+              </div>
               <input
                 v-model="rcaForm.five_whys.why_5"
                 class="form-input"
                 placeholder="Root system / process failure"
-              />
+              >
             </div>
           </div>
 
           <!-- 6M Ishikawa Fishbone Diagram -->
-          <div v-if="rcaMethod === 'ISHIKAWA'" class="fishbone-container">
+          <div
+            v-if="rcaMethod === 'ISHIKAWA'"
+            class="fishbone-container"
+          >
             <div class="fishbone-grid">
               <div class="fishbone-branch">
                 <h5>👨 Man (Personnel / Human Factor)</h5>
@@ -886,7 +1040,7 @@
                   v-model="rcaForm.fishbone.man"
                   class="form-textarea"
                   placeholder="Staffing, training gaps, fatigue..."
-                ></textarea>
+                />
               </div>
               <div class="fishbone-branch">
                 <h5>⚙️ Machine (Equipment / Systems)</h5>
@@ -894,7 +1048,7 @@
                   v-model="rcaForm.fishbone.machine"
                   class="form-textarea"
                   placeholder="Hardware faults, software bugs, EDC validation..."
-                ></textarea>
+                />
               </div>
               <div class="fishbone-branch">
                 <h5>📦 Material (Investigational Product / Supplies)</h5>
@@ -902,7 +1056,7 @@
                   v-model="rcaForm.fishbone.material"
                   class="form-textarea"
                   placeholder="IP batch quality, temperature logs, lab kits..."
-                ></textarea>
+                />
               </div>
               <div class="fishbone-branch">
                 <h5>📜 Method (SOPs / Protocol Procedures)</h5>
@@ -910,7 +1064,7 @@
                   v-model="rcaForm.fishbone.method"
                   class="form-textarea"
                   placeholder="Ambiguous study protocol, outdated SOPs..."
-                ></textarea>
+                />
               </div>
               <div class="fishbone-branch">
                 <h5>📏 Measurement (Calibration / Metrics)</h5>
@@ -918,7 +1072,7 @@
                   v-model="rcaForm.fishbone.measurement"
                   class="form-textarea"
                   placeholder="Thermometer calibration, lab precision..."
-                ></textarea>
+                />
               </div>
               <div class="fishbone-branch">
                 <h5>🌍 Milieu (Environment / Clinic Context)</h5>
@@ -926,7 +1080,7 @@
                   v-model="rcaForm.fishbone.milieu"
                   class="form-textarea"
                   placeholder="Clinic layout, weather, regional transport..."
-                ></textarea>
+                />
               </div>
             </div>
           </div>
@@ -937,14 +1091,20 @@
               v-model="rcaForm.root_cause_summary"
               class="form-input"
               placeholder="Synthesized root cause finding"
-            />
+            >
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="isRcaModalOpen = false">
+          <button
+            class="btn btn-secondary"
+            @click="isRcaModalOpen = false"
+          >
             Cancel
           </button>
-          <button class="btn btn-primary" @click="saveRcaInvestigation">
+          <button
+            class="btn btn-primary"
+            @click="saveRcaInvestigation"
+          >
             Save RCA Findings
           </button>
         </div>
@@ -952,24 +1112,32 @@
     </div>
 
     <!-- Modal 2: 1-Click Inspection Readiness Dossier Modal -->
-    <div v-if="isDossierModalOpen" class="modal-backdrop">
+    <div
+      v-if="isDossierModalOpen"
+      class="modal-backdrop"
+    >
       <div class="modal-content modal-lg">
         <div class="modal-header">
           <h3 class="modal-title">
             GxP Inspection Readiness Dossier &amp; Merkle Seal
           </h3>
-          <button class="modal-close" @click="isDossierModalOpen = false">
+          <button
+            class="modal-close"
+            @click="isDossierModalOpen = false"
+          >
             ✕
           </button>
         </div>
         <div class="modal-body">
           <div class="dossier-seal-banner">
-            <div class="seal-icon">🔒</div>
+            <div class="seal-icon">
+              🔒
+            </div>
             <div>
               <h4>Cryptographic Merkle SHA-256 Tamper Seal</h4>
               <code class="merkle-hash">{{
                 dossierData?.cryptographic_tamper_seal ||
-                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
               }}</code>
               <p class="seal-desc">
                 This dossier represents a verified, immutable state snapshot
@@ -982,7 +1150,7 @@
             <div class="dossier-stat-item">
               <span class="dossier-stat-num">{{
                 dossierData?.summary_statistics?.total_deviations ||
-                deviations.length
+                  deviations.length
               }}</span>
               <span class="dossier-stat-label">Deviations Logged</span>
             </div>
@@ -1001,17 +1169,23 @@
             <div class="dossier-stat-item">
               <span class="dossier-stat-num">{{
                 dossierData?.summary_statistics?.total_serious_breaches ||
-                seriousBreaches.length
+                  seriousBreaches.length
               }}</span>
               <span class="dossier-stat-label">Serious Breaches</span>
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="isDossierModalOpen = false">
+          <button
+            class="btn btn-secondary"
+            @click="isDossierModalOpen = false"
+          >
             Close
           </button>
-          <button class="btn btn-primary" @click="downloadDossierJson">
+          <button
+            class="btn btn-primary"
+            @click="downloadDossierJson"
+          >
             Download JSON Dossier
           </button>
         </div>
@@ -1019,13 +1193,19 @@
     </div>
 
     <!-- Modal 3: CSR Section 9.6 Narrative Viewer -->
-    <div v-if="isCsrNarrativeModalOpen" class="modal-backdrop">
+    <div
+      v-if="isCsrNarrativeModalOpen"
+      class="modal-backdrop"
+    >
       <div class="modal-content">
         <div class="modal-header">
           <h3 class="modal-title">
             CSR Section 9.6 Quality Tolerance Limit Summary
           </h3>
-          <button class="modal-close" @click="isCsrNarrativeModalOpen = false">
+          <button
+            class="modal-close"
+            @click="isCsrNarrativeModalOpen = false"
+          >
             ✕
           </button>
         </div>
@@ -1035,7 +1215,7 @@
             class="form-textarea"
             rows="10"
             :value="activeCsrNarrative"
-          ></textarea>
+          />
         </div>
         <div class="modal-footer">
           <button
@@ -1044,7 +1224,10 @@
           >
             Close
           </button>
-          <button class="btn btn-primary" @click="copyCsrText">
+          <button
+            class="btn btn-primary"
+            @click="copyCsrText"
+          >
             Copy Narrative to Clipboard
           </button>
         </div>
@@ -1052,19 +1235,25 @@
     </div>
 
     <!-- Modal 4: 1-Click Promote Finding to CAPA -->
-    <div v-if="isPromoteModalOpen" class="modal-backdrop">
+    <div
+      v-if="isPromoteModalOpen"
+      class="modal-backdrop"
+    >
       <div class="modal-content">
         <div class="modal-header">
-          <h3 class="modal-title">1-Click Promote Audit Finding to CAPA</h3>
-          <button class="modal-close" @click="isPromoteModalOpen = false">
+          <h3 class="modal-title">
+            1-Click Promote Audit Finding to CAPA
+          </h3>
+          <button
+            class="modal-close"
+            @click="isPromoteModalOpen = false"
+          >
             ✕
           </button>
         </div>
         <div class="modal-body">
           <div class="finding-quote">
-            <strong
-              >Finding {{ activeFindingToPromote?.finding_number }}:</strong
-            >
+            <strong>Finding {{ activeFindingToPromote?.finding_number }}:</strong>
             {{ activeFindingToPromote?.condition }}
           </div>
           <div class="form-group mt-2">
@@ -1073,7 +1262,7 @@
               v-model="promoteForm.action_plan"
               class="form-textarea"
               placeholder="Corrective actions to remediate finding..."
-            ></textarea>
+            />
           </div>
           <div class="form-group mt-2">
             <label class="form-label">Preventive Measures:</label>
@@ -1081,14 +1270,20 @@
               v-model="promoteForm.preventive_measures"
               class="form-textarea"
               placeholder="Systemic prevention measures..."
-            ></textarea>
+            />
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="isPromoteModalOpen = false">
+          <button
+            class="btn btn-secondary"
+            @click="isPromoteModalOpen = false"
+          >
             Cancel
           </button>
-          <button class="btn btn-primary" @click="executePromoteFinding">
+          <button
+            class="btn btn-primary"
+            @click="executePromoteFinding"
+          >
             Generate Linked CAPA
           </button>
         </div>

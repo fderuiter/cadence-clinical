@@ -2,15 +2,9 @@
   <div class="soa-matrix-editor">
     <div class="matrix-toolbar">
       <div class="toolbar-stats">
-        <span class="stat-badge"
-          ><strong>{{ localActivities.length }}</strong> Procedures</span
-        >
-        <span class="stat-badge"
-          ><strong>{{ visits.length }}</strong> Visits</span
-        >
-        <span class="stat-badge highlight"
-          ><strong>{{ totalAssignedCells }}</strong> Scheduled Activities</span
-        >
+        <span class="stat-badge"><strong>{{ localActivities.length }}</strong> Procedures</span>
+        <span class="stat-badge"><strong>{{ visits.length }}</strong> Visits</span>
+        <span class="stat-badge highlight"><strong>{{ totalAssignedCells }}</strong> Scheduled Activities</span>
       </div>
       <div class="toolbar-actions">
         <button
@@ -31,7 +25,10 @@
     </div>
 
     <!-- Inline Add Procedure Form -->
-    <div v-if="showAddProcedure" class="inline-add-box">
+    <div
+      v-if="showAddProcedure"
+      class="inline-add-box"
+    >
       <div class="inline-form-group">
         <label for="new-proc-name">Procedure Name</label>
         <input
@@ -39,7 +36,7 @@
           v-model="newProcedureName"
           placeholder="e.g. Pharmacokinetic Blood Sampling"
           class="input-text"
-        />
+        >
       </div>
       <div class="inline-form-group">
         <label for="new-proc-domain">CDASH Domain</label>
@@ -48,15 +45,33 @@
           v-model="newProcedureDomain"
           class="input-select"
         >
-          <option value="VS">VS - Vital Signs</option>
-          <option value="EG">EG - ECG</option>
-          <option value="LB">LB - Laboratory</option>
-          <option value="QS">QS - Questionnaire / VAS</option>
-          <option value="PE">PE - Physical Exam / Body Map</option>
-          <option value="AE">AE - Adverse Events</option>
-          <option value="CM">CM - Concomitant Medications</option>
-          <option value="DM">DM - Demographics</option>
-          <option value="EX">EX - Exposure</option>
+          <option value="VS">
+            VS - Vital Signs
+          </option>
+          <option value="EG">
+            EG - ECG
+          </option>
+          <option value="LB">
+            LB - Laboratory
+          </option>
+          <option value="QS">
+            QS - Questionnaire / VAS
+          </option>
+          <option value="PE">
+            PE - Physical Exam / Body Map
+          </option>
+          <option value="AE">
+            AE - Adverse Events
+          </option>
+          <option value="CM">
+            CM - Concomitant Medications
+          </option>
+          <option value="DM">
+            DM - Demographics
+          </option>
+          <option value="EX">
+            EX - Exposure
+          </option>
         </select>
       </div>
       <button
@@ -77,7 +92,10 @@
     </div>
 
     <!-- Inline Add Visit Form -->
-    <div v-if="showAddVisit" class="inline-add-box">
+    <div
+      v-if="showAddVisit"
+      class="inline-add-box"
+    >
       <div class="inline-form-group">
         <label for="new-visit-name">Visit Name</label>
         <input
@@ -85,7 +103,7 @@
           v-model="newVisitName"
           placeholder="e.g. Visit 4 / Week 8"
           class="input-text"
-        />
+        >
       </div>
       <div class="inline-form-group">
         <label for="new-visit-day">Target Day</label>
@@ -95,7 +113,7 @@
           type="number"
           class="input-text"
           style="width: 90px"
-        />
+        >
       </div>
       <button
         type="button"
@@ -119,18 +137,30 @@
       <table class="soa-interactive-table">
         <thead>
           <tr>
-            <th class="col-procedure-header" scope="col">
+            <th
+              class="col-procedure-header"
+              scope="col"
+            >
               Clinical Procedure / Assessment
             </th>
-            <th class="col-domain-header" scope="col">CDASH</th>
+            <th
+              class="col-domain-header"
+              scope="col"
+            >
+              CDASH
+            </th>
             <th
               v-for="visit in visits"
               :key="visit.visit_name"
               class="col-visit-header"
               scope="col"
             >
-              <div class="visit-header-title">{{ visit.visit_name }}</div>
-              <div class="visit-header-meta">Day {{ visit.target_day }}</div>
+              <div class="visit-header-title">
+                {{ visit.visit_name }}
+              </div>
+              <div class="visit-header-meta">
+                Day {{ visit.target_day }}
+              </div>
             </th>
           </tr>
         </thead>
@@ -142,7 +172,10 @@
           >
             <td class="cell-procedure-name">
               <span class="procedure-label">{{ act.activity_name }}</span>
-              <span v-if="act.biomedical_concept_code" class="concept-code-tag">
+              <span
+                v-if="act.biomedical_concept_code"
+                class="concept-code-tag"
+              >
                 {{ act.biomedical_concept_code }}
               </span>
             </td>
@@ -167,7 +200,7 @@
                 :checked="isAssigned(act, visit.visit_name)"
                 :aria-label="`Schedule ${act.activity_name} at ${visit.visit_name}`"
                 @click.stop="toggleAssignment(act, visit.visit_name)"
-              />
+              >
             </td>
           </tr>
         </tbody>

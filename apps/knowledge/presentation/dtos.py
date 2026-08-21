@@ -1,7 +1,7 @@
 """
 Pydantic v2 DTOs for the Knowledge & Support Hub REST API.
 
-Requirements: PRD-SYS-KH-001, PRD-SYS-KH-002
+Requirements: PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002, ADR-2188
 """
 
 from datetime import datetime
@@ -57,18 +57,57 @@ class ArticleCreate(BaseModel):
     category_id: str
     body_markdown: str = Field(..., min_length=1)
     version_label: str = Field(default="1.0", max_length=50)
+    tags: str | None = None
     reason_for_change: str = Field(..., min_length=1, max_length=1000)
 
 
+class ArticleUpdate(BaseModel):
+    """Request body for updating a working draft KnowledgeArticle (PUT /articles/{id})."""
+
+    title: str | None = Field(default=None, min_length=1, max_length=500)
+    slug: str | None = Field(
+        default=None, min_length=1, max_length=255, pattern=r"^[a-z0-9-]+$"
+    )
+    category_id: str | None = None
+    body_markdown: str = Field(..., min_length=1)
+    tags: str | None = None
+    reason_for_change: str | None = Field(default=None, max_length=1000)
+
+
 class ArticleDraftSave(BaseModel):
-    """Request body for saving an updated draft body."""
+    """Request body for saving an updated draft body (PATCH /articles/{id}/draft)."""
 
     body_markdown: str = Field(..., min_length=1)
     reason_for_change: str | None = Field(default=None, max_length=1000)
 
 
+class ArticleSubmitReviewRequest(BaseModel):
+    """Request body for submitting an article for review."""
+
+    reason_for_change: str | None = Field(default=None, max_length=1000)
+
+
+class ArticleApproveRequest(BaseModel):
+    """Request body for approving an article."""
+
+    reason_for_change: str = Field(..., min_length=1, max_length=1000)
+
+
+class ArticleRejectRequest(BaseModel):
+    """Request body for rejecting an article."""
+
+    reason_for_change: str | None = Field(default=None, max_length=1000)
+
+
+class ArticlePublishRequest(BaseModel):
+    """Request body for publishing an approved article."""
+
+    reason_for_change: str = Field(..., min_length=1, max_length=1000)
+    version_label: str | None = Field(default=None, max_length=50)
+
+
 class ArticleTransitionRequest(BaseModel):
-    """Request body for performing a state machine transition on an article."""
+    """Request body for performing a generic state machine transition on an article."""
 
     target_status: ArticleStatus
     reason_for_change: str | None = Field(default=None, max_length=1000)
@@ -95,8 +134,10 @@ class ArticleVersionResponse(BaseModel):
     status_at_snapshot: str
     body_markdown: str
     body_html: str | None
+    is_locked: bool = False
     created_at: datetime
     created_by: str
+    reason_for_change: str
 
     model_config = {"from_attributes": True}
 
@@ -111,9 +152,13 @@ class ArticleResponse(BaseModel):
     status: ArticleStatus
     version_index: int
     version_label: str
+    current_published_version_id: str | None = None
+    tags: str | None = None
     author_user_id: str
     last_edited_by: str | None
     approved_by: str | None
+    body_markdown: str | None = None
+    body_html: str | None = None
     is_deleted: bool
     created_at: datetime
     created_by: str
@@ -180,3 +225,23 @@ class ContextualHelpLookupResponse(BaseModel):
 
     article: ArticleResponse | None
     version: ArticleVersionResponse | None
+
+
+__all__ = [
+    "ArticleApproveRequest",
+    "ArticleCreate",
+    "ArticleDraftSave",
+    "ArticlePublishRequest",
+    "ArticleRejectRequest",
+    "ArticleResponse",
+    "ArticleSubmitReviewRequest",
+    "ArticleTransitionRequest",
+    "ArticleUpdate",
+    "ArticleVersionResponse",
+    "AuditLogResponse",
+    "CategoryCreate",
+    "CategoryResponse",
+    "ContextualHelpLookupResponse",
+    "ContextualHelpMappingCreate",
+    "ContextualHelpMappingResponse",
+]

@@ -106,11 +106,12 @@ Unlike the Production-Specific Architecture (which utilizes AWS infrastructure, 
 
 - **Relational Database:** A single PostgreSQL container (`postgres`) is utilized for the core EDC execution runtime (`execution`) and organization service (`org`). Dedicated PostgreSQL containers (`postgres-etmf`, `postgres-ctms`, and `postgres-quality`) are used for `etmf`, `ctms`, and `quality` respectively.
 - **Graph Database:** A community-edition Neo4j container (`neo4j`) is utilized for the trial designer (`designer`).
+- **Object Storage:** A local MinIO container (`minio`) is utilized for S3-compatible binary payload storage and presigned direct client uploads for the fileshare service (`fileshare`).
 - **Local Identity & Access Management:** Keycloak (`keycloak`) runs locally in a development mode using an in-memory database (`dev-mem`).
-- **SQLite File Databases:** Microservices like Electronic Investigator Site File (`eisf`), EHR/ePRO Interoperability Gateway (`interop`), Ticket Tracking (`tickets`), Clinical Safety (`safety`), and Notifications Dispatcher (`notifications`) utilize local independent SQLite databases to maximize performance and isolation during local testing, avoiding the need for complex database migrations.
+- **SQLite File Databases:** Microservices like Electronic Investigator Site File (`eisf`), EHR/ePRO Interoperability Gateway (`interop`), Ticket Tracking (`tickets`), Clinical Safety (`safety`), Notifications Dispatcher (`notifications`), and Fileshare & Media (`fileshare`) utilize local independent SQLite databases to maximize performance and isolation during local testing, avoiding the need for complex database migrations.
 - **In-Memory Messaging/Queues:** Local integrations utilize synchronous HTTP loops or lightweight in-memory queues instead of full enterprise brokers (e.g., RabbitMQ, AWS SQS) or caching layers (e.g., Redis clusters) which are reserved exclusively for production environments.
 
-The diagram below represents the local development runtime and mapping of all 20 active local services:
+The diagram below represents the local development runtime and mapping of all 24 active local services:
 
 ```mermaid
 flowchart TD
@@ -132,13 +133,15 @@ flowchart TD
         safety[safety - Clinical safety microservice]
         notifications[notifications - Notifications & Webhooks Dispatcher]
         econsent[econsent - Electronic Consent Service]
+        fileshare[fileshare - Fileshare & Media Service]
 
-        %% Databases
+        %% Databases & Object Storage
         postgres[(postgres - Relational Database)]
         postgres-etmf[(postgres-etmf - Relational Database)]
         postgres-ctms[(postgres-ctms - Relational Database)]
         postgres-quality[(postgres-quality - Relational Database)]
         neo4j[(neo4j - Graph Database)]
+        minio[(minio - Object Storage MinIO)]
 
         %% SQLite file boundaries
         sqlite_eisf[(eisf.db - local SQLite)]
@@ -147,6 +150,7 @@ flowchart TD
         sqlite_safety[(safety.db - local SQLite)]
         sqlite_notifications[(notifications.db - local SQLite)]
         sqlite_econsent[(econsent.db - local SQLite)]
+        sqlite_fileshare[(fileshare.db - local SQLite)]
     end
 
     %% Routing Flow
@@ -166,6 +170,7 @@ flowchart TD
     gateway --> safety
     gateway --> notifications
     gateway --> econsent
+    gateway --> fileshare
 
     %% Shared storage connections
     designer --> neo4j
@@ -182,6 +187,10 @@ flowchart TD
     safety --> sqlite_safety
     notifications --> sqlite_notifications
     econsent --> sqlite_econsent
+    fileshare --> sqlite_fileshare
+
+    %% Object Storage
+    fileshare --> minio
 
     %% Inter-service events
     etmf -->|Sync Webhooks / Email| notifications
@@ -240,6 +249,15 @@ The Notifications Dispatcher is an event-driven background service that handles 
 - **Delivery Modes:** Dispatches alert payloads across four primary channels: `EMAIL`, `SMS`, `WEBHOOK`, and `IN_APP`.
 - **Retry Queues:** Implements a SQLite-backed queue with exponential backoff and localized queue monitoring, ensuring delivery under intermittent network failures.
 - **Integration with the Main Platform:** Acts as the primary mechanism for eTMF sync events, query alerts, compliance notifications, and patient portal reminders.
+
+#### 2.3.7 Fileshare & Media Storage Service (`apps/fileshare`)
+
+The Fileshare & Media Storage Service manages binary document storage, direct browser transfer lifecycle, and secure external sharing.
+
+- **Service Boundary:** Decoupled Hexagonal `StoragePort[T]` architecture exposing FastAPI routes behind the API Gateway (`GatewayAuthMiddleware`).
+- **Object Storage Integration:** Interacts with S3/MinIO through `S3StorageAdapter` / `MinioStorageAdapter`, generating short-lived presigned upload and download URLs to bypass server memory.
+- **Envelope Security Pattern:** Persists document metadata, access grants, SHA-256 Merkle root checksums, and legal retention hold flags in relational storage (`fileshare.db` / PostgreSQL).
+- **Audit Logging:** Emits 21 CFR Part 11 compliant immutable audit entries (`FileshareAuditLog`) for all file transfers, share grants, and guest links.
 
 ### 2.4 Distributed Caching Layer
 

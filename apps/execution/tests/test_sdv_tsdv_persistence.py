@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import json
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 
 import httpx
 import pytest
@@ -519,7 +519,7 @@ async def test_sdv_automatic_verification_drop():
             value=6.5,
             is_sdv_verified=True,
             sdv_verified_by="CRA-VERIFIER",
-            sdv_verified_at=datetime.utcnow(),
+            sdv_verified_at=datetime.now(UTC),
         )
         session.add(obs)
 
@@ -530,7 +530,7 @@ async def test_sdv_automatic_verification_drop():
             study_id="STUDY-2",
             is_verified=True,
             verified_by="CRA-VERIFIER",
-            verified_at=datetime.utcnow(),
+            verified_at=datetime.now(UTC),
         )
         session.add(signoff)
 

@@ -10,7 +10,7 @@ import logging
 import os
 import sys
 import threading
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import redis
@@ -106,7 +106,7 @@ async def handle_consent_completed_message(
                     version_tag=version_tag,
                     version_index=version_index,
                     icf_signed=True,
-                    icf_signed_date=datetime.utcnow(),
+                    icf_signed_date=datetime.now(UTC),
                     requires_reconsent=False,
                 )
                 session.add(consent_db)

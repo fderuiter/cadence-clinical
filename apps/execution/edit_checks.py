@@ -8,7 +8,7 @@ and automatic query creation/resolution with audit.
 import contextlib
 import copy
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -741,7 +741,7 @@ async def run_synchronous_edit_checks(
             if existing_query:
                 existing_query.status = "CLOSED"
                 existing_query.resolver = "SYSTEM"
-                existing_query.resolved_at = datetime.utcnow()
+                existing_query.resolved_at = datetime.now(UTC)
                 existing_query.response = (
                     f"Auto-resolved: data corrected and {rule.rule_id} check passes."
                 )
@@ -886,7 +886,7 @@ async def run_asynchronous_edit_checks(
                         if existing_query:
                             existing_query.status = "CLOSED"
                             existing_query.resolver = "SYSTEM"
-                            existing_query.resolved_at = datetime.utcnow()
+                            existing_query.resolved_at = datetime.now(UTC)
                             existing_query.response = f"Auto-resolved: data corrected and {rule.rule_id} check passes."
                             existing_query.version += 1
                             logger.info(
@@ -981,7 +981,7 @@ async def _resolve_pending_predecessor_checks_for_form_in_session(
                 if existing_query:
                     existing_query.status = "CLOSED"
                     existing_query.resolver = "SYSTEM"
-                    existing_query.resolved_at = datetime.utcnow()
+                    existing_query.resolved_at = datetime.now(UTC)
                     existing_query.response = f"Auto-resolved: data corrected and {rule.rule_id} check passes."
                     existing_query.version += 1
 
@@ -1166,7 +1166,7 @@ async def run_asynchronous_form_edit_checks(
                             if existing_query:
                                 existing_query.status = "CLOSED"
                                 existing_query.resolver = "SYSTEM"
-                                existing_query.resolved_at = datetime.utcnow()
+                                existing_query.resolved_at = datetime.now(UTC)
                                 existing_query.response = f"Auto-resolved: data corrected and {rule.rule_id} check passes."
                                 existing_query.version += 1
                                 logger.info(
@@ -1275,7 +1275,7 @@ async def resolve_pending_predecessor_checks(
                 if existing_query:
                     existing_query.status = "CLOSED"
                     existing_query.resolver = "SYSTEM"
-                    existing_query.resolved_at = datetime.utcnow()
+                    existing_query.resolved_at = datetime.now(UTC)
                     existing_query.response = f"Auto-resolved: data corrected and {rule.rule_id} check passes."
                     existing_query.version += 1
                     logger.info(
@@ -1396,7 +1396,7 @@ async def resolve_pending_predecessor_checks_for_form(
                             if existing_query:
                                 existing_query.status = "CLOSED"
                                 existing_query.resolver = "SYSTEM"
-                                existing_query.resolved_at = datetime.utcnow()
+                                existing_query.resolved_at = datetime.now(UTC)
                                 existing_query.response = f"Auto-resolved: data corrected and {rule.rule_id} check passes."
                                 existing_query.version += 1
                                 logger.info(
