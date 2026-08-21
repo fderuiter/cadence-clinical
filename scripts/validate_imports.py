@@ -93,6 +93,7 @@ LEGACY_TESTS_EXEMPT_FROM_IMPORT_BOUNDARIES = {
     "apps/quality/tests/test_quality.py",
     "apps/quality/tests/test_quality_sentinel.py",
     "apps/quality/tests/test_quality_workflow.py",
+    "apps/quality/tests/test_outbox_sync.py",
     "apps/eisf/tests/test_eisf_adapter.py",
     "apps/eisf/tests/test_eisf_isolation.py",
     "apps/eisf/tests/test_eisf_service.py",

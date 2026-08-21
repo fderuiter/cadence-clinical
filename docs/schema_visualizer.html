@@ -15287,6 +15287,121 @@
           ]
         },
         {
+          "id": "quality_integration_outbox",
+          "table_name": "integration_outbox",
+          "class_name": "IntegrationOutbox",
+          "description": "Concrete integration outbox table for Quality service.",
+          "service": "quality",
+          "gxp": true,
+          "immutable": false,
+          "columns": [
+            {
+              "name": "id",
+              "type": "VARCHAR(36)",
+              "primary_key": true,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "event_type",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "payload",
+              "type": "JSON",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR(50)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "attempts",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "last_error",
+              "type": "VARCHAR",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "next_retry_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "completed_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "retry_eligible",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "correlation_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "created_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "created_by",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "reason_for_change",
+              "type": "VARCHAR(1000)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            }
+          ]
+        },
+        {
           "id": "quality_quality_kri_definitions",
           "table_name": "quality_kri_definitions",
           "class_name": "KRIDefinition",

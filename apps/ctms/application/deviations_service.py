@@ -1,6 +1,10 @@
 from datetime import UTC, datetime
 
-from apps.ctms.domain.exceptions import ActionItemNotFoundError, DeviationNotFoundError
+from apps.ctms.domain.exceptions import (
+    ActionItemNotFoundError,
+    ConcurrencyConflictError,
+    DeviationNotFoundError,
+)
 from apps.ctms.domain.models import (
     CTMSAuditLogEntity,
     DeviationActionItemEntity,
@@ -138,6 +142,7 @@ class ProtocolDeviationService:
 
         if self.quality_client:
             res = await self.quality_client.create_capa_from_deviation(
+                deviation_id=dev.id,
                 study_id=dev.study_id,
                 site_id=dev.site_id,
                 title=dev.title,
@@ -196,6 +201,49 @@ class ProtocolDeviationService:
                 user_role=user_roles,
                 action="DEVIATION_RESOLVED",
                 details=f"Resolved deviation {deviation_id} by {user_id}. Reason: {reason_for_change}",
+                timestamp=datetime.now(UTC).isoformat(),
+            )
+            await self.doa_repo.save_audit_log(audit)
+
+        return saved
+
+    async def update_deviation_status(
+        self,
+        deviation_id: str,
+        status: str,
+        user_id: str,
+        user_roles: str,
+        reason_for_change: str,
+        quality_capa_id: str | None = None,
+        version_index: int | None = None,
+    ) -> ProtocolDeviationEntity:
+        dev = await self.deviation_repo.get_deviation(deviation_id)
+        if not dev:
+            raise DeviationNotFoundError(f"Protocol deviation {deviation_id} not found")
+
+        if version_index is not None and dev.version_index != version_index:
+            raise ConcurrencyConflictError(
+                f"Version conflict: Current deviation version is {dev.version_index}, but payload requested {version_index}"
+            )
+
+        dev.status = status.upper()
+        if quality_capa_id:
+            dev.quality_capa_id = quality_capa_id
+        if dev.status == "RESOLVED":
+            dev.resolved_by = user_id
+            dev.resolved_at = datetime.now(UTC).isoformat()
+
+        dev.version_index += 1
+        dev.reason_for_change = reason_for_change
+
+        saved = await self.deviation_repo.save_deviation(dev)
+
+        if self.doa_repo:
+            audit = CTMSAuditLogEntity(
+                user_id=user_id,
+                user_role=user_roles,
+                action="DEVIATION_STATUS_UPDATED",
+                details=f"Updated status of deviation {deviation_id} to '{status}'. Reason: {reason_for_change}",
                 timestamp=datetime.now(UTC).isoformat(),
             )
             await self.doa_repo.save_audit_log(audit)

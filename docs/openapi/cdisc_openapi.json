@@ -861,118 +861,10 @@
       }
     },
     "/{path}": {
-      "delete": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__delete",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__delete",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
       "get": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__delete",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "head": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__delete",
+        "operationId": "proxy_requests__path__get",
         "parameters": [
           {
             "name": "path",
@@ -1008,7 +900,7 @@
       "post": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__delete",
+        "operationId": "proxy_requests__path__get",
         "parameters": [
           {
             "name": "path",
@@ -1041,10 +933,46 @@
           }
         }
       },
-      "options": {
+      "delete": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__delete",
+        "operationId": "proxy_requests__path__get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__get",
         "parameters": [
           {
             "name": "path",
@@ -1080,7 +1008,79 @@
       "patch": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__delete",
+        "operationId": "proxy_requests__path__get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__get",
         "parameters": [
           {
             "name": "path",
@@ -1915,6 +1915,108 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProtocolDeviationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ctms/api/v1/ctms/deviations/{deviation_id}/status": {
+      "patch": {
+        "tags": [
+          "CTMS Protocol Deviations"
+        ],
+        "summary": "Update Deviation Status",
+        "operationId": "update_deviation_status_api_v1_ctms_deviations__deviation_id__status_patch",
+        "parameters": [
+          {
+            "name": "deviation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Deviation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_ProtocolDeviationStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProtocolDeviationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "CTMS Protocol Deviations"
+        ],
+        "summary": "Update Deviation Status",
+        "operationId": "update_deviation_status_api_v1_ctms_deviations__deviation_id__status_put",
+        "parameters": [
+          {
+            "name": "deviation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Deviation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_ProtocolDeviationStatusUpdate"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -26741,6 +26843,126 @@
         }
       }
     },
+    "/quality/api/v1/admin/outbox": {
+      "get": {
+        "summary": "Quality Admin Outbox Endpoint",
+        "operationId": "quality_admin_outbox_endpoint_api_v1_admin_outbox_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quality/api/v1/quality/admin/outbox": {
+      "get": {
+        "summary": "Quality Admin Outbox Endpoint",
+        "operationId": "quality_admin_outbox_endpoint_api_v1_quality_admin_outbox_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/quality/api/v1/quality/deviations": {
       "post": {
         "summary": "Create Deviation",
@@ -34693,6 +34915,44 @@
           "version_index"
         ],
         "title": "ProtocolDeviationResponse"
+      },
+      "Ctms_ProtocolDeviationStatusUpdate": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Target status: IDENTIFIED, UNDER_REVIEW, CAPA_ESCALATED, RESOLVED"
+          },
+          "quality_capa_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Capa Id",
+            "description": "Optional Quality CAPA ID"
+          },
+          "version_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Index",
+            "description": "Expected version index for optimistic locking"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "ProtocolDeviationStatusUpdate"
       },
       "Ctms_RBQMKRIMetricCreate": {
         "properties": {
@@ -59565,6 +59825,66 @@
             ],
             "title": "Audit Finding Id",
             "description": "Optional linked audit finding ID"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Optional study ID for cross-service creation"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional site ID for cross-service creation"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title",
+            "description": "Optional deviation title for cross-service creation"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Optional deviation description for cross-service creation"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity",
+            "description": "Optional deviation severity for cross-service creation"
           }
         },
         "type": "object",

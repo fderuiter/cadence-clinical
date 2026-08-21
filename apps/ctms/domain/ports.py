@@ -330,6 +330,7 @@ class QualityClientPort(ABC):
         user_id: str,
         user_roles: list[str],
         reason_for_change: str,
+        deviation_id: str | None = None,
     ) -> dict[str, str]:
         pass
 

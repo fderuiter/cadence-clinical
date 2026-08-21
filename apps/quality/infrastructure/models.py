@@ -29,6 +29,7 @@ from apps.quality.domain.models import (
     RiskCategory,
     RiskTier,
 )
+from packages.database import IntegrationOutboxMixin
 
 
 class Base(DeclarativeBase):
@@ -592,6 +593,12 @@ class SeriousBreachRecord(Base):
 
 
 # --- Audit Ledger ---
+
+
+class IntegrationOutbox(Base, IntegrationOutboxMixin):
+    """Concrete integration outbox table for Quality service."""
+
+    __tablename__ = "integration_outbox"
 
 
 class QualityAuditLog(Base):

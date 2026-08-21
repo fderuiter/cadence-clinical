@@ -171,6 +171,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+- [2026-08-21: Quality CTMS Transactional Outbox Sync and Knowledge Hub](2026-08-21-quality-ctms-transactional-outbox-sync-and-knowledge-hub.md)
 
 - [2026-08-15: Comprehensive Clinical Issue and Operations Hub Architecture](2026-08-15-comprehensive-clinical-issue-and-operations-hub-architecture.md)
 
@@ -361,4 +362,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-13: ADR-[NUMBER]: Port Contract Compliance & Backend Static Verification](2026-08-13-port-contract-compliance-and-backend-static-verification.md)
 - [2026-08-17: Unified Database Schema Introspection and Automated Type Synchronization Gating](2026-08-17-unified-database-introspection-and-type-gating.md)
 - [2026-09-12: ADR-2026-09-12: In-Process Clinical De-Identification and Gateway USDM Validation Router](2026-09-12-in-process-clinical-deid-and-gateway-usdm-router.md)
-- [2026-09-12: ADR-2026-09-12: MSW Mock Gateway Simulator and Browser HMAC Verification Engine](2026-09-12-msw-mock-gateway-and-browser-hmac-verification.md)
+- [2026-09-12: MSW Mock Gateway Simulator and Browser HMAC Verification Engine](2026-09-12-msw-mock-gateway-and-browser-hmac-verification.md)

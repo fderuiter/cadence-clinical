@@ -54,6 +54,19 @@ DATABASE_URL = os.getenv("QUALITY_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 assert_secure_secrets("quality", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
 
+
+async def quality_startup() -> None:
+    from apps.quality.adapters.workers.outbox_worker import start_outbox_worker
+
+    start_outbox_worker()
+
+
+async def quality_shutdown() -> None:
+    from apps.quality.adapters.workers.outbox_worker import stop_outbox_worker
+
+    stop_outbox_worker()
+
+
 BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
 
 validate_branding("quality")
@@ -64,6 +77,8 @@ app = FastAPI(
         db_manager=db_manager,
         database_url=DATABASE_URL,
         base_metadata=Base.metadata,
+        startup_hooks=[quality_startup],
+        shutdown_hooks=[quality_shutdown],
     ),
 )
 
@@ -159,6 +174,40 @@ async def write_audit_log(
 async def health_check() -> dict[str, str]:
     """Service health check endpoint."""
     return {"status": "ok", "service": "quality"}
+
+
+@app.get("/api/v1/quality/admin/outbox")
+@app.get("/api/v1/admin/outbox")
+async def quality_admin_outbox_endpoint(
+    status: str | None = None,
+    event_type: str | None = None,
+):
+    session_maker = db_manager.get_session_maker()
+    async with session_maker() as session:
+        from sqlalchemy import select
+
+        from apps.quality.infrastructure.models import IntegrationOutbox
+
+        stmt = select(IntegrationOutbox).order_by(IntegrationOutbox.created_at.desc())
+        if status:
+            stmt = stmt.where(IntegrationOutbox.status == status)
+        if event_type:
+            stmt = stmt.where(IntegrationOutbox.event_type == event_type)
+        res = await session.execute(stmt)
+        records = res.scalars().all()
+        return [
+            {
+                "id": r.id,
+                "event_type": r.event_type,
+                "payload": r.payload,
+                "status": r.status,
+                "attempts": r.attempts,
+                "last_error": r.last_error,
+                "correlation_id": r.correlation_id,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in records
+        ]
 
 
 app.include_router(quality_router)

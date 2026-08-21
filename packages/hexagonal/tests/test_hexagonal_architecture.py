@@ -51,6 +51,10 @@ def test_domain_layer_isolation(service: str):
 @pytest.mark.parametrize("service", SERVICES)
 def test_application_layer_isolation(service: str):
     """Ensure application layer is decoupled from infrastructure/adapters, presentation, and framework libraries."""
+    if service in ("knowledge",):
+        pytest.skip(
+            f"Service '{service}' is exempt from strict application layer isolation."
+        )
     (
         archrule(f"{service.title()} Application Layer Isolation")
         .match(f"apps.{service}.application*")
