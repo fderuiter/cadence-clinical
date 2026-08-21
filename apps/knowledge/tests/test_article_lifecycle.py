@@ -17,23 +17,19 @@ Requirements: PRD-SYS-KH-001 (article lifecycle), PRD-SYS-KH-002 (GxP compliance
 from unittest.mock import AsyncMock, patch
 
 import pytest
-import pytest_asyncio
 
-from apps.knowledge.application.article_service import ArticleLifecycleService
 from apps.knowledge.domain.models import (
     ArticleApprovalConflictError,
     ArticleReasonRequiredError,
     ArticleStatus,
     ArticleTransitionError,
-    ARTICLE_TRANSITIONS,
-    validate_transition,
 )
 from apps.knowledge.infrastructure.models import (
     KnowledgeArticle,
     KnowledgeArticleAuditLog,
     KnowledgeCategory,
 )
-
+from apps.knowledge.services.article_service import ArticleLifecycleService
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -56,7 +52,9 @@ async def _make_category(svc: ArticleLifecycleService) -> KnowledgeCategory:
     )
 
 
-async def _make_article(svc: ArticleLifecycleService, category_id: str) -> KnowledgeArticle:
+async def _make_article(
+    svc: ArticleLifecycleService, category_id: str
+) -> KnowledgeArticle:
     """Creates a test article in DRAFT status."""
     return await svc.create_article(
         title="Test Article",
@@ -72,6 +70,7 @@ async def _make_article(svc: ArticleLifecycleService, category_id: str) -> Knowl
 # ---------------------------------------------------------------------------
 # Decision 1 — State machine: valid transitions
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_valid_transition_draft_to_in_review(db_session):
@@ -185,9 +184,19 @@ async def test_valid_transition_rejected_to_draft(db_session):
     svc = ArticleLifecycleService(db_session)
     cat = await _make_category(svc)
     article = await _make_article(svc, cat.id)
-    article = await svc.transition(article=article, target_status=ArticleStatus.IN_REVIEW, actor_user_id=ACTOR_AUTHOR)
-    article = await svc.transition(article=article, target_status=ArticleStatus.REJECTED, actor_user_id=ACTOR_APPROVER)
-    article = await svc.transition(article=article, target_status=ArticleStatus.DRAFT, actor_user_id=ACTOR_AUTHOR)
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.IN_REVIEW,
+        actor_user_id=ACTOR_AUTHOR,
+    )
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.REJECTED,
+        actor_user_id=ACTOR_APPROVER,
+    )
+    article = await svc.transition(
+        article=article, target_status=ArticleStatus.DRAFT, actor_user_id=ACTOR_AUTHOR
+    )
     assert article.status == ArticleStatus.DRAFT
 
 
@@ -201,17 +210,39 @@ async def test_valid_transition_archived_to_draft(db_session):
     svc = ArticleLifecycleService(db_session)
     cat = await _make_category(svc)
     article = await _make_article(svc, cat.id)
-    article = await svc.transition(article=article, target_status=ArticleStatus.IN_REVIEW, actor_user_id=ACTOR_AUTHOR)
-    article = await svc.transition(article=article, target_status=ArticleStatus.APPROVED, actor_user_id=ACTOR_APPROVER, reason_for_change="Approved")
-    article = await svc.transition(article=article, target_status=ArticleStatus.PUBLISHED, actor_user_id=ACTOR_APPROVER, reason_for_change="Published")
-    article = await svc.transition(article=article, target_status=ArticleStatus.ARCHIVED, actor_user_id=ACTOR_APPROVER, reason_for_change="Archiving")
-    article = await svc.transition(article=article, target_status=ArticleStatus.DRAFT, actor_user_id=ACTOR_AUTHOR)
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.IN_REVIEW,
+        actor_user_id=ACTOR_AUTHOR,
+    )
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.APPROVED,
+        actor_user_id=ACTOR_APPROVER,
+        reason_for_change="Approved",
+    )
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.PUBLISHED,
+        actor_user_id=ACTOR_APPROVER,
+        reason_for_change="Published",
+    )
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.ARCHIVED,
+        actor_user_id=ACTOR_APPROVER,
+        reason_for_change="Archiving",
+    )
+    article = await svc.transition(
+        article=article, target_status=ArticleStatus.DRAFT, actor_user_id=ACTOR_AUTHOR
+    )
     assert article.status == ArticleStatus.DRAFT
 
 
 # ---------------------------------------------------------------------------
 # Decision 1 — State machine: invalid transitions
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_invalid_transition_draft_to_published_raises(db_session):
@@ -244,9 +275,23 @@ async def test_invalid_transition_published_to_draft_raises(db_session):
     svc = ArticleLifecycleService(db_session)
     cat = await _make_category(svc)
     article = await _make_article(svc, cat.id)
-    article = await svc.transition(article=article, target_status=ArticleStatus.IN_REVIEW, actor_user_id=ACTOR_AUTHOR)
-    article = await svc.transition(article=article, target_status=ArticleStatus.APPROVED, actor_user_id=ACTOR_APPROVER, reason_for_change="Approved")
-    article = await svc.transition(article=article, target_status=ArticleStatus.PUBLISHED, actor_user_id=ACTOR_APPROVER, reason_for_change="Published")
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.IN_REVIEW,
+        actor_user_id=ACTOR_AUTHOR,
+    )
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.APPROVED,
+        actor_user_id=ACTOR_APPROVER,
+        reason_for_change="Approved",
+    )
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.PUBLISHED,
+        actor_user_id=ACTOR_APPROVER,
+        reason_for_change="Published",
+    )
 
     with pytest.raises(ArticleTransitionError):
         await svc.transition(
@@ -259,6 +304,7 @@ async def test_invalid_transition_published_to_draft_raises(db_session):
 # ---------------------------------------------------------------------------
 # Decision 2 — Four-eyes principle
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_four_eyes_same_editor_cannot_approve(db_session):
@@ -295,7 +341,11 @@ async def test_four_eyes_different_user_can_approve(db_session):
     svc = ArticleLifecycleService(db_session)
     cat = await _make_category(svc)
     article = await _make_article(svc, cat.id)
-    article = await svc.transition(article=article, target_status=ArticleStatus.IN_REVIEW, actor_user_id=ACTOR_AUTHOR)
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.IN_REVIEW,
+        actor_user_id=ACTOR_AUTHOR,
+    )
 
     article = await svc.transition(
         article=article,
@@ -310,6 +360,7 @@ async def test_four_eyes_different_user_can_approve(db_session):
 # Decision 3 — Version numbering
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_version_index_increments_on_publish(db_session):
     """
@@ -322,9 +373,24 @@ async def test_version_index_increments_on_publish(db_session):
     article = await _make_article(svc, cat.id)
     assert article.version_index == 1
 
-    article = await svc.transition(article=article, target_status=ArticleStatus.IN_REVIEW, actor_user_id=ACTOR_AUTHOR)
-    article = await svc.transition(article=article, target_status=ArticleStatus.APPROVED, actor_user_id=ACTOR_APPROVER, reason_for_change="OK")
-    article = await svc.transition(article=article, target_status=ArticleStatus.PUBLISHED, actor_user_id=ACTOR_APPROVER, reason_for_change="Go live", version_label="1.0")
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.IN_REVIEW,
+        actor_user_id=ACTOR_AUTHOR,
+    )
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.APPROVED,
+        actor_user_id=ACTOR_APPROVER,
+        reason_for_change="OK",
+    )
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.PUBLISHED,
+        actor_user_id=ACTOR_APPROVER,
+        reason_for_change="Go live",
+        version_label="1.0",
+    )
 
     assert article.version_index == 2
     assert article.version_label == "1.0"
@@ -333,6 +399,7 @@ async def test_version_index_increments_on_publish(db_session):
 # ---------------------------------------------------------------------------
 # Decision 4 — reason_for_change requirement
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_reason_required_on_approve_raises_without_it(db_session):
@@ -344,7 +411,11 @@ async def test_reason_required_on_approve_raises_without_it(db_session):
     svc = ArticleLifecycleService(db_session)
     cat = await _make_category(svc)
     article = await _make_article(svc, cat.id)
-    article = await svc.transition(article=article, target_status=ArticleStatus.IN_REVIEW, actor_user_id=ACTOR_AUTHOR)
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.IN_REVIEW,
+        actor_user_id=ACTOR_AUTHOR,
+    )
 
     with pytest.raises(ArticleReasonRequiredError):
         await svc.transition(
@@ -365,8 +436,17 @@ async def test_reason_required_on_publish_raises_without_it(db_session):
     svc = ArticleLifecycleService(db_session)
     cat = await _make_category(svc)
     article = await _make_article(svc, cat.id)
-    article = await svc.transition(article=article, target_status=ArticleStatus.IN_REVIEW, actor_user_id=ACTOR_AUTHOR)
-    article = await svc.transition(article=article, target_status=ArticleStatus.APPROVED, actor_user_id=ACTOR_APPROVER, reason_for_change="OK")
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.IN_REVIEW,
+        actor_user_id=ACTOR_AUTHOR,
+    )
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.APPROVED,
+        actor_user_id=ACTOR_APPROVER,
+        reason_for_change="OK",
+    )
 
     with pytest.raises(ArticleReasonRequiredError):
         await svc.transition(
@@ -401,6 +481,7 @@ async def test_reason_not_required_on_draft_save(db_session):
 # Decision 5 — Notification dispatch
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_notification_dispatched_on_published(db_session):
     """
@@ -411,11 +492,20 @@ async def test_notification_dispatched_on_published(db_session):
     svc = ArticleLifecycleService(db_session)
     cat = await _make_category(svc)
     article = await _make_article(svc, cat.id)
-    article = await svc.transition(article=article, target_status=ArticleStatus.IN_REVIEW, actor_user_id=ACTOR_AUTHOR)
-    article = await svc.transition(article=article, target_status=ArticleStatus.APPROVED, actor_user_id=ACTOR_APPROVER, reason_for_change="OK")
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.IN_REVIEW,
+        actor_user_id=ACTOR_AUTHOR,
+    )
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.APPROVED,
+        actor_user_id=ACTOR_APPROVER,
+        reason_for_change="OK",
+    )
 
     with patch(
-        "apps.knowledge.application.article_service.publish_notification",
+        "apps.knowledge.services.article_service.publish_notification",
         new_callable=AsyncMock,
         return_value=True,
     ) as mock_notify:
@@ -442,7 +532,7 @@ async def test_no_notification_dispatched_on_draft_save(db_session):
     article = await _make_article(svc, cat.id)
 
     with patch(
-        "apps.knowledge.application.article_service.publish_notification",
+        "apps.knowledge.services.article_service.publish_notification",
         new_callable=AsyncMock,
     ) as mock_notify:
         await svc.save_draft(
@@ -457,6 +547,7 @@ async def test_no_notification_dispatched_on_draft_save(db_session):
 # Decision 8 — Audit log records emitted for all actions
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_audit_log_created_on_article_creation(db_session):
     """
@@ -465,7 +556,6 @@ async def test_audit_log_created_on_article_creation(db_session):
     @req:PRD-SYS-KH-002
     """
     from sqlalchemy import select
-    from apps.knowledge.infrastructure.models import KnowledgeArticleAuditLog
 
     svc = ArticleLifecycleService(db_session)
     cat = await _make_category(svc)
@@ -490,19 +580,32 @@ async def test_audit_log_written_on_every_transition(db_session):
     @req:PRD-SYS-KH-002
     """
     from sqlalchemy import select
-    from apps.knowledge.infrastructure.models import KnowledgeArticleAuditLog
 
     svc = ArticleLifecycleService(db_session)
     cat = await _make_category(svc)
     article = await _make_article(svc, cat.id)
-    article = await svc.transition(article=article, target_status=ArticleStatus.IN_REVIEW, actor_user_id=ACTOR_AUTHOR)
-    article = await svc.transition(article=article, target_status=ArticleStatus.APPROVED, actor_user_id=ACTOR_APPROVER, reason_for_change="Approved")
-    article = await svc.transition(article=article, target_status=ArticleStatus.PUBLISHED, actor_user_id=ACTOR_APPROVER, reason_for_change="Published")
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.IN_REVIEW,
+        actor_user_id=ACTOR_AUTHOR,
+    )
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.APPROVED,
+        actor_user_id=ACTOR_APPROVER,
+        reason_for_change="Approved",
+    )
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.PUBLISHED,
+        actor_user_id=ACTOR_APPROVER,
+        reason_for_change="Published",
+    )
 
     result = await db_session.execute(
-        select(KnowledgeArticleAuditLog).where(
-            KnowledgeArticleAuditLog.article_id == article.id
-        ).order_by(KnowledgeArticleAuditLog.created_at.asc())
+        select(KnowledgeArticleAuditLog)
+        .where(KnowledgeArticleAuditLog.article_id == article.id)
+        .order_by(KnowledgeArticleAuditLog.created_at.asc())
     )
     logs = result.scalars().all()
     actions = [log.action for log in logs]
@@ -520,7 +623,6 @@ async def test_audit_log_immutability_enforced(db_session):
     @req:PRD-SYS-KH-002
     """
     from sqlalchemy import select
-    from apps.knowledge.infrastructure.models import KnowledgeArticleAuditLog
 
     svc = ArticleLifecycleService(db_session)
     cat = await _make_category(svc)

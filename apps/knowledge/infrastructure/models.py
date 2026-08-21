@@ -24,7 +24,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
-from apps.knowledge.domain.models import ArticleAuditAction, ArticleStatus
+from apps.knowledge.domain.models import ArticleStatus
 
 
 class Base(DeclarativeBase):
@@ -141,7 +141,9 @@ class KnowledgeArticle(Base):
     # Relationships
     category: Mapped[KnowledgeCategory] = relationship(back_populates="articles")
     versions: Mapped[list[KnowledgeArticleVersion]] = relationship(
-        back_populates="article", cascade="all, delete-orphan", order_by="KnowledgeArticleVersion.version_index"
+        back_populates="article",
+        cascade="all, delete-orphan",
+        order_by="KnowledgeArticleVersion.version_index",
     )
     audit_logs: Mapped[list[KnowledgeArticleAuditLog]] = relationship(
         back_populates="article"
@@ -267,13 +269,16 @@ class ContextualHelpMapping(Base):
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
 
     # Relationships
-    article: Mapped[KnowledgeArticle] = relationship(back_populates="contextual_mappings")
+    article: Mapped[KnowledgeArticle] = relationship(
+        back_populates="contextual_mappings"
+    )
 
 
 # ---------------------------------------------------------------------------
 # Immutability guard — prevents any update or deletion of audit log records.
 # Mirrors the pattern in apps/tickets/infrastructure/models.py.
 # ---------------------------------------------------------------------------
+
 
 @event.listens_for(Session, "before_flush")
 def prevent_audit_log_modification(session: Session, flush_context, instances) -> None:

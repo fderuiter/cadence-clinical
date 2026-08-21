@@ -94,6 +94,7 @@ RULES = {
         "allowed": [
             "scripts/**/*.sh",
             ".jules/**/*.sh",
+            ".agents/**/*.sh",
         ],
         "description": "Shell scripts (*.sh) must reside in scripts/ or its subfolders.",
     },
@@ -106,6 +107,7 @@ RULES = {
             "tests/**/*.js",
             "verification/**/*.js",
             ".jules/**/*.js",
+            ".agents/**/*.js",
         ],
         "description": "JavaScript files (*.js) must reside in apps/, packages/, scripts/, docs/, tests/, or verification/.",
     },
@@ -118,6 +120,7 @@ RULES = {
             "tests/**/*.mjs",
             "verification/**/*.mjs",
             ".jules/**/*.mjs",
+            ".agents/**/*.mjs",
         ],
         "description": "MJS files (*.mjs) must reside in apps/, packages/, scripts/, docs/, tests/, or verification/.",
     },
@@ -131,6 +134,8 @@ RULES = {
             "verification/**/*.md",
             ".github/**/*.md",
             ".jules/**/*.md",
+            ".agents/**/*.md",
+            ".scratch/**/*.md",
         ],
         "description": "Markdown files (*.md) must reside in apps/, packages/, docs/, scripts/, tests/, verification/, or .github/.",
     },
@@ -179,6 +184,8 @@ APPROVED_SUBDIRECTORIES = {
     ".cadence/",
     ".jules/",
     "data/",
+    ".agents/",
+    ".scratch/",
 }
 
 
