@@ -85,7 +85,7 @@ Chosen option: **Option 1 (StoragePort Protocol & Relational Envelope Pattern)**
 
 * **Packages:**
   - `packages/storage/`: Defines `StoragePort[T]`, `S3StorageAdapter`, and `MinioStorageAdapter`.
-  - `apps/execution/` and `apps/fileshare/`: Consume `StoragePort` for eTMF, eISF, and general file transfers.
+  - `apps/execution/`, `apps/etmf/`, and `apps/eisf/`: Consume `StoragePort` for eTMF, eISF, and general file transfers.
 * **Verification:**
   - Unit tests with `packages.testing.fakes.InMemoryStoragePort`.
   - Integration tests verifying SHA-256 checksum mismatch rejection and MinIO pre-signed URL generation.
