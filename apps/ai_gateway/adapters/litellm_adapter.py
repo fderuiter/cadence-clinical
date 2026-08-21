@@ -95,8 +95,11 @@ class LiteLLMAdapter(AIEnginePort):
         # Support JSON mode / Structured Outputs
         if request.response_schema is not None:
             kwargs["response_format"] = {
-                "type": "json_object",
-                "schema": request.response_schema,
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "response_schema",
+                    "schema": request.response_schema,
+                },
             }
 
         try:

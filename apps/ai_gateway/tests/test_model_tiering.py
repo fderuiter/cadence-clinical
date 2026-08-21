@@ -10,7 +10,7 @@ from apps.ai_gateway.domain.models import ModelTier
 def test_tier_model_resolution_defaults():
     """Verify default model resolution for each execution tier.
 
-    @req:PRD-SYS-090
+    @req:PRD-SYS-051
     """
     adapter = LiteLLMAdapter(
         tier_1_model="ollama/llama3",
@@ -31,7 +31,7 @@ def test_tier_model_resolution_defaults():
 def test_tier_model_override():
     """Verify explicit model override takes precedence over tier defaults.
 
-    @req:PRD-SYS-090
+    @req:PRD-SYS-051
     """
     adapter = LiteLLMAdapter()
     resolved = adapter.resolve_model(
@@ -44,7 +44,7 @@ def test_tier_model_override():
 def test_tier_environment_variable_configuration():
     """Verify tier model destinations can be configured via environment variables.
 
-    @req:PRD-SYS-090
+    @req:PRD-SYS-051
     """
     env_vars = {
         "AI_TIER_1_MODEL": "local-vllm/mistral-7b",
@@ -69,7 +69,7 @@ def test_tier_environment_variable_configuration():
 def test_get_tier_info_structure():
     """Verify tier information contains all required clinical capabilities.
 
-    @req:PRD-SYS-090
+    @req:PRD-SYS-051
     """
     adapter = LiteLLMAdapter()
     tier_info_list = adapter.get_tier_info()

@@ -22,21 +22,10 @@ from apps.ai_gateway.presentation.dtos import (
 
 router = APIRouter(prefix="/api/v1/ai", tags=["Inference"])
 
-_default_ai_engine: AIEnginePort | None = None
-
 
 def get_ai_engine() -> AIEnginePort:
-    """Dependency provider for the AI engine adapter."""
-    global _default_ai_engine
-    if _default_ai_engine is None:
-        _default_ai_engine = LiteLLMAdapter()
-    return _default_ai_engine
-
-
-def set_ai_engine_override(engine: AIEnginePort | None) -> None:
-    """Set or clear a global AI engine override for testing environments."""
-    global _default_ai_engine
-    _default_ai_engine = engine
+    """Dependency provider factory for the AI engine adapter."""
+    return LiteLLMAdapter()
 
 
 AIEngineDep = Annotated[AIEnginePort, Depends(get_ai_engine)]
@@ -52,7 +41,18 @@ async def generate_completion(
     payload: GenerationRequestDTO,
     engine: AIEngineDep,
 ) -> GenerationResponseDTO:
-    """Generate completion text or structured JSON data conforming to a requested schema."""
+    """Generate completion text or structured JSON data conforming to a requested schema.
+
+    Args:
+        payload: GenerationRequestDTO containing prompt/messages, tier, and optional schema.
+        engine: Injected AIEnginePort adapter.
+
+    Returns:
+        GenerationResponseDTO with content, structured data, token usage, and telemetry.
+
+    Raises:
+        HTTPException: If payload is missing prompt/messages or inference fails.
+    """
     if not payload.prompt and not payload.messages:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -114,7 +114,18 @@ async def generate_embeddings(
     payload: EmbeddingRequestDTO,
     engine: AIEngineDep,
 ) -> EmbeddingResponseDTO:
-    """Generate float vector embeddings for input text strings."""
+    """Generate float vector embeddings for input text strings.
+
+    Args:
+        payload: EmbeddingRequestDTO containing batch of text strings and model tier.
+        engine: Injected AIEnginePort adapter.
+
+    Returns:
+        EmbeddingResponseDTO containing generated float vectors and usage metrics.
+
+    Raises:
+        HTTPException: If embedding generation encounters an upstream error.
+    """
     domain_request = EmbeddingRequest(
         input_texts=payload.input_texts,
         tier=payload.tier,
@@ -152,7 +163,14 @@ async def generate_embeddings(
 async def list_tiers(
     engine: AIEngineDep,
 ) -> list[TierInfoDTO]:
-    """List all available execution tiers and active model configurations."""
+    """List all available execution tiers and active model configurations.
+
+    Args:
+        engine: Injected AIEnginePort adapter.
+
+    Returns:
+        List of TierInfoDTO describing active tier mappings and capabilities.
+    """
     tiers = engine.get_tier_info()
     return [
         TierInfoDTO(

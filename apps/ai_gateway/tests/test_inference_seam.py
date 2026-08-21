@@ -1,59 +1,29 @@
 """Inference seam tests for AI Gateway microservice."""
 
-import time
-
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from apps.ai_gateway.adapters.mock_adapter import MockAIEngineAdapter
-from apps.ai_gateway.main import app, set_ai_engine_override
-from packages.testing.security import generate_signature
+from apps.ai_gateway.main import app
+from apps.ai_gateway.presentation.routers.inference import get_ai_engine
+from packages.testing.security import create_test_auth_headers
 
 
 @pytest_asyncio.fixture(autouse=True)
 def setup_ai_gateway():
-    """Setup mock AI engine for deterministic testing."""
+    """Setup mock AI engine for deterministic testing via FastAPI dependency overrides."""
     mock_engine = MockAIEngineAdapter()
-    set_ai_engine_override(mock_engine)
+    app.dependency_overrides[get_ai_engine] = lambda: mock_engine
     yield mock_engine
-    set_ai_engine_override(None)
-
-
-def get_auth_headers(
-    roles: str = "admin",
-    change_reason: str = "AI inference test execution",
-    site_id: str | None = None,
-    user_id: str = "test_data_manager",
-) -> dict[str, str]:
-    """Produce authentic HMAC security headers for gateway testing."""
-    timestamp = str(time.time())
-    sig = generate_signature(
-        user_id,
-        roles,
-        timestamp,
-        version="2",
-        change_reason=change_reason,
-        site_id=site_id,
-    )
-    headers = {
-        "X-User-Id": user_id,
-        "X-User-Roles": roles,
-        "X-Gateway-Timestamp": timestamp,
-        "X-Gateway-Signature": sig,
-        "X-Signature-Version": "2",
-        "X-Change-Reason": change_reason,
-    }
-    if site_id:
-        headers["X-Site-Id"] = site_id
-    return headers
+    app.dependency_overrides.pop(get_ai_engine, None)
 
 
 @pytest.mark.asyncio
 async def test_health_check():
     """Verify service health check endpoint responds with ok status.
 
-    @req:PRD-SYS-090
+    @req:PRD-SYS-051
     """
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -68,10 +38,14 @@ async def test_health_check():
 async def test_text_generation_seam():
     """Verify single-turn text generation executes through public REST seam.
 
-    @req:PRD-SYS-090
+    @req:PRD-SYS-051
     """
     transport = ASGITransport(app=app)
-    headers = get_auth_headers()
+    headers = create_test_auth_headers(
+        user_id="test_data_manager",
+        roles=["Data Manager"],
+        change_reason="AI inference test execution",
+    )
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         payload = {
             "prompt": "Summarize protocol inclusion criteria.",
@@ -96,10 +70,14 @@ async def test_text_generation_seam():
 async def test_structured_output_generation_seam():
     """Verify structured output extraction enforces JSON schema.
 
-    @req:PRD-SYS-090
+    @req:PRD-SYS-051
     """
     transport = ASGITransport(app=app)
-    headers = get_auth_headers()
+    headers = create_test_auth_headers(
+        user_id="test_data_manager",
+        roles=["Data Manager"],
+        change_reason="Structured output test execution",
+    )
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         schema = {
             "type": "object",
@@ -131,10 +109,14 @@ async def test_structured_output_generation_seam():
 async def test_embeddings_generation_seam():
     """Verify dense vector embeddings generation for text batches.
 
-    @req:PRD-SYS-090
+    @req:PRD-SYS-051
     """
     transport = ASGITransport(app=app)
-    headers = get_auth_headers()
+    headers = create_test_auth_headers(
+        user_id="test_data_manager",
+        roles=["Data Manager"],
+        change_reason="Embeddings test execution",
+    )
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         payload = {
             "input_texts": [
@@ -159,10 +141,14 @@ async def test_embeddings_generation_seam():
 async def test_tier_listing_seam():
     """Verify tier configuration endpoint lists all active execution tiers.
 
-    @req:PRD-SYS-090
+    @req:PRD-SYS-051
     """
     transport = ASGITransport(app=app)
-    headers = get_auth_headers()
+    headers = create_test_auth_headers(
+        user_id="test_data_manager",
+        roles=["Data Manager"],
+        change_reason="List tiers test execution",
+    )
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/api/v1/ai/tiers", headers=headers)
         assert response.status_code == 200
@@ -178,10 +164,14 @@ async def test_tier_listing_seam():
 async def test_invalid_generation_payload():
     """Verify 422 error when neither prompt nor messages is supplied.
 
-    @req:PRD-SYS-090
+    @req:PRD-SYS-051
     """
     transport = ASGITransport(app=app)
-    headers = get_auth_headers()
+    headers = create_test_auth_headers(
+        user_id="test_data_manager",
+        roles=["Data Manager"],
+        change_reason="Invalid payload test",
+    )
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         payload = {
             "tier": "tier_2_fast",

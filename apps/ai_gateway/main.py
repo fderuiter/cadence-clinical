@@ -15,7 +15,6 @@ from apps.ai_gateway.presentation.dtos import (
 )
 from apps.ai_gateway.presentation.routers.inference import (
     get_ai_engine,
-    set_ai_engine_override,
 )
 from apps.ai_gateway.presentation.routers.inference import (
     router as inference_router,
@@ -59,5 +58,4 @@ __all__ = [
     "get_ai_engine",
     "health_check",
     "inference_router",
-    "set_ai_engine_override",
 ]

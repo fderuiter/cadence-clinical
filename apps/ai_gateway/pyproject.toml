@@ -12,7 +12,6 @@ requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.139.2,<0.140.0",
     "litellm>=1.97.0",
-    "packages-database",
     "packages-hexagonal",
     "packages-security",
     "pydantic>=2.6.0",

@@ -243,7 +243,6 @@ source = { editable = "apps/ai_gateway" }
 dependencies = [
     { name = "fastapi" },
     { name = "litellm" },
-    { name = "packages-database" },
     { name = "packages-hexagonal" },
     { name = "packages-security" },
     { name = "pydantic" },
@@ -253,7 +252,6 @@ dependencies = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.139.2,<0.140.0" },
     { name = "litellm", specifier = ">=1.97.0" },
-    { name = "packages-database", editable = "packages/database" },
     { name = "packages-hexagonal", editable = "packages/hexagonal" },
     { name = "packages-security", editable = "packages/security" },
     { name = "pydantic", specifier = ">=2.6.0" },
