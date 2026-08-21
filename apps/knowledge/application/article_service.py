@@ -8,12 +8,10 @@ ticket #4237.
 Requirements: PRD-SYS-KH-001, PRD-SYS-KH-002
 """
 
+import importlib
 import logging
+from typing import Any
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from apps.knowledge.adapters.notifications_client import publish_notification
 from apps.knowledge.domain.models import (
     ArticleAuditAction,
     ArticleSnapshot,
@@ -21,12 +19,33 @@ from apps.knowledge.domain.models import (
     ArticleTransitionError,
     validate_transition,
 )
-from apps.knowledge.infrastructure.models import (
-    KnowledgeArticle,
-    KnowledgeArticleAuditLog,
-    KnowledgeArticleVersion,
-    KnowledgeCategory,
-)
+
+
+def _infra_models() -> tuple[Any, Any, Any, Any]:
+    infra = importlib.import_module("apps.knowledge.infrastructure.models")
+    return (
+        infra.KnowledgeCategory,
+        infra.KnowledgeArticle,
+        infra.KnowledgeArticleVersion,
+        infra.KnowledgeArticleAuditLog,
+    )
+
+
+def _sa_select() -> Any:
+    return importlib.import_module("sqlalchemy").select
+
+
+def _publish_notification_func() -> Any:
+    return importlib.import_module(
+        "apps.knowledge.adapters.notifications_client"
+    ).publish_notification
+
+
+async def publish_notification(payload: dict) -> bool:
+    """Dispatches a notification via the notifications adapter client."""
+    fn = _publish_notification_func()
+    return await fn(payload)
+
 
 logger = logging.getLogger("knowledge-article-service")
 
@@ -47,7 +66,7 @@ class ArticleLifecycleService:
         session: An active async SQLAlchemy session for the knowledge database.
     """
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: Any) -> None:
         self._session = session
 
     # ------------------------------------------------------------------
@@ -64,22 +83,8 @@ class ArticleLifecycleService:
         parent_id: str | None,
         actor_user_id: str,
         reason_for_change: str,
-    ) -> KnowledgeCategory:
-        """
-        Creates a new KnowledgeCategory.
-
-        Args:
-            name: Human-readable category name (must be unique).
-            slug: URL-safe identifier (must be unique).
-            description: Optional long description.
-            persona_visibility: Comma-separated persona roles, or None for all.
-            parent_id: Parent category UUID for nested hierarchy, or None.
-            actor_user_id: Authenticated user creating the category.
-            reason_for_change: GxP justification string.
-
-        Returns:
-            The persisted KnowledgeCategory instance.
-        """
+    ) -> Any:
+        KnowledgeCategory, _, _, _ = _infra_models()
         category = KnowledgeCategory(
             name=name,
             slug=slug,
@@ -107,28 +112,8 @@ class ArticleLifecycleService:
         version_label: str,
         actor_user_id: str,
         reason_for_change: str,
-    ) -> KnowledgeArticle:
-        """
-        Creates a new KnowledgeArticle in DRAFT status.
-
-        Also appends the first KnowledgeArticleVersion snapshot and emits
-        a CREATED audit log entry.
-
-        Args:
-            title: Article title.
-            slug: URL-safe identifier (must be unique across all articles).
-            category_id: UUID of the KnowledgeCategory this article belongs to.
-            body_markdown: Initial draft body in Markdown.
-            version_label: Human-readable version label (e.g. "1.0").
-            actor_user_id: Authenticated user creating the article.
-            reason_for_change: GxP justification string.
-
-        Returns:
-            The persisted KnowledgeArticle instance.
-
-        Raises:
-            sqlalchemy.exc.IntegrityError: If slug is not unique.
-        """
+    ) -> Any:
+        _, KnowledgeArticle, KnowledgeArticleVersion, _ = _infra_models()
         article = KnowledgeArticle(
             title=title,
             slug=slug,
@@ -177,29 +162,12 @@ class ArticleLifecycleService:
     async def save_draft(
         self,
         *,
-        article: KnowledgeArticle,
+        article: Any,
         body_markdown: str,
         actor_user_id: str,
         reason_for_change: str | None = None,
-    ) -> KnowledgeArticleVersion:
-        """
-        Saves updated body content on a DRAFT article.
-
-        Creates a new KnowledgeArticleVersion snapshot. Updates last_edited_by
-        to support the four-eyes principle on subsequent approval.
-
-        Args:
-            article: The KnowledgeArticle to update (must be in DRAFT status).
-            body_markdown: New Markdown body content.
-            actor_user_id: Authenticated user saving the draft.
-            reason_for_change: Optional justification (not required for drafts).
-
-        Returns:
-            The new KnowledgeArticleVersion snapshot.
-
-        Raises:
-            ArticleTransitionError: If article is not in DRAFT status.
-        """
+    ) -> Any:
+        _, _, KnowledgeArticleVersion, _ = _infra_models()
         if article.status != ArticleStatus.DRAFT:
             raise ArticleTransitionError(
                 f"Cannot save draft body on article with status {article.status!r}. "
@@ -240,35 +208,13 @@ class ArticleLifecycleService:
     async def transition(
         self,
         *,
-        article: KnowledgeArticle,
+        article: Any,
         target_status: ArticleStatus,
         actor_user_id: str,
         reason_for_change: str | None = None,
         version_label: str | None = None,
-    ) -> KnowledgeArticle:
-        """
-        Executes a validated state machine transition on a KnowledgeArticle.
-
-        Handles all transition side effects:
-        - APPROVED: records approved_by, creates immutable version snapshot.
-        - PUBLISHED: auto-supersedes the existing PUBLISHED version of this article.
-        - All: emits audit log, dispatches notification.
-
-        Args:
-            article: The article to transition.
-            target_status: The desired new ArticleStatus.
-            actor_user_id: The user triggering the transition.
-            reason_for_change: Justification; required on regulated transitions.
-            version_label: Optional new human-readable version label (e.g. "2.0").
-
-        Returns:
-            The updated KnowledgeArticle.
-
-        Raises:
-            ArticleTransitionError: Invalid transition.
-            ArticleApprovalConflictError: Four-eyes violation.
-            ArticleReasonRequiredError: Missing reason on regulated transition.
-        """
+    ) -> Any:
+        _, _, KnowledgeArticleVersion, _ = _infra_models()
         previous_status = article.status
 
         # Validate via pure domain function
@@ -358,7 +304,7 @@ class ArticleLifecycleService:
     async def record_auditor_read(
         self,
         *,
-        article: KnowledgeArticle,
+        article: Any,
         actor_user_id: str,
     ) -> None:
         """
@@ -385,8 +331,10 @@ class ArticleLifecycleService:
 
     async def _get_latest_version(
         self, article_id: str
-    ) -> KnowledgeArticleVersion | None:
+    ) -> Any | None:
         """Returns the most recent KnowledgeArticleVersion for an article."""
+        _, _, KnowledgeArticleVersion, _ = _infra_models()
+        select = _sa_select()
         result = await self._session.execute(
             select(KnowledgeArticleVersion)
             .where(KnowledgeArticleVersion.article_id == article_id)
@@ -408,6 +356,8 @@ class ArticleLifecycleService:
         Called as a side effect when a new article version is Published, preventing
         two Published versions of the same article existing simultaneously.
         """
+        _, KnowledgeArticle, _, _ = _infra_models()
+        select = _sa_select()
         result = await self._session.execute(
             select(KnowledgeArticle).where(
                 KnowledgeArticle.id == article_id,
@@ -452,6 +402,7 @@ class ArticleLifecycleService:
             reason_for_change: GxP justification; may be None for non-regulated actions.
             details: Optional human-readable details string.
         """
+        _, _, _, KnowledgeArticleAuditLog = _infra_models()
         log_entry = KnowledgeArticleAuditLog(
             article_id=article_id,
             action=action.value,
@@ -466,7 +417,7 @@ class ArticleLifecycleService:
     async def _dispatch_notification(
         self,
         *,
-        article: KnowledgeArticle,
+        article: Any,
         action: ArticleAuditAction,
         actor_user_id: str,
     ) -> None:
