@@ -375,6 +375,10 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
             "alembic",
             "deid",
             "coverage",
+            ".agents",
+            ".scratch",
+            ".jules",
+            ".cadence",
         }:
             return True
 

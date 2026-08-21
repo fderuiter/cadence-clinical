@@ -18,7 +18,6 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from apps.knowledge.application.article_service import ArticleLifecycleService
 from apps.knowledge.domain.models import (
     ArticleApprovalConflictError,
     ArticleReasonRequiredError,
@@ -30,6 +29,7 @@ from apps.knowledge.infrastructure.models import (
     KnowledgeArticleAuditLog,
     KnowledgeCategory,
 )
+from apps.knowledge.infrastructure.services import ArticleLifecycleService
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -505,7 +505,7 @@ async def test_notification_dispatched_on_published(db_session):
     )
 
     with patch(
-        "apps.knowledge.application.article_service.publish_notification",
+        "apps.knowledge.infrastructure.services.publish_notification",
         new_callable=AsyncMock,
         return_value=True,
     ) as mock_notify:
@@ -532,7 +532,7 @@ async def test_no_notification_dispatched_on_draft_save(db_session):
     article = await _make_article(svc, cat.id)
 
     with patch(
-        "apps.knowledge.application.article_service.publish_notification",
+        "apps.knowledge.infrastructure.services.publish_notification",
         new_callable=AsyncMock,
     ) as mock_notify:
         await svc.save_draft(

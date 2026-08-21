@@ -97,7 +97,7 @@ RULES = {
             ".agents/**/*.sh",
             ".scratch/**/*.sh",
         ],
-        "description": "Shell scripts (*.sh) must reside in scripts/ or its subfolders.",
+        "description": "Shell scripts (*.sh) must reside in scripts/ or .jules/.",
     },
     "*.js": {
         "allowed": [
@@ -110,7 +110,7 @@ RULES = {
             ".jules/**/*.js",
             ".agents/**/*.js",
         ],
-        "description": "JavaScript files (*.js) must reside in apps/, packages/, scripts/, docs/, tests/, or verification/.",
+        "description": "JavaScript files (*.js) must reside in apps/, packages/, scripts/, docs/, tests/, verification/, or .jules/.",
     },
     "*.mjs": {
         "allowed": [
@@ -123,7 +123,7 @@ RULES = {
             ".jules/**/*.mjs",
             ".agents/**/*.mjs",
         ],
-        "description": "MJS files (*.mjs) must reside in apps/, packages/, scripts/, docs/, tests/, or verification/.",
+        "description": "MJS files (*.mjs) must reside in apps/, packages/, scripts/, docs/, tests/, verification/, or .jules/.",
     },
     "*.md": {
         "allowed": [
@@ -138,7 +138,7 @@ RULES = {
             ".agents/**/*.md",
             ".scratch/**/*.md",
         ],
-        "description": "Markdown files (*.md) must reside in apps/, packages/, docs/, scripts/, tests/, verification/, or .github/.",
+        "description": "Markdown files (*.md) must reside in apps/, packages/, docs/, scripts/, tests/, verification/, .github/, or .jules/.",
     },
     "*.yaml": {
         "allowed": [
@@ -149,6 +149,7 @@ RULES = {
             "docker/**/*.yaml",
             "packages/**/*.yaml",
             "apps/**/*.yaml",
+            "scripts/**/*.yaml",
         ],
         "description": "YAML files (*.yaml) must reside in permitted directories.",
     },
@@ -161,6 +162,7 @@ RULES = {
             "docker/**/*.yml",
             "packages/**/*.yml",
             "apps/**/*.yml",
+            "scripts/**/*.yml",
         ],
         "description": "YML files (*.yml) must reside in permitted directories.",
     },

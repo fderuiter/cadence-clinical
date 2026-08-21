@@ -14,7 +14,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.knowledge.adapters.database import get_db_session
-from apps.knowledge.application.article_service import ArticleLifecycleService
 from apps.knowledge.domain.models import (
     ArticleApprovalConflictError,
     ArticleReasonRequiredError,
@@ -28,6 +27,7 @@ from apps.knowledge.infrastructure.models import (
     KnowledgeArticleVersion,
     KnowledgeCategory,
 )
+from apps.knowledge.infrastructure.services import ArticleLifecycleService
 from apps.knowledge.presentation.dtos import (
     ArticleCreate,
     ArticleDraftSave,

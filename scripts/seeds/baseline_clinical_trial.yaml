@@ -1,0 +1,126 @@
+version: "1.0"
+description: "Baseline Clinical Trial Seed Data"
+
+studies:
+  - id: "study_1"
+    title: "Oncology Phase II"
+    desc: "A study for solid tumors."
+    version_id: "ver_study_1"
+    version_tag: "1.0"
+    status: "DRAFT"
+  - id: "study_001"
+    title: "Cardiovascular Phase III"
+    desc: "Cardiovascular study"
+    version_id: "ver_study_001"
+    version_tag: "1.0"
+    status: "APPROVED"
+  - id: "study_abc"
+    title: "Immunology Phase I"
+    desc: "Immunology study"
+    version_id: "ver_study_abc"
+    version_tag: "1.0"
+    status: "DRAFT"
+  - id: "study_xyz"
+    title: "Neurology Phase II"
+    desc: "Neurology study"
+    version_id: "ver_study_xyz"
+    version_tag: "1.0"
+    status: "APPROVED"
+  - id: "study_123"
+    title: "Pediatric Vaccine Trial"
+    desc: "Pediatric trial"
+    version_id: "ver_study_123"
+    version_tag: "1.0"
+    status: "DRAFT"
+  - id: "study_111"
+    title: "Rare Disease Study"
+    desc: "Rare disease study"
+    version_id: "ver_study_111"
+    version_tag: "1.0"
+    status: "APPROVED"
+  - id: "CADENCE-101"
+    title: "Multi-Center Phase II Oncology Baseline Trial"
+    desc: "CADENCE-101 Baseline Trial for EDC and MDR Integration"
+    version_id: "ver_CADENCE-101"
+    version_tag: "1.0"
+    status: "APPROVED"
+
+etmf:
+  studies:
+    - "study_001"
+    - "study_abc"
+    - "study_xyz"
+    - "study_123"
+    - "study_111"
+    - "CADENCE-101"
+  milestones:
+    - "INITIATION"
+    - "CONDUCT"
+    - "CLOSEOUT"
+
+econsent:
+  records:
+    - id: "CONSENT-001"
+      subject_pseudonym: "SUBJ-101-001"
+      study_id: "CADENCE-101"
+      site_id: "SITE-101"
+      template_id: "ICF-TEMPLATE-001"
+      version_index: 1
+      protocol_version: "1.0"
+      source_content_identity: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      server_timestamp: "2026-08-01T10:00:00Z"
+      signature_manifest: '{"signature_type": "ELECTRONIC", "algorithm": "ES256"}'
+      created_at: "2026-08-01T10:00:00Z"
+      created_by: "system"
+      reason_for_change: "Initial study subject consent"
+
+eisf:
+  documents:
+    - id: "DOC-ISF-001"
+      study_id: "CADENCE-101"
+      site_id: "SITE-101"
+      binder_classification: "01_REGULATORY"
+      filename: "Form 1572 Investigator Statement v1.pdf"
+      content: "JVBERi0xLjQKJ..."
+      mime_type: "application/pdf"
+      version_index: 1
+      created_at: "2026-08-01T10:00:00Z"
+      created_by: "system"
+      sync_status: "SYNCED"
+      source_system: "eISF"
+
+safety:
+  cases:
+    - id: "SAE-001"
+      subject_id: "SUBJ-101-003"
+      term: "Febrile Neutropenia"
+      severity: "SEVERE"
+      causality: "RELATED"
+      outcome: "RESOLVED"
+      reported_at: "2026-08-10T14:30:00Z"
+
+tickets:
+  tickets:
+    - id: "TCK-101"
+      category: "DATA_DISCREPANCY"
+      title: "Out-of-range systolic blood pressure on Visit 2"
+      priority: "HIGH"
+      status: "OPEN"
+
+notifications:
+  dispatches:
+    - id: "NTF-001"
+      channel: "EMAIL"
+      recipient: "crc.site101@example.com"
+      subject: "Protocol Amendment v2.0 Pending Re-Consent"
+      status: "DELIVERED"
+      dispatched_at: "2026-08-12T09:00:00Z"
+
+interop:
+  messages:
+    - id: "MSG-001"
+      direction: "INGEST"
+      format: "CDISC_ODM"
+      payload: '{"msg": "Laboratory Result Ingest", "status": "PARSED"}'
+      status: "PROCESSED"
+      created_at: "2026-08-15T11:20:00Z"

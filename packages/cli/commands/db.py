@@ -48,7 +48,7 @@ def reset_database(
     json_mode = is_json_mode(ctx.obj)
     repo_root = Path(__file__).resolve().parents[3]
 
-    cmd = ["uv", "run", "python", "scripts/reset_db.py"]
+    cmd = ["uv", "run", "python", "scripts/db_lifecycle.py"]
     if allow_offline:
         cmd.append("--allow-offline")
 
