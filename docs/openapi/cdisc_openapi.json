@@ -861,10 +861,46 @@
       }
     },
     "/{path}": {
+      "get": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__delete",
+        "operationId": "proxy_requests__path__get",
         "parameters": [
           {
             "name": "path",
@@ -900,151 +936,7 @@
       "put": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__delete",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__delete",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "head": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__delete",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__delete",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "options": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__delete",
+        "operationId": "proxy_requests__path__get",
         "parameters": [
           {
             "name": "path",
@@ -1080,7 +972,115 @@
       "patch": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__delete",
+        "operationId": "proxy_requests__path__get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__get",
         "parameters": [
           {
             "name": "path",
@@ -23261,6 +23261,326 @@
         }
       }
     },
+    "/fileshare/api/v1/fileshare/files/upload-url": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get Upload Url",
+        "description": "Allocate draft file record and generate presigned PUT or multipart upload URLs.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
+        "operationId": "get_upload_url_api_v1_fileshare_files_upload_url_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Fileshare_FileUploadUrlRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_FileUploadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fileshare/api/v1/fileshare/files/{file_id}/download-url": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get Download Url",
+        "description": "Retrieve short-lived presigned GET download URL with permission and watermark verification.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003",
+        "operationId": "get_download_url_api_v1_fileshare_files__file_id__download_url_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_FileDownloadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fileshare/api/v1/fileshare/files/{file_id}": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get File Record",
+        "description": "Retrieve file record metadata.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "get_file_record_api_v1_fileshare_files__file_id__get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fileshare/api/v1/fileshare/files": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "List Files",
+        "description": "List active file records for a study and site.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "list_files_api_v1_fileshare_files_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Fileshare_FileRecordResponse"
+                  },
+                  "title": "Response List Files Api V1 Fileshare Files Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fileshare/api/v1/fileshare/files/{file_id}/grants": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Create Share Grant",
+        "description": "Delegate file permissions via an internal share grant.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003",
+        "operationId": "create_share_grant_api_v1_fileshare_files__file_id__grants_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Fileshare_ShareGrantCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_ShareGrantResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fileshare/api/v1/fileshare/files/{file_id}/guest-links": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Create Guest Link",
+        "description": "Generate a time-bounded external guest link.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "create_guest_link_api_v1_fileshare_files__file_id__guest_links_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Fileshare_GuestLinkCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_GuestLinkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fileshare/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Service health check endpoint.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/interop/health": {
       "get": {
         "summary": "Health Check",
@@ -24034,7 +24354,7 @@
           "knowledge"
         ],
         "summary": "List Categories",
-        "description": "Lists all active knowledge categories.\n\nReturns:\n    List of CategoryResponse objects.",
+        "description": "Lists active knowledge categories, filtered by caller's persona visibility.\n\nArgs:\n    request: FastAPI Request instance.\n    session: Injected async database session.\n\nReturns:\n    List of CategoryResponse objects.",
         "operationId": "list_categories_api_v1_knowledge_categories_get",
         "responses": {
           "200": {
@@ -24058,7 +24378,7 @@
           "knowledge"
         ],
         "summary": "Create Category",
-        "description": "Creates a new knowledge article category. Requires super_admin role.\n\nArgs:\n    payload: Category creation data.\n    session: Injected async database session.\n\nReturns:\n    The created CategoryResponse.\n\nRaises:\n    HTTPException 409: If the category name or slug already exists.",
+        "description": "Creates a new knowledge article category. Requires super_admin role.\n\nArgs:\n    payload: Category creation data.\n    session: Injected async database session.\n\nReturns:\n    The created CategoryResponse.\n\nRaises:\n    HTTPException 404: If the specified parent_id does not exist.\n    HTTPException 409: If the category name or slug already exists.",
         "operationId": "create_category_api_v1_knowledge_categories_post",
         "requestBody": {
           "content": {
@@ -24072,6 +24392,100 @@
         },
         "responses": {
           "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_CategoryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/knowledge/api/v1/knowledge/categories/{category_id}": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Get Category",
+        "description": "Retrieves a single KnowledgeCategory by ID.\n\nArgs:\n    category_id: UUID of the category to retrieve.\n    session: Injected async database session.\n\nReturns:\n    The CategoryResponse.\n\nRaises:\n    HTTPException 404: If the category does not exist or is deleted.",
+        "operationId": "get_category_api_v1_knowledge_categories__category_id__get",
+        "parameters": [
+          {
+            "name": "category_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Category Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_CategoryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Delete Category",
+        "description": "Soft-deletes a KnowledgeCategory by ID. Requires super_admin or sysadmin role.\n\nArgs:\n    category_id: UUID of the category to soft-delete.\n    reason_for_change: GxP reason for soft deletion.\n    session: Injected async database session.\n\nReturns:\n    The soft-deleted CategoryResponse.\n\nRaises:\n    HTTPException 404: If the category does not exist or is already deleted.",
+        "operationId": "delete_category_api_v1_knowledge_categories__category_id__delete",
+        "parameters": [
+          {
+            "name": "category_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Category Id"
+            }
+          },
+          {
+            "name": "reason_for_change",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "Category soft-deleted",
+              "title": "Reason For Change"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
@@ -55559,6 +55973,557 @@
         ],
         "title": "WHODrugMatch"
       },
+      "Fileshare_FileDownloadUrlResponse": {
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "title": "File Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type"
+          },
+          "download_url": {
+            "type": "string",
+            "title": "Download Url"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In",
+            "default": 3600
+          },
+          "is_watermarked": {
+            "type": "boolean",
+            "title": "Is Watermarked",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_id",
+          "filename",
+          "mime_type",
+          "download_url"
+        ],
+        "title": "FileDownloadUrlResponse",
+        "description": "Response containing short-lived presigned GET download URL and watermark policy."
+      },
+      "Fileshare_FileRecordResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "object_key": {
+            "type": "string",
+            "title": "Object Key"
+          },
+          "checksum_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checksum Sha256"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "uploaded_by": {
+            "type": "string",
+            "title": "Uploaded By"
+          },
+          "uploaded_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Uploaded At"
+          },
+          "is_on_hold": {
+            "type": "boolean",
+            "title": "Is On Hold"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "filename",
+          "mime_type",
+          "size_bytes",
+          "object_key",
+          "checksum_sha256",
+          "version_index",
+          "uploaded_by",
+          "uploaded_at",
+          "is_on_hold",
+          "created_at",
+          "created_by",
+          "reason_for_change"
+        ],
+        "title": "FileRecordResponse",
+        "description": "Response schema representing file record metadata."
+      },
+      "Fileshare_FileUploadUrlRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "filename": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Mime Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Size Bytes"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change"
+          },
+          "is_multipart": {
+            "type": "boolean",
+            "title": "Is Multipart",
+            "default": false
+          },
+          "parts_count": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Parts Count",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "filename",
+          "mime_type",
+          "size_bytes",
+          "reason_for_change"
+        ],
+        "title": "FileUploadUrlRequest",
+        "description": "Request payload to initiate a single-part or multipart upload session."
+      },
+      "Fileshare_FileUploadUrlResponse": {
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "title": "File Id"
+          },
+          "object_key": {
+            "type": "string",
+            "title": "Object Key"
+          },
+          "upload_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upload Id"
+          },
+          "upload_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upload Url"
+          },
+          "upload_urls": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upload Urls"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In",
+            "default": 3600
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_id",
+          "object_key"
+        ],
+        "title": "FileUploadUrlResponse",
+        "description": "Response containing allocated file record details and presigned upload URLs."
+      },
+      "Fileshare_GuestLinkCreateRequest": {
+        "properties": {
+          "expires_in_hours": {
+            "type": "integer",
+            "maximum": 168.0,
+            "minimum": 1.0,
+            "title": "Expires In Hours",
+            "default": 24
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "GuestLinkCreateRequest",
+        "description": "Request payload to generate an external guest link."
+      },
+      "Fileshare_GuestLinkResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "file_record_id": {
+            "type": "string",
+            "title": "File Record Id"
+          },
+          "guest_url": {
+            "type": "string",
+            "title": "Guest Url"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "access_count": {
+            "type": "integer",
+            "title": "Access Count"
+          },
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "file_record_id",
+          "guest_url",
+          "expires_at",
+          "created_by",
+          "access_count",
+          "is_valid"
+        ],
+        "title": "GuestLinkResponse",
+        "description": "Response schema for created guest links."
+      },
+      "Fileshare_HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/Fileshare_ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Fileshare_PermissionLevel": {
+        "type": "string",
+        "enum": [
+          "view",
+          "comment",
+          "download",
+          "upload_revision",
+          "reshare",
+          "approve",
+          "expire_revoke"
+        ],
+        "title": "PermissionLevel",
+        "description": "Granular permission levels for file sharing."
+      },
+      "Fileshare_ShareGrantCreateRequest": {
+        "properties": {
+          "granted_to_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Granted To User Id"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/Fileshare_ShareScope",
+            "default": "individual"
+          },
+          "permission_level": {
+            "$ref": "#/components/schemas/Fileshare_PermissionLevel",
+            "default": "view"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "ShareGrantCreateRequest",
+        "description": "Request payload to create a new internal share grant."
+      },
+      "Fileshare_ShareGrantResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "file_record_id": {
+            "type": "string",
+            "title": "File Record Id"
+          },
+          "granted_to_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Granted To User Id"
+          },
+          "granted_by_user_id": {
+            "type": "string",
+            "title": "Granted By User Id"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/Fileshare_ShareScope"
+          },
+          "permission_level": {
+            "$ref": "#/components/schemas/Fileshare_PermissionLevel"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "file_record_id",
+          "granted_to_user_id",
+          "granted_by_user_id",
+          "scope",
+          "permission_level",
+          "expires_at",
+          "revoked_at",
+          "is_active",
+          "created_at",
+          "created_by",
+          "reason_for_change"
+        ],
+        "title": "ShareGrantResponse",
+        "description": "Response schema for share grant delegations."
+      },
+      "Fileshare_ShareScope": {
+        "type": "string",
+        "enum": [
+          "study",
+          "site",
+          "individual",
+          "folder"
+        ],
+        "title": "ShareScope",
+        "description": "Scope of access granted by a share grant."
+      },
+      "Fileshare_ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
       "Interop_AcknowledgeNotificationRequest": {
         "properties": {
           "reason_for_change": {
@@ -56971,6 +57936,10 @@
             "type": "string",
             "title": "Created By"
           },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
           "version_index": {
             "type": "integer",
             "title": "Version Index"
@@ -56987,6 +57956,7 @@
           "is_deleted",
           "created_at",
           "created_by",
+          "reason_for_change",
           "version_index"
         ],
         "title": "CategoryResponse",

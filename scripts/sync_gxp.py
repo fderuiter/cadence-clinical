@@ -46,6 +46,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
+
 # Add repository root to sys.path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -104,9 +109,26 @@ def _run(
     Returns:
         The completed process result.
     """
-    print(f"\n▶  {' '.join(cmd)}")
+    import shutil
+
+    resolved_cmd = list(cmd)
+    if resolved_cmd and resolved_cmd[0] == "uv" and shutil.which("uv") is None:
+        # Fallback to current virtual environment python
+        if len(resolved_cmd) > 2 and resolved_cmd[1] == "run":
+            if resolved_cmd[2] == "--all-extras":
+                rest = resolved_cmd[3:]
+            else:
+                rest = resolved_cmd[2:]
+            if rest and rest[0] == "python":
+                resolved_cmd = [sys.executable] + rest[1:]
+            elif rest and rest[0] == "pytest":
+                resolved_cmd = [sys.executable, "-m", "pytest"] + rest[1:]
+            else:
+                resolved_cmd = [sys.executable, "-m"] + rest
+
+    print(f"\n▶  {' '.join(resolved_cmd)}")
     return subprocess.run(
-        cmd,
+        resolved_cmd,
         cwd=REPO_ROOT,
         check=check,
         capture_output=capture,

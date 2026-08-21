@@ -57,11 +57,21 @@ Key capabilities include:
 - Upon transitioning to `APPROVED`, the version record is permanently locked.
 - Editing an approved or published article increments `version_index` and initiates a new draft record.
 
-### 4. Contextual Help Matching Algorithm
+### 4. Contextual Help Matching Algorithm & Specificity Scoring
 - In-page help queries filter by route pattern match (exact match, prefix wildcard `/ecrf/*`, or parameter wildcard `/mdr/:studyId/*`) and `(persona = :role OR persona IS NULL)`.
-- Results are ordered by `priority ASC` (lowest number = highest priority), with tie-breaking on `LENGTH(route_pattern) DESC` (most specific pattern wins).
+- Hierarchical Specificity Resolution:
+  1. Route pattern specificity (Exact > Parameterized > Longest prefix wildcard > Global `/*`).
+  2. Persona specificity (Exact persona match > Universal wildcard `NULL`).
+  3. Administrator-configured `priority` integer (ascending).
+  4. Recency tie-breaker.
+- Returns 1 primary spotlight article + up to 3 secondary related guides.
 
-### 5. PostgreSQL Full-Text Search with SQLite Dialect Guard
+### 5. Frontend Help Panel UX & Fallback Escalation
+- Global slide-in right drawer (`width: 420px`) anchored to `AppShell.vue` using Vanilla CSS design tokens.
+- Lazy on-demand fetching when the drawer is toggled, with route+persona in-memory caching.
+- Unmapped fallback pane with instant search, category directory links, and pre-populated ticket escalation to `apps/tickets/`.
+
+### 6. PostgreSQL Full-Text Search with SQLite Dialect Guard
 - `search_vector` on `KnowledgeArticleVersion` indexes `title`, `tags`, and `body_markdown` with a PostgreSQL `GIN` index.
 - SQLAlchemy definitions use conditional dialect guards to allow execution against SQLite in unit test suites.
 

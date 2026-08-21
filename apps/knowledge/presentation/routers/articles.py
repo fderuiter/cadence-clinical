@@ -9,7 +9,7 @@ Requirements: PRD-SYS-KH-001, PRD-SYS-KH-002
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,7 +28,6 @@ from apps.knowledge.infrastructure.models import (
     KnowledgeArticle,
     KnowledgeArticleAuditLog,
     KnowledgeArticleVersion,
-    KnowledgeCategory,
 )
 from apps.knowledge.presentation.dtos import (
     ArticleCreate,
@@ -44,7 +43,7 @@ from apps.knowledge.presentation.dtos import (
     ContextualHelpMappingResponse,
 )
 from packages.security.context import current_user_id
-from packages.security.rbac import require_roles
+from packages.security.rbac import get_normalized_roles, require_roles
 
 logger = logging.getLogger("knowledge-router")
 
@@ -128,18 +127,23 @@ async def create_category(
     dependencies=[Depends(require_roles(*ALL_ROLES))],
 )
 async def list_categories(
+    request: Request,
     session: AsyncSession = Depends(get_db_session),
 ) -> list[CategoryResponse]:
     """
-    Lists all active knowledge categories.
+    Lists active knowledge categories, filtered by caller's persona visibility.
+
+    Args:
+        request: FastAPI Request instance.
+        session: Injected async database session.
 
     Returns:
         List of CategoryResponse objects.
     """
-    result = await session.execute(
-        select(KnowledgeCategory).where(KnowledgeCategory.is_deleted.is_(False))
-    )
-    return [CategoryResponse.model_validate(c) for c in result.scalars().all()]
+    roles = get_normalized_roles(request)
+    svc = ArticleLifecycleService(session)
+    categories = await svc.list_categories(user_roles=roles)
+    return [CategoryResponse.model_validate(c) for c in categories]
 
 
 @router.get(
@@ -170,6 +174,45 @@ async def get_category(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
         )
+    return CategoryResponse.model_validate(category)
+
+
+@router.delete(
+    "/categories/{category_id}",
+    response_model=CategoryResponse,
+    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
+)
+async def delete_category(
+    category_id: str,
+    reason_for_change: str = "Category soft-deleted",
+    session: AsyncSession = Depends(get_db_session),
+) -> CategoryResponse:
+    """
+    Soft-deletes a KnowledgeCategory by ID. Requires super_admin or sysadmin role.
+
+    Args:
+        category_id: UUID of the category to soft-delete.
+        reason_for_change: GxP reason for soft deletion.
+        session: Injected async database session.
+
+    Returns:
+        The soft-deleted CategoryResponse.
+
+    Raises:
+        HTTPException 404: If the category does not exist or is already deleted.
+    """
+    actor = current_user_id.get()
+    svc = ArticleLifecycleService(session)
+    try:
+        category = await svc.delete_category(
+            category_id=category_id,
+            actor_user_id=actor,
+            reason_for_change=reason_for_change,
+        )
+    except CategoryNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
     return CategoryResponse.model_validate(category)
 
 

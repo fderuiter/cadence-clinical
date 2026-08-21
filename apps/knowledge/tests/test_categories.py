@@ -222,152 +222,6 @@ async def test_get_category_by_id_and_slug(db_session: AsyncSession):
     assert missing is None
 
 
-@pytest.mark.asyncio
-async def test_soft_delete_category(db_session: AsyncSession):
-    """
-    Validate soft deletion of a category sets is_deleted=True and updates reason_for_change.
-
-    @req:PRD-SYS-KH-001
-    """
-    svc = ArticleLifecycleService(db_session)
-    category = await svc.create_category(
-        name="Obsolete SOPs",
-        slug="obsolete-sops",
-        description="Deprecated guidance",
-        persona_visibility=None,
-        parent_id=None,
-        actor_user_id=ACTOR_ADMIN,
-        reason_for_change="Initial setup",
-    )
-
-    assert category.is_deleted is False
-
-    deleted = await svc.delete_category(
-        category_id=category.id,
-        actor_user_id=ACTOR_ADMIN,
-        reason_for_change="Decommissioning obsolete category",
-    )
-
-    assert deleted.is_deleted is True
-    assert deleted.reason_for_change == "Decommissioning obsolete category"
-
-    # get_category_by_id should now return None
-    lookup = await svc.get_category_by_id(category.id)
-    assert lookup is None
-
-
-@pytest.mark.asyncio
-async def test_delete_nonexistent_or_already_deleted_category_raises(
-    db_session: AsyncSession,
-):
-    """
-    Validate that deleting a non-existent or already deleted category raises CategoryNotFoundError.
-
-    @req:PRD-SYS-KH-001
-    """
-    svc = ArticleLifecycleService(db_session)
-    non_existent_id = "00000000-0000-0000-0000-000000000000"
-
-    with pytest.raises(CategoryNotFoundError, match="does not exist or has already been deleted"):
-        await svc.delete_category(
-            category_id=non_existent_id,
-            actor_user_id=ACTOR_ADMIN,
-            reason_for_change="Attempting to delete non-existent",
-        )
-
-    # Create and delete once
-    category = await svc.create_category(
-        name="Temporary Category",
-        slug="temp-category",
-        description=None,
-        persona_visibility=None,
-        parent_id=None,
-        actor_user_id=ACTOR_ADMIN,
-        reason_for_change="Setup",
-    )
-    await svc.delete_category(
-        category_id=category.id,
-        actor_user_id=ACTOR_ADMIN,
-        reason_for_change="First delete",
-    )
-
-    # Deleting again should raise CategoryNotFoundError
-    with pytest.raises(CategoryNotFoundError, match="does not exist or has already been deleted"):
-        await svc.delete_category(
-            category_id=category.id,
-            actor_user_id=ACTOR_ADMIN,
-            reason_for_change="Second delete attempt",
-        )
-
-
-@pytest.mark.asyncio
-async def test_list_categories_persona_filtering(db_session: AsyncSession):
-    """
-    Validate that list_categories filters categories based on the user's persona visibility.
-
-    @req:PRD-SYS-KH-001
-    """
-    svc = ArticleLifecycleService(db_session)
-
-    # 1. Public category (persona_visibility=None)
-    await svc.create_category(
-        name="General Platform Help",
-        slug="general-help",
-        description="Public help",
-        persona_visibility=None,
-        parent_id=None,
-        actor_user_id=ACTOR_ADMIN,
-        reason_for_change="Public category",
-    )
-
-    # 2. CRC category
-    await svc.create_category(
-        name="Site CRC Guidelines",
-        slug="crc-guidelines",
-        description="CRC SOPs",
-        persona_visibility="site_crc,cra_monitor",
-        parent_id=None,
-        actor_user_id=ACTOR_ADMIN,
-        reason_for_change="CRC category",
-    )
-
-    # 3. Data Manager category
-    await svc.create_category(
-        name="Data Management Guidelines",
-        slug="dm-guidelines",
-        description="DM SOPs",
-        persona_visibility="data_manager",
-        parent_id=None,
-        actor_user_id=ACTOR_ADMIN,
-        reason_for_change="DM category",
-    )
-
-    # 4. Admin category
-    await svc.create_category(
-        name="Admin Secrets",
-        slug="admin-secrets",
-        description="Admin only",
-        persona_visibility="super_admin",
-        parent_id=None,
-        actor_user_id=ACTOR_ADMIN,
-        reason_for_change="Admin category",
-    )
-
-    # Admin sees all 4 categories
-    admin_cats = await svc.list_categories(user_roles=["super_admin"])
-    assert len(admin_cats) == 4
-
-    # CRC user sees General Platform Help and Site CRC Guidelines (2 categories)
-    crc_cats = await svc.list_categories(user_roles=["site_crc", "crc"])
-    crc_slugs = {c.slug for c in crc_cats}
-    assert crc_slugs == {"general-help", "crc-guidelines"}
-
-    # Data Manager sees General Platform Help and Data Management Guidelines (2 categories)
-    dm_cats = await svc.list_categories(user_roles=["data_manager"])
-    dm_slugs = {c.slug for c in dm_cats}
-    assert dm_slugs == {"general-help", "dm-guidelines"}
-
-
 # ---------------------------------------------------------------------------
 # Integration tests — REST API Endpoints
 # ---------------------------------------------------------------------------
@@ -471,6 +325,156 @@ async def test_api_create_and_get_category(
             headers=auth_headers_admin,
         )
         assert dup_resp.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_soft_delete_category(db_session: AsyncSession):
+    """
+    Validate soft deletion of a category sets is_deleted=True and updates reason_for_change.
+
+    @req:PRD-SYS-KH-001
+    """
+    svc = ArticleLifecycleService(db_session)
+    category = await svc.create_category(
+        name="Obsolete SOPs",
+        slug="obsolete-sops",
+        description="Deprecated guidance",
+        persona_visibility=None,
+        parent_id=None,
+        actor_user_id=ACTOR_ADMIN,
+        reason_for_change="Initial setup",
+    )
+
+    assert category.is_deleted is False
+
+    deleted = await svc.delete_category(
+        category_id=category.id,
+        actor_user_id=ACTOR_ADMIN,
+        reason_for_change="Decommissioning obsolete category",
+    )
+
+    assert deleted.is_deleted is True
+    assert deleted.reason_for_change == "Decommissioning obsolete category"
+
+    # get_category_by_id should now return None
+    lookup = await svc.get_category_by_id(category.id)
+    assert lookup is None
+
+
+@pytest.mark.asyncio
+async def test_delete_nonexistent_or_already_deleted_category_raises(
+    db_session: AsyncSession,
+):
+    """
+    Validate that deleting a non-existent or already deleted category raises CategoryNotFoundError.
+
+    @req:PRD-SYS-KH-001
+    """
+    svc = ArticleLifecycleService(db_session)
+    non_existent_id = "00000000-0000-0000-0000-000000000000"
+
+    with pytest.raises(
+        CategoryNotFoundError, match="does not exist or has already been deleted"
+    ):
+        await svc.delete_category(
+            category_id=non_existent_id,
+            actor_user_id=ACTOR_ADMIN,
+            reason_for_change="Attempting to delete non-existent",
+        )
+
+    # Create and delete once
+    category = await svc.create_category(
+        name="Temporary Category",
+        slug="temp-category",
+        description=None,
+        persona_visibility=None,
+        parent_id=None,
+        actor_user_id=ACTOR_ADMIN,
+        reason_for_change="Setup",
+    )
+    await svc.delete_category(
+        category_id=category.id,
+        actor_user_id=ACTOR_ADMIN,
+        reason_for_change="First delete",
+    )
+
+    # Deleting again should raise CategoryNotFoundError
+    with pytest.raises(
+        CategoryNotFoundError, match="does not exist or has already been deleted"
+    ):
+        await svc.delete_category(
+            category_id=category.id,
+            actor_user_id=ACTOR_ADMIN,
+            reason_for_change="Second delete attempt",
+        )
+
+
+@pytest.mark.asyncio
+async def test_list_categories_persona_filtering(db_session: AsyncSession):
+    """
+    Validate that list_categories filters categories based on the user's persona visibility.
+
+    @req:PRD-SYS-KH-001
+    """
+    svc = ArticleLifecycleService(db_session)
+
+    # 1. Public category (persona_visibility=None)
+    await svc.create_category(
+        name="General Platform Help",
+        slug="general-help",
+        description="Public help",
+        persona_visibility=None,
+        parent_id=None,
+        actor_user_id=ACTOR_ADMIN,
+        reason_for_change="Public category",
+    )
+
+    # 2. CRC category
+    await svc.create_category(
+        name="Site CRC Guidelines",
+        slug="crc-guidelines",
+        description="CRC SOPs",
+        persona_visibility="site_crc,cra_monitor",
+        parent_id=None,
+        actor_user_id=ACTOR_ADMIN,
+        reason_for_change="CRC category",
+    )
+
+    # 3. Data Manager category
+    await svc.create_category(
+        name="Data Management Guidelines",
+        slug="dm-guidelines",
+        description="DM SOPs",
+        persona_visibility="data_manager",
+        parent_id=None,
+        actor_user_id=ACTOR_ADMIN,
+        reason_for_change="DM category",
+    )
+
+    # 4. Admin category
+    await svc.create_category(
+        name="Admin Secrets",
+        slug="admin-secrets",
+        description="Admin only",
+        persona_visibility="super_admin",
+        parent_id=None,
+        actor_user_id=ACTOR_ADMIN,
+        reason_for_change="Admin category",
+    )
+
+    # Admin sees all 4 categories
+    admin_cats = await svc.list_categories(user_roles=["super_admin"])
+    assert len(admin_cats) == 4
+
+    # CRC user sees General Platform Help and Site CRC Guidelines (2 categories)
+    crc_cats = await svc.list_categories(user_roles=["site_crc", "crc"])
+    crc_slugs = {c.slug for c in crc_cats}
+    assert crc_slugs == {"general-help", "crc-guidelines"}
+
+    # Data Manager sees General Platform Help and Data Management Guidelines (2 categories)
+    dm_cats = await svc.list_categories(user_roles=["data_manager"])
+    dm_slugs = {c.slug for c in dm_cats}
+    assert dm_slugs == {"general-help", "dm-guidelines"}
 
 
 @pytest.mark.asyncio

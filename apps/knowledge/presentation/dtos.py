@@ -38,6 +38,7 @@ class CategoryResponse(BaseModel):
     is_deleted: bool
     created_at: datetime
     created_by: str
+    reason_for_change: str
     version_index: int
 
     model_config = {"from_attributes": True}

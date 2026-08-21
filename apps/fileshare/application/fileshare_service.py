@@ -228,13 +228,20 @@ class FileShareService:
                     "Caller lacks reshare permissions for this file."
                 )
 
+        scope_enum = ShareScope(scope) if isinstance(scope, str) else scope
+        perm_enum = (
+            PermissionLevel(permission_level)
+            if isinstance(permission_level, str)
+            else permission_level
+        )
+
         grant = ShareGrant(
             id=str(uuid.uuid4()),
             file_record_id=file_id,
             granted_to_user_id=granted_to_user_id,
             granted_by_user_id=grantor_user_id,
-            scope=scope,
-            permission_level=permission_level,
+            scope=scope_enum,
+            permission_level=perm_enum,
             expires_at=expires_at,
             revoked_at=None,
             is_deleted=False,

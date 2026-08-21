@@ -112,3 +112,15 @@ A regulatory metadata and content storage pattern where an entity head record (`
 
 A deterministic routing rule mapping frontend UI route patterns and active user personas to approved operational SOPs and guidance articles with specificity- and priority-based tie-breaking.
 
+### Hierarchical Specificity Scoring
+
+A deterministic multi-tier resolution algorithm that evaluates candidate contextual help mappings by route pattern specificity (exact > parameterized > longest prefix > global wildcard), persona specificity (exact persona match > universal wildcard), administrator priority weight, and recency tie-breaking to select primary and secondary guidance articles.
+
+### Contextual Help Drawer
+
+A slide-in interface panel anchored to the application shell that dynamically presents context-sensitive procedural SOPs and clinical guidance without compressing or reflowing full-width clinical workspaces.
+
+### Fallback Escalation
+
+An interactive error-recovery pattern providing instant cross-knowledge-base search and pre-populated support ticket creation when no explicit guidance article maps to a user's current route and persona context.
+

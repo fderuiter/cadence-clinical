@@ -58,6 +58,7 @@ STATIC_DEFAULTS: dict[str, list[dict[str, Any]]] = {
         {"name": "eISF Service", "ports": [8010], "service_key": "eisf"},
         {"name": "eConsent Service", "ports": [8011], "service_key": "econsent"},
         {"name": "Organization Service", "ports": [8012], "service_key": "org"},
+        {"name": "Fileshare Service", "ports": [8013], "service_key": "fileshare"},
     ],
 }
 
@@ -75,6 +76,7 @@ DEFAULT_PORTS: dict[str, int] = {
     "eISF Service": 8010,
     "eConsent Service": 8011,
     "Organization Service": 8012,
+    "Fileshare Service": 8013,
 }
 
 SERVICE_KEY_DEFAULTS: dict[str, int] = {
@@ -91,6 +93,7 @@ SERVICE_KEY_DEFAULTS: dict[str, int] = {
     "eisf": 8010,
     "econsent": 8011,
     "org": 8012,
+    "fileshare": 8013,
     "web": 3000,
     "subject-portal": 5174,
     "keycloak": 8080,
@@ -124,6 +127,7 @@ COMPOSE_SERVICE_MAPPING: dict[str, tuple[str, str]] = {
     "eisf": ("Application Services", "eISF Service"),
     "econsent": ("Application Services", "eConsent Service"),
     "org": ("Application Services", "Organization Service"),
+    "fileshare": ("Application Services", "Fileshare Service"),
     "subject-portal": ("Frontends", "Subject Portal"),
 }
 

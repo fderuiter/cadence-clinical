@@ -11,7 +11,7 @@
           "knowledge"
         ],
         "summary": "List Categories",
-        "description": "Lists all active knowledge categories.\n\nReturns:\n    List of CategoryResponse objects.",
+        "description": "Lists active knowledge categories, filtered by caller's persona visibility.\n\nArgs:\n    request: FastAPI Request instance.\n    session: Injected async database session.\n\nReturns:\n    List of CategoryResponse objects.",
         "operationId": "list_categories_api_v1_knowledge_categories_get",
         "responses": {
           "200": {
@@ -35,7 +35,7 @@
           "knowledge"
         ],
         "summary": "Create Category",
-        "description": "Creates a new knowledge article category. Requires super_admin role.\n\nArgs:\n    payload: Category creation data.\n    session: Injected async database session.\n\nReturns:\n    The created CategoryResponse.\n\nRaises:\n    HTTPException 409: If the category name or slug already exists.",
+        "description": "Creates a new knowledge article category. Requires super_admin role.\n\nArgs:\n    payload: Category creation data.\n    session: Injected async database session.\n\nReturns:\n    The created CategoryResponse.\n\nRaises:\n    HTTPException 404: If the specified parent_id does not exist.\n    HTTPException 409: If the category name or slug already exists.",
         "operationId": "create_category_api_v1_knowledge_categories_post",
         "requestBody": {
           "content": {
@@ -49,6 +49,100 @@
         },
         "responses": {
           "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/categories/{category_id}": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Get Category",
+        "description": "Retrieves a single KnowledgeCategory by ID.\n\nArgs:\n    category_id: UUID of the category to retrieve.\n    session: Injected async database session.\n\nReturns:\n    The CategoryResponse.\n\nRaises:\n    HTTPException 404: If the category does not exist or is deleted.",
+        "operationId": "get_category_api_v1_knowledge_categories__category_id__get",
+        "parameters": [
+          {
+            "name": "category_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Category Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Delete Category",
+        "description": "Soft-deletes a KnowledgeCategory by ID. Requires super_admin or sysadmin role.\n\nArgs:\n    category_id: UUID of the category to soft-delete.\n    reason_for_change: GxP reason for soft deletion.\n    session: Injected async database session.\n\nReturns:\n    The soft-deleted CategoryResponse.\n\nRaises:\n    HTTPException 404: If the category does not exist or is already deleted.",
+        "operationId": "delete_category_api_v1_knowledge_categories__category_id__delete",
+        "parameters": [
+          {
+            "name": "category_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Category Id"
+            }
+          },
+          {
+            "name": "reason_for_change",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "Category soft-deleted",
+              "title": "Reason For Change"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
@@ -1051,6 +1145,10 @@
             "type": "string",
             "title": "Created By"
           },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
           "version_index": {
             "type": "integer",
             "title": "Version Index"
@@ -1067,6 +1165,7 @@
           "is_deleted",
           "created_at",
           "created_by",
+          "reason_for_change",
           "version_index"
         ],
         "title": "CategoryResponse",

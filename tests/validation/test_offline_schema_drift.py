@@ -193,8 +193,10 @@ class TestOfflineSchemaDrift:
         if resolved_node:
             node_executable = resolved_node
         else:
-            # Fallback search in home directory .nvm
-            nvm_nodes = glob.glob("/home/jules/.nvm/versions/node/*/bin/node")
+            # Fallback search in user home directory .nvm
+            nvm_nodes = glob.glob(
+                str(Path.home() / ".nvm" / "versions" / "node" / "*" / "bin" / "node")
+            )
             if nvm_nodes:
                 node_executable = nvm_nodes[0]
 

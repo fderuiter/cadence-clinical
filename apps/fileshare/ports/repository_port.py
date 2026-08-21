@@ -53,3 +53,4 @@ class GuestLinkRepositoryPort(RepositoryPort[GuestLink], ABC):
     async def get_by_token_hmac(self, token_hmac: str) -> GuestLink | None:
         """Retrieve guest link by token HMAC hash."""
         pass
+

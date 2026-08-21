@@ -291,6 +291,7 @@ def main() -> None:
                                     "apps/tickets/main.py",
                                     "apps/execution/main.py",
                                     "apps/designer/main.py",
+                                    "apps/fileshare/main.py",
                                     "apps/designer/presentation/routers/designer_routes.py",
                                 },
                                 {
@@ -442,6 +443,11 @@ def main() -> None:
                                 {
                                     "apps/ctms/alembic/env.py",
                                     "apps/quality/alembic/env.py",
+                                    "apps/fileshare/alembic/env.py",
+                                },
+                                {
+                                    "packages/storage/s3_store.py",
+                                    "packages/storage/adapters/s3_adapter.py",
                                 },
                                 {
                                     "apps/ctms/domain/acl/document_renderer_dto.py",

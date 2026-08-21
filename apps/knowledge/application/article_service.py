@@ -156,6 +156,127 @@ class ArticleLifecycleService:
         )
         return result.scalar_one_or_none()
 
+    async def list_categories(
+        self,
+        user_roles: list[str] | None = None,
+    ) -> list[KnowledgeCategory]:
+        """
+        Lists all active KnowledgeCategories, filtered by persona visibility.
+
+        Admin users see all active categories. Non-admin users only receive
+        categories permitted for their active persona context (or where
+        persona_visibility is null/empty).
+
+        Args:
+            user_roles: List of normalized roles/personas for the requesting user.
+
+        Returns:
+            List of visible KnowledgeCategory instances.
+        """
+        result = await self._session.execute(
+            select(KnowledgeCategory)
+            .where(KnowledgeCategory.is_deleted.is_(False))
+            .order_by(KnowledgeCategory.name.asc())
+        )
+        categories = list(result.scalars().all())
+
+        if user_roles is None:
+            return categories
+
+        return [
+            cat
+            for cat in categories
+            if self._is_category_visible_for_roles(cat.persona_visibility, user_roles)
+        ]
+
+    async def delete_category(
+        self,
+        *,
+        category_id: str,
+        actor_user_id: str,
+        reason_for_change: str,
+    ) -> KnowledgeCategory:
+        """
+        Soft-deletes a KnowledgeCategory by setting is_deleted=True.
+
+        Args:
+            category_id: UUID of the category to soft-delete.
+            actor_user_id: Authenticated user initiating the deletion.
+            reason_for_change: GxP justification string.
+
+        Returns:
+            The soft-deleted KnowledgeCategory instance.
+
+        Raises:
+            CategoryNotFoundError: If the category does not exist or has already been deleted.
+        """
+        category = await self.get_category_by_id(category_id)
+        if not category:
+            raise CategoryNotFoundError(
+                f"Category with id {category_id!r} does not exist or has already been deleted."
+            )
+
+        category.is_deleted = True
+        category.reason_for_change = reason_for_change
+        await self._session.flush()
+        return category
+
+    @staticmethod
+    def _is_category_visible_for_roles(
+        persona_visibility: str | None, user_roles: list[str]
+    ) -> bool:
+        """
+        Evaluates whether a category is visible to a user with the given roles.
+
+        Rules:
+        - If persona_visibility is None or blank -> visible to all authenticated personas.
+        - If user has super_admin, sysadmin, admin, or sponsor_admin role -> visible to admin.
+        - Otherwise, user must possess at least one persona role matching persona_visibility.
+        """
+        if not persona_visibility or not persona_visibility.strip():
+            return True
+
+        norm_user_roles = [r.strip().lower() for r in user_roles]
+
+        # Admin roles see everything
+        if any(
+            r in ("super_admin", "sysadmin", "admin", "sponsor_admin")
+            for r in norm_user_roles
+        ):
+            return True
+
+        # Parse allowed personas
+        allowed = {
+            p.strip().lower() for p in persona_visibility.split(",") if p.strip()
+        }
+
+        # Match direct or with role synonyms
+        from packages.security.rbac import ROLE_EXPANSIONS, normalize_role
+
+        expanded_allowed = set(allowed)
+        for p in allowed:
+            expanded_allowed.add(normalize_role(p))
+            if p in ROLE_EXPANSIONS:
+                expanded_allowed.update(ROLE_EXPANSIONS[p])
+            norm_p = normalize_role(p)
+            if norm_p in ROLE_EXPANSIONS:
+                expanded_allowed.update(ROLE_EXPANSIONS[norm_p])
+
+        for r in norm_user_roles:
+            if r in expanded_allowed or normalize_role(r) in expanded_allowed:
+                return True
+            if r in ROLE_EXPANSIONS and any(
+                exp in expanded_allowed for exp in ROLE_EXPANSIONS[r]
+            ):
+                return True
+            norm_r = normalize_role(r)
+            if norm_r in ROLE_EXPANSIONS and any(
+                exp in expanded_allowed for exp in ROLE_EXPANSIONS[norm_r]
+            ):
+                return True
+
+        return False
+
     # ------------------------------------------------------------------
     # Article creation
     # ------------------------------------------------------------------
