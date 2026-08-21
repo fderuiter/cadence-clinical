@@ -161,6 +161,36 @@ export const useAuthStore = defineStore("auth", {
         return normalized;
       });
     },
+    hasRole: (state) => (role) => {
+      if (!role) return false;
+      const normalized = role.trim().toLowerCase().replace(/[\s-_]+/g, "_");
+      const allowedAliases = ROLE_ALIASES[normalized] || [normalized];
+      const currentRoles = (state.rawRoles || []).map((r) =>
+        r.trim().toLowerCase().replace(/[\s-_]+/g, "_")
+      );
+      if (
+        currentRoles.some(
+          (r) => r === "admin" || r === "super_admin" || r === "sponsor_admin"
+        )
+      ) {
+        return true;
+      }
+      return allowedAliases.some((alias) => currentRoles.includes(alias));
+    },
+    isCrc: (state) => {
+      const currentRoles = (state.rawRoles || []).map((r) =>
+        r.trim().toLowerCase().replace(/[\s-_]+/g, "_")
+      );
+      if (
+        currentRoles.some(
+          (r) => r === "admin" || r === "super_admin" || r === "sponsor_admin"
+        )
+      ) {
+        return true;
+      }
+      const crcAliases = ["crc", "site_investigator", "site_crc"];
+      return crcAliases.some((alias) => currentRoles.includes(alias));
+    },
   },
   actions: {
     persist() {

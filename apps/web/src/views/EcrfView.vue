@@ -81,6 +81,16 @@
         class="ecrf-form-column"
         style="flex: 1 1 580px; min-width: 0"
       >
+        <!-- CRC Persona Component: Reusable Subject Registration & Screening Card -->
+        <SubjectEnrollmentForm
+          :can-enroll="authStore.isCrc || activeUserRole === 'site_investigator' || activeUserRole === 'crc'"
+          :screening-result="screeningResult"
+          :is-screening="isScreening"
+          :is-enrolling="isEnrolling"
+          @enroll="onSubjectEnroll"
+          @screen="onSubjectScreen"
+        />
+
         <CrcFormRenderer
           v-model:selected-subject-id="selectedSubjectId"
           v-model:selected-visit-id="selectedVisitId"
@@ -316,6 +326,7 @@ import CrcFormRenderer from "../components/persona/CrcFormRenderer.vue";
 import CraVerificationConsole from "../components/persona/CraVerificationConsole.vue";
 import PiSignatureDrawer from "../components/persona/PiSignatureDrawer.vue";
 import DesignerSchemaPanel from "../components/persona/DesignerSchemaPanel.vue";
+import SubjectEnrollmentForm from "../components/clinical/SubjectEnrollmentForm.vue";
 
 // Import Domain Composables
 import { useConsentGating } from "../composables/useConsentGating";
@@ -330,6 +341,44 @@ const route = useRoute();
 // Selected Subject & Visit State
 const selectedSubjectId = ref("SUBJ-001");
 const selectedVisitId = ref("Screening");
+
+// Screening and Enrollment State (CRC)
+const screeningResult = ref(null);
+const isScreening = ref(false);
+const isEnrolling = ref(false);
+
+async function onSubjectEnroll(payload) {
+  isEnrolling.value = true;
+  try {
+    const res = await store.enrollSubject({
+      id: payload.subject_id,
+      siteId: "SITE-101",
+      protocolVersion: "1.0.0",
+      reason: `Subject ${payload.subject_id} registered and enrolled in ${payload.study_id}.`,
+    });
+    if (res) {
+      selectedSubjectId.value = payload.subject_id;
+    }
+  } catch (err) {
+    console.error("Enrollment failed:", err);
+  } finally {
+    isEnrolling.value = false;
+  }
+}
+
+async function onSubjectScreen(payload) {
+  isScreening.value = true;
+  try {
+    const res = await store.screenSubject(payload.subjectId, {
+      study_id: payload.studyId,
+    });
+    screeningResult.value = res;
+  } catch (err) {
+    console.error("Screening failed:", err);
+  } finally {
+    isScreening.value = false;
+  }
+}
 
 // Demo Role Toggle
 const demoRole = ref("site_investigator");

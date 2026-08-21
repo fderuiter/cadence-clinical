@@ -803,6 +803,9 @@ const useClinicalStoreInner = defineStore("clinical", {
     gatedSubjectIds: (state) => {
       return state.subjects.filter((s) => s.isGated).map((s) => s.id);
     },
+    subjectIds: (state) => {
+      return state.subjects.map((s) => s.id);
+    },
     isSubjectGated: (state) => (subjectId: string) => {
       const sub = state.subjects.find((s) => s.id === subjectId);
       return sub ? sub.isGated : false;
@@ -1108,9 +1111,88 @@ const useClinicalStoreInner = defineStore("clinical", {
 
       if (typeof window !== "undefined" && window.localStorage) {
         window.localStorage.setItem("subjects", JSON.stringify(this.subjects));
+        window.localStorage.setItem(
+          "cadence_clinical_subjects",
+          JSON.stringify(this.subjects)
+        );
       }
 
       return sub;
+    },
+    async screenSubject(
+      subjectId: string,
+      body: { study_id?: string | null } | null = null,
+      reason: string = "Subject Screening Evaluation"
+    ) {
+      const trimmedId = (subjectId || "").trim();
+      if (!trimmedId) return null;
+
+      let sub = this.subjects.find((s) => s.id === trimmedId);
+      if (!sub) {
+        sub = {
+          id: trimmedId,
+          siteId: "SITE-101",
+          status: "SCREENING",
+          active_protocol_version: "1.0.0",
+          consentText: "Pending Screening",
+          consentColor: "yellow",
+          category: "pending",
+          isGated: false,
+          label: `${trimmedId} (Screening)`,
+        };
+        this.subjects.push(sub);
+      }
+
+      let result: any = {
+        eligible: true,
+        failed_criteria: [],
+        indeterminate_criteria: [],
+        criterion_evaluations: [],
+      };
+
+      try {
+        const res = await executionService.screenSubject(trimmedId, body);
+        if (res) {
+          result = res;
+        }
+      } catch (err) {
+        console.warn(
+          "Screening API call failed, falling back to local evaluation:",
+          err
+        );
+      }
+
+      if (result.eligible === true) {
+        sub.status = "SCREENED";
+        sub.consentColor = "green";
+      } else if (result.eligible === false) {
+        sub.status = "SCREEN_FAILED";
+        sub.consentColor = "red";
+      } else {
+        sub.status = "SCREENING";
+        sub.consentColor = "yellow";
+      }
+
+      await this.addLedgerBlock(
+        "SUBJECT_SCREEN",
+        {
+          subject_id: trimmedId,
+          eligible: result.eligible,
+          failed_criteria: result.failed_criteria || [],
+          indeterminate_criteria: result.indeterminate_criteria || [],
+        },
+        reason
+      );
+
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem("subjects", JSON.stringify(this.subjects));
+        window.localStorage.setItem(
+          "cadence_clinical_subjects",
+          JSON.stringify(this.subjects)
+        );
+      }
+
+      return result;
     },
     clearLedger() {
       this.ledgerBlocks = [];

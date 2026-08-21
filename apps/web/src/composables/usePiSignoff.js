@@ -7,6 +7,13 @@ export function usePiSignoff(store, authStore) {
   const signoffReason = ref("PI approval and sign-off.");
 
   const availableSubjects = computed(() => {
+    if (
+      store &&
+      Array.isArray(store.subjectIds) &&
+      store.subjectIds.length > 0
+    ) {
+      return store.subjectIds;
+    }
     if (store && Array.isArray(store.subjects)) {
       return store.subjects.map((s) => s.id);
     }

@@ -4,6 +4,10 @@ import type { components } from "./types";
 export type SubjectCreate = components["schemas"]["Execution_SubjectCreate"];
 export type SubjectResponse =
   components["schemas"]["Execution_SubjectResponse"];
+export type SubjectScreeningRequest =
+  components["schemas"]["Execution_SubjectScreeningRequest"];
+export type SubjectScreeningResponse =
+  components["schemas"]["Execution_SubjectScreeningResponse"];
 
 export interface LabAlertParams {
   study_id?: string;
@@ -24,6 +28,21 @@ export const executionService = {
     options: any = {}
   ): Promise<SubjectResponse> {
     return apiClient.post(`/api/v1/execution/subjects`, body, options);
+  },
+
+  /**
+   * Evaluates subject screening eligibility against protocol criteria.
+   */
+  screenSubject(
+    subjectId: string,
+    body: SubjectScreeningRequest | null = null,
+    options: any = {}
+  ): Promise<SubjectScreeningResponse> {
+    return apiClient.post(
+      `/api/v1/execution/subjects/${subjectId}/screening`,
+      body,
+      options
+    );
   },
 
   /**
