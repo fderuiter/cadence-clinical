@@ -81,6 +81,8 @@ async def test_form_submission_lifecycle_happy_path() -> None:
     """Verify standard happy-path lifecycle transition of a FormSubmission:
 
     DRAFT -> COMPLETED -> APPROVED.
+
+    @req:PRD-SYS-001, PRD-EDC-005
     """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
@@ -170,6 +172,8 @@ async def test_form_submission_invalid_transitions() -> None:
     - Cannot approve directly from DRAFT.
     - Cannot transition from APPROVED back to DRAFT or COMPLETED.
     - Cannot transition from COMPLETED to COMPLETED again.
+
+    @req:PRD-SYS-001, PRD-EDC-005
     """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
@@ -244,7 +248,10 @@ async def test_form_submission_invalid_transitions() -> None:
 
 @pytest.mark.asyncio
 async def test_form_submission_validation() -> None:
-    """Verify signature_manifest and signing_reason validations."""
+    """Verify signature_manifest and signing_reason validations.
+
+    @req:PRD-SYS-001, PRD-EDC-005
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -304,7 +311,10 @@ async def test_form_submission_validation() -> None:
 
 @pytest.mark.asyncio
 async def test_form_submission_locks() -> None:
-    """Verify that lock enforcement (trial, site, and visit) applies to form submissions."""
+    """Verify that lock enforcement (trial, site, and visit) applies to form submissions.
+
+    @req:PRD-SYS-001, PRD-EDC-005
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -381,7 +391,10 @@ async def test_form_submission_locks() -> None:
 
 @pytest.mark.asyncio
 async def test_form_submission_audit_logging() -> None:
-    """Verify that form submissions operations write audits to AuditLog and version increments correctly."""
+    """Verify that form submissions operations write audits to AuditLog and version increments correctly.
+
+    @req:PRD-SYS-001, PRD-EDC-005
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -433,7 +446,10 @@ async def test_form_submission_audit_logging() -> None:
 
 @pytest.mark.asyncio
 async def test_form_submission_approval_audit_manifestation() -> None:
-    """Verify that form submission approval captures signature manifest and version details in the database AuditLog."""
+    """Verify that form submission approval captures signature manifest and version details in the database AuditLog.
+
+    @req:PRD-SYS-001, PRD-EDC-005
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:

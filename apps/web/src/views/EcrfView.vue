@@ -316,6 +316,7 @@ import { soaClient } from "../api/soaClient";
 import { validateField, debounce } from "ui";
 import { evaluateAST } from "../evaluator.js";
 import { terminologyClient } from "../api/terminologyClient";
+import { executionService } from "../api/execution";
 import ReasonModal from "../components/ReasonModal.vue";
 import ConflictResolutionModal from "../components/ConflictResolutionModal.vue";
 import { useSyncStore } from "../stores/sync";
@@ -1138,7 +1139,7 @@ function clearForm() {
   );
 }
 
-function submitEcrf() {
+async function submitEcrf() {
   let allValid = true;
   let errMsgs = [];
 
@@ -1161,6 +1162,23 @@ function submitEcrf() {
         errMsgs.join("\n")
     );
     return;
+  }
+
+  try {
+    const studyId =
+      store.activeStudyId || store.currentUsdm.studyId || "CADENCE-101";
+    const siteId = store.activeSiteId || "SITE-101";
+    await executionService.submitForm({
+      study_id: studyId,
+      site_id: siteId,
+      subject_id: selectedSubjectId.value,
+      visit_id: selectedVisitId.value,
+      form_id: "VS_DEMO",
+      protocol_version: "1.0.0",
+      payload: { ...store.formValues },
+    });
+  } catch (err) {
+    console.warn("Failed to persist form submission to backend:", err);
   }
 
   store.addLedgerBlock(
