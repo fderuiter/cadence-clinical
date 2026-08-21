@@ -96,6 +96,7 @@ class QualityClient(IQualityClientPort):
         user_id: str,
         user_roles: list[str],
         reason_for_change: str,
+        deviation_id: str | None = None,
     ) -> dict[str, str]:
         headers = create_service_auth_headers(
             user_id=user_id,
@@ -103,16 +104,20 @@ class QualityClient(IQualityClientPort):
             change_reason=reason_for_change,
         )
         payload = {
+            "deviation_id": deviation_id or f"DEV-{study_id}-{site_id}",
             "study_id": study_id,
             "site_id": site_id,
             "title": f"[CTMS Escalation] {title}",
             "description": f"Severity: {severity}\nDescription: {description}\nRoot Cause: {root_cause_summary}\nAction Plan: {corrective_action}",
-            "source": "CTMS_PROTOCOL_DEVIATION",
+            "severity": severity,
+            "action_plan": corrective_action or f"Corrective action for {title}",
+            "preventive_measures": f"Root cause summary: {root_cause_summary}",
+            "capa_type": "BOTH",
         }
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 res = await client.post(
-                    f"{self.base_url}/api/v1/quality/capa",
+                    f"{self.base_url}/api/v1/quality/capas",
                     json=payload,
                     headers=headers,
                 )

@@ -1,3 +1,4 @@
+import uuid
 from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
@@ -13,6 +14,18 @@ from apps.quality.domain.models import (
 )
 from apps.quality.domain.ports import QualityRepositoryPort
 from packages.hexagonal import DomainError
+
+STAGE_MAPPING = {
+    CAPAStatus.INITIATED: "CAPA_ESCALATED",
+    CAPAStatus.UNDER_REVIEW: "UNDER_REVIEW",
+    CAPAStatus.APPROVED: "UNDER_REVIEW",
+    CAPAStatus.IMPLEMENTATION: "UNDER_REVIEW",
+    CAPAStatus.IMPLEMENTATION_VERIFIED: "UNDER_REVIEW",
+    CAPAStatus.EFFECTIVENESS_CHECK: "UNDER_REVIEW",
+    CAPAStatus.CLOSED: "RESOLVED",
+    CAPAStatus.INEFFECTIVE: "UNDER_REVIEW",
+    CAPAStatus.CANCELLED: "RESOLVED",
+}
 
 CAPA_TRANSITIONS = {
     CAPAStatus.INITIATED: {CAPAStatus.UNDER_REVIEW, CAPAStatus.CANCELLED},
@@ -305,10 +318,30 @@ class QualityService:
 
         dev = await self.repo.get_deviation_by_id(payload.deviation_id)
         if not dev:
-            raise QualityServiceError(
-                f"Parent deviation with ID '{payload.deviation_id}' not found.",
-                status_code=422,
-            )
+            study_id = getattr(payload, "study_id", None)
+            title = getattr(payload, "title", None)
+            if study_id or title:
+                dev = self.repo.create_deviation_entity(
+                    id=payload.deviation_id,
+                    study_id=study_id or "STUDY-UNKNOWN",
+                    site_id=getattr(payload, "site_id", None) or "SITE-UNKNOWN",
+                    title=title or f"Escalated Deviation {payload.deviation_id}",
+                    description=getattr(payload, "description", None) or f"Escalated deviation {payload.deviation_id}",
+                    severity=getattr(payload, "severity", None) or DeviationSeverity.MAJOR,
+                    status=DeviationStatus.REPORTED,
+                    type=DeviationType.PROTOCOL_PROCEDURE,
+                    source_system="CTMS",
+                    source_reference_id=payload.deviation_id,
+                    created_by=user_id,
+                    version_index=1,
+                    reason_for_change=change_reason,
+                )
+                await self.repo.save_deviation(dev)
+            else:
+                raise QualityServiceError(
+                    f"Parent deviation with ID '{payload.deviation_id}' not found.",
+                    status_code=422,
+                )
 
         if dev.status in (DeviationStatus.CLOSED, DeviationStatus.RESOLVED):
             raise QualityServiceError(
@@ -379,6 +412,28 @@ class QualityService:
             change_reason=change_reason,
         )
         await self.repo.save_audit_log(log_capa)
+
+        outbox_event = self.repo.create_outbox_entity(
+            event_type="CAPA_STAGE_TRANSITION",
+            payload={
+                "capa_id": capa.id,
+                "deviation_id": capa.deviation_id,
+                "capa_status": capa.status.value if hasattr(capa.status, "value") else str(capa.status),
+                "target_ctms_status": STAGE_MAPPING.get(capa.status, "CAPA_ESCALATED"),
+                "study_id": capa.study_id,
+                "site_id": capa.site_id,
+                "user_id": user_id,
+                "user_role": user_role,
+                "change_reason": change_reason,
+                "version_index": capa.version_index,
+            },
+            status="PENDING",
+            correlation_id=f"capa-stage-{capa.id}-{capa.version_index}-{uuid.uuid4().hex[:8]}",
+            created_by=user_id,
+            reason_for_change=change_reason,
+        )
+        await self.repo.save_outbox_event(outbox_event)
+
         return capa
 
     async def transition_capa(
@@ -472,6 +527,28 @@ class QualityService:
             change_reason=change_reason,
         )
         await self.repo.save_audit_log(log)
+
+        outbox_event = self.repo.create_outbox_entity(
+            event_type="CAPA_STAGE_TRANSITION",
+            payload={
+                "capa_id": capa.id,
+                "deviation_id": capa.deviation_id,
+                "capa_status": capa.status.value if hasattr(capa.status, "value") else str(capa.status),
+                "target_ctms_status": STAGE_MAPPING.get(capa.status, "UNDER_REVIEW"),
+                "study_id": capa.study_id,
+                "site_id": capa.site_id,
+                "user_id": user_id,
+                "user_role": user_role,
+                "change_reason": change_reason,
+                "version_index": capa.version_index,
+            },
+            status="PENDING",
+            correlation_id=f"capa-stage-{capa.id}-{capa.version_index}-{uuid.uuid4().hex[:8]}",
+            created_by=user_id,
+            reason_for_change=change_reason,
+        )
+        await self.repo.save_outbox_event(outbox_event)
+
         return capa
 
     async def update_capa(

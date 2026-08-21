@@ -25,6 +25,12 @@ class DeviationNotFoundError(EntityNotFoundError, CTMSDomainError):
     pass
 
 
+class ConcurrencyConflictError(CTMSDomainError):
+    """Raised when an optimistic locking / version index conflict occurs."""
+
+    pass
+
+
 class ActionItemNotFoundError(EntityNotFoundError, CTMSDomainError):
     """Raised when a deviation action item is not found."""
 

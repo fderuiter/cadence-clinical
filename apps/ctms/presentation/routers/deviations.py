@@ -8,7 +8,11 @@ from apps.ctms.adapters.repositories import (
     get_protocol_deviation_repository,
 )
 from apps.ctms.application.deviations_service import ProtocolDeviationService
-from apps.ctms.domain.exceptions import ActionItemNotFoundError, DeviationNotFoundError
+from apps.ctms.domain.exceptions import (
+    ActionItemNotFoundError,
+    ConcurrencyConflictError,
+    DeviationNotFoundError,
+)
 from apps.ctms.presentation.dtos import (
     DeviationActionItemComplete,
     DeviationActionItemCreate,
@@ -16,6 +20,7 @@ from apps.ctms.presentation.dtos import (
     ProtocolDeviationCreate,
     ProtocolDeviationRCA,
     ProtocolDeviationResponse,
+    ProtocolDeviationStatusUpdate,
 )
 from packages.security.rbac import Principal, get_principal
 
@@ -197,6 +202,58 @@ async def resolve_protocol_deviation(
         )
     except DeviationNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+    return ProtocolDeviationResponse(
+        id=entity.id or "",
+        study_id=entity.study_id,
+        site_id=entity.site_id,
+        subject_id=entity.subject_id,
+        visit_id=entity.visit_id,
+        deviation_category=entity.deviation_category,
+        severity=entity.severity,
+        title=entity.title,
+        description=entity.description,
+        date_occurred=entity.date_occurred,
+        date_identified=entity.date_identified,
+        status=entity.status,
+        root_cause_5whys=entity.root_cause_5whys,
+        root_cause_summary=entity.root_cause_summary,
+        corrective_action_plan=entity.corrective_action_plan,
+        preventive_action_plan=entity.preventive_action_plan,
+        quality_capa_id=entity.quality_capa_id,
+        reported_by=entity.reported_by,
+        resolved_by=entity.resolved_by,
+        resolved_at=entity.resolved_at,
+        created_at=entity.created_at,
+        created_by=entity.created_by,
+        reason_for_change=entity.reason_for_change,
+        version_index=entity.version_index,
+    )
+
+
+@router.put("/{deviation_id}/status", response_model=ProtocolDeviationResponse)
+@router.patch("/{deviation_id}/status", response_model=ProtocolDeviationResponse)
+async def update_deviation_status(
+    deviation_id: str,
+    payload: ProtocolDeviationStatusUpdate,
+    service: ProtocolDeviationService = Depends(get_deviations_service),
+    principal: Principal = Depends(get_principal),
+) -> ProtocolDeviationResponse:
+    try:
+        entity = await service.update_deviation_status(
+            deviation_id=deviation_id,
+            status=payload.status,
+            user_id=principal.user_id,
+            user_roles=",".join(principal.raw_roles) if principal.raw_roles else "system",
+            reason_for_change=principal.change_reason
+            or "Automated Quality CAPA outbox status update",
+            quality_capa_id=payload.quality_capa_id,
+            version_index=payload.version_index,
+        )
+    except DeviationNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ConcurrencyConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
 
     return ProtocolDeviationResponse(
         id=entity.id or "",

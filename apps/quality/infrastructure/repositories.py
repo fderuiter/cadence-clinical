@@ -12,6 +12,7 @@ from apps.quality.adapters.models import (
     CAPARecord,
     CtQFactor,
     Deviation,
+    IntegrationOutbox,
     KRIDefinition,
     KRIMetricEvaluation,
     QTLBreachEvent,
@@ -398,7 +399,16 @@ class SQLQualityRepository(QualityRepositoryPort):
         await self.session.flush()
         return breach
 
-    # --- Audit Logs ---
+    # --- Audit Logs & Outbox ---
+
+    def create_outbox_entity(self, **kwargs) -> IntegrationOutbox:
+        return IntegrationOutbox(**kwargs)
+
+    @map_database_exceptions
+    async def save_outbox_event(self, outbox_event: IntegrationOutbox) -> IntegrationOutbox:
+        self.session.add(outbox_event)
+        await self.session.flush()
+        return outbox_event
 
     def create_audit_log_entity(self, **kwargs) -> QualityAuditLog:
         return QualityAuditLog(**kwargs)

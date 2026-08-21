@@ -254,6 +254,11 @@ class CAPACreate(BaseModel):
     audit_finding_id: str | None = Field(
         None, description="Optional linked audit finding ID"
     )
+    study_id: str | None = Field(None, description="Optional study ID for cross-service creation")
+    site_id: str | None = Field(None, description="Optional site ID for cross-service creation")
+    title: str | None = Field(None, description="Optional deviation title for cross-service creation")
+    description: str | None = Field(None, description="Optional deviation description for cross-service creation")
+    severity: str | None = Field(None, description="Optional deviation severity for cross-service creation")
 
 
 class CAPATransitionRequest(BaseModel):

@@ -215,7 +215,15 @@ class QualityRepositoryPort(RepositoryPort[Any]):
     async def save_serious_breach(self, breach: Any) -> Any:
         pass
 
-    # --- Audit Logs ---
+    # --- Audit Logs & Outbox ---
+    @abstractmethod
+    def create_outbox_entity(self, **kwargs) -> Any:
+        pass
+
+    @abstractmethod
+    async def save_outbox_event(self, outbox_event: Any) -> Any:
+        pass
+
     @abstractmethod
     def create_audit_log_entity(self, **kwargs) -> Any:
         pass

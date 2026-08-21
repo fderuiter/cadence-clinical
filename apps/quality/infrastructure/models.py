@@ -594,6 +594,15 @@ class SeriousBreachRecord(Base):
 # --- Audit Ledger ---
 
 
+from packages.database import IntegrationOutboxMixin
+
+
+class IntegrationOutbox(Base, IntegrationOutboxMixin):
+    """Concrete integration outbox table for Quality service."""
+
+    __tablename__ = "integration_outbox"
+
+
 class QualityAuditLog(Base):
     """
     Represents an immutable, chronological append-only audit ledger of actions performed on Quality records.

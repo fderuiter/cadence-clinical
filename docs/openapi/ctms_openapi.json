@@ -830,6 +830,108 @@
         }
       }
     },
+    "/api/v1/ctms/deviations/{deviation_id}/status": {
+      "patch": {
+        "tags": [
+          "CTMS Protocol Deviations"
+        ],
+        "summary": "Update Deviation Status",
+        "operationId": "update_deviation_status_api_v1_ctms_deviations__deviation_id__status_patch",
+        "parameters": [
+          {
+            "name": "deviation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Deviation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolDeviationStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolDeviationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "CTMS Protocol Deviations"
+        ],
+        "summary": "Update Deviation Status",
+        "operationId": "update_deviation_status_api_v1_ctms_deviations__deviation_id__status_put",
+        "parameters": [
+          {
+            "name": "deviation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Deviation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolDeviationStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolDeviationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/ctms/deviations/{deviation_id}/action-items": {
       "post": {
         "tags": [
@@ -6961,6 +7063,44 @@
           "version_index"
         ],
         "title": "ProtocolDeviationResponse"
+      },
+      "ProtocolDeviationStatusUpdate": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Target status: IDENTIFIED, UNDER_REVIEW, CAPA_ESCALATED, RESOLVED"
+          },
+          "quality_capa_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Capa Id",
+            "description": "Optional Quality CAPA ID"
+          },
+          "version_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Index",
+            "description": "Expected version index for optimistic locking"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "ProtocolDeviationStatusUpdate"
       },
       "RBQMKRIMetricCreate": {
         "properties": {
