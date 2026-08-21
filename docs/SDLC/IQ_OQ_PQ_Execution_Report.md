@@ -48,6 +48,7 @@ alembic                  1.18.5
 annotated-doc            0.0.4
 annotated-types          0.7.0
 anyio                    4.14.2
+apps-ai-gateway          0.1.0
 apps-ctms                0.1.0
 apps-designer            0.1.0
 apps-econsent            0.1.0
@@ -89,29 +90,37 @@ cyclonedx-python-lib     11.11.0
 defusedxml               0.7.1
 detect-secrets           1.5.0
 distlib                  0.4.3
+distro                   1.9.0
 docxcompose              2.2.0
 docxtpl                  0.20.2
 ecdsa                    0.19.2
 et-xmlfile               2.0.0
 execnet                  2.1.2
 fastapi                  0.139.2
+fastuuid                 0.14.0
 filelock                 3.32.0
 fonttools                4.63.0
 frozenlist               1.8.0
+fsspec                   2026.7.0
 greenlet                 3.5.4
 h11                      0.16.0
+hf-xet                   1.6.0
 httpcore                 1.0.9
 httptools                0.8.0
 httpx                    0.28.1
+huggingface-hub          1.28.0
 identify                 2.6.19
 idna                     3.18
+importlib-metadata       8.9.0
 iniconfig                2.3.0
 jinja2                   3.1.6
+jiter                    0.16.0
 jmespath                 1.1.0
 jsonschema               4.26.0
 jsonschema-specifications 2025.9.1
 librt                    0.15.0
 license-expression       30.4.4
+litellm                  1.97.0
 lxml                     6.1.1
 mako                     1.3.12
 markdown-it-py           4.2.0
@@ -124,6 +133,7 @@ mypy-extensions          1.1.0
 neo4j                    6.2.0
 nodeenv                  1.10.0
 numpy                    2.5.1
+openai                   2.54.0
 openpyxl                 3.1.5
 packages-cli             0.1.0
 packages-compliance      0.1.0
@@ -154,6 +164,7 @@ pyasn1                   0.6.4
 pycparser                3.0
 pydantic                 2.13.4
 pydantic-core            2.46.4
+pydantic-settings        2.15.0
 pydyf                    0.12.1
 pyee                     13.0.1
 pygments                 2.20.0
@@ -179,6 +190,7 @@ pyyaml                   6.0.3
 rapidfuzz                3.14.5
 redis                    8.1.0
 referencing              0.37.0
+regex                    2026.7.19
 requests                 2.34.2
 rich                     15.0.0
 rpds-py                  2026.6.3
@@ -187,6 +199,7 @@ ruff                     0.15.22
 s3transfer               0.14.0
 shellingham              1.5.4
 six                      1.17.0
+sniffio                  1.3.1
 sortedcontainers         2.4.0
 soupsieve                2.9.1
 sqlalchemy               2.0.51
@@ -194,10 +207,13 @@ sqlmodel                 0.0.39
 starlette                1.3.1
 stevedore                5.9.0
 text-unidecode           1.3
+tiktoken                 0.14.0
 tinycss2                 1.5.1
 tinyhtml5                2.1.0
+tokenizers               0.23.1
 tomli                    2.4.1
 tomli-w                  1.2.0
+tqdm                     4.70.0
 typer                    0.27.1
 typing-extensions        4.16.0
 typing-inspection        0.4.2
@@ -214,6 +230,7 @@ websockets               16.1.1
 wrapt                    1.17.3
 yarl                     1.24.5
 yattag                   1.16.1
+zipp                     4.1.0
 zopfli                   0.4.3
 ```
 
@@ -3181,28 +3198,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 076dbe3a58b0687ad7f2b48f62b57619be62a5aa0ed1677134495eb532985dce
+- **Cryptographic Hash (SHA-256):** 5dc3e369b261a9807c351a3ba66506fd4967490fb887012490cd0219dac38ad4
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUSstualQ0WRJ2X27jOymRFVkChY8wDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUNZ8dtPBIH5StLa27gK2fvSoUxjkwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MDIxNTQxMloXDTI3MDgyMTIxNTQxMlowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MDIyMDI1M1oXDTI3MDgyMTIyMDI1M1owUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyFzV
-KlkVkg5wI0urRpIMrwuZGsRiZGZRMR9IlpbBCbE87XJse4bIiKvX0Il5ZaueGTWc
-bJqYoJXZXBpH4wKBIYhtl0NR/TgUqI9rq/YUJNDzOr1RgPPid2Ge5p57iDSl3RR3
-nrwpjtIzRvASMILR86Sl/RpD6GefUye3DMOZwXK86rxaq/gj2Ecxl3CSkM6Mh6XY
-Zok0BCov9YOzmRfqsVUVofYL1dPV9vzhIVKBxyfca6uQfXgxLP9LVKBiusRl/CZm
-9QRrchHNzmA5HRxlR39fJ9KhxYbYQgLJZewSSFXMopktTp7MY0qTwyggP0Mae73h
-b/cu7nIR+4H0EovaDwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAKfCk6+hcDHD3C
-a9ArHyVLJrBt2+UnwTF2674uF6ecZ7A+lSNryibDKkDrZOgVhWMmK11bezkCYu0l
-hNLyI6yk/nwLGAWExY6q7RpssU5Xja3LYGNGY/AHnjptoyS9mzyQ4BCBwBntLMGu
-7hAk21ohHl5aIA27vu8Mj/PU1WcMvljWfwXzpP2uhIMLClV9hW6/yt1xsJm6tDT6
-flXLe8wuuMNVg7eoNGaHw/eesgQC/A3FE1nYxt2ceTqVG2hCYr/QFj7FS2hE9hp8
-47OH0zTmydBch6CnewzmItR8M6MK3r54WTS8HZcummIu3SWv5EkXMsPPBJo5ei44
-kB5RhOYp
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw4Z6
+dxUdDwShoPGOQGVkwLfp7DCNcAtt96nRNJOpd12i6C5WE2IK8JsnOwnv0ePKn70l
+T8CwJ4a1ANIk6J2UFYBjh2qG2ObmT/OcKpy9NXL2QOiWdr5nMiDKNzCmIPPDJZsp
+mKaUIJPvakgDlFe/BqOxRHfN2XdjIrm4wOt4Gj6SWSU3Oj7fO0JwCHW4upvSMTAI
+0Ad4iOLa4Fg/kDOFHdGoh7+xTLHRxE5ib3zGJyOYR5LQRP7Va6GnVTzZe40FTNCz
+NiiideVzoBum3N5Kr62lPVW1omgzXi2cmi+SLeNWsIV3dGGPxwW+mesPz+t7ACQP
+LkK2ZkgvxGeDj7LbcwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBNOmLQ8W225a/1
+/olFO1pcnE89r3SGQZtGzxhrJO6Yob1vIn98sDwwgjv5P+mZQXl1k7ubcQXXCw08
+oIfYPur/9IdrVvgLL/FsFZu2vVGUAJAsX6TxqT8/58hqxBdc/6Zwn3wHCAKpYSjM
+0+N1mh7yZUXfkZ2VYe/8nXl+yDWntQxbSwdJGOH2kB5pF7MTgvaZg3HpyH9rxY8B
+zCePfWr9RSqi1oqXLqmwyD7nHrFDSovvfjXI0ECt/7qRxZxqhR58rmUNio0aU3Nh
+wzxUJ0sfx+w/8Yzm7qcWQLXqJ+chdwgeFycC7x/8Dy5H9t6Z/neu4tkCez/GGQla
+iQkRjuLO
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-PpP8PTRB8A5WHTfoHrDgunDkWcUHf8UB3toZloGhKzCWI3sdbzNNteFj9L1JEqs5vuoD3daBDR5DhePmrxDpRgRGs6c8SOvMr+jEijt4BEHsGDO0aXV6J3wdu4/UbZZXDoFnnH1iFF3HDons7CEY4/lu/okcq8Z+V1gGMn/2EeFSACgQUmtCkMQIvM1chLAQFs7OinyIF7IFYLH++mnPWIMRsQWenRVaCBOPWyr+m/QAq56divUWppU+pWm27eWn6LgYeL52bQiwqPRv871RCvxzrEiqfrK5MXErTTRCVZ6LfgZm71DU/2Lm63LUZZAmM9YBahhiEC71ye9NqkeJ7w==
+cinFm5e5wScfHRmVQB8P1WX3Mt9VZXitSV2feyvh51YAcF0CMc7iYOZDsGsc5ENQemH6oYo+zxzeglJIcH02dOqvPOMSa09rbu5tUnmJAIwwL9sLl9Pi5eN+r7F1KnUCkkPL2g8h7gPqLrArJa7g+7bieRaZA/wdGxZFQeCH6f6kFgWTVovakGu8oJPwrIB+zMzwjdp/bGGFudyWjP+sjVC9nsiybdT/acKOuGTvvvi6UrwdeSN5+0KLpPRsCtscTGEaXQ5/hpII5HKKxvkAbXAFmwaR7KruG0lByG5RU2W2oGoovuWm6Su0dCA4C9hnqZETI2zheGzy9E9dWMsnOg==
 -----END SIGNATURE-----
