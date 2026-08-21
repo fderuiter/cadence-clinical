@@ -10,6 +10,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-21: Knowledge Hub Two-Tier Immutable Data Model](2026-08-21-knowledge-hub-two-tier-immutable-data-model.md)
+- [2026-08-21: Knowledge Hub Multi-Channel Notifications and Preferences Architecture](2026-08-21-knowledge-hub-multi-channel-notifications-and-preferences-architecture.md)
 - [2026-08-21: Object Storage Port and Envelope Security Architecture](2026-08-21-object-storage-port-and-envelope-security-architecture.md)
 
 - [2026-08-15: Comprehensive Enterprise eConsent Architecture and Multi-Party Signature Pipeline](2026-08-15-comprehensive-enterprise-econsent-architecture-and-multi-party-signature-pipeline.md)

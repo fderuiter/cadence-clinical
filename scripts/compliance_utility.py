@@ -145,8 +145,8 @@ def parse_prd(filepath_or_dir: str) -> set[str]:
     """Parses PRD requirements (PRD-XXX-XXX) from a file or directory of fragments."""
     requirements = set()
     files = _sweep_markdown_files(filepath_or_dir)
-    pattern = re.compile(r"####\s*(PRD-[A-Z0-9]+-\d+)")
-    general_pattern = re.compile(r"\b(PRD-[A-Z0-9]+-\d+)\b")
+    pattern = re.compile(r"####\s*(PRD-(?:[A-Z0-9]+-)+\d+)")
+    general_pattern = re.compile(r"\b(PRD-(?:[A-Z0-9]+-)+\d+)\b")
 
     for file_path in files:
         with open(file_path, encoding="utf-8") as f:
@@ -226,8 +226,8 @@ def extract_requirement_references(content: str) -> set[str]:
     """
     # Match trace X or trace-X case-insensitively
     trace_pattern = re.compile(r"\btrace\s*[-]?\s*(\d+)\b", re.IGNORECASE)
-    # Match prd-ABC-123 case-insensitively
-    prd_pattern = re.compile(r"\bprd-([a-z0-9]+)-([a-z0-9]+)\b", re.IGNORECASE)
+    # Match prd-ABC-123 or prd-ABC-XYZ-123 case-insensitively
+    prd_pattern = re.compile(r"\b(prd-(?:[a-z0-9]+-)+[a-z0-9]+)\b", re.IGNORECASE)
 
     # We can also support req-X and sys-X case-insensitively just in case
     req_pattern = re.compile(r"\breq-(\d+)\b", re.IGNORECASE)
@@ -236,8 +236,8 @@ def extract_requirement_references(content: str) -> set[str]:
     refs = set()
     for m in trace_pattern.findall(content):
         refs.add(f"Trace-{m}")
-    for part1, part2 in prd_pattern.findall(content):
-        refs.add(f"PRD-{part1.upper()}-{part2.upper()}")
+    for m in prd_pattern.findall(content):
+        refs.add(m.upper())
     for m in req_pattern.findall(content):
         refs.add(f"REQ-{m.upper()}")
     for m in sys_pattern.findall(content):

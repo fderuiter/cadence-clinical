@@ -1,3 +1,5 @@
+from .adapters.minio_adapter import MinioStorageAdapter
+from .adapters.s3_adapter import S3StorageAdapter
 from .blob_store import (
     BlobStorageProvider,
     StorageIntegrityError,
@@ -10,6 +12,7 @@ from .document_models import (
     DocumentUploadResponse,
 )
 from .local_store import LocalStorageProvider
+from .ports.storage_port import StoragePort
 from .s3_store import S3StorageProvider
 
 __all__ = [
@@ -18,8 +21,11 @@ __all__ = [
     "DocumentMetadataResponse",
     "DocumentUploadResponse",
     "LocalStorageProvider",
+    "MinioStorageAdapter",
+    "S3StorageAdapter",
     "S3StorageProvider",
     "StorageIntegrityError",
     "StorageObjectNotFoundError",
+    "StoragePort",
     "verify_checksum",
 ]
