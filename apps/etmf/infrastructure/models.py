@@ -104,7 +104,10 @@ class TMFDocument(Base):
     section: Mapped[str] = mapped_column(String(255), nullable=False)
     artifact_type: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
-    _content: Mapped[str] = mapped_column("content", String, nullable=False)
+    object_key: Mapped[str | None] = mapped_column(
+        String(500), nullable=True, index=True
+    )
+    _content: Mapped[str | None] = mapped_column("content", String, nullable=True)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
 
     @property

@@ -412,7 +412,31 @@ async def ingest_tmf_document(
                     resolved_expiration_date, datetime.min.time()
                 ).replace(tzinfo=UTC)
 
+            doc_id = str(uuid.uuid4())
+            object_key = f"etmf/{study_id}/{doc_id}/{filename}"
+
+            storage_written = False
+            try:
+                from apps.etmf.storage import get_storage_adapter
+
+                storage_adapter = get_storage_adapter()
+                await storage_adapter.put_object(
+                    key=object_key,
+                    data=raw_bytes,
+                    content_type=mime_type,
+                    metadata={
+                        "study_id": study_id,
+                        "filename": filename,
+                        "doc_id": doc_id,
+                    },
+                    expected_sha256=resolved_checksum,
+                )
+                storage_written = True
+            except Exception:
+                pass
+
             doc = TMFDocument(
+                id=doc_id,
                 study_id=study_id,
                 site_id=resolved_site_id,
                 idempotency_key=idempotency_key,
@@ -420,7 +444,10 @@ async def ingest_tmf_document(
                 section=res_section,
                 artifact_type=canonical_artifact_type,
                 filename=filename,
-                content=base64_str if is_binary else content,
+                object_key=object_key if storage_written else None,
+                content=None
+                if storage_written
+                else (base64_str if is_binary else content),
                 mime_type=mime_type,
                 created_by=created_by,
                 version_index=new_version_index,

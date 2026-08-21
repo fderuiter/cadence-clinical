@@ -461,14 +461,20 @@ async def download_document(
 
     await authorize_document_read(principal, doc, session)
 
+    from apps.etmf.storage import get_document_bytes
+
+    raw_doc_bytes = await get_document_bytes(doc)
+
     if should_watermark:
         from apps.etmf.watermark import apply_watermark
 
-        final_content = apply_watermark(doc.content, doc.mime_type, user_id, user_roles)
+        final_content = apply_watermark(
+            raw_doc_bytes, doc.mime_type, user_id, user_roles
+        )
         action_name = "WATERMARKED_DOWNLOAD"
         details_msg = f"Downloaded watermarked content for eTMF document '{doc.filename}' (ID: {doc.id})."
     else:
-        final_content = doc.content
+        final_content = raw_doc_bytes
         action_name = "DOWNLOAD"
         details_msg = (
             f"Downloaded content for eTMF document '{doc.filename}' (ID: {doc.id})."
@@ -541,10 +547,12 @@ async def download_watermarked_document(
 
     await authorize_document_read(principal, doc, session)
 
+    from apps.etmf.storage import get_document_bytes
     from apps.etmf.watermark import apply_watermark
 
+    raw_doc_bytes = await get_document_bytes(doc)
     watermarked_content = apply_watermark(
-        doc.content, doc.mime_type, user_id, user_roles
+        raw_doc_bytes, doc.mime_type, user_id, user_roles
     )
 
     mime_lower = doc.mime_type.lower().strip()

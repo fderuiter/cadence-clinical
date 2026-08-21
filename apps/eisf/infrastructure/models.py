@@ -28,7 +28,10 @@ class ISFDocument(Base):
         String(255), nullable=False, index=True
     )
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
-    content: Mapped[str] = mapped_column(String, nullable=False)
+    object_key: Mapped[str | None] = mapped_column(
+        String(500), nullable=True, index=True
+    )
+    content: Mapped[str | None] = mapped_column(String, nullable=True)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 

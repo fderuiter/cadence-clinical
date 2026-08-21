@@ -475,6 +475,41 @@ services:
       postgres:
         condition: service_healthy
 
+  fileshare:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: cadence-fileshare
+    profiles:
+      - operations
+    command:
+      [
+        "python",
+        "scripts/start.py",
+        "fileshare",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8013",
+        "--reload",
+      ]
+    volumes:
+      - ..:/app
+    environment:
+      - BRAND_NAME=Cadence Clinical Research Software
+      - FILESHARE_DATABASE_URL=sqlite+aiosqlite:////app/fileshare.db
+      - GATEWAY_URL=http://gateway:8000
+      - GATEWAY_SECRET=internal-gateway-secret-12345  # pragma: allowlist secret
+      - STORAGE_ENDPOINT_URL=http://minio:9000
+      - STORAGE_BUCKET=cadence-fileshare
+      - STORAGE_ACCESS_KEY=minio_admin
+      - STORAGE_SECRET_KEY=minio_password  # pragma: allowlist secret
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
   subject-portal:
     image: node:20-alpine
     container_name: cadence-subject-portal
@@ -556,6 +591,7 @@ services:
       - ORG_URL=http://org:8012
       - EISF_URL=http://eisf:8010
       - ECONSENT_URL=http://econsent:8011
+      - FILESHARE_URL=http://fileshare:8013
       - BRAND_NAME=Cadence Clinical Research Software
     expose:
       - "8000"

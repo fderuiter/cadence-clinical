@@ -257,7 +257,8 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
                     section VARCHAR(255) NOT NULL,
                     artifact_type VARCHAR(255) NOT NULL,
                     filename VARCHAR(255) NOT NULL,
-                    content TEXT NOT NULL,
+                    object_key VARCHAR(500),
+                    content TEXT,
                     mime_type VARCHAR(100) NOT NULL,
                     created_at DATETIME NOT NULL,
                     created_by VARCHAR(255) NOT NULL,
@@ -303,6 +304,7 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
                 "section",
                 "artifact_type",
                 "filename",
+                "object_key",
                 "content",
                 "mime_type",
                 "created_at",
@@ -353,7 +355,7 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
             await conn.execute(
                 text(f"""
                 INSERT INTO tmf_documents_new (
-                    id, study_id, idempotency_key, site_id, zone, section, artifact_type, filename, content, mime_type,
+                    id, study_id, idempotency_key, site_id, zone, section, artifact_type, filename, object_key, content, mime_type,
                     created_at, created_by, version_index, status, taxonomy_version, artifact_code,
                     metadata_json, reason_for_change, protocol_version_tag, protocol_version_index, protocol_version_status,
                     document_type, approval_status, signature_manifestation, signer,
@@ -429,6 +431,11 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
             await conn.execute(
                 text(
                     "CREATE INDEX IF NOT EXISTS ix_tmf_documents_correlation_key ON tmf_documents (correlation_key);"
+                )
+            )
+            await conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_tmf_documents_object_key ON tmf_documents (object_key);"
                 )
             )
 
@@ -562,6 +569,18 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
                 await conn.execute(
                     text(
                         "ALTER TABLE tmf_documents ADD COLUMN IF NOT EXISTS sync_status VARCHAR(50);"
+                    )
+                )
+
+            with contextlib.suppress(Exception):
+                await conn.execute(
+                    text(
+                        "ALTER TABLE tmf_documents ADD COLUMN IF NOT EXISTS object_key VARCHAR(500);"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS ix_tmf_documents_object_key ON tmf_documents (object_key);"
                     )
                 )
 

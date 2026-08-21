@@ -332,6 +332,7 @@ SERVICES = {
     "org": os.getenv("ORG_URL", "http://localhost:8012"),
     "eisf": os.getenv("EISF_URL", "http://localhost:8010"),
     "econsent": os.getenv("ECONSENT_URL", "http://localhost:8011"),
+    "fileshare": os.getenv("FILESHARE_URL", "http://localhost:8013"),
 }
 
 jwks_cache: dict[str, Any] | None = None
@@ -693,6 +694,7 @@ async def get_openapi_json() -> Response:
         org_spec,
         eisf_spec,
         econsent_spec,
+        fileshare_spec,
     ) = await asyncio.gather(
         fetch_service_openapi(SERVICES["designer"]),
         fetch_service_openapi(SERVICES["execution"]),
@@ -706,7 +708,20 @@ async def get_openapi_json() -> Response:
         fetch_service_openapi(SERVICES["org"]),
         fetch_service_openapi(SERVICES["eisf"]),
         fetch_service_openapi(SERVICES["econsent"]),
+        fetch_service_openapi(SERVICES["fileshare"]),
     )
+
+    if fileshare_spec and is_valid_openapi_spec(fileshare_spec):
+        try:
+            fileshare_spec = rewrite_references(fileshare_spec, "Fileshare_")
+            for path_str, path_item in fileshare_spec.get("paths", {}).items():
+                merged["paths"][f"/fileshare{path_str}"] = path_item
+            for schema_name, schema_val in (
+                fileshare_spec.get("components", {}).get("schemas", {}).items()
+            ):
+                merged["components"]["schemas"][f"Fileshare_{schema_name}"] = schema_val
+        except Exception:
+            pass
 
     if eisf_spec and is_valid_openapi_spec(eisf_spec):
         try:
@@ -1432,6 +1447,10 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['org']}/{path[len('org/') :]}"
     elif path.startswith("api/v1/org"):
         target_url = f"{SERVICES['org']}/{path}"
+    elif path.startswith("fileshare/"):
+        target_url = f"{SERVICES['fileshare']}/{path[len('fileshare/') :]}"
+    elif path.startswith("api/v1/fileshare"):
+        target_url = f"{SERVICES['fileshare']}/{path}"
     elif path.startswith("api/v1/compliance") or path.startswith("api/v1/tickets"):
         target_url = f"{SERVICES['tickets']}/{path}"
     elif path == "events/publish":

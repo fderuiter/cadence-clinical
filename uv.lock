@@ -26,6 +26,7 @@ members = [
     "apps-safety",
     "apps-tickets",
     "cadence-clinical",
+    "cadence-fileshare",
     "cadence-knowledge",
     "packages-cli",
     "packages-compliance",
@@ -929,6 +930,29 @@ requires-dist = [
     { name = "weasyprint", specifier = ">=61.0" },
 ]
 provides-extras = ["dev"]
+
+[[package]]
+name = "cadence-fileshare"
+version = "0.1.0"
+source = { virtual = "apps/fileshare" }
+dependencies = [
+    { name = "aiosqlite" },
+    { name = "asyncpg" },
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiosqlite" },
+    { name = "asyncpg" },
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "pydantic", specifier = ">=2" },
+    { name = "sqlalchemy", extras = ["asyncio"] },
+]
 
 [[package]]
 name = "cadence-knowledge"

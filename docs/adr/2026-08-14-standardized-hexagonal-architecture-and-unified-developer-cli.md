@@ -57,15 +57,15 @@ To achieve enterprise-grade maintainability, zero-downtime microservice decoupli
 ## 6. Implementation & Verification
 
 - **Packages Created / Updated**:
-  - [`packages/cli/`](file:///Users/fred/Code/cadence-clinical/packages/cli/) (`cadence` CLI tool)
-  - [`packages/hexagonal/`](file:///Users/fred/Code/cadence-clinical/packages/hexagonal/) (Hexagonal primitives & ports)
-  - [`packages/ui/`](file:///Users/fred/Code/cadence-clinical/packages/ui/) (Shared Enterprise UI components)
+  - `packages/cli/` (`cadence` CLI tool)
+  - `packages/hexagonal/` (Hexagonal primitives & ports)
+  - `packages/ui/` (Shared Enterprise UI components)
 - **Scripts & Sentinels**:
-  - [`scripts/verify_contracts.py`](file:///Users/fred/Code/cadence-clinical/scripts/verify_contracts.py) (Dynamic contract sentinel)
-  - [`scripts/validate_imports.py`](file:///Users/fred/Code/cadence-clinical/scripts/validate_imports.py) (Cross-service boundary validator)
+  - `scripts/verify_contracts.py` (Dynamic contract sentinel)
+  - `scripts/validate_imports.py` (Cross-service boundary validator)
 - **Documentation & Catalog**:
-  - [`docs/cli.md`](file:///Users/fred/Code/cadence-clinical/docs/cli.md) (Developer CLI manual)
-  - [`docs/components/`](file:///Users/fred/Code/cadence-clinical/docs/components/) (UI component catalog)
+  - `docs/cli.md` (Developer CLI manual)
+  - `docs/components/` (UI component catalog)
 - **Verification Tests**:
-  - [`packages/cli/tests/test_cadence_cli.py`](file:///Users/fred/Code/cadence-clinical/packages/cli/tests/test_cadence_cli.py)
-  - [`packages/hexagonal/tests/test_hexagonal_kernel.py`](file:///Users/fred/Code/cadence-clinical/packages/hexagonal/tests/test_hexagonal_kernel.py)
+  - `packages/cli/tests/test_cadence_cli.py`
+  - `packages/hexagonal/tests/test_hexagonal_kernel.py`
