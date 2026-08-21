@@ -75,7 +75,7 @@ AUDITOR_ROLES = ["auditor", "tmf_auditor", "super_admin", "sysadmin"]
     "/categories",
     response_model=CategoryResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles(ADMIN_ROLES))],
+    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
 )
 async def create_category(
     payload: CategoryCreate,
@@ -125,7 +125,7 @@ async def create_category(
 @router.get(
     "/categories",
     response_model=list[CategoryResponse],
-    dependencies=[Depends(require_roles(ALL_ROLES))],
+    dependencies=[Depends(require_roles(*ALL_ROLES))],
 )
 async def list_categories(
     session: AsyncSession = Depends(get_db_session),
@@ -145,7 +145,7 @@ async def list_categories(
 @router.get(
     "/categories/{category_id}",
     response_model=CategoryResponse,
-    dependencies=[Depends(require_roles(ALL_ROLES))],
+    dependencies=[Depends(require_roles(*ALL_ROLES))],
 )
 async def get_category(
     category_id: str,
@@ -182,7 +182,7 @@ async def get_category(
     "/articles",
     response_model=ArticleResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles(ADMIN_ROLES))],
+    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
 )
 async def create_article(
     payload: ArticleCreate,
@@ -223,7 +223,7 @@ async def create_article(
 @router.get(
     "/articles",
     response_model=list[ArticleResponse],
-    dependencies=[Depends(require_roles(ALL_ROLES))],
+    dependencies=[Depends(require_roles(*ALL_ROLES))],
 )
 async def list_articles(
     status_filter: ArticleStatus | None = None,
@@ -257,7 +257,7 @@ async def list_articles(
 @router.get(
     "/articles/{article_id}",
     response_model=ArticleResponse,
-    dependencies=[Depends(require_roles(ALL_ROLES))],
+    dependencies=[Depends(require_roles(*ALL_ROLES))],
 )
 async def get_article(
     article_id: str,
@@ -309,7 +309,7 @@ async def get_article(
 @router.patch(
     "/articles/{article_id}/draft",
     response_model=ArticleVersionResponse,
-    dependencies=[Depends(require_roles(ADMIN_ROLES))],
+    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
 )
 async def save_article_draft(
     article_id: str,
@@ -359,7 +359,7 @@ async def save_article_draft(
 @router.post(
     "/articles/{article_id}/transition",
     response_model=ArticleResponse,
-    dependencies=[Depends(require_roles(ADMIN_ROLES))],
+    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
 )
 async def transition_article(
     article_id: str,
@@ -420,7 +420,7 @@ async def transition_article(
 @router.get(
     "/articles/{article_id}/versions",
     response_model=list[ArticleVersionResponse],
-    dependencies=[Depends(require_roles(ALL_ROLES))],
+    dependencies=[Depends(require_roles(*ALL_ROLES))],
 )
 async def list_article_versions(
     article_id: str,
@@ -447,7 +447,7 @@ async def list_article_versions(
 @router.get(
     "/articles/{article_id}/audit-log",
     response_model=list[AuditLogResponse],
-    dependencies=[Depends(require_roles(AUDITOR_ROLES))],
+    dependencies=[Depends(require_roles(*AUDITOR_ROLES))],
 )
 async def get_article_audit_log(
     article_id: str,
@@ -481,7 +481,7 @@ async def get_article_audit_log(
     "/contextual-help",
     response_model=ContextualHelpMappingResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles(ADMIN_ROLES))],
+    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
 )
 async def create_contextual_help_mapping(
     payload: ContextualHelpMappingCreate,
@@ -515,7 +515,7 @@ async def create_contextual_help_mapping(
 @router.get(
     "/contextual-help/lookup",
     response_model=ContextualHelpLookupResponse,
-    dependencies=[Depends(require_roles(ALL_ROLES))],
+    dependencies=[Depends(require_roles(*ALL_ROLES))],
 )
 async def lookup_contextual_help(
     route: str,

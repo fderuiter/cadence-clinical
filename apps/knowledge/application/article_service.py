@@ -120,9 +120,7 @@ class ArticleLifecycleService:
         await self._session.flush()
         return category
 
-    async def get_category_by_id(
-        self, category_id: str
-    ) -> KnowledgeCategory | None:
+    async def get_category_by_id(self, category_id: str) -> KnowledgeCategory | None:
         """
         Retrieves an active KnowledgeCategory by its unique ID.
 

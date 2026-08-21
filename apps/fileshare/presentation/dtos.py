@@ -76,7 +76,7 @@ class FileRecordResponse(BaseModel):
 class ShareGrantCreateRequest(BaseModel):
     """Request payload to create a new internal share grant."""
 
-    model_config = ConfigDict(strict=True)
+    model_config = ConfigDict(use_enum_values=True)
 
     granted_to_user_id: str | None = Field(default=None, max_length=255)
     scope: ShareScope = Field(default=ShareScope.INDIVIDUAL)
