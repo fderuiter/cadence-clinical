@@ -192,13 +192,16 @@ async def process_econsent_signature(
     session.add(signature)
 
     # 5. Write signed PDF blob into document storage layer.
-    os.makedirs("/tmp/consent_pdfs", exist_ok=True)  # nosec B108: secure internal container temp storage
-    pdf_filename = f"{payload.subject_id}_{payload.icf_version_id}_{now.strftime('%Y%m%d%H%M%S')}.pdf"
-    pdf_path = os.path.join("/tmp/consent_pdfs", pdf_filename)  # nosec B108: secure internal container temp storage
-    with open(pdf_path, "wb") as f:
-        f.write(pdf_bytes)
+    import tempfile
+    from pathlib import Path
 
-    signed_pdf_url = f"file://{pdf_path}"
+    storage_dir = Path(tempfile.gettempdir()) / "consent_pdfs"
+    storage_dir.mkdir(parents=True, exist_ok=True)
+    pdf_filename = f"{payload.subject_id}_{payload.icf_version_id}_{now.strftime('%Y%m%d%H%M%S')}.pdf"
+    pdf_path = storage_dir / pdf_filename
+    pdf_path.write_bytes(pdf_bytes)
+
+    signed_pdf_url = pdf_path.as_uri()
 
     await session.commit()
 
