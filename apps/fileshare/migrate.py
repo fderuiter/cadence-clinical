@@ -37,7 +37,9 @@ def main() -> None:
     parser.add_argument(
         "--db-url",
         type=str,
-        default=os.getenv("FILESHARE_DATABASE_URL", "sqlite+aiosqlite:///:memory:"),
+        default=os.getenv(
+            "FILESHARE_DATABASE_URL", "sqlite+aiosqlite:///:memory:"
+        ),
         help="Database URL for migration",
     )
     args = parser.parse_args()
@@ -46,3 +48,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

@@ -8,8 +8,8 @@ Create Date: 2026-08-21 12:00:00.000000  # deid-ignore
 
 from collections.abc import Sequence
 
-import sqlalchemy as sa
 from alembic import op
+import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = "0001_initial_fileshare_baseline"  # pragma: allowlist secret
@@ -32,39 +32,19 @@ def upgrade() -> None:
         sa.Column("checksum_sha256", sa.String(length=64), nullable=True),
         sa.Column("version_index", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("uploaded_by", sa.String(length=255), nullable=False),
-        sa.Column(
-            "uploaded_at", sa.DateTime(), nullable=False, server_default=sa.func.now()
-        ),
+        sa.Column("uploaded_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("is_on_hold", sa.Boolean(), nullable=False, server_default="0"),
         sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default="0"),
-        sa.Column(
-            "created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()
-        ),
+        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("created_by", sa.String(length=255), nullable=False),
         sa.Column("reason_for_change", sa.String(length=1000), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        op.f("ix_file_records_study_id"), "file_records", ["study_id"], unique=False
-    )
-    op.create_index(
-        op.f("ix_file_records_site_id"), "file_records", ["site_id"], unique=False
-    )
-    op.create_index(
-        op.f("ix_file_records_object_key"), "file_records", ["object_key"], unique=True
-    )
-    op.create_index(
-        op.f("ix_file_records_checksum_sha256"),
-        "file_records",
-        ["checksum_sha256"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_file_records_uploaded_by"),
-        "file_records",
-        ["uploaded_by"],
-        unique=False,
-    )
+    op.create_index(op.f("ix_file_records_study_id"), "file_records", ["study_id"], unique=False)
+    op.create_index(op.f("ix_file_records_site_id"), "file_records", ["site_id"], unique=False)
+    op.create_index(op.f("ix_file_records_object_key"), "file_records", ["object_key"], unique=True)
+    op.create_index(op.f("ix_file_records_checksum_sha256"), "file_records", ["checksum_sha256"], unique=False)
+    op.create_index(op.f("ix_file_records_uploaded_by"), "file_records", ["uploaded_by"], unique=False)
 
     # 2. share_grants table
     op.create_table(
@@ -73,41 +53,20 @@ def upgrade() -> None:
         sa.Column("file_record_id", sa.String(length=36), nullable=False),
         sa.Column("granted_to_user_id", sa.String(length=255), nullable=True),
         sa.Column("granted_by_user_id", sa.String(length=255), nullable=False),
-        sa.Column(
-            "scope", sa.String(length=50), nullable=False, server_default="individual"
-        ),
-        sa.Column(
-            "permission_level",
-            sa.String(length=50),
-            nullable=False,
-            server_default="view",
-        ),
+        sa.Column("scope", sa.String(length=50), nullable=False, server_default="individual"),
+        sa.Column("permission_level", sa.String(length=50), nullable=False, server_default="view"),
         sa.Column("expires_at", sa.DateTime(), nullable=True),
         sa.Column("revoked_at", sa.DateTime(), nullable=True),
         sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default="0"),
-        sa.Column(
-            "created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()
-        ),
+        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("created_by", sa.String(length=255), nullable=False),
         sa.Column("reason_for_change", sa.String(length=1000), nullable=False),
         sa.Column("version_index", sa.Integer(), nullable=False, server_default="1"),
-        sa.ForeignKeyConstraint(
-            ["file_record_id"], ["file_records.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["file_record_id"], ["file_records.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        op.f("ix_share_grants_file_record_id"),
-        "share_grants",
-        ["file_record_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_share_grants_granted_to_user_id"),
-        "share_grants",
-        ["granted_to_user_id"],
-        unique=False,
-    )
+    op.create_index(op.f("ix_share_grants_file_record_id"), "share_grants", ["file_record_id"], unique=False)
+    op.create_index(op.f("ix_share_grants_granted_to_user_id"), "share_grants", ["granted_to_user_id"], unique=False)
 
     # 3. guest_links table
     op.create_table(
@@ -120,25 +79,14 @@ def upgrade() -> None:
         sa.Column("last_accessed_at", sa.DateTime(), nullable=True),
         sa.Column("access_count", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("revoked_at", sa.DateTime(), nullable=True),
-        sa.Column(
-            "created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()
-        ),
+        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("reason_for_change", sa.String(length=1000), nullable=False),
         sa.Column("version_index", sa.Integer(), nullable=False, server_default="1"),
-        sa.ForeignKeyConstraint(
-            ["file_record_id"], ["file_records.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["file_record_id"], ["file_records.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        op.f("ix_guest_links_file_record_id"),
-        "guest_links",
-        ["file_record_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_guest_links_token_hmac"), "guest_links", ["token_hmac"], unique=True
-    )
+    op.create_index(op.f("ix_guest_links_file_record_id"), "guest_links", ["file_record_id"], unique=False)
+    op.create_index(op.f("ix_guest_links_token_hmac"), "guest_links", ["token_hmac"], unique=True)
 
 
 def downgrade() -> None:
@@ -156,3 +104,4 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_file_records_site_id"), table_name="file_records")
     op.drop_index(op.f("ix_file_records_study_id"), table_name="file_records")
     op.drop_table("file_records")
+

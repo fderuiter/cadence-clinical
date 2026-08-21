@@ -17,7 +17,9 @@ from packages.database import get_relational_db_lifespan
 from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
-DATABASE_URL = os.getenv("FILESHARE_DATABASE_URL", "sqlite+aiosqlite:///./fileshare.db")
+DATABASE_URL = os.getenv(
+    "FILESHARE_DATABASE_URL", "sqlite+aiosqlite:///./fileshare.db"
+)
 BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
 
 validate_branding("fileshare")
@@ -49,3 +51,4 @@ __all__ = [
     "app",
     "get_db_session",
 ]
+

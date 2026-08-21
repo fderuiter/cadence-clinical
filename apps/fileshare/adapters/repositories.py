@@ -206,7 +206,9 @@ class SqlAlchemyGuestLinkRepository(GuestLinkRepositoryPort):
         return model.to_domain() if model else None
 
     async def get_by_token_hmac(self, token_hmac: str) -> GuestLink | None:
-        stmt = select(GuestLinkModel).where(GuestLinkModel.token_hmac == token_hmac)
+        stmt = select(GuestLinkModel).where(
+            GuestLinkModel.token_hmac == token_hmac
+        )
         res = await self.session.execute(stmt)
         model = res.scalar_one_or_none()
         return model.to_domain() if model else None
@@ -248,3 +250,4 @@ class SqlAlchemyGuestLinkRepository(GuestLinkRepositoryPort):
             await self.session.flush()
             return True
         return False
+

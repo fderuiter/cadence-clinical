@@ -5,8 +5,8 @@ Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 
 from __future__ import annotations
 
-import uuid
 from datetime import datetime
+import uuid
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -35,7 +35,9 @@ class FileRecordModel(Base):
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    site_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
     filename: Mapped[str] = mapped_column(String(500), nullable=False)
     mime_type: Mapped[str] = mapped_column(String(255), nullable=False)
     size_bytes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -45,20 +47,30 @@ class FileRecordModel(Base):
     checksum_sha256: Mapped[str | None] = mapped_column(
         String(64), nullable=True, index=True
     )
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-    uploaded_by: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    version_index: Mapped[int] = mapped_column(
+        Integer, default=1, nullable=False
+    )
+    uploaded_by: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
     uploaded_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
-    is_on_hold: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_on_hold: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    is_deleted: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
 
     # 21 CFR Part 11 GxP audit fields
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(
+        String(1000), nullable=False
+    )
 
     # Relationships
     share_grants: Mapped[list[ShareGrantModel]] = relationship(
@@ -107,25 +119,41 @@ class ShareGrantModel(Base):
     granted_to_user_id: Mapped[str | None] = mapped_column(
         String(255), nullable=True, index=True
     )
-    granted_by_user_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    scope: Mapped[str] = mapped_column(String(50), default="individual", nullable=False)
+    granted_by_user_id: Mapped[str] = mapped_column(
+        String(255), nullable=False
+    )
+    scope: Mapped[str] = mapped_column(
+        String(50), default="individual", nullable=False
+    )
     permission_level: Mapped[str] = mapped_column(
         String(50), default="view", nullable=False
     )
-    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
+    is_deleted: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
 
     # 21 CFR Part 11 GxP audit fields
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(
+        String(1000), nullable=False
+    )
+    version_index: Mapped[int] = mapped_column(
+        Integer, default=1, nullable=False
+    )
 
     # Relationships
-    file_record: Mapped[FileRecordModel] = relationship(back_populates="share_grants")
+    file_record: Mapped[FileRecordModel] = relationship(
+        back_populates="share_grants"
+    )
 
     def to_domain(self) -> ShareGrant:
         """Converts ORM model to pure domain model."""
@@ -164,19 +192,31 @@ class GuestLinkModel(Base):
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    last_accessed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    access_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_accessed_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
+    access_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
 
     # 21 CFR Part 11 GxP audit fields
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(
+        String(1000), nullable=False
+    )
+    version_index: Mapped[int] = mapped_column(
+        Integer, default=1, nullable=False
+    )
 
     # Relationships
-    file_record: Mapped[FileRecordModel] = relationship(back_populates="guest_links")
+    file_record: Mapped[FileRecordModel] = relationship(
+        back_populates="guest_links"
+    )
 
     def to_domain(self) -> GuestLink:
         """Converts ORM model to pure domain model."""
@@ -192,3 +232,4 @@ class GuestLinkModel(Base):
             created_at=self.created_at,
             reason_for_change=self.reason_for_change,
         )
+

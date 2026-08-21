@@ -40,3 +40,4 @@ class FileOnHoldError(DomainError):
     """Raised when an action is blocked due to active legal/regulatory retention hold."""
 
     pass
+
