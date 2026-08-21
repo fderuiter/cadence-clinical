@@ -86,6 +86,26 @@ def test_cli_dev_json():
     assert len(data["services"]) == 2
 
 
+def test_cli_dev_port_collision_fallback():
+    """Verify dev command automatically assigns fallback offset ports when default ports are occupied."""
+    import socket
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("127.0.0.1", 8000))
+    s.listen(1)
+    try:
+        result = runner.invoke(app, ["--json", "dev", "gateway"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["services"][0]["name"] == "gateway"
+        assert data["services"][0]["default_port"] == 8000
+        assert data["services"][0]["assigned_port"] > 8000
+        assert data["services"][0]["rebound"] is True
+        assert data["services"][0]["offset"] > 0
+    finally:
+        s.close()
+
+
 def test_cli_db_status_json():
     """Verify db status command produces valid JSON."""
     result = runner.invoke(app, ["--json", "db", "status"])

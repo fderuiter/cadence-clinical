@@ -68,6 +68,7 @@ AUDITOR_ROLES = ["auditor", "tmf_auditor", "super_admin", "sysadmin"]
 # Category endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/categories",
     response_model=CategoryResponse,
@@ -104,7 +105,9 @@ async def create_category(
             reason_for_change=payload.reason_for_change,
         )
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     return CategoryResponse.model_validate(category)
 
 
@@ -131,6 +134,7 @@ async def list_categories(
 # ---------------------------------------------------------------------------
 # Article endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/articles",
@@ -168,7 +172,9 @@ async def create_article(
             reason_for_change=payload.reason_for_change,
         )
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     return ArticleResponse.model_validate(article)
 
 
@@ -195,9 +201,6 @@ async def list_articles(
     Returns:
         List of ArticleResponse objects.
     """
-    from packages.security.context import current_user_id as uid_ctx
-
-    actor = uid_ctx.get()
     stmt = select(KnowledgeArticle).where(KnowledgeArticle.is_deleted.is_(False))
 
     if status_filter:
@@ -244,7 +247,9 @@ async def get_article(
     )
     article = result.scalar_one_or_none()
     if not article:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
+        )
 
     # Emit auditor read event
     actor = uid_ctx.get()
@@ -289,7 +294,9 @@ async def save_article_draft(
     )
     article = result.scalar_one_or_none()
     if not article:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
+        )
 
     actor = current_user_id.get()
     svc = ArticleLifecycleService(session)
@@ -301,7 +308,9 @@ async def save_article_draft(
             reason_for_change=payload.reason_for_change,
         )
     except ArticleTransitionError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     return ArticleVersionResponse.model_validate(version)
 
 
@@ -337,7 +346,9 @@ async def transition_article(
     )
     article = result.scalar_one_or_none()
     if not article:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
+        )
 
     actor = current_user_id.get()
     svc = ArticleLifecycleService(session)
@@ -354,9 +365,13 @@ async def transition_article(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
     except ArticleApprovalConflictError as exc:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
     except ArticleTransitionError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     return ArticleResponse.model_validate(article)
 
 
@@ -418,6 +433,7 @@ async def get_article_audit_log(
 # ---------------------------------------------------------------------------
 # Contextual help endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.post(
     "/contextual-help",
