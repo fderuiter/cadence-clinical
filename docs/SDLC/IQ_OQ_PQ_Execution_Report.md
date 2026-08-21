@@ -7,11 +7,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2802
-- **Passed:** 2788 🟢
+- **Total Automated Test Cases Run:** 2809
+- **Passed:** 2790 🟢
 - **Failed/Errors:** 0 🔴
-- **Skipped:** 14 ⚪
-- **Overall Operational Pass Rate:** 99.50%
+- **Skipped:** 19 ⚪
+- **Overall Operational Pass Rate:** 99.32%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -2677,6 +2677,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_path_normalization_win32` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_repo_root_resolution` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_file_for_lines` | `scripts.tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_build_compose_command_all` | `scripts.tests.test_dev_orchestrator.TestDevOrchestrator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_build_compose_command_designer` | `scripts.tests.test_dev_orchestrator.TestDevOrchestrator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_build_compose_command_down_operations` | `scripts.tests.test_dev_orchestrator.TestDevOrchestrator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_build_compose_command_execution_with_flag` | `scripts.tests.test_dev_orchestrator.TestDevOrchestrator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_build_compose_command_no_detach` | `scripts.tests.test_dev_orchestrator.TestDevOrchestrator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_dry_run` | `scripts.tests.test_dev_orchestrator.TestDevOrchestrator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_executes_subprocess` | `scripts.tests.test_dev_orchestrator.TestDevOrchestrator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_broken_fragment_relative_link_detection` | `scripts.tests.test_directory_sweeping_pipeline` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compliance_utility_directory_sweeping` | `scripts.tests.test_directory_sweeping_pipeline` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_duplicate_requirement_id_in_fragments_fails` | `scripts.tests.test_directory_sweeping_pipeline` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2734,11 +2741,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_success_with_draft_flag` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_layout_gating_approved_and_logged` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_layout_gating_missing_justification_rejected` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_integration` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_invisible` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_overlap` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_scrambled_sequence` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_valid` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_integration` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_invisible` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_overlap` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_scrambled_sequence` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_valid` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_aggregate_eligibility_evaluation_scenarios` | `scripts.tests.test_m4_challenger1_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_document_renderer_fallback` | `scripts.tests.test_m4_challenger1_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_sync_reconciliation_signature_enforcement_errors` | `scripts.tests.test_m4_challenger1_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3056,31 +3063,31 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 
 ## Electronic Signature Block
 
-- **Signer Identity:** fred
+- **Signer Identity:** jules
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 2e57ebb04c68520ae6d6bb62025ae405afd3a973d9f7e788cb047c99df453e35
+- **Cryptographic Hash (SHA-256):** e141ebe80287e167a749bb82a3cd33af624aa6687960e444e687f109b9c2a968
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUGt1BSTzhxRfvi/UUefqZD88e7iowDQYJKoZIhvcNAQEL
-BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
-ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgx
-ODE2MTMzMVoXDTI3MDgxOTE2MTMzMVowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
-VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlr8j
-pLAyR68PN60VHvaB+g5wHC5hYIH7osA0XGICIOIxl14+BudISWOAmImqxY/K/y9/
-lMEVmyupKlXUfhIwqFy0YBvbRuwvD53vx9gKgJN6ba5aUuRrmWAv8HpzGZIT0IjS
-wRxn04DjBXrlV5aGOrDzow1+tirc0xteBeuKeQkKcRjjT9ySwCD1LzWX/415MN/n
-wT8ioaD/2b4aHzXy2AvGdjo1xKhUr9GKUta7Ag7QbhXDZeYqp71gJZX0Br5po+pq
-Wotmcq6sb5Bc5Z0Pi6Efy69OLW3DvEfpd2sCojiTYRGEPWY71WKDbwZZn0xeYFWk
-GfSA8/r0OfTqYC/+/QIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBwsa0vUJPfT8cX
-e6SlIRpgoVuqyv13s9I5+fjXHcRznggMwTiCXU11IQH8givgCJfDV2BFxmzvfLsG
-XnePVoOgI334iYsQAonAMKCl0+GK4eGy6uZNkpfyYTsZJ+fLMF0NlgXN+z6Cbg/Z
-OktZKJt8L938degX5N8N5HwiI+sJQfKVzrGDd7R2pb9fLNBKRJXpp7OYlIqoV9Dm
-DmWVeN1wv6LPNDQcnytL6asREN8KOqwHqmd4je+Ny8FKqIshjoYZScahqFwBNph4
-XzEHeDx1YwYdUCuDV7lqt68+Mv2+sj6aA4zyswRpJGcHvf3IDDmbZIUyJIF/+EFL
-1w6yeptU
+MIIDNDCCAhygAwIBAgIUCHAI7R0FvHfs0EEE+JTovybZDX4wDQYJKoZIhvcNAQEL
+BQAwVDEuMCwGA1UEAwwlQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGp1
+bGVzKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTAeFw0yNjA4
+MTkxODMxMjFaFw0yNzA4MjAxODMxMjFaMFQxLjAsBgNVBAMMJUNhZGVuY2UgR3hQ
+IFZhbGlkYXRpb24gUnVubmVyIChqdWxlcykxIjAgBgNVBAoMGUNhZGVuY2UgQ2xp
+bmljYWwgU29mdHdhcmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDI
+02ZP4h7KzOQKc4QMnpH8aIaju6HeLBgmGojyuAlpQhYdelwTgjPVKeUi2u8N2Bb8
+HhqeCqTThRejzdDY5Vkw9d4s66H2OJYJGGEJ5Xl/kXd7ez77/xIctDC0cMrFPbUp
+XSpZNEDawWgmd/pMJIEVTxJlVJqlHB/LR7G9v7i2362YcH/hCx713LaHV7DdfwQi
++QdOJosQg5GGTj/4f5VQw2+9opNDzwf5tc5STQ1p5MC1XeI4MQNcslNXv9WPNHnQ
+x4bAOtzcg3tRBrY4UBtE2fpH8wtruYQYJ/W+bJWqMm8B+Qrggm0UlVi3BsdMxhpw
+WAKlthxqTurTuWquE8QBAgMBAAEwDQYJKoZIhvcNAQELBQADggEBALpvafOduXVW
+rvsha5cq68P1K2Lnhx4nmDw+/Rf3lO610oJymahagYFIcpQMaT63x9eK/wZVJaBS
+8SFF7OBtEoOSY03+LmbzOph9U1v7Cb4EkVdnIxTvUVBMQ5waU55Py757oFmKvFu9
+1if/cIPXlgewr2HZmxL966kQfWbICSk/ef8gw8egwd03Z6mWzz+V1+znLQBDSMYg
+4o4FEaycWc9B+gEXaUMOGGxX9Cd8KVLsYgg68ML30k2Uva6SCu67ESzXD/9LOOmo
+4QswKjrxKIaUosE+6BnF3kWPRNV8DwgKUeT+7uxM4brPjBMXex9sgUWj1S0nb5iS
+9CHSK9CInFo=
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-Xmx9Sttzhk3l2qbzHeLTTXdmjpnAxdVzclO6IRafA6A+BkGNgLIfrhl2c8E2WF9JoDURSMtlQjwqc+baGL6ukmiB3DIiUmto7KemQt1xTPPWaZr15/IrxbFDbCPPZeDFsWIP1qZjyIzjPasnssJKUIpTmGmHzhYrkMjVIxaOCYTSj/U5+oz3+IMKDInRicPptFtcy2vlgM9EI/tcF7fbTzO5yTW1xH43AYBHOPj+2IrUFl2Wo1x2FS2WYwavJkcPP7xdYEDWXG7EaLuUvT9ZICOt86hUsjwcAquR/b8Awr1VXET+Vx0PSx4383kBJHPsjvZCA0QU1WIZy9fceSt/ng==
+trFEePk9ICaZqe6apDQoWxbSt04MoK5sWoTCEVVijjph6GcKt+VCfagupwnMVjfwL5hN0xmmFaxpFDrYF+Mu8MxfYrsigb0Nmmk+7LbYRi4LYYrvIPnC9iN8/ews+0UEUQ/uwQpiwd1WHGhn25kPMY6EoPw+9uMV7dejZ0nP4qdnnhPdsBKnar9gTPDFeKWj4gjjIAitzjeAGNxYGGbVjXco6VtYeRSbjI8BNtyoVi4njyZewD6d9WVrpyd7hFR1DVaWDPYDr44xBtT/EcHuYLKn1v+2ftFUp7qz+4xbFne33YjJHoYzw0dzHQ7rPkPIMosCe4FhiLwpDyPlxoZuWg==
 -----END SIGNATURE-----

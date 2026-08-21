@@ -9,10 +9,12 @@
       aria-live="polite"
     >
       <span class="banner-icon">
-        {{ notificationBanner.type === 'success' ? '✅' : '⚠️' }}
+        {{ notificationBanner.type === "success" ? "✅" : "⚠️" }}
       </span>
       <span class="banner-message">{{ notificationBanner.message }}</span>
-      <button class="banner-close" @click="notificationBanner = null">&times;</button>
+      <button class="banner-close" @click="notificationBanner = null">
+        &times;
+      </button>
     </div>
 
     <!-- Header Section -->
@@ -26,8 +28,9 @@
         </div>
         <p class="view-description">
           Graph-native immutable versioning and dynamic subject schema
-          projection. Compare version graphs, inspect field deltas, run guided 4-step study upversioning,
-          and execute bulk re-consent across clinical sites.
+          projection. Compare version graphs, inspect field deltas, run guided
+          4-step study upversioning, and execute bulk re-consent across clinical
+          sites.
         </p>
       </div>
 
@@ -60,7 +63,9 @@
       >
         <span class="nav-icon">📋</span>
         <span>Site Coordinator: Bulk Re-Consent &amp; Migration Workspace</span>
-        <span v-if="gatedSubjectCount > 0" class="nav-pill-badge">{{ gatedSubjectCount }} Hold(s)</span>
+        <span v-if="gatedSubjectCount > 0" class="nav-pill-badge"
+          >{{ gatedSubjectCount }} Hold(s)</span
+        >
       </button>
     </div>
 
@@ -156,7 +161,9 @@
               :disabled="isLoadingImpact"
               @click="fetchSubjectImpact"
             >
-              {{ isLoadingImpact ? "Refreshing API..." : "🔄 Refresh Impact Data" }}
+              {{
+                isLoadingImpact ? "Refreshing API..." : "🔄 Refresh Impact Data"
+              }}
             </button>
             <span class="subject-total-counter"
               >Total In-Flight Cohort:
@@ -172,7 +179,9 @@
               <span class="card-badge badge-green"
                 >MIGRATED &amp; RE-CONSENTED</span
               >
-              <span class="metric-count">{{ impactStats.migrated.length }}</span>
+              <span class="metric-count">{{
+                impactStats.migrated.length
+              }}</span>
             </div>
             <p class="metric-label">
               Subjects executing on Target Schema v{{ selectedAmendedVersion }}
@@ -209,13 +218,16 @@
           <!-- Completed under Previous Version -->
           <div class="metric-card metric-gray">
             <div class="card-header">
-              <span class="card-badge badge-gray">COMPLETED UNDER PREVIOUS</span>
+              <span class="card-badge badge-gray"
+                >COMPLETED UNDER PREVIOUS</span
+              >
               <span class="metric-count">{{
                 impactStats.completedPrev.length
               }}</span>
             </div>
             <p class="metric-label">
-              Historical Visits Preserved under v{{ selectedBaseVersion }} Schema
+              Historical Visits Preserved under v{{ selectedBaseVersion }}
+              Schema
             </p>
             <div class="progress-bar-container">
               <div
@@ -297,18 +309,29 @@
         <div class="impact-summary-header-card">
           <div class="summary-top-row">
             <div class="summary-title-group">
-              <h3 class="section-title">📊 Protocol Amendment Impact Summary</h3>
+              <h3 class="section-title">
+                📊 Protocol Amendment Impact Summary
+              </h3>
               <p class="summary-subtext">
-                Quantitative patient burden delta, affected schedule visits, and USDM schema revisions
-                comparing v{{ selectedBaseVersion }} to v{{ selectedAmendedVersion }}.
+                Quantitative patient burden delta, affected schedule visits, and
+                USDM schema revisions comparing v{{ selectedBaseVersion }} to
+                v{{ selectedAmendedVersion }}.
               </p>
             </div>
             <div class="summary-status-badge">
               <span
                 class="badge"
-                :class="amendmentImpact.requires_reconsent ? 'badge-alert-reconsent' : 'badge-ok'"
+                :class="
+                  amendmentImpact.requires_reconsent
+                    ? 'badge-alert-reconsent'
+                    : 'badge-ok'
+                "
               >
-                {{ amendmentImpact.requires_reconsent ? '🔒 MANDATORY RE-CONSENT GATED (PRD-SUB-007)' : '✅ ADMINISTRATIVE AMENDMENT' }}
+                {{
+                  amendmentImpact.requires_reconsent
+                    ? "🔒 MANDATORY RE-CONSENT GATED (PRD-SUB-007)"
+                    : "✅ ADMINISTRATIVE AMENDMENT"
+                }}
               </span>
             </div>
           </div>
@@ -316,38 +339,79 @@
           <div class="summary-stat-chips-grid">
             <div class="stat-chip">
               <span class="chip-label">Operational Burden Delta</span>
-              <strong class="chip-val chip-burden">{{ amendmentImpact.burden_delta > 0 ? '+' : '' }}{{ amendmentImpact.burden_delta }} Index</strong>
+              <strong class="chip-val chip-burden"
+                >{{ amendmentImpact.burden_delta > 0 ? "+" : ""
+                }}{{ amendmentImpact.burden_delta }} Index</strong
+              >
             </div>
             <div class="stat-chip">
               <span class="chip-label">Affected Visits</span>
-              <strong class="chip-val">{{ amendmentImpact.affected_visits_count }} Encounter(s)</strong>
+              <strong class="chip-val"
+                >{{
+                  amendmentImpact.affected_visits_count
+                }}
+                Encounter(s)</strong
+              >
             </div>
             <div class="stat-chip">
               <span class="chip-label">Affected Procedures</span>
-              <strong class="chip-val">{{ amendmentImpact.affected_activities_count }} Activity(ies)</strong>
+              <strong class="chip-val"
+                >{{
+                  amendmentImpact.affected_activities_count
+                }}
+                Activity(ies)</strong
+              >
             </div>
             <div class="stat-chip">
               <span class="chip-label">Schema Revision Scope</span>
-              <strong class="chip-val chip-scope">{{ amendmentImpact.is_substantial ? 'Substantial (Clinical/Safety)' : 'Minor' }}</strong>
+              <strong class="chip-val chip-scope">{{
+                amendmentImpact.is_substantial
+                  ? "Substantial (Clinical/Safety)"
+                  : "Minor"
+              }}</strong>
             </div>
           </div>
 
           <!-- Revision breakdown chips -->
           <div class="schema-breakdown-chips">
-            <span class="breakdown-chip" v-if="amendmentImpact.schema_revisions?.encounters?.added">
-              ➕ {{ amendmentImpact.schema_revisions.encounters.added }} Added Visit(s)
+            <span
+              class="breakdown-chip"
+              v-if="amendmentImpact.schema_revisions?.encounters?.added"
+            >
+              ➕ {{ amendmentImpact.schema_revisions.encounters.added }} Added
+              Visit(s)
             </span>
-            <span class="breakdown-chip" v-if="amendmentImpact.schema_revisions?.encounters?.modified">
-              🔄 {{ amendmentImpact.schema_revisions.encounters.modified }} Modified Visit(s)
+            <span
+              class="breakdown-chip"
+              v-if="amendmentImpact.schema_revisions?.encounters?.modified"
+            >
+              🔄
+              {{ amendmentImpact.schema_revisions.encounters.modified }}
+              Modified Visit(s)
             </span>
-            <span class="breakdown-chip" v-if="amendmentImpact.schema_revisions?.activities?.added">
-              ➕ {{ amendmentImpact.schema_revisions.activities.added }} Added Procedure(s)
+            <span
+              class="breakdown-chip"
+              v-if="amendmentImpact.schema_revisions?.activities?.added"
+            >
+              ➕ {{ amendmentImpact.schema_revisions.activities.added }} Added
+              Procedure(s)
             </span>
-            <span class="breakdown-chip" v-if="amendmentImpact.schema_revisions?.eligibility_criteria?.added">
-              📋 {{ amendmentImpact.schema_revisions.eligibility_criteria.added }} Added Criteria
+            <span
+              class="breakdown-chip"
+              v-if="
+                amendmentImpact.schema_revisions?.eligibility_criteria?.added
+              "
+            >
+              📋
+              {{ amendmentImpact.schema_revisions.eligibility_criteria.added }}
+              Added Criteria
             </span>
-            <span class="breakdown-chip" v-if="amendmentImpact.schema_revisions?.forms?.added">
-              📝 {{ amendmentImpact.schema_revisions.forms.added }} Added eCRF Form(s)
+            <span
+              class="breakdown-chip"
+              v-if="amendmentImpact.schema_revisions?.forms?.added"
+            >
+              📝 {{ amendmentImpact.schema_revisions.forms.added }} Added eCRF
+              Form(s)
             </span>
           </div>
         </div>
@@ -382,10 +446,20 @@
           <div class="layer-header">
             <h4>Side-by-Side Schedule of Activities &amp; Graph Structure</h4>
             <div class="legend-box">
-              <span class="legend-item"><span class="color-dot dot-green" /> + Added Encounter/Activity</span>
-              <span class="legend-item"><span class="color-dot dot-yellow" /> ~ Modified Schedule/Assay</span>
-              <span class="legend-item"><span class="color-dot dot-red" /> - Removed Procedure</span>
-              <span class="legend-item"><span class="color-dot dot-gray" /> = Preserved Baseline</span>
+              <span class="legend-item"
+                ><span class="color-dot dot-green" /> + Added
+                Encounter/Activity</span
+              >
+              <span class="legend-item"
+                ><span class="color-dot dot-yellow" /> ~ Modified
+                Schedule/Assay</span
+              >
+              <span class="legend-item"
+                ><span class="color-dot dot-red" /> - Removed Procedure</span
+              >
+              <span class="legend-item"
+                ><span class="color-dot dot-gray" /> = Preserved Baseline</span
+              >
             </div>
           </div>
 
@@ -424,7 +498,9 @@
             <!-- Amended Version Column -->
             <div class="graph-column">
               <div class="column-header amended-header">
-                <h4>Amended Protocol Version (v{{ selectedAmendedVersion }})</h4>
+                <h4>
+                  Amended Protocol Version (v{{ selectedAmendedVersion }})
+                </h4>
                 <span class="badge badge-active">ACTIVE PROJECTION</span>
               </div>
 
@@ -438,7 +514,10 @@
                   <div class="node-title-row">
                     <span class="node-type-badge">{{ item.type }}</span>
                     <span class="node-name">{{ item.name }}</span>
-                    <span class="diff-badge" :class="'diff-badge-' + item.diffType">
+                    <span
+                      class="diff-badge"
+                      :class="'diff-badge-' + item.diffType"
+                    >
                       {{ item.diffBadgeText }}
                     </span>
                   </div>
@@ -458,7 +537,9 @@
         <!-- Layer 2: Eligibility Criteria Diff -->
         <div v-if="activeDiffLayer === 'eligibility'" class="layer-content">
           <div class="layer-header">
-            <h4>Eligibility Criteria Modifications &amp; Patient Screening Rules</h4>
+            <h4>
+              Eligibility Criteria Modifications &amp; Patient Screening Rules
+            </h4>
           </div>
           <div class="criteria-diff-table-wrapper">
             <table class="data-table">
@@ -477,14 +558,31 @@
                   :key="crit.id"
                   :class="'row-diff-' + crit.change_type.toLowerCase()"
                 >
-                  <td><strong>{{ crit.id }}</strong></td>
-                  <td><span class="type-pill">{{ crit.type }}</span></td>
-                  <td>{{ crit.baseText || '— None (Added in Amendment) —' }}</td>
-                  <td><strong>{{ crit.amendedText || '— Deprecated —' }}</strong></td>
+                  <td>
+                    <strong>{{ crit.id }}</strong>
+                  </td>
+                  <td>
+                    <span class="type-pill">{{ crit.type }}</span>
+                  </td>
+                  <td>
+                    {{ crit.baseText || "— None (Added in Amendment) —" }}
+                  </td>
+                  <td>
+                    <strong>{{ crit.amendedText || "— Deprecated —" }}</strong>
+                  </td>
                   <td>
                     <span
                       class="diff-badge"
-                      :class="'diff-badge-node-' + (crit.change_type === 'ADDED' ? 'added' : crit.change_type === 'MODIFIED' ? 'modified' : crit.change_type === 'REMOVED' ? 'deprecated' : 'unchanged')"
+                      :class="
+                        'diff-badge-node-' +
+                        (crit.change_type === 'ADDED'
+                          ? 'added'
+                          : crit.change_type === 'MODIFIED'
+                            ? 'modified'
+                            : crit.change_type === 'REMOVED'
+                              ? 'deprecated'
+                              : 'unchanged')
+                      "
                     >
                       {{ crit.change_type }}
                     </span>
@@ -498,7 +596,9 @@
         <!-- Layer 3: eCRF Forms Diff -->
         <div v-if="activeDiffLayer === 'ecrf'" class="layer-content">
           <div class="layer-header">
-            <h4>eCRF Form Definitions &amp; Clinical Data Capture Schema Diff</h4>
+            <h4>
+              eCRF Form Definitions &amp; Clinical Data Capture Schema Diff
+            </h4>
           </div>
           <div class="forms-diff-grid">
             <div
@@ -514,7 +614,14 @@
                 </div>
                 <span
                   class="diff-badge"
-                  :class="'diff-badge-node-' + (form.change_type === 'ADDED' ? 'added' : form.change_type === 'MODIFIED' ? 'modified' : 'unchanged')"
+                  :class="
+                    'diff-badge-node-' +
+                    (form.change_type === 'ADDED'
+                      ? 'added'
+                      : form.change_type === 'MODIFIED'
+                        ? 'modified'
+                        : 'unchanged')
+                  "
                 >
                   {{ form.change_type }}
                 </span>
@@ -527,44 +634,59 @@
           </div>
         </div>
       </div>
-
     </div>
 
     <!-- MODE 2: Site Coordinator Bulk Re-Consent & Site Migration Workspace -->
-    <div v-if="activeMode === 'coordinator'" class="coordinator-workspace-container">
+    <div
+      v-if="activeMode === 'coordinator'"
+      class="coordinator-workspace-container"
+    >
       <div class="workspace-card">
         <div class="workspace-card-header">
           <div>
-            <h3 class="card-title">📋 Site Coordinator Bulk Re-Consent Workspace</h3>
+            <h3 class="card-title">
+              📋 Site Coordinator Bulk Re-Consent Workspace
+            </h3>
             <p class="card-subtitle">
-              Manage patient protocol re-consent holds, verify eConsent or signed paper ICF uploads,
-              and authorize batch 21 CFR Part 11 electronic signatures.
+              Manage patient protocol re-consent holds, verify eConsent or
+              signed paper ICF uploads, and authorize batch 21 CFR Part 11
+              electronic signatures.
             </p>
           </div>
           <div class="site-badge-header">
-            <span>Site Context: <strong>{{ selectedSiteScope }}</strong></span>
+            <span
+              >Site Context: <strong>{{ selectedSiteScope }}</strong></span
+            >
           </div>
         </div>
 
         <!-- Filter Controls Bar -->
         <div class="filter-toolbar">
           <div class="filter-item">
-            <label for="site-filter-select" class="filter-label">Filter by Trial Site:</label>
+            <label for="site-filter-select" class="filter-label"
+              >Filter by Trial Site:</label
+            >
             <select
               id="site-filter-select"
               v-model="siteFilter"
               class="form-select form-select-sm"
               @change="fetchSubjectImpact"
             >
-              <option value="ALL">All Assigned Sites (SITE-101, SITE-102, SITE-103)</option>
+              <option value="ALL">
+                All Assigned Sites (SITE-101, SITE-102, SITE-103)
+              </option>
               <option value="SITE-101">SITE-101 (General Hospital)</option>
-              <option value="SITE-102">SITE-102 (University Medical Center)</option>
+              <option value="SITE-102">
+                SITE-102 (University Medical Center)
+              </option>
               <option value="SITE-103">SITE-103 (Metro Clinical Center)</option>
             </select>
           </div>
 
           <div class="filter-item">
-            <label for="version-filter-select" class="filter-label">Protocol Version:</label>
+            <label for="version-filter-select" class="filter-label"
+              >Protocol Version:</label
+            >
             <select
               id="version-filter-select"
               v-model="versionFilter"
@@ -577,7 +699,9 @@
           </div>
 
           <div class="filter-item">
-            <label for="gating-filter-select" class="filter-label">Gating Status:</label>
+            <label for="gating-filter-select" class="filter-label"
+              >Gating Status:</label
+            >
             <select
               id="gating-filter-select"
               v-model="gatingFilter"
@@ -590,7 +714,9 @@
           </div>
 
           <div class="filter-item search-filter-item">
-            <label for="subject-search-input" class="filter-label">Search Subject ID:</label>
+            <label for="subject-search-input" class="filter-label"
+              >Search Subject ID:</label
+            >
             <input
               id="subject-search-input"
               v-model="searchQuery"
@@ -630,7 +756,7 @@
                 :key="sub.id"
                 :class="{
                   'row-selected': selectedSubjectIds.includes(sub.id),
-                  'row-gated': sub.isGated
+                  'row-gated': sub.isGated,
                 }"
               >
                 <td class="col-checkbox">
@@ -646,13 +772,15 @@
                   <strong>{{ sub.id }}</strong>
                 </td>
                 <td>
-                  <span class="site-tag">{{ sub.site_id || 'SITE-101' }}</span>
+                  <span class="site-tag">{{ sub.site_id || "SITE-101" }}</span>
                 </td>
                 <td>
                   <span class="state-pill">{{ sub.status }}</span>
                 </td>
                 <td>
-                  <span class="version-tag">v{{ sub.active_protocol_version }}</span>
+                  <span class="version-tag"
+                    >v{{ sub.active_protocol_version }}</span
+                  >
                 </td>
                 <td>
                   <span :class="['consent-badge', 'badge-' + sub.consentColor]">
@@ -698,9 +826,16 @@
     >
       <div class="batch-toolbar-content">
         <div class="batch-info">
-          <span class="batch-count-badge">⚡ {{ selectedSubjectIds.length }} Subject(s) Selected</span>
-          <span class="batch-site-scope">Site Scope: <strong>{{ selectedSiteScope }}</strong></span>
-          <span class="batch-version-target">Target Protocol Version: <strong>v{{ selectedAmendedVersion }}</strong></span>
+          <span class="batch-count-badge"
+            >⚡ {{ selectedSubjectIds.length }} Subject(s) Selected</span
+          >
+          <span class="batch-site-scope"
+            >Site Scope: <strong>{{ selectedSiteScope }}</strong></span
+          >
+          <span class="batch-version-target"
+            >Target Protocol Version:
+            <strong>v{{ selectedAmendedVersion }}</strong></span
+          >
         </div>
         <div class="batch-actions">
           <button
@@ -722,17 +857,18 @@
     </div>
 
     <!-- 4-Step Guided Upversioning Wizard Modal -->
-    <div
-      v-if="showCreateModal"
-      class="modal-overlay"
-      @click.self="closeWizard"
-    >
+    <div v-if="showCreateModal" class="modal-overlay" @click.self="closeWizard">
       <div class="modal-card wizard-modal-card">
         <!-- Wizard Header & Stepper -->
         <div class="modal-header wizard-header">
           <div>
-            <h3 class="modal-title">Protocol Upversioning &amp; Amendment Wizard</h3>
-            <p class="modal-subtitle">4-step guided process for study managers to publish amendments and target rules.</p>
+            <h3 class="modal-title">
+              Protocol Upversioning &amp; Amendment Wizard
+            </h3>
+            <p class="modal-subtitle">
+              4-step guided process for study managers to publish amendments and
+              target rules.
+            </p>
           </div>
           <button class="modal-close" @click="closeWizard">&times;</button>
         </div>
@@ -781,28 +917,45 @@
           <!-- Step 1: Amendment Scope & Classification -->
           <div v-if="wizardStep === 1" class="wizard-step-content">
             <h4>Step 1: Amendment Classification &amp; Scope</h4>
-            <p class="step-desc">Classify protocol change scope and establish GxP change rationale.</p>
+            <p class="step-desc">
+              Classify protocol change scope and establish GxP change rationale.
+            </p>
 
             <div class="form-group">
               <label class="form-label">Amendment Classification Type:</label>
               <select v-model="newAmendment.amendment_type" class="form-select">
-                <option value="major">Major Amendment (Structural / Safety / Visit Schedule Changes)</option>
-                <option value="minor">Minor Amendment (Administrative / Clarification / Non-substantive)</option>
+                <option value="major">
+                  Major Amendment (Structural / Safety / Visit Schedule Changes)
+                </option>
+                <option value="minor">
+                  Minor Amendment (Administrative / Clarification /
+                  Non-substantive)
+                </option>
               </select>
             </div>
 
             <div class="form-group checkbox-group">
               <label class="checkbox-label">
-                <input v-model="newAmendment.requires_reconsent" type="checkbox" />
-                <span><strong>Mandatory Subject Re-Consent (PRD-SUB-007)</strong></span>
+                <input
+                  v-model="newAmendment.requires_reconsent"
+                  type="checkbox"
+                />
+                <span
+                  ><strong
+                    >Mandatory Subject Re-Consent (PRD-SUB-007)</strong
+                  ></span
+                >
               </label>
               <small class="form-hint">
-                When enabled, eCRF data entry for active in-flight participants is locked until signed ICF is recorded.
+                When enabled, eCRF data entry for active in-flight participants
+                is locked until signed ICF is recorded.
               </small>
             </div>
 
             <div class="form-group">
-              <label class="form-label">GxP Justification &amp; Change Reason:</label>
+              <label class="form-label"
+                >GxP Justification &amp; Change Reason:</label
+              >
               <textarea
                 v-model="newAmendment.change_reason"
                 class="form-control text-area"
@@ -815,16 +968,29 @@
           <!-- Step 2: Target Version Selection -->
           <div v-if="wizardStep === 2" class="wizard-step-content">
             <h4>Step 2: Target Version &amp; Study Scope Selection</h4>
-            <p class="step-desc">Select frozen baseline snapshot and establish target amended version tag.</p>
+            <p class="step-desc">
+              Select frozen baseline snapshot and establish target amended
+              version tag.
+            </p>
 
             <div class="form-group">
               <label class="form-label">Target Study ID:</label>
-              <input type="text" class="form-control" v-model="selectedStudyId" disabled />
+              <input
+                type="text"
+                class="form-control"
+                v-model="selectedStudyId"
+                disabled
+              />
             </div>
 
             <div class="form-group">
               <label class="form-label">Base Frozen Version:</label>
-              <input type="text" class="form-control" value="v1.0.0 (Approved / Locked Snapshot)" disabled />
+              <input
+                type="text"
+                class="form-control"
+                value="v1.0.0 (Approved / Locked Snapshot)"
+                disabled
+              />
             </div>
 
             <div class="form-group">
@@ -841,7 +1007,10 @@
           <!-- Step 3: Predictive Subject Impact Preview -->
           <div v-if="wizardStep === 3" class="wizard-step-content">
             <h4>Step 3: Predictive Site &amp; Subject Impact Analysis</h4>
-            <p class="step-desc">Calculated in real-time from live execution APIs in under 2 seconds.</p>
+            <p class="step-desc">
+              Calculated in real-time from live execution APIs in under 2
+              seconds.
+            </p>
 
             <div v-if="isLoadingImpact" class="loading-state">
               <span>🔄 Calculating predictive subject impact analysis...</span>
@@ -850,15 +1019,25 @@
             <div v-else class="impact-summary-box">
               <div class="impact-stat-row">
                 <div class="impact-stat-card card-green">
-                  <span class="stat-val">{{ wizardImpactData?.categories?.migrated_and_reconsented?.count || impactStats.migrated.length }}</span>
+                  <span class="stat-val">{{
+                    wizardImpactData?.categories?.migrated_and_reconsented
+                      ?.count || impactStats.migrated.length
+                  }}</span>
                   <span class="stat-lbl">Migrated / Re-Consented</span>
                 </div>
                 <div class="impact-stat-card card-yellow">
-                  <span class="stat-val">{{ wizardImpactData?.categories?.pending_reconsent?.count || impactStats.pending.length }}</span>
+                  <span class="stat-val">{{
+                    wizardImpactData?.categories?.pending_reconsent?.count ||
+                    impactStats.pending.length
+                  }}</span>
                   <span class="stat-lbl">Pending Re-Consent Holds</span>
                 </div>
                 <div class="impact-stat-card card-gray">
-                  <span class="stat-val">{{ wizardImpactData?.categories?.completed_under_previous_version?.count || impactStats.completedPrev.length }}</span>
+                  <span class="stat-val">{{
+                    wizardImpactData?.categories
+                      ?.completed_under_previous_version?.count ||
+                    impactStats.completedPrev.length
+                  }}</span>
                   <span class="stat-lbl">Completed under v1.0.0</span>
                 </div>
               </div>
@@ -866,7 +1045,10 @@
               <div class="impact-notice">
                 <span class="notice-icon">⚡</span>
                 <span
-                  >Active execution pipeline verified. <strong>{{ impactStats.pending.length }} subject(s)</strong> across trial sites will enter mandatory re-consent holds upon publication.</span
+                  >Active execution pipeline verified.
+                  <strong>{{ impactStats.pending.length }} subject(s)</strong>
+                  across trial sites will enter mandatory re-consent holds upon
+                  publication.</span
                 >
               </div>
             </div>
@@ -875,15 +1057,32 @@
           <!-- Step 4: Schema Mapping & Publish Confirmation -->
           <div v-if="wizardStep === 4" class="wizard-step-content">
             <h4>Step 4: Target Schema Rules &amp; Publication Confirmation</h4>
-            <p class="step-desc">Verify structural graph projections and confirm zero-downtime amendment release.</p>
+            <p class="step-desc">
+              Verify structural graph projections and confirm zero-downtime
+              amendment release.
+            </p>
 
             <div class="schema-mapping-preview">
               <div class="schema-rule-box">
-                <h5>📋 Added &amp; Modified Visit Rules (v{{ newAmendment.target_version }})</h5>
+                <h5>
+                  📋 Added &amp; Modified Visit Rules (v{{
+                    newAmendment.target_version
+                  }})
+                </h5>
                 <ul>
-                  <li><strong>Visit 3.5 Interim PK Assessment:</strong> New mid-cycle pharmacokinetic encounter added.</li>
-                  <li><strong>Standard Safety Chemistry:</strong> Added high-sensitivity troponin biomarker requirement.</li>
-                  <li><strong>Historical Record Rule:</strong> In-flight subject historical visits remain immutable read-only records under v1.0.0 schema.</li>
+                  <li>
+                    <strong>Visit 3.5 Interim PK Assessment:</strong> New
+                    mid-cycle pharmacokinetic encounter added.
+                  </li>
+                  <li>
+                    <strong>Standard Safety Chemistry:</strong> Added
+                    high-sensitivity troponin biomarker requirement.
+                  </li>
+                  <li>
+                    <strong>Historical Record Rule:</strong> In-flight subject
+                    historical visits remain immutable read-only records under
+                    v1.0.0 schema.
+                  </li>
                 </ul>
               </div>
             </div>
@@ -900,12 +1099,7 @@
           >
             ← Back
           </button>
-          <button
-            class="btn btn-secondary"
-            @click="closeWizard"
-          >
-            Cancel
-          </button>
+          <button class="btn btn-secondary" @click="closeWizard">Cancel</button>
           <button
             v-if="wizardStep < 4"
             class="btn btn-primary"
@@ -921,7 +1115,11 @@
             :disabled="isSubmitting"
             @click="submitCreateAmendment"
           >
-            {{ isSubmitting ? "Publishing Target Schema..." : "🚀 Publish Protocol Amendment & Apply Target Rules" }}
+            {{
+              isSubmitting
+                ? "Publishing Target Schema..."
+                : "🚀 Publish Protocol Amendment & Apply Target Rules"
+            }}
           </button>
         </div>
       </div>
@@ -936,21 +1134,30 @@
     >
       <div class="modal-card bulk-reconsent-card">
         <div class="modal-header">
-          <h3 class="modal-title">Authorize Bulk Re-Consent Signatures (21 CFR Part 11)</h3>
-          <button class="modal-close" @click="showBulkReconsentModal = false">&times;</button>
+          <h3 class="modal-title">
+            Authorize Bulk Re-Consent Signatures (21 CFR Part 11)
+          </h3>
+          <button class="modal-close" @click="showBulkReconsentModal = false">
+            &times;
+          </button>
         </div>
 
         <div class="modal-body">
           <p class="modal-intro">
             You are authorizing batch protocol re-consent sign-off for
             <strong>{{ selectedSubjectIds.length }} subject(s)</strong>:
-            <span class="subject-tags-inline">{{ selectedSubjectIds.join(', ') }}</span>.
+            <span class="subject-tags-inline">{{
+              selectedSubjectIds.join(", ")
+            }}</span
+            >.
           </p>
 
           <div class="reconsent-options">
             <div
               class="option-card"
-              :class="{ selected: bulkReconsentForm.signature_type === 'ECONSENT' }"
+              :class="{
+                selected: bulkReconsentForm.signature_type === 'ECONSENT',
+              }"
               @click="bulkReconsentForm.signature_type = 'ECONSENT'"
             >
               <h4>✍️ Electronic Consent (eConsent)</h4>
@@ -958,11 +1165,16 @@
             </div>
             <div
               class="option-card"
-              :class="{ selected: bulkReconsentForm.signature_type === 'PAPER_UPLOAD' }"
+              :class="{
+                selected: bulkReconsentForm.signature_type === 'PAPER_UPLOAD',
+              }"
               @click="bulkReconsentForm.signature_type = 'PAPER_UPLOAD'"
             >
               <h4>📄 Verified Paper ICF Upload</h4>
-              <p>Site PI verified paper ICF signed and filed in investigator binder.</p>
+              <p>
+                Site PI verified paper ICF signed and filed in investigator
+                binder.
+              </p>
             </div>
           </div>
 
@@ -987,7 +1199,9 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">GxP Audit Justification &amp; Change Reason:</label>
+            <label class="form-label"
+              >GxP Audit Justification &amp; Change Reason:</label
+            >
             <input
               v-model="bulkReconsentForm.reason_for_change"
               type="text"
@@ -998,7 +1212,10 @@
         </div>
 
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showBulkReconsentModal = false">
+          <button
+            class="btn btn-secondary"
+            @click="showBulkReconsentModal = false"
+          >
             Cancel
           </button>
           <button
@@ -1007,7 +1224,11 @@
             :disabled="!bulkReconsentForm.signer_name.trim() || isSubmitting"
             @click="executeBulkReconsent"
           >
-            {{ isSubmitting ? "Authorizing Batch Signatures..." : "Confirm & Authorize Bulk Signatures" }}
+            {{
+              isSubmitting
+                ? "Authorizing Batch Signatures..."
+                : "Confirm & Authorize Bulk Signatures"
+            }}
           </button>
         </div>
       </div>
@@ -1112,7 +1333,8 @@ const wizardImpactData = ref(null);
 const newAmendment = ref({
   amendment_type: "major",
   requires_reconsent: true,
-  change_reason: "Protocol Amendment 2.0 introducing optional PK visit and updating dosing cohort safety rules",
+  change_reason:
+    "Protocol Amendment 2.0 introducing optional PK visit and updating dosing cohort safety rules",
   target_version: "2.0.0",
 });
 
@@ -1193,13 +1415,17 @@ const gatedInFilteredCount = computed(() => {
 });
 
 const allGatedSelected = computed(() => {
-  const gatedIds = filteredSubjects.value.filter((s) => s.isGated).map((s) => s.id);
+  const gatedIds = filteredSubjects.value
+    .filter((s) => s.isGated)
+    .map((s) => s.id);
   if (gatedIds.length === 0) return false;
   return gatedIds.every((id) => selectedSubjectIds.value.includes(id));
 });
 
 function toggleSelectAllGated() {
-  const gatedIds = filteredSubjects.value.filter((s) => s.isGated).map((s) => s.id);
+  const gatedIds = filteredSubjects.value
+    .filter((s) => s.isGated)
+    .map((s) => s.id);
   if (allGatedSelected.value) {
     selectedSubjectIds.value = selectedSubjectIds.value.filter(
       (id) => !gatedIds.includes(id)
@@ -1221,7 +1447,10 @@ const amendmentImpact = ref({
   amended_version: "2.0.0",
   burden_delta: 2.0,
   affected_visits_count: 2,
-  affected_visits: ["Visit 3: Treatment Cycle 1", "Visit 3.5: Interim PK Assessment"],
+  affected_visits: [
+    "Visit 3: Treatment Cycle 1",
+    "Visit 3.5: Interim PK Assessment",
+  ],
   affected_activities_count: 2,
   affected_activities: ["Standard Safety Chemistry", "PK Blood Draw"],
   schema_revisions: {
@@ -1233,7 +1462,8 @@ const amendmentImpact = ref({
   is_substantial: true,
   requires_reconsent: true,
   estimated_cost_usd: 7600.0,
-  narrative_summary: "Protocol Amendment 2.0 introducing mid-cycle PK visit and troponin biomarker.",
+  narrative_summary:
+    "Protocol Amendment 2.0 introducing mid-cycle PK visit and troponin biomarker.",
 });
 
 // Graph Diff Nodes Data
@@ -1316,7 +1546,8 @@ const graphDiff = ref({
       schedule: "Day 14",
       diffType: "node-modified",
       diffBadgeText: "~ Modified",
-      deltaNote: "Added PK Blood Draw form and expanded safety lab range criteria.",
+      deltaNote:
+        "Added PK Blood Draw form and expanded safety lab range criteria.",
     },
     {
       id: "a-v4",
@@ -1389,9 +1620,11 @@ const ecrfFormsDiffList = ref([
     id: "f_pk",
     form_key: "PK_ASSAY",
     name: "Pharmacokinetics Blood Sampling (eCRF)",
-    description: "PK plasma blood draw timing, tube barcoding, lab accession numbers.",
+    description:
+      "PK plasma blood draw timing, tube barcoding, lab accession numbers.",
     change_type: "ADDED",
-    deltaNote: "New CRF form mandated for Visit 3 and Visit 3.5 under Amendment 2.0.",
+    deltaNote:
+      "New CRF form mandated for Visit 3 and Visit 3.5 under Amendment 2.0.",
   },
   {
     id: "f_safety",
@@ -1407,7 +1640,8 @@ const ecrfFormsDiffList = ref([
 async function fetchSubjectImpact() {
   isLoadingImpact.value = true;
   try {
-    const siteQuery = siteFilter.value !== "ALL" ? `&site_id=${siteFilter.value}` : "";
+    const siteQuery =
+      siteFilter.value !== "ALL" ? `&site_id=${siteFilter.value}` : "";
     const res = await apiClient.get(
       `/api/v1/execution/amendments/${selectedStudyId.value}/subject-impact?target_version=${selectedAmendedVersion.value}${siteQuery}`
     );
@@ -1415,7 +1649,10 @@ async function fetchSubjectImpact() {
       wizardImpactData.value = res;
     }
   } catch (err) {
-    console.warn("Live subject-impact API call, using current state fallback:", err);
+    console.warn(
+      "Live subject-impact API call, using current state fallback:",
+      err
+    );
   } finally {
     isLoadingImpact.value = false;
   }
@@ -1432,7 +1669,11 @@ async function fetchAmendmentDiffAndImpact() {
     if (diffRes && diffRes.impact_summary) {
       amendmentImpact.value = diffRes.impact_summary;
     }
-    if (diffRes && diffRes.soa_matrix_diffs && diffRes.soa_matrix_diffs.length > 0) {
+    if (
+      diffRes &&
+      diffRes.soa_matrix_diffs &&
+      diffRes.soa_matrix_diffs.length > 0
+    ) {
       // Map API response to amended nodes
       const amendedFromApi = diffRes.soa_matrix_diffs.map((d) => ({
         id: `a-${d.entity_id}`,
@@ -1440,8 +1681,22 @@ async function fetchAmendmentDiffAndImpact() {
         name: d.name,
         spec: d.spec || "Assigned Protocol Scope",
         schedule: d.schedule || "Scheduled",
-        diffType: d.change_type === "ADDED" ? "node-added" : d.change_type === "MODIFIED" ? "node-modified" : d.change_type === "REMOVED" ? "node-deprecated" : "node-unchanged",
-        diffBadgeText: d.change_type === "ADDED" ? "+ Added" : d.change_type === "MODIFIED" ? "~ Modified" : d.change_type === "REMOVED" ? "- Deprecated" : "Preserved",
+        diffType:
+          d.change_type === "ADDED"
+            ? "node-added"
+            : d.change_type === "MODIFIED"
+              ? "node-modified"
+              : d.change_type === "REMOVED"
+                ? "node-deprecated"
+                : "node-unchanged",
+        diffBadgeText:
+          d.change_type === "ADDED"
+            ? "+ Added"
+            : d.change_type === "MODIFIED"
+              ? "~ Modified"
+              : d.change_type === "REMOVED"
+                ? "- Deprecated"
+                : "Preserved",
         deltaNote: d.delta_note,
       }));
       if (amendedFromApi.length > 0) {
@@ -1449,7 +1704,10 @@ async function fetchAmendmentDiffAndImpact() {
       }
     }
   } catch (err) {
-    console.warn("Live amendment diff API call, using verified local fallback:", err);
+    console.warn(
+      "Live amendment diff API call, using verified local fallback:",
+      err
+    );
   } finally {
     isLoadingDiff.value = false;
   }
@@ -1497,7 +1755,10 @@ async function submitCreateAmendment() {
         branch_name: `amendment-v${newAmendment.value.target_version}-draft`,
       });
     } catch (err) {
-      console.warn("Designer branching API error, proceeding with execution publish:", err);
+      console.warn(
+        "Designer branching API error, proceeding with execution publish:",
+        err
+      );
     }
 
     // 2. Publish in Execution API
@@ -1512,7 +1773,10 @@ async function submitCreateAmendment() {
     try {
       await apiClient.post("/api/v1/execution/amendments/publish", payload);
     } catch (err) {
-      console.warn("Publish amendment API error, using local state update:", err);
+      console.warn(
+        "Publish amendment API error, using local state update:",
+        err
+      );
     }
 
     selectedAmendedVersion.value = newAmendment.value.target_version;
@@ -1592,9 +1856,15 @@ async function executeBulkReconsent() {
     };
 
     try {
-      await apiClient.post("/api/v1/execution/amendments/bulk-reconsent", payload);
+      await apiClient.post(
+        "/api/v1/execution/amendments/bulk-reconsent",
+        payload
+      );
     } catch (err) {
-      console.warn("Bulk reconsent API error, applying local state update:", err);
+      console.warn(
+        "Bulk reconsent API error, applying local state update:",
+        err
+      );
     }
 
     // Update local state for all selected subjects
@@ -1640,7 +1910,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-
 .amendment-view-container {
   padding: 1.5rem 2rem;
   max-width: 100%;
@@ -2505,9 +2774,18 @@ onMounted(() => {
   border: 1px solid #e2e8f0;
 }
 
-.card-green { background: #f0fdf4; border-color: #bbf7d0; }
-.card-yellow { background: #fefce8; border-color: #fef08a; }
-.card-gray { background: #f8fafc; border-color: #e2e8f0; }
+.card-green {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+.card-yellow {
+  background: #fefce8;
+  border-color: #fef08a;
+}
+.card-gray {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
 
 .stat-val {
   display: block;
@@ -2927,4 +3205,3 @@ onMounted(() => {
   background: #94a3b8;
 }
 </style>
-

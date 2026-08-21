@@ -119,12 +119,12 @@ from typing import Generic, TypeVar
 
 T = TypeVar("T")
 
-class RepositoryPort(Generic[T], ABC):
-    ...
+
+class RepositoryPort(Generic[T], ABC): ...
+
 
 # ✔ CORRECT — native PEP 695 type parameter syntax
-class RepositoryPort[T](ABC):
-    ...
+class RepositoryPort[T](ABC): ...
 ```
 
 ---
@@ -137,8 +137,7 @@ When extracting archives (e.g. database snapshot restorations), never call `tar.
 # ✔ CORRECT — filters out members with path traversal or absolute paths
 with tarfile.open(archive_path, "r:gz") as tar:
     safe_members = [
-        m for m in tar.getmembers()
-        if not m.name.startswith("/") and ".." not in m.name
+        m for m in tar.getmembers() if not m.name.startswith("/") and ".." not in m.name
     ]
     tar.extractall(path=repo_root, members=safe_members)  # nosec B202: verified safe members
 ```
@@ -157,6 +156,7 @@ When authoring unit or integration tests across microservices or packages, agent
 from packages.testing.factories import SubjectFactory
 from packages.testing.fakes import InMemoryRepository
 from packages.testing.security import create_test_auth_headers
+
 
 def test_subject_registration():
     repo = InMemoryRepository()
@@ -798,3 +798,17 @@ Before submitting a PR, verify all items:
 - [ ] Local compliance and security sweeps run and pass, with any false positives bypassed using standard comment pragmas (restricted to mock/test files).
 - [ ] No code duplication failures (run `uv run python scripts/detect_duplication.py` locally to verify, or whitelist if exempt).
 - [ ] No binary `.docx` files, `report.xml`, or secrets are staged.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in **GitHub Issues** (canonical, via `gh` CLI) **and** `.scratch/<feature>/issues/` (local markdown drafts). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout: `CONTEXT.md` at the repo root + `docs/adr/`. See `docs/agents/domain.md`.

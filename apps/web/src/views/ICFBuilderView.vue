@@ -4,9 +4,16 @@
     <header class="builder-header">
       <div class="header-left">
         <h2>ICF Authoring: {{ econsentStore.currentIcf?.title }}</h2>
-        <span class="study-tag">Study: {{ econsentStore.currentIcf?.studyId || 'CADENCE-101' }}</span>
-        <span class="version-tag">ICF Version: {{ econsentStore.currentIcf?.version }}</span>
-        <span class="protocol-tag">Protocol: {{ econsentStore.currentIcf?.protocolVersion || 'v1.0' }}</span>
+        <span class="study-tag"
+          >Study: {{ econsentStore.currentIcf?.studyId || "CADENCE-101" }}</span
+        >
+        <span class="version-tag"
+          >ICF Version: {{ econsentStore.currentIcf?.version }}</span
+        >
+        <span class="protocol-tag"
+          >Protocol:
+          {{ econsentStore.currentIcf?.protocolVersion || "v1.0" }}</span
+        >
       </div>
       <div class="header-right">
         <button
@@ -40,10 +47,25 @@
         </strong>
       </div>
       <div class="manifest-details">
-        <div><strong>Signer:</strong> {{ latestSignature.signerName || latestSignature.username }} ({{ latestSignature.signerRole || 'Subject' }})</div>
-        <div><strong>Meaning of Signing:</strong> {{ latestSignature.meaningOfSigning || latestSignature.signingReason }}</div>
-        <div><strong>Server Timestamp:</strong> {{ latestSignature.timestamp }}</div>
-        <div><strong>Cryptographic Checksum (SHA-256):</strong> <code>{{ latestSignature.sha256_hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }}</code></div> <!-- pragma: allowlist secret -->
+        <div>
+          <strong>Signer:</strong>
+          {{ latestSignature.signerName || latestSignature.username }} ({{
+            latestSignature.signerRole || "Subject"
+          }})
+        </div>
+        <div>
+          <strong>Meaning of Signing:</strong>
+          {{
+            latestSignature.meaningOfSigning || latestSignature.signingReason
+          }}
+        </div>
+        <div>
+          <strong>Server Timestamp:</strong> {{ latestSignature.timestamp }}
+        </div>
+        <div>
+          <strong>Cryptographic Checksum (SHA-256):</strong>
+          <code>{{ latestSignature.sha256_hash || DEFAULT_EMPTY_SHA256 }}</code>
+        </div>
       </div>
     </div>
 
@@ -164,9 +186,7 @@
           />
         </div>
         <div v-else-if="showQuiz">
-          <ComprehensionQuizBuilder
-            @proceed-to-sign="openSignatureModal"
-          />
+          <ComprehensionQuizBuilder @proceed-to-sign="openSignatureModal" />
         </div>
         <div v-else class="no-selection-pane">
           <p>
@@ -245,6 +265,8 @@ import LanguageTranslationTabs from "../components/econsent/LanguageTranslationT
 import SignatureCaptureModal from "../components/SignatureCaptureModal.vue";
 
 const econsentStore = useEconsentStore();
+const DEFAULT_EMPTY_SHA256 =
+  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"; // pragma: allowlist secret
 const activeSectionId = ref(null);
 const showQuiz = ref(false);
 const showPublishModal = ref(false);
@@ -293,7 +315,11 @@ const openSignatureModal = () => {
   showSignatureModal.value = true;
 };
 
-const handleExecuteSignature = async (sigToken, signingReason, metadata = {}) => {
+const handleExecuteSignature = async (
+  sigToken,
+  signingReason,
+  metadata = {}
+) => {
   const record = {
     signerName: metadata.signerName || "Participant Jane Doe",
     signerRole: metadata.signerRole || "Subject",
