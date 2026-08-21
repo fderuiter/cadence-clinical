@@ -244,7 +244,9 @@ async def update_deviation_status(
             deviation_id=deviation_id,
             status=payload.status,
             user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles) if principal.raw_roles else "system",
+            user_roles=",".join(principal.raw_roles)
+            if principal.raw_roles
+            else "system",
             reason_for_change=principal.change_reason
             or "Automated Quality CAPA outbox status update",
             quality_capa_id=payload.quality_capa_id,

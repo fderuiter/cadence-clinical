@@ -405,7 +405,9 @@ class SQLQualityRepository(QualityRepositoryPort):
         return IntegrationOutbox(**kwargs)
 
     @map_database_exceptions
-    async def save_outbox_event(self, outbox_event: IntegrationOutbox) -> IntegrationOutbox:
+    async def save_outbox_event(
+        self, outbox_event: IntegrationOutbox
+    ) -> IntegrationOutbox:
         self.session.add(outbox_event)
         await self.session.flush()
         return outbox_event

@@ -170,6 +170,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+- [2026-08-21: Quality CTMS Transactional Outbox Sync and Knowledge Hub](2026-08-21-quality-ctms-transactional-outbox-sync-and-knowledge-hub.md)
 
 - [2026-08-15: Comprehensive Clinical Issue and Operations Hub Architecture](2026-08-15-comprehensive-clinical-issue-and-operations-hub-architecture.md)
 

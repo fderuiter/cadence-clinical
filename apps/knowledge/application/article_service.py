@@ -324,7 +324,9 @@ class ArticleLifecycleService:
 
         # Apply transition
         article.status = target_status
-        article.reason_for_change = reason_for_change or f"Transitioned to {target_status}"
+        article.reason_for_change = (
+            reason_for_change or f"Transitioned to {target_status}"
+        )
 
         # Audit log
         await self._write_audit_log(

@@ -326,8 +326,10 @@ class QualityService:
                     study_id=study_id or "STUDY-UNKNOWN",
                     site_id=getattr(payload, "site_id", None) or "SITE-UNKNOWN",
                     title=title or f"Escalated Deviation {payload.deviation_id}",
-                    description=getattr(payload, "description", None) or f"Escalated deviation {payload.deviation_id}",
-                    severity=getattr(payload, "severity", None) or DeviationSeverity.MAJOR,
+                    description=getattr(payload, "description", None)
+                    or f"Escalated deviation {payload.deviation_id}",
+                    severity=getattr(payload, "severity", None)
+                    or DeviationSeverity.MAJOR,
                     status=DeviationStatus.REPORTED,
                     type=DeviationType.PROTOCOL_PROCEDURE,
                     source_system="CTMS",
@@ -418,7 +420,9 @@ class QualityService:
             payload={
                 "capa_id": capa.id,
                 "deviation_id": capa.deviation_id,
-                "capa_status": capa.status.value if hasattr(capa.status, "value") else str(capa.status),
+                "capa_status": capa.status.value
+                if hasattr(capa.status, "value")
+                else str(capa.status),
                 "target_ctms_status": STAGE_MAPPING.get(capa.status, "CAPA_ESCALATED"),
                 "study_id": capa.study_id,
                 "site_id": capa.site_id,
@@ -533,7 +537,9 @@ class QualityService:
             payload={
                 "capa_id": capa.id,
                 "deviation_id": capa.deviation_id,
-                "capa_status": capa.status.value if hasattr(capa.status, "value") else str(capa.status),
+                "capa_status": capa.status.value
+                if hasattr(capa.status, "value")
+                else str(capa.status),
                 "target_ctms_status": STAGE_MAPPING.get(capa.status, "UNDER_REVIEW"),
                 "study_id": capa.study_id,
                 "site_id": capa.site_id,

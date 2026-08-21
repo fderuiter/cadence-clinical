@@ -54,6 +54,7 @@ DATABASE_URL = os.getenv("QUALITY_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 assert_secure_secrets("quality", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
 
+
 async def quality_startup() -> None:
     from apps.quality.adapters.workers.outbox_worker import start_outbox_worker
 

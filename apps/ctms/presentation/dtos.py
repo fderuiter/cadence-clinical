@@ -448,9 +448,14 @@ class ProtocolDeviationRCA(BaseModel):
 
 
 class ProtocolDeviationStatusUpdate(BaseModel):
-    status: str = Field(..., description="Target status: IDENTIFIED, UNDER_REVIEW, CAPA_ESCALATED, RESOLVED")
+    status: str = Field(
+        ...,
+        description="Target status: IDENTIFIED, UNDER_REVIEW, CAPA_ESCALATED, RESOLVED",
+    )
     quality_capa_id: str | None = Field(None, description="Optional Quality CAPA ID")
-    version_index: int | None = Field(None, description="Expected version index for optimistic locking")
+    version_index: int | None = Field(
+        None, description="Expected version index for optimistic locking"
+    )
 
 
 class ProtocolDeviationResponse(BaseModel):

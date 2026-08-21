@@ -35,7 +35,9 @@ async def poll_and_dispatch(session_maker=None) -> int:
         res = await session.execute(stmt)
         records = res.scalars().all()
 
-        ctms_base_url = os.getenv("CTMS_SERVICE_URL", "http://localhost:8000").rstrip("/")
+        ctms_base_url = os.getenv("CTMS_SERVICE_URL", "http://localhost:8000").rstrip(
+            "/"
+        )
 
         for record in records:
             if record.status not in ("PENDING", "FAILED") or not record.retry_eligible:
@@ -53,11 +55,15 @@ async def poll_and_dispatch(session_maker=None) -> int:
 
                     if not deviation_id or not target_status:
                         record.status = "FAILED"
-                        record.last_error = "Missing deviation_id or target_ctms_status in payload"
+                        record.last_error = (
+                            "Missing deviation_id or target_ctms_status in payload"
+                        )
                         record.retry_eligible = False
                         continue
 
-                    url = f"{ctms_base_url}/api/v1/ctms/deviations/{deviation_id}/status"
+                    url = (
+                        f"{ctms_base_url}/api/v1/ctms/deviations/{deviation_id}/status"
+                    )
                     user_id = payload.get("user_id", "quality-outbox-worker")
                     user_role = payload.get("user_role", "quality_manager,admin")
                     change_reason = payload.get(
@@ -120,7 +126,9 @@ async def outbox_lifecycle_worker() -> None:
         except asyncio.CancelledError:
             break
         except Exception as e:
-            logger.error("Error in Quality outbox dispatcher loop: %s", e, exc_info=True)
+            logger.error(
+                "Error in Quality outbox dispatcher loop: %s", e, exc_info=True
+            )
         await asyncio.sleep(poll_interval)
 
 

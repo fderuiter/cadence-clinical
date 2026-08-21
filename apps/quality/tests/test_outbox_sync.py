@@ -1,13 +1,13 @@
 import pytest
-from httpx import AsyncClient, ASGITransport
 from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 
+from apps.ctms.adapters.database import db_manager as ctms_db_manager
+from apps.ctms.main import app as ctms_app
+from apps.ctms.models import Base as CTMSBase
 from apps.quality.adapters.database import db_manager
 from apps.quality.adapters.models import Base, IntegrationOutbox
 from apps.quality.main import app as quality_app
-from apps.ctms.main import app as ctms_app
-from apps.ctms.adapters.database import db_manager as ctms_db_manager
-from apps.ctms.models import Base as CTMSBase
 from apps.quality.workers.outbox_worker import poll_and_dispatch
 from packages.security.rbac_helpers import build_gateway_headers
 
@@ -33,8 +33,12 @@ async def setup_test_dbs():
     await ctms_db_manager.close()
 
 
-def get_headers(user_id="test_user", roles="quality_manager,admin", change_reason="Outbox sync test"):
-    return build_gateway_headers(user_id=user_id, roles=roles, change_reason=change_reason)
+def get_headers(
+    user_id="test_user", roles="quality_manager,admin", change_reason="Outbox sync test"
+):
+    return build_gateway_headers(
+        user_id=user_id, roles=roles, change_reason=change_reason
+    )
 
 
 @pytest.mark.asyncio
@@ -54,7 +58,9 @@ async def test_ctms_escalation_creates_real_capa():
         "date_occurred": "2026-08-20",
     }
     headers = get_headers()
-    dev_res = ctms_client.post("/api/v1/ctms/deviations", json=dev_payload, headers=headers)
+    dev_res = ctms_client.post(
+        "/api/v1/ctms/deviations", json=dev_payload, headers=headers
+    )
     assert dev_res.status_code == 201
     dev_data = dev_res.json()
     deviation_id = dev_data["id"]
@@ -71,7 +77,9 @@ async def test_ctms_escalation_creates_real_capa():
         "preventive_measures": "Implement dual-check verification",
         "capa_type": "BOTH",
     }
-    capa_res = quality_client.post("/api/v1/quality/capas", json=capa_payload, headers=headers)
+    capa_res = quality_client.post(
+        "/api/v1/quality/capas", json=capa_payload, headers=headers
+    )
     assert capa_res.status_code == 201
     capa_data = capa_res.json()
     capa_id = capa_data["id"]
@@ -103,7 +111,9 @@ async def test_transactional_outbox_event_creation():
         "action_plan": "Action plan steps",
         "capa_type": "CORRECTIVE",
     }
-    res = quality_client.post("/api/v1/quality/capas", json=capa_payload, headers=headers)
+    res = quality_client.post(
+        "/api/v1/quality/capas", json=capa_payload, headers=headers
+    )
     assert res.status_code == 201
     capa_id = res.json()["id"]
 
@@ -134,7 +144,9 @@ async def test_outbox_worker_delivery_and_stage_mapping(monkeypatch):
         "action_plan": "Action plan steps 3",
         "capa_type": "PREVENTIVE",
     }
-    create_res = quality_client.post("/api/v1/quality/capas", json=capa_payload, headers=headers)
+    create_res = quality_client.post(
+        "/api/v1/quality/capas", json=capa_payload, headers=headers
+    )
     assert create_res.status_code == 201
     capa_id = create_res.json()["id"]
 
@@ -176,6 +188,7 @@ async def test_outbox_worker_delivery_and_stage_mapping(monkeypatch):
     session_maker = db_manager.get_session_maker()
     async with session_maker() as session:
         from sqlalchemy import select
+
         stmt = select(IntegrationOutbox)
         res = await session.execute(stmt)
         for rec in res.scalars().all():
@@ -192,7 +205,9 @@ async def test_outbox_worker_delivery_and_stage_mapping(monkeypatch):
     assert all(e["status"] == "SUCCESS" for e in events)
 
     # Check CTMS deviation status updated
-    ctms_dev_res = ctms_client.get("/api/v1/ctms/deviations?study_id=STUDY-003", headers=headers)
+    ctms_dev_res = ctms_client.get(
+        "/api/v1/ctms/deviations?study_id=STUDY-003", headers=headers
+    )
     devs = ctms_dev_res.json()
     target_dev = [d for d in devs if d["id"] == dev_id][0]
     assert target_dev["status"] == "UNDER_REVIEW"
@@ -211,7 +226,9 @@ async def test_concurrency_conflict_and_retry_backoff(monkeypatch):
         "title": "Protocol deviation test 4",
         "action_plan": "Action plan 4",
     }
-    create_res = quality_client.post("/api/v1/quality/capas", json=capa_payload, headers=headers)
+    create_res = quality_client.post(
+        "/api/v1/quality/capas", json=capa_payload, headers=headers
+    )
     assert create_res.status_code == 201
 
     # Mock httpx AsyncClient to simulate HTTP 409 Conflict
@@ -223,8 +240,10 @@ async def test_concurrency_conflict_and_retry_backoff(monkeypatch):
     class Mock409Client:
         async def __aenter__(self):
             return self
+
         async def __aexit__(self, exc_type, exc_val, exc_tb):
             pass
+
         async def put(self, url, json=None, headers=None):
             return Mock409Response()
 
