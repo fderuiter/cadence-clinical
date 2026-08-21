@@ -6,6 +6,7 @@
   "types": "./index.d.ts",
   "exports": {
     ".": "./index.js",
+    "./mockGateway": "./mockGateway.js",
     "./tokens.css": "./tokens.css",
     "./responsive.css": "./responsive.css",
     "./package.json": "./package.json"

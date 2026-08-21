@@ -230,6 +230,8 @@ def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
         if (
             name_lower in EXCLUDED_TABLES
             or table_name in test_tables
+            or name_lower.startswith("test_")
+            or name_lower.startswith("mock_")
             or "audit" in name_lower
             or "seal" in name_lower
             or "outbox" in name_lower

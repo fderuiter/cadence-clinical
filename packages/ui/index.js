@@ -105,6 +105,15 @@ export {
   deriveKeyFromPIN,
 } from "./signing.js";
 
+export {
+  validateGatewayRequest,
+  isPathSignatureGated,
+  isWhitelistedSubjectRoute,
+  stripGatewayPathPrefix,
+  isValidGatewayPathPrefix,
+  GATEWAY_SECRET,
+} from "./mockGateway.js";
+
 /**
  * Generates vanilla HTML string for a single condition row in the rule builder.
  * Includes selectors for form, field, operator, right-hand operand type/value/field reference.

@@ -203,7 +203,7 @@
       :is-open="showSignatureModal"
       username="participant.cadence101"
       signer-name="Participant Jane Doe"
-      v-bind="{ role: 'Subject' }"
+      signer-role="Subject"
       action-url="/api/v1/econsent/templates/icf-001/versions/1/capture-consent"
       :on-sign="handleExecuteSignature"
       @cancel="showSignatureModal = false"
@@ -328,8 +328,7 @@ const handleExecuteSignature = async (
     meaningOfSigning: signingReason || "I agree to participate",
     signingReason: signingReason || "I agree to participate",
     timestamp: new Date().toISOString(),
-    sha256_hash:
-      "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
+    sha256_hash: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
     sigToken,
   };
   econsentStore.recordSignedConsent(record);
@@ -345,8 +344,7 @@ const onSignatureSuccess = (result) => {
       signerRole: "Subject",
       meaningOfSigning: "I agree to participate",
       timestamp: new Date().toISOString(),
-      sha256_hash:
-        "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
+      sha256_hash: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
     };
   }
 };

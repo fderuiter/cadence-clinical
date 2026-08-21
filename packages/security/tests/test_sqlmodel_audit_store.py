@@ -295,6 +295,8 @@ async def test_commit_within_active_transaction():
             assert logs[0].entity_id == "u-1"
 
     finally:
+        if "TestUserRecord" in locals() and hasattr(TestUserRecord, "__table__"):
+            SQLModel.metadata.remove(TestUserRecord.__table__)
         await async_engine.dispose()
         with contextlib.suppress(OSError):
             os.remove(path)
