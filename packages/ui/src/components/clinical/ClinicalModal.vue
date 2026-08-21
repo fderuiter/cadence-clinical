@@ -73,7 +73,9 @@ onUnmounted(() => {
         tabindex="-1"
       >
         <div class="modal-header">
-          <h2 class="modal-title">{{ title }}</h2>
+          <h2 class="modal-title">
+            {{ title }}
+          </h2>
           <button
             class="modal-close-btn"
             aria-label="Close dialog"
@@ -89,10 +91,16 @@ onUnmounted(() => {
 
         <div class="modal-footer">
           <slot name="footer">
-            <button class="btn btn-secondary" @click="closeModal">
+            <button
+              class="btn btn-secondary"
+              @click="closeModal"
+            >
               Cancel
             </button>
-            <button class="btn btn-primary" @click="emit('confirm')">
+            <button
+              class="btn btn-primary"
+              @click="emit('confirm')"
+            >
               Confirm
             </button>
           </slot>

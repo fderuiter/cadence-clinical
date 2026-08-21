@@ -37,7 +37,9 @@ const filteredLogs = computed(() => {
   <div class="audit-log-viewer">
     <div class="audit-header">
       <div class="header-titles">
-        <h3 class="audit-title">{{ title }}</h3>
+        <h3 class="audit-title">
+          {{ title }}
+        </h3>
         <span class="part11-badge">21 CFR Part 11 GxP Immutable</span>
       </div>
       <div class="audit-controls">
@@ -53,16 +55,30 @@ const filteredLogs = computed(() => {
           class="audit-select"
           aria-label="Filter by action"
         >
-          <option value="ALL">All Actions</option>
-          <option value="CREATE">CREATE</option>
-          <option value="UPDATE">UPDATE</option>
-          <option value="DELETE">DELETE</option>
-          <option value="SIGN">SIGN</option>
+          <option value="ALL">
+            All Actions
+          </option>
+          <option value="CREATE">
+            CREATE
+          </option>
+          <option value="UPDATE">
+            UPDATE
+          </option>
+          <option value="DELETE">
+            DELETE
+          </option>
+          <option value="SIGN">
+            SIGN
+          </option>
         </select>
       </div>
     </div>
 
-    <div class="audit-timeline" role="feed" aria-label="Audit Timeline">
+    <div
+      class="audit-timeline"
+      role="feed"
+      aria-label="Audit Timeline"
+    >
       <article
         v-for="entry in filteredLogs"
         :key="entry.id"
@@ -72,20 +88,24 @@ const filteredLogs = computed(() => {
         <div class="timeline-marker"></div>
         <div class="timeline-content">
           <div class="content-header">
-            <span class="action-tag" :data-action="entry.action">{{
+            <span
+              class="action-tag"
+              :data-action="entry.action"
+            >{{
               entry.action
             }}</span>
             <span class="timestamp">{{ entry.timestamp }}</span>
-            <span class="user-id"
-              >by <strong>{{ entry.user_id }}</strong></span
-            >
+            <span class="user-id">by <strong>{{ entry.user_id }}</strong></span>
           </div>
 
           <div class="target-info">
             Target: <code>{{ entry.entity_type }} ({{ entry.entity_id }})</code>
           </div>
 
-          <div v-if="entry.reason_for_change" class="change-reason">
+          <div
+            v-if="entry.reason_for_change"
+            class="change-reason"
+          >
             <span class="reason-label">Reason for Change:</span>
             {{ entry.reason_for_change }}
           </div>
@@ -103,12 +123,19 @@ const filteredLogs = computed(() => {
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(change, cIdx) in entry.changes" :key="cIdx">
+                <tr
+                  v-for="(change, cIdx) in entry.changes"
+                  :key="cIdx"
+                >
                   <td>
                     <code>{{ change.field }}</code>
                   </td>
-                  <td class="diff-old">{{ change.old_val ?? "null" }}</td>
-                  <td class="diff-new">{{ change.new_val ?? "null" }}</td>
+                  <td class="diff-old">
+                    {{ change.old_val ?? "null" }}
+                  </td>
+                  <td class="diff-new">
+                    {{ change.new_val ?? "null" }}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -116,7 +143,10 @@ const filteredLogs = computed(() => {
         </div>
       </article>
 
-      <div v-if="filteredLogs.length === 0" class="empty-state">
+      <div
+        v-if="filteredLogs.length === 0"
+        class="empty-state"
+      >
         No audit trail events match the filter criteria.
       </div>
     </div>

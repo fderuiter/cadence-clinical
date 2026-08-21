@@ -303,3 +303,202 @@ async def test_guest_link_creation(
         assert "/api/v1/fileshare/guest/" in data["guest_url"]
 
     app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_presigned_upload_url_with_checksum_validation(
+    db_session: AsyncSession,
+    mock_storage: InMemoryStoragePort,
+    auth_headers_uploader: dict[str, str],
+):
+    """Verify presigned upload URL with SHA-256 checksum header requirement.
+
+    @req:PRD-DOC-001
+    @req:PRD-DOC-002
+    """
+    app.dependency_overrides[get_db_session] = lambda: db_session
+
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        sha256_hash = "a" * 64
+        payload = {
+            "study_id": "STUDY-PHASE3-001",
+            "site_id": "SITE-101",
+            "filename": "ecg_trace_diagnostic.pdf",
+            "mime_type": "application/pdf",
+            "size_bytes": 102400,
+            "checksum_sha256": sha256_hash,
+            "reason_for_change": "Diagnostic ECG upload with SHA-256 integrity hash",
+            "is_multipart": False,
+            "parts_count": 1,
+        }
+        resp = await client.post(
+            "/api/v1/files/upload/presigned-url",
+            json=payload,
+            headers=auth_headers_uploader,
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["checksum_sha256"] == sha256_hash
+        assert data["required_headers"]["x-amz-checksum-sha256"] == sha256_hash
+        assert "upload_url" in data
+
+    app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_role_scope_share_grant_and_revocation(
+    db_session: AsyncSession,
+    mock_storage: InMemoryStoragePort,
+    auth_headers_uploader: dict[str, str],
+    auth_headers_auditor: dict[str, str],
+    auth_headers_unauthorized: dict[str, str],
+):
+    """Verify ROLE-scoped share grant access control and explicit grant deletion.
+
+    @req:PRD-DOC-001
+    @req:PRD-DOC-003
+    """
+    app.dependency_overrides[get_db_session] = lambda: db_session
+
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. Create file record
+        up_resp = await client.post(
+            "/api/v1/fileshare/files/upload-url",
+            json={
+                "study_id": "STUDY-PHASE3-001",
+                "filename": "monitoring_log.pdf",
+                "mime_type": "application/pdf",
+                "size_bytes": 45000,
+                "reason_for_change": "Initial upload",
+            },
+            headers=auth_headers_uploader,
+        )
+        file_id = up_resp.json()["file_id"]
+
+        # Auditor without grant cannot access yet
+        auditor_dl = await client.get(
+            f"/api/v1/fileshare/files/{file_id}/download-url",
+            headers=auth_headers_auditor,
+        )
+        assert auditor_dl.status_code == 403
+
+        # 2. Grant ROLE scope to 'auditor' role
+        grant_resp = await client.post(
+            f"/api/v1/files/{file_id}/grants",
+            json={
+                "granted_to_user_id": "auditor",
+                "scope": ShareScope.ROLE.value,
+                "permission_level": PermissionLevel.VIEW.value,
+                "reason_for_change": "Grant all auditors view access",
+            },
+            headers=auth_headers_uploader,
+        )
+        assert grant_resp.status_code == 201
+        grant_id = grant_resp.json()["id"]
+
+        # Auditor now can access -> view only (watermarked)
+        dl_auditor = await client.get(
+            f"/api/v1/fileshare/files/{file_id}/download-url",
+            headers=auth_headers_auditor,
+        )
+        assert dl_auditor.status_code == 200
+        assert dl_auditor.json()["is_watermarked"] is True
+
+        # Unauthorized user without auditor role still 403
+        unauth_dl = await client.get(
+            f"/api/v1/fileshare/files/{file_id}/download-url",
+            headers=auth_headers_unauthorized,
+        )
+        assert unauth_dl.status_code == 403
+
+        # 3. Revoke the grant via DELETE
+        del_resp = await client.delete(
+            f"/api/v1/files/{file_id}/grants/{grant_id}",
+            headers=auth_headers_uploader,
+        )
+        assert del_resp.status_code == 200
+        assert del_resp.json()["is_active"] is False
+
+        # Auditor access is now revoked -> 403
+        dl_after_revoke = await client.get(
+            f"/api/v1/fileshare/files/{file_id}/download-url",
+            headers=auth_headers_auditor,
+        )
+        assert dl_after_revoke.status_code == 403
+
+    app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_guest_link_resolution_counter_and_revocation(
+    db_session: AsyncSession,
+    mock_storage: InMemoryStoragePort,
+    auth_headers_uploader: dict[str, str],
+):
+    """Verify external guest link resolution, download counting, and revocation.
+
+    @req:PRD-DOC-001
+    @req:PRD-DOC-002
+    """
+    app.dependency_overrides[get_db_session] = lambda: db_session
+
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. Create file record
+        up_resp = await client.post(
+            "/api/v1/fileshare/files/upload-url",
+            json={
+                "study_id": "STUDY-PHASE3-001",
+                "filename": "site_delegation_log.pdf",
+                "mime_type": "application/pdf",
+                "size_bytes": 80000,
+                "reason_for_change": "Delegation log for site partners",
+            },
+            headers=auth_headers_uploader,
+        )
+        file_id = up_resp.json()["file_id"]
+
+        # 2. Create guest link
+        link_resp = await client.post(
+            f"/api/v1/files/{file_id}/guest-links",
+            json={
+                "expires_in_hours": 24,
+                "reason_for_change": "External inspector review",
+            },
+            headers=auth_headers_uploader,
+        )
+        assert link_resp.status_code == 201
+        link_data = link_resp.json()
+        guest_link_id = link_data["id"]
+        guest_url = link_data["guest_url"]
+        token = guest_url.split("/")[-1]
+
+        # 3. Access guest link externally (publicly without gateway headers)
+        guest_dl_1 = await client.get(f"/api/v1/files/guest/{token}")
+        assert guest_dl_1.status_code == 200
+        data1 = guest_dl_1.json()
+        assert data1["file_id"] == file_id
+        assert data1["access_count"] == 1
+        assert "download_url" in data1
+
+        # Second access increments counter
+        guest_dl_2 = await client.get(f"/api/v1/fileshare/guest/{token}")
+        assert guest_dl_2.status_code == 200
+        data2 = guest_dl_2.json()
+        assert data2["access_count"] == 2
+
+        # 4. Explicitly revoke the guest link
+        rev_resp = await client.delete(
+            f"/api/v1/files/{file_id}/guest-links/{guest_link_id}",
+            headers=auth_headers_uploader,
+        )
+        assert rev_resp.status_code == 200
+        assert rev_resp.json()["is_valid"] is False
+
+        # Attempting to access revoked token -> 403 Forbidden
+        guest_dl_revoked = await client.get(f"/api/v1/files/guest/{token}")
+        assert guest_dl_revoked.status_code == 403
+
+    app.dependency_overrides.clear()

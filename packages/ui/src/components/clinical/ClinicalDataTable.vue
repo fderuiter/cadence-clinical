@@ -78,7 +78,9 @@ const toggleRowSelection = (row) => {
 <template>
   <div class="clinical-data-table-container">
     <div class="table-header">
-      <h3 class="table-title">{{ title }}</h3>
+      <h3 class="table-title">
+        {{ title }}
+      </h3>
       <span class="table-meta">{{ sortedData.length }} total record(s)</span>
     </div>
 
@@ -91,7 +93,11 @@ const toggleRowSelection = (row) => {
       <table class="clinical-table">
         <thead>
           <tr>
-            <th v-if="selectable" class="col-select" scope="col">
+            <th
+              v-if="selectable"
+              class="col-select"
+              scope="col"
+            >
               <span class="sr-only">Select</span>
             </th>
             <th
@@ -110,7 +116,11 @@ const toggleRowSelection = (row) => {
             >
               <div class="header-content">
                 <span>{{ col.label }}</span>
-                <span v-if="col.sortable" class="sort-icon" aria-hidden="true">
+                <span
+                  v-if="col.sortable"
+                  class="sort-icon"
+                  aria-hidden="true"
+                >
                   {{
                     sortKey === col.key
                       ? sortOrder === "asc"
@@ -130,7 +140,11 @@ const toggleRowSelection = (row) => {
             :class="['data-row', { selected: isRowSelected(row) }]"
             @click="emit('row-click', row)"
           >
-            <td v-if="selectable" class="col-select" @click.stop>
+            <td
+              v-if="selectable"
+              class="col-select"
+              @click.stop
+            >
               <input
                 type="checkbox"
                 :checked="isRowSelected(row)"
@@ -138,8 +152,16 @@ const toggleRowSelection = (row) => {
                 @change="toggleRowSelection(row)"
               />
             </td>
-            <td v-for="col in columns" :key="col.key" class="data-cell">
-              <slot :name="'cell-' + col.key" :row="row" :value="row[col.key]">
+            <td
+              v-for="col in columns"
+              :key="col.key"
+              class="data-cell"
+            >
+              <slot
+                :name="'cell-' + col.key"
+                :row="row"
+                :value="row[col.key]"
+              >
                 {{ row[col.key] }}
               </slot>
             </td>
@@ -156,12 +178,15 @@ const toggleRowSelection = (row) => {
       </table>
     </div>
 
-    <div v-if="totalPages > 1" class="table-pagination">
+    <div
+      v-if="totalPages > 1"
+      class="table-pagination"
+    >
       <button
         class="pagination-btn"
         :disabled="currentPage === 1"
-        @click="currentPage--"
         aria-label="Previous page"
+        @click="currentPage--"
       >
         Previous
       </button>
@@ -171,8 +196,8 @@ const toggleRowSelection = (row) => {
       <button
         class="pagination-btn"
         :disabled="currentPage === totalPages"
-        @click="currentPage++"
         aria-label="Next page"
+        @click="currentPage++"
       >
         Next
       </button>

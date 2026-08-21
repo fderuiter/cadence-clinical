@@ -159,3 +159,50 @@ def test_guest_link_validity():
         reason_for_change="Expired guest review",
     )
     assert expired_link.is_valid is False
+
+    revoked_link = GuestLink(
+        file_record_id=file_id,
+        token_hmac="c" * 64,
+        expires_at=datetime.now(UTC) + timedelta(hours=12),
+        created_by="sponsor_user",
+        revoked_at=datetime.now(UTC),
+        reason_for_change="Revoked guest review",
+    )
+    assert revoked_link.is_valid is False
+
+
+def test_share_scope_and_permission_levels_enum_extensions():
+    """Verify ROLE scope, EDIT and ADMIN permissions, case-insensitive parsing, and ranks.
+
+    @req:PRD-SYS-001
+    @req:PRD-DOC-001
+    @req:PRD-DOC-003
+    """
+    assert ShareScope.ROLE == "role"
+    assert ShareScope.from_str("ROLE") == ShareScope.ROLE
+    assert ShareScope.from_str("individual") == ShareScope.INDIVIDUAL
+
+    assert PermissionLevel.EDIT == "edit"
+    assert PermissionLevel.ADMIN == "admin"
+    assert PermissionLevel.from_str("EDIT") == PermissionLevel.EDIT
+    assert PermissionLevel.from_str("ADMIN") == PermissionLevel.ADMIN
+
+    # Rank hierarchy checks
+    assert PermissionLevel.ADMIN.rank > PermissionLevel.EDIT.rank
+    assert PermissionLevel.EDIT.rank > PermissionLevel.DOWNLOAD.rank
+    assert PermissionLevel.DOWNLOAD.rank > PermissionLevel.COMMENT.rank
+    assert PermissionLevel.COMMENT.rank > PermissionLevel.VIEW.rank
+
+    # Watermark policy checks
+    assert PermissionLevel.VIEW.requires_watermark() is True
+    assert PermissionLevel.COMMENT.requires_watermark() is True
+    assert PermissionLevel.DOWNLOAD.requires_watermark() is False
+    assert PermissionLevel.EDIT.requires_watermark() is False
+    assert PermissionLevel.ADMIN.requires_watermark() is False
+
+    # Satisfies checks
+    assert PermissionLevel.ADMIN.satisfies(PermissionLevel.VIEW) is True
+    assert PermissionLevel.ADMIN.satisfies(PermissionLevel.DOWNLOAD) is True
+    assert PermissionLevel.ADMIN.satisfies(PermissionLevel.EDIT) is True
+    assert PermissionLevel.EDIT.satisfies(PermissionLevel.DOWNLOAD) is True
+    assert PermissionLevel.DOWNLOAD.satisfies(PermissionLevel.EDIT) is False

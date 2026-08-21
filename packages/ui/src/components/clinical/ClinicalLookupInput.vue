@@ -45,7 +45,10 @@
         role="status"
         aria-live="polite"
       >
-        <span class="lookup-status-icon" aria-hidden="true">{{
+        <span
+          class="lookup-status-icon"
+          aria-hidden="true"
+        >{{
           statusIcon
         }}</span>
         <span class="lookup-status-text">{{ ariaLiveMessage }}</span>

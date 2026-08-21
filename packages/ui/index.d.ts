@@ -82,6 +82,34 @@ export const ClinicalQueryPanel: DefineComponent<
   any
 >;
 
+export const MediaPlayer: DefineComponent<
+  {
+    src: string;
+    mimeType?: string;
+    title?: string;
+    isWatermarked?: boolean;
+    watermarkText?: string;
+    autoplay?: boolean;
+    initialZoom?: number;
+  },
+  {},
+  any
+>;
+
+export const FileUploadModal: DefineComponent<
+  {
+    modelValue: boolean;
+    studyId: string;
+    siteId?: string | null;
+    title?: string;
+    maxSizeBytes?: number;
+    multipartThresholdBytes?: number;
+    apiEndpoint?: string;
+  },
+  {},
+  any
+>;
+
 // Utility functions
 export function debounce<T extends (...args: any[]) => any>(
   func: T,

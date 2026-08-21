@@ -43,6 +43,8 @@ class FileUploadSession:
     upload_url: str | None = None
     upload_urls: dict[int, str] | None = None
     expires_in: int = 3600
+    checksum_sha256: str | None = None
+    required_headers: dict[str, str] | None = None
 
 
 @dataclass(frozen=True)
@@ -55,6 +57,7 @@ class FileDownloadSession:
     download_url: str
     expires_in: int = 3600
     is_watermarked: bool = False
+    access_count: int | None = None
 
 
 @dataclass(frozen=True)
@@ -97,6 +100,7 @@ class FileShareService:
         site_id: str | None = None,
         is_multipart: bool = False,
         parts_count: int = 1,
+        checksum_sha256: str | None = None,
     ) -> FileUploadSession:
         """Allocate a draft FileRecord envelope and generate presigned upload URLs.
 
@@ -114,7 +118,7 @@ class FileShareService:
             mime_type=mime_type,
             size_bytes=size_bytes,
             object_key=object_key,
-            checksum_sha256=None,
+            checksum_sha256=checksum_sha256,
             version_index=1,
             uploaded_by=uploader_id,
             uploaded_at=datetime.now(UTC),
@@ -134,6 +138,12 @@ class FileShareService:
         }
         if site_id:
             metadata["site_id"] = site_id
+        if checksum_sha256:
+            metadata["checksum_sha256"] = checksum_sha256
+
+        required_headers: dict[str, str] = {}
+        if checksum_sha256:
+            required_headers["x-amz-checksum-sha256"] = checksum_sha256
 
         if is_multipart:
             upload_id = await self.storage_port.create_multipart_upload(
@@ -154,6 +164,8 @@ class FileShareService:
                 upload_id=upload_id,
                 upload_urls=part_urls,
                 expires_in=3600,
+                checksum_sha256=checksum_sha256,
+                required_headers=required_headers if required_headers else None,
             )
 
         upload_url = await self.storage_port.generate_presigned_put_url(
@@ -166,6 +178,8 @@ class FileShareService:
             object_key=object_key,
             upload_url=upload_url,
             expires_in=3600,
+            checksum_sha256=checksum_sha256,
+            required_headers=required_headers if required_headers else None,
         )
 
     async def generate_download_url(
@@ -206,6 +220,11 @@ class FileShareService:
                         and caller_site_id
                         and file_record.site_id == caller_site_id
                     )
+                    or (
+                        grant.scope == ShareScope.ROLE
+                        and grant.granted_to_user_id
+                        and grant.granted_to_user_id.strip().lower() in normalized_roles
+                    )
                 ):
                     matching_grants.append(grant)
 
@@ -241,8 +260,8 @@ class FileShareService:
         grantor_user_id: str,
         grantor_roles: list[str],
         granted_to_user_id: str | None,
-        scope: ShareScope,
-        permission_level: PermissionLevel,
+        scope: ShareScope | str,
+        permission_level: PermissionLevel | str,
         reason_for_change: str,
         expires_at: datetime | None = None,
     ) -> ShareGrant:
@@ -257,16 +276,17 @@ class FileShareService:
 
         if not is_admin and not is_uploader:
             user_grant = await self.grant_repo.find_user_grant(file_id, grantor_user_id)
-            if not user_grant or not user_grant.permission_level.satisfies(
-                PermissionLevel.RESHARE
+            if not user_grant or not (
+                user_grant.permission_level.satisfies(PermissionLevel.ADMIN)
+                or user_grant.permission_level.satisfies(PermissionLevel.RESHARE)
             ):
                 raise FileSharePermissionDeniedError(
                     "Caller lacks reshare permissions for this file."
                 )
 
-        scope_enum = ShareScope(scope) if isinstance(scope, str) else scope
+        scope_enum = ShareScope.from_str(scope) if isinstance(scope, str) else scope
         perm_enum = (
-            PermissionLevel(permission_level)
+            PermissionLevel.from_str(permission_level)
             if isinstance(permission_level, str)
             else permission_level
         )
@@ -286,6 +306,56 @@ class FileShareService:
             reason_for_change=reason_for_change,
         )
         return await self.grant_repo.save(grant)
+
+    async def revoke_share_grant(
+        self,
+        file_id: str,
+        grant_id: str,
+        caller_user_id: str,
+        caller_roles: list[str],
+        reason_for_change: str,
+    ) -> ShareGrant:
+        """Revoke an existing internal share grant with GxP authorization check."""
+        file_record = await self.file_repo.get_by_id(file_id)
+        if not file_record:
+            raise FileNotFoundError(f"File record '{file_id}' not found.")
+
+        grant = await self.grant_repo.get_by_id(grant_id)
+        if not grant or grant.file_record_id != file_id:
+            raise FileNotFoundError(
+                f"Share grant '{grant_id}' not found for file '{file_id}'."
+            )
+
+        normalized_roles = {r.strip().lower() for r in caller_roles if r}
+        is_admin = bool(normalized_roles.intersection(ADMIN_ROLES))
+        is_uploader = file_record.uploaded_by == caller_user_id
+        is_grantor = grant.granted_by_user_id == caller_user_id
+
+        if not is_admin and not is_uploader and not is_grantor:
+            user_grant = await self.grant_repo.find_user_grant(file_id, caller_user_id)
+            if not user_grant or not (
+                user_grant.permission_level.satisfies(PermissionLevel.ADMIN)
+                or user_grant.permission_level.satisfies(PermissionLevel.EXPIRE_REVOKE)
+            ):
+                raise FileSharePermissionDeniedError(
+                    "Caller lacks permission to revoke this share grant."
+                )
+
+        revoked_grant = ShareGrant(
+            id=grant.id,
+            file_record_id=grant.file_record_id,
+            granted_to_user_id=grant.granted_to_user_id,
+            granted_by_user_id=grant.granted_by_user_id,
+            scope=grant.scope,
+            permission_level=grant.permission_level,
+            expires_at=grant.expires_at,
+            revoked_at=datetime.now(UTC),
+            is_deleted=True,
+            created_at=grant.created_at,
+            created_by=grant.created_by,
+            reason_for_change=reason_for_change,
+        )
+        return await self.grant_repo.save(revoked_grant)
 
     async def create_guest_link(
         self,
@@ -332,3 +402,108 @@ class FileShareService:
             access_count=saved.access_count,
             is_valid=saved.is_valid,
         )
+
+    async def access_guest_link(
+        self,
+        raw_secret_token: str,
+    ) -> FileDownloadSession:
+        """Resolve an external guest link token and issue a presigned download session."""
+        token_hmac = hmac.new(
+            os.getenv("GATEWAY_SECRET", "default-guest-secret").encode(),
+            raw_secret_token.encode(),
+            hashlib.sha256,
+        ).hexdigest()
+
+        guest_link = await self.guest_repo.get_by_token_hmac(token_hmac)
+        if not guest_link:
+            raise FileNotFoundError("Guest link not found or invalid.")
+
+        if guest_link.revoked_at is not None:
+            raise FileSharePermissionDeniedError("Guest link has been revoked.")
+
+        if not guest_link.is_valid:
+            raise FileSharePermissionDeniedError("Guest link has expired.")
+
+        file_record = await self.file_repo.get_by_id(guest_link.file_record_id)
+        if not file_record or file_record.is_deleted:
+            raise FileNotFoundError("Associated file record not found.")
+
+        # Update download counter and access timestamp
+        updated_guest_link = GuestLink(
+            id=guest_link.id,
+            file_record_id=guest_link.file_record_id,
+            token_hmac=guest_link.token_hmac,
+            expires_at=guest_link.expires_at,
+            created_by=guest_link.created_by,
+            last_accessed_at=datetime.now(UTC),
+            access_count=guest_link.access_count + 1,
+            revoked_at=guest_link.revoked_at,
+            created_at=guest_link.created_at,
+            reason_for_change="External guest link access",
+        )
+        await self.guest_repo.save(updated_guest_link)
+
+        disposition = f'attachment; filename="{file_record.filename}"'
+        download_url = await self.storage_port.generate_presigned_get_url(
+            key=file_record.object_key,
+            expires_in=3600,
+            response_content_disposition=disposition,
+        )
+
+        return FileDownloadSession(
+            file_id=file_record.id,
+            filename=file_record.filename,
+            mime_type=file_record.mime_type,
+            download_url=download_url,
+            expires_in=3600,
+            is_watermarked=False,
+            access_count=updated_guest_link.access_count,
+        )
+
+    async def revoke_guest_link(
+        self,
+        file_id: str,
+        guest_link_id: str,
+        caller_user_id: str,
+        caller_roles: list[str],
+        reason_for_change: str,
+    ) -> GuestLink:
+        """Revoke an active external guest link with authorization check."""
+        file_record = await self.file_repo.get_by_id(file_id)
+        if not file_record:
+            raise FileNotFoundError(f"File record '{file_id}' not found.")
+
+        guest_link = await self.guest_repo.get_by_id(guest_link_id)
+        if not guest_link or guest_link.file_record_id != file_id:
+            raise FileNotFoundError(
+                f"Guest link '{guest_link_id}' not found for file '{file_id}'."
+            )
+
+        normalized_roles = {r.strip().lower() for r in caller_roles if r}
+        is_admin = bool(normalized_roles.intersection(ADMIN_ROLES))
+        is_uploader = file_record.uploaded_by == caller_user_id
+        is_creator = guest_link.created_by == caller_user_id
+
+        if not is_admin and not is_uploader and not is_creator:
+            user_grant = await self.grant_repo.find_user_grant(file_id, caller_user_id)
+            if not user_grant or not (
+                user_grant.permission_level.satisfies(PermissionLevel.ADMIN)
+                or user_grant.permission_level.satisfies(PermissionLevel.EXPIRE_REVOKE)
+            ):
+                raise FileSharePermissionDeniedError(
+                    "Caller lacks permission to revoke this guest link."
+                )
+
+        revoked_link = GuestLink(
+            id=guest_link.id,
+            file_record_id=guest_link.file_record_id,
+            token_hmac=guest_link.token_hmac,
+            expires_at=guest_link.expires_at,
+            created_by=guest_link.created_by,
+            last_accessed_at=guest_link.last_accessed_at,
+            access_count=guest_link.access_count,
+            revoked_at=datetime.now(UTC),
+            created_at=guest_link.created_at,
+            reason_for_change=reason_for_change,
+        )
+        return await self.guest_repo.save(revoked_link)

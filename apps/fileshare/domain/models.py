@@ -16,7 +16,13 @@ class ShareScope(StrEnum):
     STUDY = "study"
     SITE = "site"
     INDIVIDUAL = "individual"
+    ROLE = "role"
     FOLDER = "folder"
+
+    @classmethod
+    def from_str(cls, value: str) -> ShareScope:
+        """Normalize case-insensitive string into ShareScope enum."""
+        return cls(value.strip().lower())
 
 
 class PermissionLevel(StrEnum):
@@ -25,10 +31,17 @@ class PermissionLevel(StrEnum):
     VIEW = "view"
     COMMENT = "comment"
     DOWNLOAD = "download"
+    EDIT = "edit"
     UPLOAD_REVISION = "upload_revision"
     RESHARE = "reshare"
     APPROVE = "approve"
+    ADMIN = "admin"
     EXPIRE_REVOKE = "expire_revoke"
+
+    @classmethod
+    def from_str(cls, value: str) -> PermissionLevel:
+        """Normalize case-insensitive string into PermissionLevel enum."""
+        return cls(value.strip().lower())
 
     @property
     def rank(self) -> int:
@@ -37,9 +50,11 @@ class PermissionLevel(StrEnum):
             PermissionLevel.VIEW: 1,
             PermissionLevel.COMMENT: 2,
             PermissionLevel.DOWNLOAD: 3,
+            PermissionLevel.EDIT: 4,
             PermissionLevel.UPLOAD_REVISION: 4,
             PermissionLevel.RESHARE: 5,
             PermissionLevel.APPROVE: 6,
+            PermissionLevel.ADMIN: 7,
             PermissionLevel.EXPIRE_REVOKE: 7,
         }
         return ranks[self]

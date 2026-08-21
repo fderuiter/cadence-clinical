@@ -8,4 +8,6 @@ export { default as ClinicalModal } from "./components/clinical/ClinicalModal.vu
 export { default as ClinicalQueryFlag } from "./components/clinical/ClinicalQueryFlag.vue";
 export { default as ClinicalQueryPanel } from "./components/clinical/ClinicalQueryPanel.vue";
 export { default as ClinicalRadioGroup } from "./components/clinical/ClinicalRadioGroup.vue";
+export { default as FileUploadModal } from "./components/FileUploadModal.vue";
+export { default as MediaPlayer } from "./components/MediaPlayer.vue";
 export { default as PersonaSwitcher } from "./components/clinical/PersonaSwitcher.vue";

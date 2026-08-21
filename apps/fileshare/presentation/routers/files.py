@@ -35,6 +35,7 @@ from packages.security.context import (
 )
 
 router = APIRouter(prefix="/api/v1/fileshare/files", tags=["Fileshare"])
+files_alias_router = APIRouter(prefix="/api/v1/files", tags=["Fileshare"])
 
 
 def extract_caller_roles(request: Request) -> list[str]:
@@ -68,6 +69,21 @@ def get_fileshare_service(
     response_model=FileUploadUrlResponse,
     status_code=status.HTTP_201_CREATED,
 )
+@router.post(
+    "/upload/presigned-url",
+    response_model=FileUploadUrlResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@files_alias_router.post(
+    "/upload-url",
+    response_model=FileUploadUrlResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@files_alias_router.post(
+    "/upload/presigned-url",
+    response_model=FileUploadUrlResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def get_upload_url(
     payload: FileUploadUrlRequest,
     service: FileShareService = Depends(get_fileshare_service),
@@ -90,6 +106,7 @@ async def get_upload_url(
         site_id=payload.site_id,
         is_multipart=payload.is_multipart,
         parts_count=payload.parts_count,
+        checksum_sha256=payload.checksum_sha256,
     )
     return FileUploadUrlResponse(
         file_id=session.file_id,
@@ -98,10 +115,17 @@ async def get_upload_url(
         upload_url=session.upload_url,
         upload_urls=session.upload_urls,
         expires_in=session.expires_in,
+        checksum_sha256=session.checksum_sha256,
+        required_headers=session.required_headers or {},
     )
 
 
 @router.get(
+    "/{file_id}/download-url",
+    response_model=FileDownloadUrlResponse,
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.get(
     "/{file_id}/download-url",
     response_model=FileDownloadUrlResponse,
     status_code=status.HTTP_200_OK,
@@ -149,6 +173,11 @@ async def get_download_url(
     response_model=FileRecordResponse,
     status_code=status.HTTP_200_OK,
 )
+@files_alias_router.get(
+    "/{file_id}",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def get_file_record(
     file_id: str,
     service: FileShareService = Depends(get_fileshare_service),
@@ -171,6 +200,11 @@ async def get_file_record(
     response_model=list[FileRecordResponse],
     status_code=status.HTTP_200_OK,
 )
+@files_alias_router.get(
+    "",
+    response_model=list[FileRecordResponse],
+    status_code=status.HTTP_200_OK,
+)
 async def list_files(
     study_id: str,
     site_id: str | None = None,
@@ -185,6 +219,11 @@ async def list_files(
 
 
 @router.post(
+    "/{file_id}/grants",
+    response_model=ShareGrantResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@files_alias_router.post(
     "/{file_id}/grants",
     response_model=ShareGrantResponse,
     status_code=status.HTTP_201_CREATED,
@@ -224,7 +263,60 @@ async def create_share_grant(
         ) from exc
 
 
+@router.delete(
+    "/{file_id}/grants/{grant_id}",
+    response_model=ShareGrantResponse,
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.delete(
+    "/{file_id}/grants/{grant_id}",
+    response_model=ShareGrantResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def delete_share_grant(
+    file_id: str,
+    grant_id: str,
+    request: Request,
+    reason_for_change: str = "Revoking share grant delegation",
+    service: FileShareService = Depends(get_fileshare_service),
+) -> ShareGrantResponse:
+    """Revoke an internal share grant delegation.
+
+    Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003
+    """
+    user_id = current_user_id.get() or "system_user"
+    roles = extract_caller_roles(request)
+    justification = (
+        request.headers.get("X-Change-Reason")
+        or request.query_params.get("reason_for_change")
+        or reason_for_change
+    )
+
+    try:
+        grant = await service.revoke_share_grant(
+            file_id=file_id,
+            grant_id=grant_id,
+            caller_user_id=user_id,
+            caller_roles=roles,
+            reason_for_change=justification,
+        )
+        return ShareGrantResponse.model_validate(grant)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except FileSharePermissionDeniedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+
+
 @router.post(
+    "/{file_id}/guest-links",
+    response_model=GuestLinkResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@files_alias_router.post(
     "/{file_id}/guest-links",
     response_model=GuestLinkResponse,
     status_code=status.HTTP_201_CREATED,
@@ -260,3 +352,123 @@ async def create_guest_link(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
         ) from exc
+
+
+@router.delete(
+    "/{file_id}/guest-links/{guest_link_id}",
+    response_model=GuestLinkResponse,
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.delete(
+    "/{file_id}/guest-links/{guest_link_id}",
+    response_model=GuestLinkResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def revoke_guest_link(
+    file_id: str,
+    guest_link_id: str,
+    request: Request,
+    reason_for_change: str = "Revoking external guest link",
+    service: FileShareService = Depends(get_fileshare_service),
+) -> GuestLinkResponse:
+    """Revoke an active external guest link.
+
+    Requirements: PRD-SYS-001, PRD-DOC-001
+    """
+    user_id = current_user_id.get() or "system_user"
+    roles = extract_caller_roles(request)
+    justification = (
+        request.headers.get("X-Change-Reason")
+        or request.query_params.get("reason_for_change")
+        or reason_for_change
+    )
+
+    try:
+        revoked = await service.revoke_guest_link(
+            file_id=file_id,
+            guest_link_id=guest_link_id,
+            caller_user_id=user_id,
+            caller_roles=roles,
+            reason_for_change=justification,
+        )
+        return GuestLinkResponse(
+            id=revoked.id,
+            file_record_id=revoked.file_record_id,
+            guest_url="",
+            expires_at=revoked.expires_at,
+            created_by=revoked.created_by,
+            access_count=revoked.access_count,
+            is_valid=revoked.is_valid,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except FileSharePermissionDeniedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+
+
+@router.get(
+    "/guest/{token}",
+    response_model=FileDownloadUrlResponse,
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.get(
+    "/guest/{token}",
+    response_model=FileDownloadUrlResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_guest_file_download(
+    token: str,
+    service: FileShareService = Depends(get_fileshare_service),
+) -> FileDownloadUrlResponse:
+    """Resolve an external guest link token and issue presigned GET URL.
+
+    Requirements: PRD-SYS-001, PRD-DOC-001
+    """
+    try:
+        session = await service.access_guest_link(raw_secret_token=token)
+        return FileDownloadUrlResponse(
+            file_id=session.file_id,
+            filename=session.filename,
+            mime_type=session.mime_type,
+            download_url=session.download_url,
+            expires_in=session.expires_in,
+            is_watermarked=session.is_watermarked,
+            access_count=session.access_count,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except FileSharePermissionDeniedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+
+
+# Dedicated router for top-level guest links (/api/v1/fileshare/guest/{token} and /api/v1/files/guest/{token})
+guest_router = APIRouter(tags=["Fileshare Guest Access"])
+
+
+@guest_router.get(
+    "/api/v1/fileshare/guest/{token}",
+    response_model=FileDownloadUrlResponse,
+    status_code=status.HTTP_200_OK,
+)
+@guest_router.get(
+    "/api/v1/files/guest/{token}",
+    response_model=FileDownloadUrlResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_external_guest_file_download(
+    token: str,
+    service: FileShareService = Depends(get_fileshare_service),
+) -> FileDownloadUrlResponse:
+    """Public resolution endpoint for external guest access tokens.
+
+    Requirements: PRD-SYS-001, PRD-DOC-001
+    """
+    return await get_guest_file_download(token=token, service=service)

@@ -187,7 +187,12 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
             Response: The HTTP response from the downstream handler, or a 401/403/400
                       JSON response if validation fails.
         """
-        if request.url.path in ("/health", "/api/v1/etmf/inbound-email"):
+        if (
+            request.url.path in ("/health", "/api/v1/etmf/inbound-email")
+            or request.url.path.startswith("/api/v1/fileshare/guest/")
+            or request.url.path.startswith("/api/v1/files/guest/")
+            or request.url.path.startswith("/api/v1/fileshare/files/guest/")
+        ):
             return await call_next(request)
 
         is_mutation = request.method in ("POST", "PUT", "DELETE", "PATCH")

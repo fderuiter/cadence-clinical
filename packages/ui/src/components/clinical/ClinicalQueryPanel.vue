@@ -19,9 +19,14 @@
     </div>
     <div class="query-panel-body">
       <!-- NONE state (Only CRAs or DMs can raise new queries) -->
-      <div v-if="status === 'NONE'" class="query-create-section">
+      <div
+        v-if="status === 'NONE'"
+        class="query-create-section"
+      >
         <template v-if="canManageQueries">
-          <p class="query-panel-instruction">Raise a query for this field:</p>
+          <p class="query-panel-instruction">
+            Raise a query for this field:
+          </p>
           <div class="form-group">
             <label :for="`query-message-${id}`">Discrepancy Message</label>
             <textarea
@@ -67,7 +72,10 @@
           Raised by: {{ query.createdBy || "System" }} on
           {{ query.createdAt || "N/A" }}
         </p>
-        <div class="query-respond-section" style="margin-top: 12px">
+        <div
+          class="query-respond-section"
+          style="margin-top: 12px"
+        >
           <div class="form-group">
             <label :for="`query-response-${id}`">Your Response</label>
             <textarea
@@ -90,7 +98,10 @@
       </div>
 
       <!-- ANSWERED state (Only CRAs/DMs can close/reopen) -->
-      <div v-else-if="status === 'ANSWERED'" class="query-details">
+      <div
+        v-else-if="status === 'ANSWERED'"
+        class="query-details"
+      >
         <div class="query-status-badge badge-answered">
           Status: {{ displayQueryLabel }}
         </div>
@@ -146,7 +157,10 @@
       </div>
 
       <!-- CLOSED state -->
-      <div v-else-if="status === 'CLOSED'" class="query-details">
+      <div
+        v-else-if="status === 'CLOSED'"
+        class="query-details"
+      >
         <div class="query-status-badge badge-closed">
           Status: {{ displayQueryLabel }}
         </div>

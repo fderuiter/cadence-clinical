@@ -12,7 +12,13 @@ from fastapi import FastAPI
 
 from apps.fileshare.adapters.database import db_manager, get_db_session
 from apps.fileshare.infrastructure.models import Base
-from apps.fileshare.presentation.routers.files import router as files_router
+from apps.fileshare.presentation.routers.files import (
+    files_alias_router,
+    guest_router,
+)
+from apps.fileshare.presentation.routers.files import (
+    router as files_router,
+)
 from packages.database import get_relational_db_lifespan
 from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
@@ -35,8 +41,10 @@ app = FastAPI(
 # Enforce secure gateway authentication on every request
 app.add_middleware(GatewayAuthMiddleware)
 
-# Mount files router
+# Mount files routers and public guest router
 app.include_router(files_router)
+app.include_router(files_alias_router)
+app.include_router(guest_router)
 
 
 @app.get("/health")

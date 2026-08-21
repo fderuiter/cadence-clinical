@@ -11,7 +11,7 @@
           "knowledge"
         ],
         "summary": "List Categories",
-        "description": "Lists active knowledge categories, filtered by caller's persona visibility.\n\nArgs:\n    request: FastAPI Request instance.\n    session: Injected async database session.\n\nReturns:\n    List of CategoryResponse objects.",
+        "description": "Lists active knowledge categories, filtered by caller's persona visibility.",
         "operationId": "list_categories_api_v1_knowledge_categories_get",
         "responses": {
           "200": {
@@ -35,7 +35,7 @@
           "knowledge"
         ],
         "summary": "Create Category",
-        "description": "Creates a new knowledge article category. Requires super_admin role.\n\nArgs:\n    payload: Category creation data.\n    session: Injected async database session.\n\nReturns:\n    The created CategoryResponse.\n\nRaises:\n    HTTPException 404: If the specified parent_id does not exist.\n    HTTPException 409: If the category name or slug already exists.",
+        "description": "Creates a new knowledge article category. Requires super_admin role.",
         "operationId": "create_category_api_v1_knowledge_categories_post",
         "requestBody": {
           "content": {
@@ -77,7 +77,7 @@
           "knowledge"
         ],
         "summary": "Get Category",
-        "description": "Retrieves a single KnowledgeCategory by ID.\n\nArgs:\n    category_id: UUID of the category to retrieve.\n    session: Injected async database session.\n\nReturns:\n    The CategoryResponse.\n\nRaises:\n    HTTPException 404: If the category does not exist or is deleted.",
+        "description": "Retrieves a single KnowledgeCategory by ID.",
         "operationId": "get_category_api_v1_knowledge_categories__category_id__get",
         "parameters": [
           {
@@ -118,7 +118,7 @@
           "knowledge"
         ],
         "summary": "Delete Category",
-        "description": "Soft-deletes a KnowledgeCategory by ID. Requires super_admin or sysadmin role.\n\nArgs:\n    category_id: UUID of the category to soft-delete.\n    reason_for_change: GxP reason for soft deletion.\n    session: Injected async database session.\n\nReturns:\n    The soft-deleted CategoryResponse.\n\nRaises:\n    HTTPException 404: If the category does not exist or is already deleted.",
+        "description": "Soft-deletes a KnowledgeCategory by ID. Requires super_admin or sysadmin role.",
         "operationId": "delete_category_api_v1_knowledge_categories__category_id__delete",
         "parameters": [
           {
@@ -171,7 +171,7 @@
           "knowledge"
         ],
         "summary": "Create Article",
-        "description": "Creates a new KnowledgeArticle in DRAFT status. Requires super_admin role.\n\nArgs:\n    payload: Article creation data including initial body_markdown.\n    session: Injected async database session.\n\nReturns:\n    The created ArticleResponse.\n\nRaises:\n    HTTPException 409: If the article slug is already in use.",
+        "description": "Creates a new KnowledgeArticle in DRAFT status with an initial working draft version.\nRequires super_admin role.",
         "operationId": "create_article_api_v1_knowledge_articles_post",
         "requestBody": {
           "required": true,
@@ -211,7 +211,7 @@
           "knowledge"
         ],
         "summary": "List Articles",
-        "description": "Lists knowledge articles, optionally filtered by status and/or category.\n\nNon-admin users only receive PUBLISHED articles. Admins receive all.\n\nArgs:\n    status_filter: Optional ArticleStatus to filter by.\n    category_id: Optional category UUID to filter by.\n    session: Injected async database session.\n\nReturns:\n    List of ArticleResponse objects.",
+        "description": "Lists knowledge articles, optionally filtered by status and/or category.",
         "operationId": "list_articles_api_v1_knowledge_articles_get",
         "parameters": [
           {
@@ -276,12 +276,63 @@
       }
     },
     "/api/v1/knowledge/articles/{article_id}": {
+      "put": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Update Article Draft",
+        "description": "Updates the working draft of an article (Issue #4325).\n\nUpdates the single KnowledgeArticleVersion row during DRAFT status with markdown\nbody, auto-rendered HTML, and GxP audit fields (created_by, reason_for_change, version_index).\nRequires super_admin role.",
+        "operationId": "update_article_draft_api_v1_knowledge_articles__article_id__put",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Article Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "tags": [
           "knowledge"
         ],
         "summary": "Get Article",
-        "description": "Retrieves a single KnowledgeArticle by ID.\n\nIf the requesting user has an auditor role, records a READ_BY_AUDITOR audit event.\n\nArgs:\n    article_id: UUID of the article to retrieve.\n    session: Injected async database session.\n\nReturns:\n    The ArticleResponse.\n\nRaises:\n    HTTPException 404: If the article does not exist.",
+        "description": "Retrieves a single KnowledgeArticle by ID along with its active body content.\nIf the requesting user has an auditor role, records a READ_BY_AUDITOR audit event.",
         "operationId": "get_article_api_v1_knowledge_articles__article_id__get",
         "parameters": [
           {
@@ -324,7 +375,7 @@
           "knowledge"
         ],
         "summary": "Save Article Draft",
-        "description": "Saves updated body content to a DRAFT article. Requires super_admin role.\n\nArgs:\n    article_id: UUID of the article to update.\n    payload: Draft save payload with body_markdown.\n    session: Injected async database session.\n\nReturns:\n    The new ArticleVersionResponse snapshot.\n\nRaises:\n    HTTPException 404: Article not found.\n    HTTPException 409: Article is not in DRAFT status.",
+        "description": "Saves updated body content to a DRAFT article. Requires super_admin role.",
         "operationId": "save_article_draft_api_v1_knowledge_articles__article_id__draft_patch",
         "parameters": [
           {
@@ -371,13 +422,225 @@
         }
       }
     },
+    "/api/v1/knowledge/articles/{article_id}/submit-review": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Submit Article Review",
+        "description": "Submits a DRAFT article for peer review (DRAFT -> IN_REVIEW).",
+        "operationId": "submit_article_review_api_v1_knowledge_articles__article_id__submit_review_post",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Article Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleSubmitReviewRequest",
+                "default": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles/{article_id}/approve": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Approve Article",
+        "description": "Approves an article in IN_REVIEW status (IN_REVIEW -> APPROVED).\n\nEnforces Four-Eyes check: approver cannot be author_user_id or last_edited_by.\nLocks current KnowledgeArticleVersion record as permanently immutable.",
+        "operationId": "approve_article_api_v1_knowledge_articles__article_id__approve_post",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Article Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleApproveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles/{article_id}/reject": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Reject Article",
+        "description": "Rejects an article in IN_REVIEW status (IN_REVIEW -> REJECTED).",
+        "operationId": "reject_article_api_v1_knowledge_articles__article_id__reject_post",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Article Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleRejectRequest",
+                "default": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles/{article_id}/publish": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Publish Article",
+        "description": "Publishes an APPROVED article (APPROVED -> PUBLISHED).\n\n- Updates fast O(1) lookup pointer KnowledgeArticle.current_published_version_id.\n- Publishing version N+1 automatically sets prior active version N to SUPERSEDED.",
+        "operationId": "publish_article_api_v1_knowledge_articles__article_id__publish_post",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Article Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticlePublishRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/knowledge/articles/{article_id}/transition": {
       "post": {
         "tags": [
           "knowledge"
         ],
         "summary": "Transition Article",
-        "description": "Executes a lifecycle state machine transition on a KnowledgeArticle.\nRequires super_admin role.\n\nArgs:\n    article_id: UUID of the article to transition.\n    payload: Transition request with target_status and reason_for_change.\n    session: Injected async database session.\n\nReturns:\n    The updated ArticleResponse.\n\nRaises:\n    HTTPException 404: Article not found.\n    HTTPException 409: Invalid transition, four-eyes violation.\n    HTTPException 422: Missing reason_for_change on a regulated transition.",
+        "description": "Generic lifecycle state machine transition endpoint.",
         "operationId": "transition_article_api_v1_knowledge_articles__article_id__transition_post",
         "parameters": [
           {
@@ -430,7 +693,7 @@
           "knowledge"
         ],
         "summary": "List Article Versions",
-        "description": "Lists all immutable version snapshots for an article (chronological order).\n\nArgs:\n    article_id: UUID of the article.\n    session: Injected async database session.\n\nReturns:\n    List of ArticleVersionResponse objects, oldest first.",
+        "description": "Lists all immutable version snapshots for an article (chronological order).",
         "operationId": "list_article_versions_api_v1_knowledge_articles__article_id__versions_get",
         "parameters": [
           {
@@ -477,7 +740,7 @@
           "knowledge"
         ],
         "summary": "Get Article Audit Log",
-        "description": "Returns the immutable audit trail for a specific article.\nRequires auditor or super_admin role.\n\nArgs:\n    article_id: UUID of the article.\n    session: Injected async database session.\n\nReturns:\n    List of AuditLogResponse objects, oldest first.",
+        "description": "Returns the immutable audit trail for a specific article.",
         "operationId": "get_article_audit_log_api_v1_knowledge_articles__article_id__audit_log_get",
         "parameters": [
           {
@@ -524,7 +787,7 @@
           "knowledge"
         ],
         "summary": "Create Contextual Help Mapping",
-        "description": "Creates a contextual help mapping (route pattern + persona -> article).\nRequires super_admin role.\n\nArgs:\n    payload: Mapping creation payload.\n    session: Injected async database session.\n\nReturns:\n    The created ContextualHelpMappingResponse.",
+        "description": "Creates a contextual help mapping (route pattern + persona -> article).",
         "operationId": "create_contextual_help_mapping_api_v1_knowledge_contextual_help_post",
         "requestBody": {
           "content": {
@@ -566,7 +829,7 @@
           "knowledge"
         ],
         "summary": "Lookup Contextual Help",
-        "description": "Returns the most relevant Published article for a given route and persona.\n\nMatches the highest-priority mapping (lowest priority number) for the route\npattern that also matches the requesting persona (or has no persona filter).\n\nArgs:\n    route: The frontend route path (e.g. \"/ecrf\", \"/tickets\").\n    persona: The requesting user's persona role, or None.\n    session: Injected async database session.\n\nReturns:\n    ContextualHelpLookupResponse with the matching article and current version,\n    or null fields if no match is found.",
+        "description": "Returns the most relevant Published article for a given route and persona.",
         "operationId": "lookup_contextual_help_api_v1_knowledge_contextual_help_lookup_get",
         "parameters": [
           {
@@ -645,6 +908,22 @@
   },
   "components": {
     "schemas": {
+      "ArticleApproveRequest": {
+        "properties": {
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "ArticleApproveRequest",
+        "description": "Request body for approving an article."
+      },
       "ArticleCreate": {
         "properties": {
           "title": {
@@ -674,6 +953,17 @@
             "maxLength": 50,
             "title": "Version Label",
             "default": "1.0"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
           },
           "reason_for_change": {
             "type": "string",
@@ -718,7 +1008,54 @@
           "body_markdown"
         ],
         "title": "ArticleDraftSave",
-        "description": "Request body for saving an updated draft body."
+        "description": "Request body for saving an updated draft body (PATCH /articles/{id}/draft)."
+      },
+      "ArticlePublishRequest": {
+        "properties": {
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason For Change"
+          },
+          "version_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "ArticlePublishRequest",
+        "description": "Request body for publishing an approved article."
+      },
+      "ArticleRejectRequest": {
+        "properties": {
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "title": "ArticleRejectRequest",
+        "description": "Request body for rejecting an article."
       },
       "ArticleResponse": {
         "properties": {
@@ -749,6 +1086,28 @@
             "type": "string",
             "title": "Version Label"
           },
+          "current_published_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Published Version Id"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
           "author_user_id": {
             "type": "string",
             "title": "Author User Id"
@@ -774,6 +1133,28 @@
               }
             ],
             "title": "Approved By"
+          },
+          "body_markdown": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Markdown"
+          },
+          "body_html": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Html"
           },
           "is_deleted": {
             "type": "boolean",
@@ -827,6 +1208,25 @@
         "title": "ArticleStatus",
         "description": "Lifecycle states for a KnowledgeArticle controlled document.\n\nImplements a GxP-compliant seven-state machine enforcing four-eyes approval,\nimmutable published content, and full audit trail per 21 CFR Part 11."
       },
+      "ArticleSubmitReviewRequest": {
+        "properties": {
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "title": "ArticleSubmitReviewRequest",
+        "description": "Request body for submitting an article for review."
+      },
       "ArticleTransitionRequest": {
         "properties": {
           "target_status": {
@@ -862,7 +1262,83 @@
           "target_status"
         ],
         "title": "ArticleTransitionRequest",
-        "description": "Request body for performing a state machine transition on an article."
+        "description": "Request body for performing a generic state machine transition on an article."
+      },
+      "ArticleUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1,
+                "pattern": "^[a-z0-9-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "body_markdown": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Body Markdown"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "body_markdown"
+        ],
+        "title": "ArticleUpdate",
+        "description": "Request body for updating a working draft KnowledgeArticle (PUT /articles/{id})."
       },
       "ArticleVersionResponse": {
         "properties": {
@@ -901,6 +1377,11 @@
             ],
             "title": "Body Html"
           },
+          "is_locked": {
+            "type": "boolean",
+            "title": "Is Locked",
+            "default": false
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -909,6 +1390,10 @@
           "created_by": {
             "type": "string",
             "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
           }
         },
         "type": "object",
@@ -921,7 +1406,8 @@
           "body_markdown",
           "body_html",
           "created_at",
-          "created_by"
+          "created_by",
+          "reason_for_change"
         ],
         "title": "ArticleVersionResponse",
         "description": "Response schema for a KnowledgeArticleVersion snapshot."

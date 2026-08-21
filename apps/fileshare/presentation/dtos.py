@@ -20,6 +20,7 @@ class FileUploadUrlRequest(BaseModel):
     filename: str = Field(min_length=1, max_length=500)
     mime_type: str = Field(min_length=1, max_length=255)
     size_bytes: int = Field(ge=0)
+    checksum_sha256: str | None = Field(default=None, min_length=64, max_length=64)
     reason_for_change: str = Field(min_length=5, max_length=1000)
     is_multipart: bool = Field(default=False)
     parts_count: int = Field(default=1, ge=1, le=10000)
@@ -36,6 +37,8 @@ class FileUploadUrlResponse(BaseModel):
     upload_url: str | None = None
     upload_urls: dict[int, str] | None = None
     expires_in: int = 3600
+    checksum_sha256: str | None = None
+    required_headers: dict[str, str] = Field(default_factory=dict)
 
 
 class FileDownloadUrlResponse(BaseModel):
@@ -49,6 +52,7 @@ class FileDownloadUrlResponse(BaseModel):
     download_url: str
     expires_in: int = 3600
     is_watermarked: bool = False
+    access_count: int | None = None
 
 
 class FileRecordResponse(BaseModel):
