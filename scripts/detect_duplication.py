@@ -247,6 +247,14 @@ def main() -> None:
                                     "apps/designer/src/domain/document_renderer.py",
                                 },
                                 {
+                                    "apps/execution/domain/acl/usdm_validation_dto.py",
+                                    "apps/gateway/domain/acl/usdm_validation.py",
+                                },
+                                {
+                                    "apps/designer/infrastructure/neo4j_usdm_writer.py",
+                                    "apps/designer/domain/cdisc/usdm_importer.py",
+                                },
+                                {
                                     "apps/ctms/src/domain/acl/sync_engine_dto.py",
                                     "apps/interop/src/domain/sync_engine.py",
                                 },
