@@ -103,6 +103,8 @@ LEGACY_TESTS_EXEMPT_FROM_IMPORT_BOUNDARIES = {
     "apps/eisf/tests/test_eisf_binder.py",
     "apps/gateway/tests/test_gateway.py",
     "apps/gateway/tests/test_auditor_router.py",
+    "apps/web/tests/test_amendment_diff.py",
+    "apps/web/tests/test_econsent.py",
     "packages/storage/tests/test_safe_binary_storage_watermark.py",
     "packages/compliance/tests/test_compliance_change_request.py",
     "packages/compliance/tests/test_compliance_security.py",
@@ -116,8 +118,8 @@ LEGACY_TESTS_EXEMPT_FROM_IMPORT_BOUNDARIES = {
     "packages/security/tests/test_audit.py",
     "packages/hexagonal/tests/test_hexagonal_domain.py",
     "packages/hexagonal/tests/test_hexagonal_ports_adapters.py",
-    "apps/web/tests/test_amendment_diff.py",
     "apps/web/tests/test_econsent.py",
+    "apps/web/tests/test_amendment_diff.py",
 }
 
 

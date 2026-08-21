@@ -26,6 +26,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  signerRole: {
+    type: String,
+    default: "",
+  },
   role: {
     type: String,
     default: "Subject",
@@ -66,7 +70,7 @@ const totp = computed({
   },
 });
 
-const signerNameRef = computed({
+const signerNameProxy = computed({
   get: () => innerRef.value?.signerNameVal || "",
   set: (val) => {
     if (innerRef.value) {
@@ -75,7 +79,7 @@ const signerNameRef = computed({
   },
 });
 
-const signerRole = computed({
+const signerRoleProxy = computed({
   get: () => innerRef.value?.signerRoleVal || "",
   set: (val) => {
     if (innerRef.value) {
@@ -96,8 +100,8 @@ const signingReason = computed({
 defineExpose({
   password,
   totp,
-  signerName: signerNameRef,
-  signerRole,
+  signerName: signerNameProxy,
+  signerRole: signerRoleProxy,
   signingReason,
 });
 </script>

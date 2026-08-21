@@ -64,10 +64,7 @@
         </div>
         <div>
           <strong>Cryptographic Checksum (SHA-256):</strong>
-          <code>{{
-            latestSignature.sha256_hash ||
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" /* pragma: allowlist secret */
-          }}</code>
+          <code>{{ latestSignature.sha256_hash || DEFAULT_EMPTY_SHA256 }}</code>
         </div>
       </div>
     </div>
@@ -201,19 +198,17 @@
     </div>
 
     <!-- Signature Capture Modal -->
-    <!-- eslint-disable vuejs-accessibility/aria-role -->
     <SignatureCaptureModal
       :is-open="showSignatureModal"
       username="participant.cadence101"
       signer-name="Participant Jane Doe"
-      role="Subject"
+      signer-role="Subject"
       action-url="/api/v1/econsent/templates/icf-001/versions/1/capture-consent"
       :on-sign="handleExecuteSignature"
       @cancel="showSignatureModal = false"
       @success="onSignatureSuccess"
       @error="onSignatureError"
     />
-    <!-- eslint-enable vuejs-accessibility/aria-role -->
 
     <!-- Publish Version GxP Modal -->
     <div v-if="showPublishModal" class="publish-modal-overlay">
@@ -270,6 +265,8 @@ import LanguageTranslationTabs from "../components/econsent/LanguageTranslationT
 import SignatureCaptureModal from "../components/SignatureCaptureModal.vue";
 
 const econsentStore = useEconsentStore();
+const DEFAULT_EMPTY_SHA256 =
+  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"; // pragma: allowlist secret
 const activeSectionId = ref(null);
 const showQuiz = ref(false);
 const showPublishModal = ref(false);
@@ -329,8 +326,7 @@ const handleExecuteSignature = async (
     meaningOfSigning: signingReason || "I agree to participate",
     signingReason: signingReason || "I agree to participate",
     timestamp: new Date().toISOString(),
-    sha256_hash:
-      "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
+    sha256_hash: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
     sigToken,
   };
   econsentStore.recordSignedConsent(record);
@@ -346,8 +342,7 @@ const onSignatureSuccess = (result) => {
       signerRole: "Subject",
       meaningOfSigning: "I agree to participate",
       timestamp: new Date().toISOString(),
-      sha256_hash:
-        "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
+      sha256_hash: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
     };
   }
 };

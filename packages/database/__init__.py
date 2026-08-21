@@ -121,7 +121,7 @@ def receive_before_flush(session: Session, flush_context, instances):
             "audit_logs", "audit_ledger_seals", "data_locks", "integration_outbox", "safety_audit_logs", "ticket_audit_logs",
             "org_audit_logs", "audit_schema.audit_logs", "audit_schema.audit_ledger_seals", "notifications",
             "notification_records", "notification_audit_logs", "notification_deliveries", "notifications_audit_logs",
-            "tmf_documents", "tmf_audit_logs", "tmf_seals", "tmf_expected_documents", "tmf_document_qc_transitions",
+            "knowledge_article_audit_logs", "tmf_documents", "tmf_audit_logs", "tmf_seals", "tmf_expected_documents", "tmf_document_qc_transitions",
             "tmf_document_expiration_alert_states", "epro_submissions", "epro_defeated_submissions",
             "epro_quarantined_submissions", "interop_messages", "interop_audit_logs", "instruments",
             "subject_assignments", "subject_notifications", "ctms_studies", "ctms_audit_logs",

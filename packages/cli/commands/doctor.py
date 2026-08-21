@@ -1,6 +1,5 @@
 """Doctor diagnostic subcommand for validating and auto-healing environment, dependencies, ports, and databases."""
 
-import socket
 import sqlite3
 import subprocess
 import sys
@@ -18,6 +17,7 @@ from packages.cli.formatting import (
     print_success,
     print_warning,
 )
+from packages.cli.ports import is_port_in_use, load_categorized_ports
 
 doctor_app = typer.Typer(
     help="Run system diagnostics and auto-heal development environment issues."
@@ -31,13 +31,6 @@ SQLITE_DBS = [
     "safety.db",
     "tickets.db",
 ]
-
-
-def is_port_in_use(port: int, host: str = "127.0.0.1") -> bool:
-    """Checks if a TCP port is in use."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(0.2)
-        return s.connect_ex((host, port)) == 0
 
 
 def check_tool_version(cmd: list[str]) -> str | None:
@@ -141,34 +134,26 @@ def run_doctor(
         }
 
     # 4. Port Availability Checks
-    services_ports = {
-        "Gateway API": 8000,
-        "Designer Service": 8001,
-        "Execution Engine": 8002,
-        "eTMF Service": 8003,
-        "Interop Service": 8004,
-        "Quality Service": 8005,
-        "Notifications Service": 8006,
-        "CTMS Service": 8007,
-        "Safety Service": 8008,
-        "Tickets Service": 8009,
-        "eISF Service": 8010,
-        "eConsent Service": 8011,
-        "Organization Service": 8012,
-        "Keycloak IAM": 8080,
-        "Web App (Vite)": 3000,
-        "Subject Portal": 5174,
-        "PostgreSQL": 5432,
-        "Neo4j HTTP": 7474,
-        "Neo4j Bolt": 7687,
-    }
-    for s_name, port in services_ports.items():
-        in_use = is_port_in_use(port)
-        diagnostics["ports"][s_name] = {
-            "port": port,
-            "in_use": in_use,
-            "status": "in_use" if in_use else "available",
-        }
+    categorized_ports = load_categorized_ports()
+    for cat_name, items in categorized_ports.items():
+        for item in items:
+            s_name = item["name"]
+            ports = item["ports"]
+            for port in ports:
+                key_name = s_name if len(ports) == 1 else f"{s_name} ({port})"
+                in_use = is_port_in_use(port)
+                diagnostics["ports"][key_name] = {
+                    "service": s_name,
+                    "category": cat_name,
+                    "port": port,
+                    "in_use": in_use,
+                    "status": "in_use" if in_use else "available",
+                }
+                if in_use:
+                    diagnostics["status"] = "degraded"
+                    diagnostics["recommendations"].append(
+                        f"Port collision: {s_name} on port {port} is occupied."
+                    )
 
     if json_mode:
         output_json(diagnostics)
