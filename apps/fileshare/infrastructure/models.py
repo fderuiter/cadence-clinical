@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, ForeignKey, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from apps.fileshare.domain.models import (
@@ -18,6 +18,7 @@ from apps.fileshare.domain.models import (
     ShareGrant,
     ShareScope,
 )
+from packages.database.datetime_helpers import UTCDateTime
 
 
 class Base(DeclarativeBase):
@@ -48,14 +49,14 @@ class FileRecordModel(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     uploaded_by: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     uploaded_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
+        UTCDateTime, default=func.now(), nullable=False
     )
     is_on_hold: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # 21 CFR Part 11 GxP audit fields
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
+        UTCDateTime, default=func.now(), nullable=False
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
@@ -112,13 +113,13 @@ class ShareGrantModel(Base):
     permission_level: Mapped[str] = mapped_column(
         String(50), default="view", nullable=False
     )
-    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # 21 CFR Part 11 GxP audit fields
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
+        UTCDateTime, default=func.now(), nullable=False
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
@@ -162,15 +163,17 @@ class GuestLinkModel(Base):
     token_hmac: Mapped[str] = mapped_column(
         String(128), nullable=False, unique=True, index=True
     )
-    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    last_accessed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_accessed_at: Mapped[datetime | None] = mapped_column(
+        UTCDateTime, nullable=True
+    )
     access_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
     # 21 CFR Part 11 GxP audit fields
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
+        UTCDateTime, default=func.now(), nullable=False
     )
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)

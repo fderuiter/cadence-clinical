@@ -784,6 +784,7 @@ async def test_notification_dispatched_on_publish(db_session: AsyncSession):
     Validate that notifications are dispatched to event bus on article publication.
 
     @req:PRD-KNB-001
+    @req:PRD-KNB-002
     """
     svc = ArticleLifecycleService(db_session)
     cat = await _make_category(svc)

@@ -124,7 +124,15 @@ class ShareGrant(BaseModel):
         """Evaluates whether the grant is currently active, non-revoked, and unexpired."""
         if self.is_deleted or self.revoked_at is not None:
             return False
-        return not (self.expires_at is not None and datetime.now(UTC) > self.expires_at)
+        if self.expires_at is None:
+            return True
+        now = datetime.now(UTC)
+        expires = (
+            self.expires_at
+            if self.expires_at.tzinfo is not None
+            else self.expires_at.replace(tzinfo=UTC)
+        )
+        return now <= expires
 
 
 class GuestLink(BaseModel):
@@ -153,4 +161,10 @@ class GuestLink(BaseModel):
         """Evaluates if the guest link is unrevoked and not expired."""
         if self.revoked_at is not None:
             return False
-        return datetime.now(UTC) <= self.expires_at
+        now = datetime.now(UTC)
+        expires = (
+            self.expires_at
+            if self.expires_at.tzinfo is not None
+            else self.expires_at.replace(tzinfo=UTC)
+        )
+        return now <= expires
