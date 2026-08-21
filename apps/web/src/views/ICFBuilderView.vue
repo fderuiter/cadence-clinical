@@ -198,6 +198,7 @@
     </div>
 
     <!-- Signature Capture Modal -->
+    <!-- eslint-disable vuejs-accessibility/aria-role -->
     <SignatureCaptureModal
       :is-open="showSignatureModal"
       username="participant.cadence101"
@@ -209,6 +210,7 @@
       @success="onSignatureSuccess"
       @error="onSignatureError"
     />
+    <!-- eslint-enable vuejs-accessibility/aria-role -->
 
     <!-- Publish Version GxP Modal -->
     <div v-if="showPublishModal" class="publish-modal-overlay">

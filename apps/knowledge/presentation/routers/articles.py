@@ -14,7 +14,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.knowledge.adapters.database import get_db_session
-from apps.knowledge.application.article_service import ArticleLifecycleService
 from apps.knowledge.domain.models import (
     ArticleApprovalConflictError,
     ArticleReasonRequiredError,
@@ -41,6 +40,7 @@ from apps.knowledge.presentation.dtos import (
     ContextualHelpMappingCreate,
     ContextualHelpMappingResponse,
 )
+from apps.knowledge.services.article_service import ArticleLifecycleService
 from packages.security.context import current_user_id
 from packages.security.rbac import require_roles
 

@@ -149,6 +149,7 @@ RULES = {
             "docker/**/*.yaml",
             "packages/**/*.yaml",
             "apps/**/*.yaml",
+            "data/**/*.yaml",
         ],
         "description": "YAML files (*.yaml) must reside in permitted directories.",
     },
@@ -161,6 +162,7 @@ RULES = {
             "docker/**/*.yml",
             "packages/**/*.yml",
             "apps/**/*.yml",
+            "data/**/*.yml",
         ],
         "description": "YML files (*.yml) must reside in permitted directories.",
     },
@@ -208,6 +210,7 @@ APPROVED_SUBDIRECTORIES = {
     ".github/",
     ".cadence/",
     ".jules/",
+    "data/",
     ".agents/",
     ".scratch/",
 }

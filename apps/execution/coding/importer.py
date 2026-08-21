@@ -85,6 +85,39 @@ async def process_dictionary_import(
                         with zipfile.ZipFile(temp_zip_path) as z:
                             if dictionary_type == "MEDDRA":
                                 parser = MedDRAParser(dictionary_version=version)
+
+                                # Pre-fetch existing terms and hierarchies for this version for idempotency
+                                existing_terms = set(
+                                    (r[0], r[1])
+                                    for r in (
+                                        await session.execute(
+                                            select(
+                                                MedDRATerm.code, MedDRATerm.level
+                                            ).where(
+                                                MedDRATerm.dictionary_version == version
+                                            )
+                                        )
+                                    ).all()
+                                )
+                                existing_hiers = set(
+                                    (r[0], r[1], r[2], r[3], r[4], r[5])
+                                    for r in (
+                                        await session.execute(
+                                            select(
+                                                MedDRAHierarchy.llt_code,
+                                                MedDRAHierarchy.pt_code,
+                                                MedDRAHierarchy.hlt_code,
+                                                MedDRAHierarchy.hlgt_code,
+                                                MedDRAHierarchy.soc_code,
+                                                MedDRAHierarchy.primary_soc_flag,
+                                            ).where(
+                                                MedDRAHierarchy.dictionary_version
+                                                == version
+                                            )
+                                        )
+                                    ).all()
+                                )
+
                                 asc_files = [
                                     name
                                     for name in z.namelist()
@@ -115,6 +148,13 @@ async def process_dictionary_import(
                                     ):
                                         for record in batch:
                                             if record["type"] == "term":
+                                                term_key = (
+                                                    record["data"]["code"],
+                                                    record["data"]["level"],
+                                                )
+                                                if term_key in existing_terms:
+                                                    continue
+                                                existing_terms.add(term_key)
                                                 term_obj = MedDRATerm(
                                                     dictionary_version=version,
                                                     code=record["data"]["code"],
@@ -124,7 +164,19 @@ async def process_dictionary_import(
                                                     level=record["data"]["level"],
                                                 )
                                                 session.add(term_obj)
+                                                records_imported += 1
                                             elif record["type"] == "hierarchy":
+                                                hier_key = (
+                                                    record["data"]["llt_code"],
+                                                    record["data"]["pt_code"],
+                                                    record["data"]["hlt_code"],
+                                                    record["data"]["hlgt_code"],
+                                                    record["data"]["soc_code"],
+                                                    record["data"]["primary_soc_flag"],
+                                                )
+                                                if hier_key in existing_hiers:
+                                                    continue
+                                                existing_hiers.add(hier_key)
                                                 hier_obj = MedDRAHierarchy(
                                                     dictionary_version=version,
                                                     llt_code=record["data"]["llt_code"],
@@ -139,7 +191,7 @@ async def process_dictionary_import(
                                                     ],
                                                 )
                                                 session.add(hier_obj)
-                                            records_imported += 1
+                                                records_imported += 1
 
                                         # flush batch to DB to validate, but do not commit yet
                                         await session.flush()
@@ -158,6 +210,71 @@ async def process_dictionary_import(
 
                             elif dictionary_type == "WHODRUG":
                                 parser = WHODrugParser(dictionary_version=version)
+
+                                # Pre-fetch existing WHODrug records for this version for idempotency
+                                existing_drugs = set(
+                                    r[0]
+                                    for r in (
+                                        await session.execute(
+                                            select(WHODrugRecord.drug_code).where(
+                                                WHODrugRecord.dictionary_version
+                                                == version
+                                            )
+                                        )
+                                    ).all()
+                                )
+                                existing_ingredients = set(
+                                    r[0]
+                                    for r in (
+                                        await session.execute(
+                                            select(
+                                                WHODrugIngredient.ingredient_code
+                                            ).where(
+                                                WHODrugIngredient.dictionary_version
+                                                == version
+                                            )
+                                        )
+                                    ).all()
+                                )
+                                existing_atcs = set(
+                                    r[0]
+                                    for r in (
+                                        await session.execute(
+                                            select(WHODrugATC.atc_code).where(
+                                                WHODrugATC.dictionary_version == version
+                                            )
+                                        )
+                                    ).all()
+                                )
+                                existing_drug_atcs = set(
+                                    (r[0], r[1])
+                                    for r in (
+                                        await session.execute(
+                                            select(
+                                                WHODrugDrugATC.drug_code,
+                                                WHODrugDrugATC.atc_code,
+                                            ).where(
+                                                WHODrugDrugATC.dictionary_version
+                                                == version
+                                            )
+                                        )
+                                    ).all()
+                                )
+                                existing_drug_ingredients = set(
+                                    (r[0], r[1])
+                                    for r in (
+                                        await session.execute(
+                                            select(
+                                                WHODrugDrugIngredient.drug_code,
+                                                WHODrugDrugIngredient.ingredient_code,
+                                            ).where(
+                                                WHODrugDrugIngredient.dictionary_version
+                                                == version
+                                            )
+                                        )
+                                    ).all()
+                                )
+
                                 drug_files = [
                                     name
                                     for name in z.namelist()
@@ -186,11 +303,13 @@ async def process_dictionary_import(
                                     ):
                                         for record in batch:
                                             if record["type"] == "drug_record":
+                                                drug_code = record["data"]["drug_code"]
+                                                if drug_code in existing_drugs:
+                                                    continue
+                                                existing_drugs.add(drug_code)
                                                 obj = WHODrugRecord(
                                                     dictionary_version=version,
-                                                    drug_code=record["data"][
-                                                        "drug_code"
-                                                    ],
+                                                    drug_code=drug_code,
                                                     preferred_name=record["data"][
                                                         "preferred_name"
                                                     ],
@@ -199,27 +318,45 @@ async def process_dictionary_import(
                                                     ],
                                                 )
                                                 session.add(obj)
+                                                records_imported += 1
                                             elif record["type"] == "ingredient":
+                                                ing_code = record["data"][
+                                                    "ingredient_code"
+                                                ]
+                                                if ing_code in existing_ingredients:
+                                                    continue
+                                                existing_ingredients.add(ing_code)
                                                 obj = WHODrugIngredient(
                                                     dictionary_version=version,
-                                                    ingredient_code=record["data"][
-                                                        "ingredient_code"
-                                                    ],
+                                                    ingredient_code=ing_code,
                                                     ingredient_name=record["data"][
                                                         "ingredient_name"
                                                     ],
                                                 )
                                                 session.add(obj)
+                                                records_imported += 1
                                             elif record["type"] == "atc":
+                                                atc_code = record["data"]["atc_code"]
+                                                if atc_code in existing_atcs:
+                                                    continue
+                                                existing_atcs.add(atc_code)
                                                 obj = WHODrugATC(
                                                     dictionary_version=version,
-                                                    atc_code=record["data"]["atc_code"],
+                                                    atc_code=atc_code,
                                                     description=record["data"][
                                                         "description"
                                                     ],
                                                 )
                                                 session.add(obj)
+                                                records_imported += 1
                                             elif record["type"] == "drug_atc":
+                                                drug_atc_key = (
+                                                    record["data"]["drug_code"],
+                                                    record["data"]["atc_code"],
+                                                )
+                                                if drug_atc_key in existing_drug_atcs:
+                                                    continue
+                                                existing_drug_atcs.add(drug_atc_key)
                                                 obj = WHODrugDrugATC(
                                                     dictionary_version=version,
                                                     drug_code=record["data"][
@@ -228,7 +365,20 @@ async def process_dictionary_import(
                                                     atc_code=record["data"]["atc_code"],
                                                 )
                                                 session.add(obj)
+                                                records_imported += 1
                                             elif record["type"] == "drug_ingredient":
+                                                drug_ing_key = (
+                                                    record["data"]["drug_code"],
+                                                    record["data"]["ingredient_code"],
+                                                )
+                                                if (
+                                                    drug_ing_key
+                                                    in existing_drug_ingredients
+                                                ):
+                                                    continue
+                                                existing_drug_ingredients.add(
+                                                    drug_ing_key
+                                                )
                                                 obj = WHODrugDrugIngredient(
                                                     dictionary_version=version,
                                                     drug_code=record["data"][
@@ -239,7 +389,7 @@ async def process_dictionary_import(
                                                     ],
                                                 )
                                                 session.add(obj)
-                                            records_imported += 1
+                                                records_imported += 1
 
                                         await session.flush()
 

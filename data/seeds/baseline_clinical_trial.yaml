@@ -1,0 +1,75 @@
+# Baseline Clinical Trial Seed Data
+study:
+  id: "CADENCE-101"
+  title: "Phase II Multi-Center Study of Cadence-X in Advanced Solid Tumors"
+  description: "A Phase II randomized, double-blind clinical trial evaluating safety and efficacy."
+  version_id: "ver_cadence_101"
+  phase: "Phase II"
+  protocol_version: "1.0"
+  status: "ACTIVE"
+
+sites:
+  - id: "SITE-101"
+    name: "Metropolitan General Hospital"
+    country: "USA"
+    status: "ACTIVE"
+  - id: "SITE-102"
+    name: "St. Jude Research Center"
+    country: "USA"
+    status: "ACTIVE"
+
+subjects:
+  - id: "SUBJ-101-001"
+    site_id: "SITE-101"
+    study_id: "CADENCE-101"
+    status: "ENROLLED"
+    gender: "F"
+    age: 54
+  - id: "SUBJ-101-002"
+    site_id: "SITE-101"
+    study_id: "CADENCE-101"
+    status: "ENROLLED"
+    gender: "M"
+    age: 61
+  - id: "SUBJ-102-001"
+    site_id: "SITE-102"
+    study_id: "CADENCE-101"
+    status: "ENROLLED"
+    gender: "F"
+    age: 48
+
+consents:
+  - id: "CONSENT-101-001"
+    subject_id: "SUBJ-101-001"
+    subject_pseudonym: "SUBJ-101-001"
+    study_id: "CADENCE-101"
+    site_id: "SITE-101"
+    template_id: "ICF-TEMPLATE-001"
+    version_index: 1
+    protocol_version: "1.0"
+    signed_at: "2026-08-01T10:00:00Z"
+    status: "COMPLETED"
+
+documents:
+  - id: "DOC-TMF-001"
+    study_id: "CADENCE-101"
+    site_id: "SITE-101"
+    filename: "Protocol_v1.0_Signed.pdf"
+    zone: 1
+    section: "01.01"
+    artifact_type: "PROTOCOL"
+    artifact_code: "01.01.01"
+    content: "JVBERi0xLjQKJ..."
+    mime_type: "application/pdf"
+    created_by: "system"
+    status: "APPROVED"
+
+sae_cases:
+  - id: "SAE-001"
+    subject_id: "SUBJ-101-002"
+    study_id: "CADENCE-101"
+    term: "Febrile Neutropenia"
+    severity: "SEVERE"
+    causality: "RELATED"
+    outcome: "RESOLVED"
+    reported_at: "2026-08-10T14:30:00Z"

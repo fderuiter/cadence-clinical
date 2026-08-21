@@ -111,7 +111,7 @@ source = [
     "apps",
     "packages",
 ]
-concurrency = ["thread", "greenlet"]
+concurrency = ["thread"]
 # Omit empty scaffolded hexagonal architecture templates to keep functional business coverage accurate
 omit = [
     "apps/*/adapter/**",
