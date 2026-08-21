@@ -162,7 +162,7 @@ A modular architecture unifying repository sentinels (drift detection, duplicati
 
 ### AI Gateway Microservice
 
-A dedicated internal routing and inference microservice (`apps/ai-gateway`) that encapsulates model provider orchestration, token rate-limiting, cost accounting, tier-based model selection, and prompt template execution behind a uniform HMAC-authenticated REST API.
+A dedicated internal routing and inference microservice (`apps/ai_gateway`) that encapsulates model provider orchestration, token rate-limiting, cost accounting, tier-based model selection, and prompt template execution behind a uniform HMAC-authenticated REST API.
 
 ### Three-Tier Model Routing Strategy
 

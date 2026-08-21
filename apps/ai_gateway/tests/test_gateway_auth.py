@@ -4,6 +4,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
+from apps.ai_gateway.adapters.deid_adapter import DeidentifiedAIEngineAdapter
 from apps.ai_gateway.adapters.mock_adapter import MockAIEngineAdapter
 from apps.ai_gateway.main import app
 from apps.ai_gateway.presentation.routers.inference import get_ai_engine
@@ -14,7 +15,8 @@ from packages.testing.security import create_test_auth_headers
 def setup_ai_gateway():
     """Setup mock AI engine for deterministic security testing via dependency overrides."""
     mock_engine = MockAIEngineAdapter()
-    app.dependency_overrides[get_ai_engine] = lambda: mock_engine
+    wrapped = DeidentifiedAIEngineAdapter(mock_engine)
+    app.dependency_overrides[get_ai_engine] = lambda: wrapped
     yield mock_engine
     app.dependency_overrides.pop(get_ai_engine, None)
 

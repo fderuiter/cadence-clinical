@@ -62,6 +62,18 @@ class GenerationRequestDTO(BaseModel):
         default=None,
         description="Study protocol scope identifier.",
     )
+    custom_terms: list[str] | None = Field(
+        default=None,
+        description="Optional custom literal terms or patient names to redact.",
+    )
+    enable_deid: bool = Field(
+        default=True,
+        description="Whether to apply in-flight de-identification air-gap.",
+    )
+    compliance_profile: str = Field(
+        default="HIPAA",
+        description="Compliance profile for PHI detection (HIPAA, GDPR, EU_CTR).",
+    )
 
 
 class TokenUsageDTO(BaseModel):
@@ -90,6 +102,14 @@ class GenerationResponseDTO(BaseModel):
         default=0.0,
         description="Request latency in milliseconds.",
     )
+    deid_applied: bool = Field(
+        default=False,
+        description="Whether in-flight de-identification was applied.",
+    )
+    deid_tokens_count: int = Field(
+        default=0,
+        description="Count of surrogate tokens replaced and re-hydrated.",
+    )
 
 
 class EmbeddingRequestDTO(BaseModel):
@@ -112,6 +132,18 @@ class EmbeddingRequestDTO(BaseModel):
         default=None,
         description="Tenant identifier.",
     )
+    custom_terms: list[str] | None = Field(
+        default=None,
+        description="Optional custom literal terms or patient names to redact.",
+    )
+    enable_deid: bool = Field(
+        default=True,
+        description="Whether to apply in-flight de-identification air-gap.",
+    )
+    compliance_profile: str = Field(
+        default="HIPAA",
+        description="Compliance profile for PHI detection (HIPAA, GDPR, EU_CTR).",
+    )
 
 
 class EmbeddingResponseDTO(BaseModel):
@@ -130,6 +162,14 @@ class EmbeddingResponseDTO(BaseModel):
     latency_ms: float = Field(
         default=0.0,
         description="Request latency in milliseconds.",
+    )
+    deid_applied: bool = Field(
+        default=False,
+        description="Whether in-flight de-identification was applied to input texts.",
+    )
+    deid_tokens_count: int = Field(
+        default=0,
+        description="Count of surrogate tokens replaced in input texts.",
     )
 
 

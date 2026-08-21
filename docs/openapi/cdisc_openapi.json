@@ -861,10 +861,10 @@
       }
     },
     "/{path}": {
-      "post": {
+      "get": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__post",
+        "operationId": "proxy_requests__path__get",
         "parameters": [
           {
             "name": "path",
@@ -900,151 +900,7 @@
       "head": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__post",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__post",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__post",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "options": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__post",
-        "parameters": [
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "summary": "Proxy Requests",
-        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__post",
+        "operationId": "proxy_requests__path__get",
         "parameters": [
           {
             "name": "path",
@@ -1080,7 +936,7 @@
       "put": {
         "summary": "Proxy Requests",
         "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
-        "operationId": "proxy_requests__path__post",
+        "operationId": "proxy_requests__path__get",
         "parameters": [
           {
             "name": "path",
@@ -1107,6 +963,306 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Proxy Requests",
+        "description": "Proxy HTTP requests to downstream microservices.\n\nIntercepts all incoming traffic, enforces valid authentication,\ninjects authenticated identity headers along with cryptographic\nsignatures, and forwards the request to the appropriate downstream URL.\n\nArgs:\n    request (Request): The incoming FastAPI HTTP request.\n    path (str): The routed URL path.\n\nReturns:\n    Response: The HTTP response from the downstream service or a\n              Gateway error JSON payload.",
+        "operationId": "proxy_requests__path__get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ai_gateway/api/v1/ai/generate": {
+      "post": {
+        "tags": [
+          "Inference"
+        ],
+        "summary": "Execute AI text generation or structured extraction",
+        "description": "Generate completion text or structured JSON data conforming to a requested schema.\n\nArgs:\n    payload: GenerationRequestDTO containing prompt/messages, tier, and optional schema.\n    engine: Injected AIEnginePort adapter.\n\nReturns:\n    GenerationResponseDTO with content, structured data, token usage, and telemetry.\n\nRaises:\n    HTTPException: If payload is missing prompt/messages or inference fails.",
+        "operationId": "generate_completion_api_v1_ai_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ai_gateway_GenerationRequestDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ai_gateway_GenerationResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ai_gateway_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ai_gateway/api/v1/ai/embed": {
+      "post": {
+        "tags": [
+          "Inference"
+        ],
+        "summary": "Generate dense vector embeddings for input texts",
+        "description": "Generate float vector embeddings for input text strings.\n\nArgs:\n    payload: EmbeddingRequestDTO containing batch of text strings and model tier.\n    engine: Injected AIEnginePort adapter.\n\nReturns:\n    EmbeddingResponseDTO containing generated float vectors and usage metrics.\n\nRaises:\n    HTTPException: If embedding generation encounters an upstream error.",
+        "operationId": "generate_embeddings_api_v1_ai_embed_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ai_gateway_EmbeddingRequestDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ai_gateway_EmbeddingResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ai_gateway_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ai_gateway/api/v1/ai/tiers": {
+      "get": {
+        "tags": [
+          "Inference"
+        ],
+        "summary": "Retrieve active configuration and model mapping across execution tiers",
+        "description": "List all available execution tiers and active model configurations.\n\nArgs:\n    engine: Injected AIEnginePort adapter.\n\nReturns:\n    List of TierInfoDTO describing active tier mappings and capabilities.",
+        "operationId": "list_tiers_api_v1_ai_tiers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Ai_gateway_TierInfoDTO"
+                  },
+                  "type": "array",
+                  "title": "Response List Tiers Api V1 Ai Tiers Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ai_gateway/healthz": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Service health check endpoint.",
+        "operationId": "health_check_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Healthz Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ai_gateway/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Service health check endpoint.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
                 }
               }
             }
@@ -32985,6 +33141,492 @@
         "title": "UsdmImportResponse"
       },
       "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "Ai_gateway_ChatMessageDTO": {
+        "properties": {
+          "role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Ai_gateway_MessageRole"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Role",
+            "description": "Role of the message author.",
+            "default": "user"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Text content of the message."
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "ChatMessageDTO",
+        "description": "Chat message transfer object."
+      },
+      "Ai_gateway_EmbeddingRequestDTO": {
+        "properties": {
+          "input_texts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Input Texts",
+            "description": "Batch of text strings to embed."
+          },
+          "tier": {
+            "$ref": "#/components/schemas/Ai_gateway_ModelTier",
+            "description": "Embedding model tier (defaults to Tier 1 local).",
+            "default": "tier_1_local"
+          },
+          "model_override": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Override",
+            "description": "Optional model override."
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id",
+            "description": "Tenant identifier."
+          },
+          "custom_terms": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Terms",
+            "description": "Optional custom literal terms or patient names to redact."
+          },
+          "enable_deid": {
+            "type": "boolean",
+            "title": "Enable Deid",
+            "description": "Whether to apply in-flight de-identification air-gap.",
+            "default": true
+          },
+          "compliance_profile": {
+            "type": "string",
+            "title": "Compliance Profile",
+            "description": "Compliance profile for PHI detection (HIPAA, GDPR, EU_CTR).",
+            "default": "HIPAA"
+          }
+        },
+        "type": "object",
+        "required": [
+          "input_texts"
+        ],
+        "title": "EmbeddingRequestDTO",
+        "description": "Inbound DTO for vector embedding generation."
+      },
+      "Ai_gateway_EmbeddingResponseDTO": {
+        "properties": {
+          "embeddings": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Embeddings",
+            "description": "List of dense float vectors."
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "Active embedding model."
+          },
+          "tier": {
+            "$ref": "#/components/schemas/Ai_gateway_ModelTier",
+            "description": "Resolved model tier."
+          },
+          "usage": {
+            "$ref": "#/components/schemas/Ai_gateway_TokenUsageDTO",
+            "description": "Token usage metrics."
+          },
+          "latency_ms": {
+            "type": "number",
+            "title": "Latency Ms",
+            "description": "Request latency in milliseconds.",
+            "default": 0.0
+          },
+          "deid_applied": {
+            "type": "boolean",
+            "title": "Deid Applied",
+            "description": "Whether in-flight de-identification was applied to input texts.",
+            "default": false
+          },
+          "deid_tokens_count": {
+            "type": "integer",
+            "title": "Deid Tokens Count",
+            "description": "Count of surrogate tokens replaced in input texts.",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "embeddings",
+          "model",
+          "tier"
+        ],
+        "title": "EmbeddingResponseDTO",
+        "description": "Outbound DTO containing generated float vector embeddings."
+      },
+      "Ai_gateway_GenerationRequestDTO": {
+        "properties": {
+          "prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt",
+            "description": "Single-turn prompt string."
+          },
+          "messages": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Ai_gateway_ChatMessageDTO"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Messages",
+            "description": "Multi-turn conversation history."
+          },
+          "tier": {
+            "$ref": "#/components/schemas/Ai_gateway_ModelTier",
+            "description": "Execution tier (tier_1_local, tier_2_fast, tier_3_frontier).",
+            "default": "tier_2_fast"
+          },
+          "model_override": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Override",
+            "description": "Explicit model name override."
+          },
+          "temperature": {
+            "type": "number",
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Temperature",
+            "description": "Sampling temperature.",
+            "default": 0.0
+          },
+          "max_tokens": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Tokens",
+            "description": "Maximum tokens to generate."
+          },
+          "response_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Schema",
+            "description": "JSON Schema for Pydantic v2 structured outputs."
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id",
+            "description": "Tenant identifier for isolation and auditing."
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Study protocol scope identifier."
+          },
+          "custom_terms": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Terms",
+            "description": "Optional custom literal terms or patient names to redact."
+          },
+          "enable_deid": {
+            "type": "boolean",
+            "title": "Enable Deid",
+            "description": "Whether to apply in-flight de-identification air-gap.",
+            "default": true
+          },
+          "compliance_profile": {
+            "type": "string",
+            "title": "Compliance Profile",
+            "description": "Compliance profile for PHI detection (HIPAA, GDPR, EU_CTR).",
+            "default": "HIPAA"
+          }
+        },
+        "type": "object",
+        "title": "GenerationRequestDTO",
+        "description": "Inbound DTO for AI text generation and structured completions."
+      },
+      "Ai_gateway_GenerationResponseDTO": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Generated text or serialized JSON."
+          },
+          "structured_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Structured Data",
+            "description": "Structured JSON object if response_schema was requested."
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "Active model identifier."
+          },
+          "tier": {
+            "$ref": "#/components/schemas/Ai_gateway_ModelTier",
+            "description": "Resolved model tier."
+          },
+          "usage": {
+            "$ref": "#/components/schemas/Ai_gateway_TokenUsageDTO",
+            "description": "Token usage metrics."
+          },
+          "latency_ms": {
+            "type": "number",
+            "title": "Latency Ms",
+            "description": "Request latency in milliseconds.",
+            "default": 0.0
+          },
+          "deid_applied": {
+            "type": "boolean",
+            "title": "Deid Applied",
+            "description": "Whether in-flight de-identification was applied.",
+            "default": false
+          },
+          "deid_tokens_count": {
+            "type": "integer",
+            "title": "Deid Tokens Count",
+            "description": "Count of surrogate tokens replaced and re-hydrated.",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "content",
+          "model",
+          "tier"
+        ],
+        "title": "GenerationResponseDTO",
+        "description": "Outbound DTO containing completion results and execution telemetry."
+      },
+      "Ai_gateway_HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/Ai_gateway_ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Ai_gateway_MessageRole": {
+        "type": "string",
+        "enum": [
+          "system",
+          "user",
+          "assistant"
+        ],
+        "title": "MessageRole",
+        "description": "Standard message roles for conversational or structured prompts."
+      },
+      "Ai_gateway_ModelTier": {
+        "type": "string",
+        "enum": [
+          "tier_1_local",
+          "tier_2_fast",
+          "tier_3_frontier"
+        ],
+        "title": "ModelTier",
+        "description": "Execution tiers for routing AI workloads based on cost and capability."
+      },
+      "Ai_gateway_TierInfoDTO": {
+        "properties": {
+          "tier": {
+            "$ref": "#/components/schemas/Ai_gateway_ModelTier",
+            "description": "Tier identifier."
+          },
+          "default_model": {
+            "type": "string",
+            "title": "Default Model",
+            "description": "Default model string."
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Clinical purpose."
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Capabilities",
+            "description": "Supported capabilities."
+          }
+        },
+        "type": "object",
+        "required": [
+          "tier",
+          "default_model",
+          "description"
+        ],
+        "title": "TierInfoDTO",
+        "description": "Outbound DTO describing active model tier configurations."
+      },
+      "Ai_gateway_TokenUsageDTO": {
+        "properties": {
+          "prompt_tokens": {
+            "type": "integer",
+            "title": "Prompt Tokens",
+            "description": "Input prompt tokens.",
+            "default": 0
+          },
+          "completion_tokens": {
+            "type": "integer",
+            "title": "Completion Tokens",
+            "description": "Generated output tokens.",
+            "default": 0
+          },
+          "total_tokens": {
+            "type": "integer",
+            "title": "Total Tokens",
+            "description": "Total tokens consumed.",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "TokenUsageDTO",
+        "description": "Token consumption accounting transfer object."
+      },
+      "Ai_gateway_ValidationError": {
         "properties": {
           "loc": {
             "items": {

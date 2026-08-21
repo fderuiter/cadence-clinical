@@ -8,6 +8,9 @@ os.environ.setdefault(
     "INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz"
 )
 
+from packages.deid.air_gap import (
+    DeidAirGapVault,
+)
 from packages.deid.detector import (
     DeidDetector,
     redact_text,
@@ -44,6 +47,7 @@ from packages.deid.transforms import (
 
 __all__ = [
     "ComplianceProfile",
+    "DeidAirGapVault",
     "DetectionResult",
     "DetectorCategory",
     "PROFILE_CATEGORIES",

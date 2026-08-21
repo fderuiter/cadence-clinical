@@ -195,7 +195,7 @@ The platform web client and automated testing harness must support deterministic
 
 #### PRD-SYS-051: AI Gateway Microservice and Three-Tier Clinical Intelligence Architecture
 
-The platform must encapsulate all artificial intelligence model routing, rate-limiting, cost accounting, and prompt execution behind a dedicated internal microservice (`apps/ai-gateway`) protected by HMAC authentication. Outbound prompts must undergo in-flight de-identification of Protected Health Information (PHI) via `packages/deid`, and generated records must enter a `DRAFT_AI` state with dual-attribution metadata requiring human verification and 21 CFR Part 11 electronic signatures.
+The platform must encapsulate all artificial intelligence model routing, rate-limiting, cost accounting, and prompt execution behind a dedicated internal microservice (`apps/ai_gateway`) protected by HMAC authentication. Outbound prompts must undergo in-flight de-identification of Protected Health Information (PHI) via `packages/deid`, and generated records must enter a `DRAFT_AI` state with dual-attribution metadata requiring human verification and 21 CFR Part 11 electronic signatures.
 
 ---
 

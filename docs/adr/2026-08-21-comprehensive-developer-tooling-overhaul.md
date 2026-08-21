@@ -27,9 +27,9 @@ This decision addresses requirement **PRD-SYS-049** to establish an enterprise-g
 ## 3. Options Considered
 
 1. **Option A (Three-Tier Modernization Architecture - Selected)**:
-   - *Tier 1 (Inner Loop)*: Static AST reverse dependency graph with disk caching (`.cadence/test_graph.json`) and pure in-memory SQLite/mock graph database harnesses for unit tests.
+   - *Tier 1 (Inner Loop)*: Static AST reverse dependency graph with disk caching (`packages/testing/dependency_graph.py`) and pure in-memory SQLite/mock graph database harnesses for unit tests.
    - *Tier 2 (Agent DX & CLI)*: Shared Pydantic command schemas (`packages/tooling_core`), auto-sensing dual-mode output in `TerminalDocument`, and MCP summary envelopes with zoom inspection tokens.
-   - *Tier 3 (GxP Governance)*: Incremental JUnit XML verification caching (`.cadence/gxp_cache.json`) and a unified `SentinelCheck` concurrent plugin engine in `packages/sentinels`.
+   - *Tier 3 (GxP Governance)*: Incremental JUnit XML verification caching (`scripts/sync_gxp.py`) and a unified `SentinelCheck` concurrent plugin engine in `packages/sentinels`.
 2. **Option B (Ad-hoc Script Optimizations)**:
    - Retain individual scripts in `scripts/` and optimize test commands with ad-hoc flags without unifying contracts, MCP schemas, or caching architectures.
 

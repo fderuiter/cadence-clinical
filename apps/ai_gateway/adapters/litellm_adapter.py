@@ -32,13 +32,19 @@ class LiteLLMAdapter(AIEnginePort):
         tier_3_model: str | None = None,
         tier_1_embed_model: str | None = None,
     ) -> None:
-        self.tier_1_model = tier_1_model or os.getenv(
-            "AI_TIER_1_MODEL", "ollama/llama3"
+        self.tier_1_model: str = (
+            tier_1_model or os.getenv("AI_TIER_1_MODEL") or "ollama/llama3"
         )
-        self.tier_2_model = tier_2_model or os.getenv("AI_TIER_2_MODEL", "gpt-4o-mini")
-        self.tier_3_model = tier_3_model or os.getenv("AI_TIER_3_MODEL", "gpt-4o")
-        self.tier_1_embed_model = tier_1_embed_model or os.getenv(
-            "AI_TIER_1_EMBED_MODEL", "text-embedding-3-small"
+        self.tier_2_model: str = (
+            tier_2_model or os.getenv("AI_TIER_2_MODEL") or "gpt-4o-mini"
+        )
+        self.tier_3_model: str = (
+            tier_3_model or os.getenv("AI_TIER_3_MODEL") or "gpt-4o"
+        )
+        self.tier_1_embed_model: str = (
+            tier_1_embed_model
+            or os.getenv("AI_TIER_1_EMBED_MODEL")
+            or "text-embedding-3-small"
         )
 
         # Suppress verbose external telemetry logs

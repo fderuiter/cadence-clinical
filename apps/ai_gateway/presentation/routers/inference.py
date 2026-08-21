@@ -4,6 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from apps.ai_gateway.adapters.deid_adapter import DeidentifiedAIEngineAdapter
 from apps.ai_gateway.adapters.litellm_adapter import LiteLLMAdapter
 from apps.ai_gateway.domain.models import (
     ChatMessage,
@@ -24,8 +25,8 @@ router = APIRouter(prefix="/api/v1/ai", tags=["Inference"])
 
 
 def get_ai_engine() -> AIEnginePort:
-    """Dependency provider factory for the AI engine adapter."""
-    return LiteLLMAdapter()
+    """Dependency provider factory for the AI engine adapter wrapped in deid air-gap."""
+    return DeidentifiedAIEngineAdapter(LiteLLMAdapter())
 
 
 AIEngineDep = Annotated[AIEnginePort, Depends(get_ai_engine)]
@@ -75,6 +76,9 @@ async def generate_completion(
         response_schema=payload.response_schema,
         tenant_id=payload.tenant_id,
         study_id=payload.study_id,
+        custom_terms=payload.custom_terms,
+        enable_deid=payload.enable_deid,
+        compliance_profile=payload.compliance_profile,
     )
 
     try:
@@ -101,6 +105,8 @@ async def generate_completion(
             total_tokens=response.usage.total_tokens,
         ),
         latency_ms=response.latency_ms,
+        deid_applied=response.deid_applied,
+        deid_tokens_count=response.deid_tokens_count,
     )
 
 
@@ -131,6 +137,9 @@ async def generate_embeddings(
         tier=payload.tier,
         model_override=payload.model_override,
         tenant_id=payload.tenant_id,
+        custom_terms=payload.custom_terms,
+        enable_deid=payload.enable_deid,
+        compliance_profile=payload.compliance_profile,
     )
 
     try:
@@ -151,6 +160,8 @@ async def generate_embeddings(
             total_tokens=response.usage.total_tokens,
         ),
         latency_ms=response.latency_ms,
+        deid_applied=response.deid_applied,
+        deid_tokens_count=response.deid_tokens_count,
     )
 
 
