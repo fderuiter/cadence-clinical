@@ -499,6 +499,14 @@ def main() -> None:
                                     "apps/execution/domain/acl/protocol_version_ref_dto.py",
                                 },
                                 {
+                                    "apps/execution/domain/acl/usdm_validation_dto.py",
+                                    "apps/gateway/domain/acl/usdm_validation.py",
+                                },
+                                {
+                                    "apps/designer/infrastructure/neo4j_usdm_writer.py",
+                                    "apps/designer/domain/cdisc/usdm_importer.py",
+                                },
+                                {
                                     "apps/etmf/main.py",
                                     "apps/etmf/presentation/routers/etmf.py",
                                 },

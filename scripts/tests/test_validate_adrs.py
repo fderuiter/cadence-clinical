@@ -340,3 +340,52 @@ def test_get_changed_files_bypasses_merge_commits_and_parses_status(mock_run_git
         assert "new_file.py" in changed
         assert "untracked_file.py" in changed
         assert "should/not/be/here.py" not in changed
+
+
+def test_post_2026_adr_invalid_requirement_tags_fails_validation():
+    from scripts.validate_adrs import validate_adr_compliance
+
+    valid_reqs = {"PRD-SYS-001", "Trace-1"}
+
+    # Post-2026 ADR with missing requirement tag
+    ok, err = validate_adr_compliance(
+        "2026-09-01-new-feature.md",
+        "# ADR-999: New Feature\n\n## 1. Context & Problem Statement\nSome context.\n",
+        valid_reqs,
+    )
+    assert ok is False
+    assert "lacks a valid requirement reference" in err
+
+    # Post-2026 ADR with invalid/misspelled requirement tag
+    ok, err = validate_adr_compliance(
+        "2026-09-01-new-feature.md",
+        "# ADR-999: New Feature\n\n## 1. Context & Problem Statement\nRef PRD-INVALID-999.\n",
+        valid_reqs,
+    )
+    assert ok is False
+    assert "references invalid or misspelled requirement identifier(s)" in err
+    assert "PRD-INVALID-999" in err
+
+
+def test_legacy_pre_2026_adr_exempt_from_requirement_tags_but_checks_headers():
+    from scripts.validate_adrs import validate_adr_compliance
+
+    valid_reqs = {"PRD-SYS-001"}
+
+    # Legacy pre-2026 ADR without requirement tag passes compliance check
+    ok, err = validate_adr_compliance(
+        "2023-01-01-legacy-db.md",
+        "# ADR 2023-01-01: Legacy DB\n\n## Status\nAccepted\n\n## Context\nNo tags.\n",
+        valid_reqs,
+    )
+    assert ok is True
+    assert err == ""
+
+
+def test_shared_validation_exports():
+    import scripts.validate_adrs as val_adrs
+
+    assert callable(val_adrs.get_valid_requirements)
+    assert callable(val_adrs.is_post_2026_adr)
+    assert callable(val_adrs.extract_requirement_references)
+    assert callable(val_adrs.validate_adr_compliance)

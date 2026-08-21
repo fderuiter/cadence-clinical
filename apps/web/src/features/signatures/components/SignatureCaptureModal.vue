@@ -119,6 +119,10 @@ const props = defineProps({
     type: String,
     default: "Subject",
   },
+  signerRole: {
+    type: String,
+    default: "",
+  },
   actionUrl: {
     type: String,
     required: true,
@@ -139,7 +143,7 @@ useEscapeClose(() => emit("cancel"));
 
 const usernameVal = ref(props.username);
 const signerNameVal = ref(props.signerName || props.username || "");
-const signerRoleVal = ref(props.role || "Subject");
+const signerRoleVal = ref(props.signerRole || props.role || "Subject");
 const password = ref("");
 const totp = ref("");
 const signingReason = ref("");

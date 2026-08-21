@@ -35,6 +35,12 @@ except ImportError:
         sys.path.append(os.path.dirname(os.path.abspath(__file__)))
         import compliance_utility
 
+# Shared requirement validation logic
+get_valid_requirements = compliance_utility.get_valid_requirements
+is_post_2026_adr = compliance_utility.is_post_2026_adr
+extract_requirement_references = compliance_utility.extract_requirement_references
+validate_adr_compliance = compliance_utility.validate_adr_compliance
+
 ADR_DIR = "docs/adr"
 INDEX_FILE = os.path.join(ADR_DIR, "index.md")
 IGNORE_FILES = {"TEMPLATE.md", "index.md"}

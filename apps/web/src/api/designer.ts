@@ -51,39 +51,56 @@ export const designerService = {
   /**
    * Creates an isolated, immutable protocol amendment working branch.
    */
-  createAmendmentBranch(payload: {
-    study_id: string;
-    base_version_tag: string;
-    amendment_type?: string;
-    requires_reconsent?: boolean;
-    change_reason: string;
-    branch_name?: string;
-  }, options: any = {}): Promise<any> {
-    return apiClient.post(`/api/v1/designer/amendments/branch`, payload, options);
+  createAmendmentBranch(
+    payload: {
+      study_id: string;
+      base_version_tag: string;
+      amendment_type?: string;
+      requires_reconsent?: boolean;
+      change_reason: string;
+      branch_name?: string;
+    },
+    options: any = {}
+  ): Promise<any> {
+    return apiClient.post(
+      `/api/v1/designer/amendments/branch`,
+      payload,
+      options
+    );
   },
 
   /**
    * Computes multi-layer visual and semantic protocol diff.
    */
-  fetchAmendmentDiff(payload: {
-    study_id: string;
-    base_version_tag: string;
-    amended_version_tag: string;
-    base_payload?: any;
-    draft_payload?: any;
-  }, options: any = {}): Promise<any> {
+  fetchAmendmentDiff(
+    payload: {
+      study_id: string;
+      base_version_tag: string;
+      amended_version_tag: string;
+      base_payload?: any;
+      draft_payload?: any;
+    },
+    options: any = {}
+  ): Promise<any> {
     return apiClient.post(`/api/v1/designer/amendments/diff`, payload, options);
   },
 
   /**
    * Computes quantitative Amendment Impact Summary.
    */
-  fetchAmendmentImpact(payload: {
-    study_id: string;
-    base_version_tag: string;
-    amended_version_tag: string;
-  }, options: any = {}): Promise<any> {
-    return apiClient.post(`/api/v1/designer/amendments/impact`, payload, options);
+  fetchAmendmentImpact(
+    payload: {
+      study_id: string;
+      base_version_tag: string;
+      amended_version_tag: string;
+    },
+    options: any = {}
+  ): Promise<any> {
+    return apiClient.post(
+      `/api/v1/designer/amendments/impact`,
+      payload,
+      options
+    );
   },
 
   /**
@@ -93,4 +110,3 @@ export const designerService = {
     return apiClient.get(`/api/v1/mdr/concepts`, options);
   },
 };
-
