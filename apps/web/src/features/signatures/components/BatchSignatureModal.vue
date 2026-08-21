@@ -247,7 +247,7 @@
             <!-- Reuse GxpCredentialsInput with Username hidden -->
             <!-- prettier-ignore -->
             <GxpCredentialsInput
-              v-model:password="password" data-pragma="pragma: allowlist"
+              v-model:password="password" data-pragma="pragma: allowlist secret"
               v-model:totp="totp"
               :show-username="false"
               :password-required="true"
@@ -269,7 +269,7 @@
                 borderRadius: '4px',
                 fontSize: '13px',
               }"
-            />
+            /><!-- pragma: allowlist secret -->
 
             <!-- Error Notification Banner -->
             <div
