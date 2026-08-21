@@ -9,15 +9,12 @@ from typing import Any
 import typer
 
 from packages.cli.formatting import (
-    console,
-    create_table,
+    TerminalDocument,
     is_json_mode,
     output_json,
-    print_header,
-    print_success,
-    print_warning,
 )
 from packages.cli.ports import is_port_in_use, load_categorized_ports
+from scripts.pre_commit import install_pre_commit_hook
 
 doctor_app = typer.Typer(
     help="Run system diagnostics and auto-heal development environment issues."
@@ -45,7 +42,7 @@ def check_tool_version(cmd: list[str]) -> str | None:
 
 
 def _auto_heal_databases(repo_root: Path) -> list[str]:
-    """Auto-heals missing SQLite storage files by seeding initial schemas."""
+    """Auto-heals missing SQLite storage files and installs pre-commit hooks."""
     actions = []
     for db_name in SQLITE_DBS:
         db_path = repo_root / db_name
@@ -56,6 +53,12 @@ def _auto_heal_databases(repo_root: Path) -> list[str]:
                 )
                 conn.commit()
             actions.append(f"Initialized local SQLite database: {db_name}")
+
+    # Install git pre-commit hook if missing
+    hook_ok, hook_msg = install_pre_commit_hook(repo_root)
+    if hook_ok:
+        actions.append(hook_msg)
+
     return actions
 
 
@@ -125,21 +128,27 @@ def run_doctor(
             )
 
     # 3. Database Check
+    dbs_ready_count = 0
     for db_name in SQLITE_DBS:
         db_path = repo_root / db_name
+        exists = db_path.exists()
+        if exists:
+            dbs_ready_count += 1
         diagnostics["databases"][db_name] = {
             "type": "sqlite",
-            "exists": db_path.exists(),
-            "size_bytes": db_path.stat().st_size if db_path.exists() else 0,
+            "exists": exists,
+            "size_bytes": db_path.stat().st_size if exists else 0,
         }
 
     # 4. Port Availability Checks
     categorized_ports = load_categorized_ports()
+    total_ports = 0
     for cat_name, items in categorized_ports.items():
         for item in items:
             s_name = item["name"]
             ports = item["ports"]
             for port in ports:
+                total_ports += 1
                 key_name = s_name if len(ports) == 1 else f"{s_name} ({port})"
                 in_use = is_port_in_use(port)
                 diagnostics["ports"][key_name] = {
@@ -159,64 +168,71 @@ def run_doctor(
         output_json(diagnostics)
         return
 
-    # Rich Terminal Output
-    print_header(
-        "Cadence Clinical Environment Diagnostics & Auto-Healing",
-        "Validating runtime environment, CLI dependencies, database files, and ports",
+    # Build Authored Terminal Document
+    doc = TerminalDocument(
+        title="Cadence Clinical Environment Diagnostics",
+        subtitle="Runtime, dependencies, database storage, ports, and git guardrails",
     )
 
-    if healed_actions:
-        for act in healed_actions:
-            print_success(act)
-
-    # Binaries Table
-    t_tools = create_table(
-        "Development Tooling",
-        [("Tool", "bold white"), ("Status", "bold"), ("Version", "dim")],
+    is_healthy = diagnostics["status"] == "healthy"
+    doc.add_metric(
+        "Status",
+        "HEALTHY" if is_healthy else "DEGRADED",
+        style="green" if is_healthy else "yellow",
     )
+    doc.add_metric("Python", py_version, style="green" if py_valid else "red")
+    doc.add_metric(
+        "SQLite DBs",
+        f"{dbs_ready_count}/{len(SQLITE_DBS)} Ready",
+        style="green" if dbs_ready_count == len(SQLITE_DBS) else "yellow",
+    )
+    doc.add_metric("Ports", f"{total_ports} Configured", style="cyan")
+
+    for act in healed_actions:
+        doc.add_item(act, status="pass")
+
+    # Binaries table
+    tool_rows = []
     for tool_name, info in diagnostics["binaries"].items():
-        status_text = (
-            "[green]Installed[/green]" if info["installed"] else "[red]Missing[/red]"
+        tool_rows.append(
+            [
+                tool_name,
+                "Installed" if info["installed"] else "Missing",
+                info["version"] or "N/A",
+            ]
         )
-        ver_text = info["version"] or "N/A"
-        t_tools.add_row(tool_name, status_text, ver_text)
-    console.print(t_tools)
+    doc.add_table_data(
+        "Development Tools",
+        [("Tool", "bold white"), ("Status", "bold"), ("Version", "dim")],
+        tool_rows,
+    )
 
-    # SQLite Databases Table
-    t_db = create_table(
+    # SQLite table
+    db_rows = []
+    for db_name, info in diagnostics["databases"].items():
+        size_kb = f"{info['size_bytes'] / 1024:.1f} KB" if info["exists"] else "0 KB"
+        db_rows.append(
+            [
+                db_name,
+                "Ready" if info["exists"] else "Missing (Run 'cadence doctor -f')",
+                size_kb,
+            ]
+        )
+    doc.add_table_data(
         "Local SQLite Storage",
         [("Database", "bold white"), ("Status", "bold"), ("Size", "dim")],
+        db_rows,
     )
-    for db_name, info in diagnostics["databases"].items():
-        status_text = (
-            "[green]Ready[/green]"
-            if info["exists"]
-            else "[yellow]Not Created (Run 'cadence doctor -f' or 'cadence db seed')[/yellow]"
-        )
-        size_kb = f"{info['size_bytes'] / 1024:.1f} KB" if info["exists"] else "0 KB"
-        t_db.add_row(db_name, status_text, size_kb)
-    console.print(t_db)
 
-    # Ports Table
-    t_ports = create_table(
-        "Service Ports Overview",
-        [("Service", "bold white"), ("Port", "cyan"), ("State", "bold")],
-    )
-    for s_name, p_info in diagnostics["ports"].items():
-        state_text = (
-            "[yellow]Active / In Use[/yellow]"
-            if p_info["in_use"]
-            else "[green]Free / Available[/green]"
-        )
-        t_ports.add_row(s_name, str(p_info["port"]), state_text)
-    console.print(t_ports)
-
-    # Final summary
-    if diagnostics["status"] == "healthy":
-        print_success(
-            "All diagnostic checks passed. Environment is optimal for development."
+    if not is_healthy:
+        for rec in diagnostics["recommendations"]:
+            doc.add_item(rec, status="warn")
+        doc.set_cta(
+            "Run 'uv run cadence doctor --auto-fix' to automatically remediate environment drift."
         )
     else:
-        print_warning("Environment has warnings:")
-        for rec in diagnostics["recommendations"]:
-            console.print(f"  • {rec}")
+        doc.set_cta(
+            "Run 'uv run cadence check --parallel' to validate repository quality gates."
+        )
+
+    doc.display()

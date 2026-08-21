@@ -1,5 +1,5 @@
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
-*Execution Date:* 2026-07-23 22:38:25 UTC
+*Execution Date:* 2026-08-21 21:29:42 UTC
 *Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B
 
 ## 1. Executive Summary & Verification Declaration
@@ -7,8 +7,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2916
-- **Passed:** 2900 🟢
+- **Total Automated Test Cases Run:** 2906
+- **Passed:** 2890 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 16 ⚪
 - **Overall Operational Pass Rate:** 99.45%
@@ -2309,13 +2309,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_cli_db_seed_full_cadence_101_json` | `packages.cli.tests.test_db_seed` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_db_seed_sqlite_content` | `packages.cli.tests.test_db_seed` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_db_seed_tier_filtering` | `packages.cli.tests.test_db_seed` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_format_file_link` | `packages.cli.tests.test_formatting` | PRD-SYS-049 | 🟢 PASSED | < 1s |
-| `test_terminal_document_builder_structured_dict` | `packages.cli.tests.test_formatting` | PRD-SYS-049 | 🟢 PASSED | < 1s |
-| `test_terminal_document_render_output` | `packages.cli.tests.test_formatting` | PRD-SYS-049 | 🟢 PASSED | < 1s |
-| `test_mcp_server_initialize` | `packages.cli.tests.test_mcp_server` | PRD-SYS-049 | 🟢 PASSED | < 1s |
-| `test_mcp_server_tool_call_doctor` | `packages.cli.tests.test_mcp_server` | PRD-SYS-049 | 🟢 PASSED | < 1s |
-| `test_mcp_server_tool_call_invalid_tool` | `packages.cli.tests.test_mcp_server` | PRD-SYS-049 | 🟢 PASSED | < 1s |
-| `test_mcp_server_tools_list` | `packages.cli.tests.test_mcp_server` | PRD-SYS-049 | 🟢 PASSED | < 1s |
 | `test_extract_ports_from_command` | `packages.cli.tests.test_ports` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_get_discovered_service_ports` | `packages.cli.tests.test_ports` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_is_port_in_use_and_find_available_port` | `packages.cli.tests.test_ports` | PRD-SYS-002 | 🟢 PASSED | < 1s |
@@ -2910,9 +2903,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_merge_outcomes` | `scripts.tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_parse_existing_outcomes` | `scripts.tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_traceability_outcome_handling` | `scripts.tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_get_staged_files` | `scripts.tests.test_pre_commit` | PRD-SYS-049 | 🟢 PASSED | < 1s |
-| `test_install_pre_commit_hook` | `scripts.tests.test_pre_commit` | PRD-SYS-049 | 🟢 PASSED | < 1s |
-| `test_run_tier1_staged_checks_no_files` | `scripts.tests.test_pre_commit` | PRD-SYS-049 | 🟢 PASSED | < 1s |
 | `test_check_and_run_exporter_bypass` | `scripts.tests.test_pre_commit_openapi` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_check_and_run_exporter_missing_dependencies` | `scripts.tests.test_pre_commit_openapi` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_check_and_run_exporter_missing_venv` | `scripts.tests.test_pre_commit_openapi` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3173,30 +3163,30 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 ## Electronic Signature Block
 
 - **Signer Identity:** fred
-- **Timestamp:** 2026-07-23 22:38:25 UTC
-- **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** ea25dc7345836e839ceb63f0a12d15ecc5244d9913830c8800384571ce087d90
+- **Timestamp:** 2026-08-21 21:29:42 UTC
+- **Meaning / Purpose:** GxP Dynamic Execution Run Record
+- **Cryptographic Hash (SHA-256):** b35a024953cf03d39d914623e99a17fe9d204f80b0f5a6297f972921ecaa2a08
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUfw2Gz4XEb8X/fvV8i3M6ZNYWz2cwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUItjGtjxPEtRjZFC0pNnv8qM1KaIwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MDIxMzMwNVoXDTI3MDgyMTIxMzMwNVowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MDIxMjk0MloXDTI3MDgyMTIxMjk0MlowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApMEk
-D/zufAHTD6W2bxvOFafLe9SviI8YfXRD7792kwyAxVQFqYtK9oz2VZHNw04/iR55
-fB1EscmVPBCeInI1MqTCyKY3spnHrCIS6xmpqkHlxVyTVh+O8bTFIRv9uTT/SeBT
-MsuL6CKXP3Jlmjp5C0JB47PgPs19wzdppcTtdZzOunMBYfp//wQCYizk+d7JGM9q
-NOQ1NZm7PAooAdipT48Xxf9UOeLfD7fH8UBjxR4tUk9ZnCJDCHkopz1BoX/KEPnM
-i0wD9irrjpF12gFM9Rt6Mj/g/Z7zgv0EUeCh8SNBJNBEJMMV8/4V2JuCLMBEEDDK
-vYNyEW7hzdJQUuLGpQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAbEpqQKiKPZ5bc
-JJNo7Nzs/m8QUTrBtP11/XMMCMZk8JtmLcjO4wuhTIH3WJYRStKXby568Zgfrs0x
-cUf6gAglYTZIiVVbld96C/fx0maYmVHwqWq/gjfBIvePev5hsv6/UY9BL2GjjNde
-6Ba76ZMJdBnOgHlvayvtsaPSlfPvVYmTn5cNs5JwZ89AHt1u+ETq0yuMN9XG3u2K
-rN4LXQ+W5JbnTQQhFuN5928VSv4EBr9VxZN0ulPp0nqapPBq6HlxnFT7Rm3sHTWC
-LbjL3dfIm99PgpR4wN8sfEWBTfAGRRUHPWwC5M3i7fWkVjjrg9CGttvGWXinC3Hm
-jZkn0xWc
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAngy7
+3iYZ4cdVovfMFpMCIA9gJKqe6Nb5Gx3IkYUFU+T4F0f46Y8kryltHHlK1aan9NEc
+CML2HsdqUxdpJpD7GDaAqdr9jUTIQW1lltb4AvzV+cR/blKLVwWT2f84yrMmgU/E
+IvBD81LJL34vh05q0vYD+8i+EPJ2zAJWKQ2WeB1mI8ZzCLXEJyE0K0X/FDj19mga
+43L4woOUOJfyJ+zcZVOxNZZMvLHJlPPQbAKPBoIvpNgofdro6xwWZRKOizXsIU6X
+bdtCO401d3pVKcJRYd0yT7ws4VEOV78oPvrRLrb5RMQ0NeMeo+ZYvNe77/81Lqmi
+6DjCuRKdTAXu4B3S8QIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQB7/0tez9F6l/NN
+UoUpCvfbSNVBhdCw+dHnT86Xt6+/tBLgRcmFSaPbHLkqa+482mxVdSZBRp5Ak2ES
+M/2JIYDMo15l6xRTsZrEVyn0IzDS23bxQh2IEuRZxfgFxK5l25MLz9yxNQ6VnNvx
+3NUzeZDm678ke/ShZgVgM4ykI9LR5YwkN6fzE3a3mWOPiOs1c694oCXjVGIKBNw/
+S70UeU/9g3YA4svO8SiMADnpZ6SAd4K7Q1u1AA15S0p3wGrwLMOp1HUuvxW11iNc
+uzUMD2UkdZh0hQL82Gum7/SKJxk02DAkkS6Eh3e4zeXB4M2mK+ZgOGljUJRk/flU
+iRleNufg
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-WF/YbeGcHimB6xhXIpG4bWff3Nxjn9FLotO/+LGpaEtDuw+IubVaQKopycVzGmiBdgHhjjTyhfEE9A0betxeKK6+gcXMGGkUhXgOJUvWoDzNVy71MFlzdDmx0pzoPHFLdnsOXzWBkTrp75x2Z9ZjilzxRIX5F85ZxbgYu70InLs2NtcCRTMcb5Sz2NhCqCRkRPeTDouvnm9Hg5n08NarFjYnjCx6Vfs82dThj6mNGkd2hT0+mgA0neauiiMqdnqY8GMa6SCSQ0DW2WfLTnxYZrs/gs1o7t710bM2tc4l2a2EoF/7FkSz8S+8URW8MsEKfIl5Y425IKrbKgyPChpEpA==
+kJ6acuxRoS63ag9sGxZekfqV1wLbu1zVDXIMx2WmS2Qd8JzbDIEokgzFMlb9NxX0cExmhvOw2Pi1RYw+yWbklgrFZN5mE3FHtmTA57J4w+lKE/NV/pFqslVveNNp7Qc3kCRoriaaPKYsN+b23H489du5a4WeeReQRAtwZ1OtIOvEnFy3ozIOoPzbJdLNYQIxY435v/kgpDxHNEisE9L1sNC9SpWFPWv6S7zurPe1OmIFsLI//QcwBVCVC35ytUFctN+zeEL51WwP14i0bmKnU1w2eQMP+90MoCAlw4LbEgWWouApw45/4QOxEUlvJJM/DB4pxAaSP33Wfz17ft1SCQ==
 -----END SIGNATURE-----

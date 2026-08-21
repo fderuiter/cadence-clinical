@@ -828,7 +828,8 @@ export interface IsfDocument {
   site_id: string;
   binder_classification: string;
   filename: string;
-  content: string;
+  object_key?: string | null;
+  content?: string | null;
   mime_type: string;
   version_index: number;
   issue_date?: string | null;

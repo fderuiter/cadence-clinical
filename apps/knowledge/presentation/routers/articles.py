@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.knowledge.adapters.database import get_db_session
-from apps.knowledge.application.article_service import ArticleLifecycleService
+from apps.knowledge.adapters.repositories import create_article_service
 from apps.knowledge.domain.exceptions import (
     ArticleApprovalConflictError,
     ArticleNotFoundError,
@@ -89,7 +89,7 @@ async def create_category(
 ) -> CategoryResponse:
     """Creates a new knowledge article category. Requires super_admin role."""
     actor = current_user_id.get()
-    svc = ArticleLifecycleService(session)
+    svc = create_article_service(session)
     try:
         category = await svc.create_category(
             name=payload.name,
@@ -126,7 +126,7 @@ async def list_categories(
 ) -> list[CategoryResponse]:
     """Lists active knowledge categories, filtered by caller's persona visibility."""
     roles = get_normalized_roles(request)
-    svc = ArticleLifecycleService(session)
+    svc = create_article_service(session)
     categories = await svc.list_categories(user_roles=roles)
     return [CategoryResponse.model_validate(c) for c in categories]
 
@@ -141,7 +141,7 @@ async def get_category(
     session: AsyncSession = Depends(get_db_session),
 ) -> CategoryResponse:
     """Retrieves a single KnowledgeCategory by ID."""
-    svc = ArticleLifecycleService(session)
+    svc = create_article_service(session)
     category = await svc.get_category_by_id(category_id)
     if not category:
         raise HTTPException(
@@ -162,7 +162,7 @@ async def delete_category(
 ) -> CategoryResponse:
     """Soft-deletes a KnowledgeCategory by ID. Requires super_admin or sysadmin role."""
     actor = current_user_id.get()
-    svc = ArticleLifecycleService(session)
+    svc = create_article_service(session)
     try:
         category = await svc.delete_category(
             category_id=category_id,
@@ -196,7 +196,7 @@ async def create_article(
     Requires super_admin role.
     """
     actor = current_user_id.get()
-    svc = ArticleLifecycleService(session)
+    svc = create_article_service(session)
     try:
         article = await svc.create_article(
             title=payload.title,
@@ -236,7 +236,7 @@ async def update_article_draft(
     Requires super_admin role.
     """
     actor = current_user_id.get()
-    svc = ArticleLifecycleService(session)
+    svc = create_article_service(session)
     try:
         article, version = await svc.update_draft(
             article_id=article_id,
@@ -274,7 +274,7 @@ async def list_articles(
     session: AsyncSession = Depends(get_db_session),
 ) -> list[ArticleResponse]:
     """Lists knowledge articles, optionally filtered by status and/or category."""
-    svc = ArticleLifecycleService(session)
+    svc = create_article_service(session)
     articles = await svc.list_articles(status=status_filter, category_id=category_id)
     return [ArticleResponse.model_validate(a) for a in articles]
 
@@ -295,7 +295,7 @@ async def get_article(
     """
     from packages.security.context import current_user_id as uid_ctx
 
-    svc = ArticleLifecycleService(session)
+    svc = create_article_service(session)
     article = await svc.get_article_by_id(article_id)
     if not article:
         raise HTTPException(
@@ -341,7 +341,7 @@ async def save_article_draft(
 ) -> ArticleVersionResponse:
     """Saves updated body content to a DRAFT article. Requires super_admin role."""
     actor = current_user_id.get()
-    svc = ArticleLifecycleService(session)
+    svc = create_article_service(session)
     try:
         _, version = await svc.update_draft(
             article_id=article_id,
@@ -377,7 +377,7 @@ async def submit_article_review(
 ) -> ArticleResponse:
     """Submits a DRAFT article for peer review (DRAFT -> IN_REVIEW)."""
     actor = current_user_id.get()
-    svc = ArticleLifecycleService(session)
+    svc = create_article_service(session)
     try:
         article = await svc.submit_for_review(
             article_id=article_id,
@@ -412,7 +412,7 @@ async def approve_article(
     Locks current KnowledgeArticleVersion record as permanently immutable.
     """
     actor = current_user_id.get()
-    svc = ArticleLifecycleService(session)
+    svc = create_article_service(session)
     try:
         article = await svc.approve_article(
             article_id=article_id,
@@ -450,7 +450,7 @@ async def reject_article(
 ) -> ArticleResponse:
     """Rejects an article in IN_REVIEW status (IN_REVIEW -> REJECTED)."""
     actor = current_user_id.get()
-    svc = ArticleLifecycleService(session)
+    svc = create_article_service(session)
     try:
         article = await svc.reject_article(
             article_id=article_id,
@@ -490,7 +490,7 @@ async def publish_article(
     - Publishing version N+1 automatically sets prior active version N to SUPERSEDED.
     """
     actor = current_user_id.get()
-    svc = ArticleLifecycleService(session)
+    svc = create_article_service(session)
     try:
         article = await svc.publish_article(
             article_id=article_id,
@@ -534,7 +534,7 @@ async def transition_article(
         )
 
     actor = current_user_id.get()
-    svc = ArticleLifecycleService(session)
+    svc = create_article_service(session)
     try:
         article = await svc.transition(
             article=article,
@@ -568,7 +568,7 @@ async def list_article_versions(
     session: AsyncSession = Depends(get_db_session),
 ) -> list[ArticleVersionResponse]:
     """Lists all immutable version snapshots for an article (chronological order)."""
-    svc = ArticleLifecycleService(session)
+    svc = create_article_service(session)
     versions = await svc.list_article_versions(article_id)
     return [ArticleVersionResponse.model_validate(v) for v in versions]
 
@@ -657,7 +657,7 @@ async def lookup_contextual_help(
     if not best:
         return ContextualHelpLookupResponse(article=None, version=None)
 
-    svc = ArticleLifecycleService(session)
+    svc = create_article_service(session)
     article = await svc.get_article_by_id(best.article_id)
     if not article:
         return ContextualHelpLookupResponse(article=None, version=None)

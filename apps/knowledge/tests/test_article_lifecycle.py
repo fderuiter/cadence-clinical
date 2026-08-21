@@ -16,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.knowledge.adapters.database import get_db_session
+from apps.knowledge.adapters.repositories import create_article_service
 from apps.knowledge.application.article_service import ArticleLifecycleService
 from apps.knowledge.domain.models import (
     ArticleApprovalConflictError,
@@ -145,7 +146,7 @@ async def test_draft_creation_and_single_row_in_place_update(
 
     @req:PRD-KNB-001
     """
-    svc = ArticleLifecycleService(db_session)
+    svc = create_article_service(db_session)
     cat = await _make_category(svc)
     article = await _make_article(svc, cat.id)
 
@@ -275,7 +276,7 @@ async def test_four_eyes_author_cannot_approve(db_session: AsyncSession):
 
     @req:PRD-KNB-001
     """
-    svc = ArticleLifecycleService(db_session)
+    svc = create_article_service(db_session)
     cat = await _make_category(svc)
     article = await _make_article(svc, cat.id)
 
@@ -302,7 +303,7 @@ async def test_four_eyes_last_editor_cannot_approve(db_session: AsyncSession):
 
     @req:PRD-KNB-001
     """
-    svc = ArticleLifecycleService(db_session)
+    svc = create_article_service(db_session)
     cat = await _make_category(svc)
     article = await _make_article(svc, cat.id)
 
@@ -338,7 +339,7 @@ async def test_independent_reviewer_approves_and_locks_version(
 
     @req:PRD-KNB-001
     """
-    svc = ArticleLifecycleService(db_session)
+    svc = create_article_service(db_session)
     cat = await _make_category(svc)
     article = await _make_article(svc, cat.id)
 
@@ -524,7 +525,7 @@ async def test_publication_and_auto_supersede_prior_version(
 
     @req:PRD-KNB-001
     """
-    svc = ArticleLifecycleService(db_session)
+    svc = create_article_service(db_session)
     cat = await _make_category(svc)
     article = await _make_article(svc, cat.id)
 
@@ -764,7 +765,7 @@ async def test_reason_for_change_enforced_on_publish_and_approve(
 
     @req:PRD-KNB-001
     """
-    svc = ArticleLifecycleService(db_session)
+    svc = create_article_service(db_session)
     cat = await _make_category(svc)
     article = await _make_article(svc, cat.id)
     await svc.submit_for_review(article_id=article.id, actor_user_id=ACTOR_AUTHOR)
@@ -786,7 +787,7 @@ async def test_notification_dispatched_on_publish(db_session: AsyncSession):
     @req:PRD-KNB-001
     @req:PRD-KNB-002
     """
-    svc = ArticleLifecycleService(db_session)
+    svc = create_article_service(db_session)
     cat = await _make_category(svc)
     article = await _make_article(svc, cat.id)
     await svc.submit_for_review(article_id=article.id, actor_user_id=ACTOR_AUTHOR)
@@ -821,7 +822,7 @@ async def test_audit_logs_emitted_for_all_lifecycle_transitions(
 
     @req:PRD-KNB-001
     """
-    svc = ArticleLifecycleService(db_session)
+    svc = create_article_service(db_session)
     cat = await _make_category(svc)
     article = await _make_article(svc, cat.id)
 

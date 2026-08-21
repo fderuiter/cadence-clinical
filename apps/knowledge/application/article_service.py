@@ -9,15 +9,6 @@ Requirements: PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002, ADR-2188
 
 import logging
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from apps.knowledge.adapters.notifications_client import publish_notification
-from apps.knowledge.adapters.repositories import (
-    SQLAlchemyContextualHelpMappingRepository,
-    SQLAlchemyKnowledgeArticleRepository,
-    SQLAlchemyKnowledgeAuditLogRepository,
-    SQLAlchemyKnowledgeCategoryRepository,
-)
 from apps.knowledge.domain.exceptions import (
     ArticleNotFoundError,
     ArticleReasonRequiredError,
@@ -32,18 +23,17 @@ from apps.knowledge.domain.models import (
     ArticleStatus,
     validate_transition,
 )
-from apps.knowledge.infrastructure.models import (
-    KnowledgeArticle,
-    KnowledgeArticleAuditLog,
-    KnowledgeArticleVersion,
-    KnowledgeCategory,
-)
 from apps.knowledge.ports.repository_port import (
     ContextualHelpMappingRepositoryPort,
+    KnowledgeArticle,
+    KnowledgeArticleAuditLog,
     KnowledgeArticleRepositoryPort,
+    KnowledgeArticleVersion,
     KnowledgeAuditLogRepositoryPort,
+    KnowledgeCategory,
     KnowledgeCategoryRepositoryPort,
 )
+from packages.security.notifications import publish_notification
 
 logger = logging.getLogger("knowledge-article-service")
 
@@ -65,23 +55,15 @@ class ArticleLifecycleService:
 
     def __init__(
         self,
-        session: AsyncSession,
-        article_repo: KnowledgeArticleRepositoryPort | None = None,
-        category_repo: KnowledgeCategoryRepositoryPort | None = None,
-        audit_repo: KnowledgeAuditLogRepositoryPort | None = None,
-        help_repo: ContextualHelpMappingRepositoryPort | None = None,
+        article_repo: KnowledgeArticleRepositoryPort,
+        category_repo: KnowledgeCategoryRepositoryPort,
+        audit_repo: KnowledgeAuditLogRepositoryPort,
+        help_repo: ContextualHelpMappingRepositoryPort,
     ) -> None:
-        self._session = session
-        self._article_repo = article_repo or SQLAlchemyKnowledgeArticleRepository(
-            session
-        )
-        self._category_repo = category_repo or SQLAlchemyKnowledgeCategoryRepository(
-            session
-        )
-        self._audit_repo = audit_repo or SQLAlchemyKnowledgeAuditLogRepository(session)
-        self._help_repo = help_repo or SQLAlchemyContextualHelpMappingRepository(
-            session
-        )
+        self._article_repo = article_repo
+        self._category_repo = category_repo
+        self._audit_repo = audit_repo
+        self._help_repo = help_repo
 
     # ------------------------------------------------------------------
     # Category operations
@@ -1020,7 +1002,10 @@ class ArticleLifecycleService:
             },
         }
 
-        success = await publish_notification(payload)
+        success = await publish_notification(
+            payload,
+            service_name="knowledge-service",
+        )
         if not success:
             logger.warning(
                 "Notification dispatch failed for event_type=%r article_id=%r",

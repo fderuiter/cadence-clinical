@@ -123,7 +123,7 @@ def test_is_port_in_use_and_find_available_port():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("127.0.0.1", 0))
     occupied_port = s.getsockname()[1]
-    s.listen(1)
+    s.listen(128)
 
     try:
         assert is_port_in_use(occupied_port) is True
@@ -144,7 +144,7 @@ def test_resolve_service_port_collision():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("127.0.0.1", 0))
     occupied_port = s.getsockname()[1]
-    s.listen(1)
+    s.listen(128)
 
     try:
         # Mock SERVICE_KEY_DEFAULTS via reserved_ports

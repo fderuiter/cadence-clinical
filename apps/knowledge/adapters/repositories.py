@@ -6,8 +6,13 @@ Implements concrete database operations adhering to domain repository ports.
 Requirements: PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002, ADR-2188
 """
 
+from typing import TYPE_CHECKING
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+if TYPE_CHECKING:
+    from apps.knowledge.application.article_service import ArticleLifecycleService
 
 from apps.knowledge.domain.models import ArticleStatus
 from apps.knowledge.infrastructure.models import (
@@ -276,9 +281,22 @@ class SQLAlchemyContextualHelpMappingRepository(ContextualHelpMappingRepositoryP
         return entity
 
 
+def create_article_service(session: AsyncSession) -> ArticleLifecycleService:
+    """Factory helper to construct an ArticleLifecycleService wired to SQLAlchemy repositories."""
+    from apps.knowledge.application.article_service import ArticleLifecycleService
+
+    return ArticleLifecycleService(
+        article_repo=SQLAlchemyKnowledgeArticleRepository(session),
+        category_repo=SQLAlchemyKnowledgeCategoryRepository(session),
+        audit_repo=SQLAlchemyKnowledgeAuditLogRepository(session),
+        help_repo=SQLAlchemyContextualHelpMappingRepository(session),
+    )
+
+
 __all__ = [
     "SQLAlchemyContextualHelpMappingRepository",
     "SQLAlchemyKnowledgeArticleRepository",
     "SQLAlchemyKnowledgeAuditLogRepository",
     "SQLAlchemyKnowledgeCategoryRepository",
+    "create_article_service",
 ]

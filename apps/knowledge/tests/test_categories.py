@@ -21,7 +21,7 @@ from httpx import ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.knowledge.adapters.database import get_db_session
-from apps.knowledge.application.article_service import ArticleLifecycleService
+from apps.knowledge.adapters.repositories import create_article_service
 from apps.knowledge.domain.models import CategoryConflictError, CategoryNotFoundError
 from apps.knowledge.main import app
 from packages.testing.security import create_test_auth_headers
@@ -62,7 +62,7 @@ async def test_create_root_category(db_session: AsyncSession):
 
     @req:PRD-SYS-KH-001
     """
-    svc = ArticleLifecycleService(db_session)
+    svc = create_article_service(db_session)
     category = await svc.create_category(
         name="Clinical SOPs",
         slug="clinical-sops",
@@ -95,7 +95,7 @@ async def test_create_child_category_with_parent(db_session: AsyncSession):
 
     @req:PRD-SYS-KH-001
     """
-    svc = ArticleLifecycleService(db_session)
+    svc = create_article_service(db_session)
     parent = await svc.create_category(
         name="Data Management",
         slug="data-management",
@@ -129,7 +129,7 @@ async def test_create_category_with_nonexistent_parent_fails(
 
     @req:PRD-SYS-KH-001
     """
-    svc = ArticleLifecycleService(db_session)
+    svc = create_article_service(db_session)
     non_existent_id = "00000000-0000-0000-0000-000000000000"
 
     with pytest.raises(
@@ -155,7 +155,7 @@ async def test_create_category_duplicate_name_or_slug_fails(
 
     @req:PRD-SYS-KH-001
     """
-    svc = ArticleLifecycleService(db_session)
+    svc = create_article_service(db_session)
     await svc.create_category(
         name="Safety Reporting",
         slug="safety-reporting",
@@ -198,7 +198,7 @@ async def test_get_category_by_id_and_slug(db_session: AsyncSession):
 
     @req:PRD-SYS-KH-001
     """
-    svc = ArticleLifecycleService(db_session)
+    svc = create_article_service(db_session)
     created = await svc.create_category(
         name="Regulatory Submissions",
         slug="regulatory-submissions",
@@ -334,7 +334,7 @@ async def test_soft_delete_category(db_session: AsyncSession):
 
     @req:PRD-SYS-KH-001
     """
-    svc = ArticleLifecycleService(db_session)
+    svc = create_article_service(db_session)
     category = await svc.create_category(
         name="Obsolete SOPs",
         slug="obsolete-sops",
@@ -370,7 +370,7 @@ async def test_delete_nonexistent_or_already_deleted_category_raises(
 
     @req:PRD-SYS-KH-001
     """
-    svc = ArticleLifecycleService(db_session)
+    svc = create_article_service(db_session)
     non_existent_id = "00000000-0000-0000-0000-000000000000"
 
     with pytest.raises(
@@ -416,7 +416,7 @@ async def test_list_categories_persona_filtering(db_session: AsyncSession):
 
     @req:PRD-SYS-KH-001
     """
-    svc = ArticleLifecycleService(db_session)
+    svc = create_article_service(db_session)
 
     # 1. Public category (persona_visibility=None)
     await svc.create_category(

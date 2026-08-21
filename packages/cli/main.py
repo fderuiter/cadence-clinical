@@ -11,6 +11,7 @@ from packages.cli.commands.fix import fix_app
 from packages.cli.commands.gxp import gxp_app
 from packages.cli.commands.scaffold import scaffold_app
 from packages.cli.commands.test import test_app
+from packages.cli.mcp.server import CadenceMcpServer
 
 app = typer.Typer(
     name="cadence",
@@ -18,6 +19,17 @@ app = typer.Typer(
     add_completion=False,
     no_args_is_help=True,
 )
+
+mcp_app = typer.Typer(
+    help="Run native JSON-RPC Model Context Protocol (MCP) Stdio server for AI agents."
+)
+
+
+@mcp_app.callback(invoke_without_command=True)
+def run_mcp_server() -> None:
+    """Starts the Cadence Clinical MCP stdio server."""
+    server = CadenceMcpServer()
+    server.run_stdio()
 
 
 @app.callback()
@@ -52,6 +64,7 @@ app.add_typer(db_app, name="db")
 app.add_typer(scaffold_app, name="scaffold")
 app.add_typer(gxp_app, name="gxp")
 app.add_typer(cdisc_app, name="cdisc")
+app.add_typer(mcp_app, name="mcp")
 
 
 def main() -> None:

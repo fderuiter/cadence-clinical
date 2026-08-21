@@ -124,3 +124,19 @@ A slide-in interface panel anchored to the application shell that dynamically pr
 
 An interactive error-recovery pattern providing instant cross-knowledge-base search and pre-populated support ticket creation when no explicit guidance article maps to a user's current route and persona context.
 
+### Native Stdio MCP Server
+
+A Model Context Protocol endpoint exposed directly by the Cadence CLI binary to provide typed tool execution, schema introspection, and zoom mechanics for AI coding agents without shell escaping or unstructured text parsing.
+
+### Two-Tier Staged Pre-Commit Hook
+
+A fast git pre-commit validation pipeline that executes file-level static checks and formatters on staged hunks in sub-500ms followed by repository-level import boundary and fast unit test assertions in sub-1.5s.
+
+### Authored Terminal Document
+
+A structured CLI rendering pattern that formats command execution output as a cohesive, readable terminal document with narrative headings, status indicator cards, column alignment, clickable file links, and contextual next-action CTAs.
+
+### Deterministic Tooling Self-Healing
+
+An automated developer tooling remediation pattern that resolves non-destructive environment drift (SQLite initializations, git hooks, code format, import sorting, ADR indexing, OpenAPI schema exports) while providing guided diagnostic CTAs for external container and network states.
+

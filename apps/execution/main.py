@@ -3482,7 +3482,9 @@ async def post_batch_sign_off(
                     if "pi" in username.lower() or "investigator" in username.lower():
                         full_name += ", MD"
 
-                    signing_timestamp_utc = datetime.now(UTC).isoformat()
+                    signing_timestamp_utc = (
+                        datetime.now(UTC).isoformat().replace("+00:00", "Z")
+                    )
 
                     reason_mapping = {
                         "I attest that this data is accurate and complete.": (

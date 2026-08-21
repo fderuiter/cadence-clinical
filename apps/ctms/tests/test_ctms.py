@@ -1149,8 +1149,10 @@ async def test_ctms_sync_conflict_server_wins():
     async with db_manager.get_session_maker()() as session:
         stmt = select(MonitoringVisit).where(MonitoringVisit.id == visit_id)
         v = (await session.execute(stmt)).scalars().one()
-        # Dates will match when comparing iso strings
-        assert v.actual_date.isoformat() == actual_date_server.isoformat()
+        actual_date_db = (
+            v.actual_date if v.actual_date.tzinfo else v.actual_date.replace(tzinfo=UTC)
+        )
+        assert actual_date_db.isoformat() == actual_date_server.isoformat()
 
         # Check defeated records
         stmt_def = select(MonitoringVisitDefeated).where(

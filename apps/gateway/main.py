@@ -73,11 +73,11 @@ http_client: httpx.AsyncClient | None = None
 jwks_fetch_lock = asyncio.Lock()
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    """Handle lifecycle events for the API Gateway application."""
+async def startup() -> None:
+    """Handle startup JWKS initialization."""
     global jwks_cache, http_client
-    http_client = httpx.AsyncClient()
+    if http_client is None:
+        http_client = httpx.AsyncClient()
     if not os.getenv("SKIP_JWKS_FETCH"):
         try:
             resp = await http_client.get(JWKS_URL, timeout=5.0)
@@ -85,6 +85,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
                 jwks_cache = resp.json()
         except Exception:
             pass
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+    """Handle lifecycle events for the API Gateway application."""
+    global jwks_cache, http_client
+    http_client = httpx.AsyncClient()
+    await startup()
 
     yield
 

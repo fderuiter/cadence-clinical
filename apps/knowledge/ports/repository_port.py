@@ -155,8 +155,13 @@ class ContextualHelpMappingRepositoryPort(RepositoryPort[ContextualHelpMapping],
 
 
 __all__ = [
+    "ContextualHelpMapping",
     "ContextualHelpMappingRepositoryPort",
+    "KnowledgeArticle",
+    "KnowledgeArticleAuditLog",
     "KnowledgeArticleRepositoryPort",
+    "KnowledgeArticleVersion",
     "KnowledgeAuditLogRepositoryPort",
+    "KnowledgeCategory",
     "KnowledgeCategoryRepositoryPort",
 ]

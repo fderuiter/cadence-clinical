@@ -10,13 +10,10 @@ from typing import Any
 import typer
 
 from packages.cli.formatting import (
-    console,
-    create_table,
+    TerminalDocument,
     is_json_mode,
     output_json,
     print_error,
-    print_header,
-    print_success,
 )
 
 check_app = typer.Typer(help="Run all pre-commit and pre-push quality gates.")
@@ -25,7 +22,7 @@ check_app = typer.Typer(help="Run all pre-commit and pre-push quality gates.")
 def run_gate(name: str, cmd: list[str], cwd: Path) -> dict[str, Any]:
     """Executes a single quality gate and captures its duration, output, and exit status."""
     start_time = time.time()
-    res = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True)
+    res = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True, check=False)
     duration = time.time() - start_time
     return {
         "name": name,
@@ -120,12 +117,7 @@ def run_check(
         )
         sys.exit(1)
 
-    if not json_mode:
-        print_header(
-            "Cadence Architecture & Quality Gates",
-            f"Executing {len(selected_gates)} validation gate(s)...",
-        )
-
+    start_total = time.time()
     results: list[dict[str, Any]] = []
     if parallel and len(selected_gates) > 1:
         with concurrent.futures.ThreadPoolExecutor(
@@ -139,55 +131,74 @@ def run_check(
                 results.append(future.result())
     else:
         for name, cmd in selected_gates:
-            if not json_mode:
-                console.print(f"Running gate: [bold cyan]{name}[/bold cyan]...")
             results.append(run_gate(name, cmd, repo_root))
 
     # Sort results to match original order
     results.sort(key=lambda r: [g[0] for g in all_gates].index(r["name"]))
 
+    total_duration = round(time.time() - start_total, 2)
     all_passed = all(r["passed"] for r in results)
+    passed_count = sum(1 for r in results if r["passed"])
+    failed_count = len(results) - passed_count
 
     if json_mode:
         output_json(
             {
-                "all_passed": all_passed,
+                "command": "check",
+                "success": all_passed,
                 "total_gates": len(results),
-                "passed_gates": sum(1 for r in results if r["passed"]),
-                "failed_gates": sum(1 for r in results if not r["passed"]),
+                "passed_gates": passed_count,
+                "failed_gates": failed_count,
+                "duration_seconds": total_duration,
                 "results": results,
             }
         )
-        sys.exit(0 if all_passed else 1)
+        if not all_passed:
+            sys.exit(1)
+        return
 
-    # Terminal Output Table
-    table = create_table(
-        "Quality Gates Verification Summary",
-        [
-            ("Gate Name", "bold white"),
-            ("Status", "bold"),
-            ("Duration", "dim"),
-            ("Details", "dim"),
-        ],
+    doc = TerminalDocument(
+        title="Cadence Architecture Sentinels & Quality Gates",
+        subtitle=f"Evaluating {len(selected_gates)} architecture gate(s) {'concurrently' if parallel else 'sequentially'}...",
     )
+
+    doc.add_metric(
+        "Status",
+        "ALL PASSED" if all_passed else "FAILURES DETECTED",
+        style="green" if all_passed else "red",
+    )
+    doc.add_metric("Passed", f"{passed_count}/{len(results)}", style="green")
+    doc.add_metric(
+        "Failed", f"{failed_count}", style="red" if failed_count > 0 else "dim"
+    )
+    doc.add_metric("Duration", f"{total_duration}s", style="cyan")
+
+    gate_rows = []
     for r in results:
-        status = "[green]PASSED[/green]" if r["passed"] else "[red]FAILED[/red]"
-        details = "OK" if r["passed"] else f"Exit code {r['exit_code']}"
-        table.add_row(r["name"], status, f"{r['duration_seconds']}s", details)
-    console.print(table)
+        status_label = "✔ Passed" if r["passed"] else "✘ Failed"
+        gate_rows.append([r["name"], status_label, f"{r['duration_seconds']}s"])
+
+    doc.add_table_data(
+        "Architecture Gate Evaluations",
+        [("Gate", "bold white"), ("Status", "bold"), ("Duration", "dim")],
+        gate_rows,
+    )
 
     if not all_passed:
-        print_error("One or more quality gates failed:")
         for r in results:
             if not r["passed"]:
-                console.print(
-                    f"\n[bold red]--- Gate Failure: {r['name']} ---[/bold red]"
+                err_detail = r["stdout"] or r["stderr"]
+                first_line = (
+                    err_detail.split("\n")[0] if err_detail else "Exit code non-zero"
                 )
-                if r["stdout"]:
-                    console.print(r["stdout"])
-                if r["stderr"]:
-                    console.print(r["stderr"])
+                doc.add_item(
+                    f"Gate '{r['name']}' failed", status="fail", detail=first_line
+                )
+        doc.set_cta(
+            "Run 'uv run cadence fix --all' to automatically remediate lint, formatting, and schema drift."
+        )
+        doc.display()
         sys.exit(1)
     else:
-        print_success("All quality gates and architecture sentinels passed cleanly!")
-        sys.exit(0)
+        doc.set_cta("All architecture sentinels passed cleanly. Ready for PR commit.")
+        doc.display()
