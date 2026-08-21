@@ -95,6 +95,7 @@ RULES = {
             "scripts/**/*.sh",
             ".jules/**/*.sh",
             ".agents/**/*.sh",
+            ".scratch/**/*.sh",
         ],
         "description": "Shell scripts (*.sh) must reside in scripts/ or its subfolders.",
     },
@@ -138,6 +139,30 @@ RULES = {
             ".scratch/**/*.md",
         ],
         "description": "Markdown files (*.md) must reside in apps/, packages/, docs/, scripts/, tests/, verification/, or .github/.",
+    },
+    "*.yaml": {
+        "allowed": [
+            ".github/**/*.yaml",
+            ".agents/**/*.yaml",
+            ".jules/**/*.yaml",
+            ".cadence/**/*.yaml",
+            "docker/**/*.yaml",
+            "packages/**/*.yaml",
+            "apps/**/*.yaml",
+        ],
+        "description": "YAML files (*.yaml) must reside in permitted directories.",
+    },
+    "*.yml": {
+        "allowed": [
+            ".github/**/*.yml",
+            ".agents/**/*.yml",
+            ".jules/**/*.yml",
+            ".cadence/**/*.yml",
+            "docker/**/*.yml",
+            "packages/**/*.yml",
+            "apps/**/*.yml",
+        ],
+        "description": "YML files (*.yml) must reside in permitted directories.",
     },
 }
 

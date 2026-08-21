@@ -25,9 +25,13 @@ class SeriousBreachService:
                 "Missing change justification reason", status_code=403
             )
 
+        now = datetime.now()
         deadline = payload.discovery_date + timedelta(
             days=7
         )  # 7-day regulatory clock (168h)
+
+        diff = (deadline - now).total_seconds() / 3600.0
+        hours_remaining = round(diff, 1)
 
         authorities = getattr(
             payload, "affected_authorities", [RegulatoryAuthority.MHRA.value]
@@ -44,7 +48,7 @@ class SeriousBreachService:
             reporting_deadline=deadline,
             affected_authorities=authorities,
             status=BreachStatus.UNDER_EVALUATION,
-            regulatory_clock_hours_remaining=168.0,
+            regulatory_clock_hours_remaining=hours_remaining,
             lead_qa_id=user_id,
             created_by=user_id,
             version_index=1,
@@ -84,7 +88,12 @@ class SeriousBreachService:
 
         now = datetime.now()
         breach.confirmation_date = now
-        breach.reporting_deadline = now + timedelta(days=7)
+        if not breach.reporting_deadline and breach.discovery_date:
+            breach.reporting_deadline = breach.discovery_date + timedelta(days=7)
+        if breach.reporting_deadline:
+            diff = (breach.reporting_deadline - now).total_seconds() / 3600.0
+            breach.regulatory_clock_hours_remaining = round(diff, 1)
+
         breach.affected_authorities = affected_authorities
         breach.status = BreachStatus.CONFIRMED_BREACH
         breach.version_index += 1
@@ -110,8 +119,12 @@ class SeriousBreachService:
             )
 
         now = datetime.now()
-        if breach.reporting_deadline:
-            diff = (breach.reporting_deadline - now).total_seconds() / 3600.0
+        deadline = breach.reporting_deadline
+        if not deadline and breach.discovery_date:
+            deadline = breach.discovery_date + timedelta(days=7)
+
+        if deadline:
+            diff = (deadline - now).total_seconds() / 3600.0
             hours_remaining = round(diff, 1)
         else:
             hours_remaining = 168.0
@@ -123,9 +136,7 @@ class SeriousBreachService:
             "breach_id": breach.id,
             "study_id": breach.study_id,
             "status": breach.status,
-            "reporting_deadline": breach.reporting_deadline.isoformat()
-            if breach.reporting_deadline
-            else None,
+            "reporting_deadline": deadline.isoformat() if deadline else None,
             "regulatory_clock_hours_remaining": hours_remaining,
             "is_approaching_deadline": is_approaching,
             "is_overdue": is_overdue,
@@ -150,6 +161,11 @@ class SeriousBreachService:
             raise SeriousBreachServiceError(
                 f"Serious breach '{breach_id}' not found.", status_code=404
             )
+
+        now = datetime.now()
+        if breach.reporting_deadline:
+            diff = (breach.reporting_deadline - now).total_seconds() / 3600.0
+            breach.regulatory_clock_hours_remaining = round(diff, 1)
 
         breach.status = status
         breach.version_index += 1

@@ -130,5 +130,17 @@ if (import.meta.env.MODE === "demo") {
   });
 }
 
+// Initialize MSW Mock Gateway Worker in development / demo / offline browser mode
+if (
+  typeof window !== "undefined" &&
+  (import.meta.env.DEV ||
+    import.meta.env.MODE === "demo" ||
+    import.meta.env.VITE_ENABLE_MSW === "true")
+) {
+  import("./mocks/browser.js")
+    .then(({ startMswWorker }) => startMswWorker())
+    .catch((err) => console.warn("[MSW] Failed to initialize worker:", err));
+}
+
 // Dynamic Hover Pointer Capability Detection
 initHoverDetection();
