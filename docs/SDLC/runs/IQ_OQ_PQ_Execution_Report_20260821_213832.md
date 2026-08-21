@@ -1,5 +1,5 @@
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
-*Execution Date:* 2026-07-23 22:38:25 UTC
+*Execution Date:* 2026-08-21 21:38:32 UTC
 *Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B
 
 ## 1. Executive Summary & Verification Declaration
@@ -7,8 +7,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2920
-- **Passed:** 2904 🟢
+- **Total Automated Test Cases Run:** 2916
+- **Passed:** 2900 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 16 ⚪
 - **Overall Operational Pass Rate:** 99.45%
@@ -183,7 +183,6 @@ rpds-py                  2026.6.3
 rsa                      4.9.1
 ruff                     0.15.22
 s3transfer               0.14.0
-sentinels                0.1.0
 shellingham              1.5.4
 six                      1.17.0
 sortedcontainers         2.4.0
@@ -2318,7 +2317,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_mcp_server_tool_call_doctor` | `packages.cli.tests.test_mcp_server` | PRD-SYS-049 | 🟢 PASSED | < 1s |
 | `test_mcp_server_tool_call_invalid_tool` | `packages.cli.tests.test_mcp_server` | PRD-SYS-049 | 🟢 PASSED | < 1s |
 | `test_mcp_server_tools_list` | `packages.cli.tests.test_mcp_server` | PRD-SYS-049 | 🟢 PASSED | < 1s |
-| `test_mcp_server_zoom_inspection` | `packages.cli.tests.test_mcp_server` | PRD-SYS-049 | 🟢 PASSED | < 1s |
 | `test_extract_ports_from_command` | `packages.cli.tests.test_ports` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_get_discovered_service_ports` | `packages.cli.tests.test_ports` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_is_port_in_use_and_find_available_port` | `packages.cli.tests.test_ports` | PRD-SYS-002 | 🟢 PASSED | < 1s |
@@ -2695,7 +2693,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_commit_within_active_transaction` | `packages.security.tests.test_sqlmodel_audit_store` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_pluggable_sqlmodel_store_async` | `packages.security.tests.test_sqlmodel_audit_store` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_pluggable_sqlmodel_store_sync` | `packages.security.tests.test_sqlmodel_audit_store` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_sentinel_engine_execution` | `packages.sentinels.tests.test_sentinels` | PRD-SYS-049 | 🟢 PASSED | < 1s |
 | `test_local_storage_provider_integrity_failure` | `packages.storage.tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_local_storage_provider_lifecycle` | `packages.storage.tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_local_storage_provider_not_found` | `packages.storage.tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2715,8 +2712,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_s3_storage_adapter_not_found_handling` | `packages.storage.tests.test_storage_adapters` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_s3_storage_adapter_presigned_urls` | `packages.storage.tests.test_storage_adapters` | PRD-DOC-001 | 🟢 PASSED | < 1s |
 | `test_s3_storage_adapter_put_and_get_lifecycle` | `packages.storage.tests.test_storage_adapters` | PRD-DOC-001, PRD-DOC-003, PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_dependency_graph_ast_parsing` | `packages.testing.tests.test_dependency_graph` | PRD-SYS-049 | 🟢 PASSED | < 1s |
-| `test_dependency_graph_caching` | `packages.testing.tests.test_dependency_graph` | PRD-SYS-049 | 🟢 PASSED | < 1s |
 | `test_factories_creation` | `packages.testing.tests.test_testing_package` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_in_memory_repository` | `packages.testing.tests.test_testing_package` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_security_helpers` | `packages.testing.tests.test_testing_package` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3179,30 +3174,30 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 ## Electronic Signature Block
 
 - **Signer Identity:** fred
-- **Timestamp:** 2026-07-23 22:38:25 UTC
-- **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 01f896ae8e61462640dcd9ade49962f3908e8013dfc1c9d07499367d72990dda
+- **Timestamp:** 2026-08-21 21:38:32 UTC
+- **Meaning / Purpose:** GxP Dynamic Execution Run Record
+- **Cryptographic Hash (SHA-256):** 35ec667e37ff17a72f67c7c575b953d3b53ba0300e258893745ecc3735049f63
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUbeC65hy0GxAXx+mUJVEUBySjRSQwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUC74XP77mcmpGsvRHNFYPVt3lFF0wDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MDIxNDAxM1oXDTI3MDgyMTIxNDAxM1owUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MDIxMzgzMloXDTI3MDgyMTIxMzgzMlowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtZnk
-mlh306KCZGO1dX+SvvDEmjvI2At30FP06rzpfZBHiRCA/hTnmU+DZb+hdjRorIDX
-4bVOazGFIdsZZyNEKxAqVOp4MDQsGeymDstQVyoJleiqlGpNzsm2RNgXwtY+6jhN
-OrmmOGVxaVTgY1C0MhqKQfJMYuG/ulfdozyooeGE5JuiCTnSj4zup4ydES5GwWrC
-ApbNHyXOqQD4QDKdW7DBa73DjDs133PpqOMIjQBb4fUbfUJuLvNIGjQDDguZtZDu
-IjnpemsGownJIairbv3+9O9wggK6TGSLJwZoc20ydIKBIBdPxN4cjCW3r5/jl7OJ
-qdraouEgAbNztRLc7QIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQA3c1KqWzCp3d8H
-UQsBDOzbKcH3M/mw+OrhIOoVJG2Scw/LzJjBaAUDK1USI202Tif0bK7SGN6jOFA/
-bbbZ/ynPbGCYAbxLjM4ozTGxThP8oAHJPjwAKT4rBzKKMoeMYF3zgWQNUqhYwszD
-bi/p5bLX5Wdy7hFdtlcKA8OGuDrhnGEoUIeA7LnALPGWk/Kny8D/mA3NHTzM2Ykj
-0UIpJBHa30EnbZ9quYwyk/FtdSJ5BMP4zA5WK9A/AHdlwm++D4kDPodInCE+aTEx
-CZQsC4v7bgjo2vlh6XhR0TP5wz6yqu5FU+iPpI1WBTSthDcNVDDYGz3rvaLi5Sa7
-tjKaZ7QR
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1OXZ
+os6V5qDHvsznRzF911jkHDh5wS3krHf8UWuKLZG0GTGm6OQicO6J24fTbXhHTzeD
+NDSO4Qsvz0uWyDmteTO+O+TTVquKtlPFAHFnWoeLP7s98FYvROjOlMkwI9e5HI2A
+BCa8eT/Gpl1sNzWQA2W+lzvyL5RoCJgmU5KoBW/8LPQUMvCVDSO0r4B55G2UkIZv
+ArcAY9CKqBAL/syw2yGPzrqE6E6Sy0nyIgPrTEqHRoFBLGAw2g3+QXp452A+UIX6
+amSkBZMtYLwF6tcXNjUEdnS3exaNH4icZbGuxI7vAaGXasTfrrmQ+A4mSSxI7c67
+hT9IY+NdjQTBDmWcyQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQCilBc2cctAZPH/
+PJbAL6Ugdp/lJESvDUCZkLTdg8vjWLyNzz4FRkVzIDATo9zQow4IAAqHQ/19g4js
+XD0MPBWWwfLLy8KrDqtCAXy+kkf9eM3quxc+ixFnCgEbtnMaFd4TEyum8EovY6Gn
+EfOnJlffNnp6s7P195iJctFCmZ6BpvQVgoNsSfrtKlHJRzKsksENmSlsSQlfUyTb
+/K5iLIHhEFymQLJOxJxLJ29DaE8h0ijUBzzqVCfDELWmrOFZH44Xr0Sc4vdZL5sM
+m5h+vddDN0N57d+zoz3IGOTL2TV7hXpXJE09oMx6w6GJMfHfmm0yrXRzrCeiecxi
+grubGsvo
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-hzXLdR1XvV1wcFpEImlnOSvbndQ70LpLxwOcAgAMkHApquyzcMswPgdVT+kw+i8NyrDNzaDM8J+tE1uIusiJKiVU4nAXfonRL/96Ylvz4LqlGPTJUiXDSluSpFr3uBwFd5Klr4cLD6MWAYZPhrsViZqgd4WUiW/YQP7ZDWx5ka04TJzr1ScbWTEx9DKG2OXc8rZ4jv8NVYzeO58JP/i48GE5X0ZzlduFyDYj2F+Tihij4vFGcF3LJ9X6TvtpwXbBxmEDwCe+EdUwJ13Y++ApsvfvSeGqTmU9NoZI0ULdig2NKF17nEFwyEJzG2+3l1ZmBoV3R0lS4RWZEccGjFE09Q==
+DZ5pzq1kwyy/NeAwyHF/rWa455sb/fx5+w2CCB/66DnNOEzaGuz5AikN/6NmgPONwDRUTDupsbmx1iN0v3OzHQISSi3/dfoPJSuieRs0Ekaj/MvkdgqINN/4i1pWHr376CPgt8SVAGBQhj02Z+yhstbYo33qHmd9CxEh+6KANTFXaFjQT7R5uaTTHq9CwxXAJgUgItkWHi+aSIP2lARWw9BbFHJWmvKx0/z9GbrjlM7YMRbtWt2jcrj8Wwk8kAheHyY00CQ3F+Cr7AlnSiON+NlzLXK1GaMT/RG7KTSsvO84fLmsI8D/w5XzQKX8myzKuZJfLSpiaCnCx1QCM4N7zQ==
 -----END SIGNATURE-----

@@ -12,6 +12,15 @@ import json
 import sys
 from typing import Any
 
+from packages.tooling_core.contracts import (
+    FastTestRequest,
+    ZoomInspectRequest,
+)
+from packages.tooling_core.handlers import (
+    handle_fast_tests,
+    handle_zoom_inspect,
+)
+
 
 class CadenceMcpServer:
     """Stdio JSON-RPC 2.0 MCP server exposing Cadence CLI developer tools."""
@@ -128,6 +137,30 @@ class CadenceMcpServer:
                 },
             },
         },
+        {
+            "name": "inspect_zoom_target",
+            "description": "Progressively inspects granular logs, error traces, or test outputs for a given zoom token.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "zoom_token": {
+                        "type": "string",
+                        "description": "Zoom token returned in previous tool summary envelope",
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": "Starting line offset for pagination",
+                        "default": 0,
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Number of lines to retrieve",
+                        "default": 100,
+                    },
+                },
+                "required": ["zoom_token"],
+            },
+        },
     ]
 
     def handle_message(self, request: dict[str, Any]) -> dict[str, Any]:
@@ -190,7 +223,15 @@ class CadenceMcpServer:
                 },
             }
 
-        if tool_name == "doctor_diagnose":
+        if tool_name == "inspect_zoom_target":
+            zoom_req = ZoomInspectRequest(**args)
+            envelope = handle_zoom_inspect(zoom_req)
+            payload = envelope.model_dump()
+        elif tool_name == "run_fast_tests":
+            fast_req = FastTestRequest(**args)
+            envelope = handle_fast_tests(fast_req)
+            payload = envelope.model_dump()
+        elif tool_name == "doctor_diagnose":
             payload = {
                 "status": "success",
                 "summary": "System diagnostics completed.",
@@ -200,6 +241,7 @@ class CadenceMcpServer:
                     "databases": "Ready",
                     "ports": "Available",
                 },
+                "zoom_token": "zoom-doctor-diagnose-diag",
                 "cta": "uv run cadence dev",
             }
         else:
@@ -207,6 +249,7 @@ class CadenceMcpServer:
                 "status": "success",
                 "summary": f"Executed tool {tool_name} successfully.",
                 "metrics": {"duration_ms": 10},
+                "zoom_token": f"zoom-{tool_name}-default",
                 "details": args,
             }
 
@@ -217,7 +260,7 @@ class CadenceMcpServer:
                 "content": [
                     {
                         "type": "text",
-                        "text": json.dumps(payload),
+                        "text": json.dumps(payload, default=str),
                     }
                 ]
             },

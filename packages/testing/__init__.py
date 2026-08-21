@@ -4,6 +4,7 @@ Provides reusable domain entity factories, in-memory repository fakes,
 mock security context fixtures, and isolated test harnesses for fast test execution.
 """
 
+from packages.testing.dependency_graph import TestDependencyGraph
 from packages.testing.factories import (
     AuditLogFactory,
     ClinicalObservationFactory,
@@ -36,6 +37,7 @@ __all__ = [
     "ProtocolDefinitionFactory",
     "QueryDiscrepancyFactory",
     "SubjectFactory",
+    "TestDependencyGraph",
     "create_test_auth_headers",
     "create_test_security_context",
     "create_test_token",

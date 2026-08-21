@@ -41,6 +41,7 @@ def test_mcp_server_tools_list():
     assert "seed_clinical_scenario" in tool_names
     assert "sync_gxp_compliance" in tool_names
     assert "introspect_service_contracts" in tool_names
+    assert "inspect_zoom_target" in tool_names
 
     for tool in tools:
         assert "description" in tool
@@ -70,6 +71,38 @@ def test_mcp_server_tool_call_doctor():
     assert "status" in payload
     assert "summary" in payload
     assert "metrics" in payload
+    assert "zoom_token" in payload
+
+
+def test_mcp_server_zoom_inspection():
+    """Verify inspect_zoom_target unpacks detailed logs corresponding to a zoom token.
+
+    @req:PRD-SYS-049
+    """
+    from packages.tooling_core.handlers import register_zoom_payload
+
+    token = "zoom-test-inspect-token-123"
+    register_zoom_payload(
+        token, "test_trace", "Traceback line 1\nTraceback line 2\nTraceback line 3"
+    )
+
+    server = CadenceMcpServer()
+    req = {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "tools/call",
+        "params": {
+            "name": "inspect_zoom_target",
+            "arguments": {"zoom_token": token, "offset": 0, "limit": 2},
+        },
+    }
+    res = server.handle_message(req)
+    assert res["id"] == 4
+    payload = json.loads(res["result"]["content"][0]["text"])
+    assert payload["success"] is True
+    assert payload["data"]["total_lines"] == 3
+    assert payload["data"]["lines"] == ["Traceback line 1", "Traceback line 2"]
+    assert payload["data"]["has_more"] is True
 
 
 def test_mcp_server_tool_call_invalid_tool():
@@ -80,7 +113,7 @@ def test_mcp_server_tool_call_invalid_tool():
     server = CadenceMcpServer()
     req = {
         "jsonrpc": "2.0",
-        "id": 4,
+        "id": 5,
         "method": "tools/call",
         "params": {
             "name": "unknown_tool_xyz",

@@ -270,6 +270,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Interactive Mermaid Diagrams and Responsive Layout Controls](2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md)
 
 ### 7. DevOps, Tooling & CI/CD
+- [2026-08-21: Comprehensive Developer Tooling Overhaul](2026-08-21-comprehensive-developer-tooling-overhaul.md)
 - [2026-08-21: Comprehensive Developer Tooling Native MCP Server and Staged Guardrails](2026-08-21-comprehensive-developer-tooling-native-mcp-server-and-staged-guardrails.md)
 
 - [2026-08-14: GitHub Pages Documentation Hosting](2026-08-14-github-pages-documentation-hosting.md)

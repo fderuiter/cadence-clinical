@@ -34,8 +34,10 @@ members = [
     "packages-deid",
     "packages-hexagonal",
     "packages-security",
+    "packages-sentinels",
     "packages-storage",
     "packages-testing",
+    "packages-tooling-core",
 ]
 
 [[package]]
@@ -1967,6 +1969,8 @@ version = "0.1.0"
 source = { editable = "packages/cli" }
 dependencies = [
     { name = "httpx" },
+    { name = "packages-testing" },
+    { name = "packages-tooling-core" },
     { name = "rich" },
     { name = "typer" },
 ]
@@ -1974,6 +1978,8 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.27.0" },
+    { name = "packages-testing", editable = "packages/testing" },
+    { name = "packages-tooling-core", editable = "packages/tooling_core" },
     { name = "rich", specifier = ">=13.7.0" },
     { name = "typer", specifier = ">=0.12.0" },
 ]
@@ -2076,6 +2082,23 @@ requires-dist = [
 ]
 
 [[package]]
+name = "packages-sentinels"
+version = "0.1.0"
+source = { editable = "packages/sentinels" }
+dependencies = [
+    { name = "packages-cli" },
+    { name = "packages-tooling-core" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "packages-cli", editable = "packages/cli" },
+    { name = "packages-tooling-core", editable = "packages/tooling_core" },
+    { name = "pydantic", specifier = ">=2.0.0" },
+]
+
+[[package]]
 name = "packages-storage"
 version = "0.1.0"
 source = { editable = "packages/storage" }
@@ -2110,6 +2133,17 @@ requires-dist = [
     { name = "packages-storage", editable = "packages/storage" },
     { name = "pydantic", specifier = ">=2.6.0" },
 ]
+
+[[package]]
+name = "packages-tooling-core"
+version = "0.1.0"
+source = { editable = "packages/tooling_core" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic", specifier = ">=2.0.0" }]
 
 [[package]]
 name = "packageurl-python"

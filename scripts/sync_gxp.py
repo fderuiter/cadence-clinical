@@ -203,11 +203,12 @@ def _merge_reports(main_path: str, notif_path: str, dest_path: str) -> None:
         print(f"⚠  Failed to merge reports: {e}")
 
 
-def step_run_tests(dry_run: bool) -> None:
+def step_run_tests(dry_run: bool, full: bool = False) -> None:
     """Execute the pytest suite and emit report.xml.
 
     Args:
         dry_run: If True, skip running tests.
+        full: If True, force full test execution bypassing incremental cache.
 
     Raises:
         SystemExit: If tests fail.
@@ -219,6 +220,75 @@ def step_run_tests(dry_run: bool) -> None:
     print("\n" + "=" * 60)
     print("STEP 1 / 3 — Running test suite")
     print("=" * 60)
+
+    # Incremental GxP verification fast-path
+    if not full and os.path.exists("report.xml") and not os.environ.get("CI"):
+        try:
+            from packages.testing.dependency_graph import TestDependencyGraph
+
+            res = subprocess.run(
+                ["git", "status", "--porcelain"],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+            )
+            modified_files = []
+            for line in res.stdout.splitlines():
+                if line.strip():
+                    f = line.strip().split(None, 1)[-1]
+                    if f.endswith(".py"):
+                        modified_files.append(REPO_ROOT / f)
+
+            if not modified_files:
+                print(
+                    "⚡ [incremental] No Python source files modified. Using cached test results."
+                )
+                return
+
+            graph = TestDependencyGraph(repo_root=REPO_ROOT)
+            affected_tests = graph.resolve_affected_tests(modified_files)
+
+            if affected_tests:
+                print(
+                    f"⚡ [incremental] Running {len(affected_tests)} affected test target(s)..."
+                )
+                _run(
+                    [
+                        "uv",
+                        "run",
+                        "--all-extras",
+                        "pytest",
+                        "-q",
+                        "--no-cov",
+                        "--junitxml=report_delta.xml",
+                        *affected_tests,
+                    ]
+                )
+                if os.path.exists("report_delta.xml"):
+                    report_fragments = [
+                        p
+                        for p in [
+                            "report_main.xml",
+                            "report_sequential.xml",
+                            "report_notif.xml",
+                            "report_integration.xml",
+                            "report_qualification.xml",
+                            "report_delta.xml",
+                        ]
+                        if os.path.exists(p)
+                    ]
+                    _run(
+                        [
+                            sys.executable,
+                            "scripts/merge_junit.py",
+                            JUNIT_REPORT,
+                            *report_fragments,
+                        ]
+                    )
+                return
+        except Exception as exc:
+            print(f"⚠ Incremental test execution fallback to full run: {exc}")
+
     try:
         # Run main tests with concurrency
         _run(
@@ -426,6 +496,11 @@ def main() -> None:
         action="store_true",
         help="Generate draft compliance documents (bypasses fail-fast checks).",
     )
+    parser.add_argument(
+        "--full",
+        action="store_true",
+        help="Force full test suite execution bypassing incremental cache.",
+    )
     args = parser.parse_args()
 
     if args.commit and args.dry_run:
@@ -439,9 +514,9 @@ def main() -> None:
     elif args.commit:
         print("Mode: FULL SYNC + AUTO COMMIT")
     else:
-        print("Mode: FULL SYNC (will stage docs; commit manually)")
+        print("Mode: SYNC (will stage docs; commit manually)")
 
-    step_run_tests(dry_run=args.dry_run)
+    step_run_tests(dry_run=args.dry_run, full=args.full)
     step_generate_rtm(dry_run=args.dry_run, draft=args.draft)
     step_stage_and_report(dry_run=args.dry_run, auto_commit=args.commit)
 

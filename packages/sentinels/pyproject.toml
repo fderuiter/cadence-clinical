@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "packages-sentinels"
+version = "0.1.0"
+description = "Cadence Clinical Architecture Sentinels"
+requires-python = ">=3.14"
+dependencies = [
+    "pydantic>=2.0.0",
+    "packages-cli",
+    "packages-tooling-core",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+exclude = ["tests"]
+
+[tool.hatch.build.targets.wheel.sources]
+"" = "packages/sentinels"

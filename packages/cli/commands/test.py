@@ -17,14 +17,24 @@ from packages.cli.formatting import (
     print_info,
     print_success,
 )
+from packages.testing.dependency_graph import TestDependencyGraph
 
 test_app = typer.Typer(
     help="Run backend and frontend test suites with filtering, coverage, and watch mode."
 )
 
 
-def _find_target_test_file(modified_file: Path, repo_root: Path) -> str | None:
-    """Intelligently resolves a changed source file to its target test file or directory."""
+def _find_target_test_file(
+    modified_file: Path,
+    repo_root: Path,
+    graph: TestDependencyGraph | None = None,
+) -> str | None:
+    """Intelligently resolves a changed source file to its target test file or directory using AST dependency graph."""
+    if graph:
+        affected = graph.resolve_affected_tests([modified_file])
+        if affected:
+            return affected[0]
+
     rel = modified_file.relative_to(repo_root)
     parts = rel.parts
 
@@ -37,7 +47,6 @@ def _find_target_test_file(modified_file: Path, repo_root: Path) -> str | None:
         service = parts[1]
         service_test_dir = repo_root / "apps" / service / "tests"
         if service_test_dir.exists():
-            # Check for direct file mapping e.g. foo.py -> test_foo.py
             specific_test = service_test_dir / f"test_{modified_file.stem}.py"
             if specific_test.exists():
                 return str(specific_test.relative_to(repo_root))
@@ -190,6 +199,9 @@ def run_test(
         "Watching apps/, packages/, tests/ for changes (Ctrl+C to quit)...",
     )
 
+    dep_graph = TestDependencyGraph(repo_root=repo_root)
+    dep_graph.load_or_build()
+
     # Track mtimes of Python files
     def _snapshot_mtimes() -> dict[Path, float]:
         mtimes = {}
@@ -230,7 +242,7 @@ def run_test(
                 # Determine target test
                 specific_target = None
                 for m in modified:
-                    resolved = _find_target_test_file(m, repo_root)
+                    resolved = _find_target_test_file(m, repo_root, dep_graph)
                     if resolved:
                         specific_target = resolved
                         break

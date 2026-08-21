@@ -27,6 +27,11 @@ def sync_gxp(
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Validate only without staging changes"
     ),
+    full: bool = typer.Option(
+        False,
+        "--full",
+        help="Force full test suite execution bypassing incremental cache",
+    ),
 ) -> None:
     """Run tests, regenerate RTM documentation, and stage compliance reports."""
     json_mode = is_json_mode(ctx.obj)
@@ -35,6 +40,8 @@ def sync_gxp(
     cmd = ["uv", "run", "python", "scripts/sync_gxp.py"]
     if dry_run:
         cmd.append("--dry-run")
+    if full:
+        cmd.append("--full")
 
     if not json_mode:
         print_header(

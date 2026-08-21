@@ -30,6 +30,8 @@ packages-storage = { workspace = true }
 packages-hexagonal = { workspace = true }
 packages-compliance = { workspace = true }
 packages-testing = { workspace = true }
+packages-tooling-core = { workspace = true }
+packages-sentinels = { workspace = true }
 apps-ctms = { workspace = true }
 apps-designer = { workspace = true }
 apps-econsent = { workspace = true }

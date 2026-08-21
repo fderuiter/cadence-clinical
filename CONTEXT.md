@@ -140,3 +140,24 @@ A structured CLI rendering pattern that formats command execution output as a co
 
 An automated developer tooling remediation pattern that resolves non-destructive environment drift (SQLite initializations, git hooks, code format, import sorting, ADR indexing, OpenAPI schema exports) while providing guided diagnostic CTAs for external container and network states.
 
+### Transitive Test Dependency Graph
+
+A static AST analysis and dependency resolution model that evaluates Python and TypeScript source file import trees to calculate the precise, minimal set of downstream unit and integration tests affected by a changeset, enabling sub-second targeted test cycles.
+
+### Ephemeral In-Memory Database Harness
+
+An isolated test execution pattern where fast unit tests and TDD slices run against zero-IO in-memory SQLite instances and mock graph repositories, bypassing PostgreSQL and Neo4j network services to guarantee sub-500ms test iteration loops.
+
+### Progressive Disclosure Zoom Token
+
+A stateful or deterministic reference token emitted in MCP tool summary envelopes that allows AI coding agents to drill into granular error traces, telemetry logs, or full schema snapshots on demand without polluting model context windows.
+
+### Incremental GxP Verification Cache
+
+A compliance artifact caching mechanism that records test run outcomes and JUnit XML fragments keyed by git tree hashes, allowing localized GxP Traceability Matrix generation in sub-2 seconds while reserving full suite execution for merge-gate verification.
+
+### Unified Sentinel Plugin Engine
+
+A modular architecture unifying repository sentinels (drift detection, duplication analysis, ADR validation, schema verification) under a typed, concurrent check interface that emits structured JSON telemetry and formatted terminal reports.
+
+

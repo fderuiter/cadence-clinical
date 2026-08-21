@@ -89,6 +89,8 @@ class TerminalDocument:
         self.items: list[dict[str, Any]] = []
         self.tables: list[dict[str, Any]] = []
         self.cta: str | None = None
+        self.remediation: str | None = None
+        self.zoom_token: str | None = None
 
     def add_metric(self, label: str, value: Any, style: str = "cyan") -> Self:
         """Adds a summary metric badge (e.g. 10 Passed, 0 Failed, 1.2s)."""
@@ -117,6 +119,16 @@ class TerminalDocument:
         self.cta = cta
         return self
 
+    def set_remediation(self, remediation: str) -> Self:
+        """Sets an actionable machine-executable remediation command for agents."""
+        self.remediation = remediation
+        return self
+
+    def set_zoom_token(self, zoom_token: str) -> Self:
+        """Sets a progressive disclosure zoom token for detailed inspection."""
+        self.zoom_token = zoom_token
+        return self
+
     def to_dict(self) -> dict[str, Any]:
         """Produces a structured dictionary representation of the document."""
         return {
@@ -127,6 +139,8 @@ class TerminalDocument:
             "items": self.items,
             "tables": self.tables,
             "cta": self.cta,
+            "remediation": self.remediation,
+            "zoom_token": self.zoom_token,
         }
 
     def to_json(self) -> str:
@@ -181,6 +195,10 @@ class TerminalDocument:
         # 6. Next Action CTA
         if self.cta:
             buf.write(f"\nNext Action: {self.cta}\n")
+        if self.remediation:
+            buf.write(f"Remediation: {self.remediation}\n")
+        if self.zoom_token:
+            buf.write(f"Zoom Token: {self.zoom_token}\n")
 
         return buf.getvalue()
 
@@ -256,7 +274,7 @@ class TerminalDocument:
                 table.add_row(*[str(cell) for cell in row])
             target.print(table)
 
-        # Render Next Action CTA
+        # Render Next Action CTA & Remediation
         if self.cta:
             target.print(
                 Panel(
@@ -265,3 +283,13 @@ class TerminalDocument:
                     padding=(0, 1),
                 )
             )
+        if self.remediation:
+            target.print(
+                Panel(
+                    f"[bold magenta]⚡ Auto-Remediation:[/bold magenta] [code]{self.remediation}[/code]",
+                    border_style="magenta",
+                    padding=(0, 1),
+                )
+            )
+        if self.zoom_token:
+            target.print(f"[dim]Zoom Token: {self.zoom_token}[/dim]")

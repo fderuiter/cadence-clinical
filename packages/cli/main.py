@@ -1,4 +1,14 @@
-"""Main CLI application entrypoint for Cadence Clinical."""
+import os
+
+os.environ.setdefault(
+    "AUDIT_LOG_SECRET_KEY", "dev-audit-secret-key-cadence-2026-secure-32b"
+)
+os.environ.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
+os.environ.setdefault("SIGNING_SECRET", "designer-amendment-secure-key-12345")
+os.environ.setdefault(
+    "INBOUND_EMAIL_HMAC_SECRET", "dev-secret-inbound-email-hmac-secure-placeholder"
+)
+os.environ.setdefault("SAFETY_SALT", "internal-safety-salt-12345")
 
 import typer
 
