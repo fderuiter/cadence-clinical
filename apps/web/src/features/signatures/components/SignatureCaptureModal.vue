@@ -123,10 +123,6 @@ const props = defineProps({
     type: String,
     default: "Subject",
   },
-  signerRole: {
-    type: String,
-    default: "",
-  },
   actionUrl: {
     type: String,
     required: true,
@@ -148,11 +144,7 @@ useEscapeClose(() => emit("cancel"));
 const usernameVal = ref(props.username);
 const signerNameVal = ref(props.signerName || props.username || "");
 const signerRoleVal = ref(props.signerRole || props.role || "Subject");
-<<<<<<< HEAD
 const password = ref(""); // pragma: allowlist secret
-=======
-const password = ref("");
->>>>>>> origin/dev
 const totp = ref("");
 const signingReason = ref("");
 const busy = ref(false);
