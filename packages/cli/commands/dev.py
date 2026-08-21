@@ -28,26 +28,13 @@ from packages.cli.formatting import (
     print_success,
     print_warning,
 )
+from packages.cli.ports import get_discovered_service_ports, resolve_all_service_ports
 
 dev_app = typer.Typer(
     help="Start and orchestrate local microservices with live reloading and interactive TUI."
 )
 
-SERVICE_PORTS = {
-    "gateway": 8000,
-    "designer": 8001,
-    "execution": 8002,
-    "etmf": 8003,
-    "interop": 8004,
-    "quality": 8005,
-    "notifications": 8006,
-    "ctms": 8007,
-    "safety": 8008,
-    "tickets": 8009,
-    "eisf": 8010,
-    "econsent": 8011,
-    "org": 8012,
-}
+SERVICE_PORTS = get_discovered_service_ports()
 
 
 def _spawn_service(
@@ -210,6 +197,17 @@ def run_dev(
 
     repo_root = Path(__file__).resolve().parents[3]
 
+    resolved_manifest = resolve_all_service_ports(target_services, host=host)
+
+    if not json_mode:
+        for s in target_services:
+            info = resolved_manifest[s]
+            if info["rebound"]:
+                print_warning(
+                    f"[!] Port collision detected for '{s}' on default port {info['default_port']}. "
+                    f"Dynamically rebound to available offset port {info['assigned_port']} (+{info['offset']})."
+                )
+
     if json_mode:
         output_json(
             {
@@ -219,7 +217,11 @@ def run_dev(
                 "services": [
                     {
                         "name": s,
-                        "port": SERVICE_PORTS.get(s, 8000),
+                        "default_port": resolved_manifest[s]["default_port"],
+                        "assigned_port": resolved_manifest[s]["assigned_port"],
+                        "port": resolved_manifest[s]["assigned_port"],
+                        "rebound": resolved_manifest[s]["rebound"],
+                        "offset": resolved_manifest[s]["offset"],
                         "app": f"apps.{s}.main:app",
                     }
                     for s in target_services
@@ -230,7 +232,7 @@ def run_dev(
 
     if len(target_services) == 1 and not tui:
         s = target_services[0]
-        port = SERVICE_PORTS.get(s, 8000)
+        port = resolved_manifest[s]["assigned_port"]
         print_header(
             "Cadence Microservice Runner", f"Starting foreground {s} on port {port}"
         )
@@ -258,7 +260,7 @@ def run_dev(
     services_state: dict[str, dict[str, Any]] = {}
 
     for s in target_services:
-        port = SERVICE_PORTS.get(s, 8000)
+        port = resolved_manifest[s]["assigned_port"]
         proc = _spawn_service(s, host, port, repo_root, reload, log_queue)
         procs[s] = proc
         services_state[s] = {
@@ -283,7 +285,7 @@ def run_dev(
             ],
         )
         for s in target_services:
-            port = SERVICE_PORTS.get(s, 8000)
+            port = resolved_manifest[s]["assigned_port"]
             table.add_row(s, str(port), str(procs[s].pid), f"http://{host}:{port}/docs")
         console.print(table)
 
@@ -338,7 +340,7 @@ def run_dev(
                         if key == "r":
                             for s in target_services:
                                 procs[s].terminate()
-                                port = SERVICE_PORTS.get(s, 8000)
+                                port = resolved_manifest[s]["assigned_port"]
                                 proc = _spawn_service(
                                     s, host, port, repo_root, reload, log_queue
                                 )
@@ -359,7 +361,7 @@ def run_dev(
                             target = key_map[key]
                             if target in procs:
                                 procs[target].terminate()
-                                port = SERVICE_PORTS.get(target, 8000)
+                                port = resolved_manifest[target]["assigned_port"]
                                 proc = _spawn_service(
                                     target, host, port, repo_root, reload, log_queue
                                 )

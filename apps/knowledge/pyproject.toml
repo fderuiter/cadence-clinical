@@ -1,0 +1,13 @@
+[project]
+name = "cadence-knowledge"
+version = "0.1.0"
+description = "Cadence Knowledge & Support Hub microservice"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi",
+    "sqlalchemy[asyncio]",
+    "aiosqlite",
+    "asyncpg",
+    "pydantic>=2",
+    "httpx",
+]
