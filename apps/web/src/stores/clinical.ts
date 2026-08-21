@@ -11,7 +11,11 @@ declare module "pinia" {
 import { buildLedgerBlock, debounce } from "ui";
 import { useAuthStore } from "./auth.js";
 import { soaClient } from "../api/soaClient.js";
-import { executionService } from "../api/execution";
+import {
+  executionService,
+  type SubjectScreeningRequest,
+  type SubjectScreeningResponse,
+} from "../api/execution";
 import { evaluateAST } from "../evaluator.js";
 import { ingestionClient } from "../api/ingestionClient.js";
 import { normalizeUsdm, type NormalizedUsdm } from "./normalization";
@@ -803,6 +807,9 @@ const useClinicalStoreInner = defineStore("clinical", {
     gatedSubjectIds: (state) => {
       return state.subjects.filter((s) => s.isGated).map((s) => s.id);
     },
+    /**
+     * Array of all subject IDs in store.
+     */
     subjectIds: (state) => {
       return state.subjects.map((s) => s.id);
     },
@@ -1119,11 +1126,20 @@ const useClinicalStoreInner = defineStore("clinical", {
 
       return sub;
     },
+    /**
+     * Evaluates subject screening eligibility against protocol criteria,
+     * updates subject status in store, and appends a ledger block.
+     *
+     * @param subjectId - Target subject identifier.
+     * @param body - Optional screening payload including study_id.
+     * @param reason - Reason for audit ledger entry.
+     * @returns The screening evaluation response or null if invalid subject ID.
+     */
     async screenSubject(
       subjectId: string,
-      body: { study_id?: string | null } | null = null,
+      body: SubjectScreeningRequest | null = null,
       reason: string = "Subject Screening Evaluation"
-    ) {
+    ): Promise<SubjectScreeningResponse | null> {
       const trimmedId = (subjectId || "").trim();
       if (!trimmedId) return null;
 
@@ -1143,7 +1159,7 @@ const useClinicalStoreInner = defineStore("clinical", {
         this.subjects.push(sub);
       }
 
-      let result: any = {
+      let result: SubjectScreeningResponse = {
         eligible: true,
         failed_criteria: [],
         indeterminate_criteria: [],
@@ -1162,10 +1178,13 @@ const useClinicalStoreInner = defineStore("clinical", {
         );
       }
 
-      if (result.eligible === true) {
+      if ((result as any).status === "ENROLLED") {
+        sub.status = "ENROLLED";
+        sub.consentColor = "green";
+      } else if (result.eligible === true || (result as any).status === "SCREENED") {
         sub.status = "SCREENED";
         sub.consentColor = "green";
-      } else if (result.eligible === false) {
+      } else if (result.eligible === false || (result as any).status === "SCREEN_FAILED") {
         sub.status = "SCREEN_FAILED";
         sub.consentColor = "red";
       } else {
