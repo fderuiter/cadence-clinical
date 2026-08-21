@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from apps.quality.adapters.database import transactional
@@ -48,6 +50,15 @@ def authorize_quality_oversight(principal: Principal) -> list[str]:
 
 
 def map_breach_to_response(b: SeriousBreachRecord) -> SeriousBreachResponse:
+    deadline = b.reporting_deadline
+    if not deadline and b.discovery_date:
+        deadline = b.discovery_date + timedelta(days=7)
+
+    hours_remaining = b.regulatory_clock_hours_remaining
+    if deadline:
+        diff = (deadline - datetime.now()).total_seconds() / 3600.0
+        hours_remaining = round(diff, 1)
+
     return SeriousBreachResponse(
         id=b.id,
         study_id=b.study_id,
@@ -59,12 +70,10 @@ def map_breach_to_response(b: SeriousBreachRecord) -> SeriousBreachResponse:
         confirmation_date=b.confirmation_date.isoformat()
         if b.confirmation_date
         else None,
-        reporting_deadline=b.reporting_deadline.isoformat()
-        if b.reporting_deadline
-        else None,
+        reporting_deadline=deadline.isoformat() if deadline else None,
         affected_authorities=b.affected_authorities,
         status=b.status,
-        regulatory_clock_hours_remaining=b.regulatory_clock_hours_remaining,
+        regulatory_clock_hours_remaining=hours_remaining,
         lead_qa_id=b.lead_qa_id,
         created_at=b.created_at.isoformat(),
         created_by=b.created_by,
