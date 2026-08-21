@@ -150,7 +150,3 @@ apps/designer/templates/*.docx
 *.docx
 scripts/sync_github_project.py
 scripts/live_hygiene_enforcement.py
-/.agents
-ORIGINAL_REQUEST.md
-PROJECT.md
-PROJECT.md
