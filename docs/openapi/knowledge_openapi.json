@@ -1,0 +1,1260 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cadence Clinical - Knowledge & Support Hub",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/knowledge/categories": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "List Categories",
+        "description": "Lists all active knowledge categories.\n\nReturns:\n    List of CategoryResponse objects.",
+        "operationId": "list_categories_api_v1_knowledge_categories_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Categories Api V1 Knowledge Categories Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Create Category",
+        "description": "Creates a new knowledge article category. Requires super_admin role.\n\nArgs:\n    payload: Category creation data.\n    session: Injected async database session.\n\nReturns:\n    The created CategoryResponse.\n\nRaises:\n    HTTPException 409: If the category name or slug already exists.",
+        "operationId": "create_category_api_v1_knowledge_categories_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Create Article",
+        "description": "Creates a new KnowledgeArticle in DRAFT status. Requires super_admin role.\n\nArgs:\n    payload: Article creation data including initial body_markdown.\n    session: Injected async database session.\n\nReturns:\n    The created ArticleResponse.\n\nRaises:\n    HTTPException 409: If the article slug is already in use.",
+        "operationId": "create_article_api_v1_knowledge_articles_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "List Articles",
+        "description": "Lists knowledge articles, optionally filtered by status and/or category.\n\nNon-admin users only receive PUBLISHED articles. Admins receive all.\n\nArgs:\n    status_filter: Optional ArticleStatus to filter by.\n    category_id: Optional category UUID to filter by.\n    session: Injected async database session.\n\nReturns:\n    List of ArticleResponse objects.",
+        "operationId": "list_articles_api_v1_knowledge_articles_get",
+        "parameters": [
+          {
+            "name": "status_filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ArticleStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status Filter"
+            }
+          },
+          {
+            "name": "category_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArticleResponse"
+                  },
+                  "title": "Response List Articles Api V1 Knowledge Articles Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles/{article_id}": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Get Article",
+        "description": "Retrieves a single KnowledgeArticle by ID.\n\nIf the requesting user has an auditor role, records a READ_BY_AUDITOR audit event.\n\nArgs:\n    article_id: UUID of the article to retrieve.\n    session: Injected async database session.\n\nReturns:\n    The ArticleResponse.\n\nRaises:\n    HTTPException 404: If the article does not exist.",
+        "operationId": "get_article_api_v1_knowledge_articles__article_id__get",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Article Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles/{article_id}/draft": {
+      "patch": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Save Article Draft",
+        "description": "Saves updated body content to a DRAFT article. Requires super_admin role.\n\nArgs:\n    article_id: UUID of the article to update.\n    payload: Draft save payload with body_markdown.\n    session: Injected async database session.\n\nReturns:\n    The new ArticleVersionResponse snapshot.\n\nRaises:\n    HTTPException 404: Article not found.\n    HTTPException 409: Article is not in DRAFT status.",
+        "operationId": "save_article_draft_api_v1_knowledge_articles__article_id__draft_patch",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Article Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleDraftSave"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleVersionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles/{article_id}/transition": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Transition Article",
+        "description": "Executes a lifecycle state machine transition on a KnowledgeArticle.\nRequires super_admin role.\n\nArgs:\n    article_id: UUID of the article to transition.\n    payload: Transition request with target_status and reason_for_change.\n    session: Injected async database session.\n\nReturns:\n    The updated ArticleResponse.\n\nRaises:\n    HTTPException 404: Article not found.\n    HTTPException 409: Invalid transition, four-eyes violation.\n    HTTPException 422: Missing reason_for_change on a regulated transition.",
+        "operationId": "transition_article_api_v1_knowledge_articles__article_id__transition_post",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Article Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleTransitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles/{article_id}/versions": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "List Article Versions",
+        "description": "Lists all immutable version snapshots for an article (chronological order).\n\nArgs:\n    article_id: UUID of the article.\n    session: Injected async database session.\n\nReturns:\n    List of ArticleVersionResponse objects, oldest first.",
+        "operationId": "list_article_versions_api_v1_knowledge_articles__article_id__versions_get",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Article Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArticleVersionResponse"
+                  },
+                  "title": "Response List Article Versions Api V1 Knowledge Articles  Article Id  Versions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles/{article_id}/audit-log": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Get Article Audit Log",
+        "description": "Returns the immutable audit trail for a specific article.\nRequires auditor or super_admin role.\n\nArgs:\n    article_id: UUID of the article.\n    session: Injected async database session.\n\nReturns:\n    List of AuditLogResponse objects, oldest first.",
+        "operationId": "get_article_audit_log_api_v1_knowledge_articles__article_id__audit_log_get",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Article Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditLogResponse"
+                  },
+                  "title": "Response Get Article Audit Log Api V1 Knowledge Articles  Article Id  Audit Log Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/contextual-help": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Create Contextual Help Mapping",
+        "description": "Creates a contextual help mapping (route pattern + persona -> article).\nRequires super_admin role.\n\nArgs:\n    payload: Mapping creation payload.\n    session: Injected async database session.\n\nReturns:\n    The created ContextualHelpMappingResponse.",
+        "operationId": "create_contextual_help_mapping_api_v1_knowledge_contextual_help_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContextualHelpMappingCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextualHelpMappingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/contextual-help/lookup": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Lookup Contextual Help",
+        "description": "Returns the most relevant Published article for a given route and persona.\n\nMatches the highest-priority mapping (lowest priority number) for the route\npattern that also matches the requesting persona (or has no persona filter).\n\nArgs:\n    route: The frontend route path (e.g. \"/ecrf\", \"/tickets\").\n    persona: The requesting user's persona role, or None.\n    session: Injected async database session.\n\nReturns:\n    ContextualHelpLookupResponse with the matching article and current version,\n    or null fields if no match is found.",
+        "operationId": "lookup_contextual_help_api_v1_knowledge_contextual_help_lookup_get",
+        "parameters": [
+          {
+            "name": "route",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Route"
+            }
+          },
+          {
+            "name": "persona",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Persona"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextualHelpLookupResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Service health check endpoint.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ArticleCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "slug": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "pattern": "^[a-z0-9-]+$",
+            "title": "Slug"
+          },
+          "category_id": {
+            "type": "string",
+            "title": "Category Id"
+          },
+          "body_markdown": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Body Markdown"
+          },
+          "version_label": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "Version Label",
+            "default": "1.0"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "slug",
+          "category_id",
+          "body_markdown",
+          "reason_for_change"
+        ],
+        "title": "ArticleCreate",
+        "description": "Request body for creating a new KnowledgeArticle (starts in DRAFT)."
+      },
+      "ArticleDraftSave": {
+        "properties": {
+          "body_markdown": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Body Markdown"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "body_markdown"
+        ],
+        "title": "ArticleDraftSave",
+        "description": "Request body for saving an updated draft body."
+      },
+      "ArticleResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "category_id": {
+            "type": "string",
+            "title": "Category Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ArticleStatus"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "version_label": {
+            "type": "string",
+            "title": "Version Label"
+          },
+          "author_user_id": {
+            "type": "string",
+            "title": "Author User Id"
+          },
+          "last_edited_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Edited By"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "is_deleted": {
+            "type": "boolean",
+            "title": "Is Deleted"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "category_id",
+          "status",
+          "version_index",
+          "version_label",
+          "author_user_id",
+          "last_edited_by",
+          "approved_by",
+          "is_deleted",
+          "created_at",
+          "created_by",
+          "reason_for_change"
+        ],
+        "title": "ArticleResponse",
+        "description": "Response schema for a KnowledgeArticle."
+      },
+      "ArticleStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "IN_REVIEW",
+          "APPROVED",
+          "PUBLISHED",
+          "SUPERSEDED",
+          "ARCHIVED",
+          "REJECTED"
+        ],
+        "title": "ArticleStatus",
+        "description": "Lifecycle states for a KnowledgeArticle controlled document.\n\nImplements a GxP-compliant seven-state machine enforcing four-eyes approval,\nimmutable published content, and full audit trail per 21 CFR Part 11."
+      },
+      "ArticleTransitionRequest": {
+        "properties": {
+          "target_status": {
+            "$ref": "#/components/schemas/ArticleStatus"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          },
+          "version_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_status"
+        ],
+        "title": "ArticleTransitionRequest",
+        "description": "Request body for performing a state machine transition on an article."
+      },
+      "ArticleVersionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "article_id": {
+            "type": "string",
+            "title": "Article Id"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "version_label": {
+            "type": "string",
+            "title": "Version Label"
+          },
+          "status_at_snapshot": {
+            "type": "string",
+            "title": "Status At Snapshot"
+          },
+          "body_markdown": {
+            "type": "string",
+            "title": "Body Markdown"
+          },
+          "body_html": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Html"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "article_id",
+          "version_index",
+          "version_label",
+          "status_at_snapshot",
+          "body_markdown",
+          "body_html",
+          "created_at",
+          "created_by"
+        ],
+        "title": "ArticleVersionResponse",
+        "description": "Response schema for a KnowledgeArticleVersion snapshot."
+      },
+      "AuditLogResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "article_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Article Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "previous_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Status"
+          },
+          "new_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Status"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "article_id",
+          "action",
+          "previous_status",
+          "new_status",
+          "details",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "AuditLogResponse",
+        "description": "Response schema for a KnowledgeArticleAuditLog entry."
+      },
+      "CategoryCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "slug": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "pattern": "^[a-z0-9-]+$",
+            "title": "Slug"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "persona_visibility": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona Visibility"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "slug",
+          "reason_for_change"
+        ],
+        "title": "CategoryCreate",
+        "description": "Request body for creating a KnowledgeCategory."
+      },
+      "CategoryResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "persona_visibility": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona Visibility"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "is_deleted": {
+            "type": "boolean",
+            "title": "Is Deleted"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "description",
+          "persona_visibility",
+          "parent_id",
+          "is_deleted",
+          "created_at",
+          "created_by",
+          "version_index"
+        ],
+        "title": "CategoryResponse",
+        "description": "Response schema for a KnowledgeCategory."
+      },
+      "ContextualHelpLookupResponse": {
+        "properties": {
+          "article": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArticleResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArticleVersionResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "article",
+          "version"
+        ],
+        "title": "ContextualHelpLookupResponse",
+        "description": "Response for a contextual help panel lookup."
+      },
+      "ContextualHelpMappingCreate": {
+        "properties": {
+          "route_pattern": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Route Pattern"
+          },
+          "persona": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona"
+          },
+          "article_id": {
+            "type": "string",
+            "title": "Article Id"
+          },
+          "priority": {
+            "type": "integer",
+            "maximum": 9999.0,
+            "minimum": 1.0,
+            "title": "Priority",
+            "default": 100
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "route_pattern",
+          "article_id",
+          "reason_for_change"
+        ],
+        "title": "ContextualHelpMappingCreate",
+        "description": "Request body for creating a contextual help mapping."
+      },
+      "ContextualHelpMappingResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "route_pattern": {
+            "type": "string",
+            "title": "Route Pattern"
+          },
+          "persona": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona"
+          },
+          "article_id": {
+            "type": "string",
+            "title": "Article Id"
+          },
+          "priority": {
+            "type": "integer",
+            "title": "Priority"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "route_pattern",
+          "persona",
+          "article_id",
+          "priority",
+          "created_at",
+          "created_by"
+        ],
+        "title": "ContextualHelpMappingResponse",
+        "description": "Response schema for a ContextualHelpMapping."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
