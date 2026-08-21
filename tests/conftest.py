@@ -475,7 +475,7 @@ class _TestSessionMonitor:
                 if len(stalled) > 5:
                     stalled_summary += f" ... and {len(stalled) - 5} more"
                 print(
-                    f"\n[cadence-test-monitor] ⏳ Outstanding tests executing >15s: {stalled_summary}",
+                    f"\n[cadence-test-monitor] [SLOW] Outstanding tests executing >15s: {stalled_summary}",
                     flush=True,
                 )
 
@@ -497,7 +497,7 @@ def pytest_runtest_logreport(report):
     """Log warning diagnostics for slow individual test cases exceeding 15 seconds."""
     if report.when == "call" and report.duration > 15.0:
         print(
-            f"\n[cadence-test-monitor] ⚠️ Slow test completed: {report.nodeid} ({report.duration:.2f}s)",
+            f"\n[cadence-test-monitor] [WARN] Slow test completed: {report.nodeid} ({report.duration:.2f}s)",
             flush=True,
         )
 
