@@ -47,7 +47,13 @@
 
         <!-- Reuse GxpCredentialsInput -->
         <!-- prettier-ignore -->
-        <GxpCredentialsInput v-model:password="password" v-model:username="usernameVal" v-model:totp="totp" :disabled="busy" @keyup-enter="confirm"/><!-- pragma: allowlist secret -->
+        <GxpCredentialsInput
+          v-model:username="usernameVal"
+          v-model:password="password" data-pragma="pragma: allowlist secret"
+          v-model:totp="totp"
+          :disabled="busy"
+          @keyup-enter="confirm"
+        /><!-- pragma: allowlist secret -->
 
         <div class="form-group last-group">
           <label for="sig-reason">Meaning of Signing / Signing Reason</label>
@@ -109,6 +115,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  signerRole: {
+    type: String,
+    default: "",
+  },
   role: {
     type: String,
     default: "Subject",
@@ -138,7 +148,11 @@ useEscapeClose(() => emit("cancel"));
 const usernameVal = ref(props.username);
 const signerNameVal = ref(props.signerName || props.username || "");
 const signerRoleVal = ref(props.signerRole || props.role || "Subject");
+<<<<<<< HEAD
 const password = ref(""); // pragma: allowlist secret
+=======
+const password = ref("");
+>>>>>>> origin/dev
 const totp = ref("");
 const signingReason = ref("");
 const busy = ref(false);
@@ -168,7 +182,7 @@ watch(
     if (newVal) {
       usernameVal.value = props.username;
       signerNameVal.value = props.signerName || props.username || "";
-      signerRoleVal.value = props.role || "Subject";
+      signerRoleVal.value = props.signerRole || props.role || "Subject";
       password.value = "";
       totp.value = "";
       signingReason.value = "";
@@ -196,7 +210,7 @@ watch(
 );
 
 watch(
-  () => props.role,
+  () => props.signerRole || props.role,
   (newVal) => {
     if (newVal) signerRoleVal.value = newVal;
   }

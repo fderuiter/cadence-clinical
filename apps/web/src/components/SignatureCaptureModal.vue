@@ -26,6 +26,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  signerRole: {
+    type: String,
+    default: "",
+  },
   role: {
     type: String,
     default: "Subject",
