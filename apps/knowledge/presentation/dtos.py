@@ -8,12 +8,12 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
-from apps.knowledge.domain.models import ArticleAuditAction, ArticleStatus
-
+from apps.knowledge.domain.models import ArticleStatus
 
 # ---------------------------------------------------------------------------
 # Category DTOs
 # ---------------------------------------------------------------------------
+
 
 class CategoryCreate(BaseModel):
     """Request body for creating a KnowledgeCategory."""
@@ -46,6 +46,7 @@ class CategoryResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Article DTOs
 # ---------------------------------------------------------------------------
+
 
 class ArticleCreate(BaseModel):
     """Request body for creating a new KnowledgeArticle (starts in DRAFT)."""
@@ -124,6 +125,7 @@ class ArticleResponse(BaseModel):
 # Audit Log DTOs
 # ---------------------------------------------------------------------------
 
+
 class AuditLogResponse(BaseModel):
     """Response schema for a KnowledgeArticleAuditLog entry."""
 
@@ -144,6 +146,7 @@ class AuditLogResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Contextual Help DTOs
 # ---------------------------------------------------------------------------
+
 
 class ContextualHelpMappingCreate(BaseModel):
     """Request body for creating a contextual help mapping."""

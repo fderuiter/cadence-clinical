@@ -84,8 +84,8 @@ class ArticleLifecycleService:
         actor_user_id: str,
         reason_for_change: str,
     ) -> Any:
-        KnowledgeCategory, _, _, _ = _infra_models()
-        category = KnowledgeCategory(
+        knowledge_category_cls, _, _, _ = _infra_models()
+        category = knowledge_category_cls(
             name=name,
             slug=slug,
             description=description,
@@ -113,8 +113,8 @@ class ArticleLifecycleService:
         actor_user_id: str,
         reason_for_change: str,
     ) -> Any:
-        _, KnowledgeArticle, KnowledgeArticleVersion, _ = _infra_models()
-        article = KnowledgeArticle(
+        _, knowledge_article_cls, knowledge_article_version_cls, _ = _infra_models()
+        article = knowledge_article_cls(
             title=title,
             slug=slug,
             category_id=category_id,
@@ -130,7 +130,7 @@ class ArticleLifecycleService:
         await self._session.flush()
 
         # Snapshot initial draft body
-        version = KnowledgeArticleVersion(
+        version = knowledge_article_version_cls(
             article_id=article.id,
             version_index=1,
             version_label=version_label,
@@ -167,7 +167,7 @@ class ArticleLifecycleService:
         actor_user_id: str,
         reason_for_change: str | None = None,
     ) -> Any:
-        _, _, KnowledgeArticleVersion, _ = _infra_models()
+        _, _, knowledge_article_version_cls, _ = _infra_models()
         if article.status != ArticleStatus.DRAFT:
             raise ArticleTransitionError(
                 f"Cannot save draft body on article with status {article.status!r}. "
@@ -177,7 +177,7 @@ class ArticleLifecycleService:
         article.last_edited_by = actor_user_id
         article.reason_for_change = reason_for_change or "Draft body updated"
 
-        version = KnowledgeArticleVersion(
+        version = knowledge_article_version_cls(
             article_id=article.id,
             version_index=article.version_index,
             version_label=article.version_label,
@@ -214,7 +214,7 @@ class ArticleLifecycleService:
         reason_for_change: str | None = None,
         version_label: str | None = None,
     ) -> Any:
-        _, _, KnowledgeArticleVersion, _ = _infra_models()
+        _, _, knowledge_article_version_cls, _ = _infra_models()
         previous_status = article.status
 
         # Validate via pure domain function
@@ -245,7 +245,7 @@ class ArticleLifecycleService:
             # Snapshot body content at approval (immutable version record)
             latest_version = await self._get_latest_version(article.id)
             if latest_version:
-                snapshot = KnowledgeArticleVersion(
+                snapshot = knowledge_article_version_cls(
                     article_id=article.id,
                     version_index=article.version_index,
                     version_label=article.version_label,
@@ -270,7 +270,9 @@ class ArticleLifecycleService:
 
         # Apply transition
         article.status = target_status
-        article.reason_for_change = reason_for_change or f"Transitioned to {target_status}"
+        article.reason_for_change = (
+            reason_for_change or f"Transitioned to {target_status}"
+        )
 
         # Audit log
         await self._write_audit_log(
@@ -329,16 +331,14 @@ class ArticleLifecycleService:
     # Private helpers
     # ------------------------------------------------------------------
 
-    async def _get_latest_version(
-        self, article_id: str
-    ) -> Any | None:
+    async def _get_latest_version(self, article_id: str) -> Any | None:
         """Returns the most recent KnowledgeArticleVersion for an article."""
-        _, _, KnowledgeArticleVersion, _ = _infra_models()
+        _, _, knowledge_article_version_cls, _ = _infra_models()
         select = _sa_select()
         result = await self._session.execute(
-            select(KnowledgeArticleVersion)
-            .where(KnowledgeArticleVersion.article_id == article_id)
-            .order_by(KnowledgeArticleVersion.version_index.desc())
+            select(knowledge_article_version_cls)
+            .where(knowledge_article_version_cls.article_id == article_id)
+            .order_by(knowledge_article_version_cls.version_index.desc())
             .limit(1)
         )
         return result.scalar_one_or_none()
@@ -356,12 +356,12 @@ class ArticleLifecycleService:
         Called as a side effect when a new article version is Published, preventing
         two Published versions of the same article existing simultaneously.
         """
-        _, KnowledgeArticle, _, _ = _infra_models()
+        _, knowledge_article_cls, _, _ = _infra_models()
         select = _sa_select()
         result = await self._session.execute(
-            select(KnowledgeArticle).where(
-                KnowledgeArticle.id == article_id,
-                KnowledgeArticle.status.is_(ArticleStatus.PUBLISHED),
+            select(knowledge_article_cls).where(
+                knowledge_article_cls.id == article_id,
+                knowledge_article_cls.status.is_(ArticleStatus.PUBLISHED),
             )
         )
         published = result.scalar_one_or_none()
@@ -402,8 +402,8 @@ class ArticleLifecycleService:
             reason_for_change: GxP justification; may be None for non-regulated actions.
             details: Optional human-readable details string.
         """
-        _, _, _, KnowledgeArticleAuditLog = _infra_models()
-        log_entry = KnowledgeArticleAuditLog(
+        _, _, _, knowledge_article_audit_log_cls = _infra_models()
+        log_entry = knowledge_article_audit_log_cls(
             article_id=article_id,
             action=action.value,
             previous_status=previous_status.value if previous_status else None,
