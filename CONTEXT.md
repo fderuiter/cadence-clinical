@@ -80,3 +80,35 @@ A multi-tenant role simulation and test harness pattern that allows authorized u
 
 The continuous, automated synthesis pipeline that translates high-level CDISC USDM study definitions into runtime EDC eCRF definitions, encounter visit matrices, and declarative edit-check rules, while feeding execution metrics and discrepancy telemetry back into upstream study design sentinels.
 
+### Module-Based Ticket Routing
+
+A deterministic operational routing pattern mapping clinical inquiries, data discrepancies, and system support tickets to specialized functional queues based on clinical domain ownership (`PROTOCOL_DESIGNER`, `DATA_CAPTURE_ECRF`, `SUBJECT_MANAGEMENT_RTSM`, `REPORTING_ANALYTICS`, `PLATFORM_ADMIN_ACCESS`, `REGULATORY_COMPLIANCE`).
+
+### Dual-Target SLA Model
+
+A service-level agreement tracking model establishing decoupled response-time commitments for initial acknowledgment/triage versus final clinical resolution, with automated priority escalation on breach and clock suspension during external waiting states.
+
+### Controlled Ticket Reopening Window
+
+A regulatory compliance lifecycle rule permitting historical support or discrepancy records to transition from resolved or closed status back to an active state only within a bounded calendar timeframe and accompanied by an explicit 21 CFR Part 11 reason for change, after which records are permanently immutable.
+
+### Mandatory GxP Notification Policy
+
+A regulatory compliance rule ensuring that high-severity clinical trial alerts, service level agreement (SLA) breaches, urgent protocol amendments, and direct patient-safety or task assignments strictly bypass user opt-out preferences and are delivered across all designated communication channels (in-app, email, webhooks).
+
+### Multi-Channel Notification Dispatcher
+
+An asynchronous, decoupled delivery engine that routes event notifications across multiple transport channels (In-App inbox, SMTP Email with domain-specific Jinja2 templates, and HMAC-signed Outbound Webhooks) backed by bounded exponential backoff retries and 21 CFR Part 11 audit trails.
+
+### Deterministic Notification Idempotency Key
+
+A structured composite identifier (`{entity_type}:{entity_id}:{event_type}:{version_index}`) that uniquely identifies a notification dispatch trigger, preventing duplicate delivery tasks and phantom alerts across rapid user edits, retry sweeps, and background worker polling cycles.
+
+### Two-Tier Controlled Document Model
+
+A regulatory metadata and content storage pattern where an entity head record (`KnowledgeArticle`) maintains current lifecycle state, active published version pointers, taxonomy tags, and persona access constraints, while version snapshot records (`KnowledgeArticleVersion`) permanently retain immutable historical revisions of approved clinical and regulatory guidance.
+
+### Contextual Help Route Mapping
+
+A deterministic routing rule mapping frontend UI route patterns and active user personas to approved operational SOPs and guidance articles with specificity- and priority-based tie-breaking.
+

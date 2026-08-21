@@ -31,9 +31,10 @@ def test_permission_matrix_enum_values():
 
 
 def test_role_enum_canonical_names():
-    """Validate RoleEnum canonical values.
+    """Validate RoleEnum canonical values and multi-persona switching taxonomy.
 
-    Requirements: PRD-SYS-001, 21 CFR Part 11
+    @req:PRD-SYS-001, @req:PRD-SYS-050
+    Requirements: 21 CFR Part 11
     """
     assert RoleEnum.SPONSOR_ADMIN == "SponsorAdmin"
     assert RoleEnum.SPONSOR_DESIGNER == "SponsorDesigner"
