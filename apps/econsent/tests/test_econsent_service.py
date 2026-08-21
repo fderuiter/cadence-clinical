@@ -77,7 +77,10 @@ async def test_successful_signature_capture(db_session: AsyncSession):
     response = await process_econsent_signature(db_session, payload)
 
     assert response.consent_record_id is not None
-    assert response.signed_pdf_url.startswith("file://") and "consent_pdfs" in response.signed_pdf_url
+    assert (
+        response.signed_pdf_url.startswith("file://")
+        and "consent_pdfs" in response.signed_pdf_url
+    )
     assert isinstance(response.signature_timestamp_utc, datetime)
     assert len(response.verification_hash) == 64
 

@@ -3,13 +3,14 @@
 Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 """
 
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 import hashlib
 import hmac
 import os
 import secrets
-import uuid
-from datetime import UTC, datetime, timedelta
 from typing import Any
+import uuid
 
 from apps.fileshare.domain.exceptions import (
     FileNotFoundError,
@@ -27,15 +28,46 @@ from apps.fileshare.ports.repository_port import (
     GuestLinkRepositoryPort,
     ShareGrantRepositoryPort,
 )
-from apps.fileshare.presentation.dtos import (
-    FileDownloadUrlResponse,
-    FileUploadUrlResponse,
-    GuestLinkResponse,
-    ShareGrantResponse,
-)
 from packages.storage.ports.storage_port import StoragePort
 
 ADMIN_ROLES = {"super_admin", "sysadmin", "admin", "data_manager", "sponsor_admin"}
+
+
+@dataclass(frozen=True)
+class FileUploadSession:
+    """Represents an initialized upload session with presigned singlepart or multipart target URLs."""
+
+    file_id: str
+    object_key: str
+    upload_id: str | None = None
+    upload_url: str | None = None
+    upload_urls: dict[int, str] | None = None
+    expires_in: int = 3600
+
+
+@dataclass(frozen=True)
+class FileDownloadSession:
+    """Represents a validated download session with watermark flag and presigned download URL."""
+
+    file_id: str
+    filename: str
+    mime_type: str
+    download_url: str
+    expires_in: int = 3600
+    is_watermarked: bool = False
+
+
+@dataclass(frozen=True)
+class GuestLinkResult:
+    """Represents a generated guest access link."""
+
+    id: str
+    file_record_id: str
+    guest_url: str
+    expires_at: datetime
+    created_by: str
+    access_count: int
+    is_valid: bool
 
 
 class FileShareService:
@@ -65,7 +97,7 @@ class FileShareService:
         site_id: str | None = None,
         is_multipart: bool = False,
         parts_count: int = 1,
-    ) -> FileUploadUrlResponse:
+    ) -> FileUploadSession:
         """Allocate a draft FileRecord envelope and generate presigned upload URLs.
 
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
@@ -116,7 +148,7 @@ class FileShareService:
                 part_numbers=part_numbers,
                 expires_in=3600,
             )
-            return FileUploadUrlResponse(
+            return FileUploadSession(
                 file_id=file_id,
                 object_key=object_key,
                 upload_id=upload_id,
@@ -129,7 +161,7 @@ class FileShareService:
             expires_in=3600,
             content_type=mime_type,
         )
-        return FileUploadUrlResponse(
+        return FileUploadSession(
             file_id=file_id,
             object_key=object_key,
             upload_url=upload_url,
@@ -142,7 +174,7 @@ class FileShareService:
         caller_user_id: str,
         caller_roles: list[str],
         caller_site_id: str | None = None,
-    ) -> FileDownloadUrlResponse:
+    ) -> FileDownloadSession:
         """Verify caller permissions and issue a short-lived presigned download URL.
 
         Enforces watermark policy for view-only/comment-only grants.
@@ -159,14 +191,20 @@ class FileShareService:
         is_watermarked = False
 
         if not is_admin and not is_uploader:
-            grants = await self.grant_repo.list_by_file_id(file_id, active_only=True)
+            grants = await self.grant_repo.list_by_file_id(
+                file_id, active_only=True
+            )
             matching_grants: list[ShareGrant] = []
 
             for grant in grants:
                 if (
                     grant.scope == ShareScope.INDIVIDUAL
                     and grant.granted_to_user_id == caller_user_id
-                ) or grant.scope == ShareScope.STUDY or (
+                ):
+                    matching_grants.append(grant)
+                elif grant.scope == ShareScope.STUDY:
+                    matching_grants.append(grant)
+                elif (
                     grant.scope == ShareScope.SITE
                     and caller_site_id
                     and file_record.site_id == caller_site_id
@@ -179,7 +217,9 @@ class FileShareService:
                 )
 
             # Determine highest granted permission level
-            max_grant = max(matching_grants, key=lambda g: g.permission_level.rank)
+            max_grant = max(
+                matching_grants, key=lambda g: g.permission_level.rank
+            )
             if max_grant.permission_level.requires_watermark():
                 is_watermarked = True
 
@@ -190,7 +230,7 @@ class FileShareService:
             response_content_disposition=disposition,
         )
 
-        return FileDownloadUrlResponse(
+        return FileDownloadSession(
             file_id=file_record.id,
             filename=file_record.filename,
             mime_type=file_record.mime_type,
@@ -209,7 +249,7 @@ class FileShareService:
         permission_level: PermissionLevel,
         reason_for_change: str,
         expires_at: datetime | None = None,
-    ) -> ShareGrantResponse:
+    ) -> ShareGrant:
         """Create and persist a new share grant on a file record."""
         file_record = await self.file_repo.get_by_id(file_id)
         if not file_record:
@@ -220,7 +260,9 @@ class FileShareService:
         is_uploader = file_record.uploaded_by == grantor_user_id
 
         if not is_admin and not is_uploader:
-            user_grant = await self.grant_repo.find_user_grant(file_id, grantor_user_id)
+            user_grant = await self.grant_repo.find_user_grant(
+                file_id, grantor_user_id
+            )
             if not user_grant or not user_grant.permission_level.satisfies(
                 PermissionLevel.RESHARE
             ):
@@ -249,8 +291,7 @@ class FileShareService:
             created_by=grantor_user_id,
             reason_for_change=reason_for_change,
         )
-        saved = await self.grant_repo.save(grant)
-        return ShareGrantResponse.model_validate(saved)
+        return await self.grant_repo.save(grant)
 
     async def create_guest_link(
         self,
@@ -258,7 +299,7 @@ class FileShareService:
         creator_user_id: str,
         reason_for_change: str,
         expires_in_hours: int = 24,
-    ) -> GuestLinkResponse:
+    ) -> GuestLinkResult:
         """Generate a secure, HMAC-hashed guest link for external temporary file access."""
         file_record = await self.file_repo.get_by_id(file_id)
         if not file_record:
@@ -288,7 +329,7 @@ class FileShareService:
         saved = await self.guest_repo.save(guest_link)
 
         guest_url = f"/api/v1/fileshare/guest/{raw_secret_token}"
-        return GuestLinkResponse(
+        return GuestLinkResult(
             id=saved.id,
             file_record_id=saved.file_record_id,
             guest_url=guest_url,

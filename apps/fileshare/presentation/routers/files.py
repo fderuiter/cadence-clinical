@@ -16,9 +16,7 @@ from apps.fileshare.adapters.storage import get_storage_adapter
 from apps.fileshare.application.fileshare_service import FileShareService
 from apps.fileshare.domain.exceptions import (
     FileNotFoundError,
-    FileOnHoldError,
     FileSharePermissionDeniedError,
-    InvalidGrantError,
 )
 from apps.fileshare.presentation.dtos import (
     FileDownloadUrlResponse,
@@ -41,7 +39,11 @@ router = APIRouter(prefix="/api/v1/fileshare/files", tags=["Fileshare"])
 
 def extract_caller_roles(request: Request) -> list[str]:
     """Extract authenticated caller roles from request state or gateway headers."""
-    raw_roles = getattr(request.state, "roles", None) or request.headers.get("X-User-Roles") or ""
+    raw_roles = (
+        getattr(request.state, "roles", None)
+        or request.headers.get("X-User-Roles")
+        or ""
+    )
     return [r.strip() for r in str(raw_roles).split(",") if r.strip()]
 
 

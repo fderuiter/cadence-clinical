@@ -3,8 +3,8 @@
 Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 """
 
-from datetime import UTC, datetime, timedelta
 import uuid
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from pydantic import ValidationError
@@ -159,4 +159,3 @@ def test_guest_link_validity():
         reason_for_change="Expired guest review",
     )
     assert expired_link.is_valid is False
-

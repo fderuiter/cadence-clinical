@@ -605,4 +605,3 @@ async def test_api_delete_category_lifecycle(
             headers=auth_headers_admin,
         )
         assert second_del_resp.status_code == 404
-

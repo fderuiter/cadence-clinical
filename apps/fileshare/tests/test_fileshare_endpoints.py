@@ -4,14 +4,13 @@ Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 """
 
 import httpx
-from httpx import ASGITransport
 import pytest
+from httpx import ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.fileshare.adapters.database import get_db_session
 from apps.fileshare.domain.models import PermissionLevel, ShareScope
 from apps.fileshare.main import app
-from apps.fileshare.presentation.dtos import ShareGrantCreateRequest
 from packages.testing.fakes import InMemoryStoragePort
 from packages.testing.security import create_test_auth_headers
 
@@ -304,4 +303,3 @@ async def test_guest_link_creation(
         assert "/api/v1/fileshare/guest/" in data["guest_url"]
 
     app.dependency_overrides.clear()
-

@@ -5,7 +5,6 @@ Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
 
 from typing import Any
 
-from packages.storage.adapters.minio_adapter import MinioStorageAdapter
 from packages.storage.adapters.s3_adapter import S3StorageAdapter
 from packages.storage.ports.storage_port import StoragePort
 
@@ -31,4 +30,3 @@ def get_storage_adapter() -> StoragePort[dict[str, Any]]:
 
 
 __all__ = ["get_storage_adapter", "set_storage_adapter"]
-
