@@ -1,5 +1,5 @@
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
-*Execution Date:* 2026-07-23 22:38:25 UTC
+*Execution Date:* 2026-08-21 15:53:41 UTC
 *Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B
 
 ## 1. Executive Summary & Verification Declaration
@@ -7,8 +7,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 2850
-- **Passed:** 2829 🟢
+- **Total Automated Test Cases Run:** 2839
+- **Passed:** 2818 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 21 ⚪
 - **Overall Operational Pass Rate:** 99.26%
@@ -2106,10 +2106,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_kri_definitions_and_auto_seeding` | `apps.quality.tests.test_rbqm_engine` | PRD-QLT-004 | 🟢 PASSED | < 1s |
 | `test_qtl_tolerance_limit_and_csr_narrative` | `apps.quality.tests.test_rbqm_engine` | PRD-QLT-005 | 🟢 PASSED | < 1s |
 | `test_site_risk_profile_computation_and_ranking` | `apps.quality.tests.test_rbqm_engine` | PRD-QLT-004 | 🟢 PASSED | < 1s |
-| `test_regulatory_clock_approaching_and_overdue_indicators` | `apps.quality.tests.test_serious_breaches` | PRD-QLT-007 | 🟢 PASSED | < 1s |
 | `test_serious_breach_confirmation_and_status_progression` | `apps.quality.tests.test_serious_breaches` | PRD-QLT-007 | 🟢 PASSED | < 1s |
 | `test_serious_breach_reporting_and_initial_clock` | `apps.quality.tests.test_serious_breaches` | PRD-QLT-007 | 🟢 PASSED | < 1s |
-| `test_statutory_discovery_clock_preservation_on_confirmation` | `apps.quality.tests.test_serious_breaches` | PRD-QLT-007 | 🟢 PASSED | < 1s |
 | `test_generate_e2b_xml_happy_path` | `apps.safety.tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_e2b_xml_invalid_raises_value_error` | `apps.safety.tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_icsr_version_and_reason_for_change_rendering` | `apps.safety.tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2267,7 +2265,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_cli_db_snapshot_and_restore` | `packages.cli.tests.test_cadence_cli` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_db_status_json` | `packages.cli.tests.test_cadence_cli` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_dev_json` | `packages.cli.tests.test_cadence_cli` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_cli_dev_port_collision_fallback` | `packages.cli.tests.test_cadence_cli` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_doctor_auto_fix_json` | `packages.cli.tests.test_cadence_cli` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_doctor_json` | `packages.cli.tests.test_cadence_cli` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_gxp_export_cdisc_json` | `packages.cli.tests.test_cadence_cli` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2276,14 +2273,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_cli_db_seed_full_cadence_101_json` | `packages.cli.tests.test_db_seed` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_db_seed_sqlite_content` | `packages.cli.tests.test_db_seed` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_db_seed_tier_filtering` | `packages.cli.tests.test_db_seed` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_extract_ports_from_command` | `packages.cli.tests.test_ports` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_get_discovered_service_ports` | `packages.cli.tests.test_ports` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_is_port_in_use_and_find_available_port` | `packages.cli.tests.test_ports` | PRD-SYS-002 | 🟢 PASSED | < 1s |
-| `test_load_categorized_ports_compose` | `packages.cli.tests.test_ports` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_load_categorized_ports_fallback_on_missing` | `packages.cli.tests.test_ports` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_parse_port_entry_variations` | `packages.cli.tests.test_ports` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_resolve_all_service_ports_batch` | `packages.cli.tests.test_ports` | PRD-SYS-002 | 🟢 PASSED | < 1s |
-| `test_resolve_service_port_collision` | `packages.cli.tests.test_ports` | PRD-SYS-002 | 🟢 PASSED | < 1s |
 | `test_change_request_audit_trail_recorded` | `packages.compliance.tests.test_compliance_change_request` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_change_request_requires_dual_approval` | `packages.compliance.tests.test_compliance_change_request` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compliance_change_request_audit_trail` | `packages.compliance.tests.test_compliance_change_request` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3106,30 +3095,30 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 ## Electronic Signature Block
 
 - **Signer Identity:** jules
-- **Timestamp:** 2026-07-23 22:38:25 UTC
-- **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 9bf6af3c0f0fa473bc3b4f2e31cdec12ca00d7c169e6334baff28235226ba9c4
+- **Timestamp:** 2026-08-21 15:53:41 UTC
+- **Meaning / Purpose:** GxP Dynamic Execution Run Record
+- **Cryptographic Hash (SHA-256):** 99312b2862204087daf80ac65496455f4a871070224435992ff7ccbae81640d9
 
 -----BEGIN CERTIFICATE-----
-MIIDNDCCAhygAwIBAgIUcXviTzsQr9fz4tocaI+SwREUej4wDQYJKoZIhvcNAQEL
+MIIDNDCCAhygAwIBAgIUU2Z6rLW65gc6gNdH6BfI4iZK+0kwDQYJKoZIhvcNAQEL
 BQAwVDEuMCwGA1UEAwwlQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGp1
 bGVzKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTAeFw0yNjA4
-MjAxNTU3NDFaFw0yNzA4MjExNTU3NDFaMFQxLjAsBgNVBAMMJUNhZGVuY2UgR3hQ
+MjAxNTUzNDJaFw0yNzA4MjExNTUzNDJaMFQxLjAsBgNVBAMMJUNhZGVuY2UgR3hQ
 IFZhbGlkYXRpb24gUnVubmVyIChqdWxlcykxIjAgBgNVBAoMGUNhZGVuY2UgQ2xp
-bmljYWwgU29mdHdhcmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDJ
-+msE45WYe3vHBvVLrGovdkBjgnb7VRg5D8hqcJsSUrt1pV9sAfsugUgMHV+yvOpS
-MHSaj3MNClDfTFo/GXaWq1lK4SF3cZYzbgrRKCGEqrRbgHpmxz4Loo0rhEHf+Qmf
-40egUptW62mmXp0Pzkz3x6bGvFRiBrjIdibg4vh3uogZ4ZcS0ViAX+NdZWJubO5M
-VTG7JZGiQRk1dDGS6NSQcwdk5vWH/+2GQwWzvt0KXk4yuEc90DgaOzNnhAFYoeL8
-rmQok5t2qTu/JkPLO556noxr7Kat33lT5Q5UN/QRfN8UcliJU71IzIpfDLT6wBp3
-biPzNAL+7g9HsaJdsBY3AgMBAAEwDQYJKoZIhvcNAQELBQADggEBAI0pmKp2qaQK
-Q8wTsqatpAtnpTkF/dImjSv9R1BTConWwnQnmgr0r4rGWvZAiaUCE3/lPs9VCMV3
-LrAa/Fcq7EWSzOsOMzTTw2Ft5F4k3YmAoM776SfdAoOEmfb22q+wnO8rff6vIOY6
-E3rHiKdo1myLIqqU3RJ58Bs7R6PYvetyul0aulUeAjclaT9vgkB/4pZPtY/4qjaS
-reS3XOIp6aJbUH3kvPkhl68Wq0+c2f14BBuxCado4lrmT232fBPnMWZ/Sl45gLkc
-877A2IqA6zmvFmMjWSKQlN60+iuKXGvxL94HIifzqm7Vpx0VetCBGmn0IZ0eP70Q
-AxJAic+axog=
+bmljYWwgU29mdHdhcmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDU
+zV3wIiTdie0Z4lZLrtaaeUkmr3KgMTKheRxCssTB7SDZjYMhS0AO6mCRSea5vaO4
+Q+PGlUVUUktrcw/WpMaKllv/5uzIt4HAC+mT8UyZpS9SPZ9eOZRq+w5+tC21tH1b
+X19i0VJL1RwvfyABivMeoNJLf2lTvb+Y2FR5id+b2hioNcB0eeeJ2Ik3/aM/VeQJ
+F3XUZAmfei9v6Fyfm5JgJsLpF3yE75OHXNQ/jhezLFP6ei771NjqtBp9CRzZpApV
+7WfhyI5anG4QgDe7YxMxtHI+GpGKsnfJf4jTJl+UedX++bnxy6FmiUOpVokGq5EC
+/iBh4yaQT6whA2Fot5d1AgMBAAEwDQYJKoZIhvcNAQELBQADggEBAFxI7HsY7jUN
+5jZtQgDzjKpqr5Rv4XNhCPWQOjmnsYCrWn8ijrAuxIxEfiFLgYFCtfZnVQcWYWvu
+YnFH7pKTGBtkMbiP8qLqDekT6UA0Ex7HIxmrNUwyZNgXbZciqHuza2pwG7qL1DxC
+RRq7a6JQwP3hueEZeuaovL3tkyd0vmvxk+jA7PbkMa4MVH1gwpArN11UTyk9une1
+SOa6nNzn2d08GF4lcmEWdp+UiaJjuLTDvaZJJfUVOIuowrTFWHeyxDB4MlAQUIfO
+n8LzCrYtddk+mM1lEQNc3uE9wt5hfm7lbb4oHI2nRMSJlRdRQ9fCtQzsDxZ9BWQB
+Ur+kKmM+qBw=
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-Jhm46iRZ8GV5Ouk7uwSsWHeIhWXhnvmned9Z6EHQ2wY3t8AMNuF50BedZdpTyqa5gcpNRr3D97ECdzQeUL/sbWiSiHzUKBPw8ZxsrQNeaKDdQGyxArSjepR3fJ4J855gdrTZRo5WNOv/wS/iNKrkfaGiTtLULMzbPXRtMUY56MMI2hyfZ8dqWvxpjItkaOLEEMv6P37r0AhhQHglaSQItGbhGqDo69AlUPeqggn0T6OdJfTsbCMXXQPi2z/ejcvdTcIKwDm412qiiTGyMB0p79LRvUi7RM3zERzbcQyeTmWOC/hDonrMhT8JL7PGC+pEkmdVKwCxHLE+i9wB82uvqA==
+INSuFidbuIvFzttzZYIM9hY64/EMEIbTQrMwm8Ls2uVi0EVRijAiTbZAOOr9v7yAVXKl3eEjTTStouXZ1xHcOtqspd+2YNeh0o+mMVFXl63XvX0vnFjTYx9bfI/yt8hxlw9pVObK1ZwWMlQ7Jdrt8lpHGzdpW2+AJWGdFW2t9eHNex/DRcNXvpYzZmzXurycoeFGvofmo77PiMVx1ngmn/7OzIC/8X1BDSzAngjzUADuKkvdjJ62wY1zm+6NQ187pDTMkzc/ZwePVG0mP++zGKOe1h7A9V9iQJemGqFmtH1bNyIibQJmpfkrCjVfoF08Gy76w/eN2Q4Im/k7zj/smg==
 -----END SIGNATURE-----

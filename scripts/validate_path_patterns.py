@@ -95,6 +95,7 @@ RULES = {
             "scripts/**/*.sh",
             ".jules/**/*.sh",
             ".agents/**/*.sh",
+            ".scratch/**/*.sh",
         ],
         "description": "Shell scripts (*.sh) must reside in scripts/, .jules/, .agents/, or their subfolders.",
     },
