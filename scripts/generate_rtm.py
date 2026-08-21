@@ -84,6 +84,7 @@ def _sweep_markdown_files(path_or_dir):
     ignored_files = {
         "Requirements_Traceability_Matrix.md",
         "IQ_OQ_PQ_Execution_Report.md",
+        "RTM.md",
     }
     for root, dirs, files in os.walk(path_or_dir):
         dirs[:] = [d for d in dirs if d != "runs" and not d.startswith(".")]
@@ -565,6 +566,64 @@ DRAFT_BANNER = """> ⚠️ **DRAFT ONLY — UNVERIFIED GxP COMPLIANCE DOCUMENT**
 """
 
 
+def scan_adrs(adr_dir="docs/adr"):
+    """Scans ADR markdown files in adr_dir and extracts titles and requirement references."""
+    if not os.path.exists(adr_dir):
+        return []
+
+    try:
+        import compliance_utility
+    except ImportError:
+        try:
+            from scripts import compliance_utility
+        except ImportError:
+            sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+            import compliance_utility
+
+    adrs = []
+    for filename in sorted(os.listdir(adr_dir)):
+        if filename.endswith(".md") and filename not in ("TEMPLATE.md", "index.md"):
+            filepath = os.path.join(adr_dir, filename)
+            try:
+                with open(filepath, encoding="utf-8") as f:
+                    content = f.read()
+            except Exception:
+                continue
+
+            title = filename
+            for line in content.splitlines():
+                if line.startswith("# "):
+                    title = line[2:].strip()
+                    break
+
+            refs = compliance_utility.extract_requirement_references(content)
+            req_list = sorted(list(refs))
+            is_post = compliance_utility.is_post_2026_adr(filename)
+
+            if req_list:
+                status_str = "✅ Mapped"
+                req_str = ", ".join(req_list)
+            elif is_post:
+                status_str = "❌ Unmapped"
+                req_str = "*None*"
+            else:
+                status_str = "⚪ Exempt (Legacy)"
+                req_str = "*Legacy/Exempt*"
+
+            adrs.append(
+                {
+                    "filename": filename,
+                    "title": title,
+                    "references": req_list,
+                    "req_str": req_str,
+                    "status": status_str,
+                    "is_post_2026": is_post,
+                }
+            )
+
+    return adrs
+
+
 def generate_rtm_md(
     requirements,
     test_mappings,
@@ -723,7 +782,20 @@ def generate_rtm_md(
                 f"| {req_id} | {source_doc} | {title_desc} | {test_str} | {status_str} |\n"
             )
 
-        f.write("\n## 3. Unmapped Requirements\n\n")
+        f.write("\n## 3. Architectural Decisions Traceability Table\n\n")
+        f.write("| ADR File | Decision Title | Mapped Requirement(s) | Status |\n")
+        f.write("| :--- | :--- | :--- | :--- |\n")
+
+        adrs = scan_adrs()
+        for adr in adrs:
+            filename = adr["filename"]
+            title = adr["title"]
+            req_str = adr["req_str"]
+            status = adr["status"]
+            link_str = f"[{filename}](../adr/{filename})"
+            f.write(f"| {link_str} | {title} | {req_str} | {status} |\n")
+
+        f.write("\n## 4. Unmapped Requirements\n\n")
         unmapped_list = [
             req_id
             for req_id in requirements
@@ -738,6 +810,15 @@ def generate_rtm_md(
             f.write(
                 "All documented requirements have been successfully mapped to automated test cases.\n"
             )
+
+    rtm_short = os.path.join(os.path.dirname(output_path), "RTM.md")
+    if os.path.abspath(output_path) != os.path.abspath(rtm_short):
+        try:
+            with open(rtm_short, "w", encoding="utf-8") as f_short:
+                with open(output_path, encoding="utf-8") as f_in:
+                    f_short.write(f_in.read())
+        except Exception:
+            pass
 
 
 def generate_qualification_report(
@@ -1156,6 +1237,7 @@ def main():
 
     # 4. Generate RTM Markdown
     rtm_out = os.path.join(args.output_dir, "Requirements_Traceability_Matrix.md")
+    rtm_short = os.path.join(args.output_dir, "RTM.md")
     generate_rtm_md(
         all_requirements,
         test_mappings,
@@ -1165,8 +1247,11 @@ def main():
         timestamp=timestamp,
         draft=args.draft,
     )
-    print(f"Requirements Traceability Matrix successfully written to {rtm_out}")
+    print(
+        f"Requirements Traceability Matrix successfully written to {rtm_out} and {rtm_short}"
+    )
     format_file_with_prettier(rtm_out)
+    format_file_with_prettier(rtm_short)
 
     # 5. Generate Qualification Report
     qual_out = os.path.join(args.output_dir, "IQ_OQ_PQ_Execution_Report.md")

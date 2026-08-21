@@ -32,7 +32,7 @@ const props = defineProps({
   },
   role: {
     type: String,
-    default: "Subject",
+    default: "",
   },
   actionUrl: {
     type: String,

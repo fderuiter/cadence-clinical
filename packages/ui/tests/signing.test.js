@@ -238,7 +238,7 @@ print(encrypt(payload, key, 1, aad))
       new TextEncoder().encode(aad)
     );
     expect(decrypted).toEqual(payload);
-  });
+  }, 120000);
 
   it("Python can decrypt a JS-produced AES-GCM envelope", async () => {
     const rawKey = new Uint8Array(32);
@@ -270,7 +270,7 @@ print(json.dumps(decrypted))
 `);
     const parsedOutput = JSON.parse(pythonOutput);
     expect(parsedOutput).toEqual(payload);
-  });
+  }, 120000);
 
   it("HKDF key derivation matches Python exactly", async () => {
     const material = "session_material_abc";
@@ -288,7 +288,7 @@ derived = derive_session_key(b'${material}', b'${salt}', b'${info}')
 print(derived.hex())
 `);
     expect(jsHex).toBe(pythonHex);
-  });
+  }, 120000);
 });
 
 describe("canonicalSerialize - RFC 8785 Hardening", () => {

@@ -121,7 +121,11 @@ const props = defineProps({
   },
   role: {
     type: String,
-    default: "Subject",
+    default: "",
+  },
+  signerRole: {
+    type: String,
+    default: "",
   },
   actionUrl: {
     type: String,

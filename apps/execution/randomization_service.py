@@ -172,21 +172,31 @@ async def _randomize_subject_tx(
         stratum.block_index = allocation_result["updated_block_index"]
 
     # 11. Create SubjectRandomization row
-    if not kit_reference:
-        kit_reference = f"KIT-{secrets.token_hex(4).upper()}"
-
-    encrypted_alloc = key_mgr.encrypt({"allocation": allocated_arm}, session=session)
-
-    assignment = SubjectRandomization(
-        study_id=study_id,
-        site_id=subject.site_id,
-        subject_id=subject_id,
-        stratum_key=stratum_key,
-        encrypted_allocation=encrypted_alloc,
-        kit_reference=kit_reference,
+    stmt_existing_rand = select(SubjectRandomization).where(
+        SubjectRandomization.subject_id == subject_id
     )
-    session.add(assignment)
-    await session.flush()
+    res_existing_rand = await session.execute(stmt_existing_rand)
+    existing_rand_assignment = res_existing_rand.scalars().first()
+    if existing_rand_assignment:
+        assignment = existing_rand_assignment
+    else:
+        if not kit_reference:
+            kit_reference = f"KIT-{secrets.token_hex(4).upper()}"
+
+        encrypted_alloc = key_mgr.encrypt(
+            {"allocation": allocated_arm}, session=session
+        )
+
+        assignment = SubjectRandomization(
+            study_id=study_id,
+            site_id=subject.site_id,
+            subject_id=subject_id,
+            stratum_key=stratum_key,
+            encrypted_allocation=encrypted_alloc,
+            kit_reference=kit_reference,
+        )
+        session.add(assignment)
+        await session.flush()
 
     # 12. Transition Subject and assign details
     subject.randomize(

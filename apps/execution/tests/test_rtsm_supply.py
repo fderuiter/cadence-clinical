@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import os
+import secrets
 
 import httpx
 import pytest
@@ -558,13 +559,16 @@ async def test_locked_site_rejection():
 async def test_site_inventory_unique_constraint():
     """Verify that inventory is uniquely identified for a relevant site and kit."""
 
+    site_id = f"SITE-UC-{secrets.token_hex(4)}"
+    kit_id = f"KIT-UC-{secrets.token_hex(4)}"
+
     @transactional(lambda: db_manager.get_session_maker()())
     async def configure_inventories():
         session = current_session.get()
         inv1 = SiteInventory(
             study_id="STUDY_XYZ",
-            site_id="SITE-001",
-            kit_id="KIT-1001",
+            site_id=site_id,
+            kit_id=kit_id,
             on_hand_qty=10,
         )
         session.add(inv1)
@@ -573,8 +577,8 @@ async def test_site_inventory_unique_constraint():
         # Attempting to insert a duplicate inventory for the same site and kit should raise unique constraint exception
         inv2 = SiteInventory(
             study_id="STUDY_XYZ",
-            site_id="SITE-001",
-            kit_id="KIT-1001",
+            site_id=site_id,
+            kit_id=kit_id,
             on_hand_qty=5,
         )
         session.add(inv2)

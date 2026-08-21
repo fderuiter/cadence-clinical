@@ -360,4 +360,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-13: ADR-[NUMBER]: Port Contract Compliance & Backend Static Verification](2026-08-13-port-contract-compliance-and-backend-static-verification.md)
 - [2026-08-17: Unified Database Schema Introspection and Automated Type Synchronization Gating](2026-08-17-unified-database-introspection-and-type-gating.md)
 - [2026-09-12: ADR-2026-09-12: In-Process Clinical De-Identification and Gateway USDM Validation Router](2026-09-12-in-process-clinical-deid-and-gateway-usdm-router.md)
+- [2026-08-21: ADR-[NUMBER]: Automated RTM Synthesis and ADR Architectural Decisions Traceability](2026-08-21-rtm-synthesis-and-adr-traceability.md)
 - [2026-09-12: ADR-2026-09-12: MSW Mock Gateway Simulator and Browser HMAC Verification Engine](2026-09-12-msw-mock-gateway-and-browser-hmac-verification.md)

@@ -10,6 +10,7 @@
 /apps/execution/         @clinical-platform/clinical-operations
 /apps/gateway/           @clinical-platform/integration-and-routing
 /apps/interop/           @clinical-platform/integration-and-routing
+/apps/knowledge/         @clinical-platform/document-management
 /apps/notifications/     @clinical-platform/patient-engagement
 /apps/org/               @clinical-platform/clinical-operations
 /apps/quality/           @clinical-platform/document-management

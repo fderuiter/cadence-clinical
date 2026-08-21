@@ -36,6 +36,8 @@ def get_postgres_base_url() -> str:
             base_part, _ = remainder.rsplit("/", 1)
         else:
             base_part = remainder
+        if "@" not in base_part:
+            base_part = f"cadence:cadence_password@{base_part}"
         return f"{scheme}://{base_part}/postgres"
     return "postgresql://cadence:cadence_password@localhost:5432/postgres"  # pragma: allowlist secret
 
