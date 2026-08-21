@@ -6,6 +6,16 @@ import time
 
 import httpx
 
+from packages.security.asgi_registry import get_service_app, resolve_service_name
+from packages.security.context import (
+    current_change_reason,
+    current_site_id,
+    current_sponsor_id,
+    current_tenant_id,
+    current_unblinded_access,
+    current_user_id,
+    current_user_roles,
+)
 from packages.security.signing import generate_gateway_signature
 
 logger = logging.getLogger("packages.security.gateway_client")
@@ -37,31 +47,35 @@ def create_service_auth_headers(
         "X-Gateway-Signature": signature,
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
+        "X-In-Process": "true",
     }
 
 
 def run_async(coro):
-    """
-    Runs an async coroutine synchronously.
+    """Runs an async coroutine synchronously while preserving contextvars context.
+
     Handles loop-detection + ThreadPoolExecutor pattern to run async tasks in non-async contexts.
-    Ensures that active thread pools or running event loops are not blocked.
+    Ensures that active thread pools or running event loops are not blocked and authorization
+    context is maintained across thread pool boundaries.
     """
+    ctx = concurrent.futures.ThreadPoolExecutor
     try:
         asyncio.get_running_loop()
     except RuntimeError:
-        # No running event loop in this thread, safely use asyncio.run
         return asyncio.run(coro)
     else:
-        # Event loop is running (e.g. FastAPI / ASGI context). Run in separate thread.
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            return executor.submit(asyncio.run, coro).result()
+        with ctx(max_workers=1) as executor:
+            import contextvars
+
+            c_vars = contextvars.copy_context()
+            return executor.submit(c_vars.run, asyncio.run, coro).result()
 
 
 class GatewayBaseClient:
-    """
-    Standardized client wrapper for service-to-service communication.
-    Handles automated signature generation, gateway secret resolution,
-    header formatting, and consistent logging of failed requests.
+    """Standardized client wrapper for service-to-service communication.
+
+    Routes internal inter-service requests in-process using ASGI transports
+    without generating HMAC HTTP header signatures, propagating active contextvars.
     """
 
     _shared_client: httpx.AsyncClient | None = None
@@ -80,7 +94,6 @@ class GatewayBaseClient:
     def __init__(self, base_url: str = "", timeout: float = 5.0):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
-        # Resolved gateway secret
         gateway_secret_env = os.getenv(
             "GATEWAY_SECRET",
             "internal-gateway-secret-12345",  # pragma: allowlist secret
@@ -100,39 +113,58 @@ class GatewayBaseClient:
         sponsor_id: str | None = None,
         unblinded_access: bool = False,
         tenant_id: str | None = None,
+        is_in_process: bool = False,
     ) -> dict[str, str]:
-        """
-        Builds standard gateway headers with an HMAC-SHA256 signature V2.
-        """
-        timestamp = str(time.time())
-        signature = generate_gateway_signature(
-            user_id=user_id,
-            roles=roles,
-            timestamp=timestamp,
-            secret=self.secret,
-            change_reason=change_reason,
-            site_id=site_id,
-            sponsor_id=sponsor_id,
-            unblinded_access=unblinded_access,
-            tenant_id=tenant_id,
-        )
+        """Builds standard gateway headers for internal routing.
 
-        return {
-            "X-User-Id": user_id,
-            "X-User-Roles": roles,
-            "X-Gateway-Timestamp": timestamp,
-            "X-Gateway-Signature": signature,
-            "X-Signature-Version": "2",
-            "X-Change-Reason": change_reason,
+        For in-process calls, HMAC header signatures are omitted.
+        """
+        headers = {
+            "X-User-Id": user_id or current_user_id.get(),
+            "X-User-Roles": roles or current_user_roles.get() or "system",
+            "X-Change-Reason": change_reason or current_change_reason.get(),
+            "X-Tenant-Id": tenant_id or current_tenant_id.get() or "tenant_default",
         }
+        if is_in_process:
+            headers["X-In-Process"] = "true"
+
+        effective_site = site_id or current_site_id.get()
+        effective_sponsor = sponsor_id or current_sponsor_id.get()
+        effective_unblinded = unblinded_access or current_unblinded_access.get()
+
+        if effective_site:
+            headers["X-Site-Id"] = effective_site
+        if effective_sponsor:
+            headers["X-Sponsor-Id"] = effective_sponsor
+        if effective_unblinded:
+            headers["X-Unblinded-Access"] = "true"
+
+        if not is_in_process:
+            timestamp = str(time.time())
+            signature = generate_gateway_signature(
+                user_id=headers["X-User-Id"],
+                roles=headers["X-User-Roles"],
+                timestamp=timestamp,
+                secret=self.secret,
+                change_reason=headers["X-Change-Reason"],
+                site_id=effective_site,
+                sponsor_id=effective_sponsor,
+                unblinded_access=effective_unblinded,
+                tenant_id=headers["X-Tenant-Id"],
+            )
+            headers["X-Gateway-Timestamp"] = timestamp
+            headers["X-Gateway-Signature"] = signature
+            headers["X-Signature-Version"] = "2"
+
+        return headers
 
     async def request(
         self,
         method: str,
         path: str,
-        user_id: str,
-        roles: str,
-        change_reason: str,
+        user_id: str = "",
+        roles: str = "",
+        change_reason: str = "",
         site_id: str | None = None,
         sponsor_id: str | None = None,
         unblinded_access: bool = False,
@@ -140,11 +172,10 @@ class GatewayBaseClient:
         headers: dict[str, str] | None = None,
         **kwargs,
     ) -> httpx.Response:
-        """
-        Sends an HTTP request with auto-generated gateway security headers.
+        """Sends an in-process or HTTP request with automated context propagation.
+
         Logs all failures (transport or non-2xx responses) at the error level.
         """
-        # Resolve full URL
         url = (
             f"{self.base_url}{path}"
             if path.startswith("/")
@@ -153,7 +184,9 @@ class GatewayBaseClient:
         if not self.base_url:
             url = path
 
-        # Build gateway headers
+        service_name = resolve_service_name(self.base_url or path)
+        target_app = get_service_app(service_name) if service_name else None
+
         gw_headers = self.build_headers(
             user_id=user_id,
             roles=roles,
@@ -162,60 +195,40 @@ class GatewayBaseClient:
             sponsor_id=sponsor_id,
             unblinded_access=unblinded_access,
             tenant_id=tenant_id,
+            is_in_process=target_app is not None,
         )
 
         if headers:
             gw_headers.update(headers)
 
-        # Ensure timeout is set
         if "timeout" not in kwargs:
             kwargs["timeout"] = self.timeout
 
-        import sys
-
-        is_testing = "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ
-
         try:
-            if is_testing:
-                # In testing mode, use a short-lived client context to support pytest mocks/respx intercepts
-                async with httpx.AsyncClient() as client:
-                    method_lower = method.lower()
-                    if method_lower == "get":
-                        response = await client.get(url, headers=gw_headers, **kwargs)
-                    elif method_lower == "post":
-                        response = await client.post(url, headers=gw_headers, **kwargs)
-                    elif method_lower == "put":
-                        response = await client.put(url, headers=gw_headers, **kwargs)
-                    elif method_lower == "delete":
-                        response = await client.delete(
-                            url, headers=gw_headers, **kwargs
-                        )
-                    elif method_lower == "patch":
-                        response = await client.patch(url, headers=gw_headers, **kwargs)
-                    else:
-                        response = await client.request(
-                            method, url, headers=gw_headers, **kwargs
-                        )
+            if target_app is not None:
+                # In-process ASGI transport invocation
+                transport = httpx.ASGITransport(app=target_app)
+                clean_path = path if path.startswith("/") else f"/{path}"
+                async with httpx.AsyncClient(
+                    transport=transport, base_url="http://inprocess"
+                ) as client:
+                    req_fn = getattr(client, method.lower(), client.request)
+                    response = await req_fn(clean_path, headers=gw_headers, **kwargs)
             else:
-                # In production, use the high-concurrency shared connection pool
-                client = self.get_shared_client()
-                method_lower = method.lower()
-                if method_lower == "get":
-                    response = await client.get(url, headers=gw_headers, **kwargs)
-                elif method_lower == "post":
-                    response = await client.post(url, headers=gw_headers, **kwargs)
-                elif method_lower == "put":
-                    response = await client.put(url, headers=gw_headers, **kwargs)
-                elif method_lower == "delete":
-                    response = await client.delete(url, headers=gw_headers, **kwargs)
-                elif method_lower == "patch":
-                    response = await client.patch(url, headers=gw_headers, **kwargs)
-                else:
-                    response = await client.request(
-                        method, url, headers=gw_headers, **kwargs
-                    )
+                import sys
 
-            # Check if the response is a failure (not 2xx)
+                is_testing = (
+                    "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ
+                )
+                if is_testing:
+                    async with httpx.AsyncClient() as client:
+                        req_fn = getattr(client, method.lower(), client.request)
+                        response = await req_fn(url, headers=gw_headers, **kwargs)
+                else:
+                    client = self.get_shared_client()
+                    req_fn = getattr(client, method.lower(), client.request)
+                    response = await req_fn(url, headers=gw_headers, **kwargs)
+
             if response.status_code < 200 or response.status_code >= 300:
                 logger.error(
                     "Failed request to %s: HTTP status code %s. Response content: %s",
