@@ -48,7 +48,10 @@ def create_minimal_docx() -> bytes:
 
 
 def test_native_pdf_watermarking():
-    """Verify that a native PDF is watermarked visually and remains valid and uncorrupted."""
+    """Verify that a native PDF is watermarked visually and remains valid and uncorrupted.
+
+    @req:PRD-DOC-003
+    """
     pdf_bytes = create_minimal_pdf()
 
     # Test raw bytes input and return

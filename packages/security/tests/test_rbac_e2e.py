@@ -28,6 +28,8 @@ def override_principal(app, principal: Principal):
 async def test_rbac_execution_access(shared_sqlite_dbs, execution_client):
     """
     Verify that an authorized data manager can access the queries endpoint successfully.
+
+    @req:PRD-SYS-050
     """
     headers = data_manager()
     resp = await execution_client.get("/api/v1/execution/queries", headers=headers)

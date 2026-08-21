@@ -45,7 +45,8 @@ class MockStreamingBody:
 def test_verify_checksum():
     """Verify verify_checksum utility behaves correctly.
 
-    Requirements: PRD-SYS-001
+    Requirements: PRD-SYS-001, PRD-DOC-002
+    @req:PRD-DOC-002
     """
     data = b"gxp regulatory content"
     expected_sha256 = hashlib.sha256(data).hexdigest()
@@ -62,7 +63,8 @@ def test_verify_checksum():
 async def test_local_storage_provider_lifecycle():
     """Verify LocalStorageProvider full write, read, exists, delete lifecycle.
 
-    Requirements: PRD-SYS-001
+    Requirements: PRD-SYS-001, PRD-DOC-001
+    @req:PRD-DOC-001
     """
     with tempfile.TemporaryDirectory() as tmp_dir:
         provider = LocalStorageProvider(tmp_dir)
