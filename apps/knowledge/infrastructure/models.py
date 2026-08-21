@@ -142,7 +142,6 @@ class KnowledgeArticle(Base):
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # Relationships
     category: Mapped[KnowledgeCategory] = relationship(back_populates="articles")
@@ -273,6 +272,7 @@ class ContextualHelpMapping(Base):
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # Relationships
     article: Mapped[KnowledgeArticle] = relationship(

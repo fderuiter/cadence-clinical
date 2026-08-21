@@ -169,6 +169,8 @@ class ContextualHelpMappingResponse(BaseModel):
     priority: int
     created_at: datetime
     created_by: str
+    reason_for_change: str
+    version_index: int
 
     model_config = {"from_attributes": True}
 

@@ -1286,6 +1286,14 @@
           "created_by": {
             "type": "string",
             "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
           }
         },
         "type": "object",
@@ -1296,7 +1304,9 @@
           "article_id",
           "priority",
           "created_at",
-          "created_by"
+          "created_by",
+          "reason_for_change",
+          "version_index"
         ],
         "title": "ContextualHelpMappingResponse",
         "description": "Response schema for a ContextualHelpMapping."

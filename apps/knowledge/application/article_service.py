@@ -597,7 +597,7 @@ class ArticleLifecycleService:
         result = await self._session.execute(
             select(KnowledgeArticle).where(
                 KnowledgeArticle.id == article_id,
-                KnowledgeArticle.status.is_(ArticleStatus.PUBLISHED),
+                KnowledgeArticle.status == ArticleStatus.PUBLISHED.value,
             )
         )
         published = result.scalar_one_or_none()
