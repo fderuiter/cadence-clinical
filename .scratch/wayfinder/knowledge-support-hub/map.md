@@ -24,7 +24,9 @@ Standing decisions:
 
 ## Decisions so far
 
-(none yet)
+- **#4237 Article Lifecycle:** 7-state machine (`DRAFT` → `IN_REVIEW` → `APPROVED` → `PUBLISHED` → `ARCHIVED`/`SUPERSEDED` + `REJECTED`), Four-eyes approval enforcement, monotonic `version_index` + `version_label`, mandatory `reason_for_change` on regulated transitions, SHA-256 audit logging across all lifecycle actions.
+- **#4238 Support Ticket Routing & SLA:** 4-tier priority (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`), module queue routing (`PROTOCOL_DESIGNER`, `DATA_CAPTURE_ECRF`, `SUBJECT_MANAGEMENT_RTSM`, `REPORTING_ANALYTICS`, `PLATFORM_ADMIN_ACCESS`, `REGULATORY_COMPLIANCE`), dual-target SLA model (First Response & Resolution), auto-escalation on breach, 14-day controlled reopening window.
+- **#4239 Multi-Channel Notifications & Preferences:** Multi-channel delivery across In-App inbox, asynchronous SMTP Email with domain-specific Jinja2 templates, and HMAC-SHA256 signed Outbound Webhooks (Slack/Teams/PVI). Frontend 30s interval polling with top-bar notification drawer. 10-event triggering catalog. Centralized user preference matrix in `apps/notifications` with mandatory GxP non-opt-out overrides for `CRITICAL` tickets, SLA breaches, and direct task assignments. Deterministic composite idempotency key (`{entity_type}:{entity_id}:{event_type}:{version_index}`).
 
 ## Not yet specified
 
@@ -39,12 +41,14 @@ Standing decisions:
 
 ## Child tickets
 
+Settled:
+- #4237 Grilling: Article lifecycle and authoring workflow (CLOSED)
+- #4238 Grilling: Support ticket routing, SLA, and resolution (CLOSED)
+- #4239 Grilling: Notification and alert system (CLOSED)
+
 Frontier (unblocked):
 - #4235 Research: Cadence codebase architecture survey (wayfinder:research, AFK)
 - #4236 Research: GxP and 21 CFR Part 11 obligations (wayfinder:research, AFK)
-- #4237 Grilling: Article lifecycle and authoring workflow (wayfinder:grilling, HITL)
-- #4238 Grilling: Support ticket routing, SLA, and resolution (wayfinder:grilling, HITL)
-- #4239 Grilling: Notification and alert system (wayfinder:grilling, HITL)
 
 Blocked:
 - #4240 Grilling: DB schema and data model (blocked by #4235, #4236)
@@ -53,3 +57,4 @@ Blocked:
 - #4243 Grilling: Article search implementation (blocked by #4240)
 - #4244 Task: Write the feature specification (blocked by #4237-#4243)
 - #4245 Task: Create implementation backlog (blocked by #4244)
+
