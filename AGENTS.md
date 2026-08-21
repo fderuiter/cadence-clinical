@@ -803,7 +803,7 @@ Before submitting a PR, verify all items:
 
 ### Issue tracker
 
-Issues live in **GitHub Issues** (canonical, via `gh` CLI) **and** `.scratch/<feature>/issues/` (local markdown drafts). See `docs/agents/issue-tracker.md`.
+Issues live in **GitHub Issues** (canonical single source of truth, via `gh` CLI). See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
