@@ -32,6 +32,7 @@ packages-compliance = { workspace = true }
 packages-testing = { workspace = true }
 packages-tooling-core = { workspace = true }
 packages-sentinels = { workspace = true }
+apps-ai-gateway = { workspace = true }
 apps-ctms = { workspace = true }
 apps-designer = { workspace = true }
 apps-econsent = { workspace = true }
@@ -170,6 +171,7 @@ dependencies = [
     "jsonschema>=4.20.0",
     "typer>=0.12.0",
     "rich>=13.7.0",
+    "litellm>=1.97.0",
 ]
 
 [project.scripts]

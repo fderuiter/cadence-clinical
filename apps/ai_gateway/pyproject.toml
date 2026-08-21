@@ -1,0 +1,30 @@
+[build-system]
+requires = [
+    "hatchling",
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "apps-ai-gateway"
+version = "0.1.0"
+description = "AI Gateway microservice"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.139.2,<0.140.0",
+    "litellm>=1.97.0",
+    "packages-database",
+    "packages-hexagonal",
+    "packages-security",
+    "pydantic>=2.6.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    ".",
+]
+exclude = [
+    "tests",
+]
+
+[tool.hatch.build.targets.wheel.sources]
+"" = "apps/ai_gateway"
