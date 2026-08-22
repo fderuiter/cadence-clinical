@@ -50,13 +50,14 @@ Settled & Closed:
 - #4325 feat(knowledge): 02 — Article Authoring & Working Draft Storage (CLOSED)
 - #4326 feat(knowledge): 03 — Four-Eyes Review & Immutable Version Snapshotting (CLOSED)
 - #4327 feat(knowledge): 04 — Article Publication, Auto-Supersede & Fast Lookups (CLOSED)
+- #4328 feat(knowledge): 05 — In-Page Contextual Help Mapping & Dynamic Resolution (CLOSED)
 - #4329 feat(knowledge): 06 — Full-Text Search Vector Indexing & Discovery (CLOSED)
 - #4330 feat(knowledge): 07 — Auditor Read Logging & 21 CFR Part 11 Inspection Ledger (CLOSED)
 - #4331 feat(knowledge): 08 — Dedicated Knowledge Hub Browser View in apps/web (CLOSED)
 - #4332 feat(knowledge): 09 — Global Contextual Help Drawer & Support Ticket Escalation (CLOSED)
+- #4333 feat(knowledge): 10 — End-to-End GxP Verification Suite & Automated RTM Sync (CLOSED)
 
 ## Implementation Backlog (Ready for Agent)
 
-1. **#4328**: `feat(knowledge): 05 — In-Page Contextual Help Mapping & Dynamic Resolution` (Unblocked)
-2. **#4333**: `feat(knowledge): 10 — End-to-End GxP Verification Suite & Automated RTM Sync` (Blocked by #4328)
+*All 10 implementation tickets across the Knowledge & Support Hub milestone are complete and verified.*
 
