@@ -25,6 +25,8 @@ from apps.econsent.domain.evaluator import (
 from apps.econsent.presentation.dtos import (
     ArchivalDeliveryResponse,
     ClauseDiffDTO,
+    ClauseHarmonizationApplyRequest,
+    ClauseHarmonizationApplyResponse,
     ComposedClauseResponse,
     ComposedTemplateResponse,
     ComprehensionCheckCreate,
@@ -48,6 +50,12 @@ from apps.econsent.presentation.dtos import (
     ConsentWithdrawalResponse,
     GranularOptionCreate,
     GranularOptionResponse,
+    JargonSubstitutionDTO,
+    ReadabilityAnalysisRequest,
+    ReadabilityAnalysisResponse,
+    ReadabilityHarmonizationRequest,
+    ReadabilityHarmonizationResponse,
+    ReadabilityMetricsDTO,
     ReconsentRequirementResponse,
     ReconsentTriggerRequest,
     SubjectConsentCaptureRequest,
@@ -73,6 +81,9 @@ from apps.econsent.presentation.routers.export import (
 )
 from apps.econsent.presentation.routers.granular import (
     router as granular_router,
+)
+from apps.econsent.presentation.routers.readability import (
+    router as readability_router,
 )
 from apps.econsent.presentation.routers.reconsent import (
     router as reconsent_router,
@@ -121,11 +132,14 @@ app.include_router(withdrawal_router)
 app.include_router(export_router)
 app.include_router(granular_router)
 app.include_router(audit_router)
+app.include_router(readability_router)
 
 __all__ = [
     "ApprovedTranslationCache",
     "ArchivalDeliveryResponse",
     "ClauseDiffDTO",
+    "ClauseHarmonizationApplyRequest",
+    "ClauseHarmonizationApplyResponse",
     "ComposedClauseResponse",
     "ComposedTemplateResponse",
     "ComprehensionCheckCreate",
@@ -149,6 +163,12 @@ __all__ = [
     "ConsentWithdrawalResponse",
     "GranularOptionCreate",
     "GranularOptionResponse",
+    "JargonSubstitutionDTO",
+    "ReadabilityAnalysisRequest",
+    "ReadabilityAnalysisResponse",
+    "ReadabilityHarmonizationRequest",
+    "ReadabilityHarmonizationResponse",
+    "ReadabilityMetricsDTO",
     "ReconsentRequirementResponse",
     "ReconsentTriggerRequest",
     "SubjectConsentCaptureRequest",
@@ -158,16 +178,23 @@ __all__ = [
     "TranslationTransitionRequest",
     "app",
     "approved_translation_cache",
+    "audit_router",
     "dispatcher_lifecycle_worker",
+    "econsent_router",
     "econsent_shutdown",
     "econsent_startup",
     "evaluate_comprehension",
+    "export_router",
     "fetch_composed_translation_from_db",
     "get_approved_template_translation",
+    "granular_router",
     "map_document_to_response",
     "poll_and_dispatch",
+    "readability_router",
+    "reconsent_router",
     "start_dispatcher",
     "stop_dispatcher",
     "submit_comprehension_answers",
+    "withdrawal_router",
     "write_audit_log",
 ]

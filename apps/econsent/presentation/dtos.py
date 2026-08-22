@@ -580,3 +580,91 @@ class ConsentAuditLogResponse(BaseModel):
     document_id: str | None
     details: str
     reason_for_change: str
+
+
+# --- Readability & Jargon Harmonization DTOs ---
+class ReadabilityMetricsDTO(BaseModel):
+    word_count: int
+    sentence_count: int
+    syllable_count: int
+    difficult_word_count: int
+    difficult_words: list[str]
+    flesch_reading_ease: float
+    flesch_kincaid_grade_level: float
+    dale_chall_score: float
+    dale_chall_grade_level: str
+    is_target_grade_level: bool
+    interpretation: str
+
+
+class ReadabilityAnalysisRequest(BaseModel):
+    text: str = Field(
+        ..., min_length=1, description="Consent narrative or clause text to analyze"
+    )
+    study_id: str | None = Field(
+        None, description="Optional associated clinical study identifier"
+    )
+
+
+class ReadabilityAnalysisResponse(BaseModel):
+    metrics: ReadabilityMetricsDTO
+
+
+class JargonSubstitutionDTO(BaseModel):
+    original_term: str
+    suggested_term: str
+    rationale: str
+    category: str = "clinical_terminology"
+    confidence_score: float = 0.95
+    start_offset: int | None = None
+    end_offset: int | None = None
+
+
+class ReadabilityHarmonizationRequest(BaseModel):
+    text: str = Field(
+        ..., min_length=1, description="Original consent clause or text to harmonize"
+    )
+    study_id: str | None = Field(
+        None, description="Optional associated clinical study identifier"
+    )
+    target_grade_level: float = Field(
+        8.0, ge=4.0, le=12.0, description="Target reading grade level"
+    )
+    protocol_version: str | None = Field(
+        None, description="Protocol amendment version tag"
+    )
+
+
+class ReadabilityHarmonizationResponse(BaseModel):
+    original_metrics: ReadabilityMetricsDTO
+    harmonized_metrics: ReadabilityMetricsDTO
+    substitutions: list[JargonSubstitutionDTO]
+    harmonized_text: str
+    grade_level_delta: float
+    model_identifier: str
+
+
+class ClauseHarmonizationApplyRequest(BaseModel):
+    harmonized_text: str = Field(
+        ..., min_length=1, description="Harmonized plain-language clause text"
+    )
+    reason_for_change: str = Field(
+        ...,
+        min_length=1,
+        description="21 CFR Part 11 audit reason and protocol amendment reference",
+    )
+    protocol_version: str | None = Field(
+        None, description="Protocol amendment version reference tag"
+    )
+
+
+class ClauseHarmonizationApplyResponse(BaseModel):
+    clause_id: str
+    version_index: int
+    title: str
+    text: str
+    metrics: ReadabilityMetricsDTO
+    protocol_version: str | None
+    created_at: datetime
+    created_by: str
+    reason_for_change: str

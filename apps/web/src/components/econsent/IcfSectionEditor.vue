@@ -79,7 +79,16 @@
       >
         🏷️ Glossary Term
       </button>
+      <button
+        type="button"
+        class="toolbar-btn readability-btn"
+        title="Harmonize Readability & Medical Jargon"
+        @click="showReadabilityDrawer = true"
+      >
+        📖 Readability Harmonizer
+      </button>
     </div>
+
 
     <!-- Main Contenteditable Editor -->
     <div
@@ -150,11 +159,22 @@
         <strong>{{ hoveredGlossaryTerm }}</strong>: {{ hoveredGlossaryDefinition }}
       </div>
     </div>
+
+    <!-- Readability Assistant Split-Screen Drawer -->
+    <ReadabilityDrawer
+      :is-open="showReadabilityDrawer"
+      :text="rawSectionText"
+      :clause-id="section.id"
+      @close="showReadabilityDrawer = false"
+      @apply-substitution="onApplyReadabilitySubstitution"
+      @apply-all="onApplyAllReadability"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import ReadabilityDrawer from "./ReadabilityDrawer.vue";
 
 const props = defineProps({
   section: {
@@ -168,7 +188,39 @@ const emit = defineEmits(["update"]);
 const editorRef = ref(null);
 const localHtml = ref("");
 const showGlossaryModal = ref(false);
+const showReadabilityDrawer = ref(false);
 const selectedText = ref("");
+
+const rawSectionText = computed(() => {
+  const div = document.createElement("div");
+  div.innerHTML = localHtml.value;
+  return div.textContent || div.innerText || "";
+});
+
+const onApplyReadabilitySubstitution = ({ substitution }) => {
+  if (!substitution) return;
+  const regex = new RegExp(`\\b${substitution.original_term.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\b`, "gi");
+  localHtml.value = localHtml.value.replace(regex, substitution.suggested_term);
+  if (editorRef.value) {
+    editorRef.value.innerHTML = localHtml.value;
+  }
+  handleInput();
+};
+
+const onApplyAllReadability = ({ substitutions }) => {
+  if (!substitutions || !substitutions.length) return;
+  let updated = localHtml.value;
+  substitutions.forEach((s) => {
+    const regex = new RegExp(`\\b${s.original_term.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\b`, "gi");
+    updated = updated.replace(regex, s.suggested_term);
+  });
+  localHtml.value = updated;
+  if (editorRef.value) {
+    editorRef.value.innerHTML = localHtml.value;
+  }
+  handleInput();
+};
+
 const glossaryDefinition = ref("");
 let savedSelection = null;
 
