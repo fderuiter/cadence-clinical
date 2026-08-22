@@ -61,6 +61,26 @@ def auth_headers_unauthorized() -> dict[str, str]:
     )
 
 
+@pytest.fixture
+def auth_headers_super_admin() -> dict[str, str]:
+    """Generates authentic gateway authentication headers for a super admin."""
+    return create_test_auth_headers(
+        user_id="super_admin_01",
+        roles=["super_admin"],
+        tenant_id="tenant_trial_01",
+    )
+
+
+@pytest.fixture
+def auth_headers_data_manager() -> dict[str, str]:
+    """Generates authentic gateway authentication headers for a data manager."""
+    return create_test_auth_headers(
+        user_id="dm_user_01",
+        roles=["data_manager"],
+        tenant_id="tenant_trial_01",
+    )
+
+
 @pytest.mark.asyncio
 async def test_health_check():
     """Verify Fileshare service health endpoint.
@@ -716,5 +736,124 @@ async def test_playback_audit_checkpoint_logging(
         guest_data = guest_resp.json()
         assert guest_data["source"] == "guest_link"
         assert guest_data["user_id"].startswith("guest_")
+
+    app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_retention_hold_lifecycle_and_audit_trail(
+    db_session: AsyncSession,
+    mock_storage: InMemoryStoragePort,
+    auth_headers_uploader: dict[str, str],
+    auth_headers_data_manager: dict[str, str],
+    auth_headers_super_admin: dict[str, str],
+):
+    """Validate full retention hold lifecycle, role authorization, deletion gating (409 Conflict), and Part 11 audit logging.
+
+    @req:PRD-SYS-001
+    @req:PRD-DOC-001
+    @req:PRD-DOC-002
+    """
+    app.dependency_overrides[get_db_session] = lambda: db_session
+
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. Upload a new file as CRC uploader
+        upload_resp = await client.post(
+            "/api/v1/fileshare/files/upload-url",
+            json={
+                "study_id": "STUDY-PHASE3-001",
+                "site_id": "SITE-101",
+                "filename": "clinical_protocol_v1.pdf",
+                "mime_type": "application/pdf",
+                "size_bytes": 10240,
+                "reason_for_change": "Initial protocol upload",
+            },
+            headers=auth_headers_uploader,
+        )
+        assert upload_resp.status_code in (200, 201)
+        file_id = upload_resp.json()["file_id"]
+
+        # Verify initial file status is not on hold
+        file_resp = await client.get(
+            f"/api/v1/fileshare/files/{file_id}",
+            headers=auth_headers_uploader,
+        )
+        assert file_resp.status_code == 200
+        file_data = file_resp.json()
+        assert file_data["is_on_hold"] is False
+        assert file_data["hold_reason"] is None
+
+        # 2. Attempt to place file on hold as unauthorized CRC uploader -> 403 Forbidden
+        unauth_hold_resp = await client.post(
+            f"/api/v1/fileshare/files/{file_id}/hold",
+            json={
+                "hold_reason": "Attempted CRC hold",
+                "reason_for_change": "Unauthorized hold attempt",
+            },
+            headers=auth_headers_uploader,
+        )
+        assert unauth_hold_resp.status_code == 403
+
+        # 3. Place file on hold as Data Manager -> 200 OK
+        hold_resp = await client.post(
+            f"/api/v1/fileshare/files/{file_id}/hold",
+            json={
+                "hold_reason": "Pending regulatory FDA audit inspection",
+                "reason_for_change": "Applying retention hold per compliance notice",
+            },
+            headers=auth_headers_data_manager,
+        )
+        assert hold_resp.status_code == 200
+        held_data = hold_resp.json()
+        assert held_data["is_on_hold"] is True
+        assert held_data["hold_reason"] == "Pending regulatory FDA audit inspection"
+
+        # 4. Attempt to delete held file -> 409 Conflict with reason: FILE_ON_HOLD
+        delete_conflict_resp = await client.delete(
+            f"/api/v1/fileshare/files/{file_id}",
+            headers=auth_headers_uploader,
+        )
+        assert delete_conflict_resp.status_code == 409
+        conflict_payload = delete_conflict_resp.json()
+        assert conflict_payload["reason"] == "FILE_ON_HOLD"
+        assert "File is under retention hold" in conflict_payload["detail"]
+
+        # 5. Attempt to clear hold as unauthorized CRC uploader -> 403 Forbidden
+        unauth_clear_resp = await client.delete(
+            f"/api/v1/fileshare/files/{file_id}/hold",
+            headers=auth_headers_uploader,
+        )
+        assert unauth_clear_resp.status_code == 403
+
+        # 6. Clear hold as Super Admin -> 200 OK
+        clear_resp = await client.delete(
+            f"/api/v1/fileshare/files/{file_id}/hold",
+            headers=auth_headers_super_admin,
+        )
+        assert clear_resp.status_code == 200
+        cleared_data = clear_resp.json()
+        assert cleared_data["is_on_hold"] is False
+        assert cleared_data["hold_reason"] is None
+
+        # 7. Now delete file as uploader -> 200 OK
+        delete_success_resp = await client.delete(
+            f"/api/v1/fileshare/files/{file_id}",
+            headers=auth_headers_uploader,
+        )
+        assert delete_success_resp.status_code == 200
+
+        # 8. Retrieve immutable audit trail -> verify all 4 actions logged
+        audit_resp = await client.get(
+            f"/api/v1/fileshare/files/{file_id}/audit-logs",
+            headers=auth_headers_super_admin,
+        )
+        assert audit_resp.status_code == 200
+        logs = audit_resp.json()
+        actions = [log["action"] for log in logs]
+        assert "FILE_UPLOADED" in actions
+        assert "HOLD_SET" in actions
+        assert "HOLD_CLEARED" in actions
+        assert "FILE_DELETED" in actions
 
     app.dependency_overrides.clear()

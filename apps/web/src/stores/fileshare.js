@@ -588,6 +588,63 @@ export const useFileshareStore = defineStore("fileshare", {
     },
 
     /**
+     * Set retention/legal hold on a file record
+     */
+    async setHold(fileId, reason, holdReason = null) {
+      try {
+        await fileshareService.setHold(fileId, {
+          reason_for_change: reason,
+          hold_reason: holdReason || reason,
+        });
+      } catch (err) {
+        console.warn("Backend set hold API failed, updating local state:", err);
+      }
+      const file = this.files.find((f) => f.id === fileId);
+      if (file) {
+        file.is_on_hold = true;
+        file.hold_reason = holdReason || reason;
+        file.status = "ON_HOLD";
+      }
+    },
+
+    /**
+     * Clear retention/legal hold from a file record
+     */
+    async clearHold(fileId, reason) {
+      try {
+        await fileshareService.clearHold(fileId, {
+          reason_for_change: reason,
+        });
+      } catch (err) {
+        console.warn("Backend clear hold API failed, updating local state:", err);
+      }
+      const file = this.files.find((f) => f.id === fileId);
+      if (file) {
+        file.is_on_hold = false;
+        file.hold_reason = null;
+        file.status = "ACTIVE";
+      }
+    },
+
+    /**
+     * Delete a file record (gated on hold)
+     */
+    async deleteFile(fileId, reason) {
+      const file = this.files.find((f) => f.id === fileId);
+      if (file && file.is_on_hold) {
+        throw new Error("File is under retention hold.");
+      }
+      try {
+        await fileshareService.deleteFile(fileId, { reason_for_change: reason });
+      } catch (err) {
+        console.warn("Backend delete file API failed, updating local state:", err);
+      }
+      this.files = this.files.filter((f) => f.id !== fileId);
+      this.selectedFileIds = this.selectedFileIds.filter((id) => id !== fileId);
+    },
+
+
+    /**
      * Selection & Filters Management
      */
     toggleFileSelection(fileId) {

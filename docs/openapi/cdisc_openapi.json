@@ -24604,6 +24604,222 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Delete File Record",
+        "description": "Soft delete a file record.\n\nGated on FileRecord.is_on_hold being False; returns 409 if file is on hold.\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "Fileshare_delete_file_record_api_v1_fileshare_files__file_id__delete",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Fileshare_FileDeleteRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fileshare/api/v1/fileshare/files/{file_id}/hold": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Place File On Hold",
+        "description": "Place a file under retention/legal hold preventing deletion or archival.\n\nRequires super_admin or data_manager role.\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "Fileshare_place_file_on_hold_api_v1_fileshare_files__file_id__hold_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Fileshare_FileHoldRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Remove File From Hold",
+        "description": "Remove retention/legal hold from a file record.\n\nRequires super_admin or data_manager role.\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "Fileshare_remove_file_from_hold_api_v1_fileshare_files__file_id__hold_delete",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Fileshare_FileHoldClearRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fileshare/api/v1/fileshare/files/{file_id}/audit-logs": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get File Audit Logs",
+        "description": "Retrieve immutable Part 11 audit log entries for a file record.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "Fileshare_get_file_audit_logs_api_v1_fileshare_files__file_id__audit_logs_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Fileshare_FileAuditLogResponse"
+                  },
+                  "title": "Response Get File Audit Logs Api V1 Fileshare Files  File Id  Audit Logs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/fileshare/api/v1/fileshare/files": {
@@ -25399,6 +25615,222 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Fileshare_FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Delete File Record",
+        "description": "Soft delete a file record.\n\nGated on FileRecord.is_on_hold being False; returns 409 if file is on hold.\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "Fileshare_delete_file_record_api_v1_files__file_id__delete",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Fileshare_FileDeleteRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fileshare/api/v1/files/{file_id}/hold": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Place File On Hold",
+        "description": "Place a file under retention/legal hold preventing deletion or archival.\n\nRequires super_admin or data_manager role.\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "Fileshare_place_file_on_hold_api_v1_files__file_id__hold_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Fileshare_FileHoldRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Remove File From Hold",
+        "description": "Remove retention/legal hold from a file record.\n\nRequires super_admin or data_manager role.\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "Fileshare_remove_file_from_hold_api_v1_files__file_id__hold_delete",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Fileshare_FileHoldClearRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fileshare/api/v1/files/{file_id}/audit-logs": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get File Audit Logs",
+        "description": "Retrieve immutable Part 11 audit log entries for a file record.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "Fileshare_get_file_audit_logs_api_v1_files__file_id__audit_logs_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Fileshare_FileAuditLogResponse"
+                  },
+                  "title": "Response Get File Audit Logs Api V1 Files  File Id  Audit Logs Get"
                 }
               }
             }
@@ -63913,6 +64345,72 @@
         ],
         "title": "WHODrugMatch"
       },
+      "Fileshare_FileAuditLogResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "file_record_id": {
+            "type": "string",
+            "title": "File Record Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "file_record_id",
+          "action",
+          "user_id",
+          "timestamp",
+          "reason_for_change"
+        ],
+        "title": "FileAuditLogResponse",
+        "description": "Response schema for file Part 11 audit trail entries."
+      },
+      "Fileshare_FileDeleteRequest": {
+        "properties": {
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change",
+            "default": "Deleting file record"
+          }
+        },
+        "type": "object",
+        "title": "FileDeleteRequest",
+        "description": "Request payload to delete a file record."
+      },
       "Fileshare_FileDownloadUrlResponse": {
         "properties": {
           "file_id": {
@@ -63962,6 +64460,50 @@
         ],
         "title": "FileDownloadUrlResponse",
         "description": "Response containing short-lived presigned GET download URL and watermark policy."
+      },
+      "Fileshare_FileHoldClearRequest": {
+        "properties": {
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "FileHoldClearRequest",
+        "description": "Request payload to remove retention hold from a file."
+      },
+      "Fileshare_FileHoldRequest": {
+        "properties": {
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change"
+          },
+          "hold_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hold Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "FileHoldRequest",
+        "description": "Request payload to place a file on retention hold."
       },
       "Fileshare_FileRecordResponse": {
         "properties": {
@@ -64028,6 +64570,59 @@
             "type": "boolean",
             "title": "Is On Hold"
           },
+          "hold_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hold Reason"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Fileshare_FileStatus",
+            "default": "PENDING_SCAN"
+          },
+          "scan_status": {
+            "$ref": "#/components/schemas/Fileshare_ScanStatus",
+            "default": "PENDING"
+          },
+          "scan_engine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Engine"
+          },
+          "scan_completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Completed At"
+          },
+          "scan_threat_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Threat Name"
+          },
           "transcode_status": {
             "$ref": "#/components/schemas/Fileshare_TranscodeStatus",
             "default": "NOT_REQUIRED"
@@ -64088,6 +64683,17 @@
         ],
         "title": "FileRecordResponse",
         "description": "Response schema representing file record metadata."
+      },
+      "Fileshare_FileStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING_SCAN",
+          "READY",
+          "PENDING_TRANSCODE",
+          "QUARANTINED"
+        ],
+        "title": "FileStatus",
+        "description": "Lifecycle availability and readiness status of a file record."
       },
       "Fileshare_FileUploadUrlRequest": {
         "properties": {
@@ -64469,6 +65075,17 @@
         "title": "PlaybackEventType",
         "description": "Types of viewer session video playback audit checkpoint events."
       },
+      "Fileshare_ScanStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "CLEAN",
+          "INFECTED",
+          "SCAN_ERROR"
+        ],
+        "title": "ScanStatus",
+        "description": "Lifecycle status of file malware/virus scanning."
+      },
       "Fileshare_ShareGrantCreateRequest": {
         "properties": {
           "granted_to_user_id": {
@@ -64679,6 +65296,17 @@
       },
       "Fileshare_UploadCompleteRequest": {
         "properties": {
+          "upload_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upload Id"
+          },
           "parts": {
             "anyOf": [
               {
@@ -64712,7 +65340,7 @@
             "maxLength": 1000,
             "minLength": 5,
             "title": "Reason For Change",
-            "default": "Completed file upload"
+            "default": "Completed file upload and virus scan"
           }
         },
         "type": "object",

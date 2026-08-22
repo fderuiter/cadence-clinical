@@ -24,7 +24,7 @@ class InMemoryRepository[T](RepositoryPort[T]):
                 if entity_id:
                     self._store[str(entity_id)] = entity
 
-    async def get_by_id(self, entity_id: str) -> T | None:
+    async def get_by_id(self, entity_id: str, *args: Any, **kwargs: Any) -> T | None:
         """Retrieve entity by string primary identifier."""
         return self._store.get(str(entity_id))
 

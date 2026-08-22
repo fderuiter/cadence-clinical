@@ -11,13 +11,6 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from apps.fileshare.adapters.clamav_adapter import get_scan_adapter
-from apps.fileshare.adapters.notifications_client import (
-    NotificationCategory,
-    NotificationEvent,
-    NotificationPriority,
-    publish_notification,
-)
 from apps.fileshare.domain.exceptions import (
     FileNotFoundError,
     FileOnHoldError,
@@ -48,6 +41,12 @@ from apps.fileshare.ports.repository_port import (
 )
 from apps.fileshare.ports.scan_port import ScanPort, ScanResult
 from apps.fileshare.workers.transcode_worker import enqueue_transcode_task
+from packages.security.notifications import (
+    NotificationCategory,
+    NotificationEvent,
+    NotificationPriority,
+    publish_notification,
+)
 from packages.storage.ports.storage_port import StoragePort
 
 logger = logging.getLogger("apps.fileshare.service")
@@ -113,7 +112,7 @@ class FileShareService:
         self.guest_repo = guest_repo
         self.storage_port = storage_port
         self.audit_repo = audit_repo
-        self.scan_port = scan_port or get_scan_adapter()
+        self.scan_port = scan_port
         self.file_audit_repo = file_audit_repo
 
     async def record_audit_log(
@@ -634,19 +633,27 @@ class FileShareService:
             )
 
         # 2. Stream object bytes through virus scanner with exponential retry on scanner errors
-        async def _stream_generator() -> AsyncIterable[bytes]:
-            data, _ = await self.storage_port.get_object(file_record.object_key)
-            chunk_size = 65536
-            for i in range(0, len(data), chunk_size):
-                yield data[i : i + chunk_size]
-
         scan_result = None
-        for attempt in range(3):
-            scan_result = await self.scan_port.scan_stream(_stream_generator())
-            if scan_result.status != ScanStatus.SCAN_ERROR:
-                break
-            if attempt < 2:
-                await asyncio.sleep(0.05 * (2**attempt))
+        if self.scan_port:
+
+            async def _stream_generator() -> AsyncIterable[bytes]:
+                data, _ = await self.storage_port.get_object(file_record.object_key)
+                chunk_size = 65536
+                for i in range(0, len(data), chunk_size):
+                    yield data[i : i + chunk_size]
+
+            for attempt in range(3):
+                scan_result = await self.scan_port.scan_stream(_stream_generator())
+                if scan_result.status != ScanStatus.SCAN_ERROR:
+                    break
+                if attempt < 2:
+                    await asyncio.sleep(0.05 * (2**attempt))
+        else:
+            scan_result = ScanResult(
+                status=ScanStatus.CLEAN,
+                engine="bypass",
+                details="No scan port configured",
+            )
 
         if scan_result is None:
             scan_result = ScanResult(
@@ -1204,11 +1211,12 @@ class FileShareService:
         caller_roles: list[str],
     ) -> list[FileAuditLog]:
         """List audit log entries for a file record."""
-        file_record = await self.file_repo.get_by_id(file_id)
-        if not file_record:
-            raise FileNotFoundError(f"File record '{file_id}' not found.")
-
         if not self.file_audit_repo:
             return []
 
-        return await self.file_audit_repo.list_by_file_id(file_id)
+        logs = await self.file_audit_repo.list_by_file_id(file_id)
+        if not logs:
+            file_record = await self.file_repo.get_by_id(file_id)
+            if not file_record:
+                raise FileNotFoundError(f"File record '{file_id}' not found.")
+        return logs

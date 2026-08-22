@@ -100,4 +100,43 @@ export const fileshareService = {
     const baseUrl = getBaseUrl();
     return `${baseUrl}/share/${token}`;
   },
+
+  /**
+   * Place a file under retention/legal hold.
+   */
+  async setHold(fileId, payload) {
+    return apiClient.post(`/api/v1/fileshare/files/${fileId}/hold`, payload, {
+      changeReason: payload.reason_for_change || "Placing file on retention hold",
+    });
+  },
+
+  /**
+   * Remove retention/legal hold from a file.
+   */
+  async clearHold(fileId, payload = {}) {
+    const reason = payload.reason_for_change || "Removing retention hold";
+    const query = new URLSearchParams({ reason_for_change: reason });
+    return apiClient.delete(`/api/v1/fileshare/files/${fileId}/hold?${query.toString()}`, {
+      changeReason: reason,
+    });
+  },
+
+  /**
+   * Delete a file record (gated on hold).
+   */
+  async deleteFile(fileId, options = {}) {
+    const reason = options.reason_for_change || "Deleting file record";
+    const query = new URLSearchParams({ reason_for_change: reason });
+    return apiClient.delete(`/api/v1/fileshare/files/${fileId}?${query.toString()}`, {
+      changeReason: reason,
+    });
+  },
+
+  /**
+   * List audit log entries for a file record.
+   */
+  async listAuditLogs(fileId) {
+    return apiClient.get(`/api/v1/fileshare/files/${fileId}/audit-logs`);
+  },
 };
+

@@ -275,6 +275,14 @@
               <!-- Status -->
               <td>
                 <span
+                  v-if="file.is_on_hold"
+                  class="status-pill status-hold"
+                  :title="file.hold_reason || 'File is under retention hold.'"
+                >
+                  🔒 {{ file.status === 'ON_HOLD' ? 'ON HOLD' : (file.status || 'ON HOLD') }}
+                </span>
+                <span
+                  v-else
                   class="status-pill"
                   :class="getStatusClass(file.status)"
                 >
@@ -321,6 +329,15 @@
                     @click="openShareDrawerForFile(file)"
                   >
                     🔗 Share
+                  </button>
+                  <button
+                    class="btn btn-sm btn-outline-danger btn-delete-action"
+                    :disabled="file.is_on_hold"
+                    :title="file.is_on_hold ? 'File is under retention hold.' : 'Delete document'"
+                    :aria-label="'Delete ' + file.filename"
+                    @click="handleDeleteFile(file)"
+                  >
+                    🗑️ Delete
                   </button>
                 </div>
               </td>
@@ -620,6 +637,14 @@ function getStatusClass(status) {
   if (s.includes("review") || s.includes("pending")) return "status-review";
   if (s.includes("hold") || s.includes("archive")) return "status-hold";
   return "status-draft";
+}
+
+async function handleDeleteFile(file) {
+  if (file.is_on_hold) return;
+  const confirmed = window.confirm(`Are you sure you want to delete ${file.filename}?`);
+  if (confirmed) {
+    await fileshareStore.deleteFile(file.id, "User deleted document from Documents Hub");
+  }
 }
 </script>
 
@@ -943,7 +968,7 @@ function getStatusClass(status) {
 
 .actions-th {
   text-align: right;
-  width: 170px;
+  width: 250px;
 }
 
 .actions-cell {
@@ -954,6 +979,23 @@ function getStatusClass(status) {
   display: flex;
   justify-content: flex-end;
   gap: 6px;
+}
+
+.btn-outline-danger {
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  background-color: transparent;
+}
+
+.btn-outline-danger:hover:not(:disabled) {
+  background-color: #fee2e2;
+}
+
+.btn-outline-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: #cbd5e1;
+  color: #94a3b8;
 }
 
 /* Empty State */

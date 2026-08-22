@@ -19,6 +19,13 @@ class FileRecordRepositoryPort(RepositoryPort[FileRecord], ABC):
     """Port for persisting and querying FileRecord domain entities."""
 
     @abstractmethod
+    async def get_by_id(
+        self, entity_id: str, include_deleted: bool = False
+    ) -> FileRecord | None:
+        """Retrieve file record by its primary key identifier."""
+        pass
+
+    @abstractmethod
     async def get_by_object_key(self, object_key: str) -> FileRecord | None:
         """Retrieve file record by its unique object store key."""
         pass

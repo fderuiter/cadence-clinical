@@ -35,11 +35,12 @@ class SqlAlchemyFileRecordRepository(FileRecordRepositoryPort):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def get_by_id(self, entity_id: str) -> FileRecord | None:
-        stmt = select(FileRecordModel).where(
-            FileRecordModel.id == entity_id,
-            FileRecordModel.is_deleted.is_(False),
-        )
+    async def get_by_id(
+        self, entity_id: str, include_deleted: bool = False
+    ) -> FileRecord | None:
+        stmt = select(FileRecordModel).where(FileRecordModel.id == entity_id)
+        if not include_deleted:
+            stmt = stmt.where(FileRecordModel.is_deleted.is_(False))
         res = await self.session.execute(stmt)
         model = res.scalar_one_or_none()
         return model.to_domain() if model else None

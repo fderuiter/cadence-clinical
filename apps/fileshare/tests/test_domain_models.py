@@ -10,6 +10,7 @@ import pytest
 from pydantic import ValidationError
 
 from apps.fileshare.domain.models import (
+    FileAuditLog,
     FileRecord,
     GuestLink,
     PermissionLevel,
@@ -280,3 +281,52 @@ def test_playback_audit_event_and_enums():
     assert audit.source == PlaybackEventSource.INTERNAL
     assert audit.session_id == "sess_12345"
     assert audit.user_id == "crc_user_01"
+
+
+def test_file_record_hold_fields():
+    """Verify FileRecord hold properties and default hold_reason is None.
+
+    @req:PRD-SYS-001
+    @req:PRD-DOC-001
+    """
+    file_id = str(uuid.uuid4())
+    record = FileRecord(
+        id=file_id,
+        study_id="STUDY-101",
+        filename="protocol.pdf",
+        mime_type="application/pdf",
+        size_bytes=2048,
+        object_key="tenant_1/STUDY-101/doc/protocol.pdf",
+        uploaded_by="data_mgr_01",
+        created_by="data_mgr_01",
+        is_on_hold=True,
+        hold_reason="Pending regulatory review audit",
+        reason_for_change="Retention hold applied",
+    )
+    assert record.is_on_hold is True
+    assert record.hold_reason == "Pending regulatory review audit"
+
+
+def test_file_audit_log_model():
+    """Verify FileAuditLog entity creation and attributes.
+
+    @req:PRD-SYS-001
+    @req:PRD-DOC-001
+    """
+    log_id = str(uuid.uuid4())
+    file_id = str(uuid.uuid4())
+    audit_log = FileAuditLog(
+        id=log_id,
+        file_record_id=file_id,
+        action="HOLD_SET",
+        user_id="super_admin_01",
+        reason_for_change="Court order retention hold",
+        detail={"hold_reason": "Subpoena 2026-A"},
+    )
+    assert audit_log.id == log_id
+    assert audit_log.file_record_id == file_id
+    assert audit_log.action == "HOLD_SET"
+    assert audit_log.user_id == "super_admin_01"
+    assert audit_log.reason_for_change == "Court order retention hold"
+    assert audit_log.detail == {"hold_reason": "Subpoena 2026-A"}
+    assert isinstance(audit_log.timestamp, datetime)

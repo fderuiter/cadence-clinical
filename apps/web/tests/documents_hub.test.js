@@ -164,6 +164,67 @@ describe("feat(fileshare): 10 — Documents Hub UI (#4317)", () => {
       expect(mediaModal.props("fileRecord")).toBeDefined();
       expect(mediaModal.props("fileRecord").filename).toBeDefined();
     });
+
+    it("displays 🔒 badge and disables delete button when file is on retention hold", async () => {
+      const store = useFileshareStore();
+      store.files = [
+        {
+          id: "doc-held-001",
+          study_id: "STUDY-USDM-001",
+          site_id: "SITE-101",
+          filename: "Investigator_Brochure_v5.0.pdf",
+          mime_type: "application/pdf",
+          size_bytes: 204800,
+          uploaded_by: "Dr. Sarah Chen",
+          uploaded_at: "2026-08-10T14:30:00Z",
+          is_on_hold: true,
+          hold_reason: "Legal subpoena investigation",
+          status: "ON_HOLD",
+          grant_count: 0,
+        },
+        {
+          id: "doc-unheld-002",
+          study_id: "STUDY-USDM-001",
+          site_id: "SITE-101",
+          filename: "Lab_Results_002.pdf",
+          mime_type: "application/pdf",
+          size_bytes: 102400,
+          uploaded_by: "Lab Tech",
+          uploaded_at: "2026-08-12T10:00:00Z",
+          is_on_hold: false,
+          hold_reason: null,
+          status: "ACTIVE",
+          grant_count: 1,
+        },
+      ];
+
+      const wrapper = mount(DocumentsHubView, {
+        global: {
+          plugins: [router],
+        },
+      });
+
+      const rows = wrapper.findAll(".document-row");
+      expect(rows.length).toBe(2);
+
+      // Held file row
+      const heldRow = rows[0];
+      const heldBadge = heldRow.find(".status-pill.status-hold");
+      expect(heldBadge.exists()).toBe(true);
+      expect(heldBadge.text()).toContain("🔒");
+      expect(heldBadge.attributes("title")).toBe("Legal subpoena investigation");
+
+      const heldDeleteBtn = heldRow.find(".btn-delete-action");
+      expect(heldDeleteBtn.attributes("disabled")).toBeDefined();
+      expect(heldDeleteBtn.attributes("title")).toBe("File is under retention hold.");
+
+      // Unheld file row
+      const unheldRow = rows[1];
+      const unheldDeleteBtn = unheldRow.find(".btn-delete-action");
+      expect(unheldDeleteBtn.attributes("disabled")).toBeUndefined();
+      expect(unheldDeleteBtn.attributes("title")).toBe("Delete document");
+    });
+
   });
 
   describe("ShareDrawer.vue Component", () => {
