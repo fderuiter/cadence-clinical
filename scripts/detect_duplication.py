@@ -603,6 +603,10 @@ def main() -> None:
                                     "apps/safety/application/validator.py",
                                     "apps/safety/services/validator.py",
                                 },
+                                {
+                                    "apps/web/src/components/fileshare/MediaPreviewModal.vue",
+                                    "apps/web/src/components/etmf/PdfPreviewModal.vue",
+                                },
                             ]
                         ):
                             continue
