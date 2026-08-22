@@ -177,6 +177,10 @@ Completeness audits and expected document list seeding must dynamically query ma
 
 The system must support server-side automated and manual redaction of personally identifiable information (PII) and protected health information (PHI) within clinical documents. It must apply de-identification profiles (e.g. HIPAA, GDPR, EU_CTR) and custom terms to redact and shift dates/ages deterministically without changing the original source document. A signed, tamper-evident manifest must be generated for each redaction operation, and signature validation must fail upon any manifest modification. Raw matched values must never be returned or stored in manifest summaries, and unauthorized/read-only roles (such as inspectors and auditors) must be blocked from performing redaction or accessing unredacted original files. (Traced to SRS Trace-12; cross-referenced with ADR-065/ADR-098).
 
+#### PRD-TMF-006: Multimodal eTMF/eISF Document Intelligence and DIA Reference Model Classifier
+
+The system must provide an automated, multi-signal document intelligence pipeline combining optical character recognition (OCR) and layout parsing, regulatory metadata extraction (protocol number, site ID, investigator name, effective/expiration dates), signature completeness and digital manifestation verification, and DIA TMF Reference Model v3.2.0 taxonomy classification. High-confidence artifacts (>= 0.85) must generate recommended auto-classifications, while medium-to-low confidence or discrepancy-bearing documents must be staged into a `DRAFT_AI` or `TECHNICAL_QC` Quality Control queue for human Clinical Research Associate (CRA) review and electronic signature verification under 21 CFR Part 11 dual-attribution standards. In addition, site-level regulatory documents uploaded to eISF must automatically cross-map to corresponding Sponsor eTMF DIA taxonomy zones and artifacts.
+
 #### PRD-DOC-001: Object Storage Adapter & Metadata Envelope Pattern
 
 The system must decouple binary file payload storage from relational transaction state using a generic `StoragePort[T]` abstraction supporting MinIO and S3-compatible backends. All binary blobs (eTMF artifacts, eISF binders, site files, and multimedia attachments) must be stored under tenant-isolated paths (`/{tenant_id}/{study_id}/{doc_id}`). Document regulatory metadata, taxonomy classifications, version indices, and access control policies must reside in PostgreSQL. Pre-signed upload and download URLs must be generated only after validating caller authentication and permissions.
@@ -196,6 +200,10 @@ The platform web client and automated testing harness must support deterministic
 #### PRD-SYS-051: AI Gateway Microservice and Three-Tier Clinical Intelligence Architecture
 
 The platform must encapsulate all artificial intelligence model routing, rate-limiting, cost accounting, and prompt execution behind a dedicated internal microservice (`apps/ai_gateway`) protected by HMAC authentication. Outbound prompts must undergo in-flight de-identification of Protected Health Information (PHI) via `packages/deid`, and generated records must enter a `DRAFT_AI` state with dual-attribution metadata requiring human verification and 21 CFR Part 11 electronic signatures.
+
+#### PRD-SYS-052: Generative Pharmacovigilance Safety Narratives with 21 CFR Part 11 Electronic Signature
+
+The safety microservice (`apps/safety`) must deploy an automated regulatory narrative drafting pipeline that compiles chronological de-identified clinical event streams from `apps/execution` (Demographics, Medical History, Study Drug Administration, Concomitant Medications, Adverse Events, Diagnostic Laboratory Results, Hospitalizations, and Dechallenge/Rechallenge) into FDA MedWatch 3500A and CIOMS-I compliant Serious Adverse Event (SAE) narrative summaries. Narratives must be generated using Frontier Reasoning models (`ModelTier.TIER_3_FRONTIER`) adhering strictly to ICH E2B(R3) section structure, contain grounded claim cross-references linking narrative sentences directly to underlying eCRF clinical records, and enforce mandatory 21 CFR Part 11 cryptographic electronic signature gating by a qualified Safety Physician or Medical Monitor before entering `APPROVED` status or exporting to ICH E2B(R3) ICSR XML format.
 
 ---
 
@@ -778,6 +786,19 @@ Source Document Verification is the process by which a clinical research associa
   2. **Field-Based Sampling:** e.g., 100% SDV on primary safety endpoints (Adverse Events, Serious Adverse Events, Key Laboratory variables), and 0% on exploratory questionnaires.
 - The selection of randomized subjects for tSDV must use a deterministic PRNG seeded with the trial's unique random seed combined with the `subject_uuid`, ensuring that the sampling status of a subject is stable and cannot be altered or gamed by site coordinators.
 
+#### PRD-QRY-008: Asynchronous Cross-Domain eCRF Anomaly Detection and Candidate Query Staging
+
+- The execution platform must operate an asynchronous background evaluation engine and worker (`CrossDomainAnomalyWorker`) that evaluates submitted eCRF data across correlated clinical domains (Adverse Events `AE`, Concomitant Medications `CM`, Laboratory Diagnostics `LB`, Vital Signs `VS`, Disposition `DS`, and Exposure `EX`).
+- **Core Cross-Domain Detection Rules:**
+  1. **Adverse Events <-> Concomitant Medications (`AE-CM`):** Detect moderate or severe Adverse Events lacking associated concomitant medications for treatment or mitigation; identify concomitant medications indicating adverse reactions without corresponding AE or Medical History records; detect inverted or inconsistent temporal spans.
+  2. **Adverse Events <-> Laboratory Diagnostics (`AE-LB`):** Flag critical laboratory out-of-range observations or marked transaminitis/creatinine spikes without documented Adverse Events; detect clinical AEs with missing or non-confirmatory diagnostic laboratory test sequences.
+  3. **Adverse Events <-> Vital Signs (`AE-VS`):** Identify critical vital sign extremes (hypertensive crisis SBP > 180 mmHg or DBP > 120 mmHg, tachycardia HR > 130 bpm, bradycardia HR < 40 bpm) without matching documented AEs.
+  4. **Disposition / Exposure <-> Adverse Events (`DS/EX-AE`):** Detect study drug discontinuation, dose interruption, or dose reduction attributed to an "Adverse Event" where no matching AE record exists in the trial database.
+  5. **AI Gateway Semantic Discrepancy Reasoner:** When `AI_GATEWAY_URL` is available, invoke `apps/ai_gateway` Tier 2 model with structured Pydantic schema (`AnomalyDetectionResult`) and 21 CFR Part 11 dual-attribution audit parameters (`AIAssistedRecordMixin`). If AI Gateway is unconfigured or unreachable, deterministic rules execute without disruption.
+- **Candidate Query Lifecycle & Staging:**
+  - Inconsistencies detected by the anomaly engine must be staged as `ClinicalQuery` records with `status = "CANDIDATE"`, `query_type = "CROSS_DOMAIN_ANOMALY"`, and `origin = "ANOMALY_DETECTOR"` (or `"AI_ASSISTED"`).
+  - Staged candidate queries must not enter active site investigator queues until adjudicated by a human Data Manager (`action = "APPROVE"` -> `OPEN`, or `action = "REJECT"` -> `CANCELLED` with mandatory 21 CFR Part 11 justification).
+
 ### 7.4 Clinical Trial Management System (CTMS) and Operational Workspace
 
 To coordinate and track site monitoring, CRA allocations, recruitment progression, and site operational milestones.
@@ -914,6 +935,13 @@ To coordinate cross-functional clinical trial issues, protocol deviations, site 
 
 - Ticket sign-offs on Critical/Major resolutions must support 21 CFR Part 11 compliant electronic signatures with user identity binding, re-authentication password/token verification, and immutable audit trail manifestation.
 - The platform must manage audited blob evidence attachments with SHA-256 integrity verification, DEID scrubbing flags, and dual-visibility comment streams (`PUBLIC` vs `INTERNAL_SPONSOR`).
+
+#### PRD-TCK-005: Grounded Protocol Knowledge Hub & Support Ticket RAG Triage
+
+- The system must ingest study protocols and SOPs into a dense vector index in `apps/knowledge` preserving exact structural coordinates (`protocol_version`, `section_number`, `section_title`, and `page_number`).
+- RAG triage queries executed via `apps/ai_gateway` must employ Tier 2 prompt templates enforcing verbatim citation markers in the canonical format `[Protocol {version}, Section {section}, Page {page}]` (e.g., `[Protocol v2.1, Section 7.3, Page 42]`).
+- The system must compute a mathematical faithfulness score for all generated answers; if the confidence score is below 85% ($< 0.85$) or references unapproved protocol versions, the system must fail closed, suppress auto-draft generation, and immediately route the ticket to the human Data Manager queue with a 21 CFR Part 11 audit log entry.
+- The platform web client must render interactive citation badges opening a document viewer drawer positioned at the exact referenced protocol page.
 
 ---
 
