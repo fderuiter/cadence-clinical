@@ -7,11 +7,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3122
-- **Passed:** 3098 🟢
-- **Failed/Errors:** 0 🔴
+- **Total Automated Test Cases Run:** 3132
+- **Passed:** 3107 🟢
+- **Failed/Errors:** 1 🔴
 - **Skipped:** 24 ⚪
-- **Overall Operational Pass Rate:** 99.23%
+- **Overall Operational Pass Rate:** 99.20%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -1856,6 +1856,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_public_entry_point_whodrug` | `apps.execution.tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_strict_referential_validation_triggers` | `apps.execution.tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_whodrug_parser_init_validation` | `apps.execution.tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_approve_document_invalid_credential_rejected` | `apps.fileshare.tests.test_document_approval_endpoints` | PRD-DOC-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_approve_document_success` | `apps.fileshare.tests.test_document_approval_endpoints` | PRD-DOC-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_approved_document_is_immutable_and_blocks_revision` | `apps.fileshare.tests.test_document_approval_endpoints` | PRD-DOC-001, PRD-DOC-002, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_reject_document_workflow` | `apps.fileshare.tests.test_document_approval_endpoints` | PRD-DOC-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_rescind_approval_and_reopen_for_revisions` | `apps.fileshare.tests.test_document_approval_endpoints` | PRD-DOC-001, PRD-DOC-002, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_file_audit_log_model` | `apps.fileshare.tests.test_domain_models` | PRD-DOC-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_file_record_creation_and_defaults` | `apps.fileshare.tests.test_domain_models` | PRD-DOC-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_file_record_hold_fields` | `apps.fileshare.tests.test_domain_models` | PRD-DOC-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -2179,6 +2184,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_resolve_contextual_help_wildcards_and_persona_fallback` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
 | `test_route_normalization` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
 | `test_route_pattern_matching` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
+| `test_e2e_auditor_read_logging_and_cryptographic_chain_verification` | `apps.knowledge.tests.test_e2e_verification_suite` | PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002 | 🟢 PASSED | < 1s |
+| `test_e2e_contextual_help_dynamic_resolution_and_fallback` | `apps.knowledge.tests.test_e2e_verification_suite` | PRD-KNB-001, PRD-KNB-002, PRD-SYS-KH-001, PRD-SYS-KH-002 | 🟢 PASSED | < 1s |
+| `test_e2e_golden_path_article_lifecycle_and_four_eyes` | `apps.knowledge.tests.test_e2e_verification_suite` | PRD-KNB-001, PRD-KNB-002, PRD-SYS-050, PRD-SYS-KH-001, PRD-SYS-KH-002 | 🟢 PASSED | < 1s |
+| `test_e2e_grounded_protocol_ingestion_and_vector_search` | `apps.knowledge.tests.test_e2e_verification_suite` | PRD-SYS-KH-001, PRD-SYS-KH-002, PRD-TCK-005 | 🟢 PASSED | < 1s |
+| `test_e2e_persona_scoped_category_visibility_and_fulltext_search` | `apps.knowledge.tests.test_e2e_verification_suite` | PRD-KNB-001, PRD-KNB-002, PRD-SYS-KH-001, PRD-SYS-KH-002 | 🟢 PASSED | < 1s |
 | `test_domain_calculate_lexical_score_ranking` | `apps.knowledge.tests.test_search` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
 | `test_domain_extract_query_terms` | `apps.knowledge.tests.test_search` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
 | `test_domain_generate_highlighted_snippet` | `apps.knowledge.tests.test_search` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
@@ -3341,7 +3351,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_should_provision_postgres_controller_boundary` | `tests.test_harness_isolation` | PRD-SYS-004 | 🟢 PASSED | < 1s |
 | `test_should_provision_postgres_worker` | `tests.test_harness_isolation` | PRD-SYS-004 | 🟢 PASSED | < 1s |
 | `test_simulated_concurrent_runs_have_disjoint_databases` | `tests.test_harness_isolation` | PRD-SYS-004 | 🟢 PASSED | < 1s |
-| `test_cli_setup_credentials_json` | `tests.test_setup_credentials` | PRD-SYS-WIZARD-001 | 🟢 PASSED | < 1s |
+| `test_cli_setup_credentials_json` | `tests.test_setup_credentials` | PRD-SYS-WIZARD-001 | 🔴 FAILED | < 1s |
 | `test_cli_setup_help` | `tests.test_setup_credentials` | PRD-SYS-WIZARD-001 | 🟢 PASSED | < 1s |
 | `test_setup_wizard_bash_syntax` | `tests.test_setup_credentials` | PRD-SYS-WIZARD-001 | 🟢 PASSED | < 1s |
 | `test_setup_wizard_dev_execution` | `tests.test_setup_credentials` | PRD-SYS-WIZARD-001 | 🟢 PASSED | < 1s |
@@ -3400,28 +3410,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 7baa1ba040e89fe62c80796b4357aae8a67b3cf972a4b20aa53f102cf5754553
+- **Cryptographic Hash (SHA-256):** f2d758c48cef2f56ead708fdc4de24e0c5ac8ce03f5d681ebad86140bbfee309
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUF2gcOe1rybgwp7D96VPklsL1OZowDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUAv6JSTyoK1vW6QHHu/l0+IXpCg0wDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MTE5NDA0MVoXDTI3MDgyMjE5NDA0MVowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MTE5NTA1NFoXDTI3MDgyMjE5NTA1NFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApTON
-ToTsYLLxWA5D5BTSyuEd+V2unK/JaxnGcxf6Y/5YbQpM74f4g31rSkqIOS9moW6U
-tGPZaWlDOUAFOUMTV7KYp//pdLt8z5HBSuZn22l7zpOn3/IJESFYhzLoN3P7jj0E
-H8zhmfaKzW5JdyBVwYgz82usNeDbaubS6MXp2uKjktXk/yo+YosAanCLzff1U781
-qDi35m1VoD13b+tuY6xxu0XWNTBgHufjB66SkluPipAa1FvQpTByekLTA6vwnHyw
-2a5uIYw7oQ3+11qVjB0HI641TvigKeOkkwz/7flux13gfAstnfp2jxAe0MnuNaho
-2kKjR2gTecLmgeetQwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAP2Kts+wmrjiiM
-L9QxS+Ggrfz5UHDfdGgvvwL2dwxqIRvFSsOYY8pc2ZtjSrJrkhaVBUqdUUW42s37
-GzUwgIXhfSwDAHrpyh8cfDDKr32pMid4VhqMfusKDboKRXz4qVsG11ejpvQG7Cz0
-9X1CdxNSJnURFkYGm3+uvoFfeoPqvCfUJLeoUSK3zj+VYrg7o0VvTdanMOXuLA1R
-Xo0lCcdr9gA/OMzXyg9p18md6KqhajkLqPANabgTKYP9St+Kab62uBLgxn8E7jme
-gvegOptqz4I1d+rEHVBuGqE939LsqpH/wMHrtuGPtwgHbDhgd1PFqbaqI1U+U+oS
-nZ8+pQSX
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArEj8
+GN5VjBM3cH8TfiVATke1FZIKfvmkbIKqQTuKAiZZ2cC1EquKXGuihN3kWC0rKiR8
+HwUSBVuPlH8Io6aUsOAJezcM9bzBOQ34wonMfuYTb0FV0+QaVOE0HdDm6oZmIPM2
+5GcTEy5HJgM5lI9+SilyMOYOTpThBniTwdNMUY/6EM4THMVYcarZUj4OecDtw/XO
+3+iF4ySVJ5widNop837/2mp1ijtMh1bjaW6EM15wmPlSFAS+jRNtlqK72IWKmGR8
+BdZztpa52nuqSOv5zAGaYuMhCcYN7RzW2X71wEvml1XBpy4xM7TUPIBn3BbLfos0
+wYef4H01xWjQI0ZJrwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAHABRUOJsi2/TJ
+pqHeNJrxsghbMHQZLik6CyEU3LdUYAIwamLNmrbzBaMvIuhh86E7nfHpbbBOhA9b
+zSbIIWHSQyyXIT7WKSliWvOpiGix8PlDYj25CbY14taEh9u+0p2+mwgbQB0u3brl
+R8aUkqDYbgwyg3KygwOxyFR56cdnvNFJm2+QyVEkGnfA7RJRtgHRlmIE9GpKqcKF
+/T6xspPlCoH0EZlZFW/kzDXPWIKCLcAGRJ4j5EXuX6QeHt/Z/w6NrtJBGL97/cEE
+etiS/tXeINcASFeQ0chFhBPX91Zy9xob2rcXNVNNCC0JHaIoEZ/5tUwmqKJn4AZZ
+vOzVIvMd
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-nNMAu2OQBk2dl4Ew+bWrx9bnELuhHu5uNXMxyIJC6p5muFpRPpoYH9Jk8lKJe0X0xeUGu07jZTfhVkm9jxhKfo29389HM+V3ojTFJnugQp3QwwoeFBaE4PNTw2qcl0q9GN4vnWb8cPBYrqjmW04oqVYuivkQxdFyA98saOvOmtNca+OPpcOlTyPOCGdKnx3lfA/rz1HkgHMJ9+Cny3ojKV71dlsPaGBF+FOz7FEAD8VQbPNOfp+1BQWEeuVusp2EfrJoJbeGPd4xqUgravhhyeFPOjiBx8eZ7rq+n+WAQiV9dkOngcJra48tShZdeZuUB+zXteduQFj+PqBUd5aSmw==
+N3CdhHimlztQqSfoK6rWKL0KRgroXZmem/oYy4h/gip3BEt24bor1vQW716a7y9KjOFcRYzpYOnM39GSKJ0sVdMIZaJ62DaxuYpVoccC0uESgxRzRZL6dpGouSApCCl+De8Tg+HcXifQZ1xu6e4B5lpqJYlK6BU6mGChwbjvRef1WtZ7KhEBhuslnhtfWeNVYqd1/pnpIxXHGhyF0zrzMUmsMDG5alnEUxMoqDkpYvK1hIvIDPaTneuBxSS06PXQr6Bne39xd18QaCpm8WcFFHj2n7/+V02w6Cvg3qlqSZHQuoZXWUkmL3z2Jej5+ISUoUzYIGYQEza5YKf4kbr5fQ==
 -----END SIGNATURE-----

@@ -28,6 +28,27 @@
           </p>
         </div>
         <div class="header-actions">
+          <div
+            v-if="isApproved"
+            class="approval-badge approved-pill"
+            data-testid="approved-badge"
+          >
+            <span class="badge-icon">✅</span>
+            <span class="badge-label">Approved</span>
+            <span
+              v-if="fileRecord?.approved_by"
+              class="badge-signer font-mono"
+            >by {{ fileRecord.approved_by }}</span>
+          </div>
+          <button
+            v-if="canApprove && !isApproved"
+            class="btn btn-sm btn-success btn-approve"
+            data-testid="approve-doc-btn"
+            title="Approve this document with 21 CFR Part 11 Electronic Signature"
+            @click="openReAuthModal"
+          >
+            ✍️ Approve this document
+          </button>
           <button
             v-if="canDownload"
             class="btn btn-sm btn-outline-primary btn-download"
@@ -133,6 +154,38 @@
               <p class="signer-meta">
                 Download:
                 <strong>{{ canDownload ? "Permitted" : "Restricted (View-Only)" }}</strong>
+              </p>
+            </div>
+          </div>
+
+          <!-- 21 CFR Part 11 Electronic Signature Approval Manifestation -->
+          <div
+            v-if="isApproved"
+            class="meta-section border-top"
+            data-testid="approval-details-section"
+          >
+            <h4>Document Approval</h4>
+            <div class="manifest-card approved">
+              <p class="sign-status text-success font-bold">
+                ✅ Approved
+              </p>
+              <p
+                v-if="fileRecord?.approved_by"
+                class="signer-meta"
+              >
+                Signer: <strong class="font-mono">{{ fileRecord.approved_by }}</strong>
+              </p>
+              <p
+                v-if="fileRecord?.approved_at"
+                class="signer-meta"
+              >
+                Approved At: <span>{{ formatDate(fileRecord.approved_at) }}</span>
+              </p>
+              <p
+                v-if="fileRecord?.approval_reason"
+                class="signer-meta"
+              >
+                Meaning: <em>{{ fileRecord.approval_reason }}</em>
               </p>
             </div>
           </div>
@@ -367,6 +420,18 @@
         </main>
       </div>
     </div>
+
+    <!-- 21 CFR Part 11 Electronic Signature Re-Authentication Modal -->
+    <ReAuthModal
+      :is-open="isReAuthOpen"
+      :filename="fileRecord?.filename"
+      :username="currentUserId"
+      :busy="isApproving"
+      :error-message="approvalError"
+      @cancel="isReAuthOpen = false"
+      @close="isReAuthOpen = false"
+      @confirm="handleApproveConfirm"
+    />
   </div>
 </template>
 
@@ -377,6 +442,7 @@ import { fileshareService } from "../../api/fileshare";
 import { useAuthStore } from "../../stores/auth";
 import { useFocusTrap } from "@/composables/useFocusTrap";
 import { useEscapeClose } from "@/composables/useEscapeClose";
+import ReAuthModal from "../shared/ReAuthModal.vue";
 
 const props = defineProps({
   fileRecord: {
@@ -385,7 +451,7 @@ const props = defineProps({
   },
   permissions: {
     type: Object,
-    default: () => ({ canDownload: true, canComment: true }),
+    default: () => ({ canDownload: true, canComment: true, canApprove: false }),
   },
   isGuestView: {
     type: Boolean,
@@ -397,7 +463,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["close", "download"]);
+const emit = defineEmits(["close", "download", "approved"]);
 
 const modalRef = ref(null);
 const videoPlayerRef = ref(null);
@@ -435,6 +501,50 @@ const currentUserId = computed(() => {
 const activeUserRoles = computed(() => {
   return authStore.normalizedRoles || ["user"];
 });
+
+const isApproved = computed(() => {
+  const status = (props.fileRecord?.approval_status || "").toUpperCase();
+  return status === "APPROVED";
+});
+
+const canApprove = computed(() => {
+  return Boolean(props.permissions?.canApprove);
+});
+
+const isReAuthOpen = ref(false);
+const isApproving = ref(false);
+const approvalError = ref("");
+
+function openReAuthModal() {
+  approvalError.value = "";
+  isReAuthOpen.value = true;
+}
+
+async function handleApproveConfirm({ credential, signing_reason }) {
+  isApproving.value = true;
+  approvalError.value = "";
+  try {
+    const updated = await fileshareService.approveFile(props.fileRecord.id, {
+      credential,
+      signing_reason,
+    });
+    if (props.fileRecord) {
+      props.fileRecord.approval_status = "APPROVED";
+      props.fileRecord.approved_by = updated?.approved_by || currentUserId.value;
+      props.fileRecord.approved_at = updated?.approved_at || new Date().toISOString();
+      props.fileRecord.approval_reason = updated?.approval_reason || signing_reason;
+      props.fileRecord.signature_manifestation = updated?.signature_manifestation;
+    }
+    isReAuthOpen.value = false;
+    emit("approved", updated || props.fileRecord);
+  } catch (err) {
+    console.error("Document approval failed:", err);
+    approvalError.value =
+      err.response?.data?.detail || err.message || "Failed to approve document.";
+  } finally {
+    isApproving.value = false;
+  }
+}
 
 const canDownload = computed(() => {
   if (props.permissions && props.permissions.canDownload !== undefined) {
@@ -940,6 +1050,12 @@ function getStatusClass(status) {
   color: #166534;
 }
 
+.manifest-card.approved {
+  background-color: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+
 .sign-status {
   font-weight: 700;
   margin: 0 0 6px 0;
@@ -947,6 +1063,56 @@ function getStatusClass(status) {
 
 .signer-meta {
   margin: 0 0 4px 0;
+}
+
+.approval-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.approved-pill {
+  background-color: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.badge-signer {
+  font-size: 0.75rem;
+  color: #14532d;
+}
+
+.btn-approve {
+  background-color: #16a34a;
+  color: #ffffff;
+  border: 1px solid #16a34a;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-approve:hover:not(:disabled) {
+  background-color: #15803d;
+  border-color: #15803d;
+}
+
+.btn-approve:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.text-success {
+  color: #16a34a;
 }
 
 /* Viewer Workspace */

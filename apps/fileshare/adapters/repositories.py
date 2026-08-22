@@ -108,6 +108,13 @@ class SqlAlchemyFileRecordRepository(FileRecordRepositoryPort):
                 transcode_status=entity.transcode_status.value,
                 hls_manifest_key=entity.hls_manifest_key,
                 transcode_error=entity.transcode_error,
+                approval_status=entity.approval_status.value
+                if hasattr(entity.approval_status, "value")
+                else str(entity.approval_status),
+                signature_manifestation=entity.signature_manifestation,
+                approved_by=entity.approved_by,
+                approved_at=entity.approved_at,
+                approval_reason=entity.approval_reason,
                 created_at=entity.created_at,
                 created_by=entity.created_by,
                 reason_for_change=entity.reason_for_change,
@@ -131,6 +138,15 @@ class SqlAlchemyFileRecordRepository(FileRecordRepositoryPort):
             existing.transcode_status = entity.transcode_status.value
             existing.hls_manifest_key = entity.hls_manifest_key
             existing.transcode_error = entity.transcode_error
+            existing.approval_status = (
+                entity.approval_status.value
+                if hasattr(entity.approval_status, "value")
+                else str(entity.approval_status)
+            )
+            existing.signature_manifestation = entity.signature_manifestation
+            existing.approved_by = entity.approved_by
+            existing.approved_at = entity.approved_at
+            existing.approval_reason = entity.approval_reason
             existing.reason_for_change = entity.reason_for_change
 
         await self.session.flush()

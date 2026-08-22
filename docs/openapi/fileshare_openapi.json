@@ -562,6 +562,218 @@
         }
       }
     },
+    "/api/v1/fileshare/files/{file_id}/approve": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Approve Document Endpoint",
+        "description": "Execute 21 CFR Part 11 electronic signature document approval with in-product re-authentication.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "approve_document_endpoint_api_v1_fileshare_files__file_id__approve_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileApproveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/reject": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Reject Document Endpoint",
+        "description": "Reject a document for approval.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "reject_document_endpoint_api_v1_fileshare_files__file_id__reject_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileRejectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/rescind-approval": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Rescind Approval Endpoint",
+        "description": "Rescind a previous document approval. Requires super_admin.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "rescind_approval_endpoint_api_v1_fileshare_files__file_id__rescind_approval_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileRescindApprovalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/upload-revision": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Upload Revision Endpoint",
+        "description": "Initiate upload of a new version/revision for a file record. Blocks if approved and immutable.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, 21 CFR Part 11",
+        "operationId": "upload_revision_endpoint_api_v1_fileshare_files__file_id__upload_revision_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadRevisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileUploadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/fileshare/files": {
       "get": {
         "tags": [
@@ -1588,6 +1800,218 @@
         }
       }
     },
+    "/api/v1/files/{file_id}/approve": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Approve Document Endpoint",
+        "description": "Execute 21 CFR Part 11 electronic signature document approval with in-product re-authentication.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "approve_document_endpoint_api_v1_files__file_id__approve_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileApproveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/reject": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Reject Document Endpoint",
+        "description": "Reject a document for approval.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "reject_document_endpoint_api_v1_files__file_id__reject_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileRejectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/rescind-approval": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Rescind Approval Endpoint",
+        "description": "Rescind a previous document approval. Requires super_admin.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "rescind_approval_endpoint_api_v1_files__file_id__rescind_approval_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileRescindApprovalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/upload-revision": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Upload Revision Endpoint",
+        "description": "Initiate upload of a new version/revision for a file record. Blocks if approved and immutable.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, 21 CFR Part 11",
+        "operationId": "upload_revision_endpoint_api_v1_files__file_id__upload_revision_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadRevisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileUploadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/files": {
       "get": {
         "tags": [
@@ -2210,6 +2634,40 @@
   },
   "components": {
     "schemas": {
+      "ApprovalStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING_APPROVAL",
+          "APPROVED",
+          "REJECTED",
+          "APPROVAL_RESCINDED"
+        ],
+        "title": "ApprovalStatus",
+        "description": "Lifecycle status for document approval and 21 CFR Part 11 electronic signatures."
+      },
+      "FileApproveRequest": {
+        "properties": {
+          "signing_reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Signing Reason"
+          },
+          "credential": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Credential"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signing_reason",
+          "credential"
+        ],
+        "title": "FileApproveRequest",
+        "description": "Request payload to initiate electronic signature document approval with re-authentication."
+      },
       "FileAuditLogResponse": {
         "properties": {
           "id": {
@@ -2514,6 +2972,56 @@
             ],
             "title": "Transcode Error"
           },
+          "approval_status": {
+            "$ref": "#/components/schemas/ApprovalStatus",
+            "default": "PENDING_APPROVAL"
+          },
+          "signature_manifestation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Manifestation"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approval_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Reason"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -2548,6 +3056,38 @@
         ],
         "title": "FileRecordResponse",
         "description": "Response schema representing file record metadata."
+      },
+      "FileRejectRequest": {
+        "properties": {
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "FileRejectRequest",
+        "description": "Request payload to reject a document for approval."
+      },
+      "FileRescindApprovalRequest": {
+        "properties": {
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "FileRescindApprovalRequest",
+        "description": "Request payload to rescind a previous document approval."
       },
       "FileStatus": {
         "type": "string",
@@ -3211,6 +3751,67 @@
         "type": "object",
         "title": "UploadCompleteRequest",
         "description": "Request payload to finalize a multipart or singlepart upload."
+      },
+      "UploadRevisionRequest": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Mime Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Size Bytes"
+          },
+          "checksum_sha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checksum Sha256"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change"
+          },
+          "is_multipart": {
+            "type": "boolean",
+            "title": "Is Multipart",
+            "default": false
+          },
+          "parts_count": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Parts Count",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "mime_type",
+          "size_bytes",
+          "reason_for_change"
+        ],
+        "title": "UploadRevisionRequest",
+        "description": "Request payload to initiate a new revision upload for a file."
       },
       "ValidationError": {
         "properties": {

@@ -137,6 +137,20 @@ class ScanStatus(StrEnum):
         return cls(value.strip().upper())
 
 
+class ApprovalStatus(StrEnum):
+    """Lifecycle status for document approval and 21 CFR Part 11 electronic signatures."""
+
+    PENDING_APPROVAL = "PENDING_APPROVAL"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    APPROVAL_RESCINDED = "APPROVAL_RESCINDED"
+
+    @classmethod
+    def from_str(cls, value: str) -> ApprovalStatus:
+        """Normalize string into ApprovalStatus enum."""
+        return cls(value.strip().upper())
+
+
 class FileStatus(StrEnum):
     """Lifecycle availability and readiness status of a file record."""
 
@@ -185,6 +199,13 @@ class FileRecord(BaseModel):
     transcode_status: TranscodeStatus = Field(default=TranscodeStatus.NOT_REQUIRED)
     hls_manifest_key: str | None = Field(default=None, max_length=1000)
     transcode_error: str | None = Field(default=None, max_length=2000)
+
+    # 21 CFR Part 11 Document Approval and Electronic Signature fields
+    approval_status: ApprovalStatus = Field(default=ApprovalStatus.PENDING_APPROVAL)
+    signature_manifestation: dict[str, Any] | None = Field(default=None)
+    approved_by: str | None = Field(default=None, max_length=255)
+    approved_at: datetime | None = Field(default=None)
+    approval_reason: str | None = Field(default=None, max_length=1000)
 
     # GxP audit fields
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

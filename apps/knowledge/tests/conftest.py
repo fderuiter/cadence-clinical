@@ -5,12 +5,25 @@ Uses packages/testing infrastructure: InMemoryRepository, factories, and
 security mocks. Gated database provisioning per pytest-xdist isolation rules.
 """
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from apps.knowledge.infrastructure.models import Base
 from apps.knowledge.main import app
+
+
+@pytest.fixture(autouse=True)
+def mock_notification_dispatcher():
+    """Mocks asynchronous notification publishing across all test cases."""
+    with patch(
+        "apps.knowledge.application.article_service.publish_notification",
+        new_callable=AsyncMock,
+        return_value=True,
+    ):
+        yield
 
 
 @pytest.fixture(autouse=True)

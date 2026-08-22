@@ -13,6 +13,7 @@ from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from apps.fileshare.domain.models import (
+    ApprovalStatus,
     FileAuditLog,
     FileRecord,
     FileStatus,
@@ -83,6 +84,19 @@ class FileRecordModel(Base):
     hls_manifest_key: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     transcode_error: Mapped[str | None] = mapped_column(String(2000), nullable=True)
 
+    # 21 CFR Part 11 Document Approval and Electronic Signature fields
+    approval_status: Mapped[str] = mapped_column(
+        String(50), default="PENDING_APPROVAL", nullable=False, index=True
+    )
+    signature_manifestation: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, nullable=True
+    )
+    approved_by: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    approval_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
     # 21 CFR Part 11 GxP audit fields
     created_at: Mapped[datetime] = mapped_column(
         UTCDateTime, default=func.now(), nullable=False
@@ -129,6 +143,11 @@ class FileRecordModel(Base):
             transcode_status=TranscodeStatus(self.transcode_status),
             hls_manifest_key=self.hls_manifest_key,
             transcode_error=self.transcode_error,
+            approval_status=ApprovalStatus(self.approval_status),
+            signature_manifestation=self.signature_manifestation,
+            approved_by=self.approved_by,
+            approved_at=self.approved_at,
+            approval_reason=self.approval_reason,
             created_at=self.created_at,
             created_by=self.created_by,
             reason_for_change=self.reason_for_change,

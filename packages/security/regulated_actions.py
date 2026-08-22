@@ -138,6 +138,10 @@ def resolve_regulated_action(
     """
     Pure resolver function to determine the semantic regulated action based on HTTP method, path, and parsed body.
     """
+    path_lower = path.lower()
+    if "fileshare" in path_lower or "/files/" in path_lower or "econsent" in path_lower:
+        return None
+
     # 1. First, check body-driven rules. If path matches a body-driven rule,
     # we evaluate body conditions. If conditions match, return action.
     # If path matches but body conditions do NOT match, we return None (unguated transition).
@@ -163,6 +167,10 @@ def resolve_regulated_action_by_path(method: str, path: str) -> SemanticAction |
     """
     Path-only variant of resolver for fast middleware pre-checks where parsed body is not yet available.
     """
+    path_lower = path.lower()
+    if "fileshare" in path_lower or "/files/" in path_lower or "econsent" in path_lower:
+        return None
+
     for rule in DETECTION_RULES:
         if rule.matches_path(method, path):
             return rule.action

@@ -9,6 +9,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from apps.fileshare.domain.models import (
+    ApprovalStatus,
     FileStatus,
     PermissionLevel,
     PlaybackEventSource,
@@ -115,9 +116,53 @@ class FileRecordResponse(BaseModel):
     transcode_status: TranscodeStatus = TranscodeStatus.NOT_REQUIRED
     hls_manifest_key: str | None = None
     transcode_error: str | None = None
+    approval_status: ApprovalStatus = ApprovalStatus.PENDING_APPROVAL
+    signature_manifestation: dict[str, Any] | None = None
+    approved_by: str | None = None
+    approved_at: datetime | None = None
+    approval_reason: str | None = None
     created_at: datetime
     created_by: str
     reason_for_change: str
+
+
+class FileApproveRequest(BaseModel):
+    """Request payload to initiate electronic signature document approval with re-authentication."""
+
+    model_config = ConfigDict(strict=True)
+
+    signing_reason: str = Field(min_length=1, max_length=500)
+    credential: str = Field(min_length=1, max_length=500)
+
+
+class FileRejectRequest(BaseModel):
+    """Request payload to reject a document for approval."""
+
+    model_config = ConfigDict(strict=True)
+
+    reason_for_change: str = Field(min_length=5, max_length=1000)
+
+
+class FileRescindApprovalRequest(BaseModel):
+    """Request payload to rescind a previous document approval."""
+
+    model_config = ConfigDict(strict=True)
+
+    reason_for_change: str = Field(min_length=5, max_length=1000)
+
+
+class UploadRevisionRequest(BaseModel):
+    """Request payload to initiate a new revision upload for a file."""
+
+    model_config = ConfigDict(strict=True)
+
+    filename: str = Field(min_length=1, max_length=500)
+    mime_type: str = Field(min_length=1, max_length=255)
+    size_bytes: int = Field(ge=0)
+    checksum_sha256: str | None = Field(default=None, min_length=64, max_length=64)
+    reason_for_change: str = Field(min_length=5, max_length=1000)
+    is_multipart: bool = Field(default=False)
+    parts_count: int = Field(default=1, ge=1, le=10000)
 
 
 class ShareGrantCreateRequest(BaseModel):

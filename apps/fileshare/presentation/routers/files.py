@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.fileshare.adapters.clamav_adapter import get_scan_adapter
+from apps.fileshare.adapters.credential_verifier import get_credential_verifier
 from apps.fileshare.adapters.database import get_db_session
 from apps.fileshare.adapters.repositories import (
     SqlAlchemyFileAuditLogRepository,
@@ -19,19 +20,24 @@ from apps.fileshare.adapters.repositories import (
 from apps.fileshare.adapters.storage import get_storage_adapter
 from apps.fileshare.application.fileshare_service import FileShareService
 from apps.fileshare.domain.exceptions import (
+    FileImmutableError,
     FileNotFoundError,
     FileOnHoldError,
     FileQuarantinedError,
     FileSharePermissionDeniedError,
+    InvalidCredentialError,
 )
 from apps.fileshare.domain.models import TranscodeStatus
 from apps.fileshare.presentation.dtos import (
+    FileApproveRequest,
     FileAuditLogResponse,
     FileDeleteRequest,
     FileDownloadUrlResponse,
     FileHoldClearRequest,
     FileHoldRequest,
     FileRecordResponse,
+    FileRejectRequest,
+    FileRescindApprovalRequest,
     FileUploadUrlRequest,
     FileUploadUrlResponse,
     GuestLinkCreateRequest,
@@ -42,6 +48,7 @@ from apps.fileshare.presentation.dtos import (
     ShareGrantResponse,
     StreamUrlResponse,
     UploadCompleteRequest,
+    UploadRevisionRequest,
 )
 from packages.security.context import (
     current_site_id,
@@ -74,6 +81,7 @@ def get_fileshare_service(
     file_audit_repo = SqlAlchemyFileAuditLogRepository(session)
     storage_port = get_storage_adapter()
     scan_port = get_scan_adapter()
+    credential_verifier = get_credential_verifier()
     return FileShareService(
         file_repo=file_repo,
         grant_repo=grant_repo,
@@ -82,6 +90,7 @@ def get_fileshare_service(
         audit_repo=audit_repo,
         scan_port=scan_port,
         file_audit_repo=file_audit_repo,
+        credential_verifier=credential_verifier,
     )
 
 
@@ -571,6 +580,230 @@ async def get_file_audit_logs(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
         ) from exc
+
+
+@router.post(
+    "/{file_id}/approve",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.post(
+    "/{file_id}/approve",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def approve_document_endpoint(
+    file_id: str,
+    payload: FileApproveRequest,
+    request: Request,
+    service: FileShareService = Depends(get_fileshare_service),
+) -> Response:
+    """Execute 21 CFR Part 11 electronic signature document approval with in-product re-authentication.
+
+    Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
+    """
+    user_id = current_user_id.get() or "system_user"
+    roles = extract_caller_roles(request)
+
+    client_ip = getattr(request.state, "ip_address", None)
+    if not client_ip:
+        client_ip = request.headers.get("x-forwarded-for") or (
+            request.client.host if request.client else "127.0.0.1"
+        )
+        if "," in client_ip:
+            client_ip = client_ip.split(",")[0].strip()
+
+    user_agent = request.headers.get("user-agent") or "Fileshare Service"
+
+    try:
+        record = await service.approve_file(
+            file_id=file_id,
+            caller_user_id=user_id,
+            caller_roles=roles,
+            signing_reason=payload.signing_reason,
+            credential=payload.credential,
+            client_ip=client_ip,
+            user_agent=user_agent,
+        )
+        return FileRecordResponse.model_validate(record)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except InvalidCredentialError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc) or "Invalid re-authentication credentials.",
+        ) from exc
+    except FileQuarantinedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"message": str(exc), "reason": exc.reason},
+        ) from exc
+    except FileSharePermissionDeniedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+    except FileImmutableError as exc:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"reason": exc.reason, "detail": str(exc)},
+        )
+
+
+@router.post(
+    "/{file_id}/reject",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.post(
+    "/{file_id}/reject",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def reject_document_endpoint(
+    file_id: str,
+    payload: FileRejectRequest,
+    request: Request,
+    service: FileShareService = Depends(get_fileshare_service),
+) -> FileRecordResponse:
+    """Reject a document for approval.
+
+    Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
+    """
+    user_id = current_user_id.get() or "system_user"
+    roles = extract_caller_roles(request)
+
+    try:
+        record = await service.reject_file(
+            file_id=file_id,
+            caller_user_id=user_id,
+            caller_roles=roles,
+            reason_for_change=payload.reason_for_change,
+        )
+        return FileRecordResponse.model_validate(record)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except FileQuarantinedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"message": str(exc), "reason": exc.reason},
+        ) from exc
+    except FileSharePermissionDeniedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+
+
+@router.post(
+    "/{file_id}/rescind-approval",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.post(
+    "/{file_id}/rescind-approval",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def rescind_approval_endpoint(
+    file_id: str,
+    payload: FileRescindApprovalRequest,
+    request: Request,
+    service: FileShareService = Depends(get_fileshare_service),
+) -> FileRecordResponse:
+    """Rescind a previous document approval. Requires super_admin.
+
+    Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
+    """
+    user_id = current_user_id.get() or "system_user"
+    roles = extract_caller_roles(request)
+
+    try:
+        record = await service.rescind_approval(
+            file_id=file_id,
+            caller_user_id=user_id,
+            caller_roles=roles,
+            reason_for_change=payload.reason_for_change,
+        )
+        return FileRecordResponse.model_validate(record)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except FileSharePermissionDeniedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+
+
+@router.post(
+    "/{file_id}/upload-revision",
+    response_model=FileUploadUrlResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@files_alias_router.post(
+    "/{file_id}/upload-revision",
+    response_model=FileUploadUrlResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_revision_endpoint(
+    file_id: str,
+    payload: UploadRevisionRequest,
+    request: Request,
+    service: FileShareService = Depends(get_fileshare_service),
+) -> Response:
+    """Initiate upload of a new version/revision for a file record. Blocks if approved and immutable.
+
+    Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, 21 CFR Part 11
+    """
+    user_id = current_user_id.get() or "system_user"
+    roles = extract_caller_roles(request)
+    tenant_id = current_tenant_id.get() or "tenant_default"
+
+    try:
+        session = await service.upload_revision(
+            file_id=file_id,
+            caller_user_id=user_id,
+            caller_roles=roles,
+            filename=payload.filename,
+            mime_type=payload.mime_type,
+            size_bytes=payload.size_bytes,
+            reason_for_change=payload.reason_for_change,
+            tenant_id=tenant_id,
+            is_multipart=payload.is_multipart,
+            parts_count=payload.parts_count,
+            checksum_sha256=payload.checksum_sha256,
+        )
+        return FileUploadUrlResponse(
+            file_id=session.file_id,
+            object_key=session.object_key,
+            upload_id=session.upload_id,
+            upload_url=session.upload_url,
+            upload_urls=session.upload_urls,
+            expires_in=session.expires_in,
+            checksum_sha256=session.checksum_sha256,
+            required_headers=session.required_headers or {},
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except FileSharePermissionDeniedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+    except FileOnHoldError as exc:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"reason": "FILE_ON_HOLD", "detail": str(exc.message or exc)},
+        )
+    except FileImmutableError as exc:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"reason": exc.reason, "detail": str(exc)},
+        )
 
 
 @router.get(

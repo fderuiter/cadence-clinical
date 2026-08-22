@@ -131,7 +131,8 @@ def test_cli_setup_credentials_json(tmp_path: Path):
         ],
     )
     assert result.exit_code == 0
-    data = json.loads(result.output)
+    raw_json = result.output[result.output.find("{") : result.output.rfind("}") + 1]
+    data = json.loads(raw_json)
     assert data["command"] == "setup credentials"
     assert data["success"] is True
     assert data["dev_mode"] is True

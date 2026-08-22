@@ -21,7 +21,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.knowledge.adapters.database import get_db_session
-from apps.knowledge.services.protocol_service import ProtocolKnowledgeService
+from apps.knowledge.services.protocol_service import (
+    ProtocolKnowledgeService,
+    format_citation_marker,
+)
 from packages.security.context import current_user_id
 from packages.security.rbac import get_normalized_roles, require_roles
 
@@ -150,10 +153,6 @@ async def ingest_protocol_document(
         reason_for_change=payload.reason_for_change,
     )
 
-    from apps.knowledge.application.protocol_service import (
-        format_citation_marker,
-    )
-
     return [
         ProtocolChunkSummary(
             chunk_id=c.id,
@@ -206,10 +205,6 @@ async def upload_protocol_file(
         is_approved=is_approved,
         created_by=user_id,
         reason_for_change=reason_for_change,
-    )
-
-    from apps.knowledge.application.protocol_service import (
-        format_citation_marker,
     )
 
     return [
@@ -292,10 +287,6 @@ async def get_protocol_chunk(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Protocol chunk with ID '{chunk_id}' not found.",
         )
-
-    from apps.knowledge.application.protocol_service import (
-        format_citation_marker,
-    )
 
     return ProtocolSearchResult(
         chunk_id=chunk.id,

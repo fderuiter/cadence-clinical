@@ -155,5 +155,42 @@ export const fileshareService = {
       changeReason: payload.reason_for_change || "Video playback checkpoint audit event",
     });
   },
+
+  /**
+   * Formally approve a document with electronic signature and re-authentication (21 CFR Part 11).
+   */
+  async approveFile(fileId, payload) {
+    return apiClient.post(`/api/v1/fileshare/files/${fileId}/approve`, payload, {
+      changeReason: payload.signing_reason || "Electronic signature document approval",
+    });
+  },
+
+  /**
+   * Reject a document for approval.
+   */
+  async rejectFile(fileId, payload) {
+    return apiClient.post(`/api/v1/fileshare/files/${fileId}/reject`, payload, {
+      changeReason: payload.reason_for_change || "Reject document for approval",
+    });
+  },
+
+  /**
+   * Rescind a previous document approval (requires super_admin).
+   */
+  async rescindApproval(fileId, payload) {
+    return apiClient.post(`/api/v1/fileshare/files/${fileId}/rescind-approval`, payload, {
+      changeReason: payload.reason_for_change || "Rescinding document approval",
+    });
+  },
+
+  /**
+   * Initiate upload of a new version/revision for a file record.
+   */
+  async uploadRevision(fileId, payload) {
+    return apiClient.post(`/api/v1/fileshare/files/${fileId}/upload-revision`, payload, {
+      changeReason: payload.reason_for_change || "Uploading document revision",
+    });
+  },
 };
+
 

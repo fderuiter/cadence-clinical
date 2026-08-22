@@ -58,3 +58,21 @@ class FileScanError(DomainError):
     """Raised when a virus scanning engine error or timeout occurs."""
 
     pass
+
+
+class FileImmutableError(DomainError):
+    """Raised when an action is blocked because the file is approved and immutable."""
+
+    def __init__(
+        self,
+        message: str = "DOCUMENT_APPROVED_IMMUTABLE: Document is approved and immutable.",
+        reason: str = "DOCUMENT_APPROVED_IMMUTABLE",
+    ) -> None:
+        super().__init__(message)
+        self.reason = reason
+
+
+class InvalidCredentialError(DomainError):
+    """Raised when in-product re-authentication credential verification fails."""
+
+    pass
