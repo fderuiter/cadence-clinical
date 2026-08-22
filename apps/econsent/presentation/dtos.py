@@ -596,6 +596,23 @@ class ReadabilityMetricsDTO(BaseModel):
     is_target_grade_level: bool
     interpretation: str
 
+    @classmethod
+    def from_domain(cls, m: Any) -> ReadabilityMetricsDTO:
+        """Factory creating DTO from domain ReadabilityMetrics."""
+        return cls(
+            word_count=m.word_count,
+            sentence_count=m.sentence_count,
+            syllable_count=m.syllable_count,
+            difficult_word_count=m.difficult_word_count,
+            difficult_words=m.difficult_words,
+            flesch_reading_ease=m.flesch_reading_ease,
+            flesch_kincaid_grade_level=m.flesch_kincaid_grade_level,
+            dale_chall_score=m.dale_chall_score,
+            dale_chall_grade_level=m.dale_chall_grade_level,
+            is_target_grade_level=m.is_target_grade_level,
+            interpretation=m.interpretation,
+        )
+
 
 class ReadabilityAnalysisRequest(BaseModel):
     text: str = Field(

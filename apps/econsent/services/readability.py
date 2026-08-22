@@ -223,11 +223,17 @@ class ReadabilityMetricsService:
 
         # 1. Flesch Reading Ease (FRE) & Flesch-Kincaid Grade Level (FKGL)
         if word_count > 0:
-            asl = word_count / sentence_count  # Average Sentence Length
-            asw = syllable_count / word_count  # Average Syllables per Word
+            avg_sentence_length = word_count / sentence_count
+            avg_syllables_per_word = syllable_count / word_count
 
-            fre = 206.835 - (1.015 * asl) - (84.6 * asw)
-            fkgl = (0.39 * asl) + (11.8 * asw) - 15.59
+            fre = (
+                206.835
+                - (1.015 * avg_sentence_length)
+                - (84.6 * avg_syllables_per_word)
+            )
+            fkgl = (
+                (0.39 * avg_sentence_length) + (11.8 * avg_syllables_per_word) - 15.59
+            )
 
             fre = max(0.0, min(100.0, fre))
             fkgl = max(0.0, min(20.0, fkgl))
@@ -241,8 +247,8 @@ class ReadabilityMetricsService:
 
         if word_count > 0:
             diff_percentage = (difficult_word_count / word_count) * 100.0
-            asl = word_count / sentence_count
-            raw_dale_chall = (0.1579 * diff_percentage) + (0.0496 * asl)
+            avg_sentence_length = word_count / sentence_count
+            raw_dale_chall = (0.1579 * diff_percentage) + (0.0496 * avg_sentence_length)
             if diff_percentage > 5.0:
                 dale_chall_score = raw_dale_chall + 3.6365
             else:

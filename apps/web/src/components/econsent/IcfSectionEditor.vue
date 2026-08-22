@@ -197,10 +197,29 @@ const rawSectionText = computed(() => {
   return div.textContent || div.innerText || "";
 });
 
+const replaceTermInHtml = (html, originalTerm, suggestedTerm) => {
+  const container = document.createElement("div");
+  container.innerHTML = html;
+  const regex = new RegExp(`\\b${originalTerm.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\b`, "gi");
+
+  const walk = (node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      if (regex.test(node.nodeValue)) {
+        node.nodeValue = node.nodeValue.replace(regex, suggestedTerm);
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE && node.nodeName !== "SCRIPT" && node.nodeName !== "STYLE") {
+      for (let child = node.firstChild; child; child = child.nextSibling) {
+        walk(child);
+      }
+    }
+  };
+  walk(container);
+  return container.innerHTML;
+};
+
 const onApplyReadabilitySubstitution = ({ substitution }) => {
   if (!substitution) return;
-  const regex = new RegExp(`\\b${substitution.original_term.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\b`, "gi");
-  localHtml.value = localHtml.value.replace(regex, substitution.suggested_term);
+  localHtml.value = replaceTermInHtml(localHtml.value, substitution.original_term, substitution.suggested_term);
   if (editorRef.value) {
     editorRef.value.innerHTML = localHtml.value;
   }
@@ -211,8 +230,7 @@ const onApplyAllReadability = ({ substitutions }) => {
   if (!substitutions || !substitutions.length) return;
   let updated = localHtml.value;
   substitutions.forEach((s) => {
-    const regex = new RegExp(`\\b${s.original_term.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\b`, "gi");
-    updated = updated.replace(regex, s.suggested_term);
+    updated = replaceTermInHtml(updated, s.original_term, s.suggested_term);
   });
   localHtml.value = updated;
   if (editorRef.value) {
@@ -220,6 +238,7 @@ const onApplyAllReadability = ({ substitutions }) => {
   }
   handleInput();
 };
+
 
 const glossaryDefinition = ref("");
 let savedSelection = null;

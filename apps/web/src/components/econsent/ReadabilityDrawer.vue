@@ -400,19 +400,20 @@ onMounted(() => {
 }
 
 .badge-success {
-  background-color: #dcfce7;
-  color: #15803d;
+  background-color: var(--success-bg, #dcfce7);
+  color: var(--success, #15803d);
 }
 
 .badge-warning {
-  background-color: #fef9c3;
-  color: #a16207;
+  background-color: var(--warning-bg, #fef9c3);
+  color: var(--warning, #a16207);
 }
 
 .badge-info {
-  background-color: #e0f2fe;
-  color: #0369a1;
+  background-color: var(--accent-bg, #e0f2fe);
+  color: var(--accent, #0369a1);
 }
+
 
 .action-bar {
   display: flex;
@@ -542,23 +543,23 @@ onMounted(() => {
 }
 
 .diff-tag.del {
-  color: #dc2626;
+  color: var(--error, #dc2626);
 }
 
 .diff-tag.ins {
-  color: #16a34a;
+  color: var(--success, #16a34a);
 }
 
 .diff-text.del-text {
   font-size: 0.85rem;
   text-decoration: line-through;
-  color: #dc2626;
+  color: var(--error, #dc2626);
 }
 
 .diff-text.ins-text {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #16a34a;
+  color: var(--success, #16a34a);
 }
 
 .arrow {
@@ -591,7 +592,7 @@ onMounted(() => {
 }
 
 .btn-success {
-  background-color: #16a34a;
+  background-color: var(--success, #16a34a);
   color: #ffffff;
   padding: 10px;
   font-weight: 600;
@@ -599,6 +600,7 @@ onMounted(() => {
   border: none;
   cursor: pointer;
 }
+
 
 .btn-success:hover {
   background-color: #15803d;

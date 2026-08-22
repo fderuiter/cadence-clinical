@@ -16,10 +16,32 @@ logger = logging.getLogger("econsent-ai-client")
 class AIReadabilityGatewayClient:
     """HTTP client communicating with the centralized AI Gateway service for Tier 2 model execution."""
 
-    def __init__(self, base_url: str | None = None) -> None:
-        self.base_url = (
-            base_url or os.getenv("AI_GATEWAY_URL", "http://localhost:8000")
-        ).rstrip("/")
+    def __init__(
+        self,
+        base_url: str | None = None,
+        client: httpx.AsyncClient | None = None,
+        timeout: float = 5.0,
+    ) -> None:
+        raw_url = base_url or os.getenv("AI_GATEWAY_URL") or "http://localhost:8000"
+        self.base_url: str = raw_url.rstrip("/")
+        self._external_client = client
+        self._client: httpx.AsyncClient | None = client
+        self._timeout = timeout
+        self._limits = httpx.Limits(max_keepalive_connections=20, max_connections=50)
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        """Retrieves or lazily instantiates the persistent pooled HTTP client."""
+        if self._client is None or self._client.is_closed:
+            self._client = httpx.AsyncClient(
+                timeout=httpx.Timeout(self._timeout, connect=2.0),
+                limits=self._limits,
+            )
+        return self._client
+
+    async def close(self) -> None:
+        """Closes the underlying HTTP client session if internally managed."""
+        if self._client and not self._external_client and not self._client.is_closed:
+            await self._client.aclose()
 
     async def generate_simplification_suggestions(
         self,
@@ -70,17 +92,17 @@ class AIReadabilityGatewayClient:
             "X-Gateway-Signature": signature,
             "X-Signature-Version": "2",
             "X-Change-Reason": change_reason,
+            "X-Tenant-Id": tenant_id,
         }
 
         prompt = (
-            f"Analyze the following clinical consent clause text and identify medical jargon terms:\n\n"
-            f'"""{text}"""\n\n'
-            "Return a JSON object with a 'substitutions' list where each item has:\n"
-            "- original_term: The complex medical or legal jargon phrase\n"
-            "- suggested_term: The plain-language, patient-friendly alternative\n"
-            "- rationale: Explanation of why this preserves meaning while improving comprehension\n"
-            "- category: 'clinical_terminology', 'procedure', 'risk', or 'legal'\n"
-            "- confidence_score: Confidence score between 0.0 and 1.0"
+            f"You are an expert clinical research readability and health literacy specialist.\n"
+            f"Review the following clinical trial informed consent clause and identify complex medical "
+            f"jargon or formal scientific expressions that exceed a Grade {target_grade_level} reading level.\n"
+            f"Propose patient-friendly, plain-language replacements while strictly preserving the clinical, "
+            f"ethical, and legal meaning.\n\n"
+            f"Target Reading Level: Grade {target_grade_level}\n\n"
+            f"Clinical Clause Text:\n'''{text}'''\n"
         )
 
         response_schema = {
@@ -120,27 +142,27 @@ class AIReadabilityGatewayClient:
             "compliance_profile": "HIPAA",
         }
 
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            try:
-                response = await client.post(url, json=payload, headers=headers)
-                if response.status_code == 200:
-                    data = response.json()
-                    structured = data.get("structured_data")
-                    if isinstance(structured, dict) and "substitutions" in structured:
-                        return structured["substitutions"]
-                    # Fallback to parsing raw text content if structured_data is empty
-                    content = data.get("content", "")
-                    if content:
-                        parsed = json.loads(content)
-                        if isinstance(parsed, dict) and "substitutions" in parsed:
-                            return parsed["substitutions"]
-                else:
-                    logger.warning(
-                        "AI Gateway returned status code %s: %s",
-                        response.status_code,
-                        response.text,
-                    )
-            except Exception as err:
-                logger.warning("Failed to invoke AI Gateway for readability: %s", err)
+        try:
+            client = await self._get_client()
+            response = await client.post(url, json=payload, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                structured = data.get("structured_data")
+                if isinstance(structured, dict) and "substitutions" in structured:
+                    return structured["substitutions"]
+                # Fallback to parsing raw text content if structured_data is empty
+                content = data.get("content", "")
+                if content:
+                    parsed = json.loads(content)
+                    if isinstance(parsed, dict) and "substitutions" in parsed:
+                        return parsed["substitutions"]
+            else:
+                logger.warning(
+                    "AI Gateway returned status code %s: %s",
+                    response.status_code,
+                    response.text,
+                )
+        except Exception as err:
+            logger.warning("Failed to invoke AI Gateway for readability: %s", err)
 
         return []

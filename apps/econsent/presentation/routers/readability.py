@@ -57,20 +57,7 @@ async def analyze_readability(
         ReadabilityAnalysisResponse with calculated grade levels, word counts, and target indicators.
     """
     res = metrics_service.compute_metrics(payload.text)
-    metrics_dto = ReadabilityMetricsDTO(
-        word_count=res.word_count,
-        sentence_count=res.sentence_count,
-        syllable_count=res.syllable_count,
-        difficult_word_count=res.difficult_word_count,
-        difficult_words=res.difficult_words,
-        flesch_reading_ease=res.flesch_reading_ease,
-        flesch_kincaid_grade_level=res.flesch_kincaid_grade_level,
-        dale_chall_score=res.dale_chall_score,
-        dale_chall_grade_level=res.dale_chall_grade_level,
-        is_target_grade_level=res.is_target_grade_level,
-        interpretation=res.interpretation,
-    )
-    return ReadabilityAnalysisResponse(metrics=metrics_dto)
+    return ReadabilityAnalysisResponse(metrics=ReadabilityMetricsDTO.from_domain(res))
 
 
 @router.post(
@@ -96,33 +83,8 @@ async def harmonize_readability(
         study_id=payload.study_id,
     )
 
-    orig_dto = ReadabilityMetricsDTO(
-        word_count=result.original_metrics.word_count,
-        sentence_count=result.original_metrics.sentence_count,
-        syllable_count=result.original_metrics.syllable_count,
-        difficult_word_count=result.original_metrics.difficult_word_count,
-        difficult_words=result.original_metrics.difficult_words,
-        flesch_reading_ease=result.original_metrics.flesch_reading_ease,
-        flesch_kincaid_grade_level=result.original_metrics.flesch_kincaid_grade_level,
-        dale_chall_score=result.original_metrics.dale_chall_score,
-        dale_chall_grade_level=result.original_metrics.dale_chall_grade_level,
-        is_target_grade_level=result.original_metrics.is_target_grade_level,
-        interpretation=result.original_metrics.interpretation,
-    )
-
-    harm_dto = ReadabilityMetricsDTO(
-        word_count=result.harmonized_metrics.word_count,
-        sentence_count=result.harmonized_metrics.sentence_count,
-        syllable_count=result.harmonized_metrics.syllable_count,
-        difficult_word_count=result.harmonized_metrics.difficult_word_count,
-        difficult_words=result.harmonized_metrics.difficult_words,
-        flesch_reading_ease=result.harmonized_metrics.flesch_reading_ease,
-        flesch_kincaid_grade_level=result.harmonized_metrics.flesch_kincaid_grade_level,
-        dale_chall_score=result.harmonized_metrics.dale_chall_score,
-        dale_chall_grade_level=result.harmonized_metrics.dale_chall_grade_level,
-        is_target_grade_level=result.harmonized_metrics.is_target_grade_level,
-        interpretation=result.harmonized_metrics.interpretation,
-    )
+    orig_dto = ReadabilityMetricsDTO.from_domain(result.original_metrics)
+    harm_dto = ReadabilityMetricsDTO.from_domain(result.harmonized_metrics)
 
     subs_dto = [
         JargonSubstitutionDTO(
@@ -223,26 +185,12 @@ async def apply_clause_harmonization(
     )
     await audit_repo.save(audit_log)
 
-    metrics_dto = ReadabilityMetricsDTO(
-        word_count=new_metrics.word_count,
-        sentence_count=new_metrics.sentence_count,
-        syllable_count=new_metrics.syllable_count,
-        difficult_word_count=new_metrics.difficult_word_count,
-        difficult_words=new_metrics.difficult_words,
-        flesch_reading_ease=new_metrics.flesch_reading_ease,
-        flesch_kincaid_grade_level=new_metrics.flesch_kincaid_grade_level,
-        dale_chall_score=new_metrics.dale_chall_score,
-        dale_chall_grade_level=new_metrics.dale_chall_grade_level,
-        is_target_grade_level=new_metrics.is_target_grade_level,
-        interpretation=new_metrics.interpretation,
-    )
-
     return ClauseHarmonizationApplyResponse(
         clause_id=saved.clause_id,
         version_index=saved.version_index,
         title=saved.title,
         text=saved.text,
-        metrics=metrics_dto,
+        metrics=ReadabilityMetricsDTO.from_domain(new_metrics),
         protocol_version=payload.protocol_version,
         created_at=saved.created_at,
         created_by=saved.created_by,
