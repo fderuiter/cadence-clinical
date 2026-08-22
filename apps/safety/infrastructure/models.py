@@ -2,7 +2,16 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, event, func
+from sqlalchemy import (
+    JSON,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    event,
+    func,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
@@ -167,6 +176,55 @@ class SAEReconciliationJob(Base):
     @error_message.setter
     def error_message(self, val: str | None) -> None:
         self.error = val
+
+
+class SafetyNarrative(Base):
+    """
+    Represents an AI-generated or human-approved Serious Adverse Event (SAE) safety narrative
+    with 21 CFR Part 11 dual-attribution audit and electronic signature gating.
+
+    Requirements: PRD-SYS-052
+    """
+
+    __tablename__ = "safety_narratives"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    case_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    sae_event_key: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    sections: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
+    raw_narrative_text: Mapped[str] = mapped_column(String, nullable=False)
+    timeline_events: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSON, nullable=False, default=list
+    )
+    grounded_claims: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSON, nullable=False, default=list
+    )
+
+    # 21 CFR Part 11 Dual-Attribution AI fields (AIAssistedRecordMixin)
+    model_identifier: Mapped[str] = mapped_column(String(255), nullable=False)
+    prompt_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    confidence_score: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    review_status: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="DRAFT_AI", index=True
+    )
+    approved_by_user_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    esignature_manifest_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+
+    # Standard Part 11 Audit fields (Part11AuditMixin)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
 class SafetyAuditLog(Base):

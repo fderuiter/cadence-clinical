@@ -13511,6 +13511,376 @@
               ]
             },
             {
+              "id": "bc_safety_safety_narratives",
+              "name": "safety_narratives",
+              "label": "Safety / Pharmacovigilance - SafetyNarrative",
+              "conceptCode": "SCHEMA_SAFETY_SAFETY_NARRATIVES",
+              "displayName": "safety_narratives (safety)",
+              "definition": "Represents an AI-generated or human-approved Serious Adverse Event (SAE) safety narrative\nwith 21 CFR Part 11 dual-attribution audit and electronic signature gating.\nRequirements: PRD-SYS-052",
+              "cdashDomain": "safety",
+              "cdashVariable": "SAFETY_NARRATIVES",
+              "dataType": "Relational Table",
+              "properties": [
+                {
+                  "id": "prop_safety_safety_narratives_id",
+                  "name": "id",
+                  "label": "id (VARCHAR(36))",
+                  "cdashVariable": "ID",
+                  "dataType": "VARCHAR(36)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": true,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_study_id",
+                  "name": "study_id",
+                  "label": "study_id (VARCHAR(255))",
+                  "cdashVariable": "STUDY_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_subject_id",
+                  "name": "subject_id",
+                  "label": "subject_id (VARCHAR(255))",
+                  "cdashVariable": "SUBJECT_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_case_id",
+                  "name": "case_id",
+                  "label": "case_id (VARCHAR(255))",
+                  "cdashVariable": "CASE_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_sae_event_key",
+                  "name": "sae_event_key",
+                  "label": "sae_event_key (VARCHAR(255))",
+                  "cdashVariable": "SAE_EVENT_KEY",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_title",
+                  "name": "title",
+                  "label": "title (VARCHAR(500))",
+                  "cdashVariable": "TITLE",
+                  "dataType": "VARCHAR(500)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_sections",
+                  "name": "sections",
+                  "label": "sections (JSON)",
+                  "cdashVariable": "SECTIONS",
+                  "dataType": "JSON",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_raw_narrative_text",
+                  "name": "raw_narrative_text",
+                  "label": "raw_narrative_text (VARCHAR)",
+                  "cdashVariable": "RAW_NARRATIVE_TEXT",
+                  "dataType": "VARCHAR",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_timeline_events",
+                  "name": "timeline_events",
+                  "label": "timeline_events (JSON)",
+                  "cdashVariable": "TIMELINE_EVENTS",
+                  "dataType": "JSON",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_grounded_claims",
+                  "name": "grounded_claims",
+                  "label": "grounded_claims (JSON)",
+                  "cdashVariable": "GROUNDED_CLAIMS",
+                  "dataType": "JSON",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_model_identifier",
+                  "name": "model_identifier",
+                  "label": "model_identifier (VARCHAR(255))",
+                  "cdashVariable": "MODEL_IDENTIFIER",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_prompt_hash",
+                  "name": "prompt_hash",
+                  "label": "prompt_hash (VARCHAR(64))",
+                  "cdashVariable": "PROMPT_HASH",
+                  "dataType": "VARCHAR(64)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_confidence_score",
+                  "name": "confidence_score",
+                  "label": "confidence_score (FLOAT)",
+                  "cdashVariable": "CONFIDENCE_SCORE",
+                  "dataType": "FLOAT",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_review_status",
+                  "name": "review_status",
+                  "label": "review_status (VARCHAR(50))",
+                  "cdashVariable": "REVIEW_STATUS",
+                  "dataType": "VARCHAR(50)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_approved_by_user_id",
+                  "name": "approved_by_user_id",
+                  "label": "approved_by_user_id (VARCHAR(255))",
+                  "cdashVariable": "APPROVED_BY_USER_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_approved_at",
+                  "name": "approved_at",
+                  "label": "approved_at (DATETIME)",
+                  "cdashVariable": "APPROVED_AT",
+                  "dataType": "DATETIME",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_esignature_manifest_id",
+                  "name": "esignature_manifest_id",
+                  "label": "esignature_manifest_id (VARCHAR(255))",
+                  "cdashVariable": "ESIGNATURE_MANIFEST_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_created_at",
+                  "name": "created_at",
+                  "label": "created_at (DATETIME)",
+                  "cdashVariable": "CREATED_AT",
+                  "dataType": "DATETIME",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_created_by",
+                  "name": "created_by",
+                  "label": "created_by (VARCHAR(255))",
+                  "cdashVariable": "CREATED_BY",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_reason_for_change",
+                  "name": "reason_for_change",
+                  "label": "reason_for_change (VARCHAR(1000))",
+                  "cdashVariable": "REASON_FOR_CHANGE",
+                  "dataType": "VARCHAR(1000)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_safety_safety_narratives_version_index",
+                  "name": "version_index",
+                  "label": "version_index (INTEGER)",
+                  "cdashVariable": "VERSION_INDEX",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "safety",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                }
+              ]
+            },
+            {
               "id": "bc_org_delegations_of_authority",
               "name": "delegations_of_authority",
               "label": "Organization Management - DelegationOfAuthority",
@@ -46770,6 +47140,376 @@
           ]
         },
         {
+          "id": "bc_safety_safety_narratives",
+          "name": "safety_narratives",
+          "label": "Safety / Pharmacovigilance - SafetyNarrative",
+          "conceptCode": "SCHEMA_SAFETY_SAFETY_NARRATIVES",
+          "displayName": "safety_narratives (safety)",
+          "definition": "Represents an AI-generated or human-approved Serious Adverse Event (SAE) safety narrative\nwith 21 CFR Part 11 dual-attribution audit and electronic signature gating.\nRequirements: PRD-SYS-052",
+          "cdashDomain": "safety",
+          "cdashVariable": "SAFETY_NARRATIVES",
+          "dataType": "Relational Table",
+          "properties": [
+            {
+              "id": "prop_safety_safety_narratives_id",
+              "name": "id",
+              "label": "id (VARCHAR(36))",
+              "cdashVariable": "ID",
+              "dataType": "VARCHAR(36)",
+              "mandatory": true,
+              "config": {
+                "primary_key": true,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_study_id",
+              "name": "study_id",
+              "label": "study_id (VARCHAR(255))",
+              "cdashVariable": "STUDY_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_subject_id",
+              "name": "subject_id",
+              "label": "subject_id (VARCHAR(255))",
+              "cdashVariable": "SUBJECT_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_case_id",
+              "name": "case_id",
+              "label": "case_id (VARCHAR(255))",
+              "cdashVariable": "CASE_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_sae_event_key",
+              "name": "sae_event_key",
+              "label": "sae_event_key (VARCHAR(255))",
+              "cdashVariable": "SAE_EVENT_KEY",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_title",
+              "name": "title",
+              "label": "title (VARCHAR(500))",
+              "cdashVariable": "TITLE",
+              "dataType": "VARCHAR(500)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_sections",
+              "name": "sections",
+              "label": "sections (JSON)",
+              "cdashVariable": "SECTIONS",
+              "dataType": "JSON",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_raw_narrative_text",
+              "name": "raw_narrative_text",
+              "label": "raw_narrative_text (VARCHAR)",
+              "cdashVariable": "RAW_NARRATIVE_TEXT",
+              "dataType": "VARCHAR",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_timeline_events",
+              "name": "timeline_events",
+              "label": "timeline_events (JSON)",
+              "cdashVariable": "TIMELINE_EVENTS",
+              "dataType": "JSON",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_grounded_claims",
+              "name": "grounded_claims",
+              "label": "grounded_claims (JSON)",
+              "cdashVariable": "GROUNDED_CLAIMS",
+              "dataType": "JSON",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_model_identifier",
+              "name": "model_identifier",
+              "label": "model_identifier (VARCHAR(255))",
+              "cdashVariable": "MODEL_IDENTIFIER",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_prompt_hash",
+              "name": "prompt_hash",
+              "label": "prompt_hash (VARCHAR(64))",
+              "cdashVariable": "PROMPT_HASH",
+              "dataType": "VARCHAR(64)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_confidence_score",
+              "name": "confidence_score",
+              "label": "confidence_score (FLOAT)",
+              "cdashVariable": "CONFIDENCE_SCORE",
+              "dataType": "FLOAT",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_review_status",
+              "name": "review_status",
+              "label": "review_status (VARCHAR(50))",
+              "cdashVariable": "REVIEW_STATUS",
+              "dataType": "VARCHAR(50)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_approved_by_user_id",
+              "name": "approved_by_user_id",
+              "label": "approved_by_user_id (VARCHAR(255))",
+              "cdashVariable": "APPROVED_BY_USER_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_approved_at",
+              "name": "approved_at",
+              "label": "approved_at (DATETIME)",
+              "cdashVariable": "APPROVED_AT",
+              "dataType": "DATETIME",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_esignature_manifest_id",
+              "name": "esignature_manifest_id",
+              "label": "esignature_manifest_id (VARCHAR(255))",
+              "cdashVariable": "ESIGNATURE_MANIFEST_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_created_at",
+              "name": "created_at",
+              "label": "created_at (DATETIME)",
+              "cdashVariable": "CREATED_AT",
+              "dataType": "DATETIME",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_created_by",
+              "name": "created_by",
+              "label": "created_by (VARCHAR(255))",
+              "cdashVariable": "CREATED_BY",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_reason_for_change",
+              "name": "reason_for_change",
+              "label": "reason_for_change (VARCHAR(1000))",
+              "cdashVariable": "REASON_FOR_CHANGE",
+              "dataType": "VARCHAR(1000)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_safety_safety_narratives_version_index",
+              "name": "version_index",
+              "label": "version_index (INTEGER)",
+              "cdashVariable": "VERSION_INDEX",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "safety",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            }
+          ]
+        },
+        {
           "id": "bc_org_delegations_of_authority",
           "name": "delegations_of_authority",
           "label": "Organization Management - DelegationOfAuthority",
@@ -80000,6 +80740,376 @@
         },
         {
           "id": "prop_safety_safety_cases_version_index",
+          "name": "version_index",
+          "label": "version_index (INTEGER)",
+          "cdashVariable": "VERSION_INDEX",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "bc_safety_safety_narratives",
+      "name": "safety_narratives",
+      "label": "Safety / Pharmacovigilance - SafetyNarrative",
+      "conceptCode": "SCHEMA_SAFETY_SAFETY_NARRATIVES",
+      "displayName": "safety_narratives (safety)",
+      "definition": "Represents an AI-generated or human-approved Serious Adverse Event (SAE) safety narrative\nwith 21 CFR Part 11 dual-attribution audit and electronic signature gating.\nRequirements: PRD-SYS-052",
+      "cdashDomain": "safety",
+      "cdashVariable": "SAFETY_NARRATIVES",
+      "dataType": "Relational Table",
+      "properties": [
+        {
+          "id": "prop_safety_safety_narratives_id",
+          "name": "id",
+          "label": "id (VARCHAR(36))",
+          "cdashVariable": "ID",
+          "dataType": "VARCHAR(36)",
+          "mandatory": true,
+          "config": {
+            "primary_key": true,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_study_id",
+          "name": "study_id",
+          "label": "study_id (VARCHAR(255))",
+          "cdashVariable": "STUDY_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_subject_id",
+          "name": "subject_id",
+          "label": "subject_id (VARCHAR(255))",
+          "cdashVariable": "SUBJECT_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_case_id",
+          "name": "case_id",
+          "label": "case_id (VARCHAR(255))",
+          "cdashVariable": "CASE_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_sae_event_key",
+          "name": "sae_event_key",
+          "label": "sae_event_key (VARCHAR(255))",
+          "cdashVariable": "SAE_EVENT_KEY",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_title",
+          "name": "title",
+          "label": "title (VARCHAR(500))",
+          "cdashVariable": "TITLE",
+          "dataType": "VARCHAR(500)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_sections",
+          "name": "sections",
+          "label": "sections (JSON)",
+          "cdashVariable": "SECTIONS",
+          "dataType": "JSON",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_raw_narrative_text",
+          "name": "raw_narrative_text",
+          "label": "raw_narrative_text (VARCHAR)",
+          "cdashVariable": "RAW_NARRATIVE_TEXT",
+          "dataType": "VARCHAR",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_timeline_events",
+          "name": "timeline_events",
+          "label": "timeline_events (JSON)",
+          "cdashVariable": "TIMELINE_EVENTS",
+          "dataType": "JSON",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_grounded_claims",
+          "name": "grounded_claims",
+          "label": "grounded_claims (JSON)",
+          "cdashVariable": "GROUNDED_CLAIMS",
+          "dataType": "JSON",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_model_identifier",
+          "name": "model_identifier",
+          "label": "model_identifier (VARCHAR(255))",
+          "cdashVariable": "MODEL_IDENTIFIER",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_prompt_hash",
+          "name": "prompt_hash",
+          "label": "prompt_hash (VARCHAR(64))",
+          "cdashVariable": "PROMPT_HASH",
+          "dataType": "VARCHAR(64)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_confidence_score",
+          "name": "confidence_score",
+          "label": "confidence_score (FLOAT)",
+          "cdashVariable": "CONFIDENCE_SCORE",
+          "dataType": "FLOAT",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_review_status",
+          "name": "review_status",
+          "label": "review_status (VARCHAR(50))",
+          "cdashVariable": "REVIEW_STATUS",
+          "dataType": "VARCHAR(50)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_approved_by_user_id",
+          "name": "approved_by_user_id",
+          "label": "approved_by_user_id (VARCHAR(255))",
+          "cdashVariable": "APPROVED_BY_USER_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_approved_at",
+          "name": "approved_at",
+          "label": "approved_at (DATETIME)",
+          "cdashVariable": "APPROVED_AT",
+          "dataType": "DATETIME",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_esignature_manifest_id",
+          "name": "esignature_manifest_id",
+          "label": "esignature_manifest_id (VARCHAR(255))",
+          "cdashVariable": "ESIGNATURE_MANIFEST_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_created_at",
+          "name": "created_at",
+          "label": "created_at (DATETIME)",
+          "cdashVariable": "CREATED_AT",
+          "dataType": "DATETIME",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_created_by",
+          "name": "created_by",
+          "label": "created_by (VARCHAR(255))",
+          "cdashVariable": "CREATED_BY",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_reason_for_change",
+          "name": "reason_for_change",
+          "label": "reason_for_change (VARCHAR(1000))",
+          "cdashVariable": "REASON_FOR_CHANGE",
+          "dataType": "VARCHAR(1000)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "safety",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_safety_safety_narratives_version_index",
           "name": "version_index",
           "label": "version_index (INTEGER)",
           "cdashVariable": "VERSION_INDEX",

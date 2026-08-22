@@ -6,10 +6,23 @@ import os
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Request,
+    Response,
+)
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.safety.domain.narrative_models import (
+    NarrativeGenerateRequest,
+    NarrativeSignRequest,
+    NarrativeSignResponse,
+    SafetyNarrativeDTO,
+)
 from apps.safety.infrastructure.database import db_manager
 from apps.safety.infrastructure.models import (
     ExportJob,
@@ -34,6 +47,7 @@ from apps.safety.presentation.dtos import (
     SafetyExportJobResponse,
 )
 from apps.safety.processor import process_sae_reconciliation
+from apps.safety.services.narrative_service import SafetyNarrativeService
 from packages.database import DatabaseSessionDependency
 
 router = APIRouter()
@@ -963,3 +977,170 @@ async def get_reconciliation_run(
     await session.commit()
 
     return map_run_to_response(run, discrepancies)
+
+
+# =========================================================================
+# Generative Pharmacovigilance Safety Narratives & Part 11 E-Signature (PRD-SYS-052)
+# =========================================================================
+
+
+@router.post(
+    "/api/v1/safety/narratives/generate",
+    response_model=SafetyNarrativeDTO,
+    status_code=201,
+)
+async def generate_safety_narrative_endpoint(
+    request: Request,
+    payload: NarrativeGenerateRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> SafetyNarrativeDTO:
+    """Draft a new FDA MedWatch 3500A / CIOMS-I Serious Adverse Event narrative via Tier 3 model.
+
+    Requirements: PRD-SYS-051, PRD-SYS-052
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    effective_reason = (
+        payload.reason_for_change or change_reason or "Draft SAE Safety Narrative"
+    )
+
+    test_client = getattr(request.app.state, "test_httpx_client", None)
+    service = SafetyNarrativeService()
+
+    narrative = await service.generate_narrative(
+        session=session,
+        study_id=payload.study_id,
+        subject_id=payload.subject_id,
+        sae_event_key=payload.sae_event_key,
+        created_by=user_id,
+        reason_for_change=effective_reason,
+        worldwide_unique_case_id=payload.worldwide_unique_case_id,
+        additional_context=payload.additional_context,
+        test_client=test_client,
+    )
+    await session.commit()
+    return narrative
+
+
+@router.get(
+    "/api/v1/safety/narratives/{id}",
+    response_model=SafetyNarrativeDTO,
+)
+async def get_safety_narrative_endpoint(
+    request: Request,
+    id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> SafetyNarrativeDTO:
+    """Retrieve safety narrative details, grounded claims, and review status.
+
+    Requirements: PRD-SYS-052
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    service = SafetyNarrativeService()
+    narrative = await service.get_narrative(
+        session=session,
+        narrative_id=id,
+        user_id=user_id,
+        reason_for_change=change_reason,
+    )
+    await session.commit()
+    return narrative
+
+
+@router.get(
+    "/api/v1/safety/narratives",
+    response_model=list[SafetyNarrativeDTO],
+)
+async def list_safety_narratives_endpoint(
+    request: Request,
+    study_id: str | None = None,
+    subject_id: str | None = None,
+    review_status: str | None = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[SafetyNarrativeDTO]:
+    """List safety narratives filtered by study, subject, or review status.
+
+    Requirements: PRD-SYS-052
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    service = SafetyNarrativeService()
+    narratives = await service.list_narratives(
+        session=session,
+        study_id=study_id,
+        subject_id=subject_id,
+        review_status=review_status,
+    )
+    await write_safety_audit_log(
+        session=session,
+        user_id=user_id,
+        action="SAFETY_NARRATIVE_LIST",
+        details=f"Listed safety narratives (study: {study_id}, subject: {subject_id}, status: {review_status}).",
+        change_reason=change_reason or "List narratives",
+        version_index=1,
+    )
+    await session.commit()
+    return narratives
+
+
+@router.post(
+    "/api/v1/safety/narratives/{id}/sign",
+    response_model=NarrativeSignResponse,
+)
+async def sign_safety_narrative_endpoint(
+    request: Request,
+    id: str,
+    payload: NarrativeSignRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> NarrativeSignResponse:
+    """Apply a 21 CFR Part 11 cryptographic electronic signature to approve a safety narrative.
+
+    Requirements: PRD-SYS-051, PRD-SYS-052
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    effective_reason = payload.reason_for_change or change_reason
+    if not effective_reason or not effective_reason.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Reason for change is mandatory for 21 CFR Part 11 electronic signatures.",
+        )
+
+    service = SafetyNarrativeService()
+    sign_response = await service.sign_narrative(
+        session=session,
+        narrative_id=id,
+        user_id=user_id,
+        user_roles=user_role,
+        reason_for_change=effective_reason,
+        signature_secret=payload.signature_secret,
+    )
+    await session.commit()
+    return sign_response
+
+
+@router.post(
+    "/api/v1/safety/narratives/{id}/export-e2b",
+)
+async def export_safety_narrative_e2b_endpoint(
+    request: Request,
+    id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> Response:
+    """Export an approved safety narrative into ICH E2B(R3) XML format.
+
+    Requires 21 CFR Part 11 approval status.
+
+    Requirements: PRD-SYS-052
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    service = SafetyNarrativeService()
+    xml_content = await service.export_narrative_to_e2b_xml(
+        session=session,
+        narrative_id=id,
+        user_id=user_id,
+        reason_for_change=change_reason or "Export to ICH E2B(R3) XML",
+    )
+    await session.commit()
+    return Response(
+        content=xml_content,
+        media_type="application/xml",
+        headers={"Content-Disposition": f"attachment; filename=narrative_{id}.xml"},
+    )

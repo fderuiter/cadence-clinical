@@ -6896,6 +6896,185 @@
               "gxp_highlight": true
             }
           ]
+        },
+        {
+          "id": "safety_safety_narratives",
+          "table_name": "safety_narratives",
+          "class_name": "SafetyNarrative",
+          "description": "Represents an AI-generated or human-approved Serious Adverse Event (SAE) safety narrative\nwith 21 CFR Part 11 dual-attribution audit and electronic signature gating.\nRequirements: PRD-SYS-052",
+          "service": "safety",
+          "gxp": true,
+          "immutable": false,
+          "columns": [
+            {
+              "name": "id",
+              "type": "VARCHAR(36)",
+              "primary_key": true,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "study_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "subject_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "case_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "sae_event_key",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "title",
+              "type": "VARCHAR(500)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "sections",
+              "type": "JSON",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "raw_narrative_text",
+              "type": "VARCHAR",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "timeline_events",
+              "type": "JSON",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "grounded_claims",
+              "type": "JSON",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "model_identifier",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "prompt_hash",
+              "type": "VARCHAR(64)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "confidence_score",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "review_status",
+              "type": "VARCHAR(50)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "approved_by_user_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "approved_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "esignature_manifest_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "created_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "created_by",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "reason_for_change",
+              "type": "VARCHAR(1000)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "version_index",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            }
+          ]
         }
       ]
     },

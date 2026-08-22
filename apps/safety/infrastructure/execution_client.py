@@ -61,14 +61,20 @@ class ExecutionClient:
             "X-Change-Reason": change_reason,
         }
 
-    async def fetch_ae_data(
-        self, study_id: str, client: httpx.AsyncClient | None = None
+    async def fetch_sdtm_domain(
+        self,
+        study_id: str,
+        domain: str,
+        client: httpx.AsyncClient | None = None,
     ) -> dict[str, list[dict[str, Any]]]:
-        global mock_ae_records
-        if mock_ae_records is not None:
-            return mock_ae_records
+        """Fetch raw SDTM domain Dataset-JSON records (e.g. DM, MH, CM, AE, LB, VS)."""
+        dom_upper = domain.strip().upper()
+        if dom_upper == "AE":
+            global mock_ae_records
+            if mock_ae_records is not None:
+                return mock_ae_records
 
-        url = f"{self.base_url}/api/v1/execution/biostat/sdtm/AE"
+        url = f"{self.base_url}/api/v1/execution/biostat/sdtm/{dom_upper}"
         headers = self._get_auth_headers()
         params = {"study_id": study_id}
 
@@ -83,25 +89,28 @@ class ExecutionClient:
 
             if response.status_code != 200:
                 logger.error(
-                    "Execution service returned error %d: %s",
+                    "Execution service returned error %d for domain %s: %s",
                     response.status_code,
+                    dom_upper,
                     response.text,
                 )
                 raise HTTPException(
                     status_code=502,
-                    detail=f"Execution service returned error status {response.status_code}: {response.text}",
+                    detail=f"Execution service returned error status {response.status_code} for domain {dom_upper}: {response.text}",
                 )
 
             data = response.json()
-
             clinical_data = data.get("clinicalData", {})
             item_groups = clinical_data.get("itemGroupData", {})
 
-            result: dict[str, list[dict[str, Any]]] = {"AE": [], "SUPPAE": []}
+            result: dict[str, list[dict[str, Any]]] = {
+                dom_upper: [],
+                f"SUPP{dom_upper}": [],
+            }
 
             for ig_key, ig_data in item_groups.items():
                 domain_key = ig_key.replace("IG.", "")
-                if domain_key not in ("AE", "SUPPAE"):
+                if domain_key not in (dom_upper, f"SUPP{dom_upper}"):
                     continue
 
                 variables = [item["name"] for item in ig_data.get("items", [])]
@@ -114,22 +123,33 @@ class ExecutionClient:
 
         except httpx.RequestError as e:
             logger.error(
-                "Failed to connect to clinical execution service for AE data: %s", e
+                "Failed to connect to clinical execution service for %s data: %s",
+                dom_upper,
+                e,
             )
             raise HTTPException(
                 status_code=502,
-                detail=f"Failed to connect to execution service: {str(e)}",
+                detail=f"Failed to connect to execution service for domain {dom_upper}: {str(e)}",
             )
         except Exception as e:
             if isinstance(e, HTTPException):
                 raise e
             logger.error(
-                "Unexpected error fetching AE data from execution service: %s", e
+                "Unexpected error fetching %s data from execution service: %s",
+                dom_upper,
+                e,
             )
             raise HTTPException(
                 status_code=502,
-                detail=f"Unexpected error fetching AE data: {str(e)}",
+                detail=f"Unexpected error fetching {dom_upper} data: {str(e)}",
             )
+
+    async def fetch_ae_data(
+        self, study_id: str, client: httpx.AsyncClient | None = None
+    ) -> dict[str, list[dict[str, Any]]]:
+        return await self.fetch_sdtm_domain(
+            study_id=study_id, domain="AE", client=client
+        )
 
     async def resolve_meddra_code(
         self,

@@ -9,6 +9,7 @@ from apps.safety.infrastructure.models import (
     SafetyCase,
     SafetyCaseICSR,
     SafetyExportJob,
+    SafetyNarrative,
     prevent_audit_log_modification,
     write_audit_log,
 )
@@ -24,6 +25,7 @@ __all__ = [
     "SafetyCase",
     "SafetyCaseICSR",
     "SafetyExportJob",
+    "SafetyNarrative",
     "prevent_audit_log_modification",
     "write_audit_log",
 ]
