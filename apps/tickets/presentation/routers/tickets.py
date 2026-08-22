@@ -7,6 +7,7 @@ import contextlib
 import hashlib
 import logging
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import (
     APIRouter,
@@ -57,6 +58,8 @@ from apps.tickets.presentation.dtos import (
     CommentResponse,
     CrossAppEventCreate,
     PaginatedTicketAuditLogResponse,
+    RAGPreviewRequest,
+    RAGTriageResponse,
     RegulatoryRiskAssessment,
     SettingDiffEntry,
     TicketAssignPayload,
@@ -67,6 +70,9 @@ from apps.tickets.presentation.dtos import (
     TicketSignaturePayload,
     TicketTransitionPayload,
     TicketUpdate,
+)
+from apps.tickets.services.rag_triage_service import (
+    SupportTicketRAGTriageService,
 )
 from packages.security.context import audit_context
 from packages.security.rbac import (
@@ -1595,4 +1601,86 @@ async def analyze_diff_endpoint(
         requires_qa_signoff=metrics["requires_qa_signoff"],
         summary=metrics["summary"],
         risk_summary=metrics["risk_summary"],
+    )
+
+
+@router.post(
+    "/api/v1/tickets/{ticket_id}/rag-triage",
+    response_model=RAGTriageResponse,
+    status_code=200,
+    summary="Execute Grounded Protocol RAG support triage on an existing ticket",
+)
+async def triage_ticket_rag(
+    ticket_id: str,
+    top_k: int = Query(5, ge=1, le=20),
+    protocol_version: str | None = Query(None),
+    session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
+    _not_auditor=Depends(verify_not_auditor),
+) -> RAGTriageResponse:
+    """Execute Grounded Protocol RAG Support Triage on an existing ticket.
+
+    Applies strict 85% confidence gating:
+    - >= 85%: attaches DRAFT_AI suggestion with exact page/section citations.
+    - < 85%: suppresses auto-draft and fails closed to human Data Manager queue.
+
+    Requirements: PRD-TCK-005, PRD-SYS-051
+    """
+    stmt = select(Ticket).where(
+        Ticket.id == ticket_id,
+        Ticket.is_deleted.is_(False),
+    )
+    result = await session.execute(stmt)
+    ticket = result.scalars().first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    if not can_access_study(principal, ticket.study_id):
+        raise HTTPException(status_code=403, detail="Forbidden: Study access denied")
+
+    triage_result = await SupportTicketRAGTriageService.triage_ticket(
+        session=session,
+        ticket=ticket,
+        actor_user_id=principal.user_id,
+        top_k=top_k,
+        custom_protocol_version=protocol_version,
+    )
+
+    return RAGTriageResponse(
+        ticket_id=triage_result.ticket_id,
+        rag_status=triage_result.rag_status,
+        faithfulness_score=triage_result.faithfulness_score,
+        is_grounded=triage_result.is_grounded,
+        draft_answer=triage_result.draft_answer,
+        citations=triage_result.citations,
+        routed_to_role=triage_result.routed_to_role,
+        routing_reason=triage_result.routing_reason,
+        latency_ms=triage_result.latency_ms,
+    )
+
+
+@router.post(
+    "/api/v1/tickets/rag-triage/preview",
+    status_code=200,
+    summary="Preview Grounded Protocol RAG support triage before ticket submission",
+)
+async def preview_ticket_rag_triage(
+    payload: RAGPreviewRequest,
+    session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
+    _not_auditor=Depends(verify_not_auditor),
+) -> dict[str, Any]:
+    """Preview Grounded Protocol RAG Support Triage before ticket submission.
+
+    Requirements: PRD-TCK-005, PRD-SYS-051
+    """
+    if not can_access_study(principal, payload.study_id):
+        raise HTTPException(status_code=403, detail="Forbidden: Study access denied")
+
+    return await SupportTicketRAGTriageService.preview_rag_triage(
+        session=session,
+        query=payload.query,
+        study_id=payload.study_id,
+        protocol_version=payload.protocol_version,
+        top_k=payload.top_k,
     )

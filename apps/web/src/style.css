@@ -1123,6 +1123,13 @@ main {
   border: 1px solid rgba(234, 88, 12, 0.2);
 }
 
+.lookup-status-indicator.lookup-candidate,
+.badge.lookup-candidate {
+  color: #7c3aed;
+  background-color: #f5f3ff;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+}
+
 .lookup-status-icon {
   font-size: 1rem;
 }

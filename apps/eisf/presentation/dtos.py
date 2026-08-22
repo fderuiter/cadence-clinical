@@ -211,6 +211,26 @@ class BinderCompletenessResponse(BaseModel):
     sections: list[BinderSectionStatus]
 
 
+class EISFDocumentIntelligenceRequest(BaseModel):
+    content: str = Field(..., description="Raw text or base64 data")
+    filename: str = Field(..., description="Document filename")
+    site_id: str | None = Field(None, description="Optional site ID hint")
+    study_id: str | None = Field(None, description="Optional study ID hint")
+    mime_type: str = Field("text/plain", description="MIME type")
+
+
+class EISFDocumentIntelligenceResponse(BaseModel):
+    filename: str
+    recommended_binder_section: str
+    recommended_eisf_folder: str
+    recommended_etmf_artifact_code: str
+    recommended_etmf_artifact_name: str
+    confidence: float
+    extracted_metadata: dict[str, Any]
+    signature_completeness: dict[str, Any]
+    intelligence_report: dict[str, Any]
+
+
 __all__ = [
     "BinderCompletenessResponse",
     "BinderSectionStatus",
@@ -218,6 +238,8 @@ __all__ = [
     "DocumentResponse",
     "DocumentUpdate",
     "EISFDocumentDetail",
+    "EISFDocumentIntelligenceRequest",
+    "EISFDocumentIntelligenceResponse",
     "EISFDocumentUploadRequest",
     "EISFFolderNode",
     "EISFIngestionRequest",

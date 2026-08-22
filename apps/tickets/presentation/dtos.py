@@ -304,3 +304,28 @@ class TicketKPISummaryResponse(BaseModel):
     severity_distribution: dict[str, int]
     rca_distribution: dict[str, int]
     site_distribution: dict[str, int]
+
+
+class RAGTriageResponse(BaseModel):
+    """Schema representing the outcome of Grounded Protocol RAG Support Ticket Triage."""
+
+    ticket_id: str
+    rag_status: str
+    faithfulness_score: float
+    is_grounded: bool
+    draft_answer: str | None = None
+    citations: list[dict[str, Any]] = Field(default_factory=list)
+    routed_to_role: str | None = None
+    routing_reason: str
+    latency_ms: float = 0.0
+
+
+class RAGPreviewRequest(BaseModel):
+    """Schema for requesting a read-only grounded RAG triage preview."""
+
+    query: str = Field(..., min_length=3, description="Support inquiry text")
+    study_id: str = Field(..., description="Study scope identifier")
+    protocol_version: str | None = Field(
+        None, description="Optional protocol version filter"
+    )
+    top_k: int = Field(5, ge=1, le=20, description="Max candidate chunks to evaluate")

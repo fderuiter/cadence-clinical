@@ -20,6 +20,7 @@ from packages.cli.commands.doctor import doctor_app
 from packages.cli.commands.fix import fix_app
 from packages.cli.commands.gxp import gxp_app
 from packages.cli.commands.scaffold import scaffold_app
+from packages.cli.commands.setup import setup_app
 from packages.cli.commands.test import test_app
 from packages.cli.mcp.server import CadenceMcpServer
 
@@ -72,6 +73,7 @@ app.add_typer(check_app, name="check")
 app.add_typer(fix_app, name="fix")
 app.add_typer(db_app, name="db")
 app.add_typer(scaffold_app, name="scaffold")
+app.add_typer(setup_app, name="setup")
 app.add_typer(gxp_app, name="gxp")
 app.add_typer(cdisc_app, name="cdisc")
 app.add_typer(mcp_app, name="mcp")

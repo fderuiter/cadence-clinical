@@ -69,34 +69,44 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
     Deploys database-level triggers to guarantee immutability (insertion-only)
     for DocumentQCTransition records and block deletions on tmf_documents.
     """
+
+    def _has_table(sync_conn, table_name: str) -> bool:
+        insp = inspect(sync_conn)
+        return insp.has_table(table_name)
+
+    has_qc = await conn.run_sync(_has_table, "tmf_document_qc_transitions")
+    has_docs = await conn.run_sync(_has_table, "tmf_documents")
+
     if dialect_name == "sqlite":
-        await conn.execute(
-            text("""
-            CREATE TRIGGER IF NOT EXISTS tmf_document_qc_transitions_no_update
-            BEFORE UPDATE ON tmf_document_qc_transitions
-            BEGIN
-                SELECT RAISE(FAIL, 'IMMUTABILITY_VIOLATION: DocumentQCTransition records are append-only and cannot be updated.');
-            END;
-        """)
-        )
-        await conn.execute(
-            text("""
-            CREATE TRIGGER IF NOT EXISTS tmf_document_qc_transitions_no_delete
-            BEFORE DELETE ON tmf_document_qc_transitions
-            BEGIN
-                SELECT RAISE(FAIL, 'IMMUTABILITY_VIOLATION: DocumentQCTransition records are append-only and cannot be deleted.');
-            END;
-        """)
-        )
-        await conn.execute(
-            text("""
-            CREATE TRIGGER IF NOT EXISTS tmf_documents_no_delete
-            BEFORE DELETE ON tmf_documents
-            BEGIN
-                SELECT RAISE(FAIL, 'IMMUTABILITY_VIOLATION: eTMF documents are immutable and cannot be deleted.');
-            END;
-        """)
-        )
+        if has_qc:
+            await conn.execute(
+                text("""
+                CREATE TRIGGER IF NOT EXISTS tmf_document_qc_transitions_no_update
+                BEFORE UPDATE ON tmf_document_qc_transitions
+                BEGIN
+                    SELECT RAISE(FAIL, 'IMMUTABILITY_VIOLATION: DocumentQCTransition records are append-only and cannot be updated.');
+                END;
+            """)
+            )
+            await conn.execute(
+                text("""
+                CREATE TRIGGER IF NOT EXISTS tmf_document_qc_transitions_no_delete
+                BEFORE DELETE ON tmf_document_qc_transitions
+                BEGIN
+                    SELECT RAISE(FAIL, 'IMMUTABILITY_VIOLATION: DocumentQCTransition records are append-only and cannot be deleted.');
+                END;
+            """)
+            )
+        if has_docs:
+            await conn.execute(
+                text("""
+                CREATE TRIGGER IF NOT EXISTS tmf_documents_no_delete
+                BEFORE DELETE ON tmf_documents
+                BEGIN
+                    SELECT RAISE(FAIL, 'IMMUTABILITY_VIOLATION: eTMF documents are immutable and cannot be deleted.');
+                END;
+            """)
+            )
     elif dialect_name == "postgresql":
         await conn.execute(
             text("""
@@ -927,7 +937,7 @@ async def run_migrations(database_url: str) -> None:
             )
             async with engine.begin() as conn:
                 await upgrade_existing_tables(conn, dialect_name)
-                await deploy_database_triggers(conn, dialect_name)
+            await engine.dispose()
 
             # Programmatically stamp the alembic version as head
             env = os.environ.copy()
@@ -948,11 +958,16 @@ async def run_migrations(database_url: str) -> None:
                 stderr=asyncio.subprocess.PIPE,
             )
             await process.communicate()
+            engine = create_async_engine(database_url, echo=False)
+            async with engine.begin() as conn:
+                await deploy_database_triggers(conn, dialect_name)
             print(
                 "eTMF Schema migration completed successfully (Legacy upgrades + Alembic stamped to head)."
             )
         else:
             print("Clean eTMF install. Running declarative Alembic migrations...")
+            await engine.dispose()
+
             env = os.environ.copy()
             env["ETMF_DATABASE_URL"] = database_url
 
@@ -978,6 +993,7 @@ async def run_migrations(database_url: str) -> None:
                     f"Alembic migration failed for eTMF: {stderr.decode()}"
                 )
             print("eTMF Schema migration completed successfully via Alembic.")
+            engine = create_async_engine(database_url, echo=False)
             async with engine.begin() as conn:
                 await deploy_database_triggers(conn, dialect_name)
     finally:

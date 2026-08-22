@@ -215,3 +215,12 @@ An integration pattern in `apps/interop` combining pre-compiled deterministic FH
 ### Embedded AI Action Primitive
 
 A standardized frontend component pattern (`<AiActionButton>`, `<AiSuggestionDrawer>`) providing contextual AI triggers, visual confidence indicators, diff inspections, and role-governed human review actions within high-density clinical workspaces.
+
+### Interactive Credential Bootstrapping
+
+A structured, step-by-step human-in-the-loop CLI workflow that automates 256-bit cryptographic secret generation, guides third-party dashboard navigation for external API keys, performs idempotent `.env` upserts, and syncs secrets to CI/CD repositories.
+
+### Multi-Tier Environment Provisioning
+
+An environment configuration strategy distinguishing between developer local fast-paths (zero-touch local storage, auto-generated HMAC keys) and production compliance paths (external S3 storage, real OIDC/SMTP secrets, and strict Part 11 entropy validation).
+

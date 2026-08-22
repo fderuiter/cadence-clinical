@@ -35,6 +35,10 @@ SERVICES = discover_services()
 @pytest.mark.parametrize("service", SERVICES)
 def test_domain_layer_isolation(service: str):
     """Ensure domain layer is decoupled from application, infrastructure/adapters, presentation, and framework libraries."""
+    root_dir = Path(__file__).resolve().parent.parent.parent.parent
+    domain_dir = root_dir / "apps" / service / "domain"
+    if not domain_dir.exists() or not list(domain_dir.glob("*.py")):
+        pytest.skip(f"Service {service} does not have a domain layer.")
     (
         archrule(f"{service.title()} Domain Layer Isolation")
         .match(f"apps.{service}.domain*")
@@ -51,6 +55,10 @@ def test_domain_layer_isolation(service: str):
 @pytest.mark.parametrize("service", SERVICES)
 def test_application_layer_isolation(service: str):
     """Ensure application layer is decoupled from infrastructure/adapters, presentation, and framework libraries."""
+    root_dir = Path(__file__).resolve().parent.parent.parent.parent
+    app_dir = root_dir / "apps" / service / "application"
+    if not app_dir.exists() or not list(app_dir.glob("*.py")):
+        pytest.skip(f"Service {service} does not have an application layer.")
     (
         archrule(f"{service.title()} Application Layer Isolation")
         .match(f"apps.{service}.application*")

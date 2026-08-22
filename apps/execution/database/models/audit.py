@@ -55,4 +55,5 @@ class AuditedModel(Base):
     def __init__(self, **kwargs):
         if "id" not in kwargs:
             kwargs["id"] = str(uuid.uuid4())
-        super().__init__(**kwargs)
+        valid_kwargs = {k: v for k, v in kwargs.items() if hasattr(type(self), k)}
+        super().__init__(**valid_kwargs)

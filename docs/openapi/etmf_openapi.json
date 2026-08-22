@@ -299,6 +299,329 @@
         }
       }
     },
+    "/api/v1/etmf/intelligence/analyze": {
+      "post": {
+        "tags": [
+          "Document Intelligence"
+        ],
+        "summary": "Execute end-to-end multimodal document intelligence pipeline",
+        "description": "Run layout parsing, DIA taxonomy classification, metadata extraction, and signature verification.",
+        "operationId": "analyze_document_endpoint_api_v1_etmf_intelligence_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentIntelligenceAnalyzeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentIntelligenceReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/classify": {
+      "post": {
+        "tags": [
+          "Document Intelligence"
+        ],
+        "summary": "Execute multi-signal DIA Reference Model taxonomy classification",
+        "description": "Classify document content against DIA TMF Reference Model v3.2.0.",
+        "operationId": "classify_document_endpoint_api_v1_etmf_intelligence_classify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentIntelligenceClassifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Classify Document Endpoint Api V1 Etmf Intelligence Classify Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/extract-metadata": {
+      "post": {
+        "tags": [
+          "Document Intelligence"
+        ],
+        "summary": "Extract regulatory and trial metadata from document",
+        "description": "Extract protocol, site, investigator, and date metadata.",
+        "operationId": "extract_metadata_endpoint_api_v1_etmf_intelligence_extract_metadata_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentIntelligenceMetadataRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractedRegulatoryMetadata"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/verify-signatures": {
+      "post": {
+        "tags": [
+          "Document Intelligence"
+        ],
+        "summary": "Verify regulatory signature completeness",
+        "description": "Analyze signature lines, manifestations, and completeness for an artifact.",
+        "operationId": "verify_signatures_endpoint_api_v1_etmf_intelligence_verify_signatures_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentIntelligenceSignatureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignatureAnalysisResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/stage-qc": {
+      "post": {
+        "tags": [
+          "Document Intelligence"
+        ],
+        "summary": "Ingest and stage classified artifact into CRA Quality Control queue",
+        "description": "Analyze, ingest, and stage document with TECHNICAL_QC status for CRA review.",
+        "operationId": "stage_classified_artifact_endpoint_api_v1_etmf_intelligence_stage_qc_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StageDocumentQCRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Stage Classified Artifact Endpoint Api V1 Etmf Intelligence Stage Qc Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/qc-queue": {
+      "get": {
+        "tags": [
+          "Document Intelligence"
+        ],
+        "summary": "List pending documents staged in CRA Quality Control queue",
+        "description": "Retrieve staged QC items.",
+        "operationId": "get_qc_queue_endpoint_api_v1_etmf_intelligence_qc_queue_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional study ID filter",
+              "title": "Study Id"
+            },
+            "description": "Optional study ID filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CRAQCStagingItem"
+                  },
+                  "title": "Response Get Qc Queue Endpoint Api V1 Etmf Intelligence Qc Queue Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/qc-review/{doc_id}": {
+      "post": {
+        "tags": [
+          "Document Intelligence"
+        ],
+        "summary": "Execute CRA Quality Control review decision (Accept, Override, Reject)",
+        "description": "Adjudicate staged document classification with 21 CFR Part 11 audit trail.",
+        "operationId": "cra_qc_review_endpoint_api_v1_etmf_intelligence_qc_review__doc_id__post",
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Doc Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CRAQCReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/etmf/taxonomy": {
       "get": {
         "tags": [
@@ -2798,6 +3121,145 @@
         ],
         "title": "BinderZoneNode"
       },
+      "CRAQCReviewRequest": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "title": "Decision",
+            "description": "QC action: ACCEPT, OVERRIDE, or REJECT"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Reason For Change",
+            "description": "Part 11 change justification"
+          },
+          "override_artifact_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Artifact Code",
+            "description": "Target artifact code if decision is OVERRIDE"
+          },
+          "discrepancy_comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discrepancy Comment",
+            "description": "Optional discrepancy note or rejection comment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision",
+          "reason_for_change"
+        ],
+        "title": "CRAQCReviewRequest"
+      },
+      "CRAQCStagingItem": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id",
+            "description": "Staged document identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Filename"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Current lifecycle status (e.g. TECHNICAL_QC, DRAFT_AI)"
+          },
+          "intelligence_report": {
+            "$ref": "#/components/schemas/DocumentIntelligenceReport",
+            "description": "Associated intelligence report"
+          },
+          "staged_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Staged At",
+            "description": "Timestamp staged"
+          },
+          "staged_by": {
+            "type": "string",
+            "title": "Staged By",
+            "description": "Actor or system that staged the document"
+          },
+          "qc_assigned_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qc Assigned To",
+            "description": "Assigned CRA reviewer"
+          },
+          "discrepancy_notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Discrepancy Notes",
+            "description": "Automated discrepancies flagged for review"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "study_id",
+          "filename",
+          "status",
+          "intelligence_report",
+          "staged_at",
+          "staged_by"
+        ],
+        "title": "CRAQCStagingItem",
+        "description": "Item staged in the CRA Quality Control queue for human review."
+      },
+      "ClassificationConfidenceTier": {
+        "type": "string",
+        "enum": [
+          "HIGH",
+          "MEDIUM",
+          "LOW"
+        ],
+        "title": "ClassificationConfidenceTier",
+        "description": "Confidence tier based on classification score."
+      },
       "CompletenessResponse": {
         "properties": {
           "study_id": {
@@ -2914,6 +3376,341 @@
         },
         "type": "object",
         "title": "DocumentExpirationUpdate"
+      },
+      "DocumentIntelligenceAnalyzeRequest": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Raw text, base64 data, or text stream"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type",
+            "default": "text/plain"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Optional study ID hint"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional site ID hint"
+          },
+          "artifact_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Hint",
+            "description": "Optional artifact type or code hint"
+          },
+          "free_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Text",
+            "description": "Optional free-text hint"
+          },
+          "taxonomy_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taxonomy Version",
+            "description": "Optional taxonomy version"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id",
+            "description": "Optional document ID if already in eTMF"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content",
+          "filename"
+        ],
+        "title": "DocumentIntelligenceAnalyzeRequest"
+      },
+      "DocumentIntelligenceClassifyRequest": {
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content",
+            "description": "Optional document content"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document filename"
+          },
+          "artifact_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Hint",
+            "description": "Optional artifact type or code hint"
+          },
+          "free_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Text",
+            "description": "Optional free-text hint"
+          },
+          "taxonomy_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taxonomy Version",
+            "description": "Optional taxonomy version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename"
+        ],
+        "title": "DocumentIntelligenceClassifyRequest"
+      },
+      "DocumentIntelligenceMetadataRequest": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Document content"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document filename",
+            "default": "document.txt"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Optional study ID hint"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional site ID hint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "DocumentIntelligenceMetadataRequest"
+      },
+      "DocumentIntelligenceReport": {
+        "properties": {
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id",
+            "description": "ID of existing document if already persisted"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Source document filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type"
+          },
+          "sha256_hash": {
+            "type": "string",
+            "title": "Sha256 Hash",
+            "description": "Cryptographic SHA-256 digest of content"
+          },
+          "modality": {
+            "$ref": "#/components/schemas/DocumentModality",
+            "description": "Detected input modality",
+            "default": "TEXT"
+          },
+          "primary_classification": {
+            "$ref": "#/components/schemas/TaxonomyMatchCandidate",
+            "description": "Top-ranked DIA TMF Reference Model classification"
+          },
+          "alternative_candidates": {
+            "items": {
+              "$ref": "#/components/schemas/TaxonomyMatchCandidate"
+            },
+            "type": "array",
+            "title": "Alternative Candidates",
+            "description": "Alternative taxonomy matches"
+          },
+          "confidence_tier": {
+            "$ref": "#/components/schemas/ClassificationConfidenceTier",
+            "description": "Confidence tier of primary classification",
+            "default": "HIGH"
+          },
+          "qc_recommendation": {
+            "$ref": "#/components/schemas/QCRecommendation",
+            "description": "Recommended action for CRA Quality Control routing",
+            "default": "AUTO_CLASSIFY"
+          },
+          "extracted_metadata": {
+            "$ref": "#/components/schemas/ExtractedRegulatoryMetadata",
+            "description": "Extracted regulatory metadata"
+          },
+          "signature_analysis": {
+            "$ref": "#/components/schemas/SignatureAnalysisResult",
+            "description": "Signature completeness analysis"
+          },
+          "ai_generation_manifest": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Ai Generation Manifest",
+            "description": "21 CFR Part 11 AI provenance metadata (model, prompt hash, confidence)"
+          },
+          "eisf_target_mapping": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eisf Target Mapping",
+            "description": "Corresponding eISF folder mapping and synchronization advice"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "mime_type",
+          "sha256_hash",
+          "primary_classification"
+        ],
+        "title": "DocumentIntelligenceReport",
+        "description": "Comprehensive intelligence report containing classification, metadata, and signature analysis."
+      },
+      "DocumentIntelligenceSignatureRequest": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Document content"
+          },
+          "artifact_code": {
+            "type": "string",
+            "title": "Artifact Code",
+            "description": "DIA artifact code"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document filename",
+            "default": "document.txt"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content",
+          "artifact_code"
+        ],
+        "title": "DocumentIntelligenceSignatureRequest"
+      },
+      "DocumentModality": {
+        "type": "string",
+        "enum": [
+          "TEXT",
+          "PDF_BINARY",
+          "SCANNED_IMAGE",
+          "STRUCTURED_FORM"
+        ],
+        "title": "DocumentModality",
+        "description": "Input modality or format of the processed regulatory document."
       },
       "DocumentResponse": {
         "properties": {
@@ -3469,6 +4266,202 @@
         ],
         "title": "ExpectedDocumentResponse"
       },
+      "ExtractedRegulatoryMetadata": {
+        "properties": {
+          "protocol_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Number",
+            "description": "Clinical protocol identifier"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Resolved study identifier"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Resolved site identifier"
+          },
+          "investigator_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigator Name",
+            "description": "Principal Investigator name"
+          },
+          "issue_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue Date",
+            "description": "Document issuance or effective date"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date",
+            "description": "Document expiration date"
+          },
+          "form_identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form Identifier",
+            "description": "Official form identifier (e.g. FDA 1572, OMB number)"
+          },
+          "version_tag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Tag",
+            "description": "Document version string"
+          },
+          "raw_extracted_fields": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Raw Extracted Fields",
+            "description": "Additional key-value entities extracted"
+          },
+          "phi_pii_detected": {
+            "type": "boolean",
+            "title": "Phi Pii Detected",
+            "description": "Whether sensitive PII/PHI was detected",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "ExtractedRegulatoryMetadata",
+        "description": "Key clinical trial metadata entities extracted from document content."
+      },
+      "ExtractedSignature": {
+        "properties": {
+          "signer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signer Name",
+            "description": "Name of the extracted signer"
+          },
+          "signer_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signer Role",
+            "description": "Role of the signer (e.g. PI, Sponsor, Subject)"
+          },
+          "signature_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Date",
+            "description": "Date stamp associated with the signature"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "description": "Detection confidence score",
+            "default": 1.0
+          },
+          "location_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Hint",
+            "description": "Text location or anchor"
+          },
+          "is_digital_signature": {
+            "type": "boolean",
+            "title": "Is Digital Signature",
+            "description": "Whether cryptographic digital signature is present",
+            "default": false
+          },
+          "signature_type": {
+            "type": "string",
+            "title": "Signature Type",
+            "description": "Type of signature: DIGITAL_PKCS7, HMAC_MANIFEST, WET_OR_ELECTRONIC",
+            "default": "WET_OR_ELECTRONIC"
+          }
+        },
+        "type": "object",
+        "title": "ExtractedSignature",
+        "description": "Representation of an extracted signature or signature line."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -4022,6 +5015,16 @@
         "title": "ProtocolVersionStatusDTO",
         "description": "Controlled vocabulary of statuses for a clinical protocol or study version."
       },
+      "QCRecommendation": {
+        "type": "string",
+        "enum": [
+          "AUTO_CLASSIFY",
+          "FLAG_FOR_QC_REVIEW",
+          "MANUAL_RECLASSIFICATION_REQUIRED"
+        ],
+        "title": "QCRecommendation",
+        "description": "Recommended automated action for CRA Quality Control routing."
+      },
       "RedactRequest": {
         "properties": {
           "redacted_content": {
@@ -4094,6 +5097,57 @@
           "signing_reason"
         ],
         "title": "SignDocumentRequest"
+      },
+      "SignatureAnalysisResult": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/SignaturePresenceStatus",
+            "description": "Overall signature completeness status",
+            "default": "UNSIGNED"
+          },
+          "extracted_signatures": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractedSignature"
+            },
+            "type": "array",
+            "title": "Extracted Signatures",
+            "description": "List of identified signatures"
+          },
+          "missing_required_signatures": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Required Signatures",
+            "description": "Roles with missing required signatures"
+          },
+          "signature_blocks_detected": {
+            "type": "integer",
+            "title": "Signature Blocks Detected",
+            "description": "Total number of signature blocks identified",
+            "default": 0
+          },
+          "details": {
+            "type": "string",
+            "title": "Details",
+            "description": "Human-readable summary of signature verification",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "SignatureAnalysisResult",
+        "description": "Aggregate result of document signature completeness analysis."
+      },
+      "SignaturePresenceStatus": {
+        "type": "string",
+        "enum": [
+          "FULLY_SIGNED",
+          "PARTIALLY_SIGNED",
+          "UNSIGNED",
+          "SIGNATURE_NOT_REQUIRED"
+        ],
+        "title": "SignaturePresenceStatus",
+        "description": "Regulatory signature completeness evaluation status."
       },
       "SignatureVerificationResponse": {
         "properties": {
@@ -4228,6 +5282,94 @@
           "end"
         ],
         "title": "SpanItem"
+      },
+      "StageDocumentQCRequest": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Document content or base64 data"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type",
+            "default": "text/plain"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional site ID"
+          },
+          "artifact_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Hint",
+            "description": "Optional artifact type/code hint"
+          },
+          "taxonomy_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taxonomy Version",
+            "description": "Optional taxonomy version"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Reason For Change",
+            "description": "Part 11 change justification"
+          },
+          "assigned_cra": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Cra",
+            "description": "Optional assigned CRA reviewer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content",
+          "filename",
+          "study_id",
+          "reason_for_change"
+        ],
+        "title": "StageDocumentQCRequest"
       },
       "StudyArchiveItemResult": {
         "properties": {
@@ -4381,6 +5523,73 @@
         ],
         "title": "TaxonomyCatalogResponse",
         "description": "Top-level taxonomy catalog response representation."
+      },
+      "TaxonomyMatchCandidate": {
+        "properties": {
+          "zone_code": {
+            "type": "integer",
+            "title": "Zone Code",
+            "description": "DIA TMF Zone code (1-11)"
+          },
+          "zone_name": {
+            "type": "string",
+            "title": "Zone Name",
+            "description": "DIA TMF Zone name"
+          },
+          "section_code": {
+            "type": "string",
+            "title": "Section Code",
+            "description": "DIA TMF Section code (e.g. 05.02)"
+          },
+          "section_name": {
+            "type": "string",
+            "title": "Section Name",
+            "description": "DIA TMF Section name"
+          },
+          "artifact_code": {
+            "type": "string",
+            "title": "Artifact Code",
+            "description": "Canonical DIA artifact code (e.g. 05.02.01)"
+          },
+          "artifact_name": {
+            "type": "string",
+            "title": "Artifact Name",
+            "description": "Canonical artifact name"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "description": "Classification confidence score"
+          },
+          "matched_signals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Matched Signals",
+            "description": "Evidence signals that triggered this match (e.g. form_omb, layout_anchor, keywords)"
+          },
+          "is_extension": {
+            "type": "boolean",
+            "title": "Is Extension",
+            "description": "Whether artifact is a custom Cadence extension",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "zone_code",
+          "zone_name",
+          "section_code",
+          "section_name",
+          "artifact_code",
+          "artifact_name",
+          "confidence"
+        ],
+        "title": "TaxonomyMatchCandidate",
+        "description": "Ranked taxonomy classification candidate."
       },
       "TaxonomySectionNode": {
         "properties": {

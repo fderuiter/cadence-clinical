@@ -18,7 +18,9 @@ exclude = [
     "apps/subject-portal",
     "packages/ui",
     "packages/gateway-rewrite",
-    "packages/usdm-schemas"
+    "packages/usdm-schemas",
+    "packages/core-models",
+    "packages/deidentification"
 ]
 
 [tool.uv.sources]

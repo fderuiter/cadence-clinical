@@ -207,3 +207,96 @@ def classify_incoming_document(
             latest_doc = doc
 
     return DocumentClassification.CHANGED, latest_doc
+
+
+def classify_eisf_document_local(
+    filename: str,
+    content: str | None = None,
+    binder_hint: str | None = None,
+) -> dict[str, Any]:
+    """Fallback local classifier for eISF document intelligence when eTMF REST API is unavailable."""
+    text_corpus = f"{filename or ''} {content or ''} {binder_hint or ''}".lower()
+
+    has_sig = any(
+        term in text_corpus
+        for term in ["signature", "/s/", "signed", "signed by", "certification"]
+    )
+    sig_info = {
+        "status": "FULLY_SIGNED" if has_sig else "UNSIGNED",
+        "is_complete": has_sig,
+        "detected_signatures": 1 if has_sig else 0,
+        "missing_roles": [] if has_sig else ["Principal Investigator"],
+    }
+
+    if "1572" in text_corpus or "statement of investigator" in text_corpus:
+        return {
+            "section": "04_REGULATORY",
+            "folder": "Regulatory Documents",
+            "code": "05.02.01",
+            "name": "FDA Form 1572",
+            "confidence": 0.95,
+            "signature_completeness": sig_info,
+        }
+    if "license" in text_corpus or "medical board" in text_corpus:
+        return {
+            "section": "05_STAFF_QUALIFICATIONS",
+            "folder": "Staff Qualifications",
+            "code": "05.02.98",
+            "name": "Medical License",
+            "confidence": 0.95,
+            "signature_completeness": sig_info,
+        }
+    if "cv" in text_corpus or "curriculum vitae" in text_corpus:
+        return {
+            "section": "05_STAFF_QUALIFICATIONS",
+            "folder": "Staff Qualifications",
+            "code": "05.02.03",
+            "name": "Investigator CV",
+            "confidence": 0.95,
+            "signature_completeness": sig_info,
+        }
+    if "financial" in text_corpus or "disclosure" in text_corpus:
+        return {
+            "section": "05_STAFF_QUALIFICATIONS",
+            "folder": "Staff Qualifications",
+            "code": "05.02.02",
+            "name": "Financial Disclosure",
+            "confidence": 0.95,
+            "signature_completeness": sig_info,
+        }
+    if "delegation" in text_corpus or "doa" in text_corpus:
+        return {
+            "section": "05_STAFF_QUALIFICATIONS",
+            "folder": "Staff Qualifications",
+            "code": "05.02.04",
+            "name": "Delegation of Authority Log",
+            "confidence": 0.95,
+            "signature_completeness": sig_info,
+        }
+    if "irb" in text_corpus or "iec" in text_corpus or "ethics" in text_corpus:
+        return {
+            "section": "04_REGULATORY",
+            "folder": "Regulatory Documents",
+            "code": "04.01.01",
+            "name": "IRB/IEC Approval",
+            "confidence": 0.95,
+            "signature_completeness": sig_info,
+        }
+    if "protocol" in text_corpus:
+        return {
+            "section": "01_TRIAL_MANAGEMENT",
+            "folder": "Protocols & Amendments",
+            "code": "01.01.01",
+            "name": "Clinical Trial Protocol",
+            "confidence": 0.95,
+            "signature_completeness": sig_info,
+        }
+
+    return {
+        "section": binder_hint or "04_REGULATORY",
+        "folder": "Regulatory Documents",
+        "code": "04.01.01",
+        "name": "Regulatory Document",
+        "confidence": 0.85,
+        "signature_completeness": sig_info,
+    }

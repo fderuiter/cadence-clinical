@@ -116,6 +116,48 @@
         }
       }
     },
+    "/api/v1/ai/rag/protocol-triage": {
+      "post": {
+        "tags": [
+          "Clinical RAG"
+        ],
+        "summary": "Execute grounded Tier 2 protocol RAG triage with citation markers",
+        "description": "Executes grounded clinical RAG answering support inquiries with verbatim citations.\n\nEnforces:\n- Verbatim citation markers: `[Protocol v2.1, Section 7.3, Page 42]`\n- Mathematical faithfulness calculation (85% confidence gate)\n- Fail-closed behavior on missing or unapproved protocol context",
+        "operationId": "triage_protocol_query_api_v1_ai_rag_protocol_triage_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolRAGRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolRAGResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/healthz": {
       "get": {
         "summary": "Health Check",
@@ -551,6 +593,238 @@
         ],
         "title": "ModelTier",
         "description": "Execution tiers for routing AI workloads based on cost and capability."
+      },
+      "ParsedCitation": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version",
+            "description": "Referenced protocol version."
+          },
+          "section_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Number",
+            "description": "Referenced section number."
+          },
+          "section_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Title",
+            "description": "Resolved section title."
+          },
+          "page_number": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Page Number",
+            "description": "Referenced page number."
+          },
+          "citation_marker": {
+            "type": "string",
+            "title": "Citation Marker",
+            "description": "Exact verbatim citation string, e.g., '[Protocol v2.1, Section 7.3, Page 42]'."
+          },
+          "is_approved": {
+            "type": "boolean",
+            "title": "Is Approved",
+            "description": "True if referenced chunk belongs to an approved version."
+          },
+          "is_verified": {
+            "type": "boolean",
+            "title": "Is Verified",
+            "description": "True if coordinates match an existing chunk in the Knowledge Hub."
+          }
+        },
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "page_number",
+          "citation_marker",
+          "is_approved",
+          "is_verified"
+        ],
+        "title": "ParsedCitation",
+        "description": "Structured representation of a parsed citation reference."
+      },
+      "ProtocolRAGContextChunk": {
+        "properties": {
+          "chunk_id": {
+            "type": "string",
+            "title": "Chunk Id",
+            "description": "Unique chunk identifier."
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version",
+            "description": "Protocol version (e.g., 'v2.1')."
+          },
+          "section_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Number",
+            "description": "Protocol section number (e.g. '7.3')."
+          },
+          "section_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Title",
+            "description": "Protocol section title."
+          },
+          "page_number": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Page Number",
+            "description": "1-indexed physical page number in source PDF."
+          },
+          "chunk_text": {
+            "type": "string",
+            "title": "Chunk Text",
+            "description": "Raw text of the protocol chunk."
+          },
+          "is_approved": {
+            "type": "boolean",
+            "title": "Is Approved",
+            "description": "Whether this protocol chunk is from an approved version.",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "chunk_id",
+          "protocol_version",
+          "page_number",
+          "chunk_text"
+        ],
+        "title": "ProtocolRAGContextChunk",
+        "description": "Normalized protocol excerpt chunk passed to RAG generation and verification."
+      },
+      "ProtocolRAGRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Query",
+            "description": "Clinical inquiry text from user/ticket."
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target study identifier."
+          },
+          "protocol_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Version",
+            "description": "Optional target protocol version."
+          },
+          "context_chunks": {
+            "items": {
+              "$ref": "#/components/schemas/ProtocolRAGContextChunk"
+            },
+            "type": "array",
+            "title": "Context Chunks",
+            "description": "Retrieved protocol chunks from Knowledge Hub."
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "default": 5
+          }
+        },
+        "type": "object",
+        "required": [
+          "query",
+          "study_id"
+        ],
+        "title": "ProtocolRAGRequest",
+        "description": "Inbound request to synthesize a citation-grounded response for a clinical inquiry."
+      },
+      "ProtocolRAGResponse": {
+        "properties": {
+          "answer": {
+            "type": "string",
+            "title": "Answer",
+            "description": "Generated clinical draft with citation markers."
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/ParsedCitation"
+            },
+            "type": "array",
+            "title": "Citations",
+            "description": "Extracted citation references."
+          },
+          "faithfulness_score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Faithfulness Score",
+            "description": "Mathematical faithfulness score (0.0 - 1.0)."
+          },
+          "is_grounded": {
+            "type": "boolean",
+            "title": "Is Grounded",
+            "description": "True if faithfulness score >= 0.85."
+          },
+          "confidence_tier": {
+            "type": "string",
+            "title": "Confidence Tier",
+            "description": "'HIGH' (>= 0.85) or 'LOW_FAIL_CLOSED' (< 0.85)."
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "Model identifier.",
+            "default": "tier-2-clinical-rag"
+          },
+          "latency_ms": {
+            "type": "number",
+            "title": "Latency Ms",
+            "description": "Execution latency in milliseconds.",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "answer",
+          "faithfulness_score",
+          "is_grounded",
+          "confidence_tier"
+        ],
+        "title": "ProtocolRAGResponse",
+        "description": "Outbound response containing grounded answer, citations, and faithfulness telemetry."
       },
       "TierInfoDTO": {
         "properties": {

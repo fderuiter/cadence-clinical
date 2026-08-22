@@ -315,9 +315,11 @@ def step_run_tests(dry_run: bool, full: bool = False) -> None:
                 "--ignore=apps/designer/tests/test_study_versions.py",
                 "--ignore=apps/designer/tests/test_synopsis_router.py",
                 "--ignore=apps/execution/tests/test_pool_state_eviction.py",
+                "--ignore=apps/etmf/tests/test_etmf_qc_invariants.py",
+                "--ignore=apps/etmf/tests/test_etmf_triggers_compliance.py",
             ]
         )
-        # Run translation and compliance layout tests sequentially
+        # Run translation, compliance layout, and sqlite migration tests sequentially
         _run(
             [
                 "uv",
@@ -335,6 +337,8 @@ def step_run_tests(dry_run: bool, full: bool = False) -> None:
                 "apps/designer/tests/test_study_versions.py",
                 "apps/designer/tests/test_synopsis_router.py",
                 "apps/execution/tests/test_pool_state_eviction.py",
+                "apps/etmf/tests/test_etmf_qc_invariants.py",
+                "apps/etmf/tests/test_etmf_triggers_compliance.py",
             ]
         )
 

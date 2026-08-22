@@ -1,5 +1,5 @@
 // Auto-generated from OpenAPI schema definition
-// Generated on: 2026-08-22T03:44:46.650Z
+// Generated on: 2026-08-22T04:30:49.655Z
 
 export interface ActivityAssignmentRequest {
   visit_id: string;
@@ -116,6 +116,11 @@ export interface BlockDetailResponse {
 
 export interface Body_extract_protocol_digitization_api_v1_designer_digitization_extract_post {
   file: string;
+}
+
+export interface Body_start_digitization_dag_job_api_v1_designer_digitization_dag_jobs_post {
+  file: string;
+  study_id?: string | null;
 }
 
 export interface Body_upload_mapping_csv_api_v1_mappings_upload_post {
@@ -242,6 +247,11 @@ export interface CommitUSDMResponse {
 }
 
 export type ComparisonOperator = "==" | "!=" | "<" | "<=" | ">" | ">=";
+
+export interface CompileUSDMFromJobRequest {
+  study_id: string;
+  change_reason: string;
+}
 
 export interface ConceptDetail {
   id: string;
@@ -381,6 +391,33 @@ export interface CreateTimingWindowRequest {
   change_reason?: string;
 }
 
+export interface DAGJobStatusResponse {
+  job_id: string;
+  study_id?: string | null;
+  status: DigitizationJobStatus;
+  current_stage?: DigitizationStage | null;
+  progress_pct: number;
+  created_at: string;
+  updated_at: string;
+  checkpoints?: Record<string, any>;
+  error_message?: string | null;
+  is_terminal: boolean;
+  final_usdm_payload?: USDMProtocolExtractionResponse | null;
+  synthesized_forms?: SynthesizedECRFForm[];
+}
+
+export interface DataCaptureEcrfImpact {
+  affected_forms_count?: number;
+  added_forms?: string[];
+  modified_forms?: string[];
+  removed_forms?: string[];
+  affected_visits?: string[];
+  new_cdash_fields?: string[];
+  rule_modifications_count?: number;
+  estimated_build_hours?: number;
+  action_items?: string[];
+}
+
 export interface DataElementLibraryObjectDetail {
   id: string;
   version: string;
@@ -408,6 +445,22 @@ export interface DifferenceResult {
   old_value: any;
   new_value: any;
 }
+
+export type DigitizationJobStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
+
+export type DigitizationStage = "LAYOUT_PARSING" | "SOA_EXTRACTION" | "BIOMEDICAL_CONCEPT_MAPPING" | "ECRF_SYNTHESIS" | "USDM_COMPILATION";
+
+export interface DispatchedTicketInfo {
+  ticket_id: string;
+  reference: string;
+  domain_queue: DomainQueue;
+  title: string;
+  priority: string;
+  status: string;
+  assignee_role: string;
+}
+
+export type DomainQueue = "DATA_CAPTURE_ECRF" | "SUBJECT_MANAGEMENT_RTSM" | "REGULATORY_COMPLIANCE" | "SITE_OPERATIONS" | "CLINICAL_OPERATIONS";
 
 export interface EligibilityCriterion {
   created_at?: string;
@@ -656,7 +709,30 @@ export interface MigrationDirective {
   target_version: string;
 }
 
+export interface NarrativeDelta {
+  section_id: string;
+  section_title: string;
+  change_type: string;
+  old_text?: string | null;
+  new_text?: string | null;
+  delta_summary: string;
+  safety_risk_impact?: boolean;
+}
+
 export type ObjectType = "FORM" | "DATA_ELEMENT" | "ARM" | "VISIT";
+
+export interface OperationalTicketBlueprint {
+  domain_queue: DomainQueue;
+  title: string;
+  description: string;
+  category?: string;
+  priority?: string;
+  gxp_severity?: string;
+  assignee_role: string;
+  action_plan?: string[];
+  due_date_offset_days?: number | null;
+  context_payload?: Record<string, any>;
+}
 
 export interface ProblemDetails {
   type: string;
@@ -689,6 +765,29 @@ export interface PromoteRequest {
 export interface ProtocolAmendRequest {
   amendment_type?: string | null;
   type?: string | null;
+}
+
+export interface ProtocolImpactAssessment {
+  assessment_id: string;
+  study_id: string;
+  base_version: string;
+  amended_version: string;
+  amendment_type?: string;
+  is_substantial?: boolean;
+  requires_reconsent?: boolean;
+  patient_burden_delta?: number;
+  estimated_cost_usd?: number;
+  executive_summary: string;
+  graph_deltas?: EntityDiff[];
+  soa_deltas?: EntityDiff[];
+  narrative_deltas?: NarrativeDelta[];
+  data_capture_ecrf: DataCaptureEcrfImpact;
+  subject_management_rtsm: SubjectManagementRtsmImpact;
+  regulatory_compliance: RegulatoryComplianceImpact;
+  reconsent_gating_plan: ReConsentGatingPlan;
+  operational_tickets?: OperationalTicketBlueprint[];
+  migration_directives?: MigrationDirective[];
+  created_at: string;
 }
 
 export interface ProtocolQualityScore {
@@ -724,6 +823,14 @@ export interface QualityRuleFinding {
   target_node_id?: string | null;
 }
 
+export interface ReConsentGatingPlan {
+  gating_mandated?: boolean;
+  affected_cohort?: string;
+  flagged_subject_count?: number;
+  flagged_subject_ids?: string[];
+  justification?: string;
+}
+
 export interface ReadabilityReport {
   flesch_reading_ease: number;
   flesch_kincaid_grade_level: number;
@@ -731,6 +838,17 @@ export interface ReadabilityReport {
   sentence_count: number;
   syllable_count: number;
   interpretation: string;
+}
+
+export interface RegulatoryComplianceImpact {
+  safety_risk_level?: string;
+  requires_reconsent?: boolean;
+  is_substantial_amendment?: boolean;
+  icf_version_upgrade?: string;
+  irb_iec_submission_type?: string;
+  affected_subject_cohorts?: string[];
+  flagged_active_subjects?: string[];
+  action_items?: string[];
 }
 
 export interface RenameConceptRequest {
@@ -741,6 +859,22 @@ export interface RenameConceptRequest {
 export interface ReorderBlocksRequest {
   block_ids: string[];
   change_reason?: string | null;
+}
+
+export interface ResumeDAGJobRequest {
+  from_stage?: DigitizationStage | null;
+  change_reason?: string | null;
+}
+
+export interface RippleAnalysisRequest {
+  study_id: string;
+  base_version_tag?: string;
+  amended_version_tag?: string;
+  amendment_type?: string;
+  requires_reconsent?: boolean | null;
+  base_payload?: Record<string, any> | null;
+  draft_payload?: Record<string, any> | null;
+  active_subject_ids?: string[] | null;
 }
 
 export interface RulePreviewResponse {
@@ -866,6 +1000,27 @@ export interface SoARowView {
   derived_from_soa?: boolean;
 }
 
+export interface StageCheckpoint {
+  stage: DigitizationStage;
+  status: StageGateStatus;
+  started_at: string;
+  completed_at?: string | null;
+  duration_ms?: number;
+  gate_status?: StageGateStatus;
+  gate_errors?: string[];
+  confidence_score?: number;
+  data?: Record<string, any>;
+}
+
+export type StageGateStatus = "PASSED" | "FAILED" | "SKIPPED";
+
+export interface StartDAGJobResponse {
+  job_id: string;
+  status: DigitizationJobStatus;
+  current_stage?: DigitizationStage | null;
+  message: string;
+}
+
 export interface StudyAlignmentReport {
   study_id: string;
   complete_activities: ActivityReport[];
@@ -889,6 +1044,16 @@ export interface StudyTerminologyValidationReport {
   invalid_count: number;
   degraded_count: number;
   concepts: ConceptValidationReport[];
+}
+
+export interface SubjectManagementRtsmImpact {
+  cohort_adjustments_count?: number;
+  affected_arms?: string[];
+  dosing_changes?: Record<string, any>[];
+  visit_window_adjustments?: Record<string, any>[];
+  requires_kit_reallocation?: boolean;
+  randomization_ratio_changed?: boolean;
+  action_items?: string[];
 }
 
 export interface Suggestion {
@@ -957,6 +1122,24 @@ export interface TerminologySearchResponse {
   results: TerminologyConcept[];
   total_results: number;
   error_message?: string | null;
+}
+
+export interface TicketDispatchRequest {
+  study_id: string;
+  impact_assessment?: ProtocolImpactAssessment | null;
+  base_version_tag?: string | null;
+  amended_version_tag?: string | null;
+  base_payload?: Record<string, any> | null;
+  draft_payload?: Record<string, any> | null;
+  selected_domain_queues?: DomainQueue[] | null;
+}
+
+export interface TicketDispatchResponse {
+  study_id: string;
+  assessment_id: string;
+  total_dispatched?: number;
+  dispatched_tickets?: DispatchedTicketInfo[];
+  message: string;
 }
 
 export interface TimingWindowProperties {

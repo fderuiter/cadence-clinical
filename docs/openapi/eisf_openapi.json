@@ -733,6 +733,94 @@
           }
         }
       }
+    },
+    "/api/v1/eisf/intelligence/analyze": {
+      "post": {
+        "summary": "Analyze site document intelligence, recommend eISF section, and cross-map to eTMF",
+        "description": "Run multimodal intelligence pipeline for site-level document.",
+        "operationId": "eisf_analyze_document_endpoint_api_v1_eisf_intelligence_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EISFDocumentIntelligenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EISFDocumentIntelligenceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/eisf/sites/{site_id}/documents/{doc_id}/analyze": {
+      "post": {
+        "summary": "Run intelligence analysis on an existing site-scoped eISF document",
+        "description": "Analyze an existing eISF document.",
+        "operationId": "eisf_analyze_existing_document_endpoint_api_v1_eisf_sites__site_id__documents__doc_id__analyze_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Doc Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EISFDocumentIntelligenceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1279,6 +1367,112 @@
         ],
         "title": "EISFDocumentDetail",
         "description": "Fetch document details and download URL.\n\nRequirements: PRD-SYS-001"
+      },
+      "EISFDocumentIntelligenceRequest": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Raw text or base64 data"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document filename"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional site ID hint"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Optional study ID hint"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type",
+            "default": "text/plain"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content",
+          "filename"
+        ],
+        "title": "EISFDocumentIntelligenceRequest"
+      },
+      "EISFDocumentIntelligenceResponse": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "recommended_binder_section": {
+            "type": "string",
+            "title": "Recommended Binder Section"
+          },
+          "recommended_eisf_folder": {
+            "type": "string",
+            "title": "Recommended Eisf Folder"
+          },
+          "recommended_etmf_artifact_code": {
+            "type": "string",
+            "title": "Recommended Etmf Artifact Code"
+          },
+          "recommended_etmf_artifact_name": {
+            "type": "string",
+            "title": "Recommended Etmf Artifact Name"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "extracted_metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Extracted Metadata"
+          },
+          "signature_completeness": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Signature Completeness"
+          },
+          "intelligence_report": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Intelligence Report"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "recommended_binder_section",
+          "recommended_eisf_folder",
+          "recommended_etmf_artifact_code",
+          "recommended_etmf_artifact_name",
+          "confidence",
+          "extracted_metadata",
+          "signature_completeness",
+          "intelligence_report"
+        ],
+        "title": "EISFDocumentIntelligenceResponse"
       },
       "EISFDocumentUploadRequest": {
         "properties": {

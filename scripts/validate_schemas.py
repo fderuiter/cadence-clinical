@@ -247,6 +247,7 @@ if __name__ == "__main__":
         try:
             from apps.gateway.main import app as gateway_app
 
+            gateway_app.openapi_schema = None
             gateway_schema = gateway_app.openapi()
             gateway_out_file = os.path.join(export_dir, "cdisc_openapi.json")
             with open(gateway_out_file, "w") as f:

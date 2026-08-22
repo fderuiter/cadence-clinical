@@ -82,6 +82,7 @@ from apps.execution.exceptions import (
 from apps.execution.lab_range_cache import get_active_lab_ranges, lab_range_cache
 from apps.execution.outliers import recalculate_cohort_outliers
 from apps.execution.routers.amendments import router as amendments_router
+from apps.execution.routers.anomalies import router as anomalies_router
 from apps.execution.routers.anonymization import router as anonymization_router
 from apps.execution.routers.auditor import router as auditor_router
 from apps.execution.routers.dictionaries import router as dictionaries_router
@@ -257,6 +258,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
             start_background_query_escalation,
             stop_background_query_escalation,
         )
+        from apps.execution.workers.anomaly_worker import (
+            start_anomaly_worker,
+            stop_anomaly_worker,
+        )
         from apps.execution.workers.consent_subscriber import (
             start_consent_subscriber,
             stop_consent_subscriber,
@@ -282,6 +287,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
             await start_background_query_escalation(bg_db_manager.get_session_maker())
             start_outbox_worker(bg_db_manager.get_session_maker())
             start_consent_subscriber(bg_db_manager.get_session_maker())
+            start_anomaly_worker(bg_db_manager.get_session_maker())
 
     yield
 
@@ -294,6 +300,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         stop_outbox_worker()
         # Stop background consent subscriber worker
         stop_consent_subscriber()
+        # Stop background anomaly worker
+        stop_anomaly_worker()
         # Cleanup background database connection
         await bg_db_manager.close()
         # Cleanup database connection
@@ -327,6 +335,7 @@ app = FastAPI(
 app.include_router(locks_router)
 app.include_router(signatures_router)
 app.include_router(amendments_router)
+app.include_router(anomalies_router)
 app.include_router(auditor_router)
 app.include_router(safety_router)
 app.include_router(eisf_router)
@@ -3228,7 +3237,7 @@ async def complete_form_submission(
         user_id = current_user_id.get() or "system"
         change_reason = current_change_reason.get() or "Form Completion Edit Checks"
 
-        # Enqueue exactly one background form-level edit check task
+        # Enqueue exactly one background form-level edit check and anomaly task
         background_tasks.add_task(
             run_asynchronous_form_edit_checks,
             db_manager.get_session_maker(),

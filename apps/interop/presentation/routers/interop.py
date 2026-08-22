@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from apps.interop.application import SemanticMapperService
 from apps.interop.auth import (
     has_subject_role,
     require_staff_role,
@@ -25,6 +26,8 @@ from apps.interop.domain.acl import (
     SubjectComplianceResponse,
     evaluate_eligibility,
 )
+from apps.interop.domain.concept_maps import ALL_CONCEPT_MAPS
+from apps.interop.domain.semantic_mapping_models import HybridMappingConfig
 from apps.interop.domain.sync_engine import (
     SignatureValidationError,
     SyncMetadata,
@@ -34,6 +37,8 @@ from apps.interop.domain.sync_engine import (
 )
 from apps.interop.fhir_adapter import FHIRAdapter
 from apps.interop.infrastructure.database import db_manager
+from apps.interop.infrastructure.embedding_matcher import EmbeddingMatcher
+from apps.interop.infrastructure.llm_semantic_reasoner import LLMSemanticReasoner
 from apps.interop.infrastructure.models import (
     ClinicalQuery,
     EPROSubmission,
@@ -47,6 +52,8 @@ from apps.interop.infrastructure.models import (
 from apps.interop.presentation.dtos import (
     AcknowledgeNotificationRequest,
     BulkSyncPayload,
+    ConceptMapListResponse,
+    ConceptMapSummaryDTO,
     ConflictStrategy,
     CriterionExplanation,
     EditQuarantinedSubmissionRequest,
@@ -54,9 +61,13 @@ from apps.interop.presentation.dtos import (
     FHIRPrefillRequest,
     FHIRPreScreenRequest,
     FHIRPreScreenResponse,
+    FHIRSemanticMapRequest,
+    FHIRSemanticMapResponse,
+    MappingTierStatisticsDTO,
     OfflineSyncMarkers,
     QuarantinedSubmissionResponse,
     ReplayQuarantinedSubmissionRequest,
+    SemanticMappedItemDTO,
     SubjectNotificationResponse,
 )
 from packages.database import DatabaseSessionDependency
@@ -615,6 +626,127 @@ async def _resolve_and_save_submission(
         }
 
     return {"status": "ERROR", "detail": "Unhandled conflict resolution state"}
+
+
+@router.post(
+    "/api/v1/interop/fhir/semantic-map",
+    response_model=FHIRSemanticMapResponse,
+)
+async def fhir_semantic_map(
+    request: Request,
+    payload: FHIRSemanticMapRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> FHIRSemanticMapResponse:
+    """Execute hybrid FHIR-to-CDISC semantic interoperability mapping."""
+    require_staff_role(request)
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    matcher = EmbeddingMatcher()
+    reasoner = LLMSemanticReasoner(embedding_matcher=matcher)
+    mapper_service = SemanticMapperService(
+        embedding_matcher=matcher, llm_reasoner=reasoner
+    )
+    config = HybridMappingConfig(
+        enable_deterministic=payload.enable_deterministic,
+        enable_embedding=payload.enable_embedding,
+        enable_llm_fallback=payload.enable_llm_fallback,
+        embedding_confidence_threshold=payload.embedding_confidence_threshold,
+        llm_confidence_threshold=payload.llm_confidence_threshold,
+        human_review_confidence_threshold=payload.human_review_confidence_threshold,
+        study_id=payload.study_id,
+    )
+
+    result = await mapper_service.map_fhir_bundle(payload.bundle, config=config)
+
+    # Write 21 CFR Part 11 GxP audit log
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="FHIR_SEMANTIC_MAP",
+        details=(
+            f"Executed hybrid FHIR semantic mapping for study '{payload.study_id}'. "
+            f"Subject: '{result.subject_pseudonym}'. "
+            f"Deterministic: {result.statistics.deterministic_count}, "
+            f"Embedding: {result.statistics.embedding_count}, "
+            f"LLM Fallback: {result.statistics.llm_fallback_count}, "
+            f"Unmapped: {result.statistics.unmapped_count}, "
+            f"Flagged for Review: {result.statistics.flagged_for_review_count}."
+        ),
+        change_reason=change_reason,
+    )
+
+    return FHIRSemanticMapResponse(
+        study_id=result.study_id,
+        subject_pseudonym=result.subject_pseudonym,
+        mapped_fields=result.mapped_fields,
+        mapped_items=[
+            SemanticMappedItemDTO(
+                source_resource_type=item.source_resource_type,
+                source_id=item.source_id,
+                source_code=item.source_code,
+                source_system=item.source_system,
+                source_display=item.source_display,
+                target_domain=str(item.target_domain),
+                target_variable=item.target_variable,
+                cdash_testcd=item.cdash_testcd,
+                cdash_test=item.cdash_test,
+                extracted_value=item.extracted_value,
+                extracted_unit=item.extracted_unit,
+                observation_date=item.observation_date,
+                mapping_tier=str(item.mapping_tier),
+                confidence_score=item.confidence_score,
+                provenance=item.provenance,
+                needs_human_review=item.needs_human_review,
+                status=str(item.status),
+            )
+            for item in result.mapped_items
+        ],
+        clinical_records=result.clinical_records,
+        statistics=MappingTierStatisticsDTO(
+            total_extracted=result.statistics.total_extracted,
+            deterministic_count=result.statistics.deterministic_count,
+            embedding_count=result.statistics.embedding_count,
+            llm_fallback_count=result.statistics.llm_fallback_count,
+            unmapped_count=result.statistics.unmapped_count,
+            flagged_for_review_count=result.statistics.flagged_for_review_count,
+            execution_latency_ms=result.statistics.execution_latency_ms,
+        ),
+    )
+
+
+@router.get(
+    "/api/v1/interop/fhir/concept-maps",
+    response_model=ConceptMapListResponse,
+)
+async def list_concept_maps(
+    request: Request,
+) -> ConceptMapListResponse:
+    """Retrieve the catalog of supported FHIR-to-CDISC ConceptMaps."""
+    require_staff_role(request)
+    domains = sorted({elem.target_domain.value for elem in ALL_CONCEPT_MAPS})
+    concept_summaries = [
+        ConceptMapSummaryDTO(
+            source_system=elem.source_system,
+            source_code=elem.source_code,
+            source_display=elem.source_display,
+            target_domain=elem.target_domain.value,
+            target_variable=elem.target_variable,
+            cdash_testcd=elem.cdash_testcd,
+            cdash_test=elem.cdash_test,
+            standard_unit=elem.standard_unit,
+            category=elem.category,
+            description=elem.description,
+        )
+        for elem in ALL_CONCEPT_MAPS
+    ]
+    return ConceptMapListResponse(
+        total_concepts=len(concept_summaries),
+        domains_supported=domains,
+        concept_maps=concept_summaries,
+    )
 
 
 @router.post("/api/v1/interop/fhir/prefill")

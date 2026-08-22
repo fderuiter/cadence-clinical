@@ -28,6 +28,64 @@
         }
       }
     },
+    "/api/v1/interop/fhir/semantic-map": {
+      "post": {
+        "summary": "Fhir Semantic Map",
+        "description": "Execute hybrid FHIR-to-CDISC semantic interoperability mapping.",
+        "operationId": "fhir_semantic_map_api_v1_interop_fhir_semantic_map_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FHIRSemanticMapRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FHIRSemanticMapResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/fhir/concept-maps": {
+      "get": {
+        "summary": "List Concept Maps",
+        "description": "Retrieve the catalog of supported FHIR-to-CDISC ConceptMaps.",
+        "operationId": "list_concept_maps_api_v1_interop_fhir_concept_maps_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConceptMapListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/interop/fhir/prefill": {
       "post": {
         "summary": "Fhir Prefill",
@@ -866,6 +924,113 @@
         "title": "BulkSyncPayload",
         "description": "A bulk list of ePRO submissions for offline queue reconciliation."
       },
+      "ConceptMapListResponse": {
+        "properties": {
+          "total_concepts": {
+            "type": "integer",
+            "title": "Total Concepts"
+          },
+          "domains_supported": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Domains Supported"
+          },
+          "concept_maps": {
+            "items": {
+              "$ref": "#/components/schemas/ConceptMapSummaryDTO"
+            },
+            "type": "array",
+            "title": "Concept Maps"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_concepts",
+          "domains_supported",
+          "concept_maps"
+        ],
+        "title": "ConceptMapListResponse",
+        "description": "Response returning the registry of supported ConceptMaps."
+      },
+      "ConceptMapSummaryDTO": {
+        "properties": {
+          "source_system": {
+            "type": "string",
+            "title": "Source System"
+          },
+          "source_code": {
+            "type": "string",
+            "title": "Source Code"
+          },
+          "source_display": {
+            "type": "string",
+            "title": "Source Display"
+          },
+          "target_domain": {
+            "type": "string",
+            "title": "Target Domain"
+          },
+          "target_variable": {
+            "type": "string",
+            "title": "Target Variable"
+          },
+          "cdash_testcd": {
+            "type": "string",
+            "title": "Cdash Testcd"
+          },
+          "cdash_test": {
+            "type": "string",
+            "title": "Cdash Test"
+          },
+          "standard_unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Standard Unit"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_system",
+          "source_code",
+          "source_display",
+          "target_domain",
+          "target_variable",
+          "cdash_testcd",
+          "cdash_test"
+        ],
+        "title": "ConceptMapSummaryDTO",
+        "description": "Metadata summary of a single ConceptMap element."
+      },
       "ConflictStrategy": {
         "type": "string",
         "enum": [
@@ -1073,6 +1238,119 @@
         "title": "FHIRPrefillRequest",
         "description": "Payload for pre-filling CDASH fields using a FHIR bundle."
       },
+      "FHIRSemanticMapRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique identifier of the clinical study"
+          },
+          "bundle": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Bundle",
+            "description": "The standard FHIR Bundle JSON payload"
+          },
+          "enable_deterministic": {
+            "type": "boolean",
+            "title": "Enable Deterministic",
+            "description": "Whether to execute Tier 1 deterministic ConceptMaps",
+            "default": true
+          },
+          "enable_embedding": {
+            "type": "boolean",
+            "title": "Enable Embedding",
+            "description": "Whether to execute Tier 2 embedding cosine similarity matching",
+            "default": true
+          },
+          "enable_llm_fallback": {
+            "type": "boolean",
+            "title": "Enable Llm Fallback",
+            "description": "Whether to execute Tier 3 LLM semantic reasoning for narrative text",
+            "default": true
+          },
+          "embedding_confidence_threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Embedding Confidence Threshold",
+            "description": "Minimum cosine similarity threshold for embedding tier",
+            "default": 0.82
+          },
+          "llm_confidence_threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Llm Confidence Threshold",
+            "description": "Minimum confidence threshold for LLM extraction tier",
+            "default": 0.6
+          },
+          "human_review_confidence_threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Human Review Confidence Threshold",
+            "description": "Threshold below which mappings are flagged for human Data Manager review",
+            "default": 0.75
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "bundle"
+        ],
+        "title": "FHIRSemanticMapRequest",
+        "description": "Payload for executing hybrid semantic mapping on a FHIR bundle."
+      },
+      "FHIRSemanticMapResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "subject_pseudonym": {
+            "type": "string",
+            "title": "Subject Pseudonym"
+          },
+          "mapped_fields": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Mapped Fields",
+            "description": "Flattened eCRF context dictionary for form pre-filling"
+          },
+          "mapped_items": {
+            "items": {
+              "$ref": "#/components/schemas/SemanticMappedItemDTO"
+            },
+            "type": "array",
+            "title": "Mapped Items",
+            "description": "Detailed list of all mapped items with confidence and provenance"
+          },
+          "clinical_records": {
+            "additionalProperties": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Clinical Records",
+            "description": "Grouped clinical domain records"
+          },
+          "statistics": {
+            "$ref": "#/components/schemas/MappingTierStatisticsDTO",
+            "description": "Mapping tier telemetry and counts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "subject_pseudonym"
+        ],
+        "title": "FHIRSemanticMapResponse",
+        "description": "Response payload for hybrid FHIR semantic mapping."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1213,6 +1491,48 @@
           "version_index"
         ],
         "title": "InstrumentResponseDTO"
+      },
+      "MappingTierStatisticsDTO": {
+        "properties": {
+          "total_extracted": {
+            "type": "integer",
+            "title": "Total Extracted",
+            "default": 0
+          },
+          "deterministic_count": {
+            "type": "integer",
+            "title": "Deterministic Count",
+            "default": 0
+          },
+          "embedding_count": {
+            "type": "integer",
+            "title": "Embedding Count",
+            "default": 0
+          },
+          "llm_fallback_count": {
+            "type": "integer",
+            "title": "Llm Fallback Count",
+            "default": 0
+          },
+          "unmapped_count": {
+            "type": "integer",
+            "title": "Unmapped Count",
+            "default": 0
+          },
+          "flagged_for_review_count": {
+            "type": "integer",
+            "title": "Flagged For Review Count",
+            "default": 0
+          },
+          "execution_latency_ms": {
+            "type": "number",
+            "title": "Execution Latency Ms",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "title": "MappingTierStatisticsDTO",
+        "description": "Aggregated metrics across mapping tiers."
       },
       "OfflineSyncMarkers": {
         "properties": {
@@ -1368,6 +1688,150 @@
           "change_reason"
         ],
         "title": "ReplayQuarantinedSubmissionRequest"
+      },
+      "SemanticMappedItemDTO": {
+        "properties": {
+          "source_resource_type": {
+            "type": "string",
+            "title": "Source Resource Type"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Code"
+          },
+          "source_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source System"
+          },
+          "source_display": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Display"
+          },
+          "target_domain": {
+            "type": "string",
+            "title": "Target Domain"
+          },
+          "target_variable": {
+            "type": "string",
+            "title": "Target Variable"
+          },
+          "cdash_testcd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cdash Testcd"
+          },
+          "cdash_test": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cdash Test"
+          },
+          "extracted_value": {
+            "title": "Extracted Value"
+          },
+          "extracted_unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extracted Unit"
+          },
+          "observation_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observation Date"
+          },
+          "mapping_tier": {
+            "type": "string",
+            "title": "Mapping Tier"
+          },
+          "confidence_score": {
+            "type": "number",
+            "title": "Confidence Score"
+          },
+          "provenance": {
+            "type": "string",
+            "title": "Provenance"
+          },
+          "needs_human_review": {
+            "type": "boolean",
+            "title": "Needs Human Review",
+            "default": false
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "MAPPED"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_resource_type",
+          "target_domain",
+          "target_variable",
+          "mapping_tier",
+          "confidence_score",
+          "provenance"
+        ],
+        "title": "SemanticMappedItemDTO",
+        "description": "Individual mapped clinical observation or variable."
       },
       "SubjectAssignmentCreateDTO": {
         "properties": {

@@ -91,4 +91,41 @@ export const executionService = {
       options
     );
   },
+
+  /**
+   * Lists staged CANDIDATE clinical queries flagged by the anomaly detector.
+   */
+  getAnomalyCandidates(params: any = {}, options: any = {}): Promise<any> {
+    const query = new URLSearchParams();
+    if (params.study_id) query.append("study_id", params.study_id);
+    if (params.subject_id) query.append("subject_id", params.subject_id);
+    if (params.domain) query.append("domain", params.domain);
+    const queryString = query.toString();
+    const path = queryString
+      ? `/api/v1/execution/anomalies/candidates?${queryString}`
+      : "/api/v1/execution/anomalies/candidates";
+    return apiClient.get(path, options);
+  },
+
+  /**
+   * Triggers on-demand cross-domain anomaly evaluation for a subject.
+   */
+  evaluateAnomalies(body: any, options: any = {}): Promise<any> {
+    return apiClient.post(`/api/v1/execution/anomalies/evaluate`, body, options);
+  },
+
+  /**
+   * Adjudicates a staged CANDIDATE query (APPROVE -> OPEN or REJECT -> CANCELLED).
+   */
+  adjudicateAnomalyCandidate(
+    queryId: string,
+    body: { action: "APPROVE" | "REJECT"; reason: string; updated_message?: string },
+    options: any = {}
+  ): Promise<any> {
+    return apiClient.post(
+      `/api/v1/execution/anomalies/candidates/${queryId}/adjudicate`,
+      body,
+      options
+    );
+  },
 };

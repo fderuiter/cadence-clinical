@@ -753,6 +753,7 @@ def generate_qualification_report(
     output_path,
     timestamp=None,
     draft=False,
+    validate_only=False,
 ):
     real_time_utc = datetime.now(UTC)
     real_timestamp = real_time_utc.strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -973,27 +974,30 @@ def generate_qualification_report(
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(signed_report)
 
-    # Also write dynamic run report in runs/ directory
-    runs_dir = os.path.join(os.path.dirname(output_path), "runs")
-    os.makedirs(runs_dir, exist_ok=True)
-    ts_slug = real_time_utc.strftime("%Y%m%d_%H%M%S")
-    run_file_path = os.path.join(runs_dir, f"IQ_OQ_PQ_Execution_Report_{ts_slug}.md")
+    # Also write dynamic run report in runs/ directory (skip if validate_only)
+    if not validate_only:
+        runs_dir = os.path.join(os.path.dirname(output_path), "runs")
+        os.makedirs(runs_dir, exist_ok=True)
+        ts_slug = real_time_utc.strftime("%Y%m%d_%H%M%S")
+        run_file_path = os.path.join(
+            runs_dir, f"IQ_OQ_PQ_Execution_Report_{ts_slug}.md"
+        )
 
-    dynamic_body_text = (
-        body_text.replace(timestamp, real_timestamp)
-        if timestamp != real_timestamp
-        else body_text
-    )
-    dynamic_signed_report = sign_gxp_markdown(
-        content=dynamic_body_text,
-        signing_reason="GxP Dynamic Execution Run Record",
-        timestamp=real_timestamp,
-    )
+        dynamic_body_text = (
+            body_text.replace(timestamp, real_timestamp)
+            if timestamp != real_timestamp
+            else body_text
+        )
+        dynamic_signed_report = sign_gxp_markdown(
+            content=dynamic_body_text,
+            signing_reason="GxP Dynamic Execution Run Record",
+            timestamp=real_timestamp,
+        )
 
-    with open(run_file_path, "w", encoding="utf-8") as f:
-        f.write(dynamic_signed_report)
+        with open(run_file_path, "w", encoding="utf-8") as f:
+            f.write(dynamic_signed_report)
 
-    print(f"Dynamic execution run report successfully written to {run_file_path}")
+        print(f"Dynamic execution run report successfully written to {run_file_path}")
 
 
 def main():
@@ -1183,6 +1187,7 @@ def main():
         qual_out,
         timestamp=timestamp,
         draft=args.draft,
+        validate_only=args.validate,
     )
     print(f"Qualification Execution Report successfully written to {qual_out}")
 

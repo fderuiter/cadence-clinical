@@ -8,17 +8,14 @@ from apps.etmf.database.migrate import run_migrations
 
 
 @pytest.mark.asyncio
-async def test_etmf_triggers_immutability():
+async def test_etmf_triggers_immutability(tmp_path):
     """
     Verify that eTMF database-level triggers enforce:
     1. Absolute immutability on finalized QC transitions (no update, no delete).
     2. Absolute immutability on document records (no deletes).
     """
-    db_file = "triggers_compliance_test.sqlite"
+    db_file = str(tmp_path / "triggers_compliance_test.sqlite")
     db_url = f"sqlite+aiosqlite:///{db_file}"
-
-    if os.path.exists(db_file):
-        os.remove(db_file)
 
     try:
         # Run migrations to deploy triggers

@@ -179,3 +179,125 @@ class ReplayQuarantinedSubmissionRequest(BaseModel):
     change_reason: str = Field(
         ..., description="Standard 21 CFR Part 11 compliant reason for the replay"
     )
+
+
+class FHIRSemanticMapRequest(BaseModel):
+    """Payload for executing hybrid semantic mapping on a FHIR bundle."""
+
+    study_id: str = Field(..., description="Unique identifier of the clinical study")
+    bundle: dict[str, Any] = Field(
+        ..., description="The standard FHIR Bundle JSON payload"
+    )
+    enable_deterministic: bool = Field(
+        default=True, description="Whether to execute Tier 1 deterministic ConceptMaps"
+    )
+    enable_embedding: bool = Field(
+        default=True,
+        description="Whether to execute Tier 2 embedding cosine similarity matching",
+    )
+    enable_llm_fallback: bool = Field(
+        default=True,
+        description="Whether to execute Tier 3 LLM semantic reasoning for narrative text",
+    )
+    embedding_confidence_threshold: float = Field(
+        default=0.82,
+        ge=0.0,
+        le=1.0,
+        description="Minimum cosine similarity threshold for embedding tier",
+    )
+    llm_confidence_threshold: float = Field(
+        default=0.60,
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence threshold for LLM extraction tier",
+    )
+    human_review_confidence_threshold: float = Field(
+        default=0.75,
+        ge=0.0,
+        le=1.0,
+        description="Threshold below which mappings are flagged for human Data Manager review",
+    )
+
+
+class SemanticMappedItemDTO(BaseModel):
+    """Individual mapped clinical observation or variable."""
+
+    source_resource_type: str
+    source_id: str | None = None
+    source_code: str | None = None
+    source_system: str | None = None
+    source_display: str | None = None
+    target_domain: str
+    target_variable: str
+    cdash_testcd: str | None = None
+    cdash_test: str | None = None
+    extracted_value: Any = None
+    extracted_unit: str | None = None
+    observation_date: datetime | str | None = None
+    mapping_tier: str
+    confidence_score: float
+    provenance: str
+    needs_human_review: bool = False
+    status: str = "MAPPED"
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class MappingTierStatisticsDTO(BaseModel):
+    """Aggregated metrics across mapping tiers."""
+
+    total_extracted: int = 0
+    deterministic_count: int = 0
+    embedding_count: int = 0
+    llm_fallback_count: int = 0
+    unmapped_count: int = 0
+    flagged_for_review_count: int = 0
+    execution_latency_ms: float = 0.0
+
+
+class FHIRSemanticMapResponse(BaseModel):
+    """Response payload for hybrid FHIR semantic mapping."""
+
+    study_id: str
+    subject_pseudonym: str
+    mapped_fields: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Flattened eCRF context dictionary for form pre-filling",
+    )
+    mapped_items: list[SemanticMappedItemDTO] = Field(
+        default_factory=list,
+        description="Detailed list of all mapped items with confidence and provenance",
+    )
+    clinical_records: dict[str, list[dict[str, Any]]] = Field(
+        default_factory=dict,
+        description="Grouped clinical domain records",
+    )
+    statistics: MappingTierStatisticsDTO = Field(
+        default_factory=MappingTierStatisticsDTO,
+        description="Mapping tier telemetry and counts",
+    )
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class ConceptMapSummaryDTO(BaseModel):
+    """Metadata summary of a single ConceptMap element."""
+
+    source_system: str
+    source_code: str
+    source_display: str
+    target_domain: str
+    target_variable: str
+    cdash_testcd: str
+    cdash_test: str
+    standard_unit: str | None = None
+    category: str | None = None
+    description: str | None = None
+
+
+class ConceptMapListResponse(BaseModel):
+    """Response returning the registry of supported ConceptMaps."""
+
+    total_concepts: int
+    domains_supported: list[str]
+    concept_maps: list[ConceptMapSummaryDTO]

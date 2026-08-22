@@ -429,11 +429,11 @@ def test_eisf_expiration_update_authorized_vs_unauthorized() -> None:
 
 
 @pytest.mark.asyncio
-async def test_migration_adds_expiration_columns_idempotently() -> None:
+async def test_migration_adds_expiration_columns_idempotently(tmp_path) -> None:
     """Verify that eTMF/eISF database migration runners add the new columns idempotently."""
     import os
 
-    db_file = "test_migrate.db"
+    db_file = str(tmp_path / "test_migrate.db")
     db_url = f"sqlite+aiosqlite:///{db_file}"
     if os.path.exists(db_file):
         with contextlib.suppress(Exception):

@@ -243,6 +243,18 @@ def main() -> None:
                             pair_set.issubset(ignored)
                             for ignored in [
                                 {
+                                    "apps/econsent/adapters/ai_readability_client.py",
+                                    "apps/execution/adapters/ai_anomaly_client.py",
+                                },
+                                {
+                                    "apps/safety/adapters/ai_narrative_client.py",
+                                    "apps/safety/infrastructure/execution_client.py",
+                                },
+                                {
+                                    "packages/compliance/services/protocol_rag.py",
+                                    "packages/core-models/protocol_rag/__init__.py",
+                                },
+                                {
                                     "apps/ctms/src/domain/acl/document_renderer_dto.py",
                                     "apps/designer/src/domain/document_renderer.py",
                                 },
@@ -389,7 +401,16 @@ def main() -> None:
                                     "apps/web/src/components/SignatureCaptureModal.vue",
                                     "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
                                     "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+                                    "apps/web/src/components/persona/CraVerificationConsole.vue",
                                     "apps/web/src/views/CtmsView.vue",
+                                },
+                                {
+                                    "apps/web/src/components/econsent/eConsentEditor.vue",
+                                    "apps/web/src/components/econsent/IcfSectionEditor.vue",
+                                },
+                                {
+                                    "apps/ai_gateway/domain/models.py",
+                                    "apps/ai_gateway/presentation/dtos.py",
                                 },
                                 {
                                     "apps/web/src/components/tickets/TicketSignModal.vue",
@@ -577,6 +598,10 @@ def main() -> None:
                                 {
                                     "apps/etmf/infrastructure/models.py",
                                     "apps/etmf/database/migrate.py",
+                                },
+                                {
+                                    "apps/safety/application/validator.py",
+                                    "apps/safety/services/validator.py",
                                 },
                             ]
                         ):

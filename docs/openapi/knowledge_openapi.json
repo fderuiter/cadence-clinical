@@ -882,6 +882,187 @@
         }
       }
     },
+    "/api/v1/knowledge/protocols/ingest": {
+      "post": {
+        "tags": [
+          "protocols"
+        ],
+        "summary": "Ingest a protocol or SOP document and index dense vector chunks",
+        "description": "Ingests protocol text, extracts section/page coordinates, and indexes vector chunks.\n\nRequires sponsor_designer, data_manager, or super_admin role.",
+        "operationId": "ingest_protocol_document_api_v1_knowledge_protocols_ingest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolIngestTextRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProtocolChunkSummary"
+                  },
+                  "type": "array",
+                  "title": "Response Ingest Protocol Document Api V1 Knowledge Protocols Ingest Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/protocols/upload": {
+      "post": {
+        "tags": [
+          "protocols"
+        ],
+        "summary": "Upload and ingest a protocol PDF/document binary file",
+        "description": "Uploads a PDF or document binary, parses pages, and indexes dense vector chunks.",
+        "operationId": "upload_protocol_file_api_v1_knowledge_protocols_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_protocol_file_api_v1_knowledge_protocols_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProtocolChunkSummary"
+                  },
+                  "type": "array",
+                  "title": "Response Upload Protocol File Api V1 Knowledge Protocols Upload Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/protocols/search": {
+      "post": {
+        "tags": [
+          "protocols"
+        ],
+        "summary": "Perform dense vector semantic search over protocol chunks",
+        "description": "Searches protocol chunks via dense vector cosine similarity.",
+        "operationId": "search_protocol_chunks_api_v1_knowledge_protocols_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProtocolSearchResult"
+                  },
+                  "type": "array",
+                  "title": "Response Search Protocol Chunks Api V1 Knowledge Protocols Search Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/protocols/chunks/{chunk_id}": {
+      "get": {
+        "tags": [
+          "protocols"
+        ],
+        "summary": "Retrieve full details for a single protocol chunk by ID",
+        "description": "Retrieves full chunk text and metadata for interactive UI document preview.",
+        "operationId": "get_protocol_chunk_api_v1_knowledge_protocols_chunks__chunk_id__get",
+        "parameters": [
+          {
+            "name": "chunk_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Chunk Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolSearchResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -1507,6 +1688,45 @@
         "title": "AuditLogResponse",
         "description": "Response schema for a KnowledgeArticleAuditLog entry."
       },
+      "Body_upload_protocol_file_api_v1_knowledge_protocols_upload_post": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version"
+          },
+          "document_type": {
+            "type": "string",
+            "title": "Document Type",
+            "default": "PROTOCOL"
+          },
+          "is_approved": {
+            "type": "boolean",
+            "title": "Is Approved",
+            "default": true
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "default": "Upload protocol PDF for vector RAG triage"
+          },
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "protocol_version",
+          "file"
+        ],
+        "title": "Body_upload_protocol_file_api_v1_knowledge_protocols_upload_post"
+      },
       "CategoryCreate": {
         "properties": {
           "name": {
@@ -1809,6 +2029,254 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "ProtocolChunkSummary": {
+        "properties": {
+          "chunk_id": {
+            "type": "string",
+            "title": "Chunk Id"
+          },
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version"
+          },
+          "section_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Number"
+          },
+          "section_title": {
+            "type": "string",
+            "title": "Section Title"
+          },
+          "page_number": {
+            "type": "integer",
+            "title": "Page Number"
+          },
+          "token_count": {
+            "type": "integer",
+            "title": "Token Count"
+          },
+          "is_approved": {
+            "type": "boolean",
+            "title": "Is Approved"
+          },
+          "citation_marker": {
+            "type": "string",
+            "title": "Citation Marker"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chunk_id",
+          "document_id",
+          "study_id",
+          "protocol_version",
+          "section_number",
+          "section_title",
+          "page_number",
+          "token_count",
+          "is_approved",
+          "citation_marker"
+        ],
+        "title": "ProtocolChunkSummary",
+        "description": "DTO summarizing an ingested protocol chunk."
+      },
+      "ProtocolIngestTextRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study scope identifier."
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version",
+            "description": "Version label, e.g. 'v2.1'."
+          },
+          "raw_text": {
+            "type": "string",
+            "title": "Raw Text",
+            "description": "Protocol or SOP text content."
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Document file name.",
+            "default": "protocol.txt"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id",
+            "description": "Optional custom document ID."
+          },
+          "document_type": {
+            "type": "string",
+            "title": "Document Type",
+            "description": "'PROTOCOL' or 'SOP'.",
+            "default": "PROTOCOL"
+          },
+          "is_approved": {
+            "type": "boolean",
+            "title": "Is Approved",
+            "description": "Whether this is an approved version.",
+            "default": true
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "21 CFR Part 11 justification.",
+            "default": "Ingest protocol document for grounded RAG support triage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "protocol_version",
+          "raw_text"
+        ],
+        "title": "ProtocolIngestTextRequest",
+        "description": "Payload for text-based protocol ingestion."
+      },
+      "ProtocolSearchRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 2,
+            "title": "Query",
+            "description": "Inquiry search query."
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study scope filter."
+          },
+          "protocol_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Version",
+            "description": "Optional protocol version filter."
+          },
+          "only_approved": {
+            "type": "boolean",
+            "title": "Only Approved",
+            "description": "Only search approved protocol versions.",
+            "default": true
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "description": "Maximum matching chunks to return.",
+            "default": 5
+          }
+        },
+        "type": "object",
+        "required": [
+          "query",
+          "study_id"
+        ],
+        "title": "ProtocolSearchRequest",
+        "description": "Payload for searching protocol chunks via dense vector cosine similarity."
+      },
+      "ProtocolSearchResult": {
+        "properties": {
+          "chunk_id": {
+            "type": "string",
+            "title": "Chunk Id"
+          },
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version"
+          },
+          "section_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Number"
+          },
+          "section_title": {
+            "type": "string",
+            "title": "Section Title"
+          },
+          "page_number": {
+            "type": "integer",
+            "title": "Page Number"
+          },
+          "chunk_text": {
+            "type": "string",
+            "title": "Chunk Text"
+          },
+          "is_approved": {
+            "type": "boolean",
+            "title": "Is Approved"
+          },
+          "similarity_score": {
+            "type": "number",
+            "title": "Similarity Score"
+          },
+          "citation_marker": {
+            "type": "string",
+            "title": "Citation Marker"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chunk_id",
+          "document_id",
+          "study_id",
+          "protocol_version",
+          "section_number",
+          "section_title",
+          "page_number",
+          "chunk_text",
+          "is_approved",
+          "similarity_score",
+          "citation_marker"
+        ],
+        "title": "ProtocolSearchResult",
+        "description": "Matching protocol chunk with similarity score and citation marker."
       },
       "ValidationError": {
         "properties": {

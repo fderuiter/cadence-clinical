@@ -17,6 +17,7 @@ from apps.eisf.domain.eisf_transport_models import (
     EISFFolderNode,
 )
 from apps.eisf.domain.ports import EISFRepositoryPort
+from apps.eisf.infrastructure.adapter import classify_eisf_document_local
 from apps.eisf.infrastructure.database import transactional
 from apps.eisf.infrastructure.models import ISFAuditLog, ISFDocument
 from apps.eisf.presentation.dtos import (
@@ -1600,15 +1601,19 @@ async def eisf_analyze_document_endpoint(
     except Exception:
         pass
 
+    local_cls = classify_eisf_document_local(
+        filename=payload.filename,
+        content=payload.content,
+    )
     return EISFDocumentIntelligenceResponse(
         filename=payload.filename,
-        recommended_binder_section="04_REGULATORY",
-        recommended_eisf_folder="Regulatory Documents",
-        recommended_etmf_artifact_code="04.01.01",
-        recommended_etmf_artifact_name="Regulatory Document",
-        confidence=0.85,
+        recommended_binder_section=local_cls["section"],
+        recommended_eisf_folder=local_cls["folder"],
+        recommended_etmf_artifact_code=local_cls["code"],
+        recommended_etmf_artifact_name=local_cls["name"],
+        confidence=local_cls["confidence"],
         extracted_metadata={},
-        signature_completeness={},
+        signature_completeness=local_cls.get("signature_completeness", {}),
         intelligence_report={},
     )
 
@@ -1701,14 +1706,19 @@ async def eisf_analyze_existing_document_endpoint(
     except Exception:
         pass
 
+    local_cls = classify_eisf_document_local(
+        filename=doc.filename,
+        content=doc.content,
+        binder_hint=doc.binder_classification,
+    )
     return EISFDocumentIntelligenceResponse(
         filename=doc.filename,
-        recommended_binder_section=doc.binder_classification,
-        recommended_eisf_folder="Regulatory Documents",
-        recommended_etmf_artifact_code="04.01.01",
-        recommended_etmf_artifact_name="Regulatory Document",
-        confidence=0.85,
+        recommended_binder_section=local_cls["section"],
+        recommended_eisf_folder=local_cls["folder"],
+        recommended_etmf_artifact_code=local_cls["code"],
+        recommended_etmf_artifact_name=local_cls["name"],
+        confidence=local_cls["confidence"],
         extracted_metadata={},
-        signature_completeness={},
+        signature_completeness=local_cls.get("signature_completeness", {}),
         intelligence_report={},
     )

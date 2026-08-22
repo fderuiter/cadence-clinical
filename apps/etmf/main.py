@@ -88,6 +88,9 @@ from apps.etmf.presentation.routers.etmf import (
 from apps.etmf.presentation.routers.inspection import (
     router as inspection_router,
 )
+from apps.etmf.presentation.routers.intelligence import (
+    router as intelligence_router,
+)
 from apps.etmf.presentation.routers.taxonomy import router as taxonomy_router
 from packages.database import get_relational_db_lifespan
 from packages.hexagonal import register_rfc7807_handlers
@@ -172,6 +175,7 @@ register_rfc7807_handlers(app)
 
 app.include_router(archive_router)
 app.include_router(inspection_router)
+app.include_router(intelligence_router)
 app.include_router(taxonomy_router)
 app.include_router(etmf_router)
 

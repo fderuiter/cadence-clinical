@@ -245,6 +245,81 @@
             </div>
           </div>
 
+          <!-- Grounded Protocol RAG Triage Card -->
+          <div
+            v-if="aiTriage"
+            class="section-card ai-triage-card"
+          >
+            <div class="ai-card-header">
+              <div class="ai-card-title-group">
+                <span class="ai-robot-icon">🤖</span>
+                <h4 class="card-title ai-title">
+                  Grounded Protocol RAG Triage
+                </h4>
+              </div>
+              <span
+                class="badge"
+                :class="
+                  aiTriage.rag_status === 'DRAFT_AVAILABLE'
+                    ? 'badge-ai-grounded'
+                    : 'badge-ai-failclosed'
+                "
+              >
+                {{
+                  aiTriage.rag_status === "DRAFT_AVAILABLE"
+                    ? `🎯 ${Math.round(aiTriage.faithfulness_score * 100)}% Faithfulness (Grounded)`
+                    : "⚠️ Routed to Human Queue (< 85% Confidence)"
+                }}
+              </span>
+            </div>
+
+            <div
+              v-if="aiTriage.rag_status === 'DRAFT_AVAILABLE'"
+              class="ai-draft-content"
+            >
+              <p class="ai-draft-text">
+                {{ aiTriage.draft_answer }}
+              </p>
+              <div
+                v-if="aiTriage.citations && aiTriage.citations.length > 0"
+                class="citation-badge-list"
+              >
+                <span class="citation-label">Verified Protocol Citations:</span>
+                <button
+                  v-for="(cit, cIdx) in aiTriage.citations"
+                  :key="cIdx"
+                  type="button"
+                  class="citation-chip-btn"
+                  title="Open protocol document viewer at referenced page"
+                  @click="openCitationViewer(cit)"
+                >
+                  📖 {{ cit.citation_marker || `Protocol ${cit.protocol_version} §${cit.section_number || 'General'} p.${cit.page_number}` }}
+                </button>
+              </div>
+              <div class="ai-draft-actions">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-secondary"
+                  @click="applyAiDraftToComment"
+                >
+                  💬 Use Draft as Public Comment
+                </button>
+              </div>
+            </div>
+
+            <div
+              v-else
+              class="ai-failclosed-box"
+            >
+              <p class="ai-failclosed-text">
+                {{ aiTriage.routing_reason || "Inquiry confidence is below the 85% gating threshold. Automatically routed to human Data Manager review." }}
+              </p>
+              <div class="human-routed-badge">
+                👤 Assigned Queue: <strong>Data Manager Review</strong>
+              </div>
+            </div>
+          </div>
+
           <div
             v-if="ticket.entity_type"
             class="section-card"
@@ -590,6 +665,76 @@
       </div>
     </div>
 
+    <!-- Protocol Document Viewer Modal -->
+    <div
+      v-if="isCitationViewerOpen && activeCitation"
+      class="citation-modal-backdrop"
+      @click.self="closeCitationViewer"
+    >
+      <div
+        class="citation-modal-panel"
+        role="dialog"
+        aria-labelledby="citation-viewer-title"
+      >
+        <div class="citation-modal-header">
+          <div class="citation-modal-meta">
+            <span class="badge badge-gxp">21 CFR Part 11 Verified</span>
+            <span class="badge badge-standard">Protocol {{ activeCitation.protocol_version }}</span>
+            <span
+              v-if="activeCitation.section_number"
+              class="badge badge-primary"
+            >
+              Section {{ activeCitation.section_number }}
+            </span>
+            <span class="badge badge-page">Page {{ activeCitation.page_number }}</span>
+          </div>
+          <h3
+            id="citation-viewer-title"
+            class="citation-modal-title"
+          >
+            📖 {{ activeCitation.section_title || "Study Protocol Reference" }}
+          </h3>
+          <button
+            type="button"
+            class="drawer-close"
+            aria-label="Close"
+            @click="closeCitationViewer"
+          >
+            ✕
+          </button>
+        </div>
+        <div class="citation-modal-body">
+          <div class="citation-coordinates-box">
+            <div class="coord-item">
+              <span class="coord-label">Citation Tag:</span>
+              <span class="coord-val"><code>{{ activeCitation.citation_marker || `[Protocol ${activeCitation.protocol_version}, Section ${activeCitation.section_number || 'General'}, Page ${activeCitation.page_number}]` }}</code></span>
+            </div>
+            <div class="coord-item">
+              <span class="coord-label">Status:</span>
+              <span class="coord-val text-success">✓ Approved Protocol Version</span>
+            </div>
+          </div>
+          <div class="citation-excerpt-card">
+            <h4 class="excerpt-heading">
+              Page {{ activeCitation.page_number }} Protocol Excerpt
+            </h4>
+            <div class="excerpt-body">
+              {{ activeCitation.chunk_text || "Referenced protocol section content verified for clinical compliance." }}
+            </div>
+          </div>
+        </div>
+        <div class="citation-modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="closeCitationViewer"
+          >
+            Close Preview
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Sign Modal -->
     <TicketSignModal
       :is-open="isSignModalOpen"
@@ -638,6 +783,40 @@ const emit = defineEmits([
 const activeTab = ref("overview");
 const actionLoading = ref(false);
 const isSignModalOpen = ref(false);
+
+// AI RAG Triage and Citation State
+const activeCitation = ref(null);
+const isCitationViewerOpen = ref(false);
+
+const aiTriage = computed(() => {
+  if (!props.ticket?.context_payload) return null;
+  try {
+    const payload =
+      typeof props.ticket.context_payload === "string"
+        ? JSON.parse(props.ticket.context_payload)
+        : props.ticket.context_payload;
+    return payload?.ai_triage || null;
+  } catch {
+    return null;
+  }
+});
+
+const openCitationViewer = (citation) => {
+  activeCitation.value = citation;
+  isCitationViewerOpen.value = true;
+};
+
+const closeCitationViewer = () => {
+  isCitationViewerOpen.value = false;
+  activeCitation.value = null;
+};
+
+const applyAiDraftToComment = () => {
+  if (!aiTriage.value?.draft_answer) return;
+  newCommentContent.value = aiTriage.value.draft_answer;
+  newCommentVisibility.value = "PUBLIC";
+  activeTab.value = "discussion";
+};
 
 // Comment state
 const commentFilter = ref("ALL");
@@ -1541,5 +1720,247 @@ const onTicketSigned = (sigPayload) => {
 
 .flex-1 {
   flex: 1;
+}
+
+/* AI RAG Triage Styles */
+.ai-triage-card {
+  border-left: 4px solid #2563eb;
+  background: #f8fafc;
+}
+
+.ai-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ai-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-robot-icon {
+  font-size: 1.15rem;
+}
+
+.ai-title {
+  margin-bottom: 0;
+  color: #1e293b;
+}
+
+.badge-ai-grounded {
+  background: #dcfce7;
+  color: #15803d;
+  font-weight: 700;
+}
+
+.badge-ai-failclosed {
+  background: #fee2e2;
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.ai-draft-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ai-draft-text {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: #1e293b;
+  background: #ffffff;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  white-space: pre-wrap;
+}
+
+.citation-badge-list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.citation-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.citation-chip-btn {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease-in-out;
+}
+
+.citation-chip-btn:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1e40af;
+}
+
+.ai-draft-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.ai-failclosed-box {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.ai-failclosed-text {
+  font-size: 0.82rem;
+  color: #991b1b;
+  margin-bottom: 6px;
+}
+
+.human-routed-badge {
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+/* Citation Document Viewer Modal */
+.citation-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  backdrop-filter: blur(2px);
+}
+
+.citation-modal-panel {
+  background: #ffffff;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 650px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  border: 1px solid #cbd5e1;
+  overflow: hidden;
+}
+
+.citation-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.citation-modal-meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.citation-modal-title {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #0f172a;
+}
+
+.badge-page {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.citation-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.citation-coordinates-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.coord-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+.coord-label {
+  font-weight: 600;
+  color: #64748b;
+  min-width: 90px;
+}
+
+.coord-val {
+  color: #0f172a;
+}
+
+.text-success {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.citation-excerpt-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 14px;
+}
+
+.excerpt-heading {
+  margin: 0 0 8px 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.excerpt-body {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: #1e293b;
+  white-space: pre-wrap;
+}
+
+.citation-modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

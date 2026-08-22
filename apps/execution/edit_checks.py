@@ -1173,6 +1173,25 @@ async def run_asynchronous_form_edit_checks(
                                     f"Auto-resolved and closed clinical query in background for rule {rule.rule_id}"
                                 )
 
+                # 7. Evaluate cross-domain anomalies for the subject
+                try:
+                    from apps.execution.services.cross_domain_anomaly_service import (
+                        CrossDomainAnomalyService,
+                    )
+
+                    anomaly_service = CrossDomainAnomalyService()
+                    await anomaly_service.evaluate_subject_cross_domain_anomalies(
+                        session=session,
+                        subject_id=sub.subject_id,
+                        study_id=sub.study_id,
+                        enable_ai=False,
+                        auto_stage_queries=True,
+                    )
+                except Exception as anomaly_err:
+                    logger.warning(
+                        f"Cross-domain anomaly evaluation failed in background for subject {sub.subject_id}: {anomaly_err}"
+                    )
+
 
 async def resolve_pending_predecessor_checks(
     session: AsyncSession, new_observation: ClinicalObservation

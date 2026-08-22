@@ -2,7 +2,7 @@
 
 - **Status:** Ready for Implementation
 - **Requirement ID:** PRD-SYS-049
-- **ADR Reference:** [ADR-2189](docs/adr/2026-08-21-comprehensive-developer-tooling-native-mcp-server-and-staged-guardrails.md)
+- **ADR Reference:** [ADR-2189](../adr/2026-08-21-comprehensive-developer-tooling-native-mcp-server-and-staged-guardrails.md)
 - **Triage Label:** `ready-for-agent`
 
 ---

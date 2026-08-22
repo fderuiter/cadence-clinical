@@ -14,7 +14,12 @@ from fastapi import FastAPI
 
 from apps.knowledge.adapters.database import db_manager, get_db_session
 from apps.knowledge.infrastructure.models import Base
-from apps.knowledge.presentation.routers.articles import router as articles_router
+from apps.knowledge.presentation.routers.articles import (
+    router as articles_router,
+)
+from apps.knowledge.presentation.routers.protocols import (
+    router as protocols_router,
+)
 from packages.database import get_relational_db_lifespan
 from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
@@ -39,6 +44,7 @@ app.add_middleware(GatewayAuthMiddleware)
 
 # Mount the articles/categories/contextual-help router
 app.include_router(articles_router)
+app.include_router(protocols_router)
 
 
 @app.get("/health")

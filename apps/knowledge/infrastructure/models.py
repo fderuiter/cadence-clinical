@@ -317,6 +317,52 @@ class ContextualHelpMapping(Base):
     )
 
 
+class ProtocolKnowledgeChunk(Base):
+    """
+    A chunk of a clinical study protocol or SOP document indexed for grounded RAG.
+
+    Stores text content and dense embeddings while retaining structural coordinates
+    (protocol version, section number, section title, page number) for 21 CFR Part 11
+    and ICH GCP auditability.
+    """
+
+    __tablename__ = "protocol_knowledge_chunks"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    document_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    protocol_version: Mapped[str] = mapped_column(
+        String(50), nullable=False, index=True
+    )
+    document_type: Mapped[str] = mapped_column(
+        String(50), default="PROTOCOL", nullable=False
+    )
+
+    # Structural coordinates
+    section_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    section_title: Mapped[str] = mapped_column(String(500), nullable=False)
+    page_number: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    chunk_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    # Content and dense vector embedding
+    chunk_text: Mapped[str] = mapped_column(Text, nullable=False)
+    embedding_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    token_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    # GxP approval gate
+    is_approved: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # GxP audit fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
 # ---------------------------------------------------------------------------
 # Immutability guards — prevents update or deletion of audit logs and locked version snapshots.
 # ---------------------------------------------------------------------------
@@ -376,4 +422,5 @@ __all__ = [
     "KnowledgeArticleAuditLog",
     "KnowledgeArticleVersion",
     "KnowledgeCategory",
+    "ProtocolKnowledgeChunk",
 ]

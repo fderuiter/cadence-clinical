@@ -530,3 +530,71 @@ class TmfEmsExportRequest(BaseModel):
     include_history: bool = Field(
         True, description="Whether to include previous document versions"
     )
+
+
+class DocumentIntelligenceAnalyzeRequest(BaseModel):
+    content: str = Field(..., description="Raw text, base64 data, or text stream")
+    filename: str = Field(..., description="Document filename")
+    mime_type: str = Field("text/plain", description="MIME type")
+    study_id: str | None = Field(None, description="Optional study ID hint")
+    site_id: str | None = Field(None, description="Optional site ID hint")
+    artifact_hint: str | None = Field(
+        None, description="Optional artifact type or code hint"
+    )
+    free_text: str | None = Field(None, description="Optional free-text hint")
+    taxonomy_version: str | None = Field(None, description="Optional taxonomy version")
+    document_id: str | None = Field(
+        None, description="Optional document ID if already in eTMF"
+    )
+
+
+class DocumentIntelligenceClassifyRequest(BaseModel):
+    content: str | None = Field(None, description="Optional document content")
+    filename: str = Field(..., description="Document filename")
+    artifact_hint: str | None = Field(
+        None, description="Optional artifact type or code hint"
+    )
+    free_text: str | None = Field(None, description="Optional free-text hint")
+    taxonomy_version: str | None = Field(None, description="Optional taxonomy version")
+
+
+class DocumentIntelligenceMetadataRequest(BaseModel):
+    content: str = Field(..., description="Document content")
+    filename: str = Field("document.txt", description="Document filename")
+    study_id: str | None = Field(None, description="Optional study ID hint")
+    site_id: str | None = Field(None, description="Optional site ID hint")
+
+
+class DocumentIntelligenceSignatureRequest(BaseModel):
+    content: str = Field(..., description="Document content")
+    artifact_code: str = Field(..., description="DIA artifact code")
+    filename: str = Field("document.txt", description="Document filename")
+
+
+class StageDocumentQCRequest(BaseModel):
+    content: str = Field(..., description="Document content or base64 data")
+    filename: str = Field(..., description="Document filename")
+    mime_type: str = Field("text/plain", description="MIME type")
+    study_id: str = Field(..., description="Study ID")
+    site_id: str | None = Field(None, description="Optional site ID")
+    artifact_hint: str | None = Field(
+        None, description="Optional artifact type/code hint"
+    )
+    taxonomy_version: str | None = Field(None, description="Optional taxonomy version")
+    reason_for_change: str = Field(
+        ..., min_length=10, max_length=1000, description="Part 11 change justification"
+    )
+    assigned_cra: str | None = Field(None, description="Optional assigned CRA reviewer")
+
+
+class CRAQCReviewRequest(BaseModel):
+    decision: str = Field(..., description="QC action: ACCEPT, OVERRIDE, or REJECT")
+    reason_for_change: str = Field(
+        ..., min_length=10, max_length=1000, description="Part 11 change justification"
+    )
+    override_artifact_code: str | None = Field(
+        None, description="Target artifact code if decision is OVERRIDE"
+    )
+    discrepancy_comment: str | None = Field(
+        None, description="Optional discrepancy note or rejection comment"
+    )

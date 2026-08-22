@@ -19,6 +19,9 @@ from apps.ai_gateway.presentation.routers.inference import (
 from apps.ai_gateway.presentation.routers.inference import (
     router as inference_router,
 )
+from apps.ai_gateway.presentation.routers.rag import (
+    router as rag_router,
+)
 from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -37,6 +40,7 @@ app.add_middleware(GatewayAuthMiddleware)
 
 # Include inference routers
 app.include_router(inference_router)
+app.include_router(rag_router)
 
 
 @app.get("/health")

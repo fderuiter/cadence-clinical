@@ -21,15 +21,12 @@ def enable_sqlite_fks(engine):
 
 
 @pytest.mark.asyncio
-async def test_migration_clean_path():
+async def test_migration_clean_path(tmp_path):
     """
     Verify that migrating a clean, empty database runs successfully and creates all tables.
     """
-    db_file = "clean_test_db.sqlite"
+    db_file = str(tmp_path / "clean_test_db.sqlite")
     db_url = f"sqlite+aiosqlite:///{db_file}"
-
-    if os.path.exists(db_file):
-        os.remove(db_file)
 
     try:
         await run_migrations(db_url)
@@ -46,22 +43,18 @@ async def test_migration_clean_path():
             assert "tmf_document_qc_transitions" in tables
         await engine.dispose()
     finally:
-        if os.path.exists(db_file):
-            os.remove(db_file)
+        pass
 
 
 @pytest.mark.asyncio
-async def test_migration_upgrade_and_backfill_path():
+async def test_migration_upgrade_and_backfill_path(tmp_path):
     """
     Verify that migrating an existing database with legacy schemas safely updates columns,
     rebuilds SQLite constraints, backfills transition sequences sequentially,
     and preserves delivered fields (like content, signatures, or redactions).
     """
-    db_file = "upgrade_test_db.sqlite"
+    db_file = str(tmp_path / "upgrade_test_db.sqlite")
     db_url = f"sqlite+aiosqlite:///{db_file}"
-
-    if os.path.exists(db_file):
-        os.remove(db_file)
 
     try:
         engine = create_async_engine(db_url)
@@ -214,9 +207,18 @@ async def test_migration_upgrade_and_backfill_path():
             assert "IMMUTABILITY_VIOLATION" in str(exc_info.value)
 
             # 7. Test Document Immutability Triggers (reject DELETE on tmf_documents)
+            doc_orphan = str(uuid.uuid4())
+            await conn.execute(
+                text("""
+                INSERT INTO tmf_documents (id, study_id, zone, section, artifact_type, filename, content, mime_type, created_at, created_by, version_index, status, taxonomy_version, artifact_code, approval_status)
+                VALUES
+                (:id, 'study_001', 1, 'SecA', 'TypeA', 'orphan.txt', 'ContentO', 'text/plain', '2026-01-01', 'user1', 1, 'DRAFT', 'v3.2.0', '01.01.01', 'PENDING')
+            """),
+                {"id": doc_orphan},
+            )
             with pytest.raises((OperationalError, IntegrityError)) as exc_info:
                 await conn.execute(
-                    text(f"DELETE FROM tmf_documents WHERE id='{doc1_id}'")
+                    text(f"DELETE FROM tmf_documents WHERE id='{doc_orphan}'")
                 )
             assert "IMMUTABILITY_VIOLATION" in str(exc_info.value)
 
