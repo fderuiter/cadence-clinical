@@ -755,21 +755,28 @@ export function createClinicalVisitMatrix(visitsOrSoa, forms = []) {
 
 export { toBeAccessible } from "./accessibility-matcher.js";
 
+import AiActionButton from "./src/components/clinical/AiActionButton.vue";
+import AiSuggestionDrawer from "./src/components/clinical/AiSuggestionDrawer.vue";
 import ClinicalFormField from "./src/components/clinical/ClinicalFormField.vue";
 import ClinicalInput from "./src/components/clinical/ClinicalInput.vue";
 import ClinicalRadioGroup from "./src/components/clinical/ClinicalRadioGroup.vue";
 import ClinicalLookupInput from "./src/components/clinical/ClinicalLookupInput.vue";
 import ClinicalQueryFlag from "./src/components/clinical/ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./src/components/clinical/ClinicalQueryPanel.vue";
+import ConfidenceBadge from "./src/components/clinical/ConfidenceBadge.vue";
 
 export {
+  AiActionButton,
+  AiSuggestionDrawer,
   ClinicalFormField,
   ClinicalInput,
   ClinicalRadioGroup,
   ClinicalLookupInput,
   ClinicalQueryFlag,
   ClinicalQueryPanel,
+  ConfidenceBadge,
 };
+
 
 // Dynamic Hover Pointer Capability Detection
 export function initHoverDetection() {

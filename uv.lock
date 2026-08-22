@@ -2193,6 +2193,7 @@ source = { editable = "packages/compliance" }
 dependencies = [
     { name = "cryptography" },
     { name = "fastapi" },
+    { name = "packages-database" },
     { name = "packages-deid" },
     { name = "packages-security" },
     { name = "pydantic" },
@@ -2202,6 +2203,7 @@ dependencies = [
 requires-dist = [
     { name = "cryptography", specifier = ">=4.5.0" },
     { name = "fastapi", specifier = ">=0.139.2,<0.140.0" },
+    { name = "packages-database", editable = "packages/database" },
     { name = "packages-deid", editable = "packages/deid" },
     { name = "packages-security", editable = "packages/security" },
     { name = "pydantic", specifier = ">=2.6.0" },
