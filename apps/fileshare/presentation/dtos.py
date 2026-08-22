@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from apps.fileshare.domain.models import (
     ApprovalStatus,
+    ConversionStatus,
     FileStatus,
     PermissionLevel,
     PlaybackEventSource,
@@ -30,14 +31,16 @@ class FileUploadUrlRequest(BaseModel):
     filename: str = Field(min_length=1, max_length=500)
     mime_type: str = Field(min_length=1, max_length=255)
     size_bytes: int = Field(ge=0)
-    checksum_sha256: str | None = Field(default=None, min_length=64, max_length=64)
-    reason_for_change: str = Field(min_length=5, max_length=1000)
-    is_multipart: bool = Field(default=False)
+    is_multipart: bool = False
     parts_count: int = Field(default=1, ge=1, le=10000)
+    checksum_sha256: str | None = Field(default=None, min_length=64, max_length=64)
+    reason_for_change: str = Field(
+        default="Initial file upload", min_length=5, max_length=1000
+    )
 
 
 class FileUploadUrlResponse(BaseModel):
-    """Response containing allocated file record details and presigned upload URLs."""
+    """Response containing presigned target URL(s) for uploading."""
 
     model_config = ConfigDict(strict=True)
 
@@ -76,6 +79,8 @@ class FileDownloadUrlResponse(BaseModel):
     expires_in: int = 3600
     is_watermarked: bool = False
     access_count: int | None = None
+    is_rendition: bool = False
+    rendition_key: str | None = None
 
 
 class StreamUrlResponse(BaseModel):
@@ -116,6 +121,9 @@ class FileRecordResponse(BaseModel):
     transcode_status: TranscodeStatus = TranscodeStatus.NOT_REQUIRED
     hls_manifest_key: str | None = None
     transcode_error: str | None = None
+    pdf_rendition_key: str | None = None
+    conversion_status: ConversionStatus = ConversionStatus.NOT_REQUIRED
+    conversion_error: str | None = None
     approval_status: ApprovalStatus = ApprovalStatus.PENDING_APPROVAL
     signature_manifestation: dict[str, Any] | None = None
     approved_by: str | None = None

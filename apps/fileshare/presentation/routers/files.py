@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.fileshare.adapters.clamav_adapter import get_scan_adapter
+from apps.fileshare.adapters.conversion_adapter import get_conversion_adapter
 from apps.fileshare.adapters.credential_verifier import get_credential_verifier
 from apps.fileshare.adapters.database import get_db_session
 from apps.fileshare.adapters.repositories import (
@@ -82,6 +83,7 @@ def get_fileshare_service(
     storage_port = get_storage_adapter()
     scan_port = get_scan_adapter()
     credential_verifier = get_credential_verifier()
+    conversion_port = get_conversion_adapter(storage_port)
     return FileShareService(
         file_repo=file_repo,
         grant_repo=grant_repo,
@@ -91,6 +93,7 @@ def get_fileshare_service(
         scan_port=scan_port,
         file_audit_repo=file_audit_repo,
         credential_verifier=credential_verifier,
+        conversion_port=conversion_port,
     )
 
 
@@ -155,8 +158,18 @@ async def get_upload_url(
     response_model=FileRecordResponse,
     status_code=status.HTTP_200_OK,
 )
+@router.post(
+    "/{file_id}/upload-complete",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
 @files_alias_router.post(
     "/{file_id}/complete-upload",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.post(
+    "/{file_id}/upload-complete",
     response_model=FileRecordResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -336,6 +349,8 @@ async def get_stream_url(
 async def get_download_url(
     file_id: str,
     request: Request,
+    response: Response,
+    original: bool = False,
     service: FileShareService = Depends(get_fileshare_service),
 ) -> FileDownloadUrlResponse:
     """Retrieve short-lived presigned GET download URL with permission and watermark verification.
@@ -352,7 +367,13 @@ async def get_download_url(
             caller_user_id=user_id,
             caller_roles=roles,
             caller_site_id=site_id,
+            original=original,
         )
+        if session.is_rendition:
+            response.headers["X-Rendition"] = "pdf"
+        else:
+            response.headers["X-Rendition"] = "original"
+
         return FileDownloadUrlResponse(
             file_id=session.file_id,
             filename=session.filename,
@@ -360,6 +381,8 @@ async def get_download_url(
             download_url=session.download_url,
             expires_in=session.expires_in,
             is_watermarked=session.is_watermarked,
+            is_rendition=session.is_rendition,
+            rendition_key=session.rendition_key,
         )
     except FileNotFoundError as exc:
         raise HTTPException(
@@ -374,6 +397,33 @@ async def get_download_url(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
         ) from exc
+
+
+@router.get(
+    "/{file_id}/preview-url",
+    response_model=FileDownloadUrlResponse,
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.get(
+    "/{file_id}/preview-url",
+    response_model=FileDownloadUrlResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_preview_url(
+    file_id: str,
+    request: Request,
+    response: Response,
+    original: bool = False,
+    service: FileShareService = Depends(get_fileshare_service),
+) -> FileDownloadUrlResponse:
+    """Retrieve short-lived presigned preview URL (PDF rendition if available, otherwise original)."""
+    return await get_download_url(
+        file_id=file_id,
+        request=request,
+        response=response,
+        original=original,
+        service=service,
+    )
 
 
 @router.get(

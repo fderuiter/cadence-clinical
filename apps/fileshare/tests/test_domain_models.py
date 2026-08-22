@@ -10,6 +10,7 @@ import pytest
 from pydantic import ValidationError
 
 from apps.fileshare.domain.models import (
+    ConversionStatus,
     FileAuditLog,
     FileRecord,
     GuestLink,
@@ -20,6 +21,7 @@ from apps.fileshare.domain.models import (
     ShareGrant,
     ShareScope,
     TranscodeStatus,
+    is_convertible_office_mime_type,
     is_video_mime_type,
 )
 
@@ -330,3 +332,88 @@ def test_file_audit_log_model():
     assert audit_log.reason_for_change == "Court order retention hold"
     assert audit_log.detail == {"hold_reason": "Subpoena 2026-A"}
     assert isinstance(audit_log.timestamp, datetime)
+
+
+def test_conversion_status_enum_and_helpers():
+    """Verify ConversionStatus normalization and office MIME type detection.
+
+    @req:PRD-SYS-001
+    @req:PRD-DOC-001
+    @req:PRD-DOC-002
+    """
+    assert ConversionStatus.from_str("ready") == ConversionStatus.READY
+    assert ConversionStatus.from_str("pending") == ConversionStatus.PENDING
+    assert ConversionStatus.from_str("FAILED") == ConversionStatus.FAILED
+    assert ConversionStatus.from_str("not_required") == ConversionStatus.NOT_REQUIRED
+
+    # Word / Excel / PowerPoint MIME types
+    assert (
+        is_convertible_office_mime_type(
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+        is True
+    )
+    assert (
+        is_convertible_office_mime_type(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        is True
+    )
+    assert (
+        is_convertible_office_mime_type(
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        )
+        is True
+    )
+    assert is_convertible_office_mime_type("application/msword") is True
+    assert is_convertible_office_mime_type("application/vnd.ms-excel") is True
+    assert is_convertible_office_mime_type("application/vnd.ms-powerpoint") is True
+
+    # By filename extension
+    assert (
+        is_convertible_office_mime_type("application/octet-stream", "protocol.docx")
+        is True
+    )
+    assert (
+        is_convertible_office_mime_type("application/octet-stream", "budget.xlsx")
+        is True
+    )
+    assert (
+        is_convertible_office_mime_type("application/octet-stream", "slides.pptx")
+        is True
+    )
+
+    # Non-convertible MIME types
+    assert is_convertible_office_mime_type("application/pdf") is False
+    assert is_convertible_office_mime_type("video/mp4") is False
+    assert is_convertible_office_mime_type("image/png") is False
+    assert is_convertible_office_mime_type(None, "image.png") is False
+
+
+def test_file_record_conversion_fields():
+    """Verify FileRecord auto format conversion default and custom values.
+
+    @req:PRD-SYS-001
+    @req:PRD-DOC-001
+    @req:PRD-DOC-002
+    """
+    file_id = str(uuid.uuid4())
+    record = FileRecord(
+        id=file_id,
+        study_id="STUDY-101",
+        filename="study_synopsis.docx",
+        mime_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        size_bytes=40960,
+        object_key="tenant_1/STUDY-101/doc/study_synopsis.docx",
+        uploaded_by="crc_user_01",
+        created_by="crc_user_01",
+        conversion_status=ConversionStatus.READY,
+        pdf_rendition_key="tenant_1/STUDY-101/doc/renditions/study_synopsis.pdf",
+        reason_for_change="Protocol synopsis uploaded",
+    )
+    assert record.conversion_status == ConversionStatus.READY
+    assert (
+        record.pdf_rendition_key
+        == "tenant_1/STUDY-101/doc/renditions/study_synopsis.pdf"
+    )
+    assert record.conversion_error is None

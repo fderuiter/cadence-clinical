@@ -7,11 +7,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3132
-- **Passed:** 3108 🟢
+- **Total Automated Test Cases Run:** 3142
+- **Passed:** 3118 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 24 ⚪
-- **Overall Operational Pass Rate:** 99.23%
+- **Overall Operational Pass Rate:** 99.24%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -1856,12 +1856,22 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_public_entry_point_whodrug` | `apps.execution.tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_strict_referential_validation_triggers` | `apps.execution.tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_whodrug_parser_init_validation` | `apps.execution.tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_complete_upload_auto_enqueues_conversion` | `apps.fileshare.tests.test_auto_format_conversion` | PRD-DOC-001, PRD-DOC-002, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_conversion_adapter_convert_to_pdf` | `apps.fileshare.tests.test_auto_format_conversion` | PRD-DOC-001, PRD-DOC-002, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_conversion_adapter_empty_source_raises_error` | `apps.fileshare.tests.test_auto_format_conversion` | PRD-DOC-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_document_conversion_worker_failure` | `apps.fileshare.tests.test_auto_format_conversion` | PRD-DOC-001, PRD-DOC-002, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_document_conversion_worker_success` | `apps.fileshare.tests.test_auto_format_conversion` | PRD-DOC-001, PRD-DOC-002, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_download_and_preview_rendition_routing` | `apps.fileshare.tests.test_auto_format_conversion` | PRD-DOC-001, PRD-DOC-003, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_pending_conversion_returns_original_with_header` | `apps.fileshare.tests.test_auto_format_conversion` | PRD-DOC-001, PRD-DOC-003, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_synthetic_fallback_pdf_structure` | `apps.fileshare.tests.test_auto_format_conversion` | PRD-DOC-001, PRD-DOC-002, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_approve_document_invalid_credential_rejected` | `apps.fileshare.tests.test_document_approval_endpoints` | PRD-DOC-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_approve_document_success` | `apps.fileshare.tests.test_document_approval_endpoints` | PRD-DOC-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_approved_document_is_immutable_and_blocks_revision` | `apps.fileshare.tests.test_document_approval_endpoints` | PRD-DOC-001, PRD-DOC-002, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_reject_document_workflow` | `apps.fileshare.tests.test_document_approval_endpoints` | PRD-DOC-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_rescind_approval_and_reopen_for_revisions` | `apps.fileshare.tests.test_document_approval_endpoints` | PRD-DOC-001, PRD-DOC-002, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_conversion_status_enum_and_helpers` | `apps.fileshare.tests.test_domain_models` | PRD-DOC-001, PRD-DOC-002, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_file_audit_log_model` | `apps.fileshare.tests.test_domain_models` | PRD-DOC-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_file_record_conversion_fields` | `apps.fileshare.tests.test_domain_models` | PRD-DOC-001, PRD-DOC-002, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_file_record_creation_and_defaults` | `apps.fileshare.tests.test_domain_models` | PRD-DOC-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_file_record_hold_fields` | `apps.fileshare.tests.test_domain_models` | PRD-DOC-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_file_record_validation_errors` | `apps.fileshare.tests.test_domain_models` | PRD-DOC-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -3410,28 +3420,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 1ebdb5761fcfb86adc8aaafcb22415829d0d4640d84de80999a835e6ce73a23b
+- **Cryptographic Hash (SHA-256):** 4d9fb19736057779c02c5614c02e7c4b8eeae9b9d6777756208e8b37f7fba5b6
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUftRTSSdaXjJL1hn2ZcG6EZDnT2YwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUc9TihCbPOCdDYia7F6zD559V2gAwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MTE5NTI1OFoXDTI3MDgyMjE5NTI1OFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MTIxNDIzNVoXDTI3MDgyMjIxNDIzNVowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2dae
-hyu2g8+Rbw7k9ZDuB7+VTQY0GktgSEX19gv9oqbDt4P21o23oKMIc5mBzCkYd2vX
-MTJfNEFRaAUlLYtEEHV8CeWtLNmTyWrpUvZ2bNMofS87nTLAO+bozIhj9ErO66Y/
-KAffwD/CP5PqG9pSZ96itUWVHx3ubjjZlVhyCxSC6uXMyJhXPP4v7FoOeWKfPTsu
-Y+5YyTUmaD15ObrWXX3DBlIQ28hJG7npNAo9mt9AkFo2zFDO78VHbJaNy6AKZUc3
-FjTd0bGk15GBHLwSIeRsw/CXqHqBEoGxZEZGARKpE6reDr4lMMC7tFrK+1Mw1RPb
-QUtN4+NjraPx3ERKfwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQA3DSWofVTGb5vH
-jEYGFQhZWASB4herYvRQV3FVYmJi/n8/6fOml/P5+DOn/hBSQGwURGPV6Is9cXD4
-iwLw+at+nxTMVOLASSQyeeD7fFfNuzGBHjG7tKIACHf1sGU46YrepeJAK1zyN1CU
-CVIkFueRuL0jiU9LyhoH6v/OemqOcO+RMxYPp8fVvy8ydTEagGExCJyvDHyCIJS+
-kNoYo0Yr2zAjPtj1qajDysCfm2Am9jQa2ccCS9Bi69JFwFCZYBYwqYy8Ffw1yX0N
-zKU1JVYZ3Upl8bcAeElUlhIUqLVed62iakUxD/ve3WHJ0zZkCY2Rq4xB+45R7w/G
-bmQ7ZulQ
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsMq2
+g5AIt9hj9onZi/0jYyze+FyL56vVQOIUyCUIL8bbyzxpZe926R1OlSPWSwbQFp9l
+8uv4PonLREAWWjvVXR712nU8oAEdc6V6h9RN9NOE284Dxk9EWY1BphjmyOwq1shl
+m9+BNbRyJISxZgg/IQn1YJeD8L+dYgq8DGwxDoGFPCzaJoMTP6n/9NFy/2NaQCQB
+gIDR/LOV50PMaGbAECQly4qRZEZ8+BfRSZnJQpe8DH71Wk5F2kq0ci4K/j3Di1kK
+oEPxyd+/BXLfj7k5DX+Lon/x6/1+YpDPSf9hWw9pMKkWWJAQMAZZkL74v3pYB3fY
+9Op3PXUgBsonzNa71QIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAzjI3+zAFIkppN
+koCp7SfqvAXw+6PjOLfYp9NkP6ju/BxtUODb5ydHdKdMI8hlZaHfmcT4+VYPoJXk
+tIFoeYlffEDlCWmXtdH+s+onz1HxUoNiLBvrx65R96KK4iPreUdMznsVc2dXDz+M
+duOAYTkbM8nizZ07ijRMlk78V8GQvq10xL5OoE1HDbg1NMQFARjXpODzY4qOOGQ6
+E7eqOlzfHS3GpteVJ19aKJgLGi5KthqAbz4dzxszriH4Z801IZK1iUT40ad6Ytu4
+lL2QD/ayfgIPhoJ5PHkEqO2Rhwd2BncZ0YrJd7omKokOY7189aREQ9F3sFgBtjQV
+BEWFDLHS
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-FWzYgt72h5aDSK9GWh/aBTp5TDnKoCMJ+atH9fCre0g6p8Wn+I5PXx0W+I2eF9RrgJQ733NF+SG0aXRIy87UgraV2PanP3MFOSu0J1a2oS0RXdWLk4tlhsWhTW5Q5tJmZVIVmQ6UMtojUFPxx1CLIl2+SjJXToWMB0nL/xVvhmB5WgCTXS9oKxbsitkPMQM28AjyTqsFO7p3XGHV7eoYefCHTl9DOLlIYGCBkiqzvfVubKVAAss6V5ONPzfVg4w3jUhSayIQepdoH0yOMwRw3+wYTd3M9dUZLHVjjSqSF8EWfz6Y7yyfKtwXJCjZ+cFWqTBHE+QZ1Mv2Xqk1H11TYQ==
+p6z3kL9IkvX5j85afVQ+vF+X1PEEHkbkGnjhknKdyIPWDy1V97wDcnnGv0hqUmPZUfqmabadEgaVys3vDaqj9WYmyV4HD4fZDTB8pWKeIwkYYFLlRO2ZoDhm3JiurBx9KP2R/NrQbD3n6n1pIDJrAagOaM6YCtXp+JznfaEku1Zed4883I2RVAIC6jKrPFR9i5oYje17XULcxg6iU/Dp6sMFLqs7NhmaMKY/Yj8ZaB/RPEqNxlAXQWaWRzeo7UH78q2p2cMFndwznqXhICdkGv9SH6BL163jZTuVqqs+zSQjbzLWW5Zb+6zZ6aymcVpw6GlcakbsNDSCHFI4+KVI1g==
 -----END SIGNATURE-----

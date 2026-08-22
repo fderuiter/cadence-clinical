@@ -26,6 +26,7 @@ from apps.fileshare.domain.exceptions import (
 )
 from apps.fileshare.domain.models import (
     ApprovalStatus,
+    ConversionStatus,
     FileAuditLog,
     FileRecord,
     FileStatus,
@@ -38,8 +39,10 @@ from apps.fileshare.domain.models import (
     ShareGrant,
     ShareScope,
     TranscodeStatus,
+    is_convertible_office_mime_type,
     is_video_mime_type,
 )
+from apps.fileshare.ports.conversion_port import ConversionPort
 from apps.fileshare.ports.credential_verifier_port import CredentialVerifierPort
 from apps.fileshare.ports.repository_port import (
     FileAuditLogRepositoryPort,
@@ -49,6 +52,7 @@ from apps.fileshare.ports.repository_port import (
     ShareGrantRepositoryPort,
 )
 from apps.fileshare.ports.scan_port import ScanPort, ScanResult
+from apps.fileshare.workers.conversion_worker import enqueue_conversion_task
 from apps.fileshare.workers.transcode_worker import enqueue_transcode_task
 from packages.security.notifications import (
     NotificationCategory,
@@ -93,6 +97,8 @@ class FileDownloadSession:
     expires_in: int = 3600
     is_watermarked: bool = False
     access_count: int | None = None
+    is_rendition: bool = False
+    rendition_key: str | None = None
 
 
 @dataclass(frozen=True)
@@ -121,6 +127,7 @@ class FileShareService:
         scan_port: ScanPort | None = None,
         file_audit_repo: FileAuditLogRepositoryPort | None = None,
         credential_verifier: CredentialVerifierPort | None = None,
+        conversion_port: ConversionPort | None = None,
     ) -> None:
         self.file_repo = file_repo
         self.grant_repo = grant_repo
@@ -130,6 +137,7 @@ class FileShareService:
         self.scan_port = scan_port
         self.file_audit_repo = file_audit_repo
         self.credential_verifier = credential_verifier
+        self.conversion_port = conversion_port
 
     async def record_audit_log(
         self,
@@ -198,6 +206,9 @@ class FileShareService:
             transcode_status=TranscodeStatus.NOT_REQUIRED,
             hls_manifest_key=None,
             transcode_error=None,
+            pdf_rendition_key=None,
+            conversion_status=ConversionStatus.NOT_REQUIRED,
+            conversion_error=None,
             created_at=datetime.now(UTC),
             created_by=uploader_id,
             reason_for_change=reason_for_change,
@@ -270,10 +281,13 @@ class FileShareService:
         caller_user_id: str,
         caller_roles: list[str],
         caller_site_id: str | None = None,
+        original: bool = False,
     ) -> FileDownloadSession:
         """Verify caller permissions and issue a short-lived presigned download URL.
 
         Enforces watermark policy for view-only/comment-only grants.
+        When a PDF rendition is ready and original is not explicitly requested,
+        returns the presigned URL for the PDF rendition.
         Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003
         """
         file_record = await self.file_repo.get_by_id(file_id)
@@ -329,20 +343,40 @@ class FileShareService:
             if max_grant.permission_level.requires_watermark():
                 is_watermarked = True
 
-        disposition = f'attachment; filename="{file_record.filename}"'
+        is_rendition = False
+        rendition_key = None
+
+        if (
+            not original
+            and file_record.conversion_status == ConversionStatus.READY
+            and file_record.pdf_rendition_key
+        ):
+            target_key = file_record.pdf_rendition_key
+            target_filename = os.path.splitext(file_record.filename)[0] + ".pdf"
+            target_mime = "application/pdf"
+            is_rendition = True
+            rendition_key = file_record.pdf_rendition_key
+        else:
+            target_key = file_record.object_key
+            target_filename = file_record.filename
+            target_mime = file_record.mime_type
+
+        disposition = f'attachment; filename="{target_filename}"'
         download_url = await self.storage_port.generate_presigned_get_url(
-            key=file_record.object_key,
+            key=target_key,
             expires_in=3600,
             response_content_disposition=disposition,
         )
 
         return FileDownloadSession(
             file_id=file_record.id,
-            filename=file_record.filename,
-            mime_type=file_record.mime_type,
+            filename=target_filename,
+            mime_type=target_mime,
             download_url=download_url,
             expires_in=3600,
             is_watermarked=is_watermarked,
+            is_rendition=is_rendition,
+            rendition_key=rendition_key,
         )
 
     async def create_share_grant(
@@ -683,9 +717,17 @@ class FileShareService:
         # 3. Handle CLEAN outcome
         if scan_result.status == ScanStatus.CLEAN:
             is_video = is_video_mime_type(file_record.mime_type)
+            is_convertible = is_convertible_office_mime_type(
+                file_record.mime_type, file_record.filename
+            )
             new_status = FileStatus.PENDING_TRANSCODE if is_video else FileStatus.READY
             new_transcode_status = (
                 TranscodeStatus.PENDING if is_video else TranscodeStatus.NOT_REQUIRED
+            )
+            new_conversion_status = (
+                ConversionStatus.PENDING
+                if is_convertible
+                else ConversionStatus.NOT_REQUIRED
             )
 
             updated_record = FileRecord(
@@ -701,6 +743,7 @@ class FileShareService:
                 uploaded_by=file_record.uploaded_by,
                 uploaded_at=file_record.uploaded_at,
                 is_on_hold=file_record.is_on_hold,
+                hold_reason=file_record.hold_reason,
                 is_deleted=False,
                 status=new_status,
                 scan_status=ScanStatus.CLEAN,
@@ -710,6 +753,14 @@ class FileShareService:
                 transcode_status=new_transcode_status,
                 hls_manifest_key=file_record.hls_manifest_key,
                 transcode_error=file_record.transcode_error,
+                pdf_rendition_key=file_record.pdf_rendition_key,
+                conversion_status=new_conversion_status,
+                conversion_error=None,
+                approval_status=file_record.approval_status,
+                signature_manifestation=file_record.signature_manifestation,
+                approved_by=file_record.approved_by,
+                approved_at=file_record.approved_at,
+                approval_reason=file_record.approval_reason,
                 created_at=file_record.created_at,
                 created_by=file_record.created_by,
                 reason_for_change=reason_for_change,
@@ -719,6 +770,10 @@ class FileShareService:
             if is_video:
                 with contextlib.suppress(Exception):
                     await enqueue_transcode_task(file_id)
+
+            if is_convertible:
+                with contextlib.suppress(Exception):
+                    await enqueue_conversion_task(file_id)
 
             return saved
 
@@ -754,6 +809,7 @@ class FileShareService:
                 uploaded_by=file_record.uploaded_by,
                 uploaded_at=file_record.uploaded_at,
                 is_on_hold=file_record.is_on_hold,
+                hold_reason=file_record.hold_reason,
                 is_deleted=False,
                 status=FileStatus.QUARANTINED,
                 scan_status=ScanStatus.INFECTED,
@@ -763,6 +819,14 @@ class FileShareService:
                 transcode_status=TranscodeStatus.FAILED,
                 hls_manifest_key=None,
                 transcode_error=f"Quarantined malware: {threat_name}",
+                pdf_rendition_key=None,
+                conversion_status=ConversionStatus.FAILED,
+                conversion_error=f"Quarantined malware: {threat_name}",
+                approval_status=file_record.approval_status,
+                signature_manifestation=file_record.signature_manifestation,
+                approved_by=file_record.approved_by,
+                approved_at=file_record.approved_at,
+                approval_reason=file_record.approval_reason,
                 created_at=file_record.created_at,
                 created_by=file_record.created_by,
                 reason_for_change=f"Quarantined due to malware detection: {threat_name}",
@@ -821,6 +885,7 @@ class FileShareService:
             uploaded_by=file_record.uploaded_by,
             uploaded_at=file_record.uploaded_at,
             is_on_hold=file_record.is_on_hold,
+            hold_reason=file_record.hold_reason,
             is_deleted=False,
             status=FileStatus.PENDING_SCAN,
             scan_status=ScanStatus.SCAN_ERROR,
@@ -830,6 +895,14 @@ class FileShareService:
             transcode_status=file_record.transcode_status,
             hls_manifest_key=file_record.hls_manifest_key,
             transcode_error=file_record.transcode_error,
+            pdf_rendition_key=file_record.pdf_rendition_key,
+            conversion_status=file_record.conversion_status,
+            conversion_error=file_record.conversion_error,
+            approval_status=file_record.approval_status,
+            signature_manifestation=file_record.signature_manifestation,
+            approved_by=file_record.approved_by,
+            approved_at=file_record.approved_at,
+            approval_reason=file_record.approval_reason,
             created_at=file_record.created_at,
             created_by=file_record.created_by,
             reason_for_change="Virus scan failed after retry attempts",
@@ -887,6 +960,7 @@ class FileShareService:
             uploaded_by=file_record.uploaded_by,
             uploaded_at=file_record.uploaded_at,
             is_on_hold=file_record.is_on_hold,
+            hold_reason=file_record.hold_reason,
             is_deleted=True,
             status=file_record.status,
             scan_status=file_record.scan_status,
@@ -896,6 +970,14 @@ class FileShareService:
             transcode_status=file_record.transcode_status,
             hls_manifest_key=file_record.hls_manifest_key,
             transcode_error=file_record.transcode_error,
+            pdf_rendition_key=file_record.pdf_rendition_key,
+            conversion_status=file_record.conversion_status,
+            conversion_error=file_record.conversion_error,
+            approval_status=file_record.approval_status,
+            signature_manifestation=file_record.signature_manifestation,
+            approved_by=file_record.approved_by,
+            approved_at=file_record.approved_at,
+            approval_reason=file_record.approval_reason,
             created_at=file_record.created_at,
             created_by=file_record.created_by,
             reason_for_change=reason_for_change,
@@ -1070,6 +1152,14 @@ class FileShareService:
             transcode_status=file_record.transcode_status,
             hls_manifest_key=file_record.hls_manifest_key,
             transcode_error=file_record.transcode_error,
+            pdf_rendition_key=file_record.pdf_rendition_key,
+            conversion_status=file_record.conversion_status,
+            conversion_error=file_record.conversion_error,
+            approval_status=file_record.approval_status,
+            signature_manifestation=file_record.signature_manifestation,
+            approved_by=file_record.approved_by,
+            approved_at=file_record.approved_at,
+            approval_reason=file_record.approval_reason,
             created_at=file_record.created_at,
             created_by=file_record.created_by,
             reason_for_change=reason_for_change,
@@ -1137,6 +1227,14 @@ class FileShareService:
             transcode_status=file_record.transcode_status,
             hls_manifest_key=file_record.hls_manifest_key,
             transcode_error=file_record.transcode_error,
+            pdf_rendition_key=file_record.pdf_rendition_key,
+            conversion_status=file_record.conversion_status,
+            conversion_error=file_record.conversion_error,
+            approval_status=file_record.approval_status,
+            signature_manifestation=file_record.signature_manifestation,
+            approved_by=file_record.approved_by,
+            approved_at=file_record.approved_at,
+            approval_reason=file_record.approval_reason,
             created_at=file_record.created_at,
             created_by=file_record.created_by,
             reason_for_change=reason_for_change,
@@ -1206,6 +1304,14 @@ class FileShareService:
             transcode_status=file_record.transcode_status,
             hls_manifest_key=file_record.hls_manifest_key,
             transcode_error=file_record.transcode_error,
+            pdf_rendition_key=file_record.pdf_rendition_key,
+            conversion_status=file_record.conversion_status,
+            conversion_error=file_record.conversion_error,
+            approval_status=file_record.approval_status,
+            signature_manifestation=file_record.signature_manifestation,
+            approved_by=file_record.approved_by,
+            approved_at=file_record.approved_at,
+            approval_reason=file_record.approval_reason,
             created_at=file_record.created_at,
             created_by=file_record.created_by,
             reason_for_change=reason_for_change,
@@ -1383,6 +1489,9 @@ class FileShareService:
             transcode_status=file_record.transcode_status,
             hls_manifest_key=file_record.hls_manifest_key,
             transcode_error=file_record.transcode_error,
+            pdf_rendition_key=file_record.pdf_rendition_key,
+            conversion_status=file_record.conversion_status,
+            conversion_error=file_record.conversion_error,
             approval_status=ApprovalStatus.APPROVED,
             signature_manifestation=manifest_dict,
             approved_by=caller_user_id,
@@ -1469,6 +1578,9 @@ class FileShareService:
             transcode_status=file_record.transcode_status,
             hls_manifest_key=file_record.hls_manifest_key,
             transcode_error=file_record.transcode_error,
+            pdf_rendition_key=file_record.pdf_rendition_key,
+            conversion_status=file_record.conversion_status,
+            conversion_error=file_record.conversion_error,
             approval_status=ApprovalStatus.REJECTED,
             signature_manifestation=None,
             approved_by=None,
@@ -1538,6 +1650,9 @@ class FileShareService:
             transcode_status=file_record.transcode_status,
             hls_manifest_key=file_record.hls_manifest_key,
             transcode_error=file_record.transcode_error,
+            pdf_rendition_key=file_record.pdf_rendition_key,
+            conversion_status=file_record.conversion_status,
+            conversion_error=file_record.conversion_error,
             approval_status=ApprovalStatus.APPROVAL_RESCINDED,
             signature_manifestation=None,
             approved_by=None,
@@ -1635,6 +1750,9 @@ class FileShareService:
             transcode_status=TranscodeStatus.NOT_REQUIRED,
             hls_manifest_key=None,
             transcode_error=None,
+            pdf_rendition_key=None,
+            conversion_status=ConversionStatus.NOT_REQUIRED,
+            conversion_error=None,
             approval_status=ApprovalStatus.PENDING_APPROVAL,
             signature_manifestation=None,
             approved_by=None,

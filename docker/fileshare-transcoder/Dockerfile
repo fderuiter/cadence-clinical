@@ -1,8 +1,13 @@
 FROM ghcr.io/astral-sh/uv:python3.14-bookworm
 
-# Install FFmpeg and required audio/video codecs
+# Install FFmpeg, LibreOffice headless, and required audio/video/document rendering packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
+    libreoffice-writer \
+    libreoffice-calc \
+    libreoffice-impress \
+    default-jre-headless \
+    fonts-dejavu \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
     libcairo2 \
@@ -26,4 +31,4 @@ ENV AUDIT_LOG_SECRET_KEY=""
 ENV GATEWAY_SECRET=""
 ENV SIGNING_SECRET=""
 
-CMD ["python", "-c", "import asyncio; from apps.fileshare.workers.transcode_worker import run_transcoder_daemon; asyncio.run(run_transcoder_daemon())"]
+CMD ["python", "-c", "import asyncio; from apps.fileshare.workers.transcode_worker import run_transcoder_daemon; from apps.fileshare.workers.conversion_worker import run_conversion_daemon; asyncio.run(asyncio.gather(run_transcoder_daemon(), run_conversion_daemon()))"]

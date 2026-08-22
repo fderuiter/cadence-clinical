@@ -45,6 +45,11 @@ class FileRecordRepositoryPort(RepositoryPort[FileRecord], ABC):
         """List file records pending video transcoding."""
         pass
 
+    @abstractmethod
+    async def list_pending_conversions(self) -> list[FileRecord]:
+        """List file records pending format conversion to PDF."""
+        pass
+
 
 class ShareGrantRepositoryPort(RepositoryPort[ShareGrant], ABC):
     """Port for persisting and querying ShareGrant access delegations."""

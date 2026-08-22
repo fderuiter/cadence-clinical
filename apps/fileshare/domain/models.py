@@ -3,6 +3,7 @@
 Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 """
 
+import os
 import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -123,6 +124,51 @@ def is_video_mime_type(mime_type: str | None) -> bool:
     }
 
 
+class ConversionStatus(StrEnum):
+    """Lifecycle status of document format conversion (Office to PDF)."""
+
+    NOT_REQUIRED = "NOT_REQUIRED"
+    PENDING = "PENDING"
+    READY = "READY"
+    FAILED = "FAILED"
+
+    @classmethod
+    def from_str(cls, value: str) -> ConversionStatus:
+        """Normalize case-insensitive string into ConversionStatus enum."""
+        return cls(value.strip().upper())
+
+
+OFFICE_DOCUMENT_EXTENSIONS = {".docx", ".xlsx", ".pptx", ".doc", ".xls", ".ppt"}
+
+
+def is_convertible_office_mime_type(
+    mime_type: str | None, filename: str | None = None
+) -> bool:
+    """Check if the provided MIME type or filename represents a convertible Office document format."""
+    if mime_type:
+        normalized = mime_type.strip().lower()
+        if (
+            normalized.startswith("application/vnd.openxmlformats-officedocument.")
+            or normalized.startswith("application/vnd.ms-")
+            or normalized == "application/msword"
+            or normalized
+            in {
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                "application/msword",
+                "application/vnd.ms-excel",
+                "application/vnd.ms-powerpoint",
+            }
+        ):
+            return True
+    if filename:
+        ext = os.path.splitext(filename)[1].lower()
+        if ext in OFFICE_DOCUMENT_EXTENSIONS:
+            return True
+    return False
+
+
 class ScanStatus(StrEnum):
     """Lifecycle status of file malware/virus scanning."""
 
@@ -199,6 +245,11 @@ class FileRecord(BaseModel):
     transcode_status: TranscodeStatus = Field(default=TranscodeStatus.NOT_REQUIRED)
     hls_manifest_key: str | None = Field(default=None, max_length=1000)
     transcode_error: str | None = Field(default=None, max_length=2000)
+
+    # Document auto-format conversion metadata (Office -> PDF)
+    pdf_rendition_key: str | None = Field(default=None, max_length=1000)
+    conversion_status: ConversionStatus = Field(default=ConversionStatus.NOT_REQUIRED)
+    conversion_error: str | None = Field(default=None, max_length=2000)
 
     # 21 CFR Part 11 Document Approval and Electronic Signature fields
     approval_status: ApprovalStatus = Field(default=ApprovalStatus.PENDING_APPROVAL)

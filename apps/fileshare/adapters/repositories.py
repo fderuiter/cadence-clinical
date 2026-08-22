@@ -79,6 +79,14 @@ class SqlAlchemyFileRecordRepository(FileRecordRepositoryPort):
         res = await self.session.execute(stmt)
         return [m.to_domain() for m in res.scalars().all()]
 
+    async def list_pending_conversions(self) -> list[FileRecord]:
+        stmt = select(FileRecordModel).where(
+            FileRecordModel.conversion_status == "PENDING",
+            FileRecordModel.is_deleted.is_(False),
+        )
+        res = await self.session.execute(stmt)
+        return [m.to_domain() for m in res.scalars().all()]
+
     async def save(self, entity: FileRecord) -> FileRecord:
         stmt = select(FileRecordModel).where(FileRecordModel.id == entity.id)
         res = await self.session.execute(stmt)
@@ -108,6 +116,11 @@ class SqlAlchemyFileRecordRepository(FileRecordRepositoryPort):
                 transcode_status=entity.transcode_status.value,
                 hls_manifest_key=entity.hls_manifest_key,
                 transcode_error=entity.transcode_error,
+                pdf_rendition_key=entity.pdf_rendition_key,
+                conversion_status=entity.conversion_status.value
+                if hasattr(entity.conversion_status, "value")
+                else str(entity.conversion_status),
+                conversion_error=entity.conversion_error,
                 approval_status=entity.approval_status.value
                 if hasattr(entity.approval_status, "value")
                 else str(entity.approval_status),
@@ -138,6 +151,13 @@ class SqlAlchemyFileRecordRepository(FileRecordRepositoryPort):
             existing.transcode_status = entity.transcode_status.value
             existing.hls_manifest_key = entity.hls_manifest_key
             existing.transcode_error = entity.transcode_error
+            existing.pdf_rendition_key = entity.pdf_rendition_key
+            existing.conversion_status = (
+                entity.conversion_status.value
+                if hasattr(entity.conversion_status, "value")
+                else str(entity.conversion_status)
+            )
+            existing.conversion_error = entity.conversion_error
             existing.approval_status = (
                 entity.approval_status.value
                 if hasattr(entity.approval_status, "value")

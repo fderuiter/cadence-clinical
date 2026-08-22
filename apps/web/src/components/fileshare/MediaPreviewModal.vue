@@ -29,6 +29,24 @@
         </div>
         <div class="header-actions">
           <div
+            v-if="fileRecord?.conversion_status === 'READY'"
+            class="approval-badge rendition-pill"
+            data-testid="rendition-badge"
+            title="Automatic PDF Rendition generated for regulated preview"
+          >
+            <span class="badge-icon">📄</span>
+            <span class="badge-label">PDF Rendition</span>
+          </div>
+          <div
+            v-else-if="fileRecord?.conversion_status === 'PENDING'"
+            class="approval-badge pending-pill"
+            data-testid="converting-badge"
+            title="Converting Office document to PDF rendition in background"
+          >
+            <span class="badge-icon">🔄</span>
+            <span class="badge-label">Converting...</span>
+          </div>
+          <div
             v-if="isApproved"
             class="approval-badge approved-pill"
             data-testid="approved-badge"
@@ -1079,6 +1097,18 @@ function getStatusClass(status) {
   background-color: #dcfce7;
   color: #166534;
   border: 1px solid #86efac;
+}
+
+.rendition-pill {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.pending-pill {
+  background-color: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
 }
 
 .badge-signer {

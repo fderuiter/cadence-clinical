@@ -33,8 +33,27 @@ export const fileshareService = {
   /**
    * Retrieve presigned short-lived download URL.
    */
-  async getDownloadUrl(fileId) {
-    return apiClient.get(`/api/v1/fileshare/files/${fileId}/download-url`);
+  async getDownloadUrl(fileId, options = {}) {
+    const query = new URLSearchParams();
+    if (options.original) query.append("original", "true");
+    const qs = query.toString();
+    const path = qs
+      ? `/api/v1/fileshare/files/${fileId}/download-url?${qs}`
+      : `/api/v1/fileshare/files/${fileId}/download-url`;
+    return apiClient.get(path);
+  },
+
+  /**
+   * Retrieve presigned short-lived preview URL (PDF rendition if available).
+   */
+  async getPreviewUrl(fileId, options = {}) {
+    const query = new URLSearchParams();
+    if (options.original) query.append("original", "true");
+    const qs = query.toString();
+    const path = qs
+      ? `/api/v1/fileshare/files/${fileId}/preview-url?${qs}`
+      : `/api/v1/fileshare/files/${fileId}/preview-url`;
+    return apiClient.get(path);
   },
 
   /**

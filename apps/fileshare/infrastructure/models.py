@@ -14,6 +14,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from apps.fileshare.domain.models import (
     ApprovalStatus,
+    ConversionStatus,
     FileAuditLog,
     FileRecord,
     FileStatus,
@@ -84,6 +85,13 @@ class FileRecordModel(Base):
     hls_manifest_key: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     transcode_error: Mapped[str | None] = mapped_column(String(2000), nullable=True)
 
+    # Document auto-format conversion metadata
+    pdf_rendition_key: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    conversion_status: Mapped[str] = mapped_column(
+        String(50), default="NOT_REQUIRED", nullable=False, index=True
+    )
+    conversion_error: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+
     # 21 CFR Part 11 Document Approval and Electronic Signature fields
     approval_status: Mapped[str] = mapped_column(
         String(50), default="PENDING_APPROVAL", nullable=False, index=True
@@ -143,6 +151,9 @@ class FileRecordModel(Base):
             transcode_status=TranscodeStatus(self.transcode_status),
             hls_manifest_key=self.hls_manifest_key,
             transcode_error=self.transcode_error,
+            pdf_rendition_key=self.pdf_rendition_key,
+            conversion_status=ConversionStatus(self.conversion_status),
+            conversion_error=self.conversion_error,
             approval_status=ApprovalStatus(self.approval_status),
             signature_manifestation=self.signature_manifestation,
             approved_by=self.approved_by,
