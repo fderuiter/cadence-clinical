@@ -379,8 +379,12 @@ class ArticleLifecycleService:
         KnowledgeArticle.current_published_version_id pointer.
         """
         article = await self.get_article_by_id(article_id)
-        if not article or not article.current_published_version_id:
-            return None
+        if (
+            getattr(article, "current_published_version", None) is not None
+            and article.current_published_version.id
+            == article.current_published_version_id
+        ):
+            return article.current_published_version
         return await self._article_repo.get_version_by_id(
             article.current_published_version_id
         )
@@ -810,6 +814,7 @@ class ArticleLifecycleService:
                 approved_version.version_label = version_label
             await self._article_repo.save_version(approved_version)
             article.current_published_version_id = approved_version.id
+            article.current_published_version = approved_version
 
         if version_label:
             article.version_label = version_label

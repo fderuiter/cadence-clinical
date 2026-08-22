@@ -332,13 +332,15 @@ async def get_article(
     session: AsyncSession = Depends(get_db_session),
 ) -> ArticleResponse:
     """
-    Retrieves a single KnowledgeArticle by ID along with its active body content.
+    Retrieves a single KnowledgeArticle by ID or unique slug along with its active body content.
     If the requesting user has an auditor role, records a READ_BY_AUDITOR audit event.
     """
     from packages.security.context import current_user_id as uid_ctx
 
     svc = create_article_service(session)
     article = await svc.get_article_by_id(article_id)
+    if not article:
+        article = await svc.get_article_by_slug(article_id)
     if not article:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
@@ -347,7 +349,10 @@ async def get_article(
     # Fetch relevant version snapshot
     version: KnowledgeArticleVersion | None = None
     if article.status == ArticleStatus.PUBLISHED:
-        version = await svc.get_current_published_version(article.id)
+        if getattr(article, "current_published_version", None) is not None:
+            version = article.current_published_version
+        else:
+            version = await svc.get_current_published_version(article.id)
     if not version:
         version = await svc.get_working_draft_version(article.id)
     if not version:

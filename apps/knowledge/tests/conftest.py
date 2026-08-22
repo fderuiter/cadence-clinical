@@ -5,10 +5,20 @@ Uses packages/testing infrastructure: InMemoryRepository, factories, and
 security mocks. Gated database provisioning per pytest-xdist isolation rules.
 """
 
+import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from apps.knowledge.infrastructure.models import Base
+from apps.knowledge.main import app
+
+
+@pytest.fixture(autouse=True)
+def clean_app_overrides():
+    """Ensure app.dependency_overrides is cleaned before and after every test."""
+    app.dependency_overrides.clear()
+    yield
+    app.dependency_overrides.clear()
 
 
 @pytest_asyncio.fixture

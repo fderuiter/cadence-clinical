@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import func, literal_column, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 if TYPE_CHECKING:
     from apps.knowledge.application.article_service import ArticleLifecycleService
@@ -45,7 +46,9 @@ class SQLAlchemyKnowledgeArticleRepository(KnowledgeArticleRepositoryPort):
     async def get_by_id(self, entity_id: str) -> KnowledgeArticle | None:
         """Retrieve active knowledge article by ID."""
         result = await self._session.execute(
-            select(KnowledgeArticle).where(
+            select(KnowledgeArticle)
+            .options(joinedload(KnowledgeArticle.current_published_version))
+            .where(
                 KnowledgeArticle.id == entity_id,
                 KnowledgeArticle.is_deleted.is_(False),
             )
@@ -55,7 +58,9 @@ class SQLAlchemyKnowledgeArticleRepository(KnowledgeArticleRepositoryPort):
     async def get_by_slug(self, slug: str) -> KnowledgeArticle | None:
         """Retrieve active knowledge article by unique slug."""
         result = await self._session.execute(
-            select(KnowledgeArticle).where(
+            select(KnowledgeArticle)
+            .options(joinedload(KnowledgeArticle.current_published_version))
+            .where(
                 KnowledgeArticle.slug == slug,
                 KnowledgeArticle.is_deleted.is_(False),
             )

@@ -1056,6 +1056,8 @@ async def test_publication_and_auto_supersede_prior_version(
     Validate that publishing version N+1 updates current_published_version_id for O(1) reads
     and automatically sets prior active version N to SUPERSEDED status.
 
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
     @req:PRD-KNB-001
     """
     svc = create_article_service(db_session)
@@ -1156,6 +1158,8 @@ async def test_api_publish_endpoint_and_auto_supersede(
     """
     Validate REST API POST /articles/{id}/publish endpoint and auto-supersede behavior.
 
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
     @req:PRD-KNB-001
     """
     app.dependency_overrides[get_db_session] = lambda: db_session
@@ -1284,6 +1288,152 @@ async def test_api_publish_endpoint_and_auto_supersede(
         assert versions[1]["status_at_snapshot"] == "PUBLISHED"
 
 
+@pytest.mark.asyncio
+async def test_api_get_article_by_slug_returns_rendered_html_and_metadata(
+    db_session: AsyncSession,
+    auth_headers_author: dict[str, str],
+    auth_headers_approver: dict[str, str],
+    auth_headers_crc: dict[str, str],
+):
+    """
+    Validate that GET /api/v1/knowledge/articles/{slug} returns the active published article
+    with cached rendered HTML and metadata in a single fast lookup.
+
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
+    @req:PRD-KNB-001
+    """
+    app.dependency_overrides[get_db_session] = lambda: db_session
+
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        # Create category
+        cat_resp = await client.post(
+            "/api/v1/knowledge/categories",
+            json={
+                "name": "Site Clinical Operations",
+                "slug": "site-clinical-ops",
+                "reason_for_change": "Setup site operations category",
+            },
+            headers=auth_headers_author,
+        )
+        cat_id = cat_resp.json()["id"]
+
+        # Create article with rich markdown
+        body_content = "# Adverse Event Reporting SOP\n\nFollow these **mandatory** steps for SAE escalation:\n\n- Notify Sponsor within 24 hours\n- Complete CIOMS form\n- Document in eCRF"
+        art_resp = await client.post(
+            "/api/v1/knowledge/articles",
+            json={
+                "title": "Adverse Event Reporting SOP",
+                "slug": "ae-reporting-sop",
+                "category_id": cat_id,
+                "body_markdown": body_content,
+                "version_label": "1.0",
+                "tags": ["safety", "sae", "reporting"],
+                "reason_for_change": "Initial AE SOP authoring",
+            },
+            headers=auth_headers_author,
+        )
+        art_id = art_resp.json()["id"]
+
+        # Submit, approve, publish v1.0
+        await client.post(
+            f"/api/v1/knowledge/articles/{art_id}/submit-review",
+            headers=auth_headers_author,
+        )
+        approve_path = f"/api/v1/knowledge/articles/{art_id}/approve"
+        approver_sig = get_auth_headers_with_sig(
+            ACTOR_APPROVER, ["super_admin"], approve_path
+        )
+        await client.post(
+            approve_path,
+            json={"reason_for_change": "Approved AE reporting SOP"},
+            headers=approver_sig,
+        )
+        pub_resp = await client.post(
+            f"/api/v1/knowledge/articles/{art_id}/publish",
+            json={
+                "reason_for_change": "Published v1.0 AE reporting SOP to all site personnel",
+                "version_label": "1.0",
+            },
+            headers=auth_headers_approver,
+        )
+        assert pub_resp.status_code == 200
+
+        # Fast O(1) single-query lookup by unique SLUG as CRC persona
+        slug_resp = await client.get(
+            "/api/v1/knowledge/articles/ae-reporting-sop",
+            headers=auth_headers_crc,
+        )
+        assert slug_resp.status_code == 200
+        data = slug_resp.json()
+        assert data["id"] == art_id
+        assert data["slug"] == "ae-reporting-sop"
+        assert data["title"] == "Adverse Event Reporting SOP"
+        assert data["category_id"] == cat_id
+        assert data["status"] == "PUBLISHED"
+        assert data["version_label"] == "1.0"
+        assert data["current_published_version_id"] is not None
+        assert "safety" in data["tags"]
+        assert data["body_markdown"] == body_content
+        assert "<h1>" in data["body_html"]
+        assert "<strong>mandatory</strong>" in data["body_html"]
+        assert "<li>Notify Sponsor within 24 hours</li>" in data["body_html"]
+
+        # Non-existent slug returns 404
+        missing_resp = await client.get(
+            "/api/v1/knowledge/articles/nonexistent-sop-slug",
+            headers=auth_headers_crc,
+        )
+        assert missing_resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_single_query_published_article_lookup_eager_loads_version(
+    db_session: AsyncSession,
+):
+    """
+    Validate that repository and service get_article_by_slug eager-loads current_published_version
+    in a single query without secondary database roundtrips.
+
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
+    @req:PRD-KNB-001
+    """
+    svc = create_article_service(db_session)
+    cat = await _make_category(svc)
+    article = await _make_article(svc, cat.id)
+
+    # Publish
+    await svc.submit_for_review(article_id=article.id, actor_user_id=ACTOR_AUTHOR)
+    await svc.approve_article(
+        article_id=article.id,
+        actor_user_id=ACTOR_APPROVER,
+        reason_for_change="Approved v1.0",
+    )
+    article = await svc.publish_article(
+        article_id=article.id,
+        actor_user_id=ACTOR_APPROVER,
+        reason_for_change="Published v1.0",
+        version_label="1.0",
+    )
+
+    # Lookup by slug
+    loaded = await svc.get_article_by_slug(article.slug)
+    assert loaded is not None
+    assert loaded.id == article.id
+    assert loaded.status == ArticleStatus.PUBLISHED
+    assert loaded.current_published_version is not None
+    assert loaded.current_published_version.id == article.current_published_version_id
+    assert loaded.current_published_version.body_html is not None
+    assert "<h1>" in loaded.current_published_version.body_html
+
+    # get_current_published_version uses eager loaded relation directly
+    published_ver = await svc.get_current_published_version(article.id)
+    assert published_ver is not None
+    assert published_ver.id == loaded.current_published_version.id
+
+
 # ---------------------------------------------------------------------------
 # Additional Lifecycle, Audit Log, and Notifications Tests
 # ---------------------------------------------------------------------------
@@ -1296,6 +1446,8 @@ async def test_reason_for_change_enforced_on_publish_and_approve(
     """
     Validate that reason_for_change is mandatory for regulated approval and publication transitions.
 
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
     @req:PRD-KNB-001
     """
     svc = create_article_service(db_session)
@@ -1317,6 +1469,8 @@ async def test_notification_dispatched_on_publish(db_session: AsyncSession):
     """
     Validate that notifications are dispatched to event bus on article publication.
 
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
     @req:PRD-KNB-001
     @req:PRD-KNB-002
     """
@@ -1353,6 +1507,8 @@ async def test_audit_logs_emitted_for_all_lifecycle_transitions(
     """
     Validate that immutable audit log entries are generated for every lifecycle state transition.
 
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
     @req:PRD-KNB-001
     """
     svc = create_article_service(db_session)
