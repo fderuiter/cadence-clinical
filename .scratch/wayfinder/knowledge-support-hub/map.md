@@ -51,12 +51,12 @@ Settled & Closed:
 - #4326 feat(knowledge): 03 — Four-Eyes Review & Immutable Version Snapshotting (CLOSED)
 - #4327 feat(knowledge): 04 — Article Publication, Auto-Supersede & Fast Lookups (CLOSED)
 - #4329 feat(knowledge): 06 — Full-Text Search Vector Indexing & Discovery (CLOSED)
+- #4330 feat(knowledge): 07 — Auditor Read Logging & 21 CFR Part 11 Inspection Ledger (CLOSED)
+- #4331 feat(knowledge): 08 — Dedicated Knowledge Hub Browser View in apps/web (CLOSED)
+- #4332 feat(knowledge): 09 — Global Contextual Help Drawer & Support Ticket Escalation (CLOSED)
 
 ## Implementation Backlog (Ready for Agent)
 
 1. **#4328**: `feat(knowledge): 05 — In-Page Contextual Help Mapping & Dynamic Resolution` (Unblocked)
-2. **#4330**: `feat(knowledge): 07 — Auditor Read Logging & 21 CFR Part 11 Inspection Ledger` (Unblocked)
-3. **#4331**: `feat(knowledge): 08 — Dedicated Knowledge Hub Browser View in apps/web` (Unblocked)
-4. **#4332**: `feat(knowledge): 09 — Global Contextual Help Drawer & Support Ticket Escalation` (Blocked by #4328, #4331)
-5. **#4333**: `feat(knowledge): 10 — End-to-End GxP Verification Suite & Automated RTM Sync` (Blocked by #4331, #4332)
+2. **#4333**: `feat(knowledge): 10 — End-to-End GxP Verification Suite & Automated RTM Sync` (Blocked by #4328)
 
