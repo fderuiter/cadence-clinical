@@ -19,6 +19,7 @@ from apps.fileshare.adapters.storage import get_storage_adapter
 from apps.fileshare.application.fileshare_service import FileShareService
 from apps.fileshare.domain.exceptions import (
     FileNotFoundError,
+    FileQuarantinedError,
     FileSharePermissionDeniedError,
 )
 from apps.fileshare.domain.models import TranscodeStatus
@@ -266,6 +267,11 @@ async def get_stream_url(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
         ) from exc
+    except FileQuarantinedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"message": str(exc), "reason": exc.reason},
+        ) from exc
     except FileSharePermissionDeniedError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
@@ -343,6 +349,11 @@ async def get_download_url(
     except FileNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except FileQuarantinedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"message": str(exc), "reason": exc.reason},
         ) from exc
     except FileSharePermissionDeniedError as exc:
         raise HTTPException(
@@ -509,6 +520,11 @@ async def create_share_grant(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
         ) from exc
+    except FileQuarantinedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"message": str(exc), "reason": exc.reason},
+        ) from exc
     except FileSharePermissionDeniedError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
@@ -604,6 +620,11 @@ async def create_guest_link(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
         ) from exc
+    except FileQuarantinedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"message": str(exc), "reason": exc.reason},
+        ) from exc
 
 
 @router.delete(
@@ -694,6 +715,11 @@ async def get_guest_file_download(
     except FileNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except FileQuarantinedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"message": str(exc), "reason": exc.reason},
         ) from exc
     except FileSharePermissionDeniedError as exc:
         raise HTTPException(
