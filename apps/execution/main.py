@@ -984,7 +984,7 @@ async def create_subject(
     encrypted_demo = None
     if payload.demographics is not None:
         encrypted_demo = encrypt_demographics(
-            payload.demographics.dict(exclude_none=True)
+            payload.demographics.model_dump(exclude_none=True)
         )
 
     async with db_manager.get_session_maker()() as session:
@@ -1552,7 +1552,7 @@ async def update_subject_demographics_endpoint(
                             subject.encrypted_demographics
                         )
 
-                new_demo = payload.demographics.dict(exclude_none=True)
+                new_demo = payload.demographics.model_dump(exclude_none=True)
                 if is_post_rand and current_demo != new_demo:
                     raise HTTPException(
                         status_code=422, detail="LOCKED_FACTOR_MUTATION"

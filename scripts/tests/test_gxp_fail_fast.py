@@ -171,7 +171,7 @@ def test_missing_report_gxp_sync_dry_run():
                 in result.stdout
             )
         finally:
-            if has_backup:
+            if has_backup and backup_path.exists():
                 backup_path.rename(report_path)
             # Clean up any modified SDLC files in actual repository
             subprocess.run(

@@ -10,8 +10,17 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 FROM python:3.14-slim-bookworm
 WORKDIR /app
 
+# Install native C-libraries for PDF rendering (WeasyPrint / Pango / Cairo)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libcairo2 \
+    libharfbuzz0b \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN groupadd -g 1000 appuser && \
     useradd -r -u 1000 -g appuser appuser
+
 
 COPY --chown=1000:1000 --from=builder /app/.venv /app/.venv
 COPY --chown=1000:1000 packages/security /app/packages/security

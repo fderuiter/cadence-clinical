@@ -354,7 +354,7 @@ def test_export_protocol_etmf_forwarding_best_effort(client, monkeypatch):
     # Force best-effort archival configuration
     monkeypatch.setenv("ETMF_FORWARDING_ENABLED", "true")
     monkeypatch.setenv("ETMF_STRICT_ARCHIVAL", "false")
-    monkeypatch.setenv("ETMF_URL", "http://invalid-non-existent-etmf-url:9999")
+    monkeypatch.setenv("ETMF_URL", "http://127.0.0.1:59999")
 
     # The export should succeed normally even with non-existent ETMF URL (warnings logged)
     response = client.get(
@@ -373,7 +373,7 @@ def test_export_protocol_etmf_forwarding_strict_failure(client, monkeypatch):
     # Force strict archival configuration
     monkeypatch.setenv("ETMF_FORWARDING_ENABLED", "true")
     monkeypatch.setenv("ETMF_STRICT_ARCHIVAL", "true")
-    monkeypatch.setenv("ETMF_URL", "http://invalid-non-existent-etmf-url:9999")
+    monkeypatch.setenv("ETMF_URL", "http://127.0.0.1:59999")
 
     # The export should raise HTTP 500 on strict archival failure
     response = client.get(

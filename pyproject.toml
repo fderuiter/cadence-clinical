@@ -111,6 +111,14 @@ testpaths = [
 ]
 python_files = "test_*.py *_test.py *tests.py *suite.py"
 asyncio_mode = "auto"
+filterwarnings = [
+    "error::DeprecationWarning",
+    "ignore:builtin type SwigPyPacked has no __module__ attribute:DeprecationWarning",
+    "ignore:builtin type SwigPyObject has no __module__ attribute:DeprecationWarning",
+    "ignore:builtin type swigvarlink has no __module__ attribute:DeprecationWarning",
+    "ignore:The default datetime adapter is deprecated as of Python 3.12.*:DeprecationWarning",
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated.*:starlette.exceptions.StarletteDeprecationWarning",
+]
 
 [tool.coverage.run]
 source = [

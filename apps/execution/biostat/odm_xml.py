@@ -29,8 +29,6 @@ def _to_dict(record: Any) -> dict[str, Any]:
     """Converts pydantic models or dict-like objects to a standard dictionary."""
     if hasattr(record, "model_dump"):
         return record.model_dump()
-    if hasattr(record, "dict"):
-        return record.dict()
     if isinstance(record, dict):
         return dict(record)
     return getattr(record, "__dict__", {})

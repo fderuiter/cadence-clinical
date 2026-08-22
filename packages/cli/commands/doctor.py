@@ -41,6 +41,16 @@ def check_tool_version(cmd: list[str]) -> str | None:
     return None
 
 
+def check_pdf_engine() -> tuple[bool, str | None]:
+    """Validates if WeasyPrint and underlying Pango/Cairo C-libraries load properly."""
+    try:
+        import weasyprint
+
+        return True, f"weasyprint {weasyprint.__version__}"
+    except Exception as exc:
+        return False, str(exc)
+
+
 def _auto_heal_databases(repo_root: Path) -> list[str]:
     """Auto-heals missing SQLite storage files and installs pre-commit hooks."""
     actions = []
@@ -126,6 +136,19 @@ def run_doctor(
             diagnostics["recommendations"].append(
                 f"Required tool '{name}' is not found in PATH."
             )
+
+    # Validate C-FFI PDF layout engine (WeasyPrint / Pango / Cairo)
+    pdf_ok, pdf_detail = check_pdf_engine()
+    diagnostics["binaries"]["pango"] = {
+        "installed": pdf_ok,
+        "version": pdf_detail if pdf_ok else "Missing",
+    }
+    if not pdf_ok:
+        diagnostics["status"] = "degraded"
+        diagnostics["recommendations"].append(
+            "WeasyPrint graphics C-libraries (Pango/Cairo) are missing. "
+            "Install with: 'brew install pango' (macOS) or 'apt-get install -y libpango-1.0-0 libcairo2' (Linux)."
+        )
 
     # 3. Database Check
     dbs_ready_count = 0

@@ -115,10 +115,7 @@ async def run_sdtm_extraction(
         res_visit = await session.execute(stmt_visit)
         visits = res_visit.scalars().all()
         cm_models = map_cm(subjects, visits, observations)
-        records = [
-            cm.model_dump() if hasattr(cm, "model_dump") else cm.dict()
-            for cm in cm_models
-        ]
+        records = [cm.model_dump() for cm in cm_models]
     else:
         raise ValueError(f"Unsupported SDTM domain: {domain}")
 

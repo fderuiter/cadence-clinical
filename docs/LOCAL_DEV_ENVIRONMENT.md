@@ -36,7 +36,25 @@ The frontend portals and monorepo workspace configurations depend on Node.js and
    pnpm install
    ```
 
-### Step 3: Install Python 3.14 & Run Single-Command Setup (`pnpm setup:dev`)
+### Step 3: Install Native Graphics & PDF Layout Libraries (Pango & Cairo)
+
+The clinical PDF generation engine (`weasyprint`) relies on system C-libraries:
+
+- **macOS:**
+  ```bash
+  brew install pango
+  ```
+- **Linux (Ubuntu/Debian):**
+  ```bash
+  sudo apt update && sudo apt install -y libpango-1.0-0 libpangoft2-1.0-0 libcairo2 libharfbuzz0b
+  ```
+- **Windows (WSL2):**
+  ```bash
+  sudo apt update && sudo apt install -y libpango-1.0-0 libpangoft2-1.0-0 libcairo2 libharfbuzz0b
+  ```
+
+### Step 4: Install Python 3.14 & Run Single-Command Setup (`pnpm setup:dev`)
+
 
 Our backend systems are written in Python 3.14 and utilize `uv` for package management. Python version `3.14` is pinned via `.python-version`.
 
@@ -50,7 +68,7 @@ Our backend systems are written in Python 3.14 and utilize `uv` for package mana
    ```
    _This single command automatically provisions Python 3.14 with `--all-extras` (`pytest`, `ruff`, `bandit`, `playwright`, `weasyprint`), downloads required Playwright browser engines, and links workspace dependencies._
 
-### Step 4: Install & Configure Git Pre-commit Hooks
+### Step 5: Install & Configure Git Pre-commit Hooks
 
 Register the pre-commit configuration with Git to run automatic linting, formatting, and link validations before staging commits:
 
@@ -64,7 +82,7 @@ You can run the checks manually on all files in the repository at any time:
 uv run pre-commit run --all-files
 ```
 
-### Step 5: Parallel Developer Productivity Utilities
+### Step 6: Parallel Developer Productivity Utilities
 
 The codebase provides built-in utilities to simplify parallel feature development across branches:
 

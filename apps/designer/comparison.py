@@ -12,8 +12,6 @@ def flatten_dict(d: Any, parent_key: str = "", sep: str = ".") -> dict[str, Any]
     # Handle Pydantic models (e.g. converting to dict/model_dump)
     if hasattr(d, "model_dump") and callable(getattr(d, "model_dump")):
         d = d.model_dump()
-    elif hasattr(d, "dict") and callable(getattr(d, "dict")):
-        d = d.dict()
     elif hasattr(d, "__dict__"):
         d = d.__dict__
 
@@ -40,8 +38,6 @@ def collect_original_ids(d: Any) -> dict[str, str]:
 
     if hasattr(d, "model_dump") and callable(getattr(d, "model_dump")):
         d = d.model_dump()
-    elif hasattr(d, "dict") and callable(getattr(d, "dict")):
-        d = d.dict()
 
     if isinstance(d, dict):
         orig_id = d.get("_original_id")

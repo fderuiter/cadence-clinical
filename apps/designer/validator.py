@@ -349,19 +349,15 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
             for i, v in enumerate(d):
                 new_key = f"{parent_key}{sep}[{i}]" if parent_key else f"[{i}]"
                 items.extend(flatten_dict(v, new_key, sep=sep).items())
+        elif hasattr(d, "model_dump") and callable(getattr(d, "model_dump")):
+            for k, v in d.model_dump().items():
+                new_key = f"{parent_key}{sep}{k}" if parent_key else k
+                items.extend(flatten_dict(v, new_key, sep=sep).items())
         elif hasattr(d, "__dict__"):
             for k, v in d.__dict__.items():
                 if not k.startswith("_"):
                     new_key = f"{parent_key}{sep}{k}" if parent_key else k
                     items.extend(flatten_dict(v, new_key, sep=sep).items())
-        elif hasattr(d, "dict") and callable(getattr(d, "dict")):
-            for k, v in d.dict().items():
-                new_key = f"{parent_key}{sep}{k}" if parent_key else k
-                items.extend(flatten_dict(v, new_key, sep=sep).items())
-        elif hasattr(d, "model_dump") and callable(getattr(d, "model_dump")):
-            for k, v in d.model_dump().items():
-                new_key = f"{parent_key}{sep}{k}" if parent_key else k
-                items.extend(flatten_dict(v, new_key, sep=sep).items())
         else:
             items.append((parent_key, d))
         return dict(items)

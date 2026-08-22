@@ -1,6 +1,15 @@
 FROM ghcr.io/astral-sh/uv:python3.14-bookworm
 
+# Install native C-libraries for PDF rendering (WeasyPrint / Pango / Cairo)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libcairo2 \
+    libharfbuzz0b \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
+
 
 # Copy the dependency files
 COPY pyproject.toml ./

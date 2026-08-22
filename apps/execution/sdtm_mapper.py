@@ -74,8 +74,6 @@ def get_demographics(subject: Any) -> dict[str, Any]:
         return demographics
     if hasattr(demographics, "model_dump"):
         return demographics.model_dump()
-    if hasattr(demographics, "dict"):
-        return demographics.dict()
     return {}
 
 
