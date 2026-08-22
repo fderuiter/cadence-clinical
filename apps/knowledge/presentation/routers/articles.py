@@ -12,7 +12,6 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.knowledge.adapters.database import get_db_session
@@ -27,10 +26,7 @@ from apps.knowledge.domain.exceptions import (
     ContextualHelpMappingNotFoundError,
 )
 from apps.knowledge.domain.models import ArticleStatus
-from apps.knowledge.infrastructure.models import (
-    KnowledgeArticleAuditLog,
-    KnowledgeArticleVersion,
-)
+from apps.knowledge.infrastructure.models import KnowledgeArticleVersion
 from apps.knowledge.presentation.dtos import (
     ArticleApproveRequest,
     ArticleCreate,
@@ -38,10 +34,12 @@ from apps.knowledge.presentation.dtos import (
     ArticlePublishRequest,
     ArticleRejectRequest,
     ArticleResponse,
+    ArticleSearchResult,
     ArticleSubmitReviewRequest,
     ArticleTransitionRequest,
     ArticleUpdate,
     ArticleVersionResponse,
+    AuditChainVerificationResponse,
     AuditLogResponse,
     CategoryCreate,
     CategoryResponse,
@@ -280,6 +278,49 @@ async def list_articles(
     return [ArticleResponse.model_validate(a) for a in articles]
 
 
+# ---------------------------------------------------------------------------
+# Article Full-Text Search Endpoint (Issue #4329)
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/search",
+    response_model=list[ArticleSearchResult],
+    dependencies=[Depends(require_roles(*ALL_ROLES))],
+)
+@router.get(
+    "/articles/search",
+    response_model=list[ArticleSearchResult],
+    dependencies=[Depends(require_roles(*ALL_ROLES))],
+)
+async def search_articles(
+    request: Request,
+    q: str = "",
+    category_id: str | None = None,
+    limit: int = 50,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[ArticleSearchResult]:
+    """
+    Full-text searches published knowledge articles across titles, tags, and Markdown bodies (Issue #4329).
+
+    - Returns relevance-ranked articles with contextual highlighted snippets (<mark>...</mark>).
+    - Scopes visibility to categories accessible by the caller's persona roles.
+    - PostgreSQL tsvector-indexed in production; multi-dialect lexical fallback in SQLite test harnesses.
+    """
+    if not q or not q.strip():
+        return []
+
+    roles = get_normalized_roles(request)
+    svc = create_article_service(session)
+    results = await svc.search_articles(
+        query=q.strip(),
+        category_id=category_id,
+        user_roles=roles,
+        limit=limit,
+    )
+    return [ArticleSearchResult.model_validate(r) for r in results]
+
+
 @router.get(
     "/articles/{article_id}",
     response_model=ArticleResponse,
@@ -315,13 +356,18 @@ async def get_article(
             version = versions[-1]
 
     # Emit auditor read event if auditor persona
-    actor = uid_ctx.get()
+    actor = (
+        uid_ctx.get()
+        or request.headers.get("X-User-Id")
+        or request.headers.get("x-user-id")
+        or "auditor"
+    )
     try:
         roles = get_normalized_roles(request)
         if any(r in roles for r in AUDITOR_ROLES):
             await svc.record_auditor_read(article=article, actor_user_id=actor)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Auditor read event recording failed: %s", exc)
 
     resp = ArticleResponse.model_validate(article)
     if version:
@@ -576,26 +622,83 @@ async def list_article_versions(
 ) -> list[ArticleVersionResponse]:
     """Lists all immutable version snapshots for an article (chronological order)."""
     svc = create_article_service(session)
+    article = await svc.get_article_by_id(article_id)
+    if not article:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
+        )
     versions = await svc.list_article_versions(article_id)
     return [ArticleVersionResponse.model_validate(v) for v in versions]
 
 
 @router.get(
+    "/articles/{article_id}/versions/{version_id}",
+    response_model=ArticleVersionResponse,
+    dependencies=[Depends(require_roles(*ALL_ROLES))],
+)
+async def get_article_version(
+    article_id: str,
+    version_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> ArticleVersionResponse:
+    """Retrieves a specific immutable version snapshot for an article."""
+    svc = create_article_service(session)
+    article = await svc.get_article_by_id(article_id)
+    if not article:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
+        )
+    version = await svc.get_version_by_id(version_id)
+    if not version or version.article_id != article_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Article version not found"
+        )
+    return ArticleVersionResponse.model_validate(version)
+
+
+@router.get(
+    "/articles/{article_id}/audit-trail",
+    response_model=list[AuditLogResponse],
+    dependencies=[Depends(require_roles(*AUDITOR_ROLES))],
+)
+@router.get(
     "/articles/{article_id}/audit-log",
     response_model=list[AuditLogResponse],
     dependencies=[Depends(require_roles(*AUDITOR_ROLES))],
 )
-async def get_article_audit_log(
+async def get_article_audit_trail(
     article_id: str,
     session: AsyncSession = Depends(get_db_session),
 ) -> list[AuditLogResponse]:
-    """Returns the immutable audit trail for a specific article."""
-    result = await session.execute(
-        select(KnowledgeArticleAuditLog)
-        .where(KnowledgeArticleAuditLog.article_id == article_id)
-        .order_by(KnowledgeArticleAuditLog.created_at.asc())
-    )
-    return [AuditLogResponse.model_validate(log) for log in result.scalars().all()]
+    """Returns the immutable SHA-256 digest chained audit trail for a specific article."""
+    svc = create_article_service(session)
+    article = await svc.get_article_by_id(article_id)
+    if not article:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
+        )
+    logs = await svc.list_audit_logs(article_id)
+    return [AuditLogResponse.model_validate(log) for log in logs]
+
+
+@router.get(
+    "/articles/{article_id}/verify-audit-chain",
+    response_model=AuditChainVerificationResponse,
+    dependencies=[Depends(require_roles(*AUDITOR_ROLES))],
+)
+async def verify_article_audit_chain(
+    article_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> AuditChainVerificationResponse:
+    """Cryptographically verifies the SHA-256 digest chain integrity for an article's audit trail."""
+    svc = create_article_service(session)
+    article = await svc.get_article_by_id(article_id)
+    if not article:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
+        )
+    verification = await svc.verify_audit_chain(article_id)
+    return AuditChainVerificationResponse.model_validate(verification)
 
 
 # ---------------------------------------------------------------------------

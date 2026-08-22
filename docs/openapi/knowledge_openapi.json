@@ -369,6 +369,154 @@
         }
       }
     },
+    "/api/v1/knowledge/articles/search": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Search Articles",
+        "description": "Full-text searches published knowledge articles across titles, tags, and Markdown bodies (Issue #4329).\n\n- Returns relevance-ranked articles with contextual highlighted snippets (<mark>...</mark>).\n- Scopes visibility to categories accessible by the caller's persona roles.\n- PostgreSQL tsvector-indexed in production; multi-dialect lexical fallback in SQLite test harnesses.",
+        "operationId": "search_articles_api_v1_knowledge_articles_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "category_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArticleSearchResult"
+                  },
+                  "title": "Response Search Articles Api V1 Knowledge Articles Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/search": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Search Articles",
+        "description": "Full-text searches published knowledge articles across titles, tags, and Markdown bodies (Issue #4329).\n\n- Returns relevance-ranked articles with contextual highlighted snippets (<mark>...</mark>).\n- Scopes visibility to categories accessible by the caller's persona roles.\n- PostgreSQL tsvector-indexed in production; multi-dialect lexical fallback in SQLite test harnesses.",
+        "operationId": "search_articles_api_v1_knowledge_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "category_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArticleSearchResult"
+                  },
+                  "title": "Response Search Articles Api V1 Knowledge Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/knowledge/articles/{article_id}/draft": {
       "patch": {
         "tags": [
@@ -785,14 +933,66 @@
         }
       }
     },
+    "/api/v1/knowledge/articles/{article_id}/versions/{version_id}": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Get Article Version",
+        "description": "Retrieves a specific immutable version snapshot for an article.",
+        "operationId": "get_article_version_api_v1_knowledge_articles__article_id__versions__version_id__get",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Article Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleVersionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/knowledge/articles/{article_id}/audit-log": {
       "get": {
         "tags": [
           "knowledge"
         ],
-        "summary": "Get Article Audit Log",
-        "description": "Returns the immutable audit trail for a specific article.",
-        "operationId": "get_article_audit_log_api_v1_knowledge_articles__article_id__audit_log_get",
+        "summary": "Get Article Audit Trail",
+        "description": "Returns the immutable SHA-256 digest chained audit trail for a specific article.",
+        "operationId": "get_article_audit_trail_api_v1_knowledge_articles__article_id__audit_log_get",
         "parameters": [
           {
             "name": "article_id",
@@ -814,7 +1014,97 @@
                   "items": {
                     "$ref": "#/components/schemas/AuditLogResponse"
                   },
-                  "title": "Response Get Article Audit Log Api V1 Knowledge Articles  Article Id  Audit Log Get"
+                  "title": "Response Get Article Audit Trail Api V1 Knowledge Articles  Article Id  Audit Log Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles/{article_id}/audit-trail": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Get Article Audit Trail",
+        "description": "Returns the immutable SHA-256 digest chained audit trail for a specific article.",
+        "operationId": "get_article_audit_trail_api_v1_knowledge_articles__article_id__audit_trail_get",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Article Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditLogResponse"
+                  },
+                  "title": "Response Get Article Audit Trail Api V1 Knowledge Articles  Article Id  Audit Trail Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles/{article_id}/verify-audit-chain": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Verify Article Audit Chain",
+        "description": "Cryptographically verifies the SHA-256 digest chain integrity for an article's audit trail.",
+        "operationId": "verify_article_audit_chain_api_v1_knowledge_articles__article_id__verify_audit_chain_get",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Article Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditChainVerificationResponse"
                 }
               }
             }
@@ -1820,6 +2110,91 @@
         "title": "ArticleResponse",
         "description": "Response schema for a KnowledgeArticle."
       },
+      "ArticleSearchResult": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "category_id": {
+            "type": "string",
+            "title": "Category Id"
+          },
+          "category_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Name"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "version_label": {
+            "type": "string",
+            "title": "Version Label"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "snippet": {
+            "type": "string",
+            "title": "Snippet"
+          },
+          "highlighted_snippet": {
+            "type": "string",
+            "title": "Highlighted Snippet",
+            "default": ""
+          },
+          "relevance_score": {
+            "type": "number",
+            "title": "Relevance Score"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "category_id",
+          "version_label",
+          "version_index",
+          "snippet",
+          "relevance_score",
+          "created_at"
+        ],
+        "title": "ArticleSearchResult",
+        "description": "Response schema representing a ranked knowledge article with highlighted snippet."
+      },
       "ArticleStatus": {
         "type": "string",
         "enum": [
@@ -2044,6 +2419,56 @@
         "title": "ArticleVersionResponse",
         "description": "Response schema for a KnowledgeArticleVersion snapshot."
       },
+      "AuditChainVerificationResponse": {
+        "properties": {
+          "article_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Article Id"
+          },
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          },
+          "total_records": {
+            "type": "integer",
+            "title": "Total Records"
+          },
+          "genesis_digest": {
+            "type": "string",
+            "title": "Genesis Digest"
+          },
+          "latest_digest": {
+            "type": "string",
+            "title": "Latest Digest"
+          },
+          "tamper_detected": {
+            "type": "boolean",
+            "title": "Tamper Detected",
+            "default": false
+          },
+          "details": {
+            "type": "string",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_valid",
+          "total_records",
+          "genesis_digest",
+          "latest_digest",
+          "details"
+        ],
+        "title": "AuditChainVerificationResponse",
+        "description": "Response schema for cryptographic audit ledger chain verification."
+      },
       "AuditLogResponse": {
         "properties": {
           "id": {
@@ -2097,6 +2522,28 @@
               }
             ],
             "title": "Details"
+          },
+          "previous_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Digest"
+          },
+          "sha256_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256 Digest"
           },
           "created_at": {
             "type": "string",

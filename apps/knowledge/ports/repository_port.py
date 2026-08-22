@@ -5,6 +5,8 @@ Requirements: PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002, ADR-2188
 """
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from datetime import datetime
 
 from apps.knowledge.domain.models import ArticleStatus
 from apps.knowledge.infrastructure.models import (
@@ -15,6 +17,24 @@ from apps.knowledge.infrastructure.models import (
     KnowledgeCategory,
 )
 from packages.hexagonal import RepositoryPort
+
+
+@dataclass
+class ArticleSearchResultItem:
+    """Domain container for article search query results."""
+
+    id: str
+    slug: str
+    title: str
+    category_id: str
+    category_name: str | None
+    category_persona_visibility: str | None
+    tags: str | None
+    version_label: str
+    version_index: int
+    snippet: str
+    relevance_score: float
+    created_at: datetime
 
 
 class KnowledgeArticleRepositoryPort(RepositoryPort[KnowledgeArticle], ABC):
@@ -87,6 +107,16 @@ class KnowledgeArticleRepositoryPort(RepositoryPort[KnowledgeArticle], ABC):
         self, version: KnowledgeArticleVersion
     ) -> KnowledgeArticleVersion:
         """Persist or update an article version snapshot."""
+        pass
+
+    @abstractmethod
+    async def search_published_articles(
+        self,
+        query: str,
+        category_id: str | None = None,
+        limit: int = 50,
+    ) -> list[ArticleSearchResultItem]:
+        """Search published knowledge articles across titles, tags, and bodies."""
         pass
 
 
@@ -175,6 +205,7 @@ class ContextualHelpMappingRepositoryPort(RepositoryPort[ContextualHelpMapping],
 
 
 __all__ = [
+    "ArticleSearchResultItem",
     "ContextualHelpMapping",
     "ContextualHelpMappingRepositoryPort",
     "KnowledgeArticle",

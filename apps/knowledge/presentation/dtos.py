@@ -196,6 +196,50 @@ class ArticleResponse(BaseModel):
         return None
 
 
+class ArticleSearchResult(BaseModel):
+    """Response schema representing a ranked knowledge article with highlighted snippet."""
+
+    id: str
+    slug: str
+    title: str
+    category_id: str
+    category_name: str | None = None
+    tags: list[str] | None = None
+    version_label: str
+    version_index: int
+    snippet: str
+    highlighted_snippet: str = ""
+    relevance_score: float
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+    def model_post_init(self, __context: Any) -> None:
+        if not self.highlighted_snippet and self.snippet:
+            self.highlighted_snippet = self.snippet
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def parse_tags(cls, v: Any) -> list[str] | None:
+        if v is None:
+            return None
+        if isinstance(v, list):
+            return [str(item) for item in v]
+        if isinstance(v, str):
+            v_str = v.strip()
+            if not v_str:
+                return None
+            if v_str.startswith("[") and v_str.endswith("]"):
+                try:
+                    parsed = json.loads(v_str)
+                    if isinstance(parsed, list):
+                        return [str(item) for item in parsed]
+                except Exception:
+                    pass
+            return [t.strip() for t in v_str.split(",") if t.strip()]
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Audit Log DTOs
 # ---------------------------------------------------------------------------
@@ -210,12 +254,26 @@ class AuditLogResponse(BaseModel):
     previous_status: str | None
     new_status: str | None
     details: str | None
+    previous_digest: str | None = None
+    sha256_digest: str | None = None
     created_at: datetime
     created_by: str
     reason_for_change: str | None
     version_index: int
 
     model_config = {"from_attributes": True}
+
+
+class AuditChainVerificationResponse(BaseModel):
+    """Response schema for cryptographic audit ledger chain verification."""
+
+    article_id: str | None = None
+    is_valid: bool
+    total_records: int
+    genesis_digest: str
+    latest_digest: str
+    tamper_detected: bool = False
+    details: str
 
 
 # ---------------------------------------------------------------------------
@@ -289,10 +347,12 @@ __all__ = [
     "ArticlePublishRequest",
     "ArticleRejectRequest",
     "ArticleResponse",
+    "ArticleSearchResult",
     "ArticleSubmitReviewRequest",
     "ArticleTransitionRequest",
     "ArticleUpdate",
     "ArticleVersionResponse",
+    "AuditChainVerificationResponse",
     "AuditLogResponse",
     "CategoryCreate",
     "CategoryResponse",

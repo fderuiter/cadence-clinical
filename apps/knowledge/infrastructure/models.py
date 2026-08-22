@@ -16,6 +16,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -23,6 +24,7 @@ from sqlalchemy import (
     func,
     inspect,
 )
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
 from apps.knowledge.domain.models import ArticleStatus
@@ -218,6 +220,12 @@ class KnowledgeArticleVersion(Base):
     body_markdown: Mapped[str] = mapped_column(Text, nullable=False)
     body_html: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Full-text search vector (PostgreSQL TSVECTOR; Text in SQLite)
+    search_vector: Mapped[str | None] = mapped_column(
+        TSVECTOR().with_variant(Text(), "sqlite"),
+        nullable=True,
+    )
+
     # Immutability lock flag
     is_locked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
@@ -231,6 +239,14 @@ class KnowledgeArticleVersion(Base):
     # Relationships
     article: Mapped[KnowledgeArticle] = relationship(
         back_populates="versions", foreign_keys=[article_id]
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_knowledge_article_versions_search_vector",
+            "search_vector",
+            postgresql_using="gin",
+        ),
     )
 
 
@@ -258,6 +274,10 @@ class KnowledgeArticleAuditLog(Base):
     previous_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     new_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     details: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+
+    # Cryptographic SHA-256 digest chain fields
+    previous_digest: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    sha256_digest: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     # GxP audit fields
     created_at: Mapped[datetime] = mapped_column(
