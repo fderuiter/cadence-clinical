@@ -208,7 +208,8 @@ describe("feat(fileshare): 10 — Documents Hub UI (#4317)", () => {
       expect(rows.length).toBe(2);
 
       // Held file row
-      const heldRow = rows[0];
+      const heldRow = rows.find((r) => r.text().includes("Investigator_Brochure_v5.0.pdf"));
+      expect(heldRow).toBeDefined();
       const heldBadge = heldRow.find(".status-pill.status-hold");
       expect(heldBadge.exists()).toBe(true);
       expect(heldBadge.text()).toContain("🔒");
@@ -219,7 +220,8 @@ describe("feat(fileshare): 10 — Documents Hub UI (#4317)", () => {
       expect(heldDeleteBtn.attributes("title")).toBe("File is under retention hold.");
 
       // Unheld file row
-      const unheldRow = rows[1];
+      const unheldRow = rows.find((r) => r.text().includes("Lab_Results_002.pdf"));
+      expect(unheldRow).toBeDefined();
       const unheldDeleteBtn = unheldRow.find(".btn-delete-action");
       expect(unheldDeleteBtn.attributes("disabled")).toBeUndefined();
       expect(unheldDeleteBtn.attributes("title")).toBe("Delete document");
