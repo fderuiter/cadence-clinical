@@ -300,8 +300,14 @@ class ContextualHelpMapping(Base):
         index=True,
     )
 
+    # Specific section anchor inside article (e.g. "#enrollment-procedure")
+    section_anchor: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     # Lower number = higher priority when multiple mappings match
     priority: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
+
+    # Active flag for toggling mappings without deleting
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # GxP audit fields
     created_at: Mapped[datetime] = mapped_column(

@@ -91,7 +91,7 @@ async def extract_protocol_digitization(
 
     if not content or len(content) == 0:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Uploaded protocol file is empty or corrupted.",
         )
 
@@ -197,7 +197,7 @@ async def start_digitization_dag_job(
 
     if not content or len(content) == 0:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Uploaded protocol document is empty or corrupted.",
         )
 

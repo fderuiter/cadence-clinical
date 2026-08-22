@@ -23,6 +23,7 @@ def test_live_db_halt_when_postgres_unreachable():
         [
             "uv",
             "run",
+            "--all-extras",
             "pytest",
             "packages/database/tests/test_reset_db.py",
             "--no-cov",
@@ -62,6 +63,7 @@ def test_live_db_halt_when_neo4j_unreachable():
             [
                 "uv",
                 "run",
+                "--all-extras",
                 "pytest",
                 "packages/database/tests/test_reset_db.py",
                 "--no-cov",

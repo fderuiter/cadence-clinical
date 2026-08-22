@@ -430,7 +430,7 @@ async def import_usdm_study(
             invalid_params=invalid_params,
         )
         return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content=problem.model_dump(exclude_none=True),
         )
 
@@ -613,7 +613,7 @@ async def validate_single_code(
     """
     if not code or not code.strip():
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Concept code cannot be empty or whitespace.",
         )
 
@@ -653,7 +653,7 @@ async def search_terminology(
     """
     if not term or not term.strip():
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Search term cannot be empty or whitespace.",
         )
 
@@ -1176,14 +1176,14 @@ async def upload_protocol_ingestion(
 
     if not contents or len(contents) == 0:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="UNSUPPORTED_OR_MALFORMED_FILE",
         )
 
     ext = filename.split(".")[-1].lower() if "." in filename else ""
     if ext not in ("pdf", "docx"):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="UNSUPPORTED_OR_MALFORMED_FILE",
         )
 
@@ -1198,26 +1198,26 @@ async def upload_protocol_ingestion(
             text_content = "\n".join([p.text for p in doc.paragraphs])
         except Exception:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="UNSUPPORTED_OR_MALFORMED_FILE",
             )
     else:
         if not contents.startswith(b"%PDF"):
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="UNSUPPORTED_OR_MALFORMED_FILE",
             )
         text_content = contents.decode("utf-8", errors="ignore")
 
     if not text_content or not text_content.strip():
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="UNSUPPORTED_OR_MALFORMED_FILE",
         )
 
     if "malformed" in text_content.lower() or "invalid" in text_content.lower():
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="UNSUPPORTED_OR_MALFORMED_FILE",
         )
 
@@ -1863,12 +1863,12 @@ async def export_protocol(
     # 1. Explicit Parameter Validation (Raise HTTP 422 for invalid format/output values)
     if format not in ("pdf", "docx"):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Invalid format value. Supported formats: pdf, docx.",
         )
     if output not in ("narrative", "synopsis", "soa", "combined"):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Invalid output value. Supported outputs: narrative, synopsis, soa, combined.",
         )
 
@@ -2717,7 +2717,7 @@ async def publish_study_version_endpoint(
 
             # Propagate clear validation error notification to user
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"PUBLISH_FAILED: {error_msg}",
             )
 
@@ -2899,7 +2899,7 @@ async def create_eligibility_criterion_endpoint(
         condition_ast = parse_dsl(payload.dsl_source)
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Invalid DSL expression or reference: {str(e)}",
         )
 
@@ -2980,7 +2980,7 @@ async def update_eligibility_criterion_endpoint(
         condition_ast = parse_dsl(payload.dsl_source)
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Invalid DSL expression or reference: {str(e)}",
         )
 
@@ -3076,7 +3076,7 @@ async def validate_usdm_endpoint(
             invalid_params=invalid_params,
         )
         return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content=problem.model_dump(exclude_none=True),
         )
 

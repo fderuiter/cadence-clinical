@@ -375,8 +375,59 @@
           "knowledge"
         ],
         "summary": "Save Article Draft",
-        "description": "Saves updated body content to a DRAFT article. Requires super_admin role.",
+        "description": "Saves updated body content to a DRAFT article (Issue #4325). Requires super_admin role.",
         "operationId": "save_article_draft_api_v1_knowledge_articles__article_id__draft_patch",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Article Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleDraftSave"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleVersionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Save Article Draft",
+        "description": "Saves updated body content to a DRAFT article (Issue #4325). Requires super_admin role.",
+        "operationId": "save_article_draft_api_v1_knowledge_articles__article_id__draft_put",
         "parameters": [
           {
             "name": "article_id",
@@ -781,23 +832,23 @@
         }
       }
     },
-    "/api/v1/knowledge/contextual-help": {
+    "/api/v1/knowledge/contextual-help/mappings": {
       "post": {
         "tags": [
           "knowledge"
         ],
         "summary": "Create Contextual Help Mapping",
-        "description": "Creates a contextual help mapping (route pattern + persona -> article).",
-        "operationId": "create_contextual_help_mapping_api_v1_knowledge_contextual_help_post",
+        "description": "Creates a new contextual help route mapping. Requires super_admin role.",
+        "operationId": "create_contextual_help_mapping_api_v1_knowledge_contextual_help_mappings_post",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ContextualHelpMappingCreate"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -821,16 +872,140 @@
             }
           }
         }
-      }
-    },
-    "/api/v1/knowledge/contextual-help/lookup": {
+      },
       "get": {
         "tags": [
           "knowledge"
         ],
-        "summary": "Lookup Contextual Help",
-        "description": "Returns the most relevant Published article for a given route and persona.",
-        "operationId": "lookup_contextual_help_api_v1_knowledge_contextual_help_lookup_get",
+        "summary": "List Contextual Help Mappings",
+        "description": "Lists all contextual help mappings with optional filters. Requires super_admin role.",
+        "operationId": "list_contextual_help_mappings_api_v1_knowledge_contextual_help_mappings_get",
+        "parameters": [
+          {
+            "name": "route_pattern",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Route Pattern"
+            }
+          },
+          {
+            "name": "persona",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Persona"
+            }
+          },
+          {
+            "name": "is_active",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Active"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContextualHelpMappingResponse"
+                  },
+                  "title": "Response List Contextual Help Mappings Api V1 Knowledge Contextual Help Mappings Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/contextual-help": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Create Contextual Help Mapping",
+        "description": "Creates a new contextual help route mapping. Requires super_admin role.",
+        "operationId": "create_contextual_help_mapping_api_v1_knowledge_contextual_help_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContextualHelpMappingCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextualHelpMappingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Resolve Contextual Help",
+        "description": "Dynamically resolves in-page contextual SOP guidance and relevant articles\nfor a given clinical screen route (e.g. '/ecrf/site-101/subjects') and persona role.\n\nResolution algorithm:\n- Matches exact routes, parameterized routes, prefix wildcards, and global catch-alls.\n- Resolves via hierarchical specificity: priority ASC, persona match, pattern specificity, length, and recency.\n- Surfaces 1 primary spotlight article + up to 3 secondary related guides.",
+        "operationId": "resolve_contextual_help_api_v1_knowledge_contextual_help_get",
         "parameters": [
           {
             "name": "route",
@@ -864,7 +1039,213 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ContextualHelpLookupResponse"
+                  "$ref": "#/components/schemas/ContextualHelpResolutionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/contextual-help/mappings/{mapping_id}": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Get Contextual Help Mapping",
+        "description": "Retrieves a single contextual help mapping by ID. Requires super_admin role.",
+        "operationId": "get_contextual_help_mapping_api_v1_knowledge_contextual_help_mappings__mapping_id__get",
+        "parameters": [
+          {
+            "name": "mapping_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Mapping Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextualHelpMappingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Update Contextual Help Mapping",
+        "description": "Updates an existing contextual help mapping. Requires super_admin role.",
+        "operationId": "update_contextual_help_mapping_api_v1_knowledge_contextual_help_mappings__mapping_id__put",
+        "parameters": [
+          {
+            "name": "mapping_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Mapping Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContextualHelpMappingUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextualHelpMappingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Delete Contextual Help Mapping",
+        "description": "Deletes a contextual help mapping by ID. Requires super_admin role.",
+        "operationId": "delete_contextual_help_mapping_api_v1_knowledge_contextual_help_mappings__mapping_id__delete",
+        "parameters": [
+          {
+            "name": "mapping_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Mapping Id"
+            }
+          },
+          {
+            "name": "reason_for_change",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "Contextual help mapping deleted",
+              "title": "Reason For Change"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete Contextual Help Mapping Api V1 Knowledge Contextual Help Mappings  Mapping Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/contextual-help/lookup": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Resolve Contextual Help",
+        "description": "Dynamically resolves in-page contextual SOP guidance and relevant articles\nfor a given clinical screen route (e.g. '/ecrf/site-101/subjects') and persona role.\n\nResolution algorithm:\n- Matches exact routes, parameterized routes, prefix wildcards, and global catch-alls.\n- Resolves via hierarchical specificity: priority ASC, persona match, pattern specificity, length, and recency.\n- Surfaces 1 primary spotlight article + up to 3 secondary related guides.",
+        "operationId": "resolve_contextual_help_api_v1_knowledge_contextual_help_lookup_get",
+        "parameters": [
+          {
+            "name": "route",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Route"
+            }
+          },
+          {
+            "name": "persona",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Persona"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextualHelpResolutionResponse"
                 }
               }
             }
@@ -1138,6 +1519,12 @@
           "tags": {
             "anyOf": [
               {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
                 "type": "string"
               },
               {
@@ -1171,6 +1558,61 @@
             "minLength": 1,
             "title": "Body Markdown"
           },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1,
+                "pattern": "^[a-z0-9-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
           "reason_for_change": {
             "anyOf": [
               {
@@ -1189,7 +1631,7 @@
           "body_markdown"
         ],
         "title": "ArticleDraftSave",
-        "description": "Request body for saving an updated draft body (PATCH /articles/{id}/draft)."
+        "description": "Request body for saving an updated draft body (PUT/PATCH /articles/{id}/draft)."
       },
       "ArticlePublishRequest": {
         "properties": {
@@ -1281,7 +1723,10 @@
           "tags": {
             "anyOf": [
               {
-                "type": "string"
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
               },
               {
                 "type": "null"
@@ -1492,6 +1937,12 @@
           },
           "tags": {
             "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
               {
                 "type": "string"
               },
@@ -1877,37 +2328,6 @@
         "title": "CategoryResponse",
         "description": "Response schema for a KnowledgeCategory."
       },
-      "ContextualHelpLookupResponse": {
-        "properties": {
-          "article": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ArticleResponse"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "version": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ArticleVersionResponse"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "article",
-          "version"
-        ],
-        "title": "ContextualHelpLookupResponse",
-        "description": "Response for a contextual help panel lookup."
-      },
       "ContextualHelpMappingCreate": {
         "properties": {
           "route_pattern": {
@@ -1932,12 +2352,29 @@
             "type": "string",
             "title": "Article Id"
           },
+          "section_anchor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Anchor"
+          },
           "priority": {
             "type": "integer",
             "maximum": 9999.0,
             "minimum": 1.0,
             "title": "Priority",
             "default": 100
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
           },
           "reason_for_change": {
             "type": "string",
@@ -1980,9 +2417,25 @@
             "type": "string",
             "title": "Article Id"
           },
+          "section_anchor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Anchor"
+          },
           "priority": {
             "type": "integer",
             "title": "Priority"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
           },
           "created_at": {
             "type": "string",
@@ -2016,6 +2469,169 @@
         ],
         "title": "ContextualHelpMappingResponse",
         "description": "Response schema for a ContextualHelpMapping."
+      },
+      "ContextualHelpMappingUpdate": {
+        "properties": {
+          "route_pattern": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route Pattern"
+          },
+          "persona": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona"
+          },
+          "article_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Article Id"
+          },
+          "section_anchor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Anchor"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 9999.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "ContextualHelpMappingUpdate",
+        "description": "Request body for updating an existing contextual help mapping."
+      },
+      "ContextualHelpResolutionResponse": {
+        "properties": {
+          "matched_mapping": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContextualHelpMappingResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "primary_article": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArticleResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "primary_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArticleVersionResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "section_anchor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Anchor"
+          },
+          "related_articles": {
+            "items": {
+              "$ref": "#/components/schemas/ArticleResponse"
+            },
+            "type": "array",
+            "title": "Related Articles"
+          },
+          "article": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArticleResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArticleVersionResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "ContextualHelpResolutionResponse",
+        "description": "Dynamic resolution response for in-page contextual help."
       },
       "HTTPValidationError": {
         "properties": {

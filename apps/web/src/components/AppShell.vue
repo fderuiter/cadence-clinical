@@ -34,6 +34,18 @@
           <span class="search-placeholder">Quick Search...</span>
           <kbd class="shortcut-badge">⌘K</kbd>
         </button>
+
+        <!-- Contextual Help Trigger Button -->
+        <button
+          id="btn-contextual-help-trigger"
+          class="cmd-palette-trigger btn-help-trigger"
+          title="Open In-Page Contextual Guidance & SOPs (F1 or ?)"
+          @click="knowledgeStore.toggleDrawer()"
+        >
+          <span class="search-icon">📖</span>
+          <span class="search-placeholder">Help &amp; SOPs</span>
+          <kbd class="shortcut-badge">?</kbd>
+        </button>
       </div>
 
       <div class="header-right">
@@ -790,12 +802,14 @@ import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { useOnboardingStore } from "../stores/onboarding";
+import { useKnowledgeStore } from "../stores/knowledge";
 import { hasRequiredRole } from "../router";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
 
 const authStore = useAuthStore();
 const clinicalStore = useClinicalStore();
 const onboardingStore = useOnboardingStore();
+const knowledgeStore = useKnowledgeStore();
 
 function canAccess(requiredRoles) {
   if (!requiredRoles || requiredRoles.length === 0) return true;

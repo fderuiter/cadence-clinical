@@ -949,11 +949,14 @@ To coordinate cross-functional clinical trial issues, protocol deviations, site 
 
 To provide a centralized, GxP-compliant, role-aware knowledge base, standard operating procedures (SOPs) repository, and contextual in-app guidance across the clinical platform.
 
-#### PRD-KNB-001: Knowledge Article Lifecycle & Two-Tier Immutability
+#### PRD-KNB-001: Knowledge Article Lifecycle, Working Draft Storage & Two-Tier Immutability
 
-- The system must enforce a two-tier data model with `KnowledgeArticle` managing lifecycle states (`DRAFT`, `IN_REVIEW`, `APPROVED`, `PUBLISHED`, `SUPERSEDED`, `ARCHIVED`) and `KnowledgeArticleVersion` storing frozen, immutable content snapshots.
+- The system must provide a hierarchical category taxonomy with self-referential parent/child relations and persona-level visibility scoping.
+- The system must allow authors to draft knowledge articles in Markdown with JSON array keyword tags, version labels, auto-rendered HTML caching, and working draft snapshots updating in place during `DRAFT` status.
+- The system must enforce a two-tier data model with `KnowledgeArticle` managing lifecycle states (`DRAFT`, `IN_REVIEW`, `APPROVED`, `PUBLISHED`, `SUPERSEDED`, `ARCHIVED`, `REJECTED`) and `KnowledgeArticleVersion` storing frozen, immutable content snapshots.
 - Four-eyes approval controls must be enforced such that the user who authored or edited a version cannot approve or publish it.
 - Publishing a new version must automatically supersede any previously active version without physical deletion of historical content.
+- GxP audit ledger records (`CREATED`, `DRAFT_SAVED`, `SUBMITTED_FOR_REVIEW`, `APPROVED`, `REJECTED`, `PUBLISHED`, `SUPERSEDED`, `ARCHIVED`) must be emitted capturing user identity, timestamps, reason for change, and details.
 
 #### PRD-KNB-002: Multi-Channel Notifications and Contextual Guidance
 

@@ -56,7 +56,7 @@ async def generate_completion(
     """
     if not payload.prompt and not payload.messages:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Either 'prompt' or 'messages' must be provided.",
         )
 
@@ -85,7 +85,7 @@ async def generate_completion(
         response = await engine.generate(domain_request)
     except ValueError as val_err:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(val_err),
         ) from val_err
     except Exception as err:

@@ -439,7 +439,7 @@ async def approve_article(
         ) from exc
     except ArticleReasonRequiredError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
     except ArticleTransitionError as exc:
         raise HTTPException(
@@ -514,7 +514,7 @@ async def publish_article(
         ) from exc
     except ArticleReasonRequiredError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
     except ArticleTransitionError as exc:
         raise HTTPException(
@@ -552,7 +552,7 @@ async def transition_article(
         )
     except ArticleReasonRequiredError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
     except ArticleApprovalConflictError as exc:
         raise HTTPException(

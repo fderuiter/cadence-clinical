@@ -68,6 +68,8 @@ JWKS_URL = os.getenv(
     f"http://keycloak:8080/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs",  # deid-ignore
 )
 
+HTTP_METHODS = {"get", "put", "post", "delete", "options", "head", "patch", "trace"}
+
 jwks_cache: dict[str, Any] | None = None
 http_client: httpx.AsyncClient | None = None
 jwks_fetch_lock = asyncio.Lock()
@@ -234,6 +236,28 @@ def custom_openapi() -> dict[str, Any]:
             return new_list
         return data
 
+    http_methods = {"get", "put", "post", "delete", "options", "head", "patch", "trace"}
+
+    def rewrite_paths(paths_dict: dict[str, Any], prefix: str) -> dict[str, Any]:
+        new_paths = {}
+        for path_str, path_item in paths_dict.items():
+            if not isinstance(path_item, dict):
+                new_paths[path_str] = path_item
+                continue
+            new_path_item = {}
+            for k, v in path_item.items():
+                if k.lower() in http_methods and isinstance(v, dict):
+                    op = dict(v)
+                    if "operationId" in op and isinstance(op["operationId"], str):
+                        op_id = op["operationId"]
+                        if not op_id.startswith(prefix):
+                            op["operationId"] = f"{prefix}{op_id}"
+                    new_path_item[k] = op
+                else:
+                    new_path_item[k] = v
+            new_paths[path_str] = new_path_item
+        return new_paths
+
     for service_name, config in services_config.items():
         try:
             spec = config["app"].openapi()
@@ -242,9 +266,10 @@ def custom_openapi() -> dict[str, Any]:
 
             prefix = config["prefix"]
             spec = rewrite_references(spec, prefix)
+            paths = rewrite_paths(spec.get("paths", {}), prefix)
 
             path_prefix = f"/{service_name}"
-            for path_str, path_item in spec.get("paths", {}).items():
+            for path_str, path_item in paths.items():
                 merged["paths"][f"{path_prefix}{path_str}"] = path_item
 
             for schema_name, schema_val in (
@@ -673,6 +698,28 @@ async def get_openapi_json() -> Response:
             return new_list
         return data
 
+    http_methods = {"get", "put", "post", "delete", "options", "head", "patch", "trace"}
+
+    def rewrite_paths(paths_dict: dict[str, Any], prefix: str) -> dict[str, Any]:
+        new_paths = {}
+        for path_str, path_item in paths_dict.items():
+            if not isinstance(path_item, dict):
+                new_paths[path_str] = path_item
+                continue
+            new_path_item = {}
+            for k, v in path_item.items():
+                if k.lower() in http_methods and isinstance(v, dict):
+                    op = dict(v)
+                    if "operationId" in op and isinstance(op["operationId"], str):
+                        op_id = op["operationId"]
+                        if not op_id.startswith(prefix):
+                            op["operationId"] = f"{prefix}{op_id}"
+                    new_path_item[k] = op
+                else:
+                    new_path_item[k] = v
+            new_paths[path_str] = new_path_item
+        return new_paths
+
     merged = {
         "openapi": "3.1.0",
         "info": {"title": f"{BRAND_NAME} - Unified API", "version": "0.1.0"},
@@ -713,7 +760,10 @@ async def get_openapi_json() -> Response:
     if fileshare_spec and is_valid_openapi_spec(fileshare_spec):
         try:
             fileshare_spec = rewrite_references(fileshare_spec, "Fileshare_")
-            for path_str, path_item in fileshare_spec.get("paths", {}).items():
+            fileshare_paths = rewrite_paths(
+                fileshare_spec.get("paths", {}), "Fileshare_"
+            )
+            for path_str, path_item in fileshare_paths.items():
                 merged["paths"][f"/fileshare{path_str}"] = path_item
             for schema_name, schema_val in (
                 fileshare_spec.get("components", {}).get("schemas", {}).items()
@@ -725,7 +775,8 @@ async def get_openapi_json() -> Response:
     if eisf_spec and is_valid_openapi_spec(eisf_spec):
         try:
             eisf_spec = rewrite_references(eisf_spec, "Eisf_")
-            for path_str, path_item in eisf_spec.get("paths", {}).items():
+            eisf_paths = rewrite_paths(eisf_spec.get("paths", {}), "Eisf_")
+            for path_str, path_item in eisf_paths.items():
                 merged["paths"][f"/eisf{path_str}"] = path_item
             for schema_name, schema_val in (
                 eisf_spec.get("components", {}).get("schemas", {}).items()
@@ -737,7 +788,8 @@ async def get_openapi_json() -> Response:
     if econsent_spec and is_valid_openapi_spec(econsent_spec):
         try:
             econsent_spec = rewrite_references(econsent_spec, "Econsent_")
-            for path_str, path_item in econsent_spec.get("paths", {}).items():
+            econsent_paths = rewrite_paths(econsent_spec.get("paths", {}), "Econsent_")
+            for path_str, path_item in econsent_paths.items():
                 merged["paths"][f"/econsent{path_str}"] = path_item
             for schema_name, schema_val in (
                 econsent_spec.get("components", {}).get("schemas", {}).items()
@@ -749,7 +801,8 @@ async def get_openapi_json() -> Response:
     if tickets_spec and is_valid_openapi_spec(tickets_spec):
         try:
             tickets_spec = rewrite_references(tickets_spec, "Tickets_")
-            for path_str, path_item in tickets_spec.get("paths", {}).items():
+            tickets_paths = rewrite_paths(tickets_spec.get("paths", {}), "Tickets_")
+            for path_str, path_item in tickets_paths.items():
                 merged["paths"][f"/tickets{path_str}"] = path_item
             for schema_name, schema_val in (
                 tickets_spec.get("components", {}).get("schemas", {}).items()
@@ -761,7 +814,8 @@ async def get_openapi_json() -> Response:
     if org_spec and is_valid_openapi_spec(org_spec):
         try:
             org_spec = rewrite_references(org_spec, "Org_")
-            for path_str, path_item in org_spec.get("paths", {}).items():
+            org_paths = rewrite_paths(org_spec.get("paths", {}), "Org_")
+            for path_str, path_item in org_paths.items():
                 merged["paths"][f"/org{path_str}"] = path_item
             for schema_name, schema_val in (
                 org_spec.get("components", {}).get("schemas", {}).items()
@@ -773,7 +827,8 @@ async def get_openapi_json() -> Response:
     if safety_spec and is_valid_openapi_spec(safety_spec):
         try:
             safety_spec = rewrite_references(safety_spec, "Safety_")
-            for path_str, path_item in safety_spec.get("paths", {}).items():
+            safety_paths = rewrite_paths(safety_spec.get("paths", {}), "Safety_")
+            for path_str, path_item in safety_paths.items():
                 merged["paths"][f"/safety{path_str}"] = path_item
             for schema_name, schema_val in (
                 safety_spec.get("components", {}).get("schemas", {}).items()
@@ -785,7 +840,8 @@ async def get_openapi_json() -> Response:
     if quality_spec and is_valid_openapi_spec(quality_spec):
         try:
             quality_spec = rewrite_references(quality_spec, "Quality_")
-            for path_str, path_item in quality_spec.get("paths", {}).items():
+            quality_paths = rewrite_paths(quality_spec.get("paths", {}), "Quality_")
+            for path_str, path_item in quality_paths.items():
                 merged["paths"][f"/quality{path_str}"] = path_item
             for schema_name, schema_val in (
                 quality_spec.get("components", {}).get("schemas", {}).items()
@@ -799,7 +855,10 @@ async def get_openapi_json() -> Response:
             notifications_spec = rewrite_references(
                 notifications_spec, "Notifications_"
             )
-            for path_str, path_item in notifications_spec.get("paths", {}).items():
+            notifications_paths = rewrite_paths(
+                notifications_spec.get("paths", {}), "Notifications_"
+            )
+            for path_str, path_item in notifications_paths.items():
                 merged["paths"][f"/notifications{path_str}"] = path_item
             for schema_name, schema_val in (
                 notifications_spec.get("components", {}).get("schemas", {}).items()
@@ -813,7 +872,8 @@ async def get_openapi_json() -> Response:
     if ctms_spec and is_valid_openapi_spec(ctms_spec):
         try:
             ctms_spec = rewrite_references(ctms_spec, "Ctms_")
-            for path_str, path_item in ctms_spec.get("paths", {}).items():
+            ctms_paths = rewrite_paths(ctms_spec.get("paths", {}), "Ctms_")
+            for path_str, path_item in ctms_paths.items():
                 merged["paths"][f"/ctms{path_str}"] = path_item
             for schema_name, schema_val in (
                 ctms_spec.get("components", {}).get("schemas", {}).items()
@@ -825,7 +885,8 @@ async def get_openapi_json() -> Response:
     if designer_spec and is_valid_openapi_spec(designer_spec):
         try:
             designer_spec = rewrite_references(designer_spec, "Designer_")
-            for path_str, path_item in designer_spec.get("paths", {}).items():
+            designer_paths = rewrite_paths(designer_spec.get("paths", {}), "Designer_")
+            for path_str, path_item in designer_paths.items():
                 merged["paths"][f"/designer{path_str}"] = path_item
             for schema_name, schema_val in (
                 designer_spec.get("components", {}).get("schemas", {}).items()
@@ -837,7 +898,10 @@ async def get_openapi_json() -> Response:
     if execution_spec and is_valid_openapi_spec(execution_spec):
         try:
             execution_spec = rewrite_references(execution_spec, "Execution_")
-            for path_str, path_item in execution_spec.get("paths", {}).items():
+            execution_paths = rewrite_paths(
+                execution_spec.get("paths", {}), "Execution_"
+            )
+            for path_str, path_item in execution_paths.items():
                 merged["paths"][f"/execution{path_str}"] = path_item
             for schema_name, schema_val in (
                 execution_spec.get("components", {}).get("schemas", {}).items()
@@ -849,7 +913,8 @@ async def get_openapi_json() -> Response:
     if etmf_spec and is_valid_openapi_spec(etmf_spec):
         try:
             etmf_spec = rewrite_references(etmf_spec, "ETMF_")
-            for path_str, path_item in etmf_spec.get("paths", {}).items():
+            etmf_paths = rewrite_paths(etmf_spec.get("paths", {}), "ETMF_")
+            for path_str, path_item in etmf_paths.items():
                 merged["paths"][f"/etmf{path_str}"] = path_item
             for schema_name, schema_val in (
                 etmf_spec.get("components", {}).get("schemas", {}).items()
@@ -861,7 +926,8 @@ async def get_openapi_json() -> Response:
     if interop_spec and is_valid_openapi_spec(interop_spec):
         try:
             interop_spec = rewrite_references(interop_spec, "Interop_")
-            for path_str, path_item in interop_spec.get("paths", {}).items():
+            interop_paths = rewrite_paths(interop_spec.get("paths", {}), "Interop_")
+            for path_str, path_item in interop_paths.items():
                 merged["paths"][f"/interop{path_str}"] = path_item
             for schema_name, schema_val in (
                 interop_spec.get("components", {}).get("schemas", {}).items()
@@ -1176,7 +1242,9 @@ async def create_demo_session(body: DemoSessionRequest | None = None) -> dict[st
 
 
 @app.api_route(
-    "/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"]
+    "/{path:path}",
+    methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"],
+    include_in_schema=False,
 )
 async def proxy_requests(request: Request, path: str) -> Response:
     """

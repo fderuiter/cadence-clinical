@@ -4,7 +4,9 @@ Pydantic v2 DTOs for the Knowledge & Support Hub REST API.
 Requirements: PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002, ADR-2188
 """
 
+import json
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -57,7 +59,7 @@ class ArticleCreate(BaseModel):
     category_id: str
     body_markdown: str = Field(..., min_length=1)
     version_label: str = Field(default="1.0", max_length=50)
-    tags: str | None = None
+    tags: list[str] | str | None = None
     reason_for_change: str = Field(..., min_length=1, max_length=1000)
 
 
@@ -70,14 +72,20 @@ class ArticleUpdate(BaseModel):
     )
     category_id: str | None = None
     body_markdown: str = Field(..., min_length=1)
-    tags: str | None = None
+    tags: list[str] | str | None = None
     reason_for_change: str | None = Field(default=None, max_length=1000)
 
 
 class ArticleDraftSave(BaseModel):
-    """Request body for saving an updated draft body (PATCH /articles/{id}/draft)."""
+    """Request body for saving an updated draft body (PUT/PATCH /articles/{id}/draft)."""
 
     body_markdown: str = Field(..., min_length=1)
+    title: str | None = Field(default=None, min_length=1, max_length=500)
+    slug: str | None = Field(
+        default=None, min_length=1, max_length=255, pattern=r"^[a-z0-9-]+$"
+    )
+    category_id: str | None = None
+    tags: list[str] | str | None = None
     reason_for_change: str | None = Field(default=None, max_length=1000)
 
 
@@ -153,7 +161,7 @@ class ArticleResponse(BaseModel):
     version_index: int
     version_label: str
     current_published_version_id: str | None = None
-    tags: str | None = None
+    tags: list[str] | None = None
     author_user_id: str
     last_edited_by: str | None
     approved_by: str | None
@@ -165,6 +173,27 @@ class ArticleResponse(BaseModel):
     reason_for_change: str
 
     model_config = {"from_attributes": True}
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def parse_tags(cls, v: Any) -> list[str] | None:
+        if v is None:
+            return None
+        if isinstance(v, list):
+            return [str(item) for item in v]
+        if isinstance(v, str):
+            v_str = v.strip()
+            if not v_str:
+                return None
+            if v_str.startswith("[") and v_str.endswith("]"):
+                try:
+                    parsed = json.loads(v_str)
+                    if isinstance(parsed, list):
+                        return [str(item) for item in parsed]
+                except Exception:
+                    pass
+            return [t.strip() for t in v_str.split(",") if t.strip()]
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -200,7 +229,21 @@ class ContextualHelpMappingCreate(BaseModel):
     route_pattern: str = Field(..., min_length=1, max_length=500)
     persona: str | None = Field(default=None, max_length=100)
     article_id: str
+    section_anchor: str | None = Field(default=None, max_length=255)
     priority: int = Field(default=100, ge=1, le=9999)
+    is_active: bool = True
+    reason_for_change: str = Field(..., min_length=1, max_length=1000)
+
+
+class ContextualHelpMappingUpdate(BaseModel):
+    """Request body for updating an existing contextual help mapping."""
+
+    route_pattern: str | None = Field(default=None, min_length=1, max_length=500)
+    persona: str | None = Field(default=None, max_length=100)
+    article_id: str | None = None
+    section_anchor: str | None = Field(default=None, max_length=255)
+    priority: int | None = Field(default=None, ge=1, le=9999)
+    is_active: bool | None = None
     reason_for_change: str = Field(..., min_length=1, max_length=1000)
 
 
@@ -211,7 +254,9 @@ class ContextualHelpMappingResponse(BaseModel):
     route_pattern: str
     persona: str | None
     article_id: str
+    section_anchor: str | None = None
     priority: int
+    is_active: bool = True
     created_at: datetime
     created_by: str
     reason_for_change: str
@@ -220,11 +265,21 @@ class ContextualHelpMappingResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class ContextualHelpLookupResponse(BaseModel):
-    """Response for a contextual help panel lookup."""
+class ContextualHelpResolutionResponse(BaseModel):
+    """Dynamic resolution response for in-page contextual help."""
 
-    article: ArticleResponse | None
-    version: ArticleVersionResponse | None
+    matched_mapping: ContextualHelpMappingResponse | None = None
+    primary_article: ArticleResponse | None = None
+    primary_version: ArticleVersionResponse | None = None
+    section_anchor: str | None = None
+    related_articles: list[ArticleResponse] = Field(default_factory=list)
+    # Backward-compatibility aliases
+    article: ArticleResponse | None = None
+    version: ArticleVersionResponse | None = None
+
+
+# Alias for backwards compatibility
+ContextualHelpLookupResponse = ContextualHelpResolutionResponse
 
 
 __all__ = [
@@ -244,4 +299,6 @@ __all__ = [
     "ContextualHelpLookupResponse",
     "ContextualHelpMappingCreate",
     "ContextualHelpMappingResponse",
+    "ContextualHelpMappingUpdate",
+    "ContextualHelpResolutionResponse",
 ]

@@ -2,12 +2,14 @@
   <AppShell>
     <router-view />
   </AppShell>
+  <ContextualHelpDrawer />
 </template>
 
 <script setup>
 import { onMounted } from "vue";
 import { useClinicalStore } from "./stores/clinical";
 import AppShell from "./components/AppShell.vue";
+import ContextualHelpDrawer from "./components/ContextualHelpDrawer.vue";
 import "./style.css";
 
 const store = useClinicalStore();

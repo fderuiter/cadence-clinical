@@ -64,7 +64,7 @@ async def export_usdm_protocol_spec(
     report = validate_usdm_payload(json.dumps(export_payload))
     if not report.validity:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"USDM Export schema validation failed: {[e.reason for e in report.errors]}",
         )
 

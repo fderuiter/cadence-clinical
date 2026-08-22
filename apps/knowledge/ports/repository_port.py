@@ -145,12 +145,32 @@ class ContextualHelpMappingRepositoryPort(RepositoryPort[ContextualHelpMapping],
 
     @abstractmethod
     async def list_by_route(self, route_pattern: str) -> list[ContextualHelpMapping]:
-        """List active contextual help mappings matching a route pattern."""
+        """List active contextual help mappings matching an exact route pattern."""
+        pass
+
+    @abstractmethod
+    async def list_mappings(
+        self,
+        route_pattern: str | None = None,
+        persona: str | None = None,
+        is_active: bool | None = None,
+    ) -> list[ContextualHelpMapping]:
+        """List contextual help mappings with optional filters."""
+        pass
+
+    @abstractmethod
+    async def list_active_mappings(self) -> list[ContextualHelpMapping]:
+        """List all active contextual help mappings linked to published articles."""
         pass
 
     @abstractmethod
     async def save(self, entity: ContextualHelpMapping) -> ContextualHelpMapping:
         """Persist or update contextual help mapping."""
+        pass
+
+    @abstractmethod
+    async def delete(self, entity_id: str) -> bool:
+        """Delete contextual help mapping by ID."""
         pass
 
 

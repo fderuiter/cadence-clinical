@@ -257,7 +257,7 @@ class SQLAlchemyContextualHelpMappingRepository(ContextualHelpMappingRepositoryP
         return result.scalar_one_or_none()
 
     async def list_by_route(self, route_pattern: str) -> list[ContextualHelpMapping]:
-        """List active contextual help mappings matching a route pattern."""
+        """List active contextual help mappings matching an exact route pattern."""
         stmt = (
             select(ContextualHelpMapping)
             .join(
@@ -266,10 +266,53 @@ class SQLAlchemyContextualHelpMappingRepository(ContextualHelpMappingRepositoryP
             )
             .where(
                 ContextualHelpMapping.route_pattern == route_pattern,
+                ContextualHelpMapping.is_active.is_(True),
                 KnowledgeArticle.status == ArticleStatus.PUBLISHED.value,
                 KnowledgeArticle.is_deleted.is_(False),
             )
             .order_by(ContextualHelpMapping.priority.asc())
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_mappings(
+        self,
+        route_pattern: str | None = None,
+        persona: str | None = None,
+        is_active: bool | None = None,
+    ) -> list[ContextualHelpMapping]:
+        """List contextual help mappings with optional filters."""
+        stmt = select(ContextualHelpMapping)
+        if route_pattern is not None:
+            stmt = stmt.where(ContextualHelpMapping.route_pattern == route_pattern)
+        if persona is not None:
+            stmt = stmt.where(ContextualHelpMapping.persona == persona)
+        if is_active is not None:
+            stmt = stmt.where(ContextualHelpMapping.is_active.is_(is_active))
+        stmt = stmt.order_by(
+            ContextualHelpMapping.priority.asc(),
+            ContextualHelpMapping.created_at.desc(),
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_active_mappings(self) -> list[ContextualHelpMapping]:
+        """List all active contextual help mappings linked to published articles."""
+        stmt = (
+            select(ContextualHelpMapping)
+            .join(
+                KnowledgeArticle,
+                ContextualHelpMapping.article_id == KnowledgeArticle.id,
+            )
+            .where(
+                ContextualHelpMapping.is_active.is_(True),
+                KnowledgeArticle.status == ArticleStatus.PUBLISHED.value,
+                KnowledgeArticle.is_deleted.is_(False),
+            )
+            .order_by(
+                ContextualHelpMapping.priority.asc(),
+                ContextualHelpMapping.created_at.desc(),
+            )
         )
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
@@ -279,6 +322,15 @@ class SQLAlchemyContextualHelpMappingRepository(ContextualHelpMappingRepositoryP
         self._session.add(entity)
         await self._session.flush()
         return entity
+
+    async def delete(self, entity_id: str) -> bool:
+        """Delete contextual help mapping by ID."""
+        mapping = await self.get_by_id(entity_id)
+        if not mapping:
+            return False
+        await self._session.delete(mapping)
+        await self._session.flush()
+        return True
 
 
 def create_article_service(session: AsyncSession) -> ArticleLifecycleService:
