@@ -248,10 +248,11 @@ def step_run_tests(dry_run: bool, full: bool = False) -> None:
             graph = TestDependencyGraph(repo_root=REPO_ROOT)
             affected_tests = graph.resolve_affected_tests(modified_files)
 
-            if affected_tests:
+            if affected_tests and len(affected_tests) <= 20:
                 print(
                     f"⚡ [incremental] Running {len(affected_tests)} affected test target(s)..."
                 )
+
                 _run(
                     [
                         "uv",
@@ -311,6 +312,8 @@ def step_run_tests(dry_run: bool, full: bool = False) -> None:
                 "--ignore=scripts/tests/test_translator.py",
                 "--ignore=apps/designer/tests/test_crf_builder_compliance.py",
                 "--ignore=apps/designer/tests/test_crf_requirements_mapping.py",
+                "--ignore=apps/designer/tests/test_study_versions.py",
+                "--ignore=apps/designer/tests/test_synopsis_router.py",
                 "--ignore=apps/execution/tests/test_pool_state_eviction.py",
             ]
         )
@@ -329,9 +332,12 @@ def step_run_tests(dry_run: bool, full: bool = False) -> None:
                 "scripts/tests/test_translator.py",
                 "apps/designer/tests/test_crf_builder_compliance.py",
                 "apps/designer/tests/test_crf_requirements_mapping.py",
+                "apps/designer/tests/test_study_versions.py",
+                "apps/designer/tests/test_synopsis_router.py",
                 "apps/execution/tests/test_pool_state_eviction.py",
             ]
         )
+
         # Run notification tests sequentially
         _run(
             [

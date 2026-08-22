@@ -1,9 +1,12 @@
 import base64
+from typing import Any
 
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
+
+from packages.database.audit import AIReviewStatus
 
 
 class TamperDetectedError(Exception):
@@ -21,6 +24,21 @@ class TamperDetectedError(Exception):
         super().__init__(message)
         self.is_valid = is_valid
         self.status = status
+
+
+class UnapprovedAIRecordError(Exception):
+    """Exception raised when an unapproved AI-generated draft is accessed as active clinical data.
+
+    Requirements: PRD-SYS-051
+    """
+
+    def __init__(
+        self,
+        message: str = "AI-generated record is in draft/pending state and cannot be treated as active clinical trial execution data.",
+        review_status: str = "DRAFT_AI",
+    ):
+        super().__init__(message)
+        self.review_status = review_status
 
 
 class VerificationResult:
@@ -468,3 +486,75 @@ class ESignatureVerifier:
             )
 
         return res
+
+
+def verify_ai_assisted_record_approval(record: Any) -> VerificationResult:
+    """Verify that an AI-assisted entity has completed Human-in-the-Loop review and electronic signing.
+
+    Args:
+        record: Any object or Pydantic model implementing AIAssistedRecordMixin attributes.
+
+    Returns:
+        VerificationResult with validity status.
+    """
+    review_status = getattr(record, "review_status", None)
+    approved_by = getattr(record, "approved_by_user_id", None)
+    approved_at = getattr(record, "approved_at", None)
+    signature_manifest_id = getattr(record, "esignature_manifest_id", None)
+
+    if review_status != AIReviewStatus.APPROVED:
+        status_str = (
+            review_status.value
+            if isinstance(review_status, AIReviewStatus)
+            else str(review_status)
+        )
+        return VerificationResult(
+            is_valid=False,
+            status="UNAPPROVED_AI_DRAFT",
+            failure_reason=(
+                f"Record has review status '{status_str}' and has not received "
+                "21 CFR Part 11 human approval."
+            ),
+        )
+
+    if not approved_by or approved_at is None or not signature_manifest_id:
+        return VerificationResult(
+            is_valid=False,
+            status="INCOMPLETE_APPROVAL_METADATA",
+            failure_reason="Record status is APPROVED but lacks mandatory approver ID, timestamp, or signature manifest.",
+        )
+
+    return VerificationResult(is_valid=True, status="APPROVED_HITL")
+
+
+def assert_ai_record_approved(record: Any) -> None:
+    """Enforce that an AI-assisted record is approved, raising UnapprovedAIRecordError if not.
+
+    Args:
+        record: Any object implementing AIAssistedRecordMixin attributes.
+
+    Raises:
+        UnapprovedAIRecordError: If the record is in DRAFT_AI, PENDING_REVIEW, or REJECTED state.
+    """
+    result = verify_ai_assisted_record_approval(record)
+    if not result.is_valid:
+        review_status = getattr(record, "review_status", "UNKNOWN")
+        status_str = (
+            review_status.value
+            if isinstance(review_status, AIReviewStatus)
+            else str(review_status)
+        )
+        raise UnapprovedAIRecordError(
+            message=result.failure_reason,
+            review_status=status_str,
+        )
+
+
+__all__ = [
+    "ESignatureVerifier",
+    "TamperDetectedError",
+    "UnapprovedAIRecordError",
+    "VerificationResult",
+    "assert_ai_record_approved",
+    "verify_ai_assisted_record_approval",
+]

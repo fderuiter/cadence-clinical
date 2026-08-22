@@ -15,7 +15,9 @@ dependencies = [
     "cryptography>=4.5.0",
     "packages-security",
     "packages-deid",
+    "packages-database",
 ]
+
 
 [tool.hatch.build.targets.wheel]
 packages = [

@@ -10,6 +10,7 @@ line-by-line conflict resolution when logical code changes collide on the same A
 import ast
 import json
 import os
+import shutil
 import subprocess
 import sys
 
@@ -379,16 +380,25 @@ def fallback_to_git_merge(ancestor: str, current: str, other: str) -> int:
 def format_file(file_path: str, file_type: str):
     """Run project code formatting/linting on the merged file."""
     if file_type == "python":
-        subprocess.run(["uv", "run", "ruff", "format", file_path], capture_output=True)
-        subprocess.run(
-            ["uv", "run", "ruff", "check", "--fix", file_path],
-            capture_output=True,
-        )
+        if shutil.which("uv"):
+            subprocess.run(
+                ["uv", "run", "ruff", "format", file_path], capture_output=True
+            )
+            subprocess.run(
+                ["uv", "run", "ruff", "check", "--fix", file_path],
+                capture_output=True,
+            )
     elif file_type in ("javascript", "typescript"):
-        subprocess.run(
-            ["pnpm", "exec", "prettier", "--write", file_path],
-            capture_output=True,
-        )
+        if shutil.which("pnpm"):
+            subprocess.run(
+                ["pnpm", "exec", "prettier", "--write", file_path],
+                capture_output=True,
+            )
+        elif shutil.which("npx"):
+            subprocess.run(
+                ["npx", "prettier", "--write", file_path],
+                capture_output=True,
+            )
 
 
 def log_resolved_file(file_path: str):
