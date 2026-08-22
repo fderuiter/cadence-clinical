@@ -9,6 +9,7 @@ from collections.abc import AsyncGenerator
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from apps.fileshare.adapters.clamav_adapter import MockScanAdapter, set_scan_adapter
 from apps.fileshare.adapters.storage import set_storage_adapter
 from apps.fileshare.infrastructure.models import Base
 from packages.testing.fakes import InMemoryStoragePort
@@ -20,6 +21,14 @@ def mock_storage() -> InMemoryStoragePort:
     fake_storage = InMemoryStoragePort()
     set_storage_adapter(fake_storage)
     return fake_storage
+
+
+@pytest_asyncio.fixture(autouse=True)
+def mock_scanner() -> MockScanAdapter:
+    """Provides and registers an isolated MockScanAdapter for each test."""
+    fake_scanner = MockScanAdapter()
+    set_scan_adapter(fake_scanner)
+    return fake_scanner
 
 
 @pytest_asyncio.fixture
