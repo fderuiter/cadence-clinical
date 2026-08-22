@@ -29,6 +29,7 @@ from apps.knowledge.infrastructure.models import (
     KnowledgeCategory,
 )
 from apps.knowledge.main import app
+from packages.security.audit_logger import audit_logger_engine
 from packages.testing.security import create_test_auth_headers
 
 # ---------------------------------------------------------------------------
@@ -144,6 +145,8 @@ async def test_draft_creation_and_single_row_in_place_update(
     """
     Validate that working draft updates a single KnowledgeArticleVersion row during DRAFT status.
 
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
     @req:PRD-KNB-001
     """
     svc = create_article_service(db_session)
@@ -195,6 +198,8 @@ async def test_api_draft_storage_endpoints(
     """
     Validate REST API endpoints for Draft Storage: POST /articles, PUT /articles/{id}, GET /articles/{id}.
 
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
     @req:PRD-KNB-001
     """
     app.dependency_overrides[get_db_session] = lambda: db_session
@@ -264,6 +269,287 @@ async def test_api_draft_storage_endpoints(
         assert "<h2>AE Reporting</h2>" in get_data["body_html"]
 
 
+@pytest.mark.asyncio
+async def test_create_article_with_tags_json_array(
+    db_session: AsyncSession,
+    auth_headers_author: dict[str, str],
+    auth_headers_editor: dict[str, str],
+):
+    """
+    Validate keywords and tags are stored as JSON array on KnowledgeArticle and returned in DTOs.
+
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
+    @req:PRD-KNB-001
+    """
+    app.dependency_overrides[get_db_session] = lambda: db_session
+
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        # Create Category
+        cat_resp = await client.post(
+            "/api/v1/knowledge/categories",
+            json={
+                "name": "Tags Category",
+                "slug": "tags-category",
+                "reason_for_change": "Setup category",
+            },
+            headers=auth_headers_author,
+        )
+        cat_id = cat_resp.json()["id"]
+
+        # Create Article with JSON list of tags
+        post_resp = await client.post(
+            "/api/v1/knowledge/articles",
+            json={
+                "title": "Randomization Stratification SOP",
+                "slug": "rand-strat-sop",
+                "category_id": cat_id,
+                "body_markdown": "# Randomization\n\nStratification instructions.",
+                "tags": ["randomization", "stratification", "rtsm"],
+                "reason_for_change": "Initial creation with tags",
+            },
+            headers=auth_headers_author,
+        )
+        assert post_resp.status_code == 201
+        data = post_resp.json()
+        assert data["tags"] == ["randomization", "stratification", "rtsm"]
+        art_id = data["id"]
+
+        # Verify GET returns tags as array
+        get_resp = await client.get(
+            f"/api/v1/knowledge/articles/{art_id}",
+            headers=auth_headers_author,
+        )
+        assert get_resp.status_code == 200
+        get_data = get_resp.json()
+        assert get_data["tags"] == ["randomization", "stratification", "rtsm"]
+
+        # Update tags via PUT /articles/{id}
+        put_resp = await client.put(
+            f"/api/v1/knowledge/articles/{art_id}",
+            json={
+                "body_markdown": "# Randomization\n\nUpdated stratification instructions.",
+                "tags": ["randomization", "adaptive-trial", "rtsm"],
+                "reason_for_change": "Updated tags",
+            },
+            headers=auth_headers_editor,
+        )
+        assert put_resp.status_code == 200
+        assert put_resp.json()["tags"] == [
+            "randomization",
+            "adaptive-trial",
+            "rtsm",
+        ]
+
+
+@pytest.mark.asyncio
+async def test_api_put_and_patch_draft_endpoints(
+    db_session: AsyncSession,
+    auth_headers_author: dict[str, str],
+    auth_headers_editor: dict[str, str],
+):
+    """
+    Validate PUT and PATCH /api/v1/knowledge/articles/{id}/draft endpoints update active working draft.
+
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
+    @req:PRD-KNB-001
+    """
+    app.dependency_overrides[get_db_session] = lambda: db_session
+
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        # Create Category & Article
+        cat_resp = await client.post(
+            "/api/v1/knowledge/categories",
+            json={
+                "name": "Draft Endpoints Category",
+                "slug": "draft-endpoints-category",
+                "reason_for_change": "Setup category",
+            },
+            headers=auth_headers_author,
+        )
+        cat_id = cat_resp.json()["id"]
+
+        art_resp = await client.post(
+            "/api/v1/knowledge/articles",
+            json={
+                "title": "Query Management SOP",
+                "slug": "query-management-sop",
+                "category_id": cat_id,
+                "body_markdown": "# Query SOP\n\nInitial query guidance.",
+                "reason_for_change": "Initial creation",
+            },
+            headers=auth_headers_author,
+        )
+        art_id = art_resp.json()["id"]
+
+        # 1. Update working draft via PUT /articles/{id}/draft
+        put_draft_resp = await client.put(
+            f"/api/v1/knowledge/articles/{art_id}/draft",
+            json={
+                "body_markdown": "# Query SOP\n\nUpdated query resolution workflow.",
+                "tags": ["queries", "dm", "ecrf"],
+                "reason_for_change": "Updated query resolution guidance via PUT",
+            },
+            headers=auth_headers_editor,
+        )
+        assert put_draft_resp.status_code == 200
+        v_data = put_draft_resp.json()
+        assert (
+            v_data["body_markdown"]
+            == "# Query SOP\n\nUpdated query resolution workflow."
+        )
+        assert "<h1>Query SOP</h1>" in v_data["body_html"]
+        assert v_data["is_locked"] is False
+
+        # 2. Update working draft via PATCH /articles/{id}/draft
+        patch_draft_resp = await client.patch(
+            f"/api/v1/knowledge/articles/{art_id}/draft",
+            json={
+                "body_markdown": "# Query SOP\n\nTightened 48h resolution SLA.",
+                "reason_for_change": "Updated SLA via PATCH",
+            },
+            headers=auth_headers_editor,
+        )
+        assert patch_draft_resp.status_code == 200
+        pv_data = patch_draft_resp.json()
+        assert (
+            pv_data["body_markdown"] == "# Query SOP\n\nTightened 48h resolution SLA."
+        )
+        assert "Tightened 48h resolution SLA" in pv_data["body_html"]
+
+        # Verify only 1 version exists and was updated in place
+        vers_resp = await client.get(
+            f"/api/v1/knowledge/articles/{art_id}/versions",
+            headers=auth_headers_author,
+        )
+        assert vers_resp.status_code == 200
+        assert len(vers_resp.json()) == 1
+
+
+@pytest.mark.asyncio
+async def test_update_draft_on_non_draft_article_fails(
+    db_session: AsyncSession,
+    auth_headers_author: dict[str, str],
+    auth_headers_editor: dict[str, str],
+):
+    """
+    Validate that updating a draft on an article in non-DRAFT status raises 409 Conflict.
+
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
+    @req:PRD-KNB-001
+    """
+    app.dependency_overrides[get_db_session] = lambda: db_session
+
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        cat_resp = await client.post(
+            "/api/v1/knowledge/categories",
+            json={
+                "name": "Review State Category",
+                "slug": "review-state-category",
+                "reason_for_change": "Setup category",
+            },
+            headers=auth_headers_author,
+        )
+        cat_id = cat_resp.json()["id"]
+
+        art_resp = await client.post(
+            "/api/v1/knowledge/articles",
+            json={
+                "title": "In Review SOP",
+                "slug": "in-review-sop",
+                "category_id": cat_id,
+                "body_markdown": "# In Review Content",
+                "reason_for_change": "Initial creation",
+            },
+            headers=auth_headers_author,
+        )
+        art_id = art_resp.json()["id"]
+
+        # Transition to IN_REVIEW
+        await client.post(
+            f"/api/v1/knowledge/articles/{art_id}/submit-review",
+            headers=auth_headers_author,
+        )
+
+        # Attempting draft update on IN_REVIEW article must fail with 409
+        put_resp = await client.put(
+            f"/api/v1/knowledge/articles/{art_id}/draft",
+            json={
+                "body_markdown": "# Tampered Draft Content",
+                "reason_for_change": "Attempting edit while under review",
+            },
+            headers=auth_headers_editor,
+        )
+        assert put_resp.status_code == 409
+        assert "must be in DRAFT status" in put_resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_gxp_audit_ledger_created_and_draft_saved_events(
+    db_session: AsyncSession,
+):
+    """
+    Validate that GxP audit ledger records CREATED and DRAFT_SAVED events with user ID, timestamp, and details.
+
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
+    @req:PRD-KNB-001
+    """
+    svc = create_article_service(db_session)
+    cat = await _make_category(svc)
+
+    # 1. Create Article -> records CREATED audit log
+    article = await svc.create_article(
+        title="Consent Verification Protocol",
+        slug="consent-verification-protocol",
+        category_id=cat.id,
+        body_markdown="# Informed Consent\n\nVerify patient signatures.",
+        actor_user_id=ACTOR_AUTHOR,
+        reason_for_change="Initial consent procedure authoring",
+    )
+
+    # 2. Update Draft -> records DRAFT_SAVED audit log
+    await svc.update_draft(
+        article_id=article.id,
+        body_markdown="# Informed Consent\n\nVerify patient signatures and re-consent flags.",
+        actor_user_id=ACTOR_EDITOR,
+        reason_for_change="Added re-consent instructions",
+    )
+
+    result = await db_session.execute(
+        select(KnowledgeArticleAuditLog)
+        .where(KnowledgeArticleAuditLog.article_id == article.id)
+        .order_by(KnowledgeArticleAuditLog.created_at.asc())
+    )
+    logs = result.scalars().all()
+    assert len(logs) == 2
+
+    # Verify CREATED audit log
+    created_log = logs[0]
+    assert created_log.action == "CREATED"
+    assert created_log.previous_status is None
+    assert created_log.new_status == "DRAFT"
+    assert created_log.created_by == ACTOR_AUTHOR
+    assert created_log.reason_for_change == "Initial consent procedure authoring"
+    assert "Consent Verification Protocol" in created_log.details
+    assert created_log.created_at is not None
+
+    # Verify DRAFT_SAVED audit log
+    draft_log = logs[1]
+    assert draft_log.action == "DRAFT_SAVED"
+    assert draft_log.previous_status == "DRAFT"
+    assert draft_log.new_status == "DRAFT"
+    assert draft_log.created_by == ACTOR_EDITOR
+    assert draft_log.reason_for_change == "Added re-consent instructions"
+    assert ACTOR_EDITOR in draft_log.details
+    assert draft_log.created_at is not None
+
+
 # ---------------------------------------------------------------------------
 # Acceptance Criteria 2: Four-Eyes Review & Snapshots (#4326)
 # ---------------------------------------------------------------------------
@@ -274,6 +560,8 @@ async def test_four_eyes_author_cannot_approve(db_session: AsyncSession):
     """
     Validate that an article cannot be approved by its original author (author_user_id).
 
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
     @req:PRD-KNB-001
     """
     svc = create_article_service(db_session)
@@ -301,6 +589,8 @@ async def test_four_eyes_last_editor_cannot_approve(db_session: AsyncSession):
     """
     Validate that an article cannot be approved by the last editor (last_edited_by).
 
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
     @req:PRD-KNB-001
     """
     svc = create_article_service(db_session)
@@ -337,6 +627,8 @@ async def test_independent_reviewer_approves_and_locks_version(
     """
     Validate that an independent reviewer can approve an article, locking the snapshot as permanently immutable.
 
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
     @req:PRD-KNB-001
     """
     svc = create_article_service(db_session)
@@ -391,6 +683,8 @@ async def test_api_review_and_four_eyes_workflow(
     """
     Validate REST API endpoints for Four-Eyes Review: submit-review, approve (with 403 conflicts), reject.
 
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
     @req:PRD-KNB-001
     """
     app.dependency_overrides[get_db_session] = lambda: db_session
@@ -508,6 +802,245 @@ async def test_api_review_and_four_eyes_workflow(
         assert app_resp.status_code == 200
         assert app_resp.json()["status"] == "APPROVED"
         assert app_resp.json()["approved_by"] == ACTOR_APPROVER
+
+
+@pytest.mark.asyncio
+async def test_api_generic_transition_endpoint_supporting_in_review_approved_rejected(
+    db_session: AsyncSession,
+    auth_headers_author: dict[str, str],
+    auth_headers_editor: dict[str, str],
+    auth_headers_approver: dict[str, str],
+):
+    """
+    Validate POST /api/v1/knowledge/articles/{id}/transition supporting IN_REVIEW, APPROVED, and REJECTED.
+
+    Tests four-eyes enforcement, mandatory reason_for_change on approval, and rejection workflow.
+
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
+    @req:PRD-KNB-001
+    """
+    app.dependency_overrides[get_db_session] = lambda: db_session
+
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. Setup category & article
+        cat_resp = await client.post(
+            "/api/v1/knowledge/categories",
+            json={
+                "name": "Regulatory Compliance Guidelines",
+                "slug": "regulatory-compliance-guidelines",
+                "reason_for_change": "Category setup",
+            },
+            headers=auth_headers_author,
+        )
+        assert cat_resp.status_code == 201
+        cat_id = cat_resp.json()["id"]
+
+        art_resp = await client.post(
+            "/api/v1/knowledge/articles",
+            json={
+                "title": "21 CFR Part 11 Electronic Records SOP",
+                "slug": "part-11-electronic-records-sop",
+                "category_id": cat_id,
+                "body_markdown": "# Electronic Records SOP\n\nMandatory digital signature guidelines.",
+                "version_label": "1.0",
+                "reason_for_change": "Initial compliance draft",
+            },
+            headers=auth_headers_author,
+        )
+        assert art_resp.status_code == 201
+        art_id = art_resp.json()["id"]
+        transition_path = f"/api/v1/knowledge/articles/{art_id}/transition"
+
+        # 2. Transition DRAFT -> IN_REVIEW via /transition endpoint
+        sub_resp = await client.post(
+            transition_path,
+            json={
+                "target_status": "IN_REVIEW",
+                "reason_for_change": "Ready for QA review",
+            },
+            headers=auth_headers_author,
+        )
+        assert sub_resp.status_code == 200
+        assert sub_resp.json()["status"] == "IN_REVIEW"
+
+        # 3. Author attempts approval -> 403 Forbidden (Four-eyes violation)
+        author_sig = get_auth_headers_with_sig(
+            ACTOR_AUTHOR, ["super_admin"], transition_path
+        )
+        author_app_resp = await client.post(
+            transition_path,
+            json={
+                "target_status": "APPROVED",
+                "reason_for_change": "Author self-approval",
+            },
+            headers=author_sig,
+        )
+        assert author_app_resp.status_code == 403
+
+        # 4. Approver attempts approval without reason_for_change -> 422 Unprocessable Entity
+        approver_sig = get_auth_headers_with_sig(
+            ACTOR_APPROVER, ["super_admin"], transition_path
+        )
+        no_reason_resp = await client.post(
+            transition_path,
+            json={
+                "target_status": "APPROVED",
+                "reason_for_change": "",
+            },
+            headers=approver_sig,
+        )
+        assert no_reason_resp.status_code == 422
+
+        # 5. Approver rejects article -> 200 OK (IN_REVIEW -> REJECTED)
+        rej_resp = await client.post(
+            transition_path,
+            json={
+                "target_status": "REJECTED",
+                "reason_for_change": "Missing section 4.2 password aging policy",
+            },
+            headers=approver_sig,
+        )
+        assert rej_resp.status_code == 200
+        assert rej_resp.json()["status"] == "REJECTED"
+
+        # 6. Reopen REJECTED -> DRAFT
+        reopen_resp = await client.post(
+            transition_path,
+            json={
+                "target_status": "DRAFT",
+                "reason_for_change": "Reopening to incorporate password aging policy",
+            },
+            headers=auth_headers_editor,
+        )
+        assert reopen_resp.status_code == 200
+        assert reopen_resp.json()["status"] == "DRAFT"
+
+        # 7. Editor updates draft and transitions DRAFT -> IN_REVIEW
+        await client.put(
+            f"/api/v1/knowledge/articles/{art_id}",
+            json={
+                "body_markdown": "# Electronic Records SOP\n\nMandatory digital signature guidelines & 90-day password aging.",
+                "reason_for_change": "Added section 4.2 password aging policy",
+            },
+            headers=auth_headers_editor,
+        )
+        await client.post(
+            transition_path,
+            json={
+                "target_status": "IN_REVIEW",
+                "reason_for_change": "Resubmitting amended draft for review",
+            },
+            headers=auth_headers_editor,
+        )
+
+        # 8. Editor attempts approval -> 403 Forbidden (Four-eyes violation for last_edited_by)
+        editor_sig = get_auth_headers_with_sig(
+            ACTOR_EDITOR, ["super_admin"], transition_path
+        )
+        editor_app_resp = await client.post(
+            transition_path,
+            json={
+                "target_status": "APPROVED",
+                "reason_for_change": "Editor self-approval",
+            },
+            headers=editor_sig,
+        )
+        assert editor_app_resp.status_code == 403
+
+        # 9. Independent approver approves via /transition -> 200 OK (IN_REVIEW -> APPROVED)
+        app_resp = await client.post(
+            transition_path,
+            json={
+                "target_status": "APPROVED",
+                "reason_for_change": "Four-eyes peer review verified per 21 CFR Part 11",
+            },
+            headers=approver_sig,
+        )
+        assert app_resp.status_code == 200
+        assert app_resp.json()["status"] == "APPROVED"
+        assert app_resp.json()["approved_by"] == ACTOR_APPROVER
+
+        # 10. Attempting direct system-only transition (e.g. SUPERSEDED) -> 422 Unprocessable Entity
+        disallowed_resp = await client.post(
+            transition_path,
+            json={
+                "target_status": "SUPERSEDED",
+                "reason_for_change": "Direct client supersede attempt",
+            },
+            headers=approver_sig,
+        )
+        assert disallowed_resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_sha256_digest_chain_audit_emission(db_session: AsyncSession):
+    """
+    Validate that SUBMITTED_FOR_REVIEW, APPROVED, and REJECTED lifecycle events emit to SHA-256 digest chain.
+
+    @req:PRD-SYS-KH-001
+    @req:PRD-SYS-KH-002
+    @req:PRD-KNB-001
+    """
+    svc = create_article_service(db_session)
+    cat = await _make_category(svc)
+    article = await _make_article(svc, cat.id)
+
+    # Initial state
+    assert audit_logger_engine.verify_chain_integrity() is True
+    digest_initial = audit_logger_engine.last_digest
+
+    # 1. Submit for review -> emits SUBMITTED_FOR_REVIEW
+    article = await svc.submit_for_review(
+        article_id=article.id,
+        actor_user_id=ACTOR_AUTHOR,
+        reason_for_change="Submitting for quality review",
+    )
+    digest_after_submit = audit_logger_engine.last_digest
+    assert digest_after_submit != digest_initial
+    assert audit_logger_engine.verify_chain_integrity() is True
+
+    # 2. Reject article -> emits REJECTED
+    article = await svc.reject_article(
+        article_id=article.id,
+        actor_user_id=ACTOR_APPROVER,
+        reason_for_change="Needs typo fixes in introduction",
+    )
+    digest_after_reject = audit_logger_engine.last_digest
+    assert digest_after_reject != digest_after_submit
+    assert audit_logger_engine.verify_chain_integrity() is True
+
+    # Reopen to DRAFT and resubmit
+    article = await svc.transition(
+        article=article,
+        target_status=ArticleStatus.DRAFT,
+        actor_user_id=ACTOR_AUTHOR,
+        reason_for_change="Addressing review comments",
+    )
+    article = await svc.submit_for_review(
+        article_id=article.id,
+        actor_user_id=ACTOR_AUTHOR,
+        reason_for_change="Resubmitting corrected draft",
+    )
+
+    # 3. Approve article -> emits APPROVED
+    digest_before_approve = audit_logger_engine.last_digest
+    article = await svc.approve_article(
+        article_id=article.id,
+        actor_user_id=ACTOR_APPROVER,
+        reason_for_change="Verified compliant per SOP-QA-001",
+    )
+    digest_after_approve = audit_logger_engine.last_digest
+    assert digest_after_approve != digest_before_approve
+    assert audit_logger_engine.verify_chain_integrity() is True
+
+    # Verify recent records in the audit store
+    records = audit_logger_engine._store.fetch_all()
+    action_types = [r.action_type for r in records if r.entity_id == article.id]
+    assert "SUBMITTED_FOR_REVIEW" in action_types
+    assert "REJECTED" in action_types
+    assert "APPROVED" in action_types
 
 
 # ---------------------------------------------------------------------------

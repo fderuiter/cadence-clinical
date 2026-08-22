@@ -1,5 +1,5 @@
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
-*Execution Date:* 2026-07-23 22:38:25 UTC
+*Execution Date:* 2026-08-22 14:24:10 UTC
 *Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B
 
 ## 1. Executive Summary & Verification Declaration
@@ -7,11 +7,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3063
-- **Passed:** 3039 🟢
-- **Failed/Errors:** 0 🔴
+- **Total Automated Test Cases Run:** 3050
+- **Passed:** 3024 🟢
+- **Failed/Errors:** 2 🔴
 - **Skipped:** 24 ⚪
-- **Overall Operational Pass Rate:** 99.22%
+- **Overall Operational Pass Rate:** 99.15%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -554,7 +554,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_build_docx_template` | `apps.designer.tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_as_docx_success` | `apps.designer.tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_as_pdf_success` | `apps.designer.tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_export_protocol_etmf_forwarding_best_effort` | `apps.designer.tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_export_protocol_etmf_forwarding_best_effort` | `apps.designer.tests.test_protocol_export` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_export_protocol_etmf_forwarding_strict_failure` | `apps.designer.tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_generation_auditing` | `apps.designer.tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_invalid_output` | `apps.designer.tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2122,19 +2122,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_get_category_by_id_and_slug` | `apps.knowledge.tests.test_categories` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
 | `test_list_categories_persona_filtering` | `apps.knowledge.tests.test_categories` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
 | `test_soft_delete_category` | `apps.knowledge.tests.test_categories` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
-| `test_admin_create_and_manage_contextual_help_mappings` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
-| `test_admin_create_mapping_with_invalid_article_returns_404` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
-| `test_hierarchical_specificity_ranking` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
-| `test_pattern_classification` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
-| `test_persona_matching_and_fallback` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
-| `test_resolve_contextual_help_exact_match` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
-| `test_resolve_contextual_help_filters_inactive_and_draft_articles` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
-| `test_resolve_contextual_help_lookup_backward_compatibility` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
-| `test_resolve_contextual_help_tie_breaking_and_related_articles` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
-| `test_resolve_contextual_help_unmapped_fallback_returns_empty_gracefully` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
-| `test_resolve_contextual_help_wildcards_and_persona_fallback` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
-| `test_route_normalization` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
-| `test_route_pattern_matching` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
 | `test_publish_notification_failure_swallowed` | `apps.notifications.tests.test_clinical_workflow_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_publish_notification_success` | `apps.notifications.tests.test_clinical_workflow_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_router_send_dashboard_notification_sdv_drop` | `apps.notifications.tests.test_clinical_workflow_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3005,7 +2992,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verification_performance_under_five_seconds` | `scripts.tests.test_gxp_decomposed_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_fail_fast_without_report_and_draft_flag` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_missing_report_gxp_sync_dry_run` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_success_with_draft_flag` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_success_with_draft_flag` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🔴 FAILED | < 1s |
 | `test_layout_gating_approved_and_logged` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_layout_gating_missing_justification_rejected` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_layout_validation_integration` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
@@ -3339,30 +3326,30 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 ## Electronic Signature Block
 
 - **Signer Identity:** fred
-- **Timestamp:** 2026-07-23 22:38:25 UTC
-- **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** ea560cb0e73d2b50f014da28e3524e526f8722e05c2dcd505cb7a603c868d316
+- **Timestamp:** 2026-08-22 14:24:10 UTC
+- **Meaning / Purpose:** GxP Dynamic Execution Run Record
+- **Cryptographic Hash (SHA-256):** e4ec59756e8dc9b43ecf921cc2ae5d89c2ecc7d54fdf2bab8ae4ac6625e63890
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUPR8jxUEvgoC93xWXkWW4StOtOWEwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUUschOnc7xR5auoIqiFbQLyi2DXUwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MTE0MzI1OVoXDTI3MDgyMjE0MzI1OVowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MTE0MjQxMFoXDTI3MDgyMjE0MjQxMFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA46/u
-UijBgdFU2JJRmDIKQtqWCcfMR8+KH18X7ur1JwiLzGg236cu3zNpN9331Rmj7+/c
-/FUUkN6tINl0ldJXyDvd/3eKka+Y1hnu/72VbtVS96+r27tlbwVqTwcTbqhdv5Gl
-WjC8KD4O3uan/jQczOyeSOcd/D3nKaqrjnJk4UQ9iMU0geW54kTrbr6uXCQ0wziU
-HBv9P6/Ifz7lDROddEYW15Cmr7hqSYzqg8MSPOhdeQrJZtiDL/RLQKXhU5glw61D
-Zuh23/TQKUI1j5ll+Twda9lZIaYseUngw2xx/VW11NmKZb4vN8CEj5woQ1xuKLMt
-nffkPugvYIVEiOFjwQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQDMZsR9tAotk6gr
-LDET3bbhpd8KYEZX9IBKbaL4yIA4KwGHFM7qp79ToO7HToRg4BKRQgDcFzUG8uet
-lDt3sLkDnM+oLTh2raqKiKj4ddIpSGnqft3ll8tnTw1jKLB3eoe1pj3LdNRlzzGq
-mOL6jqPQUfCVFHtSPDeY4yu/csu8bB8e6ApCIJUA/N2lhE3Z0oObSHsk1X1dZtzD
-nwQsgm92WfpkL3lgfWZHh7VOBUZEDWtn/rssSyDbjW9nHtcF0/X9yI0Bq5oQwdLk
-3HBH1b9+hkhcHdgnP6eOq9IS6MvykNeDV7e2PyGGEEM+v4r626uxv6SiMcrAm2vY
-7pveoqMJ
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3Fgg
+B3P+nvZddoon83UJuy58L2Avo0VXn8CN6X03fHFFOjRrSETYBsP0Uufqs3R1nu4C
+tSxRQ0iiAflWwIJuH/GO7RoVF54sfXZSCLPVYbtQnnS436ID/ve4+3zUIgZAxMCV
+wPfRY3hAbusJ/rUYj7Cn4pJ0Lm+jN+nbYqYdrW13YZ4uraVmWLD/5FY6ndLImAlM
+zij6rQlTPaDJtauUZoERNHohJ/vXWNuoRt9Uu5Yi6CnCdJi/3lTFcdGfIZ10tshJ
+W5p1B+9kNj5DNFwSw6UUxmL8gD1xIFsPlszx4kNvrjbOXgqOwM/vnbnQmAEl7crg
+OaseM+qnH+qSzKz1PQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQABVYNo4EuxBCtj
+Yp9zi6nlTe8ZPgsvagwI5aF+lr6LANHhQeYMwIvMPH6NYzqLoq09jZ/JLKPwR0Ms
+pt2Qei/H5rdPtahTB3cx4jrM//Kj1Pof3gHL0ARB5xGrt36E2ZxZRxtJ/3zn7WJD
+zFLImEJHx8AJql9q9ZArHKoUsuJKZ5w7hlnHT1XhRKtWnF5s+OggxdNwiRO8gaMl
+8XH5q42/wQtmgZlNSqpiMMdsUOLgwWetco5/rsIvbUDZdsghhv2M4+weASvEh+hh
+2N1INS7absHm9AVO9ktkW0Ain6BdQgdGSyKp6JEWX32R5VoevKU6jsPyknvaMDiU
+Yk4LfffR
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-21uEp1ht3KU08o1t6jERb+VC6JrUcqpdwAYhNfIZuFHWspWnft8/Tj2cQXp2Q6lrWUXNUroWuy1h7CS+3t80xqMltH/GYMZ1pwbODdsRGaP/zA9rSYaJ133rCMnDXu+cS2kuzrC/bqSBFszWhjYMesDyWbpBtehaRRiqmhAN52Tp+5M8VgPOucZ0sMUVXUihT0iv25MWBzF83zLjtSEIikXcULljXO35VwfN/CoN+k/DlXCt+cRmBcPXxonmNL5oJqOJvDWab8jWupJHcquq9U00SgnzTOIBauPNsXaoE9qO4sXfJBP1aCdS1H3QCSyDn1NmKCnzbUGAUZ/Z5AIqcQ==
+mkWvvaWXPvHXVsKWdscmtHWFHJhh2kAi2V2ZYyYunnWaNbyNLnKtEHHs7etgc3ZGzfFBARWPD2kBYxW9MuZAS6YMoZeKBEBxZoB3S50usBUJY0NNTH88iweBdlgFhxtGjRm/6EcLD/FmIaWlSvAPf5EugJ6gkqaNuqsJjKpqDfZtS8hnfUCdr3YfcDVXkt320DxmVTzm0incMxVYCnzsZTYJlNwqSz7lrVnc36ja6hAJcthYjxhB2gUyhrzCjGiMXPgUFvtK/vjSHkSE4SarntiZ6IVVPZX+d6DgA67cxT0cIFMboAQbroCFIgSnljnZR6kpBOiZ6mGlzCrzkawFZw==
 -----END SIGNATURE-----

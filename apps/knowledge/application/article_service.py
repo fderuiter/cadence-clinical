@@ -7,7 +7,9 @@ snapshotting, GxP audit logging, and notification dispatch per ADR-2188.
 Requirements: PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002, ADR-2188
 """
 
+import json
 import logging
+from dataclasses import dataclass, field
 
 from apps.knowledge.domain.exceptions import (
     ArticleNotFoundError,
@@ -15,6 +17,7 @@ from apps.knowledge.domain.exceptions import (
     ArticleTransitionError,
     CategoryConflictError,
     CategoryNotFoundError,
+    ContextualHelpMappingNotFoundError,
 )
 from apps.knowledge.domain.markdown_renderer import render_markdown_to_html
 from apps.knowledge.domain.models import (
@@ -23,7 +26,12 @@ from apps.knowledge.domain.models import (
     ArticleStatus,
     validate_transition,
 )
+from apps.knowledge.domain.route_matcher import (
+    normalize_route,
+    rank_matching_mappings,
+)
 from apps.knowledge.ports.repository_port import (
+    ContextualHelpMapping,
     ContextualHelpMappingRepositoryPort,
     KnowledgeArticle,
     KnowledgeArticleAuditLog,
@@ -33,9 +41,47 @@ from apps.knowledge.ports.repository_port import (
     KnowledgeCategory,
     KnowledgeCategoryRepositoryPort,
 )
+from packages.security.audit_logger import CentralAuditLogger
 from packages.security.notifications import publish_notification
 
 logger = logging.getLogger("knowledge-article-service")
+
+
+@dataclass
+class ContextualHelpResolutionResult:
+    """Result container for dynamic contextual help resolution."""
+
+    matched_mapping: ContextualHelpMapping | None = None
+    primary_article: KnowledgeArticle | None = None
+    primary_version: KnowledgeArticleVersion | None = None
+    section_anchor: str | None = None
+    related_articles: list[tuple[KnowledgeArticle, KnowledgeArticleVersion | None]] = (
+        field(default_factory=list)
+    )
+
+
+def normalize_tags_for_storage(tags: list[str] | str | None) -> str | None:
+    """Normalizes tags input into a canonical JSON array string for database storage."""
+    if tags is None:
+        return None
+    if isinstance(tags, list):
+        return json.dumps([str(item) for item in tags if str(item).strip()])
+    if isinstance(tags, str):
+        v_str = tags.strip()
+        if not v_str:
+            return None
+        if v_str.startswith("[") and v_str.endswith("]"):
+            try:
+                parsed = json.loads(v_str)
+                if isinstance(parsed, list):
+                    return json.dumps(
+                        [str(item) for item in parsed if str(item).strip()]
+                    )
+            except Exception:
+                pass
+        items = [t.strip() for t in v_str.split(",") if t.strip()]
+        return json.dumps(items)
+    return str(tags)
 
 
 class ArticleLifecycleService:
@@ -229,7 +275,7 @@ class ArticleLifecycleService:
         category_id: str,
         body_markdown: str,
         version_label: str = "1.0",
-        tags: str | None = None,
+        tags: list[str] | str | None = None,
         actor_user_id: str,
         reason_for_change: str,
     ) -> KnowledgeArticle:
@@ -245,7 +291,7 @@ class ArticleLifecycleService:
             category_id: UUID of the KnowledgeCategory this article belongs to.
             body_markdown: Initial draft body in Markdown.
             version_label: Human-readable version label (e.g. "1.0").
-            tags: Optional tags string or JSON array.
+            tags: Optional tags list, JSON array string, or comma-separated string.
             actor_user_id: Authenticated user creating the article.
             reason_for_change: GxP justification string.
 
@@ -259,6 +305,7 @@ class ArticleLifecycleService:
             )
 
         rendered_html = render_markdown_to_html(body_markdown)
+        stored_tags = normalize_tags_for_storage(tags)
 
         article = KnowledgeArticle(
             title=title,
@@ -267,7 +314,7 @@ class ArticleLifecycleService:
             status=ArticleStatus.DRAFT,
             version_index=1,
             version_label=version_label,
-            tags=tags,
+            tags=stored_tags,
             author_user_id=actor_user_id,
             last_edited_by=actor_user_id,
             created_by=actor_user_id,
@@ -355,7 +402,7 @@ class ArticleLifecycleService:
         title: str | None = None,
         slug: str | None = None,
         category_id: str | None = None,
-        tags: str | None = None,
+        tags: list[str] | str | None = None,
         reason_for_change: str | None = None,
     ) -> tuple[KnowledgeArticle, KnowledgeArticleVersion]:
         """
@@ -372,7 +419,7 @@ class ArticleLifecycleService:
             title: Optional updated title.
             slug: Optional updated slug.
             category_id: Optional updated category ID.
-            tags: Optional updated tags.
+            tags: Optional updated tags list, JSON array string, or comma-separated string.
             reason_for_change: GxP reason for change.
 
         Returns:
@@ -407,7 +454,7 @@ class ArticleLifecycleService:
         if category_id:
             article.category_id = category_id
         if tags is not None:
-            article.tags = tags
+            article.tags = normalize_tags_for_storage(tags)
 
         article.last_edited_by = actor_user_id
         article.reason_for_change = reason_for_change or "Draft body updated"
@@ -953,6 +1000,24 @@ class ArticleLifecycleService:
         )
         await self._audit_repo.append_log(log_entry)
 
+        try:
+            CentralAuditLogger.log_event(
+                service_name="apps/knowledge",
+                action_type=action_val,
+                entity_name="KnowledgeArticle",
+                entity_id=article_id,
+                user_id=actor_user_id,
+                reason_for_change=reason_for_change
+                or f"Knowledge article lifecycle action: {action_val}",
+                details={
+                    "previous_status": prev_val,
+                    "new_status": new_val,
+                    "details": details,
+                },
+            )
+        except Exception as exc:
+            logger.warning("CentralAuditLogger event emission failed: %s", exc)
+
     # ------------------------------------------------------------------
     # Notifications dispatch
     # ------------------------------------------------------------------
@@ -1013,5 +1078,239 @@ class ArticleLifecycleService:
                 article.id,
             )
 
+    # ------------------------------------------------------------------
+    # Contextual Help Mappings & Resolution (Issue #4328)
+    # ------------------------------------------------------------------
 
-__all__ = ["ArticleLifecycleService"]
+    async def create_help_mapping(
+        self,
+        *,
+        route_pattern: str,
+        persona: str | None,
+        article_id: str,
+        priority: int = 100,
+        section_anchor: str | None = None,
+        is_active: bool = True,
+        actor_user_id: str,
+        reason_for_change: str,
+    ) -> ContextualHelpMapping:
+        """
+        Creates a new ContextualHelpMapping.
+
+        Args:
+            route_pattern: Target route pattern (e.g. '/ecrf/*', '/mdr/:studyId/*').
+            persona: Specific persona role or None for universal.
+            article_id: UUID of the target KnowledgeArticle.
+            priority: Priority integer (lowest integer = highest priority).
+            section_anchor: Optional anchor heading (e.g. '#enrollment-procedure').
+            is_active: Boolean active status flag.
+            actor_user_id: Authenticated user creating the mapping.
+            reason_for_change: GxP justification string.
+
+        Returns:
+            The persisted ContextualHelpMapping instance.
+
+        Raises:
+            ArticleNotFoundError: If article_id does not exist or is deleted.
+        """
+        article = await self.get_article_by_id(article_id)
+        if not article:
+            raise ArticleNotFoundError(
+                f"Article with id {article_id!r} does not exist or has been deleted."
+            )
+
+        mapping = ContextualHelpMapping(
+            route_pattern=normalize_route(route_pattern),
+            persona=persona.strip().lower() if persona and persona.strip() else None,
+            article_id=article_id,
+            priority=priority,
+            section_anchor=section_anchor.strip()
+            if section_anchor and section_anchor.strip()
+            else None,
+            is_active=is_active,
+            created_by=actor_user_id,
+            reason_for_change=reason_for_change,
+        )
+        return await self._help_repo.save(mapping)
+
+    async def get_help_mapping_by_id(
+        self, mapping_id: str
+    ) -> ContextualHelpMapping | None:
+        """Retrieves a ContextualHelpMapping by ID."""
+        return await self._help_repo.get_by_id(mapping_id)
+
+    async def list_help_mappings(
+        self,
+        *,
+        route_pattern: str | None = None,
+        persona: str | None = None,
+        is_active: bool | None = None,
+    ) -> list[ContextualHelpMapping]:
+        """Lists contextual help mappings with optional filters."""
+        return await self._help_repo.list_mappings(
+            route_pattern=route_pattern,
+            persona=persona,
+            is_active=is_active,
+        )
+
+    async def update_help_mapping(
+        self,
+        *,
+        mapping_id: str,
+        actor_user_id: str,
+        reason_for_change: str,
+        route_pattern: str | None = None,
+        persona: str | None = None,
+        article_id: str | None = None,
+        priority: int | None = None,
+        section_anchor: str | None = None,
+        is_active: bool | None = None,
+    ) -> ContextualHelpMapping:
+        """
+        Updates an existing ContextualHelpMapping.
+
+        Args:
+            mapping_id: UUID of mapping.
+            actor_user_id: Authenticated user making change.
+            reason_for_change: GxP reason for change.
+            route_pattern: Optional updated pattern.
+            persona: Optional updated persona.
+            article_id: Optional updated article ID.
+            priority: Optional updated priority integer.
+            section_anchor: Optional updated section anchor.
+            is_active: Optional updated active status.
+
+        Returns:
+            The updated ContextualHelpMapping instance.
+
+        Raises:
+            ContextualHelpMappingNotFoundError: If mapping does not exist.
+            ArticleNotFoundError: If updated article_id does not exist.
+        """
+        mapping = await self._help_repo.get_by_id(mapping_id)
+        if not mapping:
+            raise ContextualHelpMappingNotFoundError(
+                f"ContextualHelpMapping with id {mapping_id!r} does not exist."
+            )
+
+        if article_id and article_id != mapping.article_id:
+            art = await self.get_article_by_id(article_id)
+            if not art:
+                raise ArticleNotFoundError(
+                    f"Article with id {article_id!r} does not exist or has been deleted."
+                )
+            mapping.article_id = article_id
+
+        if route_pattern is not None:
+            mapping.route_pattern = normalize_route(route_pattern)
+        if persona is not None:
+            mapping.persona = persona.strip().lower() if persona.strip() else None
+        if priority is not None:
+            mapping.priority = priority
+        if section_anchor is not None:
+            mapping.section_anchor = (
+                section_anchor.strip() if section_anchor.strip() else None
+            )
+        if is_active is not None:
+            mapping.is_active = is_active
+
+        mapping.reason_for_change = reason_for_change
+        mapping.version_index += 1
+        return await self._help_repo.save(mapping)
+
+    async def delete_help_mapping(
+        self,
+        *,
+        mapping_id: str,
+        actor_user_id: str,
+        reason_for_change: str,
+    ) -> bool:
+        """Deletes a ContextualHelpMapping by ID."""
+        mapping = await self._help_repo.get_by_id(mapping_id)
+        if not mapping:
+            raise ContextualHelpMappingNotFoundError(
+                f"ContextualHelpMapping with id {mapping_id!r} does not exist."
+            )
+        return await self._help_repo.delete(mapping_id)
+
+    async def resolve_contextual_help(
+        self,
+        *,
+        route: str,
+        persona: str | None = None,
+    ) -> ContextualHelpResolutionResult:
+        """
+        Dynamically resolves the primary spotlight article and up to 3 secondary
+        related guides for a given route and user persona.
+
+        Hierarchical Specificity Resolution:
+        1. Evaluates all active mappings linked to published articles.
+        2. Filters matching route patterns and persona / fallback rules.
+        3. Ranks candidates via route_matcher (priority ASC, persona match, pattern specificity, length, recency).
+        4. Deduplicates articles: best mapping selects primary article; next distinct mappings form related articles.
+
+        Args:
+            route: In-app route path (e.g. '/ecrf/site-101/subjects/SUBJ-001').
+            persona: User's active persona role (e.g. 'site_crc').
+
+        Returns:
+            ContextualHelpResolutionResult containing primary spotlight article, version, anchor, and related guides.
+        """
+        active_mappings = await self._help_repo.list_active_mappings()
+        if not active_mappings:
+            return ContextualHelpResolutionResult()
+
+        ranked = rank_matching_mappings(active_mappings, route, persona)
+        if not ranked:
+            return ContextualHelpResolutionResult()
+
+        # Deduplicate articles so the same article is not surfaced multiple times
+        seen_articles: set[str] = set()
+        primary_mapping: ContextualHelpMapping | None = None
+        primary_article: KnowledgeArticle | None = None
+        primary_version: KnowledgeArticleVersion | None = None
+        related: list[tuple[KnowledgeArticle, KnowledgeArticleVersion | None]] = []
+
+        for m in ranked:
+            if m.article_id in seen_articles:
+                continue
+            seen_articles.add(m.article_id)
+
+            article = await self.get_article_by_id(m.article_id)
+            if (
+                not article
+                or article.status != ArticleStatus.PUBLISHED
+                or article.is_deleted
+            ):
+                continue
+
+            version = await self.get_current_published_version(article.id)
+            if not version:
+                version = await self._article_repo.get_latest_version(article.id)
+
+            if primary_mapping is None:
+                primary_mapping = m
+                primary_article = article
+                primary_version = version
+            elif len(related) < 3:
+                related.append((article, version))
+
+            if primary_mapping is not None and len(related) >= 3:
+                break
+
+        if primary_mapping is None:
+            return ContextualHelpResolutionResult()
+
+        return ContextualHelpResolutionResult(
+            matched_mapping=primary_mapping,
+            primary_article=primary_article,
+            primary_version=primary_version,
+            section_anchor=primary_mapping.section_anchor,
+            related_articles=related,
+        )
+
+
+__all__ = [
+    "ArticleLifecycleService",
+    "ContextualHelpResolutionResult",
+]

@@ -9,6 +9,7 @@ Requirements: PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002, ADR-2188
 """
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
@@ -23,11 +24,10 @@ from apps.knowledge.domain.exceptions import (
     ArticleTransitionError,
     CategoryConflictError,
     CategoryNotFoundError,
+    ContextualHelpMappingNotFoundError,
 )
 from apps.knowledge.domain.models import ArticleStatus
 from apps.knowledge.infrastructure.models import (
-    ContextualHelpMapping,
-    KnowledgeArticle,
     KnowledgeArticleAuditLog,
     KnowledgeArticleVersion,
 )
@@ -45,9 +45,10 @@ from apps.knowledge.presentation.dtos import (
     AuditLogResponse,
     CategoryCreate,
     CategoryResponse,
-    ContextualHelpLookupResponse,
     ContextualHelpMappingCreate,
     ContextualHelpMappingResponse,
+    ContextualHelpMappingUpdate,
+    ContextualHelpResolutionResponse,
 )
 from packages.security.context import current_user_id
 from packages.security.rbac import get_normalized_roles, require_roles
@@ -329,6 +330,11 @@ async def get_article(
     return resp
 
 
+@router.put(
+    "/articles/{article_id}/draft",
+    response_model=ArticleVersionResponse,
+    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
+)
 @router.patch(
     "/articles/{article_id}/draft",
     response_model=ArticleVersionResponse,
@@ -339,7 +345,7 @@ async def save_article_draft(
     payload: ArticleDraftSave,
     session: AsyncSession = Depends(get_db_session),
 ) -> ArticleVersionResponse:
-    """Saves updated body content to a DRAFT article. Requires super_admin role."""
+    """Saves updated body content to a DRAFT article (Issue #4325). Requires super_admin role."""
     actor = current_user_id.get()
     svc = create_article_service(session)
     try:
@@ -347,6 +353,10 @@ async def save_article_draft(
             article_id=article_id,
             body_markdown=payload.body_markdown,
             actor_user_id=actor,
+            title=payload.title,
+            slug=payload.slug,
+            category_id=payload.category_id,
+            tags=payload.tags,
             reason_for_change=payload.reason_for_change,
         )
     except ArticleNotFoundError as exc:
@@ -524,17 +534,14 @@ async def transition_article(
     session: AsyncSession = Depends(get_db_session),
 ) -> ArticleResponse:
     """Generic lifecycle state machine transition endpoint."""
-    result = await session.execute(
-        select(KnowledgeArticle).where(KnowledgeArticle.id == article_id)
-    )
-    article = result.scalar_one_or_none()
+    svc = create_article_service(session)
+    article = await svc.get_article_by_id(article_id)
     if not article:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
         )
 
     actor = current_user_id.get()
-    svc = create_article_service(session)
     try:
         article = await svc.transition(
             article=article,
@@ -592,7 +599,7 @@ async def get_article_audit_log(
 
 
 # ---------------------------------------------------------------------------
-# Contextual help endpoints
+# Contextual Help Admin Management & Dynamic Resolution Endpoints (Issue #4328)
 # ---------------------------------------------------------------------------
 
 
@@ -602,73 +609,217 @@ async def get_article_audit_log(
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_roles(*ADMIN_ROLES))],
 )
+@router.post(
+    "/contextual-help/mappings",
+    response_model=ContextualHelpMappingResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
+)
 async def create_contextual_help_mapping(
     payload: ContextualHelpMappingCreate,
     session: AsyncSession = Depends(get_db_session),
 ) -> ContextualHelpMappingResponse:
-    """Creates a contextual help mapping (route pattern + persona -> article)."""
+    """Creates a new contextual help route mapping. Requires super_admin role."""
     actor = current_user_id.get()
-    mapping = ContextualHelpMapping(
-        route_pattern=payload.route_pattern,
-        persona=payload.persona,
-        article_id=payload.article_id,
-        priority=payload.priority,
-        created_by=actor,
-        reason_for_change=payload.reason_for_change,
-    )
-    session.add(mapping)
-    await session.flush()
+    svc = create_article_service(session)
+    try:
+        mapping = await svc.create_help_mapping(
+            route_pattern=payload.route_pattern,
+            persona=payload.persona,
+            article_id=payload.article_id,
+            priority=payload.priority,
+            section_anchor=payload.section_anchor,
+            is_active=payload.is_active,
+            actor_user_id=actor,
+            reason_for_change=payload.reason_for_change,
+        )
+    except ArticleNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
     return ContextualHelpMappingResponse.model_validate(mapping)
 
 
 @router.get(
-    "/contextual-help/lookup",
-    response_model=ContextualHelpLookupResponse,
+    "/contextual-help/mappings",
+    response_model=list[ContextualHelpMappingResponse],
+    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
+)
+async def list_contextual_help_mappings(
+    route_pattern: str | None = None,
+    persona: str | None = None,
+    is_active: bool | None = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[ContextualHelpMappingResponse]:
+    """Lists all contextual help mappings with optional filters. Requires super_admin role."""
+    svc = create_article_service(session)
+    mappings = await svc.list_help_mappings(
+        route_pattern=route_pattern,
+        persona=persona,
+        is_active=is_active,
+    )
+    return [ContextualHelpMappingResponse.model_validate(m) for m in mappings]
+
+
+@router.get(
+    "/contextual-help/mappings/{mapping_id}",
+    response_model=ContextualHelpMappingResponse,
+    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
+)
+async def get_contextual_help_mapping(
+    mapping_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> ContextualHelpMappingResponse:
+    """Retrieves a single contextual help mapping by ID. Requires super_admin role."""
+    svc = create_article_service(session)
+    mapping = await svc.get_help_mapping_by_id(mapping_id)
+    if not mapping:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ContextualHelpMapping with id {mapping_id!r} not found",
+        )
+    return ContextualHelpMappingResponse.model_validate(mapping)
+
+
+@router.put(
+    "/contextual-help/mappings/{mapping_id}",
+    response_model=ContextualHelpMappingResponse,
+    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
+)
+async def update_contextual_help_mapping(
+    mapping_id: str,
+    payload: ContextualHelpMappingUpdate,
+    session: AsyncSession = Depends(get_db_session),
+) -> ContextualHelpMappingResponse:
+    """Updates an existing contextual help mapping. Requires super_admin role."""
+    actor = current_user_id.get()
+    svc = create_article_service(session)
+    try:
+        mapping = await svc.update_help_mapping(
+            mapping_id=mapping_id,
+            actor_user_id=actor,
+            reason_for_change=payload.reason_for_change,
+            route_pattern=payload.route_pattern,
+            persona=payload.persona,
+            article_id=payload.article_id,
+            priority=payload.priority,
+            section_anchor=payload.section_anchor,
+            is_active=payload.is_active,
+        )
+    except ContextualHelpMappingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except ArticleNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    return ContextualHelpMappingResponse.model_validate(mapping)
+
+
+@router.delete(
+    "/contextual-help/mappings/{mapping_id}",
+    response_model=dict[str, Any],
+    dependencies=[Depends(require_roles(*ADMIN_ROLES))],
+)
+async def delete_contextual_help_mapping(
+    mapping_id: str,
+    reason_for_change: str = "Contextual help mapping deleted",
+    session: AsyncSession = Depends(get_db_session),
+) -> dict[str, Any]:
+    """Deletes a contextual help mapping by ID. Requires super_admin role."""
+    actor = current_user_id.get()
+    svc = create_article_service(session)
+    try:
+        deleted = await svc.delete_help_mapping(
+            mapping_id=mapping_id,
+            actor_user_id=actor,
+            reason_for_change=reason_for_change,
+        )
+    except ContextualHelpMappingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    return {"success": deleted, "id": mapping_id}
+
+
+@router.get(
+    "/contextual-help",
+    response_model=ContextualHelpResolutionResponse,
     dependencies=[Depends(require_roles(*ALL_ROLES))],
 )
-async def lookup_contextual_help(
+@router.get(
+    "/contextual-help/lookup",
+    response_model=ContextualHelpResolutionResponse,
+    dependencies=[Depends(require_roles(*ALL_ROLES))],
+)
+async def resolve_contextual_help(
     route: str,
     persona: str | None = None,
     session: AsyncSession = Depends(get_db_session),
-) -> ContextualHelpLookupResponse:
-    """Returns the most relevant Published article for a given route and persona."""
-    stmt = (
-        select(ContextualHelpMapping)
-        .join(
-            KnowledgeArticle,
-            ContextualHelpMapping.article_id == KnowledgeArticle.id,
-        )
-        .where(
-            ContextualHelpMapping.route_pattern == route,
-            KnowledgeArticle.status == ArticleStatus.PUBLISHED.value,
-            KnowledgeArticle.is_deleted.is_(False),
-        )
-        .order_by(ContextualHelpMapping.priority.asc())
-    )
-    result = await session.execute(stmt)
-    mappings = result.scalars().all()
+) -> ContextualHelpResolutionResponse:
+    """
+    Dynamically resolves in-page contextual SOP guidance and relevant articles
+    for a given clinical screen route (e.g. '/ecrf/site-101/subjects') and persona role.
 
-    best: ContextualHelpMapping | None = None
-    for m in mappings:
-        if m.persona is None or m.persona == persona:
-            best = m
-            break
-
-    if not best:
-        return ContextualHelpLookupResponse(article=None, version=None)
-
+    Resolution algorithm:
+    - Matches exact routes, parameterized routes, prefix wildcards, and global catch-alls.
+    - Resolves via hierarchical specificity: priority ASC, persona match, pattern specificity, length, and recency.
+    - Surfaces 1 primary spotlight article + up to 3 secondary related guides.
+    """
     svc = create_article_service(session)
-    article = await svc.get_article_by_id(best.article_id)
-    if not article:
-        return ContextualHelpLookupResponse(article=None, version=None)
+    result = await svc.resolve_contextual_help(route=route, persona=persona)
 
-    version = await svc.get_current_published_version(article.id)
-    if not version:
-        version = await svc.get_latest_version(article.id)
+    if not result.primary_article:
+        return ContextualHelpResolutionResponse(
+            matched_mapping=None,
+            primary_article=None,
+            primary_version=None,
+            section_anchor=None,
+            related_articles=[],
+            article=None,
+            version=None,
+        )
 
-    return ContextualHelpLookupResponse(
-        article=ArticleResponse.model_validate(article) if article else None,
-        version=ArticleVersionResponse.model_validate(version) if version else None,
+    # Prepare primary article response with body content attached
+    primary_art_resp = ArticleResponse.model_validate(result.primary_article)
+    if result.primary_version:
+        primary_art_resp.body_markdown = result.primary_version.body_markdown
+        primary_art_resp.body_html = result.primary_version.body_html
+
+    primary_ver_resp = (
+        ArticleVersionResponse.model_validate(result.primary_version)
+        if result.primary_version
+        else None
+    )
+
+    mapping_resp = (
+        ContextualHelpMappingResponse.model_validate(result.matched_mapping)
+        if result.matched_mapping
+        else None
+    )
+
+    # Prepare related articles response
+    related_resp: list[ArticleResponse] = []
+    for rel_art, rel_ver in result.related_articles:
+        rel_art_resp = ArticleResponse.model_validate(rel_art)
+        if rel_ver:
+            rel_art_resp.body_markdown = rel_ver.body_markdown
+            rel_art_resp.body_html = rel_ver.body_html
+        related_resp.append(rel_art_resp)
+
+    return ContextualHelpResolutionResponse(
+        matched_mapping=mapping_resp,
+        primary_article=primary_art_resp,
+        primary_version=primary_ver_resp,
+        section_anchor=result.section_anchor,
+        related_articles=related_resp,
+        article=primary_art_resp,
+        version=primary_ver_resp,
     )
 
 

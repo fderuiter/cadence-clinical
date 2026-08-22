@@ -33,16 +33,24 @@ class ArticleVersionImmutableError(ConflictError):
     """Raised when an approved or published version snapshot is attempted to be mutated."""
 
 
-class CategoryNotFoundError(EntityNotFoundError):
-    """Raised when a referenced category or parent category cannot be found."""
+class CategoryCircularParentError(ValidationError):
+    """Raised when setting a category parent would create a circular reference."""
 
 
 class CategoryConflictError(EntityAlreadyExistsError):
     """Raised when category name or slug is not unique."""
 
 
-class CategoryCircularParentError(ValidationError):
-    """Raised when category parent creates a circular reference."""
+class CategoryNotFoundError(EntityNotFoundError):
+    """Raised when a referenced category or parent category cannot be found."""
+
+
+class ContextualHelpMappingNotFoundError(EntityNotFoundError):
+    """Raised when a requested contextual help mapping cannot be found."""
+
+
+class ContextualHelpConflictError(ConflictError):
+    """Raised when a contextual help mapping conflict occurs."""
 
 
 __all__ = [
@@ -54,4 +62,6 @@ __all__ = [
     "CategoryCircularParentError",
     "CategoryConflictError",
     "CategoryNotFoundError",
+    "ContextualHelpConflictError",
+    "ContextualHelpMappingNotFoundError",
 ]
