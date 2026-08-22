@@ -10,6 +10,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-21: Asynchronous Cross-Domain eCRF Anomaly Detection Worker](2026-08-21-asynchronous-cross-domain-ecrf-anomaly-detection-worker.md)
+- [2026-08-21: Asynchronous Protocol Digitization Stage DAG with USDM Compilation](2026-08-21-asynchronous-protocol-digitization-stage-dag-with-usdm-compilation.md)
 - [2026-08-21: Knowledge Hub Two-Tier Immutable Data Model](2026-08-21-knowledge-hub-two-tier-immutable-data-model.md)
 - [2026-08-21: Knowledge Hub Multi-Channel Notifications and Preferences Architecture](2026-08-21-knowledge-hub-multi-channel-notifications-and-preferences-architecture.md)
 - [2026-08-21: Object Storage Port and Envelope Security Architecture](2026-08-21-object-storage-port-and-envelope-security-architecture.md)
@@ -142,6 +144,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 3. Clinical Data Interoperability & Standards
 
+- [2026-08-22: Hybrid FHIR-to-CDISC Semantic Interoperability Mapper](2026-08-22-hybrid-fhir-to-cdisc-semantic-interoperability-mapper.md)
 - [2026-08-17: Fast Version-Check with Immediate Quarantine and Client Alerting](2026-08-17-fast-version-check-with-immediate-quarantine-and-client-alerting.md)
 
 - [2026-08-14: Offline TypeScript Schema Generator using SQLModel Base Metadata](2026-08-14-offline-typescript-schema-generator-using-sqlmodel-base-metadata.md)
@@ -174,6 +177,9 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+- [2026-08-21: Generative Pharmacovigilance Safety Narratives with Part 11 E-Signature](2026-08-21-generative-pharmacovigilance-safety-narratives-with-part-11-e-signature.md)
+- [2026-08-21: Multimodal eTMF and eISF Document Intelligence and DIA Reference Model Classifier](2026-08-21-multimodal-etmf-and-eisf-document-intelligence-and-dia-reference-model-classifier.md)
+- [2026-08-21: Grounded Protocol Knowledge Hub and Support Ticket RAG Triage](2026-08-21-grounded-protocol-knowledge-hub-and-support-ticket-rag-triage.md)
 - [2026-08-19: Dynamic Subject Enrollment and eCRF Visit Execution with Real Time Edit Checks](2026-08-19-dynamic-subject-enrollment-and-ecrf-visit-execution-with-real-time-edit-checks.md)
 
 - [2026-08-15: Comprehensive Clinical Issue and Operations Hub Architecture](2026-08-15-comprehensive-clinical-issue-and-operations-hub-architecture.md)

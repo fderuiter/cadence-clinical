@@ -85,13 +85,38 @@ class RulesRepositoryPort(RepositoryPort[Any]):
     async def get_by_id(self, entity_id: str) -> Any | None:
         pass
 
+
+class DigitizationJobRepositoryPort(RepositoryPort[Any]):
+    """
+    Repository port for Protocol Digitization DAG job state and checkpoints.
+    """
+
     @abstractmethod
-    async def save(self, entity: Any) -> Any:
+    async def create_job(self, job: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def get_job(self, job_id: str) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def update_job(self, job: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def save_checkpoint(self, job_id: str, checkpoint: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def list_jobs(
+        self, study_id: str | None = None, limit: int = 50
+    ) -> list[Any]:
         pass
 
 
 __all__ = [
     "DesignerRepositoryPort",
+    "DigitizationJobRepositoryPort",
     "LibraryRepositoryPort",
     "ProtocolRepositoryPort",
     "RulesRepositoryPort",
