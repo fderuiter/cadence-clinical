@@ -6,6 +6,7 @@ Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
 from abc import ABC, abstractmethod
 
 from apps.fileshare.domain.models import (
+    FileAuditLog,
     FileRecord,
     GuestLink,
     PlaybackAuditEvent,
@@ -83,4 +84,13 @@ class PlaybackAuditRepositoryPort(RepositoryPort[PlaybackAuditEvent], ABC):
     @abstractmethod
     async def list_by_session_id(self, session_id: str) -> list[PlaybackAuditEvent]:
         """List playback audit events for a viewer session."""
+        pass
+
+
+class FileAuditLogRepositoryPort(RepositoryPort[FileAuditLog], ABC):
+    """Port for persisting and querying FileAuditLog entries."""
+
+    @abstractmethod
+    async def list_by_file_id(self, file_record_id: str) -> list[FileAuditLog]:
+        """List audit log entries for a file record ordered by timestamp descending."""
         pass

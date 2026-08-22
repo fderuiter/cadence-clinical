@@ -6,6 +6,7 @@ Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -170,6 +171,7 @@ class FileRecord(BaseModel):
     uploaded_by: str = Field(min_length=1, max_length=255)
     uploaded_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     is_on_hold: bool = Field(default=False)
+    hold_reason: str | None = Field(default=None, max_length=1000)
     is_deleted: bool = Field(default=False)
 
     # File lifecycle and virus scan fields
@@ -283,3 +285,20 @@ class PlaybackAuditEvent(BaseModel):
     # GxP audit fields
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     reason_for_change: str = Field(min_length=5, max_length=1000)
+
+
+class FileAuditLog(BaseModel):
+    """Domain model representing an immutable Part 11 audit trail event for a file record.
+
+    Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
+    """
+
+    model_config = ConfigDict(strict=True, frozen=True)
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    file_record_id: str = Field(min_length=1, max_length=36)
+    action: str = Field(min_length=1, max_length=50)
+    user_id: str = Field(min_length=1, max_length=255)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    reason_for_change: str = Field(min_length=1, max_length=1000)
+    detail: dict[str, Any] | None = Field(default=None)

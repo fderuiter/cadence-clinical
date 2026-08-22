@@ -7,17 +7,21 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String, func
+from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from apps.fileshare.domain.models import (
+    FileAuditLog,
     FileRecord,
+    FileStatus,
     GuestLink,
     PermissionLevel,
     PlaybackAuditEvent,
     PlaybackEventSource,
     PlaybackEventType,
+    ScanStatus,
     ShareGrant,
     ShareScope,
     TranscodeStatus,
@@ -56,7 +60,21 @@ class FileRecordModel(Base):
         UTCDateTime, default=func.now(), nullable=False
     )
     is_on_hold: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    hold_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # File lifecycle and virus scan fields
+    status: Mapped[str] = mapped_column(
+        String(50), default="PENDING_SCAN", nullable=False, index=True
+    )
+    scan_status: Mapped[str] = mapped_column(
+        String(50), default="PENDING", nullable=False, index=True
+    )
+    scan_engine: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    scan_completed_at: Mapped[datetime | None] = mapped_column(
+        UTCDateTime, nullable=True
+    )
+    scan_threat_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Video transcoding metadata
     transcode_status: Mapped[str] = mapped_column(
@@ -82,6 +100,9 @@ class FileRecordModel(Base):
     playback_audit_logs: Mapped[list[PlaybackAuditLogModel]] = relationship(
         back_populates="file_record", cascade="all, delete-orphan"
     )
+    audit_logs: Mapped[list[FileAuditLogModel]] = relationship(
+        back_populates="file_record", cascade="all, delete-orphan"
+    )
 
     def to_domain(self) -> FileRecord:
         """Converts ORM model to pure domain model."""
@@ -98,7 +119,13 @@ class FileRecordModel(Base):
             uploaded_by=self.uploaded_by,
             uploaded_at=self.uploaded_at,
             is_on_hold=self.is_on_hold,
+            hold_reason=self.hold_reason,
             is_deleted=self.is_deleted,
+            status=FileStatus(self.status),
+            scan_status=ScanStatus(self.scan_status),
+            scan_engine=self.scan_engine,
+            scan_completed_at=self.scan_completed_at,
+            scan_threat_name=self.scan_threat_name,
             transcode_status=TranscodeStatus(self.transcode_status),
             hls_manifest_key=self.hls_manifest_key,
             transcode_error=self.transcode_error,
@@ -259,4 +286,42 @@ class PlaybackAuditLogModel(Base):
             timestamp=self.timestamp,
             created_at=self.created_at,
             reason_for_change=self.reason_for_change,
+        )
+
+
+class FileAuditLogModel(Base):
+    """Database table representing immutable audit trail entries for fileshare operations."""
+
+    __tablename__ = "file_audit_logs"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    file_record_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("file_records.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    action: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), nullable=False, index=True
+    )
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    detail: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+
+    # Relationships
+    file_record: Mapped[FileRecordModel] = relationship(back_populates="audit_logs")
+
+    def to_domain(self) -> FileAuditLog:
+        """Converts ORM model to pure domain model."""
+        return FileAuditLog(
+            id=self.id,
+            file_record_id=self.file_record_id,
+            action=self.action,
+            user_id=self.user_id,
+            timestamp=self.timestamp,
+            reason_for_change=self.reason_for_change,
+            detail=self.detail,
         )

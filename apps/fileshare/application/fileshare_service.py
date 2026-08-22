@@ -1,42 +1,56 @@
-"""Application service managing file uploads, downloads, permissions, and sharing.
-
-Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
-"""
-
+import asyncio
 import contextlib
 import hashlib
 import hmac
+import logging
 import os
 import secrets
 import uuid
+from collections.abc import AsyncIterable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from apps.fileshare.adapters.clamav_adapter import get_scan_adapter
+from apps.fileshare.adapters.notifications_client import (
+    NotificationCategory,
+    NotificationEvent,
+    NotificationPriority,
+    publish_notification,
+)
 from apps.fileshare.domain.exceptions import (
     FileNotFoundError,
+    FileOnHoldError,
+    FileQuarantinedError,
     FileSharePermissionDeniedError,
 )
 from apps.fileshare.domain.models import (
+    FileAuditLog,
     FileRecord,
+    FileStatus,
     GuestLink,
     PermissionLevel,
     PlaybackAuditEvent,
     PlaybackEventSource,
     PlaybackEventType,
+    ScanStatus,
     ShareGrant,
     ShareScope,
     TranscodeStatus,
     is_video_mime_type,
 )
 from apps.fileshare.ports.repository_port import (
+    FileAuditLogRepositoryPort,
     FileRecordRepositoryPort,
     GuestLinkRepositoryPort,
     PlaybackAuditRepositoryPort,
     ShareGrantRepositoryPort,
 )
+from apps.fileshare.ports.scan_port import ScanPort, ScanResult
 from apps.fileshare.workers.transcode_worker import enqueue_transcode_task
 from packages.storage.ports.storage_port import StoragePort
+
+logger = logging.getLogger("apps.fileshare.service")
 
 ADMIN_ROLES = {"super_admin", "sysadmin", "admin", "data_manager", "sponsor_admin"}
 
@@ -91,12 +105,38 @@ class FileShareService:
         guest_repo: GuestLinkRepositoryPort,
         storage_port: StoragePort[dict[str, Any]],
         audit_repo: PlaybackAuditRepositoryPort | None = None,
+        scan_port: ScanPort | None = None,
+        file_audit_repo: FileAuditLogRepositoryPort | None = None,
     ) -> None:
         self.file_repo = file_repo
         self.grant_repo = grant_repo
         self.guest_repo = guest_repo
         self.storage_port = storage_port
         self.audit_repo = audit_repo
+        self.scan_port = scan_port or get_scan_adapter()
+        self.file_audit_repo = file_audit_repo
+
+    async def record_audit_log(
+        self,
+        file_id: str,
+        action: str,
+        user_id: str,
+        reason_for_change: str,
+        detail: dict[str, Any] | None = None,
+    ) -> FileAuditLog | None:
+        """Record an immutable Part 11 audit log entry for a file action."""
+        if not self.file_audit_repo:
+            return None
+        entry = FileAuditLog(
+            id=str(uuid.uuid4()),
+            file_record_id=file_id,
+            action=action,
+            user_id=user_id,
+            timestamp=datetime.now(UTC),
+            reason_for_change=reason_for_change,
+            detail=detail,
+        )
+        return await self.file_audit_repo.save(entry)
 
     async def generate_upload_url(
         self,
@@ -120,12 +160,6 @@ class FileShareService:
         clean_filename = os.path.basename(filename).replace(" ", "_")
         object_key = f"{tenant_id}/{study_id}/{file_id}/{clean_filename}"
 
-        transcode_status = (
-            TranscodeStatus.PENDING
-            if is_video_mime_type(mime_type)
-            else TranscodeStatus.NOT_REQUIRED
-        )
-
         record = FileRecord(
             id=file_id,
             study_id=study_id,
@@ -139,8 +173,14 @@ class FileShareService:
             uploaded_by=uploader_id,
             uploaded_at=datetime.now(UTC),
             is_on_hold=False,
+            hold_reason=None,
             is_deleted=False,
-            transcode_status=transcode_status,
+            status=FileStatus.PENDING_SCAN,
+            scan_status=ScanStatus.PENDING,
+            scan_engine=None,
+            scan_completed_at=None,
+            scan_threat_name=None,
+            transcode_status=TranscodeStatus.NOT_REQUIRED,
             hls_manifest_key=None,
             transcode_error=None,
             created_at=datetime.now(UTC),
@@ -148,6 +188,14 @@ class FileShareService:
             reason_for_change=reason_for_change,
         )
         await self.file_repo.save(record)
+
+        await self.record_audit_log(
+            file_id=file_id,
+            action="FILE_UPLOADED",
+            user_id=uploader_id,
+            reason_for_change=reason_for_change,
+            detail={"filename": clean_filename, "size_bytes": size_bytes},
+        )
 
         metadata = {
             "file_id": file_id,
@@ -216,6 +264,15 @@ class FileShareService:
         file_record = await self.file_repo.get_by_id(file_id)
         if not file_record:
             raise FileNotFoundError(f"File record '{file_id}' not found.")
+
+        if (
+            file_record.status == FileStatus.QUARANTINED
+            or file_record.scan_status == ScanStatus.INFECTED
+        ):
+            raise FileQuarantinedError(
+                f"File '{file_record.filename}' is quarantined due to detected malware.",
+                reason="QUARANTINED",
+            )
 
         normalized_roles = {r.strip().lower() for r in caller_roles if r}
         is_admin = bool(normalized_roles.intersection(ADMIN_ROLES))
@@ -288,6 +345,15 @@ class FileShareService:
         file_record = await self.file_repo.get_by_id(file_id)
         if not file_record:
             raise FileNotFoundError(f"File record '{file_id}' not found.")
+
+        if (
+            file_record.status == FileStatus.QUARANTINED
+            or file_record.scan_status == ScanStatus.INFECTED
+        ):
+            raise FileQuarantinedError(
+                f"Cannot share quarantined file '{file_record.filename}'.",
+                reason="QUARANTINED",
+            )
 
         normalized_roles = {r.strip().lower() for r in grantor_roles if r}
         is_admin = bool(normalized_roles.intersection(ADMIN_ROLES))
@@ -388,6 +454,15 @@ class FileShareService:
         if not file_record:
             raise FileNotFoundError(f"File record '{file_id}' not found.")
 
+        if (
+            file_record.status == FileStatus.QUARANTINED
+            or file_record.scan_status == ScanStatus.INFECTED
+        ):
+            raise FileQuarantinedError(
+                f"Cannot generate guest link for quarantined file '{file_record.filename}'.",
+                reason="QUARANTINED",
+            )
+
         raw_secret_token = secrets.token_urlsafe(32)
         token_hmac = hmac.new(
             os.getenv("GATEWAY_SECRET", "default-guest-secret").encode(),
@@ -446,6 +521,15 @@ class FileShareService:
         file_record = await self.file_repo.get_by_id(guest_link.file_record_id)
         if not file_record or file_record.is_deleted:
             raise FileNotFoundError("Associated file record not found.")
+
+        if (
+            file_record.status == FileStatus.QUARANTINED
+            or file_record.scan_status == ScanStatus.INFECTED
+        ):
+            raise FileQuarantinedError(
+                f"File '{file_record.filename}' is quarantined and cannot be accessed.",
+                reason="QUARANTINED",
+            )
 
         # Update download counter and access timestamp
         updated_guest_link = GuestLink(
@@ -531,20 +615,176 @@ class FileShareService:
         self,
         file_id: str,
         caller_user_id: str,
+        upload_id: str | None = None,
         parts: list[dict[str, Any]] | None = None,
         checksum_sha256: str | None = None,
-        reason_for_change: str = "Completed file upload",
+        reason_for_change: str = "Completed file upload and virus scan",
     ) -> FileRecord:
-        """Completes upload session, finalizes multipart upload if needed, and enqueues video transcoding."""
+        """Completes upload session, finalizes multipart upload if needed, streams payload through ScanPort, and applies quarantine or transcode lifecycle."""
         file_record = await self.file_repo.get_by_id(file_id)
-        if not file_record:
+        if not file_record or file_record.is_deleted:
             raise FileNotFoundError(f"File record '{file_id}' not found.")
 
-        is_video = is_video_mime_type(file_record.mime_type)
-        transcode_status = (
-            TranscodeStatus.PENDING if is_video else file_record.transcode_status
-        )
+        # 1. Finalize multipart upload if upload_id and parts provided
+        if upload_id and parts:
+            await self.storage_port.complete_multipart_upload(
+                key=file_record.object_key,
+                upload_id=upload_id,
+                parts=parts,
+            )
 
+        # 2. Stream object bytes through virus scanner with exponential retry on scanner errors
+        async def _stream_generator() -> AsyncIterable[bytes]:
+            data, _ = await self.storage_port.get_object(file_record.object_key)
+            chunk_size = 65536
+            for i in range(0, len(data), chunk_size):
+                yield data[i : i + chunk_size]
+
+        scan_result = None
+        for attempt in range(3):
+            scan_result = await self.scan_port.scan_stream(_stream_generator())
+            if scan_result.status != ScanStatus.SCAN_ERROR:
+                break
+            if attempt < 2:
+                await asyncio.sleep(0.05 * (2**attempt))
+
+        if scan_result is None:
+            scan_result = ScanResult(
+                status=ScanStatus.SCAN_ERROR,
+                engine="clamav-1.3",
+                details="No scan result returned",
+            )
+
+        now = datetime.now(UTC)
+
+        # 3. Handle CLEAN outcome
+        if scan_result.status == ScanStatus.CLEAN:
+            is_video = is_video_mime_type(file_record.mime_type)
+            new_status = FileStatus.PENDING_TRANSCODE if is_video else FileStatus.READY
+            new_transcode_status = (
+                TranscodeStatus.PENDING if is_video else TranscodeStatus.NOT_REQUIRED
+            )
+
+            updated_record = FileRecord(
+                id=file_record.id,
+                study_id=file_record.study_id,
+                site_id=file_record.site_id,
+                filename=file_record.filename,
+                mime_type=file_record.mime_type,
+                size_bytes=file_record.size_bytes,
+                object_key=file_record.object_key,
+                checksum_sha256=checksum_sha256 or file_record.checksum_sha256,
+                version_index=file_record.version_index,
+                uploaded_by=file_record.uploaded_by,
+                uploaded_at=file_record.uploaded_at,
+                is_on_hold=file_record.is_on_hold,
+                is_deleted=False,
+                status=new_status,
+                scan_status=ScanStatus.CLEAN,
+                scan_engine=scan_result.engine,
+                scan_completed_at=now,
+                scan_threat_name=None,
+                transcode_status=new_transcode_status,
+                hls_manifest_key=file_record.hls_manifest_key,
+                transcode_error=file_record.transcode_error,
+                created_at=file_record.created_at,
+                created_by=file_record.created_by,
+                reason_for_change=reason_for_change,
+            )
+            saved = await self.file_repo.save(updated_record)
+
+            if is_video:
+                with contextlib.suppress(Exception):
+                    await enqueue_transcode_task(file_id)
+
+            return saved
+
+        # 4. Handle INFECTED outcome
+        if scan_result.status == ScanStatus.INFECTED:
+            threat_name = scan_result.threat_name or "Malware.Detected"
+            quarantine_key = f"quarantine/{file_record.object_key}"
+
+            # Relocate object to quarantine prefix in storage
+            with contextlib.suppress(Exception):
+                data, sha = await self.storage_port.get_object(file_record.object_key)
+                await self.storage_port.put_object(
+                    key=quarantine_key,
+                    data=data,
+                    content_type=file_record.mime_type,
+                    metadata={
+                        "quarantine_threat": threat_name,
+                        "original_key": file_record.object_key,
+                    },
+                )
+                await self.storage_port.delete_object(file_record.object_key)
+
+            updated_record = FileRecord(
+                id=file_record.id,
+                study_id=file_record.study_id,
+                site_id=file_record.site_id,
+                filename=file_record.filename,
+                mime_type=file_record.mime_type,
+                size_bytes=file_record.size_bytes,
+                object_key=quarantine_key,
+                checksum_sha256=checksum_sha256 or file_record.checksum_sha256,
+                version_index=file_record.version_index,
+                uploaded_by=file_record.uploaded_by,
+                uploaded_at=file_record.uploaded_at,
+                is_on_hold=file_record.is_on_hold,
+                is_deleted=False,
+                status=FileStatus.QUARANTINED,
+                scan_status=ScanStatus.INFECTED,
+                scan_engine=scan_result.engine,
+                scan_completed_at=now,
+                scan_threat_name=threat_name,
+                transcode_status=TranscodeStatus.FAILED,
+                hls_manifest_key=None,
+                transcode_error=f"Quarantined malware: {threat_name}",
+                created_at=file_record.created_at,
+                created_by=file_record.created_by,
+                reason_for_change=f"Quarantined due to malware detection: {threat_name}",
+            )
+            saved = await self.file_repo.save(updated_record)
+
+            # Alert uploader
+            with contextlib.suppress(Exception):
+                await publish_notification(
+                    NotificationEvent(
+                        recipient_user_id=file_record.uploaded_by,
+                        category=NotificationCategory.ALERTS,
+                        priority=NotificationPriority.CRITICAL,
+                        channels="IN_APP,EMAIL",
+                        message_content=(
+                            f"Security Alert: File '{file_record.filename}' uploaded to study "
+                            f"'{file_record.study_id}' failed virus scanning and has been quarantined. "
+                            f"Threat detected: {threat_name}."
+                        ),
+                        related_entity_id=file_record.id,
+                        related_entity_type="file_record",
+                    )
+                )
+
+            # Alert super_admin
+            with contextlib.suppress(Exception):
+                await publish_notification(
+                    NotificationEvent(
+                        recipient_role="super_admin",
+                        category=NotificationCategory.ALERTS,
+                        priority=NotificationPriority.CRITICAL,
+                        channels="IN_APP,EMAIL",
+                        message_content=(
+                            f"Malware Detected: User '{file_record.uploaded_by}' uploaded infected file "
+                            f"'{file_record.filename}' (ID: {file_record.id}) to study "
+                            f"'{file_record.study_id}'. Threat: {threat_name}. File has been quarantined."
+                        ),
+                        related_entity_id=file_record.id,
+                        related_entity_type="file_record",
+                    )
+                )
+
+            return saved
+
+        # 5. Handle SCAN_ERROR (all retries failed)
         updated_record = FileRecord(
             id=file_record.id,
             study_id=file_record.study_id,
@@ -556,20 +796,40 @@ class FileShareService:
             checksum_sha256=checksum_sha256 or file_record.checksum_sha256,
             version_index=file_record.version_index,
             uploaded_by=file_record.uploaded_by,
-            uploaded_at=datetime.now(UTC),
+            uploaded_at=file_record.uploaded_at,
             is_on_hold=file_record.is_on_hold,
             is_deleted=False,
-            transcode_status=transcode_status,
+            status=FileStatus.PENDING_SCAN,
+            scan_status=ScanStatus.SCAN_ERROR,
+            scan_engine=scan_result.engine,
+            scan_completed_at=now,
+            scan_threat_name=None,
+            transcode_status=file_record.transcode_status,
             hls_manifest_key=file_record.hls_manifest_key,
             transcode_error=file_record.transcode_error,
             created_at=file_record.created_at,
             created_by=file_record.created_by,
-            reason_for_change=reason_for_change,
+            reason_for_change="Virus scan failed after retry attempts",
         )
         saved = await self.file_repo.save(updated_record)
 
-        if is_video:
-            await enqueue_transcode_task(file_id)
+        # Alert super_admin regarding engine unavailability
+        with contextlib.suppress(Exception):
+            await publish_notification(
+                NotificationEvent(
+                    recipient_role="super_admin",
+                    category=NotificationCategory.ALERTS,
+                    priority=NotificationPriority.HIGH,
+                    channels="IN_APP",
+                    message_content=(
+                        f"Virus Scan Failure: File '{file_record.filename}' (ID: {file_record.id}) "
+                        f"could not be scanned after 3 attempts due to ClamAV engine error. "
+                        f"File remains in PENDING_SCAN state."
+                    ),
+                    related_entity_id=file_record.id,
+                    related_entity_type="file_record",
+                )
+            )
 
         return saved
 
@@ -605,6 +865,11 @@ class FileShareService:
             uploaded_at=file_record.uploaded_at,
             is_on_hold=file_record.is_on_hold,
             is_deleted=True,
+            status=file_record.status,
+            scan_status=file_record.scan_status,
+            scan_engine=file_record.scan_engine,
+            scan_completed_at=file_record.scan_completed_at,
+            scan_threat_name=file_record.scan_threat_name,
             transcode_status=file_record.transcode_status,
             hls_manifest_key=file_record.hls_manifest_key,
             transcode_error=file_record.transcode_error,
@@ -628,6 +893,15 @@ class FileShareService:
         file_record = await self.file_repo.get_by_id(file_id)
         if not file_record:
             raise FileNotFoundError(f"File record '{file_id}' not found.")
+
+        if (
+            file_record.status == FileStatus.QUARANTINED
+            or file_record.scan_status == ScanStatus.INFECTED
+        ):
+            raise FileQuarantinedError(
+                f"File '{file_record.filename}' is quarantined and cannot be streamed.",
+                reason="QUARANTINED",
+            )
 
         normalized_roles = {r.strip().lower() for r in caller_roles if r}
         is_admin = bool(normalized_roles.intersection(ADMIN_ROLES))
@@ -717,3 +991,224 @@ class FileShareService:
         if self.audit_repo:
             return await self.audit_repo.save(audit_event)
         return audit_event
+
+    async def set_hold(
+        self,
+        file_id: str,
+        caller_user_id: str,
+        caller_roles: list[str],
+        reason_for_change: str,
+        hold_reason: str | None = None,
+    ) -> FileRecord:
+        """Place a file on legal/regulatory retention hold.
+
+        Requires super_admin or data_manager role.
+        Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
+        """
+        normalized_roles = {r.strip().lower() for r in caller_roles if r}
+        hold_roles = {
+            "super_admin",
+            "data_manager",
+            "sponsor_admin",
+            "admin",
+            "sysadmin",
+        }
+        if not normalized_roles.intersection(hold_roles):
+            raise FileSharePermissionDeniedError(
+                "Only super_admin or data_manager can place a file on retention hold."
+            )
+
+        file_record = await self.file_repo.get_by_id(file_id)
+        if not file_record or file_record.is_deleted:
+            raise FileNotFoundError(f"File record '{file_id}' not found.")
+
+        effective_hold_reason = hold_reason or reason_for_change
+
+        updated = FileRecord(
+            id=file_record.id,
+            study_id=file_record.study_id,
+            site_id=file_record.site_id,
+            filename=file_record.filename,
+            mime_type=file_record.mime_type,
+            size_bytes=file_record.size_bytes,
+            object_key=file_record.object_key,
+            checksum_sha256=file_record.checksum_sha256,
+            version_index=file_record.version_index,
+            uploaded_by=file_record.uploaded_by,
+            uploaded_at=file_record.uploaded_at,
+            is_on_hold=True,
+            hold_reason=effective_hold_reason,
+            is_deleted=file_record.is_deleted,
+            status=file_record.status,
+            scan_status=file_record.scan_status,
+            scan_engine=file_record.scan_engine,
+            scan_completed_at=file_record.scan_completed_at,
+            scan_threat_name=file_record.scan_threat_name,
+            transcode_status=file_record.transcode_status,
+            hls_manifest_key=file_record.hls_manifest_key,
+            transcode_error=file_record.transcode_error,
+            created_at=file_record.created_at,
+            created_by=file_record.created_by,
+            reason_for_change=reason_for_change,
+        )
+        saved = await self.file_repo.save(updated)
+
+        await self.record_audit_log(
+            file_id=file_id,
+            action="HOLD_SET",
+            user_id=caller_user_id,
+            reason_for_change=reason_for_change,
+            detail={"hold_reason": effective_hold_reason},
+        )
+        return saved
+
+    async def clear_hold(
+        self,
+        file_id: str,
+        caller_user_id: str,
+        caller_roles: list[str],
+        reason_for_change: str,
+    ) -> FileRecord:
+        """Remove legal/regulatory retention hold from a file.
+
+        Requires super_admin or data_manager role.
+        Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
+        """
+        normalized_roles = {r.strip().lower() for r in caller_roles if r}
+        hold_roles = {
+            "super_admin",
+            "data_manager",
+            "sponsor_admin",
+            "admin",
+            "sysadmin",
+        }
+        if not normalized_roles.intersection(hold_roles):
+            raise FileSharePermissionDeniedError(
+                "Only super_admin or data_manager can remove retention hold."
+            )
+
+        file_record = await self.file_repo.get_by_id(file_id)
+        if not file_record or file_record.is_deleted:
+            raise FileNotFoundError(f"File record '{file_id}' not found.")
+
+        updated = FileRecord(
+            id=file_record.id,
+            study_id=file_record.study_id,
+            site_id=file_record.site_id,
+            filename=file_record.filename,
+            mime_type=file_record.mime_type,
+            size_bytes=file_record.size_bytes,
+            object_key=file_record.object_key,
+            checksum_sha256=file_record.checksum_sha256,
+            version_index=file_record.version_index,
+            uploaded_by=file_record.uploaded_by,
+            uploaded_at=file_record.uploaded_at,
+            is_on_hold=False,
+            hold_reason=None,
+            is_deleted=file_record.is_deleted,
+            status=file_record.status,
+            scan_status=file_record.scan_status,
+            scan_engine=file_record.scan_engine,
+            scan_completed_at=file_record.scan_completed_at,
+            scan_threat_name=file_record.scan_threat_name,
+            transcode_status=file_record.transcode_status,
+            hls_manifest_key=file_record.hls_manifest_key,
+            transcode_error=file_record.transcode_error,
+            created_at=file_record.created_at,
+            created_by=file_record.created_by,
+            reason_for_change=reason_for_change,
+        )
+        saved = await self.file_repo.save(updated)
+
+        await self.record_audit_log(
+            file_id=file_id,
+            action="HOLD_CLEARED",
+            user_id=caller_user_id,
+            reason_for_change=reason_for_change,
+        )
+        return saved
+
+    async def delete_file(
+        self,
+        file_id: str,
+        caller_user_id: str,
+        caller_roles: list[str],
+        reason_for_change: str,
+    ) -> FileRecord:
+        """Perform soft delete on a file record.
+
+        Gated on FileRecord.is_on_hold being False.
+        Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
+        """
+        file_record = await self.file_repo.get_by_id(file_id)
+        if not file_record or file_record.is_deleted:
+            raise FileNotFoundError(f"File record '{file_id}' not found.")
+
+        if file_record.is_on_hold:
+            raise FileOnHoldError("File is under retention hold and cannot be deleted.")
+
+        normalized_roles = {r.strip().lower() for r in caller_roles if r}
+        is_admin = bool(normalized_roles.intersection(ADMIN_ROLES))
+        is_uploader = file_record.uploaded_by == caller_user_id
+
+        if not is_admin and not is_uploader:
+            user_grant = await self.grant_repo.find_user_grant(file_id, caller_user_id)
+            if not user_grant or not user_grant.permission_level.satisfies(
+                PermissionLevel.ADMIN
+            ):
+                raise FileSharePermissionDeniedError(
+                    "Caller lacks permission to delete this file."
+                )
+
+        updated = FileRecord(
+            id=file_record.id,
+            study_id=file_record.study_id,
+            site_id=file_record.site_id,
+            filename=file_record.filename,
+            mime_type=file_record.mime_type,
+            size_bytes=file_record.size_bytes,
+            object_key=file_record.object_key,
+            checksum_sha256=file_record.checksum_sha256,
+            version_index=file_record.version_index,
+            uploaded_by=file_record.uploaded_by,
+            uploaded_at=file_record.uploaded_at,
+            is_on_hold=file_record.is_on_hold,
+            hold_reason=file_record.hold_reason,
+            is_deleted=True,
+            status=file_record.status,
+            scan_status=file_record.scan_status,
+            scan_engine=file_record.scan_engine,
+            scan_completed_at=file_record.scan_completed_at,
+            scan_threat_name=file_record.scan_threat_name,
+            transcode_status=file_record.transcode_status,
+            hls_manifest_key=file_record.hls_manifest_key,
+            transcode_error=file_record.transcode_error,
+            created_at=file_record.created_at,
+            created_by=file_record.created_by,
+            reason_for_change=reason_for_change,
+        )
+        saved = await self.file_repo.save(updated)
+
+        await self.record_audit_log(
+            file_id=file_id,
+            action="FILE_DELETED",
+            user_id=caller_user_id,
+            reason_for_change=reason_for_change,
+        )
+        return saved
+
+    async def list_audit_logs(
+        self,
+        file_id: str,
+        caller_user_id: str,
+        caller_roles: list[str],
+    ) -> list[FileAuditLog]:
+        """List audit log entries for a file record."""
+        file_record = await self.file_repo.get_by_id(file_id)
+        if not file_record:
+            raise FileNotFoundError(f"File record '{file_id}' not found.")
+
+        if not self.file_audit_repo:
+            return []
+
+        return await self.file_audit_repo.list_by_file_id(file_id)

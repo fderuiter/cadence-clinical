@@ -188,11 +188,21 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                       JSON response if validation fails.
         """
         if (
-            request.url.path in ("/health", "/api/v1/etmf/inbound-email")
+            request.url.path
+            in (
+                "/health",
+                "/api/v1/etmf/inbound-email",
+                "/api/v1/fileshare/audit/playback",
+                "/api/v1/files/audit/playback",
+            )
             or request.url.path.startswith("/api/v1/fileshare/guest/")
             or request.url.path.startswith("/api/v1/files/guest/")
             or request.url.path.startswith("/api/v1/fileshare/files/guest/")
         ):
+            user_hdr = request.headers.get("X-User-Id")
+            if user_hdr:
+                current_user_id.set(user_hdr)
+                request.state.user_id = user_hdr
             return await call_next(request)
 
         is_mutation = request.method in ("POST", "PUT", "DELETE", "PATCH")

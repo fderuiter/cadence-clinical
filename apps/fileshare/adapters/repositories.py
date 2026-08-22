@@ -7,18 +7,21 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.fileshare.domain.models import (
+    FileAuditLog,
     FileRecord,
     GuestLink,
     PlaybackAuditEvent,
     ShareGrant,
 )
 from apps.fileshare.infrastructure.models import (
+    FileAuditLogModel,
     FileRecordModel,
     GuestLinkModel,
     PlaybackAuditLogModel,
     ShareGrantModel,
 )
 from apps.fileshare.ports.repository_port import (
+    FileAuditLogRepositoryPort,
     FileRecordRepositoryPort,
     GuestLinkRepositoryPort,
     PlaybackAuditRepositoryPort,
@@ -94,7 +97,13 @@ class SqlAlchemyFileRecordRepository(FileRecordRepositoryPort):
                 uploaded_by=entity.uploaded_by,
                 uploaded_at=entity.uploaded_at,
                 is_on_hold=entity.is_on_hold,
+                hold_reason=entity.hold_reason,
                 is_deleted=entity.is_deleted,
+                status=entity.status.value,
+                scan_status=entity.scan_status.value,
+                scan_engine=entity.scan_engine,
+                scan_completed_at=entity.scan_completed_at,
+                scan_threat_name=entity.scan_threat_name,
                 transcode_status=entity.transcode_status.value,
                 hls_manifest_key=entity.hls_manifest_key,
                 transcode_error=entity.transcode_error,
@@ -111,7 +120,13 @@ class SqlAlchemyFileRecordRepository(FileRecordRepositoryPort):
             existing.checksum_sha256 = entity.checksum_sha256
             existing.version_index = entity.version_index
             existing.is_on_hold = entity.is_on_hold
+            existing.hold_reason = entity.hold_reason
             existing.is_deleted = entity.is_deleted
+            existing.status = entity.status.value
+            existing.scan_status = entity.scan_status.value
+            existing.scan_engine = entity.scan_engine
+            existing.scan_completed_at = entity.scan_completed_at
+            existing.scan_threat_name = entity.scan_threat_name
             existing.transcode_status = entity.transcode_status.value
             existing.hls_manifest_key = entity.hls_manifest_key
             existing.transcode_error = entity.transcode_error
@@ -121,7 +136,10 @@ class SqlAlchemyFileRecordRepository(FileRecordRepositoryPort):
         return entity
 
     async def delete(self, entity_id: str) -> bool:
-        stmt = select(FileRecordModel).where(FileRecordModel.id == entity_id)
+        stmt = select(FileRecordModel).where(
+            FileRecordModel.id == entity_id,
+            FileRecordModel.is_on_hold.is_(False),
+        )
         res = await self.session.execute(stmt)
         existing = res.scalar_one_or_none()
         if existing:
@@ -336,6 +354,64 @@ class SqlAlchemyPlaybackAuditRepository(PlaybackAuditRepositoryPort):
         stmt = select(PlaybackAuditLogModel).where(
             PlaybackAuditLogModel.id == entity_id
         )
+        res = await self.session.execute(stmt)
+        existing = res.scalar_one_or_none()
+        if existing:
+            await self.session.delete(existing)
+            await self.session.flush()
+            return True
+        return False
+
+
+class SqlAlchemyFileAuditLogRepository(FileAuditLogRepositoryPort):
+    """SQLAlchemy implementation of FileAuditLogRepositoryPort."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def get_by_id(self, entity_id: str) -> FileAuditLog | None:
+        stmt = select(FileAuditLogModel).where(FileAuditLogModel.id == entity_id)
+        res = await self.session.execute(stmt)
+        model = res.scalar_one_or_none()
+        return model.to_domain() if model else None
+
+    async def list_by_file_id(self, file_record_id: str) -> list[FileAuditLog]:
+        stmt = (
+            select(FileAuditLogModel)
+            .where(FileAuditLogModel.file_record_id == file_record_id)
+            .order_by(FileAuditLogModel.timestamp.desc())
+        )
+        res = await self.session.execute(stmt)
+        return [m.to_domain() for m in res.scalars().all()]
+
+    async def save(self, entity: FileAuditLog) -> FileAuditLog:
+        stmt = select(FileAuditLogModel).where(FileAuditLogModel.id == entity.id)
+        res = await self.session.execute(stmt)
+        existing = res.scalar_one_or_none()
+
+        if existing is None:
+            model = FileAuditLogModel(
+                id=entity.id,
+                file_record_id=entity.file_record_id,
+                action=entity.action,
+                user_id=entity.user_id,
+                timestamp=entity.timestamp,
+                reason_for_change=entity.reason_for_change,
+                detail=entity.detail,
+            )
+            self.session.add(model)
+        else:
+            existing.action = entity.action
+            existing.user_id = entity.user_id
+            existing.timestamp = entity.timestamp
+            existing.reason_for_change = entity.reason_for_change
+            existing.detail = entity.detail
+
+        await self.session.flush()
+        return entity
+
+    async def delete(self, entity_id: str) -> bool:
+        stmt = select(FileAuditLogModel).where(FileAuditLogModel.id == entity_id)
         res = await self.session.execute(stmt)
         existing = res.scalar_one_or_none()
         if existing:

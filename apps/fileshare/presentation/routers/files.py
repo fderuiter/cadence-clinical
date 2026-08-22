@@ -6,8 +6,10 @@ Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.fileshare.adapters.clamav_adapter import get_scan_adapter
 from apps.fileshare.adapters.database import get_db_session
 from apps.fileshare.adapters.repositories import (
+    SqlAlchemyFileAuditLogRepository,
     SqlAlchemyFileRecordRepository,
     SqlAlchemyGuestLinkRepository,
     SqlAlchemyPlaybackAuditRepository,
@@ -62,13 +64,17 @@ def get_fileshare_service(
     grant_repo = SqlAlchemyShareGrantRepository(session)
     guest_repo = SqlAlchemyGuestLinkRepository(session)
     audit_repo = SqlAlchemyPlaybackAuditRepository(session)
+    file_audit_repo = SqlAlchemyFileAuditLogRepository(session)
     storage_port = get_storage_adapter()
+    scan_port = get_scan_adapter()
     return FileShareService(
         file_repo=file_repo,
         grant_repo=grant_repo,
         guest_repo=guest_repo,
         storage_port=storage_port,
         audit_repo=audit_repo,
+        scan_port=scan_port,
+        file_audit_repo=file_audit_repo,
     )
 
 
@@ -737,13 +743,19 @@ audit_alias_router = APIRouter(prefix="/api/v1/files/audit", tags=["Fileshare Au
 )
 async def record_playback_checkpoint(
     payload: PlaybackAuditCreateRequest,
+    request: Request,
     service: FileShareService = Depends(get_fileshare_service),
 ) -> PlaybackAuditResponse:
     """Record a viewer session video playback checkpoint audit event.
 
     Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
     """
-    user_id = current_user_id.get() or "guest_viewer"
+    user_id = (
+        request.headers.get("X-User-Id")
+        or getattr(request.state, "user_id", None)
+        or (current_user_id.get() if current_user_id.get() != "system" else None)
+        or "guest_viewer"
+    )
     try:
         event = await service.record_playback_audit(
             file_id=payload.file_record_id,

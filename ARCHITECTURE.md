@@ -219,6 +219,8 @@ flowchart TD
         notifications[notifications - Notifications & Webhooks Dispatcher]
         econsent[econsent - Electronic Consent Service]
         fileshare[fileshare - Fileshare & Media Service]
+        fileshare-transcoder[fileshare-transcoder - Media Transcoding Worker]
+        clamav[clamav - Antivirus Scanning Engine]
 
         %% Databases & Object Storage
         postgres[(postgres - Relational Database)]
@@ -274,8 +276,11 @@ flowchart TD
     econsent --> sqlite_econsent
     fileshare --> sqlite_fileshare
 
-    %% Object Storage
+    %% Object Storage & Workers
     fileshare --> minio
+    fileshare-transcoder --> minio
+    fileshare --> fileshare-transcoder
+    fileshare --> clamav
 
     %% Inter-service events
     etmf -->|Sync Webhooks / Email| notifications

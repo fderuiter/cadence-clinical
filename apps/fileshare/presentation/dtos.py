@@ -9,9 +9,11 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from apps.fileshare.domain.models import (
+    FileStatus,
     PermissionLevel,
     PlaybackEventSource,
     PlaybackEventType,
+    ScanStatus,
     ShareScope,
     TranscodeStatus,
 )
@@ -53,10 +55,11 @@ class UploadCompleteRequest(BaseModel):
 
     model_config = ConfigDict(strict=True)
 
+    upload_id: str | None = None
     parts: list[dict[str, Any]] | None = None
     checksum_sha256: str | None = Field(default=None, min_length=64, max_length=64)
     reason_for_change: str = Field(
-        default="Completed file upload", min_length=5, max_length=1000
+        default="Completed file upload and virus scan", min_length=5, max_length=1000
     )
 
 
@@ -103,6 +106,12 @@ class FileRecordResponse(BaseModel):
     uploaded_by: str
     uploaded_at: datetime
     is_on_hold: bool
+    hold_reason: str | None = None
+    status: FileStatus = FileStatus.PENDING_SCAN
+    scan_status: ScanStatus = ScanStatus.PENDING
+    scan_engine: str | None = None
+    scan_completed_at: datetime | None = None
+    scan_threat_name: str | None = None
     transcode_status: TranscodeStatus = TranscodeStatus.NOT_REQUIRED
     hls_manifest_key: str | None = None
     transcode_error: str | None = None
@@ -194,3 +203,44 @@ class PlaybackAuditResponse(BaseModel):
     timestamp: datetime
     created_at: datetime
     reason_for_change: str
+
+
+class FileHoldRequest(BaseModel):
+    """Request payload to place a file on retention hold."""
+
+    model_config = ConfigDict(strict=True)
+
+    reason_for_change: str = Field(min_length=5, max_length=1000)
+    hold_reason: str | None = Field(default=None, max_length=1000)
+
+
+class FileHoldClearRequest(BaseModel):
+    """Request payload to remove retention hold from a file."""
+
+    model_config = ConfigDict(strict=True)
+
+    reason_for_change: str = Field(min_length=5, max_length=1000)
+
+
+class FileDeleteRequest(BaseModel):
+    """Request payload to delete a file record."""
+
+    model_config = ConfigDict(strict=True)
+
+    reason_for_change: str = Field(
+        default="Deleting file record", min_length=5, max_length=1000
+    )
+
+
+class FileAuditLogResponse(BaseModel):
+    """Response schema for file Part 11 audit trail entries."""
+
+    model_config = ConfigDict(strict=True, from_attributes=True)
+
+    id: str
+    file_record_id: str
+    action: str
+    user_id: str
+    timestamp: datetime
+    reason_for_change: str
+    detail: dict[str, Any] | None = None

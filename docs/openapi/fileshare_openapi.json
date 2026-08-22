@@ -89,6 +89,177 @@
         }
       }
     },
+    "/api/v1/fileshare/files/{file_id}/complete-upload": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Complete File Upload",
+        "description": "Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
+        "operationId": "complete_file_upload_api_v1_fileshare_files__file_id__complete_upload_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/UploadCompleteRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/abort-upload": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Abort File Upload",
+        "description": "Abort multipart upload session and mark file record deleted.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "abort_file_upload_api_v1_fileshare_files__file_id__abort_upload_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "upload_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Upload Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fileshare/files/{file_id}/stream-url": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get Stream Url",
+        "description": "Issue short-lived presigned HLS master manifest stream URL for video playback.\n\nReturns HTTP 200 with presigned URL when transcoding is READY,\nHTTP 202 Accepted when transcoding is PENDING or IN_PROGRESS,\nHTTP 409 Conflict when transcoding has FAILED,\nand HTTP 400 Bad Request when transcoding was NOT_REQUIRED.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "get_stream_url_api_v1_fileshare_files__file_id__stream_url_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HLS master manifest presigned URL is ready for streaming.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamUrlResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Video transcoding is pending or in progress."
+          },
+          "400": {
+            "description": "Transcoding is not required for non-video file."
+          },
+          "409": {
+            "description": "Video transcoding failed."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/fileshare/files/{file_id}/download-url": {
       "get": {
         "tags": [
@@ -728,6 +899,177 @@
         }
       }
     },
+    "/api/v1/files/{file_id}/complete-upload": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Complete File Upload",
+        "description": "Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
+        "operationId": "complete_file_upload_api_v1_files__file_id__complete_upload_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/UploadCompleteRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/abort-upload": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Abort File Upload",
+        "description": "Abort multipart upload session and mark file record deleted.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "abort_file_upload_api_v1_files__file_id__abort_upload_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "upload_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Upload Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{file_id}/stream-url": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get Stream Url",
+        "description": "Issue short-lived presigned HLS master manifest stream URL for video playback.\n\nReturns HTTP 200 with presigned URL when transcoding is READY,\nHTTP 202 Accepted when transcoding is PENDING or IN_PROGRESS,\nHTTP 409 Conflict when transcoding has FAILED,\nand HTTP 400 Bad Request when transcoding was NOT_REQUIRED.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "get_stream_url_api_v1_files__file_id__stream_url_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HLS master manifest presigned URL is ready for streaming.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamUrlResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Video transcoding is pending or in progress."
+          },
+          "400": {
+            "description": "Transcoding is not required for non-video file."
+          },
+          "409": {
+            "description": "Video transcoding failed."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/files/{file_id}/download-url": {
       "get": {
         "tags": [
@@ -1283,6 +1625,90 @@
         }
       }
     },
+    "/api/v1/fileshare/audit/playback": {
+      "post": {
+        "tags": [
+          "Fileshare Audit"
+        ],
+        "summary": "Record Playback Checkpoint",
+        "description": "Record a viewer session video playback checkpoint audit event.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "record_playback_checkpoint_api_v1_fileshare_audit_playback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaybackAuditCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaybackAuditResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/audit/playback": {
+      "post": {
+        "tags": [
+          "Fileshare Audit"
+        ],
+        "summary": "Record Playback Checkpoint",
+        "description": "Record a viewer session video playback checkpoint audit event.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11",
+        "operationId": "record_playback_checkpoint_api_v1_files_audit_playback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaybackAuditCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaybackAuditResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/fileshare/guest/{token}": {
       "get": {
         "tags": [
@@ -1466,6 +1892,32 @@
           "is_on_hold": {
             "type": "boolean",
             "title": "Is On Hold"
+          },
+          "transcode_status": {
+            "$ref": "#/components/schemas/TranscodeStatus",
+            "default": "NOT_REQUIRED"
+          },
+          "hls_manifest_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hls Manifest Key"
+          },
+          "transcode_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcode Error"
           },
           "created_at": {
             "type": "string",
@@ -1757,6 +2209,131 @@
         "title": "PermissionLevel",
         "description": "Granular permission levels for file sharing."
       },
+      "PlaybackAuditCreateRequest": {
+        "properties": {
+          "file_record_id": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "File Record Id"
+          },
+          "event": {
+            "$ref": "#/components/schemas/PlaybackEventType"
+          },
+          "source": {
+            "$ref": "#/components/schemas/PlaybackEventSource",
+            "default": "internal"
+          },
+          "session_id": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Session Id"
+          },
+          "guest_token": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guest Token"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change",
+            "default": "Video playback checkpoint audit event"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_record_id",
+          "event",
+          "session_id"
+        ],
+        "title": "PlaybackAuditCreateRequest",
+        "description": "Request payload to log a viewer playback audit checkpoint event."
+      },
+      "PlaybackAuditResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "file_record_id": {
+            "type": "string",
+            "title": "File Record Id"
+          },
+          "event": {
+            "$ref": "#/components/schemas/PlaybackEventType"
+          },
+          "source": {
+            "$ref": "#/components/schemas/PlaybackEventSource"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "file_record_id",
+          "event",
+          "source",
+          "session_id",
+          "user_id",
+          "timestamp",
+          "created_at",
+          "reason_for_change"
+        ],
+        "title": "PlaybackAuditResponse",
+        "description": "Response schema for logged video playback audit checkpoint events."
+      },
+      "PlaybackEventSource": {
+        "type": "string",
+        "enum": [
+          "internal",
+          "guest_link"
+        ],
+        "title": "PlaybackEventSource",
+        "description": "Origin source of video playback session."
+      },
+      "PlaybackEventType": {
+        "type": "string",
+        "enum": [
+          "PLAY_START",
+          "PLAY_25",
+          "PLAY_50",
+          "PLAY_75",
+          "PLAY_END"
+        ],
+        "title": "PlaybackEventType",
+        "description": "Types of viewer session video playback audit checkpoint events."
+      },
       "ShareGrantCreateRequest": {
         "properties": {
           "granted_to_user_id": {
@@ -1907,6 +2484,105 @@
         ],
         "title": "ShareScope",
         "description": "Scope of access granted by a share grant."
+      },
+      "StreamUrlResponse": {
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "title": "File Id"
+          },
+          "stream_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stream Url"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In",
+            "default": 300
+          },
+          "transcode_status": {
+            "$ref": "#/components/schemas/TranscodeStatus"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_id",
+          "transcode_status"
+        ],
+        "title": "StreamUrlResponse",
+        "description": "Response schema containing presigned HLS manifest stream URL or transcoding status."
+      },
+      "TranscodeStatus": {
+        "type": "string",
+        "enum": [
+          "NOT_REQUIRED",
+          "PENDING",
+          "IN_PROGRESS",
+          "READY",
+          "FAILED"
+        ],
+        "title": "TranscodeStatus",
+        "description": "Lifecycle status of HLS/DASH video transcoding."
+      },
+      "UploadCompleteRequest": {
+        "properties": {
+          "parts": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parts"
+          },
+          "checksum_sha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checksum Sha256"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Reason For Change",
+            "default": "Completed file upload"
+          }
+        },
+        "type": "object",
+        "title": "UploadCompleteRequest",
+        "description": "Request payload to finalize a multipart or singlepart upload."
       },
       "ValidationError": {
         "properties": {
