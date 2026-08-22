@@ -4,6 +4,7 @@ Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.fileshare.adapters.clamav_adapter import get_scan_adapter
@@ -19,12 +20,17 @@ from apps.fileshare.adapters.storage import get_storage_adapter
 from apps.fileshare.application.fileshare_service import FileShareService
 from apps.fileshare.domain.exceptions import (
     FileNotFoundError,
+    FileOnHoldError,
     FileQuarantinedError,
     FileSharePermissionDeniedError,
 )
 from apps.fileshare.domain.models import TranscodeStatus
 from apps.fileshare.presentation.dtos import (
+    FileAuditLogResponse,
+    FileDeleteRequest,
     FileDownloadUrlResponse,
+    FileHoldClearRequest,
+    FileHoldRequest,
     FileRecordResponse,
     FileUploadUrlRequest,
     FileUploadUrlResponse,
@@ -386,6 +392,185 @@ async def get_file_record(
             detail=f"File record '{file_id}' not found.",
         )
     return FileRecordResponse.model_validate(record)
+
+
+@router.post(
+    "/{file_id}/hold",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.post(
+    "/{file_id}/hold",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def place_file_on_hold(
+    file_id: str,
+    payload: FileHoldRequest,
+    request: Request,
+    service: FileShareService = Depends(get_fileshare_service),
+) -> FileRecordResponse:
+    """Place a file under retention/legal hold preventing deletion or archival.
+
+    Requires super_admin or data_manager role.
+    Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
+    """
+    user_id = current_user_id.get() or "system_user"
+    roles = extract_caller_roles(request)
+
+    try:
+        record = await service.set_hold(
+            file_id=file_id,
+            caller_user_id=user_id,
+            caller_roles=roles,
+            reason_for_change=payload.reason_for_change,
+            hold_reason=payload.hold_reason,
+        )
+        return FileRecordResponse.model_validate(record)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except FileSharePermissionDeniedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+
+
+@router.delete(
+    "/{file_id}/hold",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.delete(
+    "/{file_id}/hold",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def remove_file_from_hold(
+    file_id: str,
+    request: Request,
+    payload: FileHoldClearRequest | None = None,
+    service: FileShareService = Depends(get_fileshare_service),
+) -> FileRecordResponse:
+    """Remove retention/legal hold from a file record.
+
+    Requires super_admin or data_manager role.
+    Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
+    """
+    user_id = current_user_id.get() or "system_user"
+    roles = extract_caller_roles(request)
+    justification = (
+        (payload.reason_for_change if payload else None)
+        or request.headers.get("X-Change-Reason")
+        or request.query_params.get("reason_for_change")
+        or "Removing legal/retention hold"
+    )
+
+    try:
+        record = await service.clear_hold(
+            file_id=file_id,
+            caller_user_id=user_id,
+            caller_roles=roles,
+            reason_for_change=justification,
+        )
+        return FileRecordResponse.model_validate(record)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except FileSharePermissionDeniedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+
+
+@router.delete(
+    "/{file_id}",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.delete(
+    "/{file_id}",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def delete_file_record(
+    file_id: str,
+    request: Request,
+    payload: FileDeleteRequest | None = None,
+    service: FileShareService = Depends(get_fileshare_service),
+) -> Response:
+    """Soft delete a file record.
+
+    Gated on FileRecord.is_on_hold being False; returns 409 if file is on hold.
+    Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
+    """
+    user_id = current_user_id.get() or "system_user"
+    roles = extract_caller_roles(request)
+    justification = (
+        (payload.reason_for_change if payload else None)
+        or request.headers.get("X-Change-Reason")
+        or request.query_params.get("reason_for_change")
+        or "Deleting file record"
+    )
+
+    try:
+        record = await service.delete_file(
+            file_id=file_id,
+            caller_user_id=user_id,
+            caller_roles=roles,
+            reason_for_change=justification,
+        )
+        return FileRecordResponse.model_validate(record)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except FileSharePermissionDeniedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+    except FileOnHoldError as exc:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"reason": "FILE_ON_HOLD", "detail": str(exc.message or exc)},
+        )
+
+
+@router.get(
+    "/{file_id}/audit-logs",
+    response_model=list[FileAuditLogResponse],
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.get(
+    "/{file_id}/audit-logs",
+    response_model=list[FileAuditLogResponse],
+    status_code=status.HTTP_200_OK,
+)
+async def get_file_audit_logs(
+    file_id: str,
+    request: Request,
+    service: FileShareService = Depends(get_fileshare_service),
+) -> list[FileAuditLogResponse]:
+    """Retrieve immutable Part 11 audit log entries for a file record.
+
+    Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
+    """
+    user_id = current_user_id.get() or "system_user"
+    roles = extract_caller_roles(request)
+
+    try:
+        entries = await service.list_audit_logs(
+            file_id=file_id,
+            caller_user_id=user_id,
+            caller_roles=roles,
+        )
+        return [FileAuditLogResponse.model_validate(e) for e in entries]
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
 
 
 @router.get(
