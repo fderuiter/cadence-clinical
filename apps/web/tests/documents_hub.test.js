@@ -50,6 +50,28 @@ vi.mock("../src/api/fileshare", () => ({
     revokeGuestLink: vi.fn(() => Promise.resolve({ success: true })),
     listGuestLinks: vi.fn(() => Promise.resolve([])),
     getGuestShareUrl: vi.fn((token) => `http://localhost:8000/share/${token}`),
+    getStreamUrl: vi.fn((fileId) =>
+      Promise.resolve({
+        file_id: fileId,
+        stream_url: "https://cadence.example.com/hls/master.m3u8",
+        expires_in: 300,
+        transcode_status: "READY",
+        message: "Video stream is ready",
+      })
+    ),
+    recordPlaybackAudit: vi.fn((payload) =>
+      Promise.resolve({
+        id: "audit-mock-123",
+        file_record_id: payload.file_record_id,
+        event: payload.event,
+        source: payload.source || "internal",
+        session_id: payload.session_id,
+        user_id: "demo-user",
+        timestamp: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        reason_for_change: payload.reason_for_change,
+      })
+    ),
   },
 }));
 

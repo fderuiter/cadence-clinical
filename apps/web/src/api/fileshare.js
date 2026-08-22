@@ -138,5 +138,22 @@ export const fileshareService = {
   async listAuditLogs(fileId) {
     return apiClient.get(`/api/v1/fileshare/files/${fileId}/audit-logs`);
   },
+
+  /**
+   * Retrieve short-lived presigned HLS master manifest stream URL.
+   * Returns 200 with stream_url when ready, or 202 when transcode is pending/in-progress.
+   */
+  async getStreamUrl(fileId) {
+    return apiClient.get(`/api/v1/fileshare/files/${fileId}/stream-url`);
+  },
+
+  /**
+   * Record video playback checkpoint audit telemetry event (21 CFR Part 11).
+   */
+  async recordPlaybackAudit(payload) {
+    return apiClient.post("/api/v1/fileshare/audit/playback", payload, {
+      changeReason: payload.reason_for_change || "Video playback checkpoint audit event",
+    });
+  },
 };
 
