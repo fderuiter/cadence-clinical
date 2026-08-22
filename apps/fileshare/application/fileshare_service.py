@@ -1216,7 +1216,7 @@ class FileShareService:
 
         logs = await self.file_audit_repo.list_by_file_id(file_id)
         if not logs:
-            file_record = await self.file_repo.get_by_id(file_id)
+            file_record = await self.file_repo.get_by_id(file_id, include_deleted=True)
             if not file_record:
                 raise FileNotFoundError(f"File record '{file_id}' not found.")
         return logs
