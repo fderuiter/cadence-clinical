@@ -23,13 +23,14 @@ def test_fail_fast_without_report_and_draft_flag():
 
     lock = FileLock("/tmp/gxp_fail_fast_test.lock", timeout=120)
     with lock:
-        # Temporarily move report.xml if it exists
-        report_path = Path("report.xml")
-        backup_path = Path("report.xml.bak_test")
-        has_backup = False
-        if report_path.exists():
-            report_path.rename(backup_path)
-            has_backup = True
+        report_files = [
+            p for p in Path(".").glob("report*.xml") if not p.name.endswith(".bak_test")
+        ]
+        backups = []
+        for rf in report_files:
+            bk = Path(f"{rf.name}.bak_test")
+            rf.rename(bk)
+            backups.append((rf, bk))
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             output_path = Path(tmp_dir) / "SDLC"
@@ -57,8 +58,9 @@ def test_fail_fast_without_report_and_draft_flag():
                 # Must write no files under the output directory
                 assert not output_path.exists() or len(os.listdir(output_path)) == 0
             finally:
-                if has_backup:
-                    backup_path.rename(report_path)
+                for rf, bk in backups:
+                    if bk.exists():
+                        bk.rename(rf)
 
 
 def test_success_with_draft_flag():
@@ -70,13 +72,14 @@ def test_success_with_draft_flag():
 
     lock = FileLock("/tmp/gxp_fail_fast_test.lock", timeout=120)
     with lock:
-        # Temporarily move report.xml if it exists
-        report_path = Path("report.xml")
-        backup_path = Path("report.xml.bak_test")
-        has_backup = False
-        if report_path.exists():
-            report_path.rename(backup_path)
-            has_backup = True
+        report_files = [
+            p for p in Path(".").glob("report*.xml") if not p.name.endswith(".bak_test")
+        ]
+        backups = []
+        for rf in report_files:
+            bk = Path(f"{rf.name}.bak_test")
+            rf.rename(bk)
+            backups.append((rf, bk))
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             output_path = Path(tmp_dir) / "SDLC"
@@ -124,8 +127,9 @@ def test_success_with_draft_flag():
                 assert "⚪ UNVERIFIED" in qual_content
                 assert any(part.strip() == "N/A" for part in qual_content.split("|"))
             finally:
-                if has_backup:
-                    backup_path.rename(report_path)
+                for rf, bk in backups:
+                    if bk.exists():
+                        bk.rename(rf)
 
 
 def test_missing_report_gxp_sync_dry_run():
