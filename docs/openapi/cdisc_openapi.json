@@ -24441,15 +24441,22 @@
           "Fileshare"
         ],
         "summary": "List Files",
-        "description": "List active file records for a study and site.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "description": "List active file records for an optional study, site, and search query.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
         "operationId": "Fileshare_list_files_api_v1_fileshare_files_get",
         "parameters": [
           {
             "name": "study_id",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": "string",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "Study Id"
             }
           },
@@ -24467,6 +24474,42 @@
                 }
               ],
               "title": "Site Id"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Page Size"
             }
           }
         ],
@@ -24499,6 +24542,51 @@
       }
     },
     "/fileshare/api/v1/fileshare/files/{file_id}/grants": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "List Share Grants",
+        "description": "Retrieve active internal share grants for a file record.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003",
+        "operationId": "Fileshare_list_share_grants_api_v1_fileshare_files__file_id__grants_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Fileshare_ShareGrantResponse"
+                  },
+                  "title": "Response List Share Grants Api V1 Fileshare Files  File Id  Grants Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "Fileshare"
@@ -24534,6 +24622,104 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Fileshare_ShareGrantResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fileshare/api/v1/fileshare/files/{file_id}/guest-links": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "List Guest Links",
+        "description": "Retrieve active guest links for a file record.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "Fileshare_list_guest_links_api_v1_fileshare_files__file_id__guest_links_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Fileshare_GuestLinkResponse"
+                  },
+                  "title": "Response List Guest Links Api V1 Fileshare Files  File Id  Guest Links Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Create Guest Link",
+        "description": "Generate a time-bounded external guest link.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "Fileshare_create_guest_link_api_v1_fileshare_files__file_id__guest_links_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Fileshare_GuestLinkCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_GuestLinkResponse"
                 }
               }
             }
@@ -24596,59 +24782,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Fileshare_ShareGrantResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/fileshare/api/v1/fileshare/files/{file_id}/guest-links": {
-      "post": {
-        "tags": [
-          "Fileshare"
-        ],
-        "summary": "Create Guest Link",
-        "description": "Generate a time-bounded external guest link.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
-        "operationId": "Fileshare_create_guest_link_api_v1_fileshare_files__file_id__guest_links_post",
-        "parameters": [
-          {
-            "name": "file_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "File Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Fileshare_GuestLinkCreateRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Fileshare_GuestLinkResponse"
                 }
               }
             }
@@ -24947,15 +25080,22 @@
           "Fileshare"
         ],
         "summary": "List Files",
-        "description": "List active file records for a study and site.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "description": "List active file records for an optional study, site, and search query.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
         "operationId": "Fileshare_list_files_api_v1_files_get",
         "parameters": [
           {
             "name": "study_id",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": "string",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "Study Id"
             }
           },
@@ -24973,6 +25113,42 @@
                 }
               ],
               "title": "Site Id"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Page Size"
             }
           }
         ],
@@ -25005,6 +25181,51 @@
       }
     },
     "/fileshare/api/v1/files/{file_id}/grants": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "List Share Grants",
+        "description": "Retrieve active internal share grants for a file record.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003",
+        "operationId": "Fileshare_list_share_grants_api_v1_files__file_id__grants_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Fileshare_ShareGrantResponse"
+                  },
+                  "title": "Response List Share Grants Api V1 Files  File Id  Grants Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "Fileshare"
@@ -25040,6 +25261,104 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Fileshare_ShareGrantResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fileshare/api/v1/files/{file_id}/guest-links": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "List Guest Links",
+        "description": "Retrieve active guest links for a file record.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "Fileshare_list_guest_links_api_v1_files__file_id__guest_links_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Fileshare_GuestLinkResponse"
+                  },
+                  "title": "Response List Guest Links Api V1 Files  File Id  Guest Links Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Create Guest Link",
+        "description": "Generate a time-bounded external guest link.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
+        "operationId": "Fileshare_create_guest_link_api_v1_files__file_id__guest_links_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Fileshare_GuestLinkCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_GuestLinkResponse"
                 }
               }
             }
@@ -25102,59 +25421,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Fileshare_ShareGrantResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/fileshare/api/v1/files/{file_id}/guest-links": {
-      "post": {
-        "tags": [
-          "Fileshare"
-        ],
-        "summary": "Create Guest Link",
-        "description": "Generate a time-bounded external guest link.\n\nRequirements: PRD-SYS-001, PRD-DOC-001",
-        "operationId": "Fileshare_create_guest_link_api_v1_files__file_id__guest_links_post",
-        "parameters": [
-          {
-            "name": "file_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "File Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Fileshare_GuestLinkCreateRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Fileshare_GuestLinkResponse"
                 }
               }
             }
@@ -26495,7 +26761,7 @@
           "knowledge"
         ],
         "summary": "Get Article",
-        "description": "Retrieves a single KnowledgeArticle by ID along with its active body content.\nIf the requesting user has an auditor role, records a READ_BY_AUDITOR audit event.",
+        "description": "Retrieves a single KnowledgeArticle by ID or unique slug along with its active body content.\nIf the requesting user has an auditor role, records a READ_BY_AUDITOR audit event.",
         "operationId": "Knowledge_get_article_api_v1_knowledge_articles__article_id__get",
         "parameters": [
           {
@@ -26515,6 +26781,154 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Knowledge_ArticleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/knowledge/api/v1/knowledge/articles/search": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Search Articles",
+        "description": "Full-text searches published knowledge articles across titles, tags, and Markdown bodies (Issue #4329).\n\n- Returns relevance-ranked articles with contextual highlighted snippets (<mark>...</mark>).\n- Scopes visibility to categories accessible by the caller's persona roles.\n- PostgreSQL tsvector-indexed in production; multi-dialect lexical fallback in SQLite test harnesses.",
+        "operationId": "Knowledge_search_articles_api_v1_knowledge_articles_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "category_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_ArticleSearchResult"
+                  },
+                  "title": "Response Search Articles Api V1 Knowledge Articles Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/knowledge/api/v1/knowledge/search": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Search Articles",
+        "description": "Full-text searches published knowledge articles across titles, tags, and Markdown bodies (Issue #4329).\n\n- Returns relevance-ranked articles with contextual highlighted snippets (<mark>...</mark>).\n- Scopes visibility to categories accessible by the caller's persona roles.\n- PostgreSQL tsvector-indexed in production; multi-dialect lexical fallback in SQLite test harnesses.",
+        "operationId": "Knowledge_search_articles_api_v1_knowledge_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "category_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_ArticleSearchResult"
+                  },
+                  "title": "Response Search Articles Api V1 Knowledge Search Get"
                 }
               }
             }
@@ -26948,14 +27362,66 @@
         }
       }
     },
+    "/knowledge/api/v1/knowledge/articles/{article_id}/versions/{version_id}": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Get Article Version",
+        "description": "Retrieves a specific immutable version snapshot for an article.",
+        "operationId": "Knowledge_get_article_version_api_v1_knowledge_articles__article_id__versions__version_id__get",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Article Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ArticleVersionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/knowledge/api/v1/knowledge/articles/{article_id}/audit-log": {
       "get": {
         "tags": [
           "knowledge"
         ],
-        "summary": "Get Article Audit Log",
-        "description": "Returns the immutable audit trail for a specific article.",
-        "operationId": "Knowledge_get_article_audit_log_api_v1_knowledge_articles__article_id__audit_log_get",
+        "summary": "Get Article Audit Trail",
+        "description": "Returns the immutable SHA-256 digest chained audit trail for a specific article.",
+        "operationId": "Knowledge_get_article_audit_trail_api_v1_knowledge_articles__article_id__audit_log_get",
         "parameters": [
           {
             "name": "article_id",
@@ -26977,7 +27443,97 @@
                   "items": {
                     "$ref": "#/components/schemas/Knowledge_AuditLogResponse"
                   },
-                  "title": "Response Get Article Audit Log Api V1 Knowledge Articles  Article Id  Audit Log Get"
+                  "title": "Response Get Article Audit Trail Api V1 Knowledge Articles  Article Id  Audit Log Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/knowledge/api/v1/knowledge/articles/{article_id}/audit-trail": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Get Article Audit Trail",
+        "description": "Returns the immutable SHA-256 digest chained audit trail for a specific article.",
+        "operationId": "Knowledge_get_article_audit_trail_api_v1_knowledge_articles__article_id__audit_trail_get",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Article Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_AuditLogResponse"
+                  },
+                  "title": "Response Get Article Audit Trail Api V1 Knowledge Articles  Article Id  Audit Trail Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/knowledge/api/v1/knowledge/articles/{article_id}/verify-audit-chain": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Verify Article Audit Chain",
+        "description": "Cryptographically verifies the SHA-256 digest chain integrity for an article's audit trail.",
+        "operationId": "Knowledge_verify_article_audit_chain_api_v1_knowledge_articles__article_id__verify_audit_chain_get",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Article Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_AuditChainVerificationResponse"
                 }
               }
             }
@@ -65195,6 +65751,91 @@
         "title": "ArticleResponse",
         "description": "Response schema for a KnowledgeArticle."
       },
+      "Knowledge_ArticleSearchResult": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "category_id": {
+            "type": "string",
+            "title": "Category Id"
+          },
+          "category_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Name"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "version_label": {
+            "type": "string",
+            "title": "Version Label"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "snippet": {
+            "type": "string",
+            "title": "Snippet"
+          },
+          "highlighted_snippet": {
+            "type": "string",
+            "title": "Highlighted Snippet",
+            "default": ""
+          },
+          "relevance_score": {
+            "type": "number",
+            "title": "Relevance Score"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "category_id",
+          "version_label",
+          "version_index",
+          "snippet",
+          "relevance_score",
+          "created_at"
+        ],
+        "title": "ArticleSearchResult",
+        "description": "Response schema representing a ranked knowledge article with highlighted snippet."
+      },
       "Knowledge_ArticleStatus": {
         "type": "string",
         "enum": [
@@ -65419,6 +66060,56 @@
         "title": "ArticleVersionResponse",
         "description": "Response schema for a KnowledgeArticleVersion snapshot."
       },
+      "Knowledge_AuditChainVerificationResponse": {
+        "properties": {
+          "article_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Article Id"
+          },
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          },
+          "total_records": {
+            "type": "integer",
+            "title": "Total Records"
+          },
+          "genesis_digest": {
+            "type": "string",
+            "title": "Genesis Digest"
+          },
+          "latest_digest": {
+            "type": "string",
+            "title": "Latest Digest"
+          },
+          "tamper_detected": {
+            "type": "boolean",
+            "title": "Tamper Detected",
+            "default": false
+          },
+          "details": {
+            "type": "string",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_valid",
+          "total_records",
+          "genesis_digest",
+          "latest_digest",
+          "details"
+        ],
+        "title": "AuditChainVerificationResponse",
+        "description": "Response schema for cryptographic audit ledger chain verification."
+      },
       "Knowledge_AuditLogResponse": {
         "properties": {
           "id": {
@@ -65472,6 +66163,28 @@
               }
             ],
             "title": "Details"
+          },
+          "previous_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Digest"
+          },
+          "sha256_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256 Digest"
           },
           "created_at": {
             "type": "string",

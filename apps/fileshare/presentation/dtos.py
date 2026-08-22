@@ -4,10 +4,17 @@ Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 """
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from apps.fileshare.domain.models import PermissionLevel, ShareScope
+from apps.fileshare.domain.models import (
+    PermissionLevel,
+    PlaybackEventSource,
+    PlaybackEventType,
+    ShareScope,
+    TranscodeStatus,
+)
 
 
 class FileUploadUrlRequest(BaseModel):
@@ -41,6 +48,18 @@ class FileUploadUrlResponse(BaseModel):
     required_headers: dict[str, str] = Field(default_factory=dict)
 
 
+class UploadCompleteRequest(BaseModel):
+    """Request payload to finalize a multipart or singlepart upload."""
+
+    model_config = ConfigDict(strict=True)
+
+    parts: list[dict[str, Any]] | None = None
+    checksum_sha256: str | None = Field(default=None, min_length=64, max_length=64)
+    reason_for_change: str = Field(
+        default="Completed file upload", min_length=5, max_length=1000
+    )
+
+
 class FileDownloadUrlResponse(BaseModel):
     """Response containing short-lived presigned GET download URL and watermark policy."""
 
@@ -53,6 +72,18 @@ class FileDownloadUrlResponse(BaseModel):
     expires_in: int = 3600
     is_watermarked: bool = False
     access_count: int | None = None
+
+
+class StreamUrlResponse(BaseModel):
+    """Response schema containing presigned HLS manifest stream URL or transcoding status."""
+
+    model_config = ConfigDict(strict=True)
+
+    file_id: str
+    stream_url: str | None = None
+    expires_in: int = 300
+    transcode_status: TranscodeStatus
+    message: str | None = None
 
 
 class FileRecordResponse(BaseModel):
@@ -72,6 +103,9 @@ class FileRecordResponse(BaseModel):
     uploaded_by: str
     uploaded_at: datetime
     is_on_hold: bool
+    transcode_status: TranscodeStatus = TranscodeStatus.NOT_REQUIRED
+    hls_manifest_key: str | None = None
+    transcode_error: str | None = None
     created_at: datetime
     created_by: str
     reason_for_change: str
@@ -129,3 +163,34 @@ class GuestLinkResponse(BaseModel):
     created_by: str
     access_count: int
     is_valid: bool
+
+
+class PlaybackAuditCreateRequest(BaseModel):
+    """Request payload to log a viewer playback audit checkpoint event."""
+
+    model_config = ConfigDict(use_enum_values=True)
+
+    file_record_id: str = Field(min_length=1, max_length=36)
+    event: PlaybackEventType
+    source: PlaybackEventSource = Field(default=PlaybackEventSource.INTERNAL)
+    session_id: str = Field(min_length=1, max_length=255)
+    guest_token: str | None = Field(default=None, max_length=255)
+    reason_for_change: str = Field(
+        default="Video playback checkpoint audit event", min_length=5, max_length=1000
+    )
+
+
+class PlaybackAuditResponse(BaseModel):
+    """Response schema for logged video playback audit checkpoint events."""
+
+    model_config = ConfigDict(strict=True, from_attributes=True)
+
+    id: str
+    file_record_id: str
+    event: PlaybackEventType
+    source: PlaybackEventSource
+    session_id: str
+    user_id: str
+    timestamp: datetime
+    created_at: datetime
+    reason_for_change: str

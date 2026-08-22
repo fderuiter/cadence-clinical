@@ -510,6 +510,32 @@ services:
       minio:
         condition: service_healthy
 
+  fileshare-transcoder:
+    build:
+      context: ..
+      dockerfile: docker/fileshare-transcoder/Dockerfile
+    container_name: cadence-fileshare-transcoder
+    profiles:
+      - operations
+    volumes:
+      - ..:/app
+    environment:
+      - BRAND_NAME=Cadence Clinical Research Software
+      - FILESHARE_DATABASE_URL=sqlite+aiosqlite:////app/fileshare.db
+      - GATEWAY_URL=http://gateway:8000
+      - GATEWAY_SECRET=internal-gateway-secret-12345  # pragma: allowlist secret
+      - STORAGE_ENDPOINT_URL=http://minio:9000
+      - STORAGE_BUCKET=cadence-fileshare
+      - STORAGE_ACCESS_KEY=minio_admin
+      - STORAGE_SECRET_KEY=minio_password  # pragma: allowlist secret
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      fileshare:
+        condition: service_started
+
   subject-portal:
     image: node:20-alpine
     container_name: cadence-subject-portal

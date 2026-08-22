@@ -42,6 +42,8 @@ def test_fail_fast_without_report_and_draft_flag():
                         str(GENERATE_RTM_SCRIPT),
                         "--output-dir",
                         str(output_path),
+                        "--report",
+                        str(Path(tmp_dir) / "missing_report.xml"),
                     ],
                     cwd=os.getcwd(),
                     capture_output=True,
@@ -91,6 +93,8 @@ def test_success_with_draft_flag():
                         str(GENERATE_RTM_SCRIPT),
                         "--output-dir",
                         str(output_path),
+                        "--report",
+                        str(Path(tmp_dir) / "missing_report.xml"),
                         "--draft",
                     ],
                     cwd=os.getcwd(),  # Use repo root so it can scan tests

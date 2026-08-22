@@ -40,3 +40,21 @@ class FileOnHoldError(DomainError):
     """Raised when an action is blocked due to active legal/regulatory retention hold."""
 
     pass
+
+
+class FileQuarantinedError(DomainError):
+    """Raised when an action is blocked because the file failed malware scanning and is quarantined."""
+
+    def __init__(
+        self,
+        message: str = "File is quarantined due to detected malware.",
+        reason: str = "QUARANTINED",
+    ) -> None:
+        super().__init__(message)
+        self.reason = reason
+
+
+class FileScanError(DomainError):
+    """Raised when a virus scanning engine error or timeout occurs."""
+
+    pass

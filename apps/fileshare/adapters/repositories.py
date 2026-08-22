@@ -6,15 +6,22 @@ Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.fileshare.domain.models import FileRecord, GuestLink, ShareGrant
+from apps.fileshare.domain.models import (
+    FileRecord,
+    GuestLink,
+    PlaybackAuditEvent,
+    ShareGrant,
+)
 from apps.fileshare.infrastructure.models import (
     FileRecordModel,
     GuestLinkModel,
+    PlaybackAuditLogModel,
     ShareGrantModel,
 )
 from apps.fileshare.ports.repository_port import (
     FileRecordRepositoryPort,
     GuestLinkRepositoryPort,
+    PlaybackAuditRepositoryPort,
     ShareGrantRepositoryPort,
 )
 
@@ -45,16 +52,26 @@ class SqlAlchemyFileRecordRepository(FileRecordRepositoryPort):
 
     async def list_by_study(
         self,
-        study_id: str,
+        study_id: str | None = None,
         site_id: str | None = None,
         include_deleted: bool = False,
     ) -> list[FileRecord]:
-        stmt = select(FileRecordModel).where(FileRecordModel.study_id == study_id)
+        stmt = select(FileRecordModel)
+        if study_id is not None:
+            stmt = stmt.where(FileRecordModel.study_id == study_id)
         if not include_deleted:
             stmt = stmt.where(FileRecordModel.is_deleted.is_(False))
         if site_id is not None:
             stmt = stmt.where(FileRecordModel.site_id == site_id)
 
+        res = await self.session.execute(stmt)
+        return [m.to_domain() for m in res.scalars().all()]
+
+    async def list_pending_transcodes(self) -> list[FileRecord]:
+        stmt = select(FileRecordModel).where(
+            FileRecordModel.transcode_status == "PENDING",
+            FileRecordModel.is_deleted.is_(False),
+        )
         res = await self.session.execute(stmt)
         return [m.to_domain() for m in res.scalars().all()]
 
@@ -78,6 +95,9 @@ class SqlAlchemyFileRecordRepository(FileRecordRepositoryPort):
                 uploaded_at=entity.uploaded_at,
                 is_on_hold=entity.is_on_hold,
                 is_deleted=entity.is_deleted,
+                transcode_status=entity.transcode_status.value,
+                hls_manifest_key=entity.hls_manifest_key,
+                transcode_error=entity.transcode_error,
                 created_at=entity.created_at,
                 created_by=entity.created_by,
                 reason_for_change=entity.reason_for_change,
@@ -92,6 +112,9 @@ class SqlAlchemyFileRecordRepository(FileRecordRepositoryPort):
             existing.version_index = entity.version_index
             existing.is_on_hold = entity.is_on_hold
             existing.is_deleted = entity.is_deleted
+            existing.transcode_status = entity.transcode_status.value
+            existing.hls_manifest_key = entity.hls_manifest_key
+            existing.transcode_error = entity.transcode_error
             existing.reason_for_change = entity.reason_for_change
 
         await self.session.flush()
@@ -211,6 +234,17 @@ class SqlAlchemyGuestLinkRepository(GuestLinkRepositoryPort):
         model = res.scalar_one_or_none()
         return model.to_domain() if model else None
 
+    async def list_by_file_id(
+        self, file_record_id: str, active_only: bool = True
+    ) -> list[GuestLink]:
+        stmt = select(GuestLinkModel).where(
+            GuestLinkModel.file_record_id == file_record_id
+        )
+        if active_only:
+            stmt = stmt.where(GuestLinkModel.revoked_at.is_(None))
+        res = await self.session.execute(stmt)
+        return [m.to_domain() for m in res.scalars().all()]
+
     async def save(self, entity: GuestLink) -> GuestLink:
         stmt = select(GuestLinkModel).where(GuestLinkModel.id == entity.id)
         res = await self.session.execute(stmt)
@@ -241,6 +275,67 @@ class SqlAlchemyGuestLinkRepository(GuestLinkRepositoryPort):
 
     async def delete(self, entity_id: str) -> bool:
         stmt = select(GuestLinkModel).where(GuestLinkModel.id == entity_id)
+        res = await self.session.execute(stmt)
+        existing = res.scalar_one_or_none()
+        if existing:
+            await self.session.delete(existing)
+            await self.session.flush()
+            return True
+        return False
+
+
+class SqlAlchemyPlaybackAuditRepository(PlaybackAuditRepositoryPort):
+    """SQLAlchemy implementation of PlaybackAuditRepositoryPort."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def get_by_id(self, entity_id: str) -> PlaybackAuditEvent | None:
+        stmt = select(PlaybackAuditLogModel).where(
+            PlaybackAuditLogModel.id == entity_id
+        )
+        res = await self.session.execute(stmt)
+        model = res.scalar_one_or_none()
+        return model.to_domain() if model else None
+
+    async def list_by_file_id(self, file_record_id: str) -> list[PlaybackAuditEvent]:
+        stmt = (
+            select(PlaybackAuditLogModel)
+            .where(PlaybackAuditLogModel.file_record_id == file_record_id)
+            .order_by(PlaybackAuditLogModel.timestamp.desc())
+        )
+        res = await self.session.execute(stmt)
+        return [m.to_domain() for m in res.scalars().all()]
+
+    async def list_by_session_id(self, session_id: str) -> list[PlaybackAuditEvent]:
+        stmt = (
+            select(PlaybackAuditLogModel)
+            .where(PlaybackAuditLogModel.session_id == session_id)
+            .order_by(PlaybackAuditLogModel.timestamp.asc())
+        )
+        res = await self.session.execute(stmt)
+        return [m.to_domain() for m in res.scalars().all()]
+
+    async def save(self, entity: PlaybackAuditEvent) -> PlaybackAuditEvent:
+        model = PlaybackAuditLogModel(
+            id=entity.id,
+            file_record_id=entity.file_record_id,
+            event=entity.event.value,
+            source=entity.source.value,
+            session_id=entity.session_id,
+            user_id=entity.user_id,
+            timestamp=entity.timestamp,
+            created_at=entity.created_at,
+            reason_for_change=entity.reason_for_change,
+        )
+        self.session.add(model)
+        await self.session.flush()
+        return entity
+
+    async def delete(self, entity_id: str) -> bool:
+        stmt = select(PlaybackAuditLogModel).where(
+            PlaybackAuditLogModel.id == entity_id
+        )
         res = await self.session.execute(stmt)
         existing = res.scalar_one_or_none()
         if existing:

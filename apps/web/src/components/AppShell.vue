@@ -437,6 +437,25 @@
                 </router-link>
               </li>
               <li
+                id="tab-btn-documents"
+                class="nav-item"
+                :class="{ active: $route.name === 'documents' }"
+              >
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/documents"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
+                    <span class="nav-icon">🗂️</span>
+                    <span class="nav-label">Documents Hub</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
                 id="tab-btn-quality"
                 class="nav-item"
                 :class="{ active: $route.name === 'quality' }"
@@ -471,6 +490,25 @@
                   >
                     <span class="nav-icon">🎫</span>
                     <span class="nav-label">Clinical Issues &amp; Tickets</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
+                id="tab-btn-knowledge"
+                class="nav-item"
+                :class="{ active: $route.name === 'knowledge' }"
+              >
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/knowledge"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
+                    <span class="nav-icon">📚</span>
+                    <span class="nav-label">Knowledge &amp; SOP Hub</span>
                   </button>
                 </router-link>
               </li>

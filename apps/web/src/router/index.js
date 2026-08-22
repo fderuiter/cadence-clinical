@@ -263,6 +263,22 @@ const routes = [
       requiresAuth: true,
     },
   },
+  {
+    path: "/documents",
+    name: "documents",
+    component: () => import("../views/DocumentsHubView.vue"),
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: "/knowledge",
+    name: "knowledge",
+    component: () => import("../views/KnowledgeView.vue"),
+    meta: {
+      requiresAuth: true,
+    },
+  },
 ];
 
 export const router = createRouter({

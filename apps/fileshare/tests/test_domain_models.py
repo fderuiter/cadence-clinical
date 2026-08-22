@@ -13,8 +13,13 @@ from apps.fileshare.domain.models import (
     FileRecord,
     GuestLink,
     PermissionLevel,
+    PlaybackAuditEvent,
+    PlaybackEventSource,
+    PlaybackEventType,
     ShareGrant,
     ShareScope,
+    TranscodeStatus,
+    is_video_mime_type,
 )
 
 
@@ -206,3 +211,72 @@ def test_share_scope_and_permission_levels_enum_extensions():
     assert PermissionLevel.ADMIN.satisfies(PermissionLevel.EDIT) is True
     assert PermissionLevel.EDIT.satisfies(PermissionLevel.DOWNLOAD) is True
     assert PermissionLevel.DOWNLOAD.satisfies(PermissionLevel.EDIT) is False
+
+
+def test_video_mime_type_detection():
+    """Verify is_video_mime_type helper for standard and clinical video formats.
+
+    @req:PRD-SYS-001
+    @req:PRD-DOC-001
+    """
+    assert is_video_mime_type("video/mp4") is True
+    assert is_video_mime_type("video/webm") is True
+    assert is_video_mime_type("video/quicktime") is True
+    assert is_video_mime_type("video/x-matroska") is True
+    assert is_video_mime_type("application/vnd.apple.mpegurl") is True
+    assert is_video_mime_type("application/pdf") is False
+    assert is_video_mime_type("image/png") is False
+    assert is_video_mime_type(None) is False
+    assert is_video_mime_type("") is False
+
+
+def test_transcode_status_enum():
+    """Verify TranscodeStatus enum values and case-insensitive parsing.
+
+    @req:PRD-SYS-001
+    @req:PRD-DOC-001
+    """
+    assert TranscodeStatus.NOT_REQUIRED == "NOT_REQUIRED"
+    assert TranscodeStatus.PENDING == "PENDING"
+    assert TranscodeStatus.IN_PROGRESS == "IN_PROGRESS"
+    assert TranscodeStatus.READY == "READY"
+    assert TranscodeStatus.FAILED == "FAILED"
+
+    assert TranscodeStatus.from_str("ready") == TranscodeStatus.READY
+    assert TranscodeStatus.from_str("PENDING") == TranscodeStatus.PENDING
+
+
+def test_playback_audit_event_and_enums():
+    """Verify PlaybackEventType, PlaybackEventSource, and PlaybackAuditEvent instantiation.
+
+    @req:PRD-SYS-001
+    @req:PRD-DOC-001
+    """
+    assert PlaybackEventType.PLAY_START == "PLAY_START"
+    assert PlaybackEventType.PLAY_25 == "PLAY_25"
+    assert PlaybackEventType.PLAY_50 == "PLAY_50"
+    assert PlaybackEventType.PLAY_75 == "PLAY_75"
+    assert PlaybackEventType.PLAY_END == "PLAY_END"
+    assert PlaybackEventType.from_str("play_start") == PlaybackEventType.PLAY_START
+
+    assert PlaybackEventSource.INTERNAL == "internal"
+    assert PlaybackEventSource.GUEST_LINK == "guest_link"
+    assert PlaybackEventSource.from_str("GUEST_LINK") == PlaybackEventSource.GUEST_LINK
+
+    event_id = str(uuid.uuid4())
+    file_id = str(uuid.uuid4())
+    audit = PlaybackAuditEvent(
+        id=event_id,
+        file_record_id=file_id,
+        event=PlaybackEventType.PLAY_50,
+        source=PlaybackEventSource.INTERNAL,
+        session_id="sess_12345",
+        user_id="crc_user_01",
+        reason_for_change="50% video progress checkpoint",
+    )
+    assert audit.id == event_id
+    assert audit.file_record_id == file_id
+    assert audit.event == PlaybackEventType.PLAY_50
+    assert audit.source == PlaybackEventSource.INTERNAL
+    assert audit.session_id == "sess_12345"
+    assert audit.user_id == "crc_user_01"

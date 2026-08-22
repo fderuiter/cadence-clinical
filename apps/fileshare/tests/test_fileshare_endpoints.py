@@ -9,8 +9,14 @@ from httpx import ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.fileshare.adapters.database import get_db_session
-from apps.fileshare.domain.models import PermissionLevel, ShareScope
+from apps.fileshare.adapters.repositories import SqlAlchemyFileRecordRepository
+from apps.fileshare.domain.models import (
+    PermissionLevel,
+    ShareScope,
+    TranscodeStatus,
+)
 from apps.fileshare.main import app
+from apps.fileshare.workers.transcode_worker import VideoTranscodeWorker
 from packages.testing.fakes import InMemoryStoragePort
 from packages.testing.security import create_test_auth_headers
 
@@ -500,5 +506,215 @@ async def test_guest_link_resolution_counter_and_revocation(
         # Attempting to access revoked token -> 403 Forbidden
         guest_dl_revoked = await client.get(f"/api/v1/files/guest/{token}")
         assert guest_dl_revoked.status_code == 403
+
+    app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_video_transcoding_and_stream_url_flow(
+    db_session: AsyncSession,
+    mock_storage: InMemoryStoragePort,
+    auth_headers_uploader: dict[str, str],
+    auth_headers_unauthorized: dict[str, str],
+):
+    """Verify video upload completion sets PENDING, stream-url returns 202 then 200 after transcode, and 403 for unauthorized.
+
+    @req:PRD-SYS-001
+    @req:PRD-DOC-001
+    @req:PRD-DOC-002
+    """
+    app.dependency_overrides[get_db_session] = lambda: db_session
+
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. Allocate upload session for a video file
+        upload_req = {
+            "study_id": "STUDY-PHASE3-001",
+            "site_id": "SITE-101",
+            "filename": "endoscopy_screening_01.mp4",
+            "mime_type": "video/mp4",
+            "size_bytes": 5242880,
+            "reason_for_change": "Subject endoscopy video screening",
+            "is_multipart": False,
+        }
+        alloc_resp = await client.post(
+            "/api/v1/fileshare/files/upload-url",
+            json=upload_req,
+            headers=auth_headers_uploader,
+        )
+        assert alloc_resp.status_code == 201
+        file_id = alloc_resp.json()["file_id"]
+        object_key = alloc_resp.json()["object_key"]
+
+        # Put mock source video bytes in storage
+        await mock_storage.put_object(
+            key=object_key,
+            data=b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 500,
+            content_type="video/mp4",
+        )
+
+        # 2. Complete upload
+        comp_resp = await client.post(
+            f"/api/v1/fileshare/files/{file_id}/complete-upload",
+            json={"reason_for_change": "Finished uploading screening video"},
+            headers=auth_headers_uploader,
+        )
+        assert comp_resp.status_code == 200
+        assert comp_resp.json()["transcode_status"] == "PENDING"
+
+        # 3. Request stream-url before transcoding completes -> HTTP 202 Accepted
+        stream_pending_resp = await client.get(
+            f"/api/v1/fileshare/files/{file_id}/stream-url",
+            headers=auth_headers_uploader,
+        )
+        assert stream_pending_resp.status_code == 202
+        pending_data = stream_pending_resp.json()
+        assert pending_data["transcode_status"] == "PENDING"
+        assert pending_data["stream_url"] is None
+
+        # 4. Execute transcode worker
+        file_repo = SqlAlchemyFileRecordRepository(db_session)
+        worker = VideoTranscodeWorker(file_repo=file_repo, storage_port=mock_storage)
+        transcoded = await worker.transcode_file(file_id)
+        assert transcoded.transcode_status == TranscodeStatus.READY
+
+        # 5. Request stream-url after transcoding completes -> HTTP 200 OK with presigned manifest URL
+        stream_ready_resp = await client.get(
+            f"/api/v1/fileshare/files/{file_id}/stream-url",
+            headers=auth_headers_uploader,
+        )
+        assert stream_ready_resp.status_code == 200
+        ready_data = stream_ready_resp.json()
+        assert ready_data["transcode_status"] == "READY"
+        assert ready_data["stream_url"] is not None
+        assert "master.m3u8" in ready_data["stream_url"]
+        assert ready_data["expires_in"] == 300
+
+        # 6. Unauthorized access to stream-url -> HTTP 403 Forbidden
+        stream_unauth_resp = await client.get(
+            f"/api/v1/fileshare/files/{file_id}/stream-url",
+            headers=auth_headers_unauthorized,
+        )
+        assert stream_unauth_resp.status_code == 403
+
+    app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_stream_url_error_conditions(
+    db_session: AsyncSession,
+    mock_storage: InMemoryStoragePort,
+    auth_headers_uploader: dict[str, str],
+):
+    """Verify stream-url returns 400 for non-video files, 409 for failed transcodes, and 404 for missing.
+
+    @req:PRD-SYS-001
+    @req:PRD-DOC-001
+    """
+    app.dependency_overrides[get_db_session] = lambda: db_session
+
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. 404 for non-existent file
+        resp_404 = await client.get(
+            "/api/v1/fileshare/files/non-existent-id/stream-url",
+            headers=auth_headers_uploader,
+        )
+        assert resp_404.status_code == 404
+
+        # 2. 400 for non-video file (PDF)
+        pdf_alloc = await client.post(
+            "/api/v1/fileshare/files/upload-url",
+            json={
+                "study_id": "STUDY-PHASE3-001",
+                "filename": "protocol_amendment_v2.pdf",
+                "mime_type": "application/pdf",
+                "size_bytes": 10000,
+                "reason_for_change": "Protocol document upload",
+            },
+            headers=auth_headers_uploader,
+        )
+        pdf_id = pdf_alloc.json()["file_id"]
+        resp_400 = await client.get(
+            f"/api/v1/fileshare/files/{pdf_id}/stream-url",
+            headers=auth_headers_uploader,
+        )
+        assert resp_400.status_code == 400
+        assert "not a video" in resp_400.json()["detail"].lower()
+
+    app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_playback_audit_checkpoint_logging(
+    db_session: AsyncSession,
+    mock_storage: InMemoryStoragePort,
+    auth_headers_uploader: dict[str, str],
+):
+    """Verify POST /api/v1/fileshare/audit/playback logs viewer checkpoints.
+
+    @req:PRD-SYS-001
+    @req:PRD-DOC-001
+    """
+    app.dependency_overrides[get_db_session] = lambda: db_session
+
+    transport = ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. Create a video file record
+        alloc_resp = await client.post(
+            "/api/v1/fileshare/files/upload-url",
+            json={
+                "study_id": "STUDY-PHASE3-001",
+                "filename": "training_video.mp4",
+                "mime_type": "video/mp4",
+                "size_bytes": 1024000,
+                "reason_for_change": "Site investigator training video",
+            },
+            headers=auth_headers_uploader,
+        )
+        file_id = alloc_resp.json()["file_id"]
+
+        # 2. Emit playback checkpoint events
+        session_id = "viewer_sess_98765"
+        checkpoints = ["PLAY_START", "PLAY_25", "PLAY_50", "PLAY_75", "PLAY_END"]
+
+        for cp in checkpoints:
+            audit_payload = {
+                "file_record_id": file_id,
+                "event": cp,
+                "source": "internal",
+                "session_id": session_id,
+                "reason_for_change": f"Video playback checkpoint {cp}",
+            }
+            resp = await client.post(
+                "/api/v1/fileshare/audit/playback",
+                json=audit_payload,
+                headers=auth_headers_uploader,
+            )
+            assert resp.status_code == 201
+            data = resp.json()
+            assert data["file_record_id"] == file_id
+            assert data["event"] == cp
+            assert data["session_id"] == session_id
+            assert data["user_id"] == "crc_user_01"
+            assert "timestamp" in data
+
+        # 3. Test guest link playback audit event
+        guest_payload = {
+            "file_record_id": file_id,
+            "event": "PLAY_START",
+            "source": "guest_link",
+            "session_id": "guest_sess_111",
+            "guest_token": "secret_token_abc_123",
+            "reason_for_change": "Guest review playback start",
+        }
+        guest_resp = await client.post(
+            "/api/v1/fileshare/audit/playback",
+            json=guest_payload,
+        )
+        assert guest_resp.status_code == 201
+        guest_data = guest_resp.json()
+        assert guest_data["source"] == "guest_link"
+        assert guest_data["user_id"].startswith("guest_")
 
     app.dependency_overrides.clear()

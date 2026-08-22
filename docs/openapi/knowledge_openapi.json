@@ -332,7 +332,7 @@
           "knowledge"
         ],
         "summary": "Get Article",
-        "description": "Retrieves a single KnowledgeArticle by ID along with its active body content.\nIf the requesting user has an auditor role, records a READ_BY_AUDITOR audit event.",
+        "description": "Retrieves a single KnowledgeArticle by ID or unique slug along with its active body content.\nIf the requesting user has an auditor role, records a READ_BY_AUDITOR audit event.",
         "operationId": "get_article_api_v1_knowledge_articles__article_id__get",
         "parameters": [
           {

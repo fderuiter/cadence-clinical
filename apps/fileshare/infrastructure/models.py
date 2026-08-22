@@ -15,8 +15,12 @@ from apps.fileshare.domain.models import (
     FileRecord,
     GuestLink,
     PermissionLevel,
+    PlaybackAuditEvent,
+    PlaybackEventSource,
+    PlaybackEventType,
     ShareGrant,
     ShareScope,
+    TranscodeStatus,
 )
 from packages.database.datetime_helpers import UTCDateTime
 
@@ -54,6 +58,13 @@ class FileRecordModel(Base):
     is_on_hold: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
+    # Video transcoding metadata
+    transcode_status: Mapped[str] = mapped_column(
+        String(50), default="NOT_REQUIRED", nullable=False, index=True
+    )
+    hls_manifest_key: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    transcode_error: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+
     # 21 CFR Part 11 GxP audit fields
     created_at: Mapped[datetime] = mapped_column(
         UTCDateTime, default=func.now(), nullable=False
@@ -66,6 +77,9 @@ class FileRecordModel(Base):
         back_populates="file_record", cascade="all, delete-orphan"
     )
     guest_links: Mapped[list[GuestLinkModel]] = relationship(
+        back_populates="file_record", cascade="all, delete-orphan"
+    )
+    playback_audit_logs: Mapped[list[PlaybackAuditLogModel]] = relationship(
         back_populates="file_record", cascade="all, delete-orphan"
     )
 
@@ -85,6 +99,9 @@ class FileRecordModel(Base):
             uploaded_at=self.uploaded_at,
             is_on_hold=self.is_on_hold,
             is_deleted=self.is_deleted,
+            transcode_status=TranscodeStatus(self.transcode_status),
+            hls_manifest_key=self.hls_manifest_key,
+            transcode_error=self.transcode_error,
             created_at=self.created_at,
             created_by=self.created_by,
             reason_for_change=self.reason_for_change,
@@ -192,6 +209,54 @@ class GuestLinkModel(Base):
             last_accessed_at=self.last_accessed_at,
             access_count=self.access_count,
             revoked_at=self.revoked_at,
+            created_at=self.created_at,
+            reason_for_change=self.reason_for_change,
+        )
+
+
+class PlaybackAuditLogModel(Base):
+    """Database table representing viewer session video playback audit checkpoints."""
+
+    __tablename__ = "playback_audit_logs"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    file_record_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("file_records.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    event: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    source: Mapped[str] = mapped_column(String(50), default="internal", nullable=False)
+    session_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), nullable=False
+    )
+
+    # 21 CFR Part 11 GxP audit fields
+    created_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), nullable=False
+    )
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+    # Relationships
+    file_record: Mapped[FileRecordModel] = relationship(
+        back_populates="playback_audit_logs"
+    )
+
+    def to_domain(self) -> PlaybackAuditEvent:
+        """Converts ORM model to pure domain model."""
+        return PlaybackAuditEvent(
+            id=self.id,
+            file_record_id=self.file_record_id,
+            event=PlaybackEventType(self.event),
+            source=PlaybackEventSource(self.source),
+            session_id=self.session_id,
+            user_id=self.user_id,
+            timestamp=self.timestamp,
             created_at=self.created_at,
             reason_for_change=self.reason_for_change,
         )

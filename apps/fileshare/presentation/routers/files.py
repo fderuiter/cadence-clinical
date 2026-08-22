@@ -3,13 +3,14 @@
 Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.fileshare.adapters.database import get_db_session
 from apps.fileshare.adapters.repositories import (
     SqlAlchemyFileRecordRepository,
     SqlAlchemyGuestLinkRepository,
+    SqlAlchemyPlaybackAuditRepository,
     SqlAlchemyShareGrantRepository,
 )
 from apps.fileshare.adapters.storage import get_storage_adapter
@@ -18,6 +19,7 @@ from apps.fileshare.domain.exceptions import (
     FileNotFoundError,
     FileSharePermissionDeniedError,
 )
+from apps.fileshare.domain.models import TranscodeStatus
 from apps.fileshare.presentation.dtos import (
     FileDownloadUrlResponse,
     FileRecordResponse,
@@ -25,8 +27,12 @@ from apps.fileshare.presentation.dtos import (
     FileUploadUrlResponse,
     GuestLinkCreateRequest,
     GuestLinkResponse,
+    PlaybackAuditCreateRequest,
+    PlaybackAuditResponse,
     ShareGrantCreateRequest,
     ShareGrantResponse,
+    StreamUrlResponse,
+    UploadCompleteRequest,
 )
 from packages.security.context import (
     current_site_id,
@@ -55,12 +61,14 @@ def get_fileshare_service(
     file_repo = SqlAlchemyFileRecordRepository(session)
     grant_repo = SqlAlchemyShareGrantRepository(session)
     guest_repo = SqlAlchemyGuestLinkRepository(session)
+    audit_repo = SqlAlchemyPlaybackAuditRepository(session)
     storage_port = get_storage_adapter()
     return FileShareService(
         file_repo=file_repo,
         grant_repo=grant_repo,
         guest_repo=guest_repo,
         storage_port=storage_port,
+        audit_repo=audit_repo,
     )
 
 
@@ -117,6 +125,174 @@ async def get_upload_url(
         expires_in=session.expires_in,
         checksum_sha256=session.checksum_sha256,
         required_headers=session.required_headers or {},
+    )
+
+
+@router.post(
+    "/{file_id}/complete-upload",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.post(
+    "/{file_id}/complete-upload",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def complete_file_upload(
+    file_id: str,
+    payload: UploadCompleteRequest | None = None,
+    service: FileShareService = Depends(get_fileshare_service),
+) -> FileRecordResponse:
+    """Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.
+
+    Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
+    """
+    user_id = current_user_id.get() or "system_user"
+    parts = payload.parts if payload else None
+    checksum = payload.checksum_sha256 if payload else None
+    reason = (
+        payload.reason_for_change
+        if payload and payload.reason_for_change
+        else "Completed file upload"
+    )
+
+    try:
+        record = await service.complete_upload(
+            file_id=file_id,
+            caller_user_id=user_id,
+            parts=parts,
+            checksum_sha256=checksum,
+            reason_for_change=reason,
+        )
+        return FileRecordResponse.model_validate(record)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+
+@router.post(
+    "/{file_id}/abort-upload",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.post(
+    "/{file_id}/abort-upload",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def abort_file_upload(
+    file_id: str,
+    upload_id: str | None = None,
+    service: FileShareService = Depends(get_fileshare_service),
+) -> FileRecordResponse:
+    """Abort multipart upload session and mark file record deleted.
+
+    Requirements: PRD-SYS-001, PRD-DOC-001
+    """
+    user_id = current_user_id.get() or "system_user"
+    try:
+        record = await service.abort_upload(
+            file_id=file_id,
+            caller_user_id=user_id,
+            upload_id=upload_id,
+        )
+        return FileRecordResponse.model_validate(record)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+
+@router.get(
+    "/{file_id}/stream-url",
+    response_model=StreamUrlResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        200: {
+            "description": "HLS master manifest presigned URL is ready for streaming."
+        },
+        202: {"description": "Video transcoding is pending or in progress."},
+        400: {"description": "Transcoding is not required for non-video file."},
+        409: {"description": "Video transcoding failed."},
+    },
+)
+@files_alias_router.get(
+    "/{file_id}/stream-url",
+    response_model=StreamUrlResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        200: {
+            "description": "HLS master manifest presigned URL is ready for streaming."
+        },
+        202: {"description": "Video transcoding is pending or in progress."},
+        400: {"description": "Transcoding is not required for non-video file."},
+        409: {"description": "Video transcoding failed."},
+    },
+)
+async def get_stream_url(
+    file_id: str,
+    request: Request,
+    response: Response,
+    service: FileShareService = Depends(get_fileshare_service),
+) -> StreamUrlResponse:
+    """Issue short-lived presigned HLS master manifest stream URL for video playback.
+
+    Returns HTTP 200 with presigned URL when transcoding is READY,
+    HTTP 202 Accepted when transcoding is PENDING or IN_PROGRESS,
+    HTTP 409 Conflict when transcoding has FAILED,
+    and HTTP 400 Bad Request when transcoding was NOT_REQUIRED.
+
+    Requirements: PRD-SYS-001, PRD-DOC-001
+    """
+    user_id = current_user_id.get() or "anonymous_user"
+    roles = extract_caller_roles(request)
+    site_id = current_site_id.get()
+
+    try:
+        record, stream_url = await service.generate_stream_url(
+            file_id=file_id,
+            caller_user_id=user_id,
+            caller_roles=roles,
+            caller_site_id=site_id,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except FileSharePermissionDeniedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+
+    if record.transcode_status == TranscodeStatus.READY and stream_url:
+        return StreamUrlResponse(
+            file_id=record.id,
+            stream_url=stream_url,
+            expires_in=300,
+            transcode_status=record.transcode_status,
+            message="Video stream is ready",
+        )
+    if record.transcode_status in (
+        TranscodeStatus.PENDING,
+        TranscodeStatus.IN_PROGRESS,
+    ):
+        response.status_code = status.HTTP_202_ACCEPTED
+        return StreamUrlResponse(
+            file_id=record.id,
+            stream_url=None,
+            expires_in=300,
+            transcode_status=record.transcode_status,
+            message=f"Video transcoding is {record.transcode_status.value.lower()}",
+        )
+    if record.transcode_status == TranscodeStatus.FAILED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Video transcoding failed: {record.transcode_error or 'Unknown error'}",
+        )
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="File is not a video or video transcoding was not required.",
     )
 
 
@@ -206,16 +382,86 @@ async def get_file_record(
     status_code=status.HTTP_200_OK,
 )
 async def list_files(
-    study_id: str,
+    study_id: str | None = None,
     site_id: str | None = None,
+    q: str | None = None,
+    page: int = 1,
+    page_size: int = 50,
     service: FileShareService = Depends(get_fileshare_service),
 ) -> list[FileRecordResponse]:
-    """List active file records for a study and site.
+    """List active file records for an optional study, site, and search query.
 
     Requirements: PRD-SYS-001, PRD-DOC-001
     """
     records = await service.file_repo.list_by_study(study_id=study_id, site_id=site_id)
-    return [FileRecordResponse.model_validate(r) for r in records]
+    if q and q.strip():
+        query_str = q.strip().lower()
+        records = [
+            r
+            for r in records
+            if query_str in r.filename.lower()
+            or query_str in r.study_id.lower()
+            or query_str in r.uploaded_by.lower()
+            or (r.site_id and query_str in r.site_id.lower())
+        ]
+    start_idx = max(0, (page - 1) * page_size)
+    paged = records[start_idx : start_idx + page_size]
+    return [FileRecordResponse.model_validate(r) for r in paged]
+
+
+@router.get(
+    "/{file_id}/grants",
+    response_model=list[ShareGrantResponse],
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.get(
+    "/{file_id}/grants",
+    response_model=list[ShareGrantResponse],
+    status_code=status.HTTP_200_OK,
+)
+async def list_share_grants(
+    file_id: str,
+    service: FileShareService = Depends(get_fileshare_service),
+) -> list[ShareGrantResponse]:
+    """Retrieve active internal share grants for a file record.
+
+    Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-003
+    """
+    grants = await service.grant_repo.list_by_file_id(file_id, active_only=True)
+    return [ShareGrantResponse.model_validate(g) for g in grants]
+
+
+@router.get(
+    "/{file_id}/guest-links",
+    response_model=list[GuestLinkResponse],
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.get(
+    "/{file_id}/guest-links",
+    response_model=list[GuestLinkResponse],
+    status_code=status.HTTP_200_OK,
+)
+async def list_guest_links(
+    file_id: str,
+    service: FileShareService = Depends(get_fileshare_service),
+) -> list[GuestLinkResponse]:
+    """Retrieve active guest links for a file record.
+
+    Requirements: PRD-SYS-001, PRD-DOC-001
+    """
+    links = await service.guest_repo.list_by_file_id(file_id, active_only=True)
+    return [
+        GuestLinkResponse(
+            id=link.id,
+            file_record_id=link.file_record_id,
+            guest_url="",
+            expires_at=link.expires_at,
+            created_by=link.created_by,
+            access_count=link.access_count,
+            is_valid=link.is_valid,
+        )
+        for link in links
+    ]
 
 
 @router.post(
@@ -472,3 +718,44 @@ async def get_external_guest_file_download(
     Requirements: PRD-SYS-001, PRD-DOC-001
     """
     return await get_guest_file_download(token=token, service=service)
+
+
+# Dedicated router for playback audit logging (/api/v1/fileshare/audit/playback and /api/v1/files/audit/playback)
+audit_router = APIRouter(prefix="/api/v1/fileshare/audit", tags=["Fileshare Audit"])
+audit_alias_router = APIRouter(prefix="/api/v1/files/audit", tags=["Fileshare Audit"])
+
+
+@audit_router.post(
+    "/playback",
+    response_model=PlaybackAuditResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@audit_alias_router.post(
+    "/playback",
+    response_model=PlaybackAuditResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def record_playback_checkpoint(
+    payload: PlaybackAuditCreateRequest,
+    service: FileShareService = Depends(get_fileshare_service),
+) -> PlaybackAuditResponse:
+    """Record a viewer session video playback checkpoint audit event.
+
+    Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
+    """
+    user_id = current_user_id.get() or "guest_viewer"
+    try:
+        event = await service.record_playback_audit(
+            file_id=payload.file_record_id,
+            event=payload.event,
+            source=payload.source,
+            session_id=payload.session_id,
+            user_id=user_id,
+            guest_token=payload.guest_token,
+            reason_for_change=payload.reason_for_change,
+        )
+        return PlaybackAuditResponse.model_validate(event)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc

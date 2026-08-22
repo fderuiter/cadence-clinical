@@ -7,11 +7,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3083
-- **Passed:** 3059 🟢
-- **Failed/Errors:** 0 🔴
+- **Total Automated Test Cases Run:** 3095
+- **Passed:** 3070 🟢
+- **Failed/Errors:** 1 🔴
 - **Skipped:** 24 ⚪
-- **Overall Operational Pass Rate:** 99.22%
+- **Overall Operational Pass Rate:** 99.19%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -2152,6 +2152,18 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_resolve_contextual_help_wildcards_and_persona_fallback` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
 | `test_route_normalization` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
 | `test_route_pattern_matching` | `apps.knowledge.tests.test_contextual_help` | PRD-KNB-002, PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
+| `test_domain_calculate_lexical_score_ranking` | `apps.knowledge.tests.test_search` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
+| `test_domain_extract_query_terms` | `apps.knowledge.tests.test_search` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
+| `test_domain_generate_highlighted_snippet` | `apps.knowledge.tests.test_search` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
+| `test_domain_strip_markdown` | `apps.knowledge.tests.test_search` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
+| `test_search_category_filter` | `apps.knowledge.tests.test_search` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
+| `test_search_empty_and_no_match` | `apps.knowledge.tests.test_search` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
+| `test_search_excludes_non_published_and_deleted_articles` | `apps.knowledge.tests.test_search` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
+| `test_search_performance_sla` | `apps.knowledge.tests.test_search` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
+| `test_search_persona_visibility_scoping` | `apps.knowledge.tests.test_search` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
+| `test_search_published_articles_success` | `apps.knowledge.tests.test_search` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
+| `test_search_relevance_ranking_order` | `apps.knowledge.tests.test_search` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
+| `test_search_rest_api_endpoint` | `apps.knowledge.tests.test_search` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
 | `test_publish_notification_failure_swallowed` | `apps.notifications.tests.test_clinical_workflow_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_publish_notification_success` | `apps.notifications.tests.test_clinical_workflow_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_router_send_dashboard_notification_sdv_drop` | `apps.notifications.tests.test_clinical_workflow_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3023,7 +3035,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_tamper_detection_metadata_modification` | `scripts.tests.test_gxp_decomposed_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_tamper_detection_signature_bytes_modification` | `scripts.tests.test_gxp_decomposed_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verification_performance_under_five_seconds` | `scripts.tests.test_gxp_decomposed_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_fail_fast_without_report_and_draft_flag` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_fail_fast_without_report_and_draft_flag` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🔴 FAILED | < 1s |
 | `test_missing_report_gxp_sync_dry_run` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_success_with_draft_flag` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_layout_gating_approved_and_logged` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3361,28 +3373,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** f754c435e562d3f095af86f871205664e480d9a6209a7b7404fc80773d76dc1f
+- **Cryptographic Hash (SHA-256):** 4599435418fe07699db2faf30c30c2e26c358d01ea52d4da9b10460e6ee1258d
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUJ3MS9f2KJ+bmzdU362WHuU1kboUwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIULbNadk+mWU3FeOeyCHd5ruWzR+MwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MTE5MDMwOVoXDTI3MDgyMjE5MDMwOVowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MTE5MTA1NFoXDTI3MDgyMjE5MTA1NFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt41V
-c6BGuMTiIWUeJtjMdpyG6ZkTQi6gsDULdSVa9AyPqz1lB++NLd8ozm9n5bTDHNCl
-dS+vLpLUVpeZFabhV0GyO1q18er3baY1GeHZwzQm1vwvXK5nIc0OX+WBuZWLLyWf
-vvLJztykJc8AibbFpDtU5w1StAZvoD8JAEhfifZOeiO/BszE7u1MjFcBQXW0fII0
-kRKZl7sNzy23gZA4RVJB+vGRQvLvDPzrYO5VBFpJzBGPo2h0DxF4NxMfQHrUjE9q
-oJnPafa4yuwwmm+807XpWJkQprVoCZhu+PX1sp3E366FIc1WAAYz/mvIdocWGlet
-hU+CtMDigFCCoKWr+wIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBRLvvZuiKWM2oT
-DCb9i3W+ILgDvcjgjQJjF++CYiHNZGgAdrrbocBeohKW4ekv3ujRmYNHNiwpdxZb
-ZH102qhOlU/AzsGLtR5lfbcIY37ubjR+PkTOX1iMuPBzmNfTDCmE8/iRz4s8rdf4
-f96SjUSmbsefU5bdhSOJtNvdWz28j/olElK/1ocEI5f7akkvuabS6s/QDQvxF02h
-RDd4Ldy5CCP7PYmHJgmXRemNF8iGLX0HkvoFdUqcsJ7/3gTfYOx+8dPOa3SgLCjt
-8PKGBh5qNznAS1BoCtIpXWOdSf4aGnvKHdudBrdTlkxidVdLXJZRShu7eb0bBHks
-kcOoFn0y
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8jKn
+sf+PAfvKhuBTq3KP16R+c2OkiKTXKMzmCJ/yEIYrhtCTFF21i9qvljxofwzC1HnD
+QkvfGMUMr7g24/PLnQJ87QN/QuqaGMA6VtSQr7nsEqqORRGCJe54ESy9EJuQ6TiO
+rdjs7l/D6yyZArcZxj66bsYs1H/OZ2ijHycpFF0gLW8JgDOUI4LbFgcpUgkUzH1N
+nKq62M4345L6b0vOTapDZ6hiYd/FCNk5k5PRKMIO1o29CEAKQ3cihSLVaMArdurO
+5snz2CAOL8L7PoVeJh0GHhQctawgKtuk4Hpy8AQfxO0exiTNFX2X9W/rIywLPNct
+jZaf1cGJk2eKJbT3LQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAYoTi4AJeLdE9V
+W7at7tjo5YM2fY+za/S6/nUJLV35TtDWp7CyNMwgJJzCgFqO3emu6Bh0cbbH485t
+Aiie1zCOJYBMWa6lqx6gyHEBjhxU1MIZahmdSDIjQc/kEU/9JI027nUDvGghewkL
+D0Rdu/HkEgV6mi4ud+UfxHV2kgoLwlW3BU9ZM0x/RTdnjoSvJwtsDsm6cuXzAMte
+/jyl2fpNNSpCH56AiF/bnRIC7/519dkcaV/Z6ZJBo3PMY3u/qRIda50SWCubRr9g
+QxG4pWnhtALKT1VJ0GpC8Qb/I8ell01K2NWAi1mNg03KfbKKb3i03KMFKRIkC/5J
+HVSZFX79
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-rS7xfbCZ894M9JLXFFONsHkfaaPbPkK0D13o4wKrU3wFnD1K/MVPOfOOmnuiWVzEp5JtwWO7VJB2nHEoOTlFTCKHtCfXfxvYN3R1qrNUxvBdGT2n8dCPzHWeGwcdtShw07y6HXACrKUHep8ktA/WmvwJIlPDvRxZvGW/VvbQLGPSZEWv2nnJOaGlLx97t/RKZZUnnkszPcaGx2ymthpuosrFb6VHTQYOv3XrE+rFFx18WisItXmb9XVatvo2XwdZI30cHQI9IpUY8F/C6DjV1N7BOx8V/V3/HYawgMuxQl7VDbcsPzzL4WInYdPJpWGLySmTk82KmKVC6I8fvNr38A==
+J4uCRj/fXw5+mZO873zVXTd0to9aMZZWPvo5W/SySziyhvZ5H6Wf5+/FHMXsgapN+X6n56DgShtxHlQDqZKtFlzctL6j1nrj0idJpuTVVVSSpltgGRwY27lI7ReWZcmRqoUudFV4duF67tniSSKh6B9aWoWDn7gVMwMNZWbSUWzRzy1oxZlwRX6YCJVxVYqEX7ML/GSR1cYFhvD6djzX5BbUEm3sGstcTXHaMr5CvTIVKoVypfqukLgRLekqQWJObCCeiRx+7IrOvF//PDzWZQoGYVWcMi/BXOSLjmQWKqLDgHrxRr9mHakkaKYf5OyunvIonbDqfI8ZyQWT3yGytA==
 -----END SIGNATURE-----

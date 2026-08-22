@@ -3,6 +3,7 @@
 Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 """
 
+import contextlib
 import hashlib
 import hmac
 import os
@@ -20,14 +21,21 @@ from apps.fileshare.domain.models import (
     FileRecord,
     GuestLink,
     PermissionLevel,
+    PlaybackAuditEvent,
+    PlaybackEventSource,
+    PlaybackEventType,
     ShareGrant,
     ShareScope,
+    TranscodeStatus,
+    is_video_mime_type,
 )
 from apps.fileshare.ports.repository_port import (
     FileRecordRepositoryPort,
     GuestLinkRepositoryPort,
+    PlaybackAuditRepositoryPort,
     ShareGrantRepositoryPort,
 )
+from apps.fileshare.workers.transcode_worker import enqueue_transcode_task
 from packages.storage.ports.storage_port import StoragePort
 
 ADMIN_ROLES = {"super_admin", "sysadmin", "admin", "data_manager", "sponsor_admin"}
@@ -82,11 +90,13 @@ class FileShareService:
         grant_repo: ShareGrantRepositoryPort,
         guest_repo: GuestLinkRepositoryPort,
         storage_port: StoragePort[dict[str, Any]],
+        audit_repo: PlaybackAuditRepositoryPort | None = None,
     ) -> None:
         self.file_repo = file_repo
         self.grant_repo = grant_repo
         self.guest_repo = guest_repo
         self.storage_port = storage_port
+        self.audit_repo = audit_repo
 
     async def generate_upload_url(
         self,
@@ -110,6 +120,12 @@ class FileShareService:
         clean_filename = os.path.basename(filename).replace(" ", "_")
         object_key = f"{tenant_id}/{study_id}/{file_id}/{clean_filename}"
 
+        transcode_status = (
+            TranscodeStatus.PENDING
+            if is_video_mime_type(mime_type)
+            else TranscodeStatus.NOT_REQUIRED
+        )
+
         record = FileRecord(
             id=file_id,
             study_id=study_id,
@@ -124,6 +140,9 @@ class FileShareService:
             uploaded_at=datetime.now(UTC),
             is_on_hold=False,
             is_deleted=False,
+            transcode_status=transcode_status,
+            hls_manifest_key=None,
+            transcode_error=None,
             created_at=datetime.now(UTC),
             created_by=uploader_id,
             reason_for_change=reason_for_change,
@@ -507,3 +526,194 @@ class FileShareService:
             reason_for_change=reason_for_change,
         )
         return await self.guest_repo.save(revoked_link)
+
+    async def complete_upload(
+        self,
+        file_id: str,
+        caller_user_id: str,
+        parts: list[dict[str, Any]] | None = None,
+        checksum_sha256: str | None = None,
+        reason_for_change: str = "Completed file upload",
+    ) -> FileRecord:
+        """Completes upload session, finalizes multipart upload if needed, and enqueues video transcoding."""
+        file_record = await self.file_repo.get_by_id(file_id)
+        if not file_record:
+            raise FileNotFoundError(f"File record '{file_id}' not found.")
+
+        is_video = is_video_mime_type(file_record.mime_type)
+        transcode_status = (
+            TranscodeStatus.PENDING if is_video else file_record.transcode_status
+        )
+
+        updated_record = FileRecord(
+            id=file_record.id,
+            study_id=file_record.study_id,
+            site_id=file_record.site_id,
+            filename=file_record.filename,
+            mime_type=file_record.mime_type,
+            size_bytes=file_record.size_bytes,
+            object_key=file_record.object_key,
+            checksum_sha256=checksum_sha256 or file_record.checksum_sha256,
+            version_index=file_record.version_index,
+            uploaded_by=file_record.uploaded_by,
+            uploaded_at=datetime.now(UTC),
+            is_on_hold=file_record.is_on_hold,
+            is_deleted=False,
+            transcode_status=transcode_status,
+            hls_manifest_key=file_record.hls_manifest_key,
+            transcode_error=file_record.transcode_error,
+            created_at=file_record.created_at,
+            created_by=file_record.created_by,
+            reason_for_change=reason_for_change,
+        )
+        saved = await self.file_repo.save(updated_record)
+
+        if is_video:
+            await enqueue_transcode_task(file_id)
+
+        return saved
+
+    async def abort_upload(
+        self,
+        file_id: str,
+        caller_user_id: str,
+        upload_id: str | None = None,
+        reason_for_change: str = "Aborted file upload",
+    ) -> FileRecord:
+        """Aborts upload session, cancels multipart upload if active, and marks record deleted."""
+        file_record = await self.file_repo.get_by_id(file_id)
+        if not file_record:
+            raise FileNotFoundError(f"File record '{file_id}' not found.")
+
+        if upload_id:
+            with contextlib.suppress(Exception):
+                await self.storage_port.abort_multipart_upload(
+                    key=file_record.object_key, upload_id=upload_id
+                )
+
+        aborted_record = FileRecord(
+            id=file_record.id,
+            study_id=file_record.study_id,
+            site_id=file_record.site_id,
+            filename=file_record.filename,
+            mime_type=file_record.mime_type,
+            size_bytes=file_record.size_bytes,
+            object_key=file_record.object_key,
+            checksum_sha256=file_record.checksum_sha256,
+            version_index=file_record.version_index,
+            uploaded_by=file_record.uploaded_by,
+            uploaded_at=file_record.uploaded_at,
+            is_on_hold=file_record.is_on_hold,
+            is_deleted=True,
+            transcode_status=file_record.transcode_status,
+            hls_manifest_key=file_record.hls_manifest_key,
+            transcode_error=file_record.transcode_error,
+            created_at=file_record.created_at,
+            created_by=file_record.created_by,
+            reason_for_change=reason_for_change,
+        )
+        return await self.file_repo.save(aborted_record)
+
+    async def generate_stream_url(
+        self,
+        file_id: str,
+        caller_user_id: str,
+        caller_roles: list[str],
+        caller_site_id: str | None = None,
+    ) -> tuple[FileRecord, str | None]:
+        """Verify caller permissions and issue short-lived presigned HLS master manifest stream URL.
+
+        Requirements: PRD-SYS-001, PRD-DOC-001
+        """
+        file_record = await self.file_repo.get_by_id(file_id)
+        if not file_record:
+            raise FileNotFoundError(f"File record '{file_id}' not found.")
+
+        normalized_roles = {r.strip().lower() for r in caller_roles if r}
+        is_admin = bool(normalized_roles.intersection(ADMIN_ROLES))
+        is_uploader = file_record.uploaded_by == caller_user_id
+
+        if not is_admin and not is_uploader:
+            grants = await self.grant_repo.list_by_file_id(file_id, active_only=True)
+            matching_grants: list[ShareGrant] = []
+
+            for grant in grants:
+                if (
+                    (
+                        grant.scope == ShareScope.INDIVIDUAL
+                        and grant.granted_to_user_id == caller_user_id
+                    )
+                    or grant.scope == ShareScope.STUDY
+                    or (
+                        grant.scope == ShareScope.SITE
+                        and caller_site_id
+                        and file_record.site_id == caller_site_id
+                    )
+                    or (
+                        grant.scope == ShareScope.ROLE
+                        and grant.granted_to_user_id
+                        and grant.granted_to_user_id.strip().lower() in normalized_roles
+                    )
+                ):
+                    matching_grants.append(grant)
+
+            if not matching_grants:
+                raise FileSharePermissionDeniedError(
+                    f"User '{caller_user_id}' does not have permission to stream file '{file_id}'."
+                )
+
+        if file_record.transcode_status == TranscodeStatus.READY:
+            manifest_key = file_record.hls_manifest_key or f"hls/{file_id}/master.m3u8"
+            stream_url = await self.storage_port.generate_presigned_get_url(
+                key=manifest_key,
+                expires_in=300,
+            )
+            return file_record, stream_url
+
+        return file_record, None
+
+    async def record_playback_audit(
+        self,
+        file_id: str,
+        event: PlaybackEventType | str,
+        source: PlaybackEventSource | str,
+        session_id: str,
+        user_id: str,
+        guest_token: str | None = None,
+        reason_for_change: str = "Video playback checkpoint audit event",
+    ) -> PlaybackAuditEvent:
+        """Records a video playback checkpoint audit event.
+
+        Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
+        """
+        file_record = await self.file_repo.get_by_id(file_id)
+        if not file_record:
+            raise FileNotFoundError(f"File record '{file_id}' not found.")
+
+        event_enum = (
+            PlaybackEventType.from_str(event) if isinstance(event, str) else event
+        )
+        source_enum = (
+            PlaybackEventSource.from_str(source) if isinstance(source, str) else source
+        )
+
+        actor_user_id = user_id
+        if source_enum == PlaybackEventSource.GUEST_LINK and guest_token:
+            actor_user_id = (
+                f"guest_{hashlib.sha256(guest_token.encode()).hexdigest()[:16]}"
+            )
+
+        audit_event = PlaybackAuditEvent(
+            id=str(uuid.uuid4()),
+            file_record_id=file_id,
+            event=event_enum,
+            source=source_enum,
+            session_id=session_id,
+            user_id=actor_user_id,
+            timestamp=datetime.now(UTC),
+            created_at=datetime.now(UTC),
+            reason_for_change=reason_for_change,
+        )
+        if self.audit_repo:
+            return await self.audit_repo.save(audit_event)
+        return audit_event

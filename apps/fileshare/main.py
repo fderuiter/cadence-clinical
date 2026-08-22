@@ -1,7 +1,7 @@
 """FastAPI application for the Fileshare Microservice.
 
 Owns: Clinical file records, object storage presigned transfers,
-internal share grants, and guest links.
+internal share grants, guest links, and video transcoding pipeline.
 
 Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 """
@@ -13,11 +13,17 @@ from fastapi import FastAPI
 from apps.fileshare.adapters.database import db_manager, get_db_session
 from apps.fileshare.infrastructure.models import Base
 from apps.fileshare.presentation.routers.files import (
+    audit_alias_router,
+    audit_router,
     files_alias_router,
     guest_router,
 )
 from apps.fileshare.presentation.routers.files import (
     router as files_router,
+)
+from apps.fileshare.workers.transcode_worker import (
+    start_transcode_worker,
+    stop_transcode_worker,
 )
 from packages.database import get_relational_db_lifespan
 from packages.security import validate_branding
@@ -35,15 +41,19 @@ app = FastAPI(
         db_manager=db_manager,
         database_url=DATABASE_URL,
         base_metadata=Base.metadata,
+        startup_hooks=[start_transcode_worker],
+        shutdown_hooks=[stop_transcode_worker],
     ),
 )
 
 # Enforce secure gateway authentication on every request
 app.add_middleware(GatewayAuthMiddleware)
 
-# Mount files routers and public guest router
+# Mount files routers, audit routers, and public guest router
 app.include_router(files_router)
 app.include_router(files_alias_router)
+app.include_router(audit_router)
+app.include_router(audit_alias_router)
 app.include_router(guest_router)
 
 

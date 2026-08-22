@@ -68,6 +68,88 @@ class PermissionLevel(StrEnum):
         return self in (PermissionLevel.VIEW, PermissionLevel.COMMENT)
 
 
+class TranscodeStatus(StrEnum):
+    """Lifecycle status of HLS/DASH video transcoding."""
+
+    NOT_REQUIRED = "NOT_REQUIRED"
+    PENDING = "PENDING"
+    IN_PROGRESS = "IN_PROGRESS"
+    READY = "READY"
+    FAILED = "FAILED"
+
+    @classmethod
+    def from_str(cls, value: str) -> TranscodeStatus:
+        """Normalize case-insensitive string into TranscodeStatus enum."""
+        return cls(value.strip().upper())
+
+
+class PlaybackEventType(StrEnum):
+    """Types of viewer session video playback audit checkpoint events."""
+
+    PLAY_START = "PLAY_START"
+    PLAY_25 = "PLAY_25"
+    PLAY_50 = "PLAY_50"
+    PLAY_75 = "PLAY_75"
+    PLAY_END = "PLAY_END"
+
+    @classmethod
+    def from_str(cls, value: str) -> PlaybackEventType:
+        """Normalize string into PlaybackEventType enum."""
+        return cls(value.strip().upper())
+
+
+class PlaybackEventSource(StrEnum):
+    """Origin source of video playback session."""
+
+    INTERNAL = "internal"
+    GUEST_LINK = "guest_link"
+
+    @classmethod
+    def from_str(cls, value: str) -> PlaybackEventSource:
+        """Normalize string into PlaybackEventSource enum."""
+        return cls(value.strip().lower())
+
+
+def is_video_mime_type(mime_type: str | None) -> bool:
+    """Check if the provided MIME type represents a video container format."""
+    if not mime_type:
+        return False
+    normalized = mime_type.strip().lower()
+    return normalized.startswith("video/") or normalized in {
+        "application/x-mpegurl",
+        "application/vnd.apple.mpegurl",
+        "application/dash+xml",
+    }
+
+
+class ScanStatus(StrEnum):
+    """Lifecycle status of file malware/virus scanning."""
+
+    PENDING = "PENDING"
+    CLEAN = "CLEAN"
+    INFECTED = "INFECTED"
+    SCAN_ERROR = "SCAN_ERROR"
+
+    @classmethod
+    def from_str(cls, value: str) -> ScanStatus:
+        """Normalize string into ScanStatus enum."""
+        return cls(value.strip().upper())
+
+
+class FileStatus(StrEnum):
+    """Lifecycle availability and readiness status of a file record."""
+
+    PENDING_SCAN = "PENDING_SCAN"
+    READY = "READY"
+    PENDING_TRANSCODE = "PENDING_TRANSCODE"
+    QUARANTINED = "QUARANTINED"
+
+    @classmethod
+    def from_str(cls, value: str) -> FileStatus:
+        """Normalize string into FileStatus enum."""
+        return cls(value.strip().upper())
+
+
 class FileRecord(BaseModel):
     """Domain model representing a managed file and its object storage metadata.
 
@@ -89,6 +171,18 @@ class FileRecord(BaseModel):
     uploaded_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     is_on_hold: bool = Field(default=False)
     is_deleted: bool = Field(default=False)
+
+    # File lifecycle and virus scan fields
+    status: FileStatus = Field(default=FileStatus.PENDING_SCAN)
+    scan_status: ScanStatus = Field(default=ScanStatus.PENDING)
+    scan_engine: str | None = Field(default=None, max_length=100)
+    scan_completed_at: datetime | None = Field(default=None)
+    scan_threat_name: str | None = Field(default=None, max_length=255)
+
+    # Video transcoding metadata
+    transcode_status: TranscodeStatus = Field(default=TranscodeStatus.NOT_REQUIRED)
+    hls_manifest_key: str | None = Field(default=None, max_length=1000)
+    transcode_error: str | None = Field(default=None, max_length=2000)
 
     # GxP audit fields
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
@@ -168,3 +262,24 @@ class GuestLink(BaseModel):
             else self.expires_at.replace(tzinfo=UTC)
         )
         return now <= expires
+
+
+class PlaybackAuditEvent(BaseModel):
+    """Domain model representing a viewer session playback audit event.
+
+    Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11
+    """
+
+    model_config = ConfigDict(strict=True, frozen=True)
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    file_record_id: str = Field(min_length=1, max_length=36)
+    event: PlaybackEventType
+    source: PlaybackEventSource = Field(default=PlaybackEventSource.INTERNAL)
+    session_id: str = Field(min_length=1, max_length=255)
+    user_id: str = Field(min_length=1, max_length=255)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    # GxP audit fields
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    reason_for_change: str = Field(min_length=5, max_length=1000)
