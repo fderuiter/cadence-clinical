@@ -92,6 +92,10 @@ class SQLCodingRepository:
         self.session.add(assignment)
 
     async def add_ledger(self, ledger_data: dict) -> None:
+        decision_by = ledger_data.get("decision_by") or "system"
+        recoding_reason = (
+            ledger_data.get("recoding_reason") or "Medical coding ledger event"
+        )
         ledger = ClinicalCodingLedger(
             assignment_id=ledger_data["assignment_id"],
             verbatim_text=ledger_data["verbatim_text"],
@@ -103,8 +107,8 @@ class SQLCodingRepository:
             new_dictionary_version=ledger_data["new_dictionary_version"],
             new_coded_code=ledger_data["new_coded_code"],
             new_coded_term=ledger_data["new_coded_term"],
-            recoding_reason=ledger_data["recoding_reason"],
-            decision_by=ledger_data["decision_by"],
+            recoding_reason=recoding_reason,
+            decision_by=decision_by,
             decision_at=ledger_data["decision_at"],
             old_hierarchy=ledger_data["old_hierarchy"],
             new_hierarchy=ledger_data["new_hierarchy"],

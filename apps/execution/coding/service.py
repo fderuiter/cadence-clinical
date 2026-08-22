@@ -10,7 +10,10 @@ from datetime import UTC, datetime
 from typing import Any
 
 # Matcher utility
-from apps.execution.coding.matcher import match_verbatim_term
+from apps.execution.coding.matcher import (
+    match_semantic_verbatim_term,
+    match_verbatim_term,
+)
 
 # Core Exceptions
 from apps.execution.exceptions import (
@@ -319,6 +322,33 @@ async def process_coding_action(
                     sug = s
                     break
             if sug is None:
+                for s in sug_list:
+                    hier_list = s.get("hierarchies") or []
+                    for h in hier_list:
+                        if (
+                            h.get("pt_code") == code
+                            or h.get("llt_code") == code
+                            or h.get("hlt_code") == code
+                            or h.get("hlgt_code") == code
+                            or h.get("soc_code") == code
+                        ):
+                            sug = {
+                                "code": code,
+                                "term_name": term
+                                or (
+                                    h.get("pt_name")
+                                    if h.get("pt_code") == code
+                                    else h.get("llt_name")
+                                ),
+                                "level": "PT" if h.get("pt_code") == code else "LLT",
+                                "score": s.get("score"),
+                                "hierarchies": hier_list,
+                            }
+                            break
+                    if sug is not None:
+                        break
+
+            if sug is None:
                 raise InvalidCodingActionError(
                     f"The provided code '{code}' does not match any available suggestions. Use OVERRIDE for manual coding."
                 )
@@ -333,7 +363,13 @@ async def process_coding_action(
         # Resolve suggestion fields
         coded_code = sug.get("code") or sug.get("drug_code")
         coded_term = (
-            sug.get("term_name") or sug.get("preferred_name") or sug.get("drug_name")
+            term.strip()
+            if term and term.strip()
+            else (
+                sug.get("term_name")
+                or sug.get("preferred_name")
+                or sug.get("drug_name")
+            )
         )
         score = sug.get("score")
         if _get_value(dict_type) == "MEDDRA":
@@ -484,6 +520,9 @@ async def process_coding_action(
                 or f"Manual decision: {action_upper}",
                 "decision_by": resolved_actor,
                 "decision_at": datetime.now(UTC).replace(tzinfo=None),
+                "created_by": resolved_actor,
+                "reason_for_change": reason_for_change
+                or f"Manual decision: {action_upper}",
                 "old_hierarchy": old_hierarchy,
                 "new_hierarchy": hierarchy,
                 "recoding_status": assignment.recoding_status,
@@ -521,6 +560,51 @@ async def process_coding_action(
             )
             await repo.add_outbox_entry(outbox_entry)
 
+    return assignment
+
+
+async def suggest_semantic_coding(
+    session: Any,
+    assignment_id: str,
+    actor: str = "system:ai:tier1",
+) -> Any:
+    """Generates AI Tier 1 semantic coding suggestions for an assignment.
+
+    Requirements: PRD-SYS-008, PRD-SYS-042, PRD-SYS-051
+    """
+    repo = _get_repository(session)
+    assignment = await repo.get_assignment(assignment_id)
+
+    dict_type_str = _get_value(assignment.dictionary_type)
+    version = assignment.dictionary_version
+
+    # Run semantic matching
+    res = await match_semantic_verbatim_term(
+        session=session,
+        verbatim=assignment.verbatim_text,
+        dictionary_type=dict_type_str,
+        version=version,
+        top_k=5,
+    )
+
+    candidates = []
+    if res.get("match"):
+        candidates.append(res["match"])
+    if res.get("suggestions"):
+        candidates.extend(res["suggestions"])
+
+    if candidates:
+        top_score = candidates[0].get("score", 0.0)
+        assignment.suggestions = candidates
+        assignment.score = top_score
+        assignment.status = CodingState.SUGGESTED
+    else:
+        assignment.suggestions = []
+        assignment.score = 0.0
+
+    await repo.save_assignment(assignment)
+    if hasattr(session, "flush"):
+        await session.flush()
     return assignment
 
 

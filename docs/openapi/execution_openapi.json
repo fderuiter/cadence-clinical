@@ -628,6 +628,193 @@
         }
       }
     },
+    "/api/v1/execution/anomalies/evaluate": {
+      "post": {
+        "tags": [
+          "Anomalies"
+        ],
+        "summary": "Evaluate Anomalies",
+        "description": "Evaluates cross-domain clinical data for a subject and stages detected candidate queries.",
+        "operationId": "evaluate_anomalies_api_v1_execution_anomalies_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnomalyEvaluateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnomalyEvaluateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/anomalies/candidates": {
+      "get": {
+        "tags": [
+          "Anomalies"
+        ],
+        "summary": "List Candidate Queries",
+        "description": "Lists staged CANDIDATE clinical queries flagged by the anomaly worker for review.",
+        "operationId": "list_candidate_queries_api_v1_execution_anomalies_candidates_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by study ID",
+              "title": "Study Id"
+            },
+            "description": "Filter by study ID"
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by subject ID",
+              "title": "Subject Id"
+            },
+            "description": "Filter by subject ID"
+          },
+          {
+            "name": "domain",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by primary domain",
+              "title": "Domain"
+            },
+            "description": "Filter by primary domain"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AnomalyCandidateItem"
+                  },
+                  "title": "Response List Candidate Queries Api V1 Execution Anomalies Candidates Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/anomalies/candidates/{query_id}/adjudicate": {
+      "post": {
+        "tags": [
+          "Anomalies"
+        ],
+        "summary": "Adjudicate Candidate Query",
+        "description": "Adjudicates a staged CANDIDATE query: promotes to OPEN or dismisses to CANCELLED.",
+        "operationId": "adjudicate_candidate_query_api_v1_execution_anomalies_candidates__query_id__adjudicate_post",
+        "parameters": [
+          {
+            "name": "query_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Query Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjudicationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdjudicationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/auditor/token/generate": {
       "post": {
         "tags": [
@@ -2917,6 +3104,49 @@
         "summary": "Get Coding Assignment",
         "description": "Retrieves a single medical coding assignment by ID.",
         "operationId": "get_coding_assignment_api_v1_execution_coding_assignments__assignment_id__get",
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assignment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodingAssignmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/coding/assignments/{assignment_id}/suggest": {
+      "post": {
+        "tags": [
+          "Dictionaries"
+        ],
+        "summary": "Post Suggest Coding",
+        "description": "Generates AI Tier 1 semantic coding suggestions for an assignment.",
+        "operationId": "post_suggest_coding_api_v1_execution_coding_assignments__assignment_id__suggest_post",
         "parameters": [
           {
             "name": "assignment_id",
@@ -6776,6 +7006,330 @@
         "title": "AddDOAAssignmentRequest",
         "description": "Request payload to add site personnel task delegation record.\n\nRequirements: PRD-SYS-001"
       },
+      "AdjudicationActionEnum": {
+        "type": "string",
+        "enum": [
+          "APPROVE",
+          "REJECT"
+        ],
+        "title": "AdjudicationActionEnum",
+        "description": "Permitted adjudication actions."
+      },
+      "AdjudicationRequest": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/AdjudicationActionEnum",
+            "description": "Adjudication decision: APPROVE (promote to OPEN) or REJECT (dismiss/CANCELLED)."
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "title": "Reason",
+            "description": "Mandatory 21 CFR Part 11 justification or reason for change."
+          },
+          "updated_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated Message",
+            "description": "Optional edited query text before opening to site staff."
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "reason"
+        ],
+        "title": "AdjudicationRequest",
+        "description": "Payload for Data Manager adjudication of a staged candidate query."
+      },
+      "AdjudicationResponse": {
+        "properties": {
+          "query_id": {
+            "type": "string",
+            "title": "Query Id"
+          },
+          "new_status": {
+            "type": "string",
+            "title": "New Status"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "adjudicated_by": {
+            "type": "string",
+            "title": "Adjudicated By"
+          },
+          "adjudicated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Adjudicated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query_id",
+          "new_status",
+          "action",
+          "message",
+          "adjudicated_by",
+          "adjudicated_at"
+        ],
+        "title": "AdjudicationResponse",
+        "description": "Outcome of Data Manager candidate query adjudication."
+      },
+      "AnomalyCandidateItem": {
+        "properties": {
+          "query_id": {
+            "type": "string",
+            "title": "Query Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "visit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Id"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain"
+          },
+          "test_code": {
+            "type": "string",
+            "title": "Test Code"
+          },
+          "observation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observation Id"
+          },
+          "field_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Link"
+          },
+          "rule_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule Id"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "CANDIDATE"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query_id",
+          "study_id",
+          "subject_id",
+          "test_code",
+          "created_at"
+        ],
+        "title": "AnomalyCandidateItem",
+        "description": "Summary of a staged CANDIDATE query generated by the anomaly detector."
+      },
+      "AnomalyEvaluateRequest": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject identifier to evaluate."
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study identifier."
+          },
+          "enable_ai": {
+            "type": "boolean",
+            "title": "Enable Ai",
+            "description": "Whether to run AI Gateway semantic reasoning if available.",
+            "default": true
+          },
+          "auto_stage_queries": {
+            "type": "boolean",
+            "title": "Auto Stage Queries",
+            "description": "Whether to automatically stage detected anomalies as CANDIDATE queries.",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_id",
+          "study_id"
+        ],
+        "title": "AnomalyEvaluateRequest",
+        "description": "Request payload to trigger on-demand anomaly evaluation."
+      },
+      "AnomalyEvaluateResponse": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "anomalies": {
+            "items": {
+              "$ref": "#/components/schemas/CrossDomainAnomaly"
+            },
+            "type": "array",
+            "title": "Anomalies"
+          },
+          "evaluated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Evaluated At"
+          },
+          "queries_staged_count": {
+            "type": "integer",
+            "title": "Queries Staged Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_id",
+          "study_id",
+          "anomalies",
+          "evaluated_at",
+          "queries_staged_count"
+        ],
+        "title": "AnomalyEvaluateResponse",
+        "description": "Response payload returning evaluation results."
+      },
+      "AnomalySeverity": {
+        "type": "string",
+        "enum": [
+          "HIGH",
+          "MEDIUM",
+          "LOW"
+        ],
+        "title": "AnomalySeverity",
+        "description": "Priority and severity level of a detected cross-domain anomaly."
+      },
       "ApproveDelegationRequest": {
         "properties": {
           "delegation_id": {
@@ -8201,6 +8755,186 @@
         ],
         "title": "CriterionLevelResult",
         "description": "Pydantic schema for individual criterion level evaluation result."
+      },
+      "CrossDomainAnomaly": {
+        "properties": {
+          "anomaly_id": {
+            "type": "string",
+            "title": "Anomaly Id",
+            "description": "Unique identifier for the detected anomaly instance."
+          },
+          "anomaly_type": {
+            "$ref": "#/components/schemas/CrossDomainAnomalyType",
+            "description": "Category of the cross-domain inconsistency."
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study scope identifier."
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Clinical subject identifier."
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Clinical site identifier if known."
+          },
+          "visit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Id",
+            "description": "Clinical visit identifier associated with primary finding."
+          },
+          "primary_domain": {
+            "type": "string",
+            "title": "Primary Domain",
+            "description": "Primary CDISC domain (e.g. AE, CM, LB, VS, DS, EX)."
+          },
+          "primary_test_code": {
+            "type": "string",
+            "title": "Primary Test Code",
+            "description": "Primary observation test code."
+          },
+          "correlated_domain": {
+            "type": "string",
+            "title": "Correlated Domain",
+            "description": "Correlated CDISC domain that exhibits inconsistency."
+          },
+          "correlated_test_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlated Test Code",
+            "description": "Optional correlated test code in the related domain."
+          },
+          "severity": {
+            "$ref": "#/components/schemas/AnomalySeverity",
+            "description": "Clinical severity or query priority.",
+            "default": "MEDIUM"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Short, human-readable summary of the discrepancy."
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation",
+            "description": "Detailed clinical explanation and rationale."
+          },
+          "confidence_score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence Score",
+            "description": "Confidence score (1.0 for deterministic rules, 0.0-1.0 for AI reasoners).",
+            "default": 1.0
+          },
+          "model_identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Identifier",
+            "description": "AI model identifier if generated or assisted by AI Gateway."
+          },
+          "prompt_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Hash",
+            "description": "Cryptographic SHA-256 prompt hash for AI Gateway attribution."
+          },
+          "observation_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Observation Ids",
+            "description": "List of associated ClinicalObservation IDs involved in this finding."
+          },
+          "form_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form Id",
+            "description": "Associated eCRF form or page ID."
+          },
+          "field_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Id",
+            "description": "Associated form field ID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "anomaly_type",
+          "study_id",
+          "subject_id",
+          "primary_domain",
+          "primary_test_code",
+          "correlated_domain",
+          "message",
+          "explanation"
+        ],
+        "title": "CrossDomainAnomaly",
+        "description": "Domain representation of an identified cross-domain inconsistency or anomaly."
+      },
+      "CrossDomainAnomalyType": {
+        "type": "string",
+        "enum": [
+          "AE_WITHOUT_CONCOMITANT_MED",
+          "CONCOMITANT_MED_WITHOUT_AE",
+          "MARKED_LAB_ABNORMALITY_WITHOUT_AE",
+          "CRITICAL_VITALS_WITHOUT_AE",
+          "DRUG_DISCONTINUATION_WITHOUT_AE",
+          "TEMPORAL_SEQUENCE_MISMATCH",
+          "AI_CONTEXTUAL_INCONSISTENCY"
+        ],
+        "title": "CrossDomainAnomalyType",
+        "description": "Enumeration of cross-domain clinical anomaly and discrepancy categories."
       },
       "CustodianEnum": {
         "type": "string",

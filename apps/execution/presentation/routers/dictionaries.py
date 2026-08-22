@@ -437,6 +437,50 @@ async def get_coding_assignment(
 
 
 @router.post(
+    "/api/v1/execution/coding/assignments/{assignment_id}/suggest",
+    response_model=CodingAssignmentResponse,
+)
+async def post_suggest_coding(
+    assignment_id: str,
+    roles: list[str] = Depends(get_normalized_roles),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> CodingAssignmentResponse:
+    """Generates AI Tier 1 semantic coding suggestions for an assignment."""
+    from apps.execution.coding import suggest_semantic_coding as suggest_service
+
+    actor = current_user_id.get() or "system:ai:tier1"
+    async with session.begin():
+        try:
+            as_db = await suggest_service(
+                session=session,
+                assignment_id=assignment_id,
+                actor=actor,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    return CodingAssignmentResponse(
+        id=as_db.id,
+        verbatim_text=as_db.verbatim_text,
+        source_field=as_db.source_field,
+        observation_id=as_db.observation_id,
+        dictionary_type=as_db.dictionary_type.value,
+        dictionary_version=as_db.dictionary_version,
+        coded_code=as_db.coded_code,
+        coded_term=as_db.coded_term,
+        status=as_db.status.value,
+        recoding_status=as_db.recoding_status.value,
+        assigned_by=as_db.assigned_by,
+        assigned_at=as_db.assigned_at,
+        score=as_db.score,
+        hierarchy=as_db.hierarchy,
+        suggestions=as_db.suggestions,
+        domain=as_db.domain,
+        version=as_db.version,
+        is_deleted=as_db.is_deleted,
+    )
+
+
+@router.post(
     "/api/v1/execution/coding/assignments/{assignment_id}/action",
     response_model=CodingAssignmentResponse,
 )
