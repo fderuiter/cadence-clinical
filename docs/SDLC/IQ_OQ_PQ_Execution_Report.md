@@ -8,10 +8,10 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 3132
-- **Passed:** 3107 🟢
-- **Failed/Errors:** 1 🔴
+- **Passed:** 3108 🟢
+- **Failed/Errors:** 0 🔴
 - **Skipped:** 24 ⚪
-- **Overall Operational Pass Rate:** 99.20%
+- **Overall Operational Pass Rate:** 99.23%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -3351,7 +3351,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_should_provision_postgres_controller_boundary` | `tests.test_harness_isolation` | PRD-SYS-004 | 🟢 PASSED | < 1s |
 | `test_should_provision_postgres_worker` | `tests.test_harness_isolation` | PRD-SYS-004 | 🟢 PASSED | < 1s |
 | `test_simulated_concurrent_runs_have_disjoint_databases` | `tests.test_harness_isolation` | PRD-SYS-004 | 🟢 PASSED | < 1s |
-| `test_cli_setup_credentials_json` | `tests.test_setup_credentials` | PRD-SYS-WIZARD-001 | 🔴 FAILED | < 1s |
+| `test_cli_setup_credentials_json` | `tests.test_setup_credentials` | PRD-SYS-WIZARD-001 | 🟢 PASSED | < 1s |
 | `test_cli_setup_help` | `tests.test_setup_credentials` | PRD-SYS-WIZARD-001 | 🟢 PASSED | < 1s |
 | `test_setup_wizard_bash_syntax` | `tests.test_setup_credentials` | PRD-SYS-WIZARD-001 | 🟢 PASSED | < 1s |
 | `test_setup_wizard_dev_execution` | `tests.test_setup_credentials` | PRD-SYS-WIZARD-001 | 🟢 PASSED | < 1s |
@@ -3410,28 +3410,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** f2d758c48cef2f56ead708fdc4de24e0c5ac8ce03f5d681ebad86140bbfee309
+- **Cryptographic Hash (SHA-256):** 1ebdb5761fcfb86adc8aaafcb22415829d0d4640d84de80999a835e6ce73a23b
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUE3DEe/ausOYnfSfZsHKLWbuB0MIwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUftRTSSdaXjJL1hn2ZcG6EZDnT2YwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MTE5NTE0OFoXDTI3MDgyMjE5NTE0OFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MTE5NTI1OFoXDTI3MDgyMjE5NTI1OFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlIGJ
-4L7dNqGmVYct6azFU9wuhW88lWi9Ko5oPs3jvX3SfO7o/zvmAK1gZ7l/8tIj0tgC
-M6VSMM0jzy63lXK16/oXleKPESJWrWt6YdgDGmgS2kAWXWHMTpQvjDF8MNQgQjxV
-EvIcwB8fd7ERcqn0MKbIaNeyBafa/PF4oaQWt9CkFu3yr20HblhZPItQ+Fp25UN8
-gyRU80IEG7iMgFbDlLxRwj3jedLMvVZ+e9xhspcuIHTuasmD5vGTdG/vIQ0Fwv5F
-bv92nA8hWxgkRJyi+0gTxUZZlWk2rr8o84y+VaWrRBKVjAyhFKIXhU/mDN0KlRmK
-z2+GFxRCCXg6ApWfdQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQB4a+JePOeHDxDa
-I9+/2OSzQfs/Q0dXecbh+lDahoB9+MjAQu9i4v5jnUB81Q06d/TeXnLWdUDRDA2m
-9Ls6TtmYpX32KbWnVq7fCMSbrCUuwPJuaS0GH1nJsP9MKzY438bTuvqTrjeOZ+yR
-8XlfCLZP9vbKeuVXmnYIz63f+M/Q4jGD4H/aaA71lLwxrpHvhqoYB5xZTl2V4xhC
-41ByqoYH2REozNTRGJVBSm60aphq9I4zE4Vam6X1XoUf+9GiSga+/0GFKUWJSbjk
-kC+H5DRc+mnYee2l56Xxo0B4W9mglD7VLEbmvQY95wTNI30SPP+W6SNWTs1N8SSL
-eWglpO/b
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2dae
+hyu2g8+Rbw7k9ZDuB7+VTQY0GktgSEX19gv9oqbDt4P21o23oKMIc5mBzCkYd2vX
+MTJfNEFRaAUlLYtEEHV8CeWtLNmTyWrpUvZ2bNMofS87nTLAO+bozIhj9ErO66Y/
+KAffwD/CP5PqG9pSZ96itUWVHx3ubjjZlVhyCxSC6uXMyJhXPP4v7FoOeWKfPTsu
+Y+5YyTUmaD15ObrWXX3DBlIQ28hJG7npNAo9mt9AkFo2zFDO78VHbJaNy6AKZUc3
+FjTd0bGk15GBHLwSIeRsw/CXqHqBEoGxZEZGARKpE6reDr4lMMC7tFrK+1Mw1RPb
+QUtN4+NjraPx3ERKfwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQA3DSWofVTGb5vH
+jEYGFQhZWASB4herYvRQV3FVYmJi/n8/6fOml/P5+DOn/hBSQGwURGPV6Is9cXD4
+iwLw+at+nxTMVOLASSQyeeD7fFfNuzGBHjG7tKIACHf1sGU46YrepeJAK1zyN1CU
+CVIkFueRuL0jiU9LyhoH6v/OemqOcO+RMxYPp8fVvy8ydTEagGExCJyvDHyCIJS+
+kNoYo0Yr2zAjPtj1qajDysCfm2Am9jQa2ccCS9Bi69JFwFCZYBYwqYy8Ffw1yX0N
+zKU1JVYZ3Upl8bcAeElUlhIUqLVed62iakUxD/ve3WHJ0zZkCY2Rq4xB+45R7w/G
+bmQ7ZulQ
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-BMRT120PJyiUn7lAtIzkZMBE314+aeUmtJw5MpttBl7sI1iDCxxP7wZysdcTCLpPGtIaBZfDstCyr/osEC5Z5DUg0mcNvqVoTEjqBm5z9Pxu6k+ck+tWXZSYc48vi9JgnMZiJi/TpbRXCDNAIesJJlofl+/czr4Rk4AwZAot73L12O64YL7PO8jVF6B5v6kb4Dp8sKXFpDc6W6dIBcCpIkFnuD+lboyYaYA99JNp8J+OFTO5Dp14EhTYIskSTny8G9HuEZK2m6hZ3iAhH3DG4XAkVi/JUgnmLJBKN5bUTood85nowQ2Y534/SnYvsGFoy1rU3IOpuhHrYnQMuTwOYw==
+FWzYgt72h5aDSK9GWh/aBTp5TDnKoCMJ+atH9fCre0g6p8Wn+I5PXx0W+I2eF9RrgJQ733NF+SG0aXRIy87UgraV2PanP3MFOSu0J1a2oS0RXdWLk4tlhsWhTW5Q5tJmZVIVmQ6UMtojUFPxx1CLIl2+SjJXToWMB0nL/xVvhmB5WgCTXS9oKxbsitkPMQM28AjyTqsFO7p3XGHV7eoYefCHTl9DOLlIYGCBkiqzvfVubKVAAss6V5ONPzfVg4w3jUhSayIQepdoH0yOMwRw3+wYTd3M9dUZLHVjjSqSF8EWfz6Y7yyfKtwXJCjZ+cFWqTBHE+QZ1Mv2Xqk1H11TYQ==
 -----END SIGNATURE-----
