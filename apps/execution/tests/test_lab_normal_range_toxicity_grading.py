@@ -23,11 +23,7 @@ Requirements:
 - @req:Trace-15
 """
 
-import hashlib
-import hmac
-import json
 import os
-import time
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -62,6 +58,7 @@ from apps.execution.services.lab_toxicity_engine import (
     CTCAEGrade,
     LabToxicityEngine,
 )
+from packages.security.rbac_helpers import build_gateway_headers
 
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # nosec B105: test mock
 
@@ -72,25 +69,11 @@ def get_auth_headers(
     change_reason: str = "Testing Lab Governance & Toxicity Grading",
 ) -> dict[str, str]:
     """Generate Gateway signature-compliant authentication headers."""
-    timestamp = str(time.time())
-    payload = {
-        "change_reason": change_reason,
-        "roles": roles,
-        "timestamp": timestamp,
-        "user_id": user_id,
-    }
-    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-    signature = hmac.new(
-        GATEWAY_SECRET.encode(), serialized.encode(), hashlib.sha256
-    ).hexdigest()
-    return {
-        "X-User-Id": user_id,
-        "X-User-Roles": roles,
-        "X-Gateway-Timestamp": timestamp,
-        "X-Gateway-Signature": signature,
-        "X-Signature-Version": "2",
-        "X-Change-Reason": change_reason,
-    }
+    return build_gateway_headers(
+        user_id=user_id,
+        roles=roles,
+        change_reason=change_reason,
+    )
 
 
 @pytest_asyncio.fixture(autouse=True)

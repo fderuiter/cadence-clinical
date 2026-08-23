@@ -333,11 +333,20 @@ class ISensorRepositoryPort(RepositoryPort[Any]):
         pass
 
 
-class IDCTRepositoryPort(ABC):
+class IDCTRepositoryPort(RepositoryPort[Any]):
     """Port for Decentralized Clinical Trial (DCT) repository persistence."""
 
     @abstractmethod
+    async def get_by_id(self, entity_id: str) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def save(self, entity: Any) -> Any:
+        pass
+
+    @abstractmethod
     async def create_telehealth_session(self, record: Any) -> Any:
+
         pass
 
     @abstractmethod

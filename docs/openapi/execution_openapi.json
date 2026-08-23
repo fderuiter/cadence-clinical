@@ -6292,10 +6292,10 @@
     "/api/v1/execution/labs/ingest": {
       "post": {
         "tags": [
-          "Laboratory Ingestion"
+          "Laboratory Governance & Ingestion"
         ],
         "summary": "Ingest Lab Batch Endpoint",
-        "description": "Ingest central or local laboratory batch data (CSV, HL7 v2.x, or FHIR JSON).\n\nSupports JSON payloads containing CSV/HL7 strings or FHIR Observation objects/bundles,\nas well as multipart/form-data file uploads.\n\nArgs:\n    request: FastAPI HTTP request instance.\n    background_tasks: BackgroundTasks context for dispatching critical alerts.\n    payload_body: Optional parsed JSON body.\n    roles: Verified principal roles ensuring write permissions.\n\nReturns:\n    LabBatchIngestResult: Summary of batch processing statistics and auto-queries.",
+        "description": "Ingest central or local laboratory batch data (CSV, HL7 v2.x, FHIR JSON, CDISC LAB, or Local Manual).",
         "operationId": "ingest_lab_batch_endpoint_api_v1_execution_labs_ingest_post",
         "responses": {
           "200": {
@@ -6314,7 +6314,7 @@
     "/api/v1/execution/labs/batch-status": {
       "get": {
         "tags": [
-          "Laboratory Ingestion"
+          "Laboratory Governance & Ingestion"
         ],
         "summary": "Get Batch Status Endpoint",
         "description": "Retrieve status and metrics for previous lab batch ingestion jobs.",
@@ -6395,7 +6395,7 @@
     "/api/v1/execution/labs/batch-status/{batch_id}": {
       "get": {
         "tags": [
-          "Laboratory Ingestion"
+          "Laboratory Governance & Ingestion"
         ],
         "summary": "Get Batch Status By Id Endpoint",
         "description": "Query execution status and statistics of a specific laboratory batch by ID.",
@@ -6418,6 +6418,485 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LabBatchIngestResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/labs/certifications": {
+      "post": {
+        "tags": [
+          "Laboratory Governance & Ingestion"
+        ],
+        "summary": "Create Local Lab Certification",
+        "description": "Register a local laboratory certification and accreditation.",
+        "operationId": "create_local_lab_certification_api_v1_execution_labs_certifications_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalLabCertificationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalLabCertificationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Laboratory Governance & Ingestion"
+        ],
+        "summary": "List Local Lab Certifications",
+        "description": "List local laboratory certifications with optional filters.",
+        "operationId": "list_local_lab_certifications_api_v1_execution_labs_certifications_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by study ID",
+              "title": "Study Id"
+            },
+            "description": "Filter by study ID"
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by site ID",
+              "title": "Site Id"
+            },
+            "description": "Filter by site ID"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by certification status",
+              "title": "Status"
+            },
+            "description": "Filter by certification status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocalLabCertificationResponse"
+                  },
+                  "title": "Response List Local Lab Certifications Api V1 Execution Labs Certifications Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/labs/certifications/{cert_id}": {
+      "put": {
+        "tags": [
+          "Laboratory Governance & Ingestion"
+        ],
+        "summary": "Update Local Lab Certification",
+        "description": "Update an existing local laboratory certification.",
+        "operationId": "update_local_lab_certification_api_v1_execution_labs_certifications__cert_id__put",
+        "parameters": [
+          {
+            "name": "cert_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cert Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalLabCertificationUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalLabCertificationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/labs/certifications/verify": {
+      "post": {
+        "tags": [
+          "Laboratory Governance & Ingestion"
+        ],
+        "summary": "Verify Local Lab Certification Endpoint",
+        "description": "Verify if a site has active, unexpired local lab certification for an observation date.",
+        "operationId": "verify_local_lab_certification_endpoint_api_v1_execution_labs_certifications_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalLabCertificationVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalLabCertificationVerifyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/labs/toxicity/review-queue": {
+      "get": {
+        "tags": [
+          "Laboratory Governance & Ingestion"
+        ],
+        "summary": "List Staged Ae Review Queue",
+        "description": "Retrieve laboratory Grade 3/4 toxicity triggers staged for Investigator review.",
+        "operationId": "list_staged_ae_review_queue_api_v1_execution_labs_toxicity_review_queue_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by study ID",
+              "title": "Study Id"
+            },
+            "description": "Filter by study ID"
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by site ID",
+              "title": "Site Id"
+            },
+            "description": "Filter by site ID"
+          },
+          {
+            "name": "review_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status (default: STAGED_FOR_INVESTIGATOR_REVIEW, ALL for any)",
+              "default": "STAGED_FOR_INVESTIGATOR_REVIEW",
+              "title": "Review Status"
+            },
+            "description": "Filter by status (default: STAGED_FOR_INVESTIGATOR_REVIEW, ALL for any)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StagedAdverseEventReviewResponse"
+                  },
+                  "title": "Response List Staged Ae Review Queue Api V1 Execution Labs Toxicity Review Queue Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/labs/toxicity/review/{review_id}/action": {
+      "post": {
+        "tags": [
+          "Laboratory Governance & Ingestion"
+        ],
+        "summary": "Action Staged Ae Review",
+        "description": "Perform Investigator workflow action on a staged Grade 3/4 AE (Confirm, Dismiss, Escalate).",
+        "operationId": "action_staged_ae_review_api_v1_execution_labs_toxicity_review__review_id__action_post",
+        "parameters": [
+          {
+            "name": "review_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Review Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StagedAdverseEventActionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StagedAdverseEventActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/labs/toxicity/evaluate": {
+      "post": {
+        "tags": [
+          "Laboratory Governance & Ingestion"
+        ],
+        "summary": "Evaluate Toxicity Realtime",
+        "description": "Evaluate and simulate CTCAE v5.0 / DAIDS v2.1 toxicity grading in real time.",
+        "operationId": "evaluate_toxicity_realtime_api_v1_execution_labs_toxicity_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabToxicityEvaluateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabToxicityEvaluateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/labs/loinc-catalog": {
+      "get": {
+        "tags": [
+          "Laboratory Governance & Ingestion"
+        ],
+        "summary": "Get Loinc Catalog Endpoint",
+        "description": "Retrieve standardized LOINC catalog mappings.",
+        "operationId": "get_loinc_catalog_endpoint_api_v1_execution_labs_loinc_catalog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoincCatalogResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/labs/convert-unit": {
+      "post": {
+        "tags": [
+          "Laboratory Governance & Ingestion"
+        ],
+        "summary": "Convert Unit Endpoint",
+        "description": "Convert laboratory measurement between conventional and SI units.",
+        "operationId": "convert_unit_endpoint_api_v1_execution_labs_convert_unit_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoincConvertRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoincConvertResponse"
                 }
               }
             }
@@ -12524,6 +13003,17 @@
         "title": "CGTVialReturnReconciliationResponse",
         "description": "Response schema for vial return reconciliation."
       },
+      "CertificationStatusEnum": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "EXPIRED",
+          "SUSPENDED",
+          "PENDING_RENEWAL"
+        ],
+        "title": "CertificationStatusEnum",
+        "description": "Accreditation and certification lifecycle status of a local laboratory."
+      },
       "ClinicalQueryResponse": {
         "properties": {
           "id": {
@@ -15721,6 +16211,15 @@
         "title": "GenerateAuditorTokenRequest",
         "description": "Request payload to generate a temporary auditor access token.\n\nRequirements: PRD-SYS-001"
       },
+      "GradingScaleEnum": {
+        "type": "string",
+        "enum": [
+          "CTCAE_V5",
+          "DAIDS_V2_1"
+        ],
+        "title": "GradingScaleEnum",
+        "description": "Toxicity grading system standard."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -16251,6 +16750,23 @@
             "title": "Queries Raised",
             "default": 0
           },
+          "staged_aes_count": {
+            "type": "integer",
+            "title": "Staged Aes Count",
+            "default": 0
+          },
+          "uncalibrated_safeguards": {
+            "type": "integer",
+            "title": "Uncalibrated Safeguards",
+            "default": 0
+          },
+          "toxicity_grades": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Toxicity Grades"
+          },
           "errors": {
             "items": {
               "additionalProperties": true,
@@ -16740,6 +17256,710 @@
         "title": "LabReferenceRangeUpdate",
         "description": "Pydantic schema for updating a reference range."
       },
+      "LabToxicityEvaluateRequest": {
+        "properties": {
+          "test_code": {
+            "type": "string",
+            "title": "Test Code",
+            "description": "Standardized laboratory test code (e.g. 'ALT', 'CREAT', 'ANC')"
+          },
+          "test_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Name",
+            "description": "Optional descriptive test name"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value",
+            "description": "Observed numeric test measurement"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit",
+            "description": "Reporting unit of measurement"
+          },
+          "ref_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref Low",
+            "description": "Lower limit of demographic normal range (LLN)"
+          },
+          "ref_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref High",
+            "description": "Upper limit of demographic normal range (ULN)"
+          },
+          "baseline_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Value",
+            "description": "Optional subject baseline value for acute delta calculation"
+          },
+          "previous_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Value",
+            "description": "Optional previous observation value"
+          },
+          "grading_scale": {
+            "$ref": "#/components/schemas/GradingScaleEnum",
+            "description": "Target grading scale: 'CTCAE_V5' or 'DAIDS_V2_1'",
+            "default": "CTCAE_V5"
+          },
+          "alt_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alt Value",
+            "description": "Co-analyte ALT value for Hy's Law evaluation"
+          },
+          "ast_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ast Value",
+            "description": "Co-analyte AST value for Hy's Law evaluation"
+          },
+          "bili_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bili Value",
+            "description": "Co-analyte Total Bilirubin value for Hy's Law evaluation"
+          },
+          "alkp_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alkp Value",
+            "description": "Co-analyte Alkaline Phosphatase value for Hy's Law evaluation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "test_code",
+          "value",
+          "unit"
+        ],
+        "title": "LabToxicityEvaluateRequest",
+        "description": "Request payload to simulate/evaluate laboratory toxicity grading in real time."
+      },
+      "LabToxicityEvaluateResponse": {
+        "properties": {
+          "test_code": {
+            "type": "string",
+            "title": "Test Code",
+            "description": "Analyzed laboratory test code"
+          },
+          "test_name": {
+            "type": "string",
+            "title": "Test Name",
+            "description": "Descriptive test name"
+          },
+          "observed_value": {
+            "type": "number",
+            "title": "Observed Value",
+            "description": "Evaluated measurement value"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit",
+            "description": "Unit of measurement"
+          },
+          "ctcae_grade": {
+            "type": "integer",
+            "title": "Ctcae Grade",
+            "description": "Computed severity grade integer (0 to 4)"
+          },
+          "grading_scale": {
+            "type": "string",
+            "title": "Grading Scale",
+            "description": "Grading scale applied"
+          },
+          "toxicity_description": {
+            "type": "string",
+            "title": "Toxicity Description",
+            "description": "Detailed clinical severity criterion description"
+          },
+          "is_critical_ae_trigger": {
+            "type": "boolean",
+            "title": "Is Critical Ae Trigger",
+            "description": "True if Grade >= 3 triggering automated AE drafting"
+          },
+          "is_hys_law_warning": {
+            "type": "boolean",
+            "title": "Is Hys Law Warning",
+            "description": "True if Hy's Law criteria for severe DILI are met"
+          },
+          "is_delta_check_alert": {
+            "type": "boolean",
+            "title": "Is Delta Check Alert",
+            "description": "True if acute delta threshold exceeded"
+          },
+          "delta_percentage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Percentage",
+            "description": "Calculated percentage deviation from baseline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "test_code",
+          "test_name",
+          "observed_value",
+          "unit",
+          "ctcae_grade",
+          "grading_scale",
+          "toxicity_description",
+          "is_critical_ae_trigger",
+          "is_hys_law_warning",
+          "is_delta_check_alert"
+        ],
+        "title": "LabToxicityEvaluateResponse",
+        "description": "Response payload with computed CTCAE / DAIDS toxicity grade and alert flags."
+      },
+      "LocalLabCertificationCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique protocol study identifier"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Investigator site identifier"
+          },
+          "lab_name": {
+            "type": "string",
+            "title": "Lab Name",
+            "description": "Laboratory facility name"
+          },
+          "lab_identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lab Identifier",
+            "description": "Optional facility identifier"
+          },
+          "certification_number": {
+            "type": "string",
+            "title": "Certification Number",
+            "description": "CLIA, CAP, or ISO certification number"
+          },
+          "accreditation_body": {
+            "type": "string",
+            "title": "Accreditation Body",
+            "description": "Accrediting agency (e.g. CLIA, CAP, ISO 15189)"
+          },
+          "effective_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Effective Date",
+            "description": "Certification effective begin date"
+          },
+          "expiration_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expiration Date",
+            "description": "Certification expiration end date"
+          },
+          "director_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Director Name",
+            "description": "Name of laboratory director"
+          },
+          "is_accredited": {
+            "type": "boolean",
+            "title": "Is Accredited",
+            "description": "Accreditation status flag",
+            "default": true
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Operational notes"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory GxP 21 CFR Part 11 justification reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "lab_name",
+          "certification_number",
+          "accreditation_body",
+          "effective_date",
+          "expiration_date",
+          "reason_for_change"
+        ],
+        "title": "LocalLabCertificationCreate",
+        "description": "Payload to register a new local laboratory accreditation or certification.\n\nRequirements: PRD-LAB-001"
+      },
+      "LocalLabCertificationResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique database identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique protocol study identifier"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Investigator site identifier"
+          },
+          "lab_name": {
+            "type": "string",
+            "title": "Lab Name",
+            "description": "Laboratory facility name"
+          },
+          "lab_identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lab Identifier",
+            "description": "Optional facility identifier"
+          },
+          "certification_number": {
+            "type": "string",
+            "title": "Certification Number",
+            "description": "Certification number"
+          },
+          "accreditation_body": {
+            "type": "string",
+            "title": "Accreditation Body",
+            "description": "Accreditation body"
+          },
+          "effective_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Effective Date",
+            "description": "Effective begin date"
+          },
+          "expiration_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expiration Date",
+            "description": "Expiration end date"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CertificationStatusEnum",
+            "description": "Status"
+          },
+          "director_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Director Name",
+            "description": "Laboratory director name"
+          },
+          "is_accredited": {
+            "type": "boolean",
+            "title": "Is Accredited",
+            "description": "Accredited status"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Notes"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "description": "Version index"
+          },
+          "is_deleted": {
+            "type": "boolean",
+            "title": "Is Deleted",
+            "description": "Soft deletion flag"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "lab_name",
+          "certification_number",
+          "accreditation_body",
+          "effective_date",
+          "expiration_date",
+          "status",
+          "is_accredited",
+          "version",
+          "is_deleted"
+        ],
+        "title": "LocalLabCertificationResponse",
+        "description": "Response representing a local laboratory certification.\n\nRequirements: PRD-LAB-001"
+      },
+      "LocalLabCertificationUpdate": {
+        "properties": {
+          "lab_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lab Name",
+            "description": "Updated facility name"
+          },
+          "lab_identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lab Identifier",
+            "description": "Updated facility identifier"
+          },
+          "certification_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certification Number",
+            "description": "Updated certification number"
+          },
+          "accreditation_body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accreditation Body",
+            "description": "Updated accrediting agency"
+          },
+          "effective_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Date",
+            "description": "Updated effective date"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date",
+            "description": "Updated expiration date"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CertificationStatusEnum"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Updated operational status"
+          },
+          "director_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Director Name",
+            "description": "Updated laboratory director"
+          },
+          "is_accredited": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Accredited",
+            "description": "Updated accreditation flag"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Updated operational notes"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory GxP 21 CFR Part 11 justification reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "LocalLabCertificationUpdate",
+        "description": "Payload to update an existing local laboratory certification.\n\nRequirements: PRD-LAB-001"
+      },
+      "LocalLabCertificationVerifyRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique protocol study identifier"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Target site identifier"
+          },
+          "observation_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observation Date",
+            "description": "Observation collection date (defaults to current time)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id"
+        ],
+        "title": "LocalLabCertificationVerifyRequest",
+        "description": "Request to verify local laboratory certification validity."
+      },
+      "LocalLabCertificationVerifyResponse": {
+        "properties": {
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid",
+            "description": "True if site has active, unexpired certification"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Certification status code"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study identifier"
+          },
+          "certification_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certification Number",
+            "description": "Certification number if found"
+          },
+          "accreditation_body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accreditation Body",
+            "description": "Accreditation body if found"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date",
+            "description": "Expiration date if found"
+          },
+          "days_until_expiration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Until Expiration",
+            "description": "Days remaining until expiration"
+          },
+          "uncalibrated_safeguard_triggered": {
+            "type": "boolean",
+            "title": "Uncalibrated Safeguard Triggered",
+            "description": "True if safeguard fired due to expired or missing certification",
+            "default": false
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable status summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_valid",
+          "status",
+          "site_id",
+          "study_id",
+          "message"
+        ],
+        "title": "LocalLabCertificationVerifyResponse",
+        "description": "Response from local lab certification verification."
+      },
       "LocalLedgerBlock": {
         "properties": {
           "index": {
@@ -16910,6 +18130,183 @@
         ],
         "title": "LoggerIngestionRequest",
         "description": "Payload to upload and ingest a raw temperature logger file."
+      },
+      "LoincCatalogResponse": {
+        "properties": {
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count",
+            "description": "Total mapped LOINC test codes"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LoincMappingItem"
+            },
+            "type": "array",
+            "title": "Items",
+            "description": "List of mapped LOINC analyte items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_count",
+          "items"
+        ],
+        "title": "LoincCatalogResponse",
+        "description": "Response payload containing standardized LOINC mappings."
+      },
+      "LoincConvertRequest": {
+        "properties": {
+          "test_code": {
+            "type": "string",
+            "title": "Test Code",
+            "description": "Laboratory analyte code"
+          },
+          "from_unit": {
+            "type": "string",
+            "title": "From Unit",
+            "description": "Source unit"
+          },
+          "to_unit": {
+            "type": "string",
+            "title": "To Unit",
+            "description": "Target unit"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value",
+            "description": "Numeric value to convert"
+          }
+        },
+        "type": "object",
+        "required": [
+          "test_code",
+          "from_unit",
+          "to_unit",
+          "value"
+        ],
+        "title": "LoincConvertRequest",
+        "description": "Request to convert laboratory value between conventional and SI units."
+      },
+      "LoincConvertResponse": {
+        "properties": {
+          "test_code": {
+            "type": "string",
+            "title": "Test Code",
+            "description": "Analyte test code"
+          },
+          "from_unit": {
+            "type": "string",
+            "title": "From Unit",
+            "description": "Original source unit"
+          },
+          "to_unit": {
+            "type": "string",
+            "title": "To Unit",
+            "description": "Target converted unit"
+          },
+          "original_value": {
+            "type": "number",
+            "title": "Original Value",
+            "description": "Original input value"
+          },
+          "converted_value": {
+            "type": "number",
+            "title": "Converted Value",
+            "description": "Computed converted value"
+          },
+          "factor": {
+            "type": "number",
+            "title": "Factor",
+            "description": "Multiplicative conversion factor"
+          },
+          "offset": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offset",
+            "description": "Additive offset if applicable"
+          },
+          "loinc_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loinc Code",
+            "description": "Associated LOINC code if resolved"
+          }
+        },
+        "type": "object",
+        "required": [
+          "test_code",
+          "from_unit",
+          "to_unit",
+          "original_value",
+          "converted_value",
+          "factor"
+        ],
+        "title": "LoincConvertResponse",
+        "description": "Response from mathematical laboratory unit conversion."
+      },
+      "LoincMappingItem": {
+        "properties": {
+          "test_code": {
+            "type": "string",
+            "title": "Test Code",
+            "description": "Standardized internal analyte code"
+          },
+          "test_name": {
+            "type": "string",
+            "title": "Test Name",
+            "description": "Analyte name"
+          },
+          "loinc_code": {
+            "type": "string",
+            "title": "Loinc Code",
+            "description": "Standard LOINC code"
+          },
+          "standard_unit": {
+            "type": "string",
+            "title": "Standard Unit",
+            "description": "Standardized SI/UCUM unit"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "Clinical laboratory domain category"
+          },
+          "molecular_weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Molecular Weight",
+            "description": "Molecular weight (g/mol) for molar/mass conversions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "test_code",
+          "test_name",
+          "loinc_code",
+          "standard_unit",
+          "category"
+        ],
+        "title": "LoincMappingItem",
+        "description": "LOINC dictionary mapping metadata item."
       },
       "LotExpiryExtensionRequest": {
         "properties": {
@@ -20385,6 +21782,342 @@
         ],
         "title": "StabilityBudgetResponse",
         "description": "Response schema for a drug stability budget."
+      },
+      "StagedAdverseEventActionRequest": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "title": "Action",
+            "description": "Action to take: 'CONFIRM' (promote to formal AE), 'DISMISS' (not clinically significant), or 'ESCALATE_SAE'"
+          },
+          "investigator_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigator Notes",
+            "description": "Clinical commentary and rationale"
+          },
+          "electronic_signature_password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Electronic Signature Password",
+            "description": "21 CFR Part 11 authentication credential"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory GxP 21 CFR Part 11 justification reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "reason_for_change"
+        ],
+        "title": "StagedAdverseEventActionRequest",
+        "description": "Payload to perform an Investigator action on a staged Grade 3/4 AE."
+      },
+      "StagedAdverseEventActionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Review ID"
+          },
+          "review_status": {
+            "type": "string",
+            "title": "Review Status",
+            "description": "Updated review status"
+          },
+          "action_taken": {
+            "type": "string",
+            "title": "Action Taken",
+            "description": "Action that was executed"
+          },
+          "form_submission_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form Submission Id",
+            "description": "FormSubmission ID if confirmed"
+          },
+          "query_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query Id",
+            "description": "ClinicalQuery ID updated"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Result message"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp",
+            "description": "Action timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "review_status",
+          "action_taken",
+          "message",
+          "timestamp"
+        ],
+        "title": "StagedAdverseEventActionResponse",
+        "description": "Response from executing an Investigator action on a staged AE."
+      },
+      "StagedAdverseEventReviewResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique review record ID"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Trial study identifier"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Investigator site identifier"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "visit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Id",
+            "description": "Visit identifier"
+          },
+          "observation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observation Id",
+            "description": "Linked ClinicalObservation ID"
+          },
+          "form_submission_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form Submission Id",
+            "description": "Drafted AE FormSubmission ID"
+          },
+          "query_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query Id",
+            "description": "Linked discrepancy ClinicalQuery ID"
+          },
+          "test_code": {
+            "type": "string",
+            "title": "Test Code",
+            "description": "Laboratory test code"
+          },
+          "test_name": {
+            "type": "string",
+            "title": "Test Name",
+            "description": "Descriptive test name"
+          },
+          "lab_value": {
+            "type": "number",
+            "title": "Lab Value",
+            "description": "Observed lab measurement value"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit",
+            "description": "Unit of measurement"
+          },
+          "ctcae_grade": {
+            "type": "integer",
+            "title": "Ctcae Grade",
+            "description": "Toxicity grade (3 or 4)"
+          },
+          "grading_scale": {
+            "type": "string",
+            "title": "Grading Scale",
+            "description": "Grading scale standard"
+          },
+          "toxicity_term": {
+            "type": "string",
+            "title": "Toxicity Term",
+            "description": "Standard adverse event term"
+          },
+          "clinical_description": {
+            "type": "string",
+            "title": "Clinical Description",
+            "description": "Clinical severity description"
+          },
+          "is_hys_law_warning": {
+            "type": "boolean",
+            "title": "Is Hys Law Warning",
+            "description": "Potential Hy's Law DILI alert"
+          },
+          "is_delta_check_alert": {
+            "type": "boolean",
+            "title": "Is Delta Check Alert",
+            "description": "Acute delta check alert"
+          },
+          "delta_percentage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Percentage",
+            "description": "Delta change percentage from baseline"
+          },
+          "review_status": {
+            "type": "string",
+            "title": "Review Status",
+            "description": "Current review status"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By",
+            "description": "User ID of reviewing Investigator"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At",
+            "description": "Review timestamp"
+          },
+          "investigator_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigator Notes",
+            "description": "Investigator clinical notes"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "description": "Version index"
+          },
+          "is_deleted": {
+            "type": "boolean",
+            "title": "Is Deleted",
+            "description": "Soft deletion flag"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At",
+            "description": "Creation timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "subject_id",
+          "test_code",
+          "test_name",
+          "lab_value",
+          "unit",
+          "ctcae_grade",
+          "grading_scale",
+          "toxicity_term",
+          "clinical_description",
+          "is_hys_law_warning",
+          "is_delta_check_alert",
+          "review_status",
+          "version",
+          "is_deleted"
+        ],
+        "title": "StagedAdverseEventReviewResponse",
+        "description": "Response payload for a staged Grade 3/4 AE laboratory toxicity review item."
       },
       "StudyEvent": {
         "properties": {

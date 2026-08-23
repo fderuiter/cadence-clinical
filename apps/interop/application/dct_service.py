@@ -44,10 +44,6 @@ from apps.interop.domain.dct_processor import (
     verify_pediatric_assent_bundle,
 )
 from apps.interop.domain.ports import IDCTRepositoryPort
-from apps.interop.infrastructure.dct_models import (
-    DTPShipmentRecord,
-    InHomeVisitRecord,
-)
 
 
 class DCTService:
@@ -414,7 +410,7 @@ class DCTService:
         user_id: str = "system",
         user_role: str = "site_crc",
         change_reason: str = "Dispatch Direct-to-Patient drug shipment",
-    ) -> DTPShipmentRecord:
+    ) -> Any:
         """Create a new DTP courier dispatch order with temperature condition profile."""
         shipment_id = f"DTP-{uuid.uuid4().hex[:10].upper()}"
         tracking_number = f"CAD-EXP-{secrets.randbelow(899999) + 100000}"
@@ -436,31 +432,31 @@ class DCTService:
             "battery_percent": 100.0,
         }
 
-        record = DTPShipmentRecord(
-            shipment_id=shipment_id,
-            tracking_number=tracking_number,
-            courier_name=courier_name,
-            study_id=study_id,
-            site_id=site_id,
-            subject_pseudonym_id=subject_pseudonym_id,
-            destination_address_pseudonym=destination_address_pseudonym,
-            temperature_zone=temperature_zone.value,
-            kit_serials=kit_serials,
-            tamper_seal_id=tamper_seal_id,
-            status="ORDER_CREATED",
-            current_temp_celsius=mid_temp,
-            min_temp_celsius=mid_temp,
-            max_temp_celsius=mid_temp,
-            mkt_celsius=mid_temp,
-            excursion_severity="NONE",
-            custody_handoffs=[],
-            temperature_readings=[initial_reading],
-            delivery_signature=None,
-            created_by=user_id,
-            reason_for_change=change_reason,
-        )
+        record_dict = {
+            "shipment_id": shipment_id,
+            "tracking_number": tracking_number,
+            "courier_name": courier_name,
+            "study_id": study_id,
+            "site_id": site_id,
+            "subject_pseudonym_id": subject_pseudonym_id,
+            "destination_address_pseudonym": destination_address_pseudonym,
+            "temperature_zone": temperature_zone.value,
+            "kit_serials": kit_serials,
+            "tamper_seal_id": tamper_seal_id,
+            "status": "ORDER_CREATED",
+            "current_temp_celsius": mid_temp,
+            "min_temp_celsius": mid_temp,
+            "max_temp_celsius": mid_temp,
+            "mkt_celsius": mid_temp,
+            "excursion_severity": "NONE",
+            "custody_handoffs": [],
+            "temperature_readings": [initial_reading],
+            "delivery_signature": None,
+            "created_by": user_id,
+            "reason_for_change": change_reason,
+        }
 
-        persisted = await self.repository.create_dtp_shipment(record)
+        persisted = await self.repository.create_dtp_shipment(record_dict)
         await self.repository.write_dct_audit_log(
             study_id=study_id,
             action="CREATE_DTP_SHIPMENT",
@@ -483,7 +479,7 @@ class DCTService:
         user_id: str = "system",
         user_role: str = "courier",
         change_reason: str = "Ingest cold chain logger data",
-    ) -> DTPShipmentRecord:
+    ) -> Any:
         """Ingest temperature data points, compute MKT, and flag excursions."""
         shipment = await self.repository.get_dtp_shipment_by_tracking(tracking_number)
         if not shipment:
@@ -545,7 +541,7 @@ class DCTService:
         user_id: str = "system",
         user_role: str = "courier",
         change_reason: str = "Record Chain of Custody handoff",
-    ) -> DTPShipmentRecord:
+    ) -> Any:
         """Record an immutable Chain of Custody handoff in shipment lifecycle."""
         shipment = await self.repository.get_dtp_shipment_by_tracking(tracking_number)
         if not shipment:
@@ -598,7 +594,7 @@ class DCTService:
         user_id: str = "system",
         user_role: str = "courier",
         change_reason: str = "Confirm final delivery to subject residence",
-    ) -> DTPShipmentRecord:
+    ) -> Any:
         """Confirm final mile delivery with recipient signature and logger verification."""
         shipment = await self.repository.get_dtp_shipment_by_tracking(tracking_number)
         if not shipment:
@@ -635,31 +631,31 @@ class DCTService:
         user_id: str = "system",
         user_role: str = "site_crc",
         change_reason: str = "Schedule in-home nursing visit",
-    ) -> InHomeVisitRecord:
+    ) -> Any:
         """Schedule in-home visiting clinician appointment with protocol task checklist."""
         visit_id = f"VISIT-HOME-{uuid.uuid4().hex[:8].upper()}"
 
-        record = InHomeVisitRecord(
-            visit_id=visit_id,
-            study_id=study_id,
-            site_id=site_id,
-            subject_id=subject_id,
-            visit_number=visit_number,
-            visit_name=visit_name,
-            nurse_id=nurse_id,
-            nurse_name=nurse_name,
-            nurse_license_number=nurse_license_number,
-            scheduled_start_utc=scheduled_start_utc,
-            status="SCHEDULED",
-            procedures=procedures,
-            mobile_ecrf_data={},
-            offline_sync_id=None,
-            sync_status="SYNCHRONIZED",
-            created_by=user_id,
-            reason_for_change=change_reason,
-        )
+        record_dict = {
+            "visit_id": visit_id,
+            "study_id": study_id,
+            "site_id": site_id,
+            "subject_id": subject_id,
+            "visit_number": visit_number,
+            "visit_name": visit_name,
+            "nurse_id": nurse_id,
+            "nurse_name": nurse_name,
+            "nurse_license_number": nurse_license_number,
+            "scheduled_start_utc": scheduled_start_utc,
+            "status": "SCHEDULED",
+            "procedures": procedures,
+            "mobile_ecrf_data": {},
+            "offline_sync_id": None,
+            "sync_status": "SYNCHRONIZED",
+            "created_by": user_id,
+            "reason_for_change": change_reason,
+        }
 
-        persisted = await self.repository.create_in_home_visit(record)
+        persisted = await self.repository.create_in_home_visit(record_dict)
         await self.repository.write_dct_audit_log(
             study_id=study_id,
             action="SCHEDULE_IN_HOME_VISIT",
@@ -680,7 +676,7 @@ class DCTService:
         user_id: str = "system",
         user_role: str = "nurse",
         change_reason: str = "Update visiting nurse visit progress",
-    ) -> InHomeVisitRecord:
+    ) -> Any:
         """Update home healthcare visit status (EN_ROUTE, ARRIVED, PROCEDURES_IN_PROGRESS, etc.)."""
         visit = await self.repository.get_in_home_visit_by_id(visit_id)
         if not visit:
@@ -700,7 +696,7 @@ class DCTService:
         user_id: str = "system",
         user_role: str = "nurse",
         change_reason: str = "Synchronize mobile eCRF offline cached data",
-    ) -> InHomeVisitRecord:
+    ) -> Any:
         """Reconcile in-home mobile eCRF data entry collected offline."""
         visit = await self.repository.get_in_home_visit_by_id(visit_id)
         if not visit:

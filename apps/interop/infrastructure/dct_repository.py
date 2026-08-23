@@ -28,6 +28,15 @@ class DCTRepository(IDCTRepositoryPort):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
+    async def get_by_id(self, entity_id: str) -> Any | None:
+        return await self.get_telehealth_session_by_id(entity_id)
+
+    async def save(self, entity: Any) -> Any:
+        self.session.add(entity)
+        await self.session.commit()
+        await self.session.refresh(entity)
+        return entity
+
     # =========================================================================
     # Telehealth Sessions
     # =========================================================================

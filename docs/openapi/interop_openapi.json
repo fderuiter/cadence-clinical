@@ -2741,6 +2741,1772 @@
           }
         }
       }
+    },
+    "/api/v1/interop/dct/telehealth/sessions": {
+      "post": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "Schedule WebRTC telehealth video visit",
+        "description": "Schedule a new WebRTC telehealth video consultation session.\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "operationId": "schedule_telehealth_session_api_v1_interop_dct_telehealth_sessions_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelehealthSessionCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelehealthSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "List telehealth video consultation sessions",
+        "description": "Query scheduled and active telehealth consultation sessions.\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "operationId": "list_telehealth_sessions_api_v1_interop_dct_telehealth_sessions_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelehealthSessionListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/dct/telehealth/sessions/{session_id}": {
+      "get": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "Retrieve single telehealth session details",
+        "description": "Retrieve details of a single telehealth video session by ID or room ID.\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "operationId": "get_telehealth_session_api_v1_interop_dct_telehealth_sessions__session_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelehealthSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/dct/telehealth/sessions/{session_id}/token": {
+      "post": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "Generate HMAC-SHA256 signed room authorization token",
+        "description": "Issue a role-scoped, cryptographic room authorization token for WebRTC video entry.\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "operationId": "generate_room_token_api_v1_interop_dct_telehealth_sessions__session_id__token_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoomTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomTokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/dct/telehealth/sessions/{session_id}/signaling": {
+      "post": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "Exchange WebRTC session signaling message",
+        "description": "Append WebRTC session signaling envelope (SDP offer/answer, ICE candidates).\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "operationId": "update_session_signaling_api_v1_interop_dct_telehealth_sessions__session_id__signaling_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebRTCSignalingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelehealthSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/dct/telehealth/sessions/{session_id}/co-view": {
+      "post": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "Synchronize eConsent interactive co-viewing state",
+        "description": "Synchronize eConsent page position, active highlights, and scroll percentage.\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "operationId": "sync_co_view_state_api_v1_interop_dct_telehealth_sessions__session_id__co_view_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoViewStateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelehealthSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/dct/telehealth/sessions/{session_id}/archive-recording": {
+      "post": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "Archive GxP recording with SHA-256 digital seal (21 CFR Part 11)",
+        "description": "Archive telehealth video consultation recording with cryptographic SHA-256 digital seal.\n\n@req:PRD-DCT-005\n@req:ADR-2199",
+        "operationId": "archive_telehealth_recording_api_v1_interop_dct_telehealth_sessions__session_id__archive_recording_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArchiveRecordingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveRecordingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/dct/econsent/pediatric-assent": {
+      "post": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "Submit tiered pediatric assent & LAR dual-signature manifest",
+        "description": "Submit age-appropriate pediatric assent and parent/LAR electronic signature bundle.\n\n@req:PRD-DCT-006\n@req:ADR-2199",
+        "operationId": "submit_pediatric_assent_api_v1_interop_dct_econsent_pediatric_assent_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PediatricAssentSubmitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PediatricAssentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "List executed pediatric assents",
+        "description": "Query executed pediatric assent and LAR consent records.\n\n@req:PRD-DCT-006\n@req:ADR-2199",
+        "operationId": "list_pediatric_assents_api_v1_interop_dct_econsent_pediatric_assent_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PediatricAssentListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/dct/econsent/pediatric-assent/{assent_id}/verify": {
+      "get": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "Verify cryptographic bundle seal of pediatric assent",
+        "description": "Validate cryptographic SHA-256 seal integrity for pediatric assent bundle.\n\n@req:PRD-DCT-006\n@req:ADR-2199",
+        "operationId": "verify_pediatric_assent_api_v1_interop_dct_econsent_pediatric_assent__assent_id__verify_get",
+        "parameters": [
+          {
+            "name": "assent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assent Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyAssentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/dct/dtp/shipments": {
+      "post": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "Create Direct-to-Patient (DTP) courier dispatch order",
+        "description": "Create a new Direct-to-Patient courier drug shipment with temperature-controlled profile.\n\n@req:PRD-DCT-003\n@req:ADR-2199",
+        "operationId": "create_dtp_shipment_api_v1_interop_dct_dtp_shipments_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DTPShipmentCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DTPShipmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "List Direct-to-Patient drug shipments",
+        "description": "Query DTP shipments with cold-chain indicators and tracking states.\n\n@req:PRD-DCT-003\n@req:ADR-2199",
+        "operationId": "list_dtp_shipments_api_v1_interop_dct_dtp_shipments_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "subject_pseudonym_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Pseudonym Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DTPShipmentListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/dct/dtp/shipments/{tracking_number}": {
+      "get": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "Retrieve single DTP shipment details by tracking number",
+        "description": "Retrieve details, temperature telemetry, and Chain of Custody for a DTP shipment.\n\n@req:PRD-DCT-003\n@req:ADR-2199",
+        "operationId": "get_dtp_shipment_api_v1_interop_dct_dtp_shipments__tracking_number__get",
+        "parameters": [
+          {
+            "name": "tracking_number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tracking Number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DTPShipmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/dct/dtp/shipments/{tracking_number}/temperature": {
+      "post": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "Ingest cold-chain temperature telemetry points & calculate MKT",
+        "description": "Ingest cold chain logger data points, compute Arrhenius MKT, and flag excursions.\n\n@req:PRD-DCT-003\n@req:ADR-2199",
+        "operationId": "ingest_dtp_temperature_api_v1_interop_dct_dtp_shipments__tracking_number__temperature_post",
+        "parameters": [
+          {
+            "name": "tracking_number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tracking Number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemperatureIngestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DTPShipmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/dct/dtp/shipments/{tracking_number}/handoff": {
+      "post": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "Record Chain of Custody (CoC) handoff event",
+        "description": "Record signed Chain of Custody handoff across depot, courier hubs, and final mile.\n\n@req:PRD-DCT-003\n@req:ADR-2199",
+        "operationId": "record_dtp_handoff_api_v1_interop_dct_dtp_shipments__tracking_number__handoff_post",
+        "parameters": [
+          {
+            "name": "tracking_number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tracking Number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustodyHandoffRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DTPShipmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/dct/dtp/shipments/{tracking_number}/delivery": {
+      "post": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "Confirm final delivery with recipient signature",
+        "description": "Confirm delivery at subject residence with recipient signature and greenlight checks.\n\n@req:PRD-DCT-003\n@req:ADR-2199",
+        "operationId": "confirm_dtp_delivery_api_v1_interop_dct_dtp_shipments__tracking_number__delivery_post",
+        "parameters": [
+          {
+            "name": "tracking_number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tracking Number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliveryConfirmRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DTPShipmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/dct/home-health/visits": {
+      "post": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "Schedule decentralized in-home nursing visit",
+        "description": "Schedule visiting healthcare nurse appointment with protocol procedure tasks.\n\n@req:PRD-DCT-004\n@req:ADR-2199",
+        "operationId": "schedule_in_home_visit_api_v1_interop_dct_home_health_visits_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InHomeVisitCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InHomeVisitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "List in-home visiting clinician appointments",
+        "description": "Query in-home nursing visits by study, site, nurse, or subject.\n\n@req:PRD-DCT-004\n@req:ADR-2199",
+        "operationId": "list_in_home_visits_api_v1_interop_dct_home_health_visits_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "nurse_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Nurse Id"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InHomeVisitListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/dct/home-health/visits/{visit_id}": {
+      "get": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "Retrieve single in-home visit details",
+        "description": "Retrieve in-home nursing visit details, procedure progress, and mobile eCRF data.\n\n@req:PRD-DCT-004\n@req:ADR-2199",
+        "operationId": "get_in_home_visit_api_v1_interop_dct_home_health_visits__visit_id__get",
+        "parameters": [
+          {
+            "name": "visit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Visit Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InHomeVisitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/dct/home-health/visits/{visit_id}/status": {
+      "post": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "Update visiting nurse visit progress and completed procedures",
+        "description": "Update in-home visit status (EN_ROUTE, ARRIVED_ON_SITE, PROCEDURES_IN_PROGRESS, etc.).\n\n@req:PRD-DCT-004\n@req:ADR-2199",
+        "operationId": "update_in_home_visit_status_api_v1_interop_dct_home_health_visits__visit_id__status_post",
+        "parameters": [
+          {
+            "name": "visit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Visit Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InHomeVisitStatusUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InHomeVisitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/dct/home-health/visits/{visit_id}/sync-ecrf": {
+      "post": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "Reconcile offline-cached mobile eCRF clinical data entry",
+        "description": "Reconcile mobile eCRF clinical data entered offline by visiting nurse.\n\n@req:PRD-DCT-004\n@req:ADR-2199",
+        "operationId": "reconcile_mobile_ecrf_sync_api_v1_interop_dct_home_health_visits__visit_id__sync_ecrf_post",
+        "parameters": [
+          {
+            "name": "visit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Visit Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MobileECRFSyncRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InHomeVisitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/dct/metrics/{study_id}": {
+      "get": {
+        "tags": [
+          "Decentralized Clinical Trials (DCT)"
+        ],
+        "summary": "Retrieve aggregated DCT operational metrics",
+        "description": "Retrieve real-time DCT dashboard KPI metrics for study.\n\n@req:PRD-DCT-003\n@req:PRD-DCT-004\n@req:PRD-DCT-005\n@req:PRD-DCT-006\n@req:ADR-2199",
+        "operationId": "get_dct_metrics_api_v1_interop_dct_metrics__study_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DCTMetricsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/endpoints": {
+      "post": {
+        "tags": [
+          "eSource & SMART on FHIR"
+        ],
+        "summary": "Register Ehr Endpoint",
+        "description": "Register a new hospital EHR FHIR endpoint with SMART Backend Services credentials.",
+        "operationId": "register_ehr_endpoint_api_v1_interop_esource_endpoints_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EhrEndpointCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EhrEndpointResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "eSource & SMART on FHIR"
+        ],
+        "summary": "List Ehr Endpoints",
+        "description": "List configured hospital EHR endpoints.",
+        "operationId": "list_ehr_endpoints_api_v1_interop_esource_endpoints_get",
+        "parameters": [
+          {
+            "name": "active_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Active Only"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EhrEndpointResponse"
+                  },
+                  "title": "Response List Ehr Endpoints Api V1 Interop Esource Endpoints Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/smart/assertion": {
+      "post": {
+        "tags": [
+          "eSource & SMART on FHIR"
+        ],
+        "summary": "Generate Client Assertion",
+        "description": "Generate an asymmetric signed client assertion JWT for SMART on FHIR Backend Services OAuth2.",
+        "operationId": "generate_client_assertion_api_v1_interop_esource_smart_assertion_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SmartClientAssertionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmartClientAssertionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/smart/verify": {
+      "post": {
+        "tags": [
+          "eSource & SMART on FHIR"
+        ],
+        "summary": "Verify Client Assertion",
+        "description": "Verify an asymmetric client assertion JWT per SMART Backend Services rules.",
+        "operationId": "verify_client_assertion_api_v1_interop_esource_smart_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SmartAssertionVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmartAssertionVerifyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/poll": {
+      "post": {
+        "tags": [
+          "eSource & SMART on FHIR"
+        ],
+        "summary": "Poll Hospital Ehr",
+        "description": "Trigger automated SMART on FHIR polling against a registered hospital EHR endpoint.",
+        "operationId": "poll_hospital_ehr_api_v1_interop_esource_poll_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EhrPollRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EhrPollResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/ingest": {
+      "post": {
+        "tags": [
+          "eSource & SMART on FHIR"
+        ],
+        "summary": "Ingest Fhir Bundle",
+        "description": "Ingest a standard FHIR Bundle, normalize to CDASH domain models, and populate candidate reconciliation queue.",
+        "operationId": "ingest_fhir_bundle_api_v1_interop_esource_ingest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EhrIngestBundleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EhrIngestBundleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/candidates": {
+      "get": {
+        "tags": [
+          "eSource & SMART on FHIR"
+        ],
+        "summary": "List Candidates",
+        "description": "Retrieve candidate reconciliation items with filtering for the split-screen drawer.",
+        "operationId": "list_candidates_api_v1_interop_esource_candidates_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "domain",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Domain"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EhrCandidateListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/candidates/{candidate_id}": {
+      "get": {
+        "tags": [
+          "eSource & SMART on FHIR"
+        ],
+        "summary": "Get Candidate",
+        "description": "Get details of a specific candidate reconciliation item.",
+        "operationId": "get_candidate_api_v1_interop_esource_candidates__candidate_id__get",
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Candidate Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EhrCandidateItemDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/reconcile/accept": {
+      "post": {
+        "tags": [
+          "eSource & SMART on FHIR"
+        ],
+        "summary": "Accept Candidate",
+        "description": "1-Click 'Accept & Commit' candidate EHR data into eCRF with Part 11 audit attribution.",
+        "operationId": "accept_candidate_api_v1_interop_esource_reconcile_accept_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EhrReconcileAcceptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EhrReconcileActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/reconcile/reject": {
+      "post": {
+        "tags": [
+          "eSource & SMART on FHIR"
+        ],
+        "summary": "Reject Candidate",
+        "description": "1-Click 'Reject with Reason' to discard candidate EHR data with mandatory justification.",
+        "operationId": "reject_candidate_api_v1_interop_esource_reconcile_reject_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EhrReconcileRejectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EhrReconcileActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/reconcile/query": {
+      "post": {
+        "tags": [
+          "eSource & SMART on FHIR"
+        ],
+        "summary": "Raise Clinical Query",
+        "description": "1-Click 'Raise Clinical Query' to open a formal GxP discrepancy query for an EHR-to-eCRF mismatch.",
+        "operationId": "raise_clinical_query_api_v1_interop_esource_reconcile_query_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EhrReconcileQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EhrReconcileActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/provenance/{candidate_id}": {
+      "get": {
+        "tags": [
+          "eSource & SMART on FHIR"
+        ],
+        "summary": "Get Provenance Audit",
+        "description": "Retrieve complete immutable FHIR source provenance and Part 11 audit ledger for a record.",
+        "operationId": "get_provenance_audit_api_v1_interop_esource_provenance__candidate_id__get",
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Candidate Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EhrProvenanceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2950,6 +4716,91 @@
         ],
         "title": "AlertSeverity",
         "description": "Clinical alert severity classification."
+      },
+      "ArchiveRecordingRequest": {
+        "properties": {
+          "media_payload_or_hash": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Media Payload Or Hash",
+            "description": "Raw recording media binary string or computed SHA-256 hash"
+          },
+          "duration_seconds": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Duration Seconds",
+            "description": "Total recording duration in seconds"
+          },
+          "resolution": {
+            "type": "string",
+            "title": "Resolution",
+            "description": "Video recording resolution (e.g. 720p, 1080p, 4K)",
+            "default": "1080p"
+          },
+          "recorded_by": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Recorded By",
+            "description": "User ID of recording operator"
+          },
+          "participant_manifest": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Participant Manifest",
+            "description": "List of participant identities"
+          }
+        },
+        "type": "object",
+        "required": [
+          "media_payload_or_hash",
+          "duration_seconds",
+          "recorded_by"
+        ],
+        "title": "ArchiveRecordingRequest",
+        "description": "Request to archive video recording with SHA-256 digital seal (21 CFR Part 11)."
+      },
+      "ArchiveRecordingResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "recording_id": {
+            "type": "string",
+            "title": "Recording Id"
+          },
+          "media_sha256_hash": {
+            "type": "string",
+            "title": "Media Sha256 Hash"
+          },
+          "digital_seal_signature": {
+            "type": "string",
+            "title": "Digital Seal Signature"
+          },
+          "sealed_at_utc": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sealed At Utc"
+          },
+          "part11_certification_statement": {
+            "type": "string",
+            "title": "Part11 Certification Statement"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "recording_id",
+          "media_sha256_hash",
+          "digital_seal_signature",
+          "sealed_at_utc",
+          "part11_certification_statement"
+        ],
+        "title": "ArchiveRecordingResponse",
+        "description": "Response containing recording digital seal."
       },
       "AssignmentComplianceDetailDTO": {
         "properties": {
@@ -3637,6 +5488,103 @@
         "title": "ClinicalSnapshot",
         "description": "Immutable, version-pinned snapshot pool tied to a database lock milestone."
       },
+      "CoViewStateRequest": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Document Id",
+            "description": "Informed consent document identifier"
+          },
+          "page_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Page Index",
+            "description": "Current active page index",
+            "default": 0
+          },
+          "clause_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clause Id",
+            "description": "Active highlighted clause ID"
+          },
+          "presenter_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Presenter Id",
+            "description": "Presenter user ID"
+          },
+          "presenter_role": {
+            "$ref": "#/components/schemas/ParticipantRole",
+            "description": "Role of presenter",
+            "default": "INVESTIGATOR"
+          },
+          "scroll_percent": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Scroll Percent",
+            "description": "Vertical scroll percentage 0.0 to 100.0",
+            "default": 0.0
+          },
+          "active_highlights": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Active Highlights",
+            "description": "Array of highlight coordinates"
+          },
+          "lock_presenter_control": {
+            "type": "boolean",
+            "title": "Lock Presenter Control",
+            "description": "Whether presenter has exclusive navigation lock",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "presenter_id"
+        ],
+        "title": "CoViewStateRequest",
+        "description": "Synchronized eConsent co-viewing position and annotations update."
+      },
+      "ComprehensionAnswerDTO": {
+        "properties": {
+          "question_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Question Id"
+          },
+          "selected_option": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Selected Option"
+          },
+          "correct_option": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Correct Option"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id",
+          "selected_option",
+          "correct_option"
+        ],
+        "title": "ComprehensionAnswerDTO",
+        "description": "Comprehension question response item."
+      },
       "ConceptMapListResponse": {
         "properties": {
           "total_concepts": {
@@ -3940,6 +5888,364 @@
           "is_indeterminate"
         ],
         "title": "CriterionExplanation"
+      },
+      "CustodyHandoffRequest": {
+        "properties": {
+          "stage": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Stage",
+            "description": "e.g. DEPOT_PICKUP, TRANSIT_HUB, FINAL_MILE"
+          },
+          "released_by": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Released By"
+          },
+          "received_by": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Received By"
+          },
+          "tamper_seal_intact": {
+            "type": "boolean",
+            "title": "Tamper Seal Intact",
+            "default": true
+          },
+          "current_temperature_celsius": {
+            "type": "number",
+            "title": "Current Temperature Celsius",
+            "description": "Visual thermometer reading in \u00b0C"
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "stage",
+          "released_by",
+          "received_by",
+          "current_temperature_celsius"
+        ],
+        "title": "CustodyHandoffRequest",
+        "description": "Chain of Custody handoff recording request."
+      },
+      "DCTMetricsResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "total_telehealth_sessions": {
+            "type": "integer",
+            "title": "Total Telehealth Sessions"
+          },
+          "active_video_rooms": {
+            "type": "integer",
+            "title": "Active Video Rooms"
+          },
+          "total_dtp_shipments": {
+            "type": "integer",
+            "title": "Total Dtp Shipments"
+          },
+          "active_cold_chain_shipments": {
+            "type": "integer",
+            "title": "Active Cold Chain Shipments"
+          },
+          "temperature_excursion_alerts": {
+            "type": "integer",
+            "title": "Temperature Excursion Alerts"
+          },
+          "scheduled_nurse_visits": {
+            "type": "integer",
+            "title": "Scheduled Nurse Visits"
+          },
+          "completed_home_visits": {
+            "type": "integer",
+            "title": "Completed Home Visits"
+          },
+          "pending_offline_syncs": {
+            "type": "integer",
+            "title": "Pending Offline Syncs"
+          },
+          "pediatric_assents_completed": {
+            "type": "integer",
+            "title": "Pediatric Assents Completed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "study_id",
+          "total_telehealth_sessions",
+          "active_video_rooms",
+          "total_dtp_shipments",
+          "active_cold_chain_shipments",
+          "temperature_excursion_alerts",
+          "scheduled_nurse_visits",
+          "completed_home_visits",
+          "pending_offline_syncs",
+          "pediatric_assents_completed"
+        ],
+        "title": "DCTMetricsResponse",
+        "description": "Comprehensive DCT dashboard overview metrics."
+      },
+      "DTPShipmentCreateRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Site Id"
+          },
+          "subject_pseudonym_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Pseudonym Id"
+          },
+          "destination_address_pseudonym": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Destination Address Pseudonym"
+          },
+          "courier_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Courier Name",
+            "default": "World Courier"
+          },
+          "temperature_zone": {
+            "$ref": "#/components/schemas/TemperatureZone",
+            "default": "REFRIGERATED"
+          },
+          "kit_serials": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Kit Serials"
+          },
+          "tamper_seal_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Tamper Seal Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_pseudonym_id",
+          "destination_address_pseudonym",
+          "kit_serials",
+          "tamper_seal_id"
+        ],
+        "title": "DTPShipmentCreateRequest",
+        "description": "Request to create a Direct-to-Patient courier dispatch order."
+      },
+      "DTPShipmentDTO": {
+        "properties": {
+          "shipment_id": {
+            "type": "string",
+            "title": "Shipment Id"
+          },
+          "tracking_number": {
+            "type": "string",
+            "title": "Tracking Number"
+          },
+          "courier_name": {
+            "type": "string",
+            "title": "Courier Name"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_pseudonym_id": {
+            "type": "string",
+            "title": "Subject Pseudonym Id"
+          },
+          "destination_address_pseudonym": {
+            "type": "string",
+            "title": "Destination Address Pseudonym"
+          },
+          "temperature_zone": {
+            "$ref": "#/components/schemas/TemperatureZone"
+          },
+          "kit_serials": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kit Serials"
+          },
+          "tamper_seal_id": {
+            "type": "string",
+            "title": "Tamper Seal Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DTPShipmentStatus"
+          },
+          "current_temp_celsius": {
+            "type": "number",
+            "title": "Current Temp Celsius"
+          },
+          "min_temp_celsius": {
+            "type": "number",
+            "title": "Min Temp Celsius"
+          },
+          "max_temp_celsius": {
+            "type": "number",
+            "title": "Max Temp Celsius"
+          },
+          "mkt_celsius": {
+            "type": "number",
+            "title": "Mkt Celsius"
+          },
+          "excursion_severity": {
+            "$ref": "#/components/schemas/ExcursionSeverity"
+          },
+          "custody_handoffs": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Custody Handoffs"
+          },
+          "temperature_readings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Temperature Readings"
+          },
+          "delivery_signature": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Signature"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "shipment_id",
+          "tracking_number",
+          "courier_name",
+          "study_id",
+          "site_id",
+          "subject_pseudonym_id",
+          "destination_address_pseudonym",
+          "temperature_zone",
+          "kit_serials",
+          "tamper_seal_id",
+          "status",
+          "current_temp_celsius",
+          "min_temp_celsius",
+          "max_temp_celsius",
+          "mkt_celsius",
+          "excursion_severity",
+          "custody_handoffs",
+          "temperature_readings",
+          "delivery_signature",
+          "created_at"
+        ],
+        "title": "DTPShipmentDTO",
+        "description": "Direct-to-Patient shipment data object."
+      },
+      "DTPShipmentListResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "shipments": {
+            "items": {
+              "$ref": "#/components/schemas/DTPShipmentDTO"
+            },
+            "type": "array",
+            "title": "Shipments"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "shipments",
+          "total"
+        ],
+        "title": "DTPShipmentListResponse",
+        "description": "List response for DTP shipments."
+      },
+      "DTPShipmentResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "shipment": {
+            "$ref": "#/components/schemas/DTPShipmentDTO"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "DTP shipment processed successfully"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "shipment"
+        ],
+        "title": "DTPShipmentResponse",
+        "description": "Response wrapper for DTP shipment operations."
+      },
+      "DTPShipmentStatus": {
+        "type": "string",
+        "enum": [
+          "ORDER_CREATED",
+          "DEPOT_PICKED",
+          "PACKED",
+          "COURIER_DISPATCHED",
+          "IN_TRANSIT",
+          "OUT_FOR_DELIVERY",
+          "DELIVERED",
+          "TEMP_EXCURSION_HOLD",
+          "RETURNED"
+        ],
+        "title": "DTPShipmentStatus",
+        "description": "Lifecycle state machine for Direct-to-Patient courier IP shipments."
       },
       "DailySummariesResponse": {
         "properties": {
@@ -4509,6 +6815,37 @@
         ],
         "title": "DefineXMLValidationResult",
         "description": "Validation outcome for compiled CDISC Define-XML v2.1."
+      },
+      "DeliveryConfirmRequest": {
+        "properties": {
+          "recipient_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Recipient Name"
+          },
+          "signature_manifestation": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Signature Manifestation"
+          },
+          "tamper_seal_verified": {
+            "type": "boolean",
+            "title": "Tamper Seal Verified",
+            "default": true
+          },
+          "logger_greenlight": {
+            "type": "boolean",
+            "title": "Logger Greenlight",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "recipient_name",
+          "signature_manifestation"
+        ],
+        "title": "DeliveryConfirmRequest",
+        "description": "Delivery confirmation with recipient electronic signature."
       },
       "DeviceListResponse": {
         "properties": {
@@ -5274,6 +7611,994 @@
         ],
         "title": "EditQuarantinedSubmissionRequest"
       },
+      "EhrCandidateItemDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "subject_pseudonym": {
+            "type": "string",
+            "title": "Subject Pseudonym"
+          },
+          "ehr_system_id": {
+            "type": "string",
+            "title": "Ehr System Id"
+          },
+          "fhir_resource_type": {
+            "type": "string",
+            "title": "Fhir Resource Type"
+          },
+          "fhir_resource_id": {
+            "type": "string",
+            "title": "Fhir Resource Id"
+          },
+          "source_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Source Timestamp"
+          },
+          "target_domain": {
+            "type": "string",
+            "title": "Target Domain"
+          },
+          "target_variable": {
+            "type": "string",
+            "title": "Target Variable"
+          },
+          "cdash_testcd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cdash Testcd"
+          },
+          "cdash_test": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cdash Test"
+          },
+          "candidate_value": {
+            "title": "Candidate Value"
+          },
+          "candidate_unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Unit"
+          },
+          "current_ecrf_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Ecrf Value"
+          },
+          "current_ecrf_updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Ecrf Updated At"
+          },
+          "discrepancy_type": {
+            "type": "string",
+            "title": "Discrepancy Type",
+            "default": "NEW_FIELD"
+          },
+          "confidence_score": {
+            "type": "number",
+            "title": "Confidence Score",
+            "default": 1.0
+          },
+          "mapping_provenance": {
+            "type": "string",
+            "title": "Mapping Provenance"
+          },
+          "raw_fhir_resource": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Raw Fhir Resource"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "PENDING_REVIEW"
+          },
+          "resolution_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Action"
+          },
+          "resolution_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Reason"
+          },
+          "resolved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved By"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "electronic_signature": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Electronic Signature"
+          },
+          "clinical_query_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinical Query Id"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "subject_pseudonym",
+          "ehr_system_id",
+          "fhir_resource_type",
+          "fhir_resource_id",
+          "source_timestamp",
+          "target_domain",
+          "target_variable",
+          "candidate_value",
+          "mapping_provenance"
+        ],
+        "title": "EhrCandidateItemDTO",
+        "description": "Response DTO for an individual candidate eSource reconciliation record."
+      },
+      "EhrCandidateListResponse": {
+        "properties": {
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/EhrCandidateItemDTO"
+            },
+            "type": "array",
+            "title": "Candidates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_count",
+          "candidates"
+        ],
+        "title": "EhrCandidateListResponse",
+        "description": "Paginated list response of candidate eSource reconciliation items."
+      },
+      "EhrEndpointCreateRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Hospital or health system network name"
+          },
+          "system_type": {
+            "$ref": "#/components/schemas/EhrSystemType",
+            "description": "EHR system vendor",
+            "default": "SMART_FHIR_GENERIC"
+          },
+          "fhir_base_url": {
+            "type": "string",
+            "title": "Fhir Base Url",
+            "description": "FHIR R4 API base URL"
+          },
+          "token_url": {
+            "type": "string",
+            "title": "Token Url",
+            "description": "SMART Backend Services OAuth2 token endpoint"
+          },
+          "client_id": {
+            "type": "string",
+            "title": "Client Id",
+            "description": "OAuth2 client_id registered with hospital EHR"
+          },
+          "public_key_jwks_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Key Jwks Url",
+            "description": "Optional public JWKS URL"
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scopes",
+            "description": "FHIR scopes requested"
+          },
+          "polling_interval_sec": {
+            "type": "integer",
+            "minimum": 30.0,
+            "title": "Polling Interval Sec",
+            "description": "Automated polling interval in seconds",
+            "default": 300
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "description": "Whether endpoint polling is active",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "fhir_base_url",
+          "token_url",
+          "client_id"
+        ],
+        "title": "EhrEndpointCreateRequest",
+        "description": "Payload to register a new hospital EHR FHIR endpoint configuration."
+      },
+      "EhrEndpointResponse": {
+        "properties": {
+          "endpoint_id": {
+            "type": "string",
+            "title": "Endpoint Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "system_type": {
+            "type": "string",
+            "title": "System Type"
+          },
+          "fhir_base_url": {
+            "type": "string",
+            "title": "Fhir Base Url"
+          },
+          "token_url": {
+            "type": "string",
+            "title": "Token Url"
+          },
+          "client_id": {
+            "type": "string",
+            "title": "Client Id"
+          },
+          "public_key_jwks_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Key Jwks Url"
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scopes"
+          },
+          "polling_interval_sec": {
+            "type": "integer",
+            "title": "Polling Interval Sec"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "last_polled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Polled At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "endpoint_id",
+          "name",
+          "system_type",
+          "fhir_base_url",
+          "token_url",
+          "client_id",
+          "scopes",
+          "polling_interval_sec",
+          "is_active"
+        ],
+        "title": "EhrEndpointResponse",
+        "description": "Response DTO representing a registered hospital EHR endpoint."
+      },
+      "EhrIngestBundleRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study protocol identifier"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Clinical trial site identifier",
+            "default": "SITE-01"
+          },
+          "ehr_system_id": {
+            "type": "string",
+            "title": "Ehr System Id",
+            "description": "Source EHR system name",
+            "default": "FHIR_EHR_DIRECT"
+          },
+          "bundle": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Bundle",
+            "description": "Raw HL7 FHIR Bundle JSON payload"
+          },
+          "current_ecrf_context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Ecrf Context",
+            "description": "Current eCRF field values for side-by-side comparison"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "bundle"
+        ],
+        "title": "EhrIngestBundleRequest",
+        "description": "Request payload to directly ingest and normalize a FHIR Bundle into candidate queue."
+      },
+      "EhrIngestBundleResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "total_ingested": {
+            "type": "integer",
+            "title": "Total Ingested"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/EhrCandidateItemDTO"
+            },
+            "type": "array",
+            "title": "Candidates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "total_ingested",
+          "candidates"
+        ],
+        "title": "EhrIngestBundleResponse",
+        "description": "Response returned after ingesting a raw FHIR Bundle."
+      },
+      "EhrPollRequest": {
+        "properties": {
+          "endpoint_id": {
+            "type": "string",
+            "title": "Endpoint Id",
+            "description": "ID of registered EHR endpoint"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study protocol identifier"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Clinical trial site identifier",
+            "default": "SITE-01"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject identifier/MRN to poll from hospital EHR"
+          },
+          "private_key_pem": {
+            "type": "string",
+            "title": "Private Key Pem",
+            "description": "RSA private key for SMART Backend Services auth"
+          },
+          "current_ecrf_context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Ecrf Context",
+            "description": "Optional current eCRF context dictionary for live comparison"
+          }
+        },
+        "type": "object",
+        "required": [
+          "endpoint_id",
+          "study_id",
+          "subject_id",
+          "private_key_pem"
+        ],
+        "title": "EhrPollRequest",
+        "description": "Request to trigger automated polling against a configured hospital EHR endpoint."
+      },
+      "EhrPollResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "total_ingested": {
+            "type": "integer",
+            "title": "Total Ingested"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/EhrCandidateItemDTO"
+            },
+            "type": "array",
+            "title": "Candidates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_id",
+          "total_ingested",
+          "candidates"
+        ],
+        "title": "EhrPollResponse",
+        "description": "Response returned after executing an EHR poll operation."
+      },
+      "EhrProvenanceResponse": {
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "title": "Candidate Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "subject_pseudonym": {
+            "type": "string",
+            "title": "Subject Pseudonym"
+          },
+          "ehr_system_id": {
+            "type": "string",
+            "title": "Ehr System Id"
+          },
+          "fhir_resource_type": {
+            "type": "string",
+            "title": "Fhir Resource Type"
+          },
+          "fhir_resource_id": {
+            "type": "string",
+            "title": "Fhir Resource Id"
+          },
+          "source_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Timestamp"
+          },
+          "target_domain": {
+            "type": "string",
+            "title": "Target Domain"
+          },
+          "target_variable": {
+            "type": "string",
+            "title": "Target Variable"
+          },
+          "cdash_testcd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cdash Testcd"
+          },
+          "cdash_test": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cdash Test"
+          },
+          "candidate_value": {
+            "title": "Candidate Value"
+          },
+          "candidate_unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Unit"
+          },
+          "current_ecrf_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Ecrf Value"
+          },
+          "discrepancy_type": {
+            "type": "string",
+            "title": "Discrepancy Type"
+          },
+          "confidence_score": {
+            "type": "number",
+            "title": "Confidence Score"
+          },
+          "mapping_provenance": {
+            "type": "string",
+            "title": "Mapping Provenance"
+          },
+          "raw_fhir_resource": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Raw Fhir Resource"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "resolution_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Action"
+          },
+          "resolution_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Reason"
+          },
+          "resolved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved By"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "electronic_signature": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Electronic Signature"
+          },
+          "clinical_query_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinical Query Id"
+          },
+          "audit_trail": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Audit Trail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "candidate_id",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "subject_pseudonym",
+          "ehr_system_id",
+          "fhir_resource_type",
+          "fhir_resource_id",
+          "source_timestamp",
+          "target_domain",
+          "target_variable",
+          "cdash_testcd",
+          "cdash_test",
+          "candidate_value",
+          "candidate_unit",
+          "current_ecrf_value",
+          "discrepancy_type",
+          "confidence_score",
+          "mapping_provenance",
+          "raw_fhir_resource",
+          "status",
+          "resolution_action",
+          "resolution_reason",
+          "resolved_by",
+          "resolved_at",
+          "electronic_signature",
+          "clinical_query_id"
+        ],
+        "title": "EhrProvenanceResponse",
+        "description": "Complete provenance and audit attribution metadata response for a candidate/committed record."
+      },
+      "EhrReconcileAcceptRequest": {
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "title": "Candidate Id",
+            "description": "UUID of candidate record to accept"
+          },
+          "signature_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Token",
+            "description": "Optional Part 11 electronic signature token"
+          },
+          "commit_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commit Reason",
+            "description": "Optional commit justification"
+          },
+          "change_reason": {
+            "type": "string",
+            "title": "Change Reason",
+            "description": "Part 11 audit change reason",
+            "default": "CRC eSource Reconciliation Accept & Commit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "candidate_id"
+        ],
+        "title": "EhrReconcileAcceptRequest",
+        "description": "Request payload for 1-click Accept & Commit action."
+      },
+      "EhrReconcileActionResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "candidate": {
+            "$ref": "#/components/schemas/EhrCandidateItemDTO"
+          },
+          "clinical_query_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinical Query Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "candidate",
+          "message"
+        ],
+        "title": "EhrReconcileActionResponse",
+        "description": "Response after executing a reconciliation review action."
+      },
+      "EhrReconcileQueryRequest": {
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "title": "Candidate Id",
+            "description": "UUID of candidate record with discrepancy"
+          },
+          "query_explanation": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Query Explanation",
+            "description": "Clinical query discrepancy explanation"
+          },
+          "discrepancy_type": {
+            "type": "string",
+            "title": "Discrepancy Type",
+            "description": "Type of discrepancy",
+            "default": "VALUE_MISMATCH"
+          },
+          "change_reason": {
+            "type": "string",
+            "title": "Change Reason",
+            "description": "Part 11 audit change reason",
+            "default": "CRC Raised eSource Discrepancy Query"
+          }
+        },
+        "type": "object",
+        "required": [
+          "candidate_id",
+          "query_explanation"
+        ],
+        "title": "EhrReconcileQueryRequest",
+        "description": "Request payload for 1-click Raise Clinical Query action."
+      },
+      "EhrReconcileRejectRequest": {
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "title": "Candidate Id",
+            "description": "UUID of candidate record to reject"
+          },
+          "rejection_reason": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Rejection Reason",
+            "description": "Mandatory clinical rationale for rejection"
+          },
+          "change_reason": {
+            "type": "string",
+            "title": "Change Reason",
+            "description": "Part 11 audit change reason",
+            "default": "CRC eSource Reconciliation Reject"
+          }
+        },
+        "type": "object",
+        "required": [
+          "candidate_id",
+          "rejection_reason"
+        ],
+        "title": "EhrReconcileRejectRequest",
+        "description": "Request payload for 1-click Reject with Reason action."
+      },
+      "EhrSystemType": {
+        "type": "string",
+        "enum": [
+          "EPIC",
+          "CERNER",
+          "ALLSCRIPTS",
+          "SMART_FHIR_GENERIC"
+        ],
+        "title": "EhrSystemType",
+        "description": "Supported EHR vendor platform architectures."
+      },
       "ElectronicSignatureBlock": {
         "properties": {
           "signer_id": {
@@ -5313,6 +8638,16 @@
         ],
         "title": "ElectronicSignatureBlock",
         "description": "21 CFR Part 11 compliant electronic signature block."
+      },
+      "ExcursionSeverity": {
+        "type": "string",
+        "enum": [
+          "NONE",
+          "MINOR_WARNING",
+          "CRITICAL_EXCURSION_QUARANTINE"
+        ],
+        "title": "ExcursionSeverity",
+        "description": "Temperature excursion severity classifications."
       },
       "ExecuteProgramRequest": {
         "properties": {
@@ -6179,6 +9514,270 @@
         "title": "IOTWearableIngestItem",
         "description": "Raw ingestion payload for connected sensors and wearable IoT streams."
       },
+      "InHomeVisitCreateRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id"
+          },
+          "visit_number": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Visit Number"
+          },
+          "visit_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Visit Name"
+          },
+          "nurse_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Nurse Id"
+          },
+          "nurse_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Nurse Name"
+          },
+          "nurse_license_number": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Nurse License Number"
+          },
+          "scheduled_start_utc": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled Start Utc"
+          },
+          "procedures": {
+            "items": {
+              "$ref": "#/components/schemas/ProtocolProcedureDTO"
+            },
+            "type": "array",
+            "title": "Procedures"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_id",
+          "visit_number",
+          "visit_name",
+          "nurse_id",
+          "nurse_name",
+          "nurse_license_number",
+          "scheduled_start_utc"
+        ],
+        "title": "InHomeVisitCreateRequest",
+        "description": "Request to schedule an in-home visiting clinician appointment."
+      },
+      "InHomeVisitDTO": {
+        "properties": {
+          "visit_id": {
+            "type": "string",
+            "title": "Visit Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "visit_number": {
+            "type": "string",
+            "title": "Visit Number"
+          },
+          "visit_name": {
+            "type": "string",
+            "title": "Visit Name"
+          },
+          "nurse_id": {
+            "type": "string",
+            "title": "Nurse Id"
+          },
+          "nurse_name": {
+            "type": "string",
+            "title": "Nurse Name"
+          },
+          "nurse_license_number": {
+            "type": "string",
+            "title": "Nurse License Number"
+          },
+          "scheduled_start_utc": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled Start Utc"
+          },
+          "status": {
+            "$ref": "#/components/schemas/InHomeVisitStatus"
+          },
+          "procedures": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Procedures"
+          },
+          "mobile_ecrf_data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Mobile Ecrf Data"
+          },
+          "offline_sync_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offline Sync Id"
+          },
+          "sync_status": {
+            "type": "string",
+            "title": "Sync Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "visit_id",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "visit_number",
+          "visit_name",
+          "nurse_id",
+          "nurse_name",
+          "nurse_license_number",
+          "scheduled_start_utc",
+          "status",
+          "procedures",
+          "mobile_ecrf_data",
+          "offline_sync_id",
+          "sync_status",
+          "created_at"
+        ],
+        "title": "InHomeVisitDTO",
+        "description": "In-home nursing visit data object."
+      },
+      "InHomeVisitListResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "visits": {
+            "items": {
+              "$ref": "#/components/schemas/InHomeVisitDTO"
+            },
+            "type": "array",
+            "title": "Visits"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "visits",
+          "total"
+        ],
+        "title": "InHomeVisitListResponse",
+        "description": "List response for in-home visits."
+      },
+      "InHomeVisitResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "visit": {
+            "$ref": "#/components/schemas/InHomeVisitDTO"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "In-home visit processed successfully"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "visit"
+        ],
+        "title": "InHomeVisitResponse",
+        "description": "Response wrapper for in-home visit."
+      },
+      "InHomeVisitStatus": {
+        "type": "string",
+        "enum": [
+          "SCHEDULED",
+          "CONFIRMED",
+          "EN_ROUTE",
+          "ARRIVED_ON_SITE",
+          "PROCEDURES_IN_PROGRESS",
+          "VISIT_COMPLETED",
+          "CANCELLED",
+          "RESCHEDULED"
+        ],
+        "title": "InHomeVisitStatus",
+        "description": "Lifecycle states for decentralized in-home nursing visits."
+      },
+      "InHomeVisitStatusUpdateRequest": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/InHomeVisitStatus"
+          },
+          "procedures": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ProtocolProcedureDTO"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procedures"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "InHomeVisitStatusUpdateRequest",
+        "description": "Update in-home visit progress and completed procedures."
+      },
       "IngestResponse": {
         "properties": {
           "study_id": {
@@ -6472,6 +10071,18 @@
         ],
         "title": "IssueLockTokenRequest",
         "description": "Request payload to issue a formal database lock authorization token for unblinded analysis."
+      },
+      "LARRelationship": {
+        "type": "string",
+        "enum": [
+          "PARENT",
+          "LEGAL_GUARDIAN",
+          "POWER_OF_ATTORNEY",
+          "COURT_APPOINTED",
+          "NEXT_OF_KIN"
+        ],
+        "title": "LARRelationship",
+        "description": "Legal relationship of Legally Authorized Representative to minor/subject."
       },
       "LakehouseMetrics": {
         "properties": {
@@ -7012,6 +10623,34 @@
         "title": "MedicalImagingLesion",
         "description": "RECIST 1.1 or imaging lesion evaluation."
       },
+      "MobileECRFSyncRequest": {
+        "properties": {
+          "client_sync_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Client Sync Id"
+          },
+          "offline_collected_at_utc": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Offline Collected At Utc"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data",
+            "description": "Key-value mapping of eCRF item answers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_sync_id",
+          "offline_collected_at_utc",
+          "data"
+        ],
+        "title": "MobileECRFSyncRequest",
+        "description": "Offline-cached mobile eCRF data entry submission."
+      },
       "MultiStreamIngestPayload": {
         "properties": {
           "study_id": {
@@ -7401,6 +11040,338 @@
         "title": "PackageLockValidationResult",
         "description": "Result of lockfile parsing and cryptographic integrity assertion."
       },
+      "ParticipantRole": {
+        "type": "string",
+        "enum": [
+          "INVESTIGATOR",
+          "SUBJECT",
+          "LAR",
+          "NURSE_COORDINATOR",
+          "TRANSLATOR",
+          "WITNESS"
+        ],
+        "title": "ParticipantRole",
+        "description": "Permitted clinical roles for telehealth room participants."
+      },
+      "PediatricAssentDTO": {
+        "properties": {
+          "assent_id": {
+            "type": "string",
+            "title": "Assent Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "tier": {
+            "$ref": "#/components/schemas/PediatricAssentTier"
+          },
+          "minor_age": {
+            "type": "integer",
+            "title": "Minor Age"
+          },
+          "comprehension_score_percent": {
+            "type": "number",
+            "title": "Comprehension Score Percent"
+          },
+          "comprehension_passed": {
+            "type": "boolean",
+            "title": "Comprehension Passed"
+          },
+          "assent_signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assent Signature"
+          },
+          "lar_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lar Name"
+          },
+          "lar_relationship": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lar Relationship"
+          },
+          "lar_legal_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lar Legal Basis"
+          },
+          "lar_signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lar Signature"
+          },
+          "investigator_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigator Name"
+          },
+          "investigator_signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigator Signature"
+          },
+          "cryptographic_bundle_hash": {
+            "type": "string",
+            "title": "Cryptographic Bundle Hash"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "assent_id",
+          "study_id",
+          "subject_id",
+          "tier",
+          "minor_age",
+          "comprehension_score_percent",
+          "comprehension_passed",
+          "assent_signature",
+          "lar_name",
+          "lar_relationship",
+          "lar_legal_basis",
+          "lar_signature",
+          "investigator_name",
+          "investigator_signature",
+          "cryptographic_bundle_hash",
+          "created_at"
+        ],
+        "title": "PediatricAssentDTO",
+        "description": "Persisted pediatric assent manifest."
+      },
+      "PediatricAssentListResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "assents": {
+            "items": {
+              "$ref": "#/components/schemas/PediatricAssentDTO"
+            },
+            "type": "array",
+            "title": "Assents"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "assents",
+          "total"
+        ],
+        "title": "PediatricAssentListResponse",
+        "description": "List response for pediatric assents."
+      },
+      "PediatricAssentResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "assent": {
+            "$ref": "#/components/schemas/PediatricAssentDTO"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Pediatric assent processed successfully"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "assent"
+        ],
+        "title": "PediatricAssentResponse",
+        "description": "Response wrapper for pediatric assent."
+      },
+      "PediatricAssentSubmitRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id"
+          },
+          "minor_age": {
+            "type": "integer",
+            "maximum": 25.0,
+            "minimum": 0.0,
+            "title": "Minor Age",
+            "description": "Age of minor at consent execution"
+          },
+          "answers": {
+            "items": {
+              "$ref": "#/components/schemas/ComprehensionAnswerDTO"
+            },
+            "type": "array",
+            "title": "Answers",
+            "description": "Quiz answers"
+          },
+          "assent_signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assent Signature",
+            "description": "Minor assent signature string or drawing token"
+          },
+          "lar_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lar Name",
+            "description": "Name of Parent or Legally Authorized Representative"
+          },
+          "lar_relationship": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LARRelationship"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Legal relationship to minor"
+          },
+          "lar_legal_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lar Legal Basis",
+            "description": "Legal authority basis (e.g. Birth Certificate, Court Order)"
+          },
+          "lar_signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lar Signature",
+            "description": "Electronic signature of LAR"
+          },
+          "investigator_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigator Name",
+            "description": "Investigator counter-signatory name"
+          },
+          "investigator_signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigator Signature",
+            "description": "Investigator electronic signature"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "subject_id",
+          "minor_age"
+        ],
+        "title": "PediatricAssentSubmitRequest",
+        "description": "Submission payload for tiered pediatric assent and LAR consent."
+      },
+      "PediatricAssentTier": {
+        "type": "string",
+        "enum": [
+          "CHILD_7_11",
+          "ADOLESCENT_12_17",
+          "LAR_PARENT_GUARDIAN",
+          "ADULT_18_PLUS"
+        ],
+        "title": "PediatricAssentTier",
+        "description": "Multi-tiered age-appropriate informed consent / assent categories."
+      },
       "PipelineExecutionResult": {
         "properties": {
           "execution_id": {
@@ -7525,6 +11496,21 @@
         "title": "PipelineExecutionStatus",
         "description": "Execution status for the continuous CDR transformation pipeline."
       },
+      "ProcedureType": {
+        "type": "string",
+        "enum": [
+          "VITAL_SIGNS",
+          "PK_BLOOD_DRAW",
+          "IP_ADMINISTRATION",
+          "12_LEAD_ECG",
+          "SAFETY_LABS",
+          "PHYSICAL_EXAM",
+          "BIOMARKER_SAMPLING",
+          "PATIENT_DIARY_REVIEW"
+        ],
+        "title": "ProcedureType",
+        "description": "Standard decentralized in-home nursing clinical procedures."
+      },
       "ProgramListResponse": {
         "properties": {
           "study_id": {
@@ -7570,6 +11556,58 @@
         ],
         "title": "ProgramResponse",
         "description": "Response containing statistical program definition."
+      },
+      "ProtocolProcedureDTO": {
+        "properties": {
+          "procedure_type": {
+            "$ref": "#/components/schemas/ProcedureType"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "completed": {
+            "type": "boolean",
+            "title": "Completed",
+            "default": false
+          },
+          "timestamp_utc": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp Utc"
+          },
+          "sample_barcodes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sample Barcodes"
+          },
+          "performed_by": {
+            "type": "string",
+            "title": "Performed By",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "procedure_type",
+          "description"
+        ],
+        "title": "ProtocolProcedureDTO",
+        "description": "Protocol procedure task record."
       },
       "QuarantinedSubmissionResponse": {
         "properties": {
@@ -7726,6 +11764,84 @@
           "change_reason"
         ],
         "title": "ReplayQuarantinedSubmissionRequest"
+      },
+      "RoomTokenRequest": {
+        "properties": {
+          "participant_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Participant Id",
+            "description": "Unique participant identifier"
+          },
+          "participant_role": {
+            "$ref": "#/components/schemas/ParticipantRole",
+            "description": "Clinical role of participant"
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Display Name",
+            "description": "Friendly participant display name"
+          },
+          "duration_minutes": {
+            "type": "integer",
+            "maximum": 480.0,
+            "minimum": 15.0,
+            "title": "Duration Minutes",
+            "description": "Token validity window in minutes",
+            "default": 120
+          }
+        },
+        "type": "object",
+        "required": [
+          "participant_id",
+          "participant_role",
+          "display_name"
+        ],
+        "title": "RoomTokenRequest",
+        "description": "Request to issue an HMAC-SHA256 signed room authorization token."
+      },
+      "RoomTokenResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "room_id": {
+            "type": "string",
+            "title": "Room Id"
+          },
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "expires_at_utc": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At Utc"
+          },
+          "participant_role": {
+            "$ref": "#/components/schemas/ParticipantRole"
+          },
+          "capabilities": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object",
+            "title": "Capabilities"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "room_id",
+          "token",
+          "expires_at_utc",
+          "participant_role",
+          "capabilities"
+        ],
+        "title": "RoomTokenResponse",
+        "description": "Response containing signed room token and claims."
       },
       "RunADaMPipelineRequest": {
         "properties": {
@@ -8699,6 +12815,177 @@
         "title": "SensorSafetyAlert",
         "description": "Automated biometric safety threshold alert."
       },
+      "SignalingMessageType": {
+        "type": "string",
+        "enum": [
+          "OFFER",
+          "ANSWER",
+          "ICE_CANDIDATE",
+          "JOIN_ROOM",
+          "LEAVE_ROOM",
+          "CO_VIEW_STATE",
+          "ANNOTATION",
+          "CHAT"
+        ],
+        "title": "SignalingMessageType",
+        "description": "WebRTC session signaling message categories."
+      },
+      "SmartAssertionVerifyRequest": {
+        "properties": {
+          "assertion_jwt": {
+            "type": "string",
+            "title": "Assertion Jwt",
+            "description": "Raw client assertion JWT"
+          },
+          "public_key_pem": {
+            "type": "string",
+            "title": "Public Key Pem",
+            "description": "RSA public key in PEM format"
+          },
+          "expected_audience": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Audience",
+            "description": "Expected token endpoint URL"
+          },
+          "expected_client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Client Id",
+            "description": "Expected client_id claim"
+          }
+        },
+        "type": "object",
+        "required": [
+          "assertion_jwt",
+          "public_key_pem"
+        ],
+        "title": "SmartAssertionVerifyRequest",
+        "description": "Payload to verify an inbound or generated SMART client assertion JWT."
+      },
+      "SmartAssertionVerifyResponse": {
+        "properties": {
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          },
+          "claims": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Claims"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_valid"
+        ],
+        "title": "SmartAssertionVerifyResponse",
+        "description": "Response indicating assertion verification validity and claims."
+      },
+      "SmartClientAssertionRequest": {
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "title": "Client Id",
+            "description": "OAuth2 client identifier"
+          },
+          "token_endpoint": {
+            "type": "string",
+            "title": "Token Endpoint",
+            "description": "Target EHR OAuth2 token URL (aud claim)"
+          },
+          "private_key_pem": {
+            "type": "string",
+            "title": "Private Key Pem",
+            "description": "RSA private key in PEM format"
+          },
+          "algorithm": {
+            "type": "string",
+            "title": "Algorithm",
+            "description": "Asymmetric signing algorithm (RS384 or RS256)",
+            "default": "RS384"
+          },
+          "key_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Id",
+            "description": "Optional kid header"
+          },
+          "expiration_seconds": {
+            "type": "integer",
+            "maximum": 300.0,
+            "title": "Expiration Seconds",
+            "description": "Assertion validity lifetime in seconds",
+            "default": 300
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_id",
+          "token_endpoint",
+          "private_key_pem"
+        ],
+        "title": "SmartClientAssertionRequest",
+        "description": "Request payload to generate a signed asymmetric client assertion JWT."
+      },
+      "SmartClientAssertionResponse": {
+        "properties": {
+          "client_assertion_jwt": {
+            "type": "string",
+            "title": "Client Assertion Jwt"
+          },
+          "token_endpoint": {
+            "type": "string",
+            "title": "Token Endpoint"
+          },
+          "algorithm": {
+            "type": "string",
+            "title": "Algorithm"
+          },
+          "expires_in_seconds": {
+            "type": "integer",
+            "title": "Expires In Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_assertion_jwt",
+          "token_endpoint",
+          "algorithm",
+          "expires_in_seconds"
+        ],
+        "title": "SmartClientAssertionResponse",
+        "description": "Response containing the signed client assertion JWT."
+      },
       "SnapshotAuditTrailResponse": {
         "properties": {
           "snapshot_id": {
@@ -9465,6 +13752,308 @@
         ],
         "title": "SubjectNotificationResponse"
       },
+      "TelehealthSessionCreateRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id",
+            "description": "Study protocol identifier"
+          },
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id",
+            "description": "Study subject identifier"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Title",
+            "description": "Descriptive title of consultation",
+            "default": "Telehealth Clinical Consultation"
+          },
+          "scheduled_start_utc": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled Start Utc",
+            "description": "Scheduled visit start timestamp in UTC"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Clinical trial site identifier"
+          },
+          "scheduled_end_utc": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled End Utc",
+            "description": "Optional scheduled end timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "subject_id",
+          "scheduled_start_utc"
+        ],
+        "title": "TelehealthSessionCreateRequest",
+        "description": "Request to schedule a new WebRTC telehealth video visit."
+      },
+      "TelehealthSessionDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "room_id": {
+            "type": "string",
+            "title": "Room Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "scheduled_start_utc": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled Start Utc"
+          },
+          "scheduled_end_utc": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled End Utc"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TelehealthSessionStatus"
+          },
+          "co_view_state": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Co View State"
+          },
+          "signaling_messages": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Signaling Messages"
+          },
+          "participant_records": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Participant Records"
+          },
+          "recording_seal_metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recording Seal Metadata"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "room_id",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "title",
+          "scheduled_start_utc",
+          "scheduled_end_utc",
+          "status",
+          "co_view_state",
+          "signaling_messages",
+          "participant_records",
+          "recording_seal_metadata",
+          "created_at",
+          "created_by"
+        ],
+        "title": "TelehealthSessionDTO",
+        "description": "Telehealth session data object."
+      },
+      "TelehealthSessionListResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/TelehealthSessionDTO"
+            },
+            "type": "array",
+            "title": "Sessions"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "sessions",
+          "total"
+        ],
+        "title": "TelehealthSessionListResponse",
+        "description": "Response wrapper for listing telehealth sessions."
+      },
+      "TelehealthSessionResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "session": {
+            "$ref": "#/components/schemas/TelehealthSessionDTO"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Telehealth session processed successfully"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "session"
+        ],
+        "title": "TelehealthSessionResponse",
+        "description": "Response wrapper for telehealth session creation and queries."
+      },
+      "TelehealthSessionStatus": {
+        "type": "string",
+        "enum": [
+          "SCHEDULED",
+          "WAITING_ROOM",
+          "IN_PROGRESS",
+          "COMPLETED",
+          "CANCELLED",
+          "RECORDING_PROCESSING"
+        ],
+        "title": "TelehealthSessionStatus",
+        "description": "Lifecycle states for WebRTC telehealth video visits."
+      },
+      "TemperatureIngestRequest": {
+        "properties": {
+          "readings": {
+            "items": {
+              "$ref": "#/components/schemas/TemperatureReadingDTO"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Readings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "readings"
+        ],
+        "title": "TemperatureIngestRequest",
+        "description": "Batch ingestion of temperature logger telemetry points."
+      },
+      "TemperatureReadingDTO": {
+        "properties": {
+          "timestamp_utc": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp Utc"
+          },
+          "temperature_celsius": {
+            "type": "number",
+            "title": "Temperature Celsius"
+          },
+          "logger_id": {
+            "type": "string",
+            "title": "Logger Id",
+            "default": "LOGGER-01"
+          },
+          "battery_percent": {
+            "type": "number",
+            "title": "Battery Percent",
+            "default": 100.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "timestamp_utc",
+          "temperature_celsius"
+        ],
+        "title": "TemperatureReadingDTO",
+        "description": "Cold chain data logger reading point."
+      },
+      "TemperatureZone": {
+        "type": "string",
+        "enum": [
+          "CRYOGENIC",
+          "ULTRA_COLD",
+          "FROZEN",
+          "REFRIGERATED",
+          "CONTROLLED_AMBIENT"
+        ],
+        "title": "TemperatureZone",
+        "description": "Storage condition temperature envelopes."
+      },
       "ValidateDatasetJSONRequest": {
         "properties": {
           "payload": {
@@ -9640,6 +14229,30 @@
         ],
         "title": "ValidationError"
       },
+      "VerifyAssentResponse": {
+        "properties": {
+          "assent_id": {
+            "type": "string",
+            "title": "Assent Id"
+          },
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          },
+          "bundle_hash": {
+            "type": "string",
+            "title": "Bundle Hash"
+          }
+        },
+        "type": "object",
+        "required": [
+          "assent_id",
+          "is_valid",
+          "bundle_hash"
+        ],
+        "title": "VerifyAssentResponse",
+        "description": "Response validating cryptographic bundle seal integrity."
+      },
       "VerifyManifestResponse": {
         "properties": {
           "result": {
@@ -9671,6 +14284,86 @@
         ],
         "title": "VerifySnapshotResponse",
         "description": "Response for cryptographic SHA-256 integrity verification."
+      },
+      "WebRTCSignalingRequest": {
+        "properties": {
+          "sender_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Sender Id",
+            "description": "Participant sender identifier"
+          },
+          "sender_role": {
+            "$ref": "#/components/schemas/ParticipantRole",
+            "description": "Role of the sender"
+          },
+          "message_type": {
+            "$ref": "#/components/schemas/SignalingMessageType",
+            "description": "Type of signaling message"
+          },
+          "sdp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sdp",
+            "description": "Session Description Protocol (SDP) string"
+          },
+          "candidate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate",
+            "description": "ICE candidate string"
+          },
+          "sdp_mid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sdp Mid",
+            "description": "SDP media stream identifier"
+          },
+          "sdp_m_line_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sdp M Line Index",
+            "description": "SDP m-line index"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload",
+            "description": "Arbitrary payload for chat/annotations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sender_id",
+          "sender_role",
+          "message_type"
+        ],
+        "title": "WebRTCSignalingRequest",
+        "description": "WebRTC session signaling envelope (SDP / ICE candidates / annotations)."
       }
     }
   }
