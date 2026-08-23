@@ -36,6 +36,7 @@ class ProtocolRAGRequest(BaseModel):
         description="Retrieved protocol chunks from Knowledge Hub.",
     )
     top_k: int = Field(default=5, ge=1, le=20)
+    tenant_id: str = Field(default="default", description="Tenant identifier.")
 
 
 class ProtocolRAGResponse(BaseModel):
