@@ -4,7 +4,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from tests.conftest import clean_neo4j_graph, clean_postgres_databases
+from tests.conftest import (
+    SERVICE_DB_PREFIXES,
+    clean_neo4j_graph,
+    clean_postgres_databases,
+)
 
 
 def test_live_db_halt_when_postgres_unreachable():
@@ -116,10 +120,10 @@ async def test_clean_postgres_databases_calls_truncate():
     ):
         await clean_postgres_databases()
 
-    assert mock_connect.await_count == 11
+    assert mock_connect.await_count == len(SERVICE_DB_PREFIXES)
     mock_conn.execute.assert_any_await("SET session_replication_role = 'replica';")
     mock_conn.execute.assert_any_await(
         'TRUNCATE TABLE "public"."clinical_subjects" RESTART IDENTITY CASCADE;'
     )
     mock_conn.execute.assert_any_await("SET session_replication_role = 'origin';")
-    assert mock_conn.close.await_count == 11
+    assert mock_conn.close.await_count == len(SERVICE_DB_PREFIXES)
