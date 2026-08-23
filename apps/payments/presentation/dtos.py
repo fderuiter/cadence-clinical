@@ -412,3 +412,288 @@ class PaymentAuditLogResponse(BaseModel):
     created_by: str
     reason_for_change: str | None
     version_index: int
+
+
+# ==========================================
+# 7. Self-Billing Invoicing & Remittance Advice
+# ==========================================
+
+
+class BillingCycleCompilationRequest(BaseModel):
+    """Request payload for compiling monthly/quarterly billing cycle into draft self-billing invoice."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    study_id: str = Field(..., description="Target Study Protocol UUID or Identifier")
+    site_id: str = Field(..., description="Target Trial Site UUID or Identifier")
+    billing_cycle: str = Field(
+        default="MONTHLY", description="Billing cycle type (MONTHLY, QUARTERLY, MANUAL)"
+    )
+    period_start: str = Field(..., description="Billing cycle start date (YYYY-MM-DD)")
+    period_end: str = Field(..., description="Billing cycle end date (YYYY-MM-DD)")
+    auto_approve: bool = Field(
+        default=False, description="Automatically approve invoice upon compilation"
+    )
+
+
+class InvoiceLineItemResponse(BaseModel):
+    """Response model for an itemized procedure line item on an invoice."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    invoice_id: str
+    payable_id: str | None
+    subject_id: str
+    visit_code: str
+    procedure_code: str | None
+    procedure_name: str | None
+    base_amount: float
+    overhead_amount: float
+    patient_stipend: float
+    travel_reimbursement: float
+    gross_amount: float
+    withholding_rate: float
+    withholding_amount: float
+    net_amount: float
+    currency: str
+    created_at: datetime
+    version_index: int
+
+
+class RemittanceAdviceResponse(BaseModel):
+    """Response payload for cryptographically sealed PDF remittance advice statement."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    remittance_number: str
+    invoice_id: str
+    study_id: str
+    site_id: str
+    currency: str
+    gross_amount: float
+    overhead_amount: float
+    holdback_amount: float
+    net_amount: float
+    pdf_sha256_hash: str
+    is_sealed: bool
+    is_signed: bool
+    signed_by: str | None
+    signed_at: datetime | None
+    signer_role: str | None
+    signature_manifest: dict[str, Any] | None
+    dispatched_to: str | None
+    dispatched_at: datetime | None
+    dispatch_status: str
+    created_at: datetime
+    version_index: int
+
+
+class SelfBillingInvoiceResponse(BaseModel):
+    """Response payload for a compiled self-billing invoice statement."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    invoice_number: str
+    study_id: str
+    site_id: str
+    contract_id: str
+    billing_cycle: str
+    period_start: str
+    period_end: str
+    currency: str
+    total_base_amount: float
+    total_overhead_amount: float
+    total_patient_stipend: float
+    total_travel_reimbursement: float
+    total_gross_amount: float
+    total_holdback_amount: float
+    total_net_amount: float
+    payable_count: int
+    status: str
+    approved_by: str | None
+    approved_at: datetime | None
+    erp_system: str | None
+    erp_reference_id: str | None
+    erp_sync_status: str
+    erp_synced_at: datetime | None
+    reconciled_by: str | None
+    reconciled_at: datetime | None
+    reconciliation_reference: str | None
+    reconciliation_notes: str | None
+    created_at: datetime
+    created_by: str
+    reason_for_change: str | None
+    version_index: int
+    line_items: list[InvoiceLineItemResponse] = Field(default_factory=list)
+    remittance_advice: RemittanceAdviceResponse | None = None
+
+
+class RemittanceAdviceSignRequest(BaseModel):
+    """Request payload for applying 21 CFR Part 11 digital signature to a remittance advice document."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    signer_name: str = Field(..., description="Authorized Grants Lead Name")
+    signer_role: str = Field(
+        default="Grants Lead", description="Signer corporate or clinical title"
+    )
+    signature_reason: str = Field(
+        default="Authorized Self-Billing Remittance Disbursement Statement",
+        description="21 CFR Part 11 Electronic Signature manifestation statement",
+    )
+    cert_pem: str | None = Field(
+        default=None, description="Optional custom X.509 Certificate PEM"
+    )
+    private_key_pem: str | None = Field(
+        default=None, description="Optional custom RSA Private Key PEM"
+    )
+
+
+class RemittanceAdviceDispatchRequest(BaseModel):
+    """Request payload for dispatching signed remittance advice statement via automated email."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    recipient_email: str = Field(
+        ..., description="Site financial contact destination email address"
+    )
+
+
+class RemittanceSignatureVerificationResponse(BaseModel):
+    """Response payload for cryptographic verification of a remittance advice statement."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    is_valid: bool
+    status: str
+    failure_reason: str | None = None
+    pdf_sha256_hash: str
+    signed_by: str | None = None
+    signed_at: datetime | None = None
+    signer_role: str | None = None
+
+
+# ==========================================
+# 8. Enterprise ERP Synchronization (SAP/NetSuite)
+# ==========================================
+
+
+class ErpExportResponse(BaseModel):
+    """Standard enterprise ERP export payload schema."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    erp_system: str
+    invoice_number: str
+    document_type: str = "SELF_BILLING_INVOICE"
+    payload: dict[str, Any]
+    export_timestamp: str
+
+
+class ErpWebhookPayload(BaseModel):
+    """Inbound enterprise ERP webhook payload from SAP / NetSuite."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    erp_system: str = Field(
+        default="SAP",
+        description="Source ERP system (SAP, NETSUITE, ORACLE_FINANCIALS)",
+    )
+    invoice_number: str | None = Field(
+        default=None, description="Cadence invoice number"
+    )
+    invoice_id: str | None = Field(default=None, description="Cadence invoice UUID")
+    erp_reference_id: str = Field(
+        ..., description="ERP Document Number / Transaction ID"
+    )
+    status: str = Field(
+        ..., description="ERP execution status (PENDING, APPROVED, PAID, RECONCILED)"
+    )
+    payment_date: str | None = Field(
+        default=None, description="Bank settlement date (YYYY-MM-DD)"
+    )
+    amount_paid: float | None = Field(
+        default=None, ge=0.0, description="Amount disbursed by ERP"
+    )
+    currency: str = Field(default="USD", description="Currency of payment")
+    bank_reference: str | None = Field(
+        default=None, description="Bank wire reference or clearing check number"
+    )
+    notes: str | None = Field(
+        default=None, description="ERP reconciliation processing notes"
+    )
+
+
+class ErpWebhookResponse(BaseModel):
+    """Response acknowledging ERP webhook processing and status transition."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    status: str
+    invoice_id: str
+    invoice_number: str
+    erp_system: str
+    erp_reference_id: str
+    previous_status: str
+    new_status: str
+    reconciled: bool
+    message: str
+
+
+class PaymentReconciliationRequest(BaseModel):
+    """Formal request payload for reconciling bank disbursement against invoice."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    payment_reference: str = Field(
+        ..., description="Bank Wire / Check / ERP Settlement Document Number"
+    )
+    erp_system: str = Field(
+        default="SAP", description="ERP system identifier (SAP, NETSUITE, etc.)"
+    )
+    payment_date: str | None = Field(
+        default=None, description="Payment execution date (YYYY-MM-DD)"
+    )
+    amount_paid: float = Field(..., ge=0.0, description="Actual disbursed net amount")
+    notes: str | None = Field(
+        default=None, description="Financial reconciliation notes"
+    )
+
+
+class PaymentReconciliationResponse(BaseModel):
+    """Summary response for completed payment reconciliation."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    invoice_id: str
+    invoice_number: str
+    status: str
+    erp_sync_status: str
+    reconciled_by: str
+    reconciled_at: datetime
+    reconciliation_reference: str
+    total_net_amount: float
+    amount_paid: float
+    reconciled_payables_count: int
+
+
+class ErpSyncLogResponse(BaseModel):
+    """Response payload for ERP synchronization transaction log."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    invoice_id: str
+    erp_system: str
+    sync_direction: str
+    status: str
+    payload: dict[str, Any] | None
+    response_data: dict[str, Any] | None
+    external_reference: str | None
+    reconciled: bool
+    created_at: datetime
+    created_by: str
+    version_index: int

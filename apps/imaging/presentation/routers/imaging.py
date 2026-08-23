@@ -9,6 +9,7 @@ Requirements: ADR-2199, PRD-IMG-001, PRD-IMG-002
 import hashlib
 import json
 import uuid
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import (
@@ -29,8 +30,16 @@ from sqlalchemy.orm import selectinload
 
 from apps.imaging.adapters.database import get_db_session
 from apps.imaging.adapters.storage import get_storage_adapter
+from apps.imaging.domain.models import (
+    AdjudicationWorkflowStatus,
+    LesionMeasurement,
+    OncologicCriteria,
+    ReaderAssessment,
+    ReaderRole,
+)
 from apps.imaging.infrastructure.models import (
     DeidentificationCertificateModel,
+    ImagingAdjudicationSessionModel,
     ImagingAnnotationModel,
     ImagingAuditLogModel,
     ImagingInstanceEnvelopeModel,
@@ -39,10 +48,13 @@ from apps.imaging.infrastructure.models import (
     TumorResponseAssessmentModel,
 )
 from apps.imaging.presentation.dtos import (
+    AdjudicationSessionResponseDto,
     CaliperAnnotationCreateDto,
     CaliperAnnotationResponseDto,
     CertificateVerificationResponse,
+    CreateAdjudicationSessionDto,
     DicomUploadResponse,
+    EDCTumorBindingResponseDto,
     InstanceEnvelopeSummaryDto,
     LuganoEvaluationRequestDto,
     LuganoEvaluationResponseDto,
@@ -51,12 +63,19 @@ from apps.imaging.presentation.dtos import (
     PresignedDownloadUrlResponse,
     RECISTEvaluationRequestDto,
     RECISTEvaluationResponseDto,
+    SDTMDatasetExportResponseDto,
     SeriesEnvelopeSummaryDto,
+    StepUpAdjudicationSignOffDto,
     StudyEnvelopeDetailDto,
     StudyEnvelopeSummaryDto,
     SubjectTimepointEvaluateRequestDto,
     SubjectTimepointsTrajectoryResponseDto,
+    SubmitReaderAssessmentDto,
     TimepointTrajectorySummaryDto,
+)
+from apps.imaging.services.adjudication import (
+    DualReaderAdjudicationSession,
+    ImagingAdjudicationEngine,
 )
 from apps.imaging.services.lugano_engine import LuganoEngine, LuganoLesionInput
 from apps.imaging.services.mpr_engine import MprGeometryEngine
@@ -1246,4 +1265,672 @@ async def evaluate_and_lock_timepoint(
         locked_at=assessment_model.locked_at,
         reader_id=assessment_model.reader_id,
         created_at=assessment_model.created_at,
+    )
+
+
+# =========================================================================
+# Blinded Dual-Reader Charter & Tie-Breaker Adjudication Endpoints
+# Requirements: PRD-IMG-003, PRD-IMG-005, PRD-IMG-006, PRD-SYS-001
+# =========================================================================
+
+
+def _model_to_domain_session(
+    m: ImagingAdjudicationSessionModel,
+) -> DualReaderAdjudicationSession:
+    """Helper to convert ORM model to domain session entity."""
+    r1_assessment = (
+        ReaderAssessment(**m.reader_1_assessment) if m.reader_1_assessment else None
+    )
+    r2_assessment = (
+        ReaderAssessment(**m.reader_2_assessment) if m.reader_2_assessment else None
+    )
+    adj_assessment = (
+        ReaderAssessment(**m.adjudicator_assessment)
+        if m.adjudicator_assessment
+        else None
+    )
+
+    criteria_val = m.assessment_criteria or "RECIST_1_1"
+    wf_status_val = m.workflow_status or "PENDING_PRIMARY_READS"
+
+    return DualReaderAdjudicationSession(
+        id=m.id,
+        session_id=m.id,
+        study_envelope_id=m.study_envelope_id,
+        study_id=m.study_id,
+        site_id=m.site_id or "SITE-DEFAULT",
+        subject_id=m.subject_id,
+        timepoint_name=m.timepoint_name,
+        assessment_criteria=OncologicCriteria(criteria_val),
+        reader_1_id=m.reader_1_id,
+        reader_1_name=m.reader_1_name or "Reader 1",
+        reader_1_status=m.reader_1_status or "PENDING",
+        reader_1_assessment=r1_assessment,
+        reader_2_id=m.reader_2_id,
+        reader_2_name=m.reader_2_name or "Reader 2",
+        reader_2_status=m.reader_2_status or "PENDING",
+        reader_2_assessment=r2_assessment,
+        adjudicator_id=m.adjudicator_id,
+        adjudicator_name=m.adjudicator_name or "Adjudication Committee Chair",
+        adjudicator_assessment=adj_assessment,
+        sld_discordance_delta=(
+            m.sld_discordance_delta if m.sld_discordance_delta is not None else 0.0
+        ),
+        is_response_discordant=(
+            m.is_response_discordant if m.is_response_discordant is not None else False
+        ),
+        discordance_reasons=m.discordance_reasons or [],
+        workflow_status=AdjudicationWorkflowStatus(wf_status_val),
+        final_consensus_response=m.final_consensus_response,
+        final_consensus_sld_mm=m.final_consensus_sld_mm,
+        binding_reader=m.binding_reader,
+        adjudication_rationale=m.adjudication_rationale,
+        electronic_signature=m.electronic_signature,
+        locked_at=m.locked_at.isoformat() if m.locked_at else None,
+        locked_by=m.locked_by,
+        session_digest=m.session_digest or "",
+        tenant_id=m.tenant_id or "tenant_default",
+        version_index=m.version_index if m.version_index is not None else 1,
+    )
+
+
+@router.post(
+    "/adjudication/sessions",
+    response_model=AdjudicationSessionResponseDto,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_adjudication_session(
+    request: Request,
+    payload: CreateAdjudicationSessionDto,
+    session: AsyncSession = Depends(get_db_session),
+) -> AdjudicationSessionResponseDto:
+    """Instantiates and routes a new Blinded Dual-Reader Independent Review Charter session.
+
+    @req:PRD-IMG-003
+    @req:PRD-SYS-001
+    """
+    user_id, tenant_id, site_id, reason = _get_request_identity(request)
+    effective_site_id = payload.site_id or site_id or "SITE-DEFAULT"
+
+    session_id = str(uuid.uuid4())
+
+    model = ImagingAdjudicationSessionModel(
+        id=session_id,
+        study_envelope_id=payload.study_envelope_id,
+        study_id=payload.study_id,
+        site_id=effective_site_id,
+        subject_id=payload.subject_id,
+        timepoint_name=payload.timepoint_name,
+        assessment_criteria=payload.assessment_criteria,
+        reader_1_id=payload.reader_1_id,
+        reader_1_name=payload.reader_1_name,
+        reader_1_status="PENDING",
+        reader_2_id=payload.reader_2_id,
+        reader_2_name=payload.reader_2_name,
+        reader_2_status="PENDING",
+        adjudicator_id=payload.adjudicator_id,
+        adjudicator_name=payload.adjudicator_name,
+        workflow_status="PENDING_PRIMARY_READS",
+        tenant_id=tenant_id,
+        created_by=user_id,
+        reason_for_change=reason,
+    )
+
+    domain_session = _model_to_domain_session(model)
+    ImagingAdjudicationEngine._update_session_digest(domain_session)
+    model.session_digest = domain_session.session_digest
+
+    session.add(model)
+
+    audit_entry = ImagingAuditLogModel(
+        action="ADJUDICATION_SESSION_CREATED",
+        actor_id=user_id,
+        reason_for_change=reason,
+        details={
+            "session_id": session_id,
+            "subject_id": payload.subject_id,
+            "timepoint_name": payload.timepoint_name,
+            "reader_1_id": payload.reader_1_id,
+            "reader_2_id": payload.reader_2_id,
+            "adjudicator_id": payload.adjudicator_id,
+        },
+    )
+    session.add(audit_entry)
+
+    await session.commit()
+    await session.refresh(model)
+
+    view_data = ImagingAdjudicationEngine.get_blinded_session_view(
+        domain_session,
+        requesting_user_id=user_id,
+        requesting_role=request.headers.get("X-Reader-Role"),
+    )
+    return AdjudicationSessionResponseDto(**view_data)
+
+
+@router.get(
+    "/adjudication/sessions",
+    response_model=list[AdjudicationSessionResponseDto],
+)
+async def list_adjudication_sessions(
+    request: Request,
+    study_id: str | None = Query(default=None),
+    subject_id: str | None = Query(default=None),
+    timepoint_name: str | None = Query(default=None),
+    workflow_status: str | None = Query(default=None),
+    session: AsyncSession = Depends(get_db_session),
+) -> list[AdjudicationSessionResponseDto]:
+    """Lists adjudication sessions with dynamic blinding enforcement based on requesting role.
+
+    @req:PRD-IMG-003
+    """
+    user_id, _, _, _ = _get_request_identity(request)
+    reader_role = request.headers.get("X-Reader-Role")
+
+    stmt = select(ImagingAdjudicationSessionModel).order_by(
+        ImagingAdjudicationSessionModel.created_at.desc()
+    )
+
+    if study_id:
+        stmt = stmt.where(ImagingAdjudicationSessionModel.study_id == study_id)
+    if subject_id:
+        stmt = stmt.where(ImagingAdjudicationSessionModel.subject_id == subject_id)
+    if timepoint_name:
+        stmt = stmt.where(
+            ImagingAdjudicationSessionModel.timepoint_name == timepoint_name
+        )
+    if workflow_status:
+        stmt = stmt.where(
+            ImagingAdjudicationSessionModel.workflow_status == workflow_status
+        )
+
+    result = await session.execute(stmt)
+    models = result.scalars().all()
+
+    response_list: list[AdjudicationSessionResponseDto] = []
+    for m in models:
+        dom = _model_to_domain_session(m)
+        view_data = ImagingAdjudicationEngine.get_blinded_session_view(
+            dom,
+            requesting_user_id=user_id,
+            requesting_role=reader_role,
+        )
+        response_list.append(AdjudicationSessionResponseDto(**view_data))
+
+    return response_list
+
+
+@router.get(
+    "/adjudication/sessions/{session_id}",
+    response_model=AdjudicationSessionResponseDto,
+)
+async def get_adjudication_session(
+    request: Request,
+    session_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> AdjudicationSessionResponseDto:
+    """Retrieves an adjudication session with strict blinding isolation between readers.
+
+    @req:PRD-IMG-003
+    """
+    user_id, _, _, _ = _get_request_identity(request)
+    reader_role = request.headers.get("X-Reader-Role")
+
+    stmt = select(ImagingAdjudicationSessionModel).where(
+        ImagingAdjudicationSessionModel.id == session_id
+    )
+    result = await session.execute(stmt)
+    model = result.scalar_one_or_none()
+
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Adjudication session '{session_id}' not found.",
+        )
+
+    dom = _model_to_domain_session(model)
+    view_data = ImagingAdjudicationEngine.get_blinded_session_view(
+        dom,
+        requesting_user_id=user_id,
+        requesting_role=reader_role,
+    )
+    return AdjudicationSessionResponseDto(**view_data)
+
+
+@router.post(
+    "/adjudication/sessions/{session_id}/assessments",
+    response_model=AdjudicationSessionResponseDto,
+)
+async def submit_reader_assessment(
+    request: Request,
+    session_id: str,
+    payload: SubmitReaderAssessmentDto,
+    session: AsyncSession = Depends(get_db_session),
+) -> AdjudicationSessionResponseDto:
+    """Submits a blinded reader assessment and automatically detects response discordance.
+
+    @req:PRD-IMG-003
+    @req:PRD-IMG-005
+    """
+    user_id, _, _, reason = _get_request_identity(request)
+
+    stmt = select(ImagingAdjudicationSessionModel).where(
+        ImagingAdjudicationSessionModel.id == session_id
+    )
+    result = await session.execute(stmt)
+    model = result.scalar_one_or_none()
+
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Adjudication session '{session_id}' not found.",
+        )
+
+    # Convert incoming DTO lesions to domain LesionMeasurement objects
+    target_lesions = [
+        LesionMeasurement(
+            lesion_id=lesion.lesion_id,
+            organ_site=lesion.organ_site,
+            longest_diameter_mm=lesion.longest_diameter_mm,
+            short_axis_mm=lesion.short_axis_mm,
+            slice_location=lesion.slice_location,
+            slice_index=lesion.slice_index,
+            sop_instance_uid=lesion.sop_instance_uid,
+            deauville_score=lesion.deauville_score,
+        )
+        for lesion in payload.target_lesions
+    ]
+
+    sum_sld = (
+        payload.sum_longest_diameters_mm
+        if payload.sum_longest_diameters_mm > 0
+        else sum(lesion.longest_diameter_mm for lesion in target_lesions)
+    )
+
+    assessment = ReaderAssessment(
+        reader_id=payload.reader_id or user_id,
+        reader_name=payload.reader_name,
+        reader_role=ReaderRole(payload.reader_role),
+        timepoint_name=model.timepoint_name,
+        target_lesions=target_lesions,
+        non_target_status=payload.non_target_status,
+        new_lesions_present=payload.new_lesions_present,
+        new_lesions_count=payload.new_lesions_count,
+        sum_longest_diameters_mm=sum_sld,
+        baseline_sld_mm=payload.baseline_sld_mm,
+        nadir_sld_mm=payload.nadir_sld_mm,
+        overall_response=payload.overall_response,
+        assessment_notes=payload.assessment_notes,
+        submitted_at=datetime.now(UTC).isoformat(),
+        digital_signature=payload.digital_signature,
+    )
+
+    is_r1 = payload.reader_role == "READER_1" or payload.reader_id == model.reader_1_id
+    is_r2 = payload.reader_role == "READER_2" or payload.reader_id == model.reader_2_id
+
+    if is_r1:
+        model.reader_1_assessment = assessment.model_dump()
+        model.reader_1_status = "COMPLETED"
+    elif is_r2:
+        model.reader_2_assessment = assessment.model_dump()
+        model.reader_2_status = "COMPLETED"
+    else:
+        # Adjudicator assessment
+        model.adjudicator_assessment = assessment.model_dump()
+
+    # If both Reader 1 and Reader 2 have completed reads, trigger concordance engine
+    if model.reader_1_assessment and model.reader_2_assessment:
+        domain_sess = _model_to_domain_session(model)
+        r1_obj = ReaderAssessment(**model.reader_1_assessment)
+        r2_obj = ReaderAssessment(**model.reader_2_assessment)
+
+        evaluated = ImagingAdjudicationEngine.evaluate_primary_reads(
+            domain_sess, r1_obj, r2_obj
+        )
+
+        model.workflow_status = evaluated.workflow_status.value
+        model.sld_discordance_delta = evaluated.sld_discordance_delta
+        model.is_response_discordant = evaluated.is_response_discordant
+        model.discordance_reasons = evaluated.discordance_reasons
+        model.final_consensus_response = (
+            evaluated.final_consensus_response.value
+            if hasattr(evaluated.final_consensus_response, "value")
+            else evaluated.final_consensus_response
+        )
+        model.final_consensus_sld_mm = evaluated.final_consensus_sld_mm
+        model.binding_reader = evaluated.binding_reader
+        model.session_digest = evaluated.session_digest
+        model.locked_at = (
+            datetime.fromisoformat(evaluated.locked_at) if evaluated.locked_at else None
+        )
+        model.locked_by = evaluated.locked_by
+    else:
+        # One read still pending
+        model.workflow_status = "PENDING_READ_2" if is_r1 else "PENDING_READ_1"
+        domain_sess = _model_to_domain_session(model)
+        ImagingAdjudicationEngine._update_session_digest(domain_sess)
+        model.session_digest = domain_sess.session_digest
+
+    model.version_index += 1
+    model.reason_for_change = f"Reader assessment submitted by {payload.reader_role}"
+
+    audit_entry = ImagingAuditLogModel(
+        action="READER_ASSESSMENT_SUBMITTED",
+        actor_id=user_id,
+        reason_for_change=reason,
+        details={
+            "session_id": session_id,
+            "reader_role": payload.reader_role,
+            "overall_response": payload.overall_response,
+            "sum_longest_diameters_mm": sum_sld,
+            "workflow_status": model.workflow_status,
+        },
+    )
+    session.add(audit_entry)
+
+    await session.commit()
+    await session.refresh(model)
+
+    dom_final = _model_to_domain_session(model)
+    view_data = ImagingAdjudicationEngine.get_blinded_session_view(
+        dom_final,
+        requesting_user_id=user_id,
+        requesting_role=payload.reader_role,
+    )
+    return AdjudicationSessionResponseDto(**view_data)
+
+
+@router.post(
+    "/adjudication/sessions/{session_id}/sign-off",
+    response_model=AdjudicationSessionResponseDto,
+)
+async def sign_off_adjudication(
+    request: Request,
+    session_id: str,
+    payload: StepUpAdjudicationSignOffDto,
+    session: AsyncSession = Depends(get_db_session),
+) -> AdjudicationSessionResponseDto:
+    """Executes 21 CFR Part 11 step-up electronic signature sign-off for binding tie-breaker determination.
+
+    @req:PRD-IMG-005
+    @req:PRD-SYS-001
+    """
+    user_id, _, _, reason = _get_request_identity(request)
+
+    stmt = select(ImagingAdjudicationSessionModel).where(
+        ImagingAdjudicationSessionModel.id == session_id
+    )
+    result = await session.execute(stmt)
+    model = result.scalar_one_or_none()
+
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Adjudication session '{session_id}' not found.",
+        )
+
+    if not payload.rationale or not payload.rationale.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Clinical justification rationale is mandatory for 21 CFR Part 11 adjudication sign-off.",
+        )
+
+    # 1. Step-up signature manifestation packaging
+    ts_now = datetime.now(UTC).isoformat()
+    manifest_bytes = f"{session_id}|{payload.signer_id}|{payload.signing_reason}|{ts_now}|{payload.rationale}".encode()
+    signature_digest = hashlib.sha256(manifest_bytes).hexdigest()
+
+    signature_manifestation = {
+        "signer_id": payload.signer_id or user_id,
+        "signer_name": payload.signer_name,
+        "timestamp": ts_now,
+        "signing_reason": payload.signing_reason,
+        "ip_address": (request.client.host if request.client else "127.0.0.1"),
+        "user_agent": request.headers.get("User-Agent", "Cadence-Imaging/2.0"),
+        "sha256_hash": signature_digest,
+        "step_up_verified": True,
+    }
+
+    # 2. Build adjudicator assessment
+    if payload.adjudicator_assessment:
+        adj_target_lesions = [
+            LesionMeasurement(
+                lesion_id=lesion.lesion_id,
+                organ_site=lesion.organ_site,
+                longest_diameter_mm=lesion.longest_diameter_mm,
+                short_axis_mm=lesion.short_axis_mm,
+                slice_location=lesion.slice_location,
+                slice_index=lesion.slice_index,
+                sop_instance_uid=lesion.sop_instance_uid,
+                deauville_score=lesion.deauville_score,
+            )
+            for lesion in payload.adjudicator_assessment.target_lesions
+        ]
+        sum_sld = (
+            payload.adjudicator_assessment.sum_longest_diameters_mm
+            if payload.adjudicator_assessment.sum_longest_diameters_mm > 0
+            else sum(lesion.longest_diameter_mm for lesion in adj_target_lesions)
+        )
+        adj_assessment_obj = ReaderAssessment(
+            reader_id=payload.signer_id or user_id,
+            reader_name=payload.signer_name,
+            reader_role=ReaderRole.ADJUDICATOR,
+            timepoint_name=model.timepoint_name,
+            target_lesions=adj_target_lesions,
+            non_target_status=payload.adjudicator_assessment.non_target_status,
+            new_lesions_present=payload.adjudicator_assessment.new_lesions_present,
+            new_lesions_count=payload.adjudicator_assessment.new_lesions_count,
+            sum_longest_diameters_mm=sum_sld,
+            overall_response=payload.adjudicator_assessment.overall_response,
+            assessment_notes=payload.rationale,
+            submitted_at=ts_now,
+            digital_signature=signature_digest,
+        )
+    elif payload.binding_reader == "READER_1" and model.reader_1_assessment:
+        r1_dict = model.reader_1_assessment
+        adj_assessment_obj = ReaderAssessment(
+            reader_id=payload.signer_id or user_id,
+            reader_name=payload.signer_name,
+            reader_role=ReaderRole.ADJUDICATOR,
+            timepoint_name=model.timepoint_name,
+            target_lesions=[
+                LesionMeasurement(**lesion)
+                for lesion in r1_dict.get("target_lesions", [])
+            ],
+            non_target_status=r1_dict.get("non_target_status", "NON_CR_NON_PD"),
+            new_lesions_present=r1_dict.get("new_lesions_present", False),
+            new_lesions_count=r1_dict.get("new_lesions_count", 0),
+            sum_longest_diameters_mm=r1_dict.get("sum_longest_diameters_mm", 0.0),
+            overall_response=r1_dict.get("overall_response", "NE"),
+            assessment_notes=payload.rationale,
+            submitted_at=ts_now,
+            digital_signature=signature_digest,
+        )
+    elif payload.binding_reader == "READER_2" and model.reader_2_assessment:
+        r2_dict = model.reader_2_assessment
+        adj_assessment_obj = ReaderAssessment(
+            reader_id=payload.signer_id or user_id,
+            reader_name=payload.signer_name,
+            reader_role=ReaderRole.ADJUDICATOR,
+            timepoint_name=model.timepoint_name,
+            target_lesions=[
+                LesionMeasurement(**lesion)
+                for lesion in r2_dict.get("target_lesions", [])
+            ],
+            non_target_status=r2_dict.get("non_target_status", "NON_CR_NON_PD"),
+            new_lesions_present=r2_dict.get("new_lesions_present", False),
+            new_lesions_count=r2_dict.get("new_lesions_count", 0),
+            sum_longest_diameters_mm=r2_dict.get("sum_longest_diameters_mm", 0.0),
+            overall_response=r2_dict.get("overall_response", "NE"),
+            assessment_notes=payload.rationale,
+            submitted_at=ts_now,
+            digital_signature=signature_digest,
+        )
+    else:
+        # Fallback default
+        adj_assessment_obj = ReaderAssessment(
+            reader_id=payload.signer_id or user_id,
+            reader_name=payload.signer_name,
+            reader_role=ReaderRole.ADJUDICATOR,
+            timepoint_name=model.timepoint_name,
+            overall_response="PR",
+            assessment_notes=payload.rationale,
+            submitted_at=ts_now,
+            digital_signature=signature_digest,
+        )
+
+    # 3. Apply decision via domain engine
+    domain_sess = _model_to_domain_session(model)
+    adjudicated = ImagingAdjudicationEngine.apply_adjudicator_decision(
+        session=domain_sess,
+        adjudicator_assessment=adj_assessment_obj,
+        rationale=payload.rationale,
+        locked_by=payload.signer_id or user_id,
+        binding_reader=payload.binding_reader,
+        step_up_signature=signature_manifestation,
+    )
+
+    model.adjudicator_assessment = adj_assessment_obj.model_dump()
+    model.workflow_status = adjudicated.workflow_status.value
+    model.final_consensus_response = (
+        adjudicated.final_consensus_response.value
+        if hasattr(adjudicated.final_consensus_response, "value")
+        else adjudicated.final_consensus_response
+    )
+    model.final_consensus_sld_mm = adjudicated.final_consensus_sld_mm
+    model.binding_reader = adjudicated.binding_reader
+    model.adjudication_rationale = adjudicated.adjudication_rationale
+    model.electronic_signature = signature_manifestation
+    model.locked_at = (
+        datetime.fromisoformat(adjudicated.locked_at)
+        if adjudicated.locked_at
+        else datetime.now(UTC)
+    )
+    model.locked_by = adjudicated.locked_by
+    model.session_digest = adjudicated.session_digest
+    model.version_index += 1
+    model.reason_for_change = (
+        f"21 CFR Part 11 Adjudication Sign-Off: {payload.rationale}"
+    )
+
+    # Also persist or update TumorResponseAssessmentModel for subject trajectory synchronization
+    assessment_model = TumorResponseAssessmentModel(
+        id=str(uuid.uuid4()),
+        study_id=model.study_id,
+        site_id=model.site_id,
+        subject_id=model.subject_id,
+        timepoint_name=model.timepoint_name,
+        assessment_criteria=model.assessment_criteria,
+        current_sld_mm=model.final_consensus_sld_mm,
+        target_response=model.final_consensus_response or "SD",
+        non_target_status="NON_CR_NON_PD",
+        new_lesions_present=False,
+        overall_response=model.final_consensus_response or "SD",
+        is_locked=True,
+        locked_at=model.locked_at,
+        locked_by=model.locked_by,
+        reader_id=model.locked_by or "adjudicator",
+        manifest_sha256=model.session_digest,
+        signature=f"SIG-ADJ-{signature_digest[:16]}",
+        created_by=user_id,
+        reason_for_change="Adjudication Tie-Breaker Resolution",
+    )
+    session.add(assessment_model)
+
+    audit_entry = ImagingAuditLogModel(
+        action="ADJUDICATION_STEP_UP_SIGNED",
+        actor_id=payload.signer_id or user_id,
+        reason_for_change=payload.rationale,
+        details={
+            "session_id": session_id,
+            "final_response": model.final_consensus_response,
+            "binding_reader": model.binding_reader,
+            "session_digest": model.session_digest,
+            "step_up_signature": signature_manifestation,
+        },
+    )
+    session.add(audit_entry)
+
+    await session.commit()
+    await session.refresh(model)
+
+    dom_final = _model_to_domain_session(model)
+    view_data = ImagingAdjudicationEngine.get_blinded_session_view(
+        dom_final,
+        requesting_user_id=user_id,
+        requesting_role="ADJUDICATOR",
+    )
+    return AdjudicationSessionResponseDto(**view_data)
+
+
+@router.get(
+    "/adjudication/sessions/{session_id}/edc-binding",
+    response_model=EDCTumorBindingResponseDto,
+)
+async def get_edc_ecrf_tumor_binding(
+    session_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> EDCTumorBindingResponseDto:
+    """Extracts direct EDC eCRF tumor assessment form bindings from verified adjudication measurements.
+
+    @req:PRD-IMG-006
+    """
+    stmt = select(ImagingAdjudicationSessionModel).where(
+        ImagingAdjudicationSessionModel.id == session_id
+    )
+    result = await session.execute(stmt)
+    model = result.scalar_one_or_none()
+
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Adjudication session '{session_id}' not found.",
+        )
+
+    dom = _model_to_domain_session(model)
+    binding = ImagingAdjudicationEngine.generate_edc_ecrf_binding(dom)
+    return EDCTumorBindingResponseDto(**binding)
+
+
+@router.get(
+    "/adjudication/sessions/{session_id}/sdtm",
+    response_model=SDTMDatasetExportResponseDto,
+)
+@router.get(
+    "/adjudication/sessions/{session_id}/export-sdtm",
+    response_model=SDTMDatasetExportResponseDto,
+)
+async def export_adjudication_sdtm_datasets(
+    session_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> SDTMDatasetExportResponseDto:
+    """Exports CDISC SDTM TU (Tumor Identification), TR (Tumor Results), and RS (Disease Response) datasets.
+
+    @req:PRD-IMG-006
+    """
+    stmt = select(ImagingAdjudicationSessionModel).where(
+        ImagingAdjudicationSessionModel.id == session_id
+    )
+    result = await session.execute(stmt)
+    model = result.scalar_one_or_none()
+
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Adjudication session '{session_id}' not found.",
+        )
+
+    dom = _model_to_domain_session(model)
+    sdtm_data = ImagingAdjudicationEngine.generate_sdtm_tu_tr_rs(dom)
+
+    total_cnt = len(sdtm_data["TU"]) + len(sdtm_data["TR"]) + len(sdtm_data["RS"])
+
+    return SDTMDatasetExportResponseDto(
+        study_id=model.study_id,
+        subject_id=model.subject_id,
+        timepoint_name=model.timepoint_name,
+        tu_records=sdtm_data["TU"],
+        tr_records=sdtm_data["TR"],
+        rs_records=sdtm_data["RS"],
+        total_records=total_cnt,
     )

@@ -10,10 +10,10 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Set test environment variables before importing app
-os.environ["BRAND_NAME"] = "Cadence Clinical"
-os.environ["BRAND_DOMAIN"] = "cadenceclinical.com"
-os.environ["GATEWAY_SECRET"] = "test-gateway-secret-12345"
-os.environ["AUDIT_LOG_SECRET_KEY"] = "test-imaging-audit-secret-key-999"
+os.environ.setdefault("BRAND_NAME", "Cadence Clinical")
+os.environ.setdefault("BRAND_DOMAIN", "cadenceclinical.com")
+os.environ.setdefault("GATEWAY_SECRET", "test-gateway-secret-12345")
+os.environ.setdefault("AUDIT_LOG_SECRET_KEY", "test-imaging-audit-secret-key-999")
 
 from apps.imaging.adapters.database import db_manager
 from apps.imaging.adapters.storage import set_storage_port
@@ -64,7 +64,7 @@ async def client(test_env) -> AsyncGenerator[AsyncClient]:
         roles=["Site Investigator / CRC"],
         tenant_id="tenant_clinical_test",
         change_reason="Imaging test upload and review",
-        secret=b"test-gateway-secret-12345",
+        secret=os.getenv("GATEWAY_SECRET", "test-gateway-secret-12345").encode(),
     )
     async with AsyncClient(
         transport=transport, base_url="http://test", headers=headers

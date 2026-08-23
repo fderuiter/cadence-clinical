@@ -83,6 +83,12 @@ class ImagingStudyEnvelopeModel(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    adjudication_sessions: Mapped[list[ImagingAdjudicationSessionModel]] = relationship(
+        "ImagingAdjudicationSessionModel",
+        back_populates="study",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
 
 class ImagingSeriesEnvelopeModel(Base):
@@ -399,3 +405,105 @@ class TumorResponseAssessmentModel(Base):
     )
     reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class ImagingAdjudicationSessionModel(Base):
+    """Database table recording Blinded Dual-Reader IRC adjudication sessions.
+
+    Requirements: PRD-IMG-003, PRD-IMG-005, PRD-IMG-006, PRD-SYS-001
+    """
+
+    __tablename__ = "imaging_adjudication_sessions"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_envelope_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("imaging_study_envelopes.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    timepoint_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    assessment_criteria: Mapped[str] = mapped_column(
+        String(50), default="RECIST_1_1", nullable=False
+    )
+    reader_1_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    reader_1_name: Mapped[str] = mapped_column(
+        String(255), default="Reader 1", nullable=False
+    )
+    reader_1_status: Mapped[str] = mapped_column(
+        String(50), default="PENDING", nullable=False
+    )
+    reader_1_assessment: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, nullable=True
+    )
+    reader_2_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    reader_2_name: Mapped[str] = mapped_column(
+        String(255), default="Reader 2", nullable=False
+    )
+    reader_2_status: Mapped[str] = mapped_column(
+        String(50), default="PENDING", nullable=False
+    )
+    reader_2_assessment: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, nullable=True
+    )
+    adjudicator_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    adjudicator_name: Mapped[str | None] = mapped_column(
+        String(255), default="Adjudication Committee Chair", nullable=True
+    )
+    adjudicator_assessment: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, nullable=True
+    )
+    sld_discordance_delta: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    is_response_discordant: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    discordance_reasons: Mapped[list[str]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    workflow_status: Mapped[str] = mapped_column(
+        String(50), default="PENDING_PRIMARY_READS", nullable=False, index=True
+    )
+    final_consensus_response: Mapped[str | None] = mapped_column(
+        String(50), nullable=True
+    )
+    final_consensus_sld_mm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    binding_reader: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    adjudication_rationale: Mapped[str | None] = mapped_column(
+        String(2000), nullable=True
+    )
+    electronic_signature: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, nullable=True
+    )
+    locked_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    locked_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    session_digest: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    tenant_id: Mapped[str] = mapped_column(
+        String(255), default="tenant_default", nullable=False, index=True
+    )
+
+    # 21 CFR Part 11 GxP Audit Columns
+    created_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(
+        String(255), default="system", nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), onupdate=func.now(), nullable=False
+    )
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Relationship
+    study: Mapped[ImagingStudyEnvelopeModel | None] = relationship(
+        "ImagingStudyEnvelopeModel", back_populates="adjudication_sessions"
+    )

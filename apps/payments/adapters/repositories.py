@@ -1,6 +1,6 @@
 """SQLAlchemy Repository implementation for Site Payments microservice.
 
-Requirements: ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-006
+Requirements: ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-004, PRD-PAY-006
 """
 
 from __future__ import annotations
@@ -17,11 +17,15 @@ from apps.payments.adapters.database import get_db_session
 from apps.payments.domain.ports import IPaymentsRepository
 from apps.payments.infrastructure.models import (
     BudgetContractModel,
+    ErpSyncLogModel,
     FeeScheduleModel,
     HoldbackReserveModel,
+    InvoiceLineItemModel,
     PayableAllocationModel,
     PayableModel,
     PaymentAuditLogModel,
+    RemittanceAdviceModel,
+    SelfBillingInvoiceModel,
     SplitPayeeConfigModel,
 )
 
@@ -262,6 +266,182 @@ class SQLAlchemyPaymentsRepository(IPaymentsRepository):
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
+    # ==========================================
+    # Self-Billing Invoices & Line Items
+    # ==========================================
+
+    async def save_invoice(
+        self, invoice: SelfBillingInvoiceModel
+    ) -> SelfBillingInvoiceModel:
+        if not invoice.id:
+            invoice.id = str(uuid.uuid4())
+        self.session.add(invoice)
+        await self.session.commit()
+        await self.session.refresh(invoice)
+        return invoice
+
+    async def get_invoice_by_id(
+        self, invoice_id: str
+    ) -> SelfBillingInvoiceModel | None:
+        stmt = (
+            select(SelfBillingInvoiceModel)
+            .where(SelfBillingInvoiceModel.id == invoice_id)
+            .options(
+                selectinload(SelfBillingInvoiceModel.line_items),
+                selectinload(SelfBillingInvoiceModel.remittance_advice),
+                selectinload(SelfBillingInvoiceModel.contract),
+                selectinload(SelfBillingInvoiceModel.erp_logs),
+            )
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
+    async def get_invoice_by_number(
+        self, invoice_number: str
+    ) -> SelfBillingInvoiceModel | None:
+        stmt = (
+            select(SelfBillingInvoiceModel)
+            .where(SelfBillingInvoiceModel.invoice_number == invoice_number)
+            .options(
+                selectinload(SelfBillingInvoiceModel.line_items),
+                selectinload(SelfBillingInvoiceModel.remittance_advice),
+                selectinload(SelfBillingInvoiceModel.contract),
+                selectinload(SelfBillingInvoiceModel.erp_logs),
+            )
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
+    async def list_invoices(
+        self,
+        study_id: str | None = None,
+        site_id: str | None = None,
+        billing_cycle: str | None = None,
+        status: str | None = None,
+        erp_sync_status: str | None = None,
+    ) -> list[SelfBillingInvoiceModel]:
+        stmt = select(SelfBillingInvoiceModel).options(
+            selectinload(SelfBillingInvoiceModel.line_items),
+            selectinload(SelfBillingInvoiceModel.remittance_advice),
+            selectinload(SelfBillingInvoiceModel.contract),
+            selectinload(SelfBillingInvoiceModel.erp_logs),
+        )
+        if study_id:
+            stmt = stmt.where(SelfBillingInvoiceModel.study_id == study_id)
+        if site_id:
+            stmt = stmt.where(SelfBillingInvoiceModel.site_id == site_id)
+        if billing_cycle:
+            stmt = stmt.where(SelfBillingInvoiceModel.billing_cycle == billing_cycle)
+        if status:
+            stmt = stmt.where(SelfBillingInvoiceModel.status == status)
+        if erp_sync_status:
+            stmt = stmt.where(
+                SelfBillingInvoiceModel.erp_sync_status == erp_sync_status
+            )
+        stmt = stmt.order_by(desc(SelfBillingInvoiceModel.created_at))
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def save_invoice_line_items(
+        self, line_items: list[InvoiceLineItemModel]
+    ) -> list[InvoiceLineItemModel]:
+        for item in line_items:
+            if not item.id:
+                item.id = str(uuid.uuid4())
+            self.session.add(item)
+        await self.session.commit()
+        for item in line_items:
+            await self.session.refresh(item)
+        return line_items
+
+    # ==========================================
+    # Remittance Advice
+    # ==========================================
+
+    async def save_remittance_advice(
+        self, remittance: RemittanceAdviceModel
+    ) -> RemittanceAdviceModel:
+        if not remittance.id:
+            remittance.id = str(uuid.uuid4())
+        self.session.add(remittance)
+        await self.session.commit()
+        await self.session.refresh(remittance)
+        return remittance
+
+    async def get_remittance_advice_by_id(
+        self, remittance_id: str
+    ) -> RemittanceAdviceModel | None:
+        stmt = (
+            select(RemittanceAdviceModel)
+            .where(RemittanceAdviceModel.id == remittance_id)
+            .options(selectinload(RemittanceAdviceModel.invoice))
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
+    async def get_remittance_advice_by_invoice_id(
+        self, invoice_id: str
+    ) -> RemittanceAdviceModel | None:
+        stmt = (
+            select(RemittanceAdviceModel)
+            .where(RemittanceAdviceModel.invoice_id == invoice_id)
+            .options(selectinload(RemittanceAdviceModel.invoice))
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
+    async def list_remittance_advices(
+        self,
+        study_id: str | None = None,
+        site_id: str | None = None,
+        dispatch_status: str | None = None,
+    ) -> list[RemittanceAdviceModel]:
+        stmt = select(RemittanceAdviceModel).options(
+            selectinload(RemittanceAdviceModel.invoice)
+        )
+        if study_id:
+            stmt = stmt.where(RemittanceAdviceModel.study_id == study_id)
+        if site_id:
+            stmt = stmt.where(RemittanceAdviceModel.site_id == site_id)
+        if dispatch_status:
+            stmt = stmt.where(RemittanceAdviceModel.dispatch_status == dispatch_status)
+        stmt = stmt.order_by(desc(RemittanceAdviceModel.created_at))
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    # ==========================================
+    # Enterprise ERP Synchronization
+    # ==========================================
+
+    async def save_erp_sync_log(self, sync_log: ErpSyncLogModel) -> ErpSyncLogModel:
+        if not sync_log.id:
+            sync_log.id = str(uuid.uuid4())
+        self.session.add(sync_log)
+        await self.session.commit()
+        await self.session.refresh(sync_log)
+        return sync_log
+
+    async def list_erp_sync_logs(
+        self,
+        invoice_id: str | None = None,
+        erp_system: str | None = None,
+        status: str | None = None,
+    ) -> list[ErpSyncLogModel]:
+        stmt = select(ErpSyncLogModel)
+        if invoice_id:
+            stmt = stmt.where(ErpSyncLogModel.invoice_id == invoice_id)
+        if erp_system:
+            stmt = stmt.where(ErpSyncLogModel.erp_system == erp_system)
+        if status:
+            stmt = stmt.where(ErpSyncLogModel.status == status)
+        stmt = stmt.order_by(desc(ErpSyncLogModel.created_at))
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    # ==========================================
+    # Audit Logs
+    # ==========================================
+
     async def record_audit_log(
         self,
         entity_type: str,
@@ -311,6 +491,16 @@ class SQLAlchemyPaymentsRepository(IPaymentsRepository):
         stmt = stmt.order_by(desc(PaymentAuditLogModel.created_at))
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+    async def get_by_id(self, id: str) -> Any | None:
+        """Generic get_by_id implementing RepositoryPort."""
+        return await self.get_contract_by_id(id)
+
+    async def save(self, entity: Any) -> Any:
+        """Generic save implementing RepositoryPort."""
+        self.session.add(entity)
+        await self.session.flush()
+        return entity
 
 
 async def get_payments_repository(

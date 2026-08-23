@@ -403,3 +403,296 @@ class PaymentAuditLogModel(Base):
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class SelfBillingInvoiceModel(Base):
+    """Database table representing self-billing invoices aggregated over a billing cycle."""
+
+    __tablename__ = "payments_self_billing_invoices"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    invoice_number: Mapped[str] = mapped_column(
+        String(100), unique=True, nullable=False, index=True
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    contract_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("payments_budget_contracts.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    billing_cycle: Mapped[str] = mapped_column(
+        String(50), default="MONTHLY", nullable=False, index=True
+    )
+    period_start: Mapped[str] = mapped_column(String(50), nullable=False)
+    period_end: Mapped[str] = mapped_column(String(50), nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
+
+    # Aggregated Financials
+    total_base_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    total_overhead_amount: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    total_patient_stipend: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    total_travel_reimbursement: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    total_gross_amount: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    total_holdback_amount: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    total_net_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    payable_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    # Lifecycle & Approval
+    status: Mapped[str] = mapped_column(
+        String(50), default="DRAFT", nullable=False, index=True
+    )
+    approved_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+
+    # Enterprise ERP Synchronization
+    erp_system: Mapped[str | None] = mapped_column(
+        String(50), default="SAP", nullable=True
+    )
+    erp_reference_id: Mapped[str | None] = mapped_column(
+        String(100), nullable=True, index=True
+    )
+    erp_sync_status: Mapped[str] = mapped_column(
+        String(50), default="PENDING", nullable=False, index=True
+    )
+    erp_synced_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+
+    # Reconciliation
+    reconciled_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reconciled_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    reconciliation_reference: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    reconciliation_notes: Mapped[str | None] = mapped_column(
+        String(1000), nullable=True
+    )
+
+    # 21 CFR Part 11 GxP Audit Columns
+    created_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(
+        String(255), default="system", nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), onupdate=func.now(), nullable=False
+    )
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Relationships
+    contract: Mapped[BudgetContractModel] = relationship(
+        "BudgetContractModel",
+        lazy="selectin",
+    )
+    line_items: Mapped[list[InvoiceLineItemModel]] = relationship(
+        "InvoiceLineItemModel",
+        back_populates="invoice",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    remittance_advice: Mapped[RemittanceAdviceModel | None] = relationship(
+        "RemittanceAdviceModel",
+        back_populates="invoice",
+        uselist=False,
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    erp_logs: Mapped[list[ErpSyncLogModel]] = relationship(
+        "ErpSyncLogModel",
+        back_populates="invoice",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+
+class InvoiceLineItemModel(Base):
+    """Database table recording itemized procedure line items on a self-billing invoice."""
+
+    __tablename__ = "payments_invoice_line_items"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    invoice_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("payments_self_billing_invoices.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    payable_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("payments_payables.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    visit_code: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    procedure_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    procedure_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    base_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    overhead_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    patient_stipend: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    travel_reimbursement: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    gross_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    withholding_rate: Mapped[float] = mapped_column(Float, default=10.0, nullable=False)
+    withholding_amount: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    net_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
+
+    # 21 CFR Part 11 GxP Audit Columns
+    created_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(
+        String(255), default="system", nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), onupdate=func.now(), nullable=False
+    )
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Relationships
+    invoice: Mapped[SelfBillingInvoiceModel] = relationship(
+        "SelfBillingInvoiceModel",
+        back_populates="line_items",
+        lazy="selectin",
+    )
+    payable: Mapped[PayableModel | None] = relationship(
+        "PayableModel",
+        lazy="selectin",
+    )
+
+
+class RemittanceAdviceModel(Base):
+    """Database table managing cryptographically signed PDF remittance advice statements."""
+
+    __tablename__ = "payments_remittance_advices"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    remittance_number: Mapped[str] = mapped_column(
+        String(100), unique=True, nullable=False, index=True
+    )
+    invoice_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("payments_self_billing_invoices.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
+
+    gross_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    overhead_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    holdback_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    net_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+
+    # Cryptographic Sealing & SHA-256 Digest
+    pdf_sha256_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    pdf_content: Mapped[str | None] = mapped_column(String, nullable=True)
+    is_sealed: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # 21 CFR Part 11 Electronic Signature
+    is_signed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    signed_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    signed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    signer_role: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    signature_manifest: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, nullable=True
+    )
+
+    # Automated Email Dispatch
+    dispatched_to: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    dispatched_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    dispatch_status: Mapped[str] = mapped_column(
+        String(50), default="PENDING", nullable=False, index=True
+    )
+
+    # 21 CFR Part 11 GxP Audit Columns
+    created_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(
+        String(255), default="system", nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), onupdate=func.now(), nullable=False
+    )
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Relationship
+    invoice: Mapped[SelfBillingInvoiceModel] = relationship(
+        "SelfBillingInvoiceModel",
+        back_populates="remittance_advice",
+        lazy="selectin",
+    )
+
+
+class ErpSyncLogModel(Base):
+    """Database table recording bidirectional ERP synchronization events and webhooks."""
+
+    __tablename__ = "payments_erp_sync_logs"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    invoice_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("payments_self_billing_invoices.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    erp_system: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    sync_direction: Mapped[str] = mapped_column(
+        String(50), default="OUTBOUND_EXPORT", nullable=False
+    )
+    status: Mapped[str] = mapped_column(
+        String(50), default="PENDING", nullable=False, index=True
+    )
+    payload: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    response_data: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    external_reference: Mapped[str | None] = mapped_column(
+        String(100), nullable=True, index=True
+    )
+    reconciled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # 21 CFR Part 11 GxP Audit Columns
+    created_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(
+        String(255), default="system", nullable=False
+    )
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Relationship
+    invoice: Mapped[SelfBillingInvoiceModel] = relationship(
+        "SelfBillingInvoiceModel",
+        back_populates="erp_logs",
+        lazy="selectin",
+    )

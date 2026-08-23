@@ -349,3 +349,183 @@ class SubjectTimepointsTrajectoryResponseDto(BaseModel):
     subject_id: str
     trajectory: list[TimepointTrajectorySummaryDto] = Field(default_factory=list)
     active_annotations_count: int = 0
+
+
+# =========================================================================
+# Blinded Dual-Reader Charter & Tie-Breaker Adjudication DTOs
+# Requirements: PRD-IMG-003, PRD-IMG-005, PRD-IMG-006, PRD-SYS-001
+# =========================================================================
+
+
+class CreateAdjudicationSessionDto(BaseModel):
+    """Payload to instantiate a new Blinded Dual-Reader IRC adjudication session."""
+
+    study_id: str = Field(..., description="Trial Protocol Identifier")
+    site_id: str = Field(..., description="Clinical Trial Site ID")
+    subject_id: str = Field(..., description="Trial Subject UUID")
+    timepoint_name: str = Field(..., description="e.g. BASELINE, CYCLE_2_DAY_1")
+    study_envelope_id: str | None = Field(
+        default=None, description="Optional study envelope ID"
+    )
+    assessment_criteria: str = Field(
+        default="RECIST_1_1", description="RECIST_1_1, LUGANO_2014, RANO"
+    )
+    reader_1_id: str = Field(..., description="Certified Radiologist 1 User ID")
+    reader_1_name: str = Field(default="Reader 1", description="Reader 1 Full Name")
+    reader_2_id: str = Field(..., description="Certified Radiologist 2 User ID")
+    reader_2_name: str = Field(default="Reader 2", description="Reader 2 Full Name")
+    adjudicator_id: str | None = Field(
+        default=None, description="Adjudication Committee Chair User ID"
+    )
+    adjudicator_name: str | None = Field(
+        default="Adjudication Committee Chair", description="Adjudicator Full Name"
+    )
+
+
+class LesionMeasurementDto(BaseModel):
+    """Individual target or non-target lesion caliper measurement."""
+
+    lesion_id: str = Field(..., description="Lesion tag, e.g. TL1, TL2, NTL1")
+    organ_site: str = Field(..., description="Anatomical organ location")
+    longest_diameter_mm: float = Field(..., description="Longest axis diameter in mm")
+    short_axis_mm: float | None = Field(
+        default=None, description="Short / perpendicular axis in mm"
+    )
+    slice_location: float | None = Field(default=None, description="Slice Z-position")
+    slice_index: int | None = Field(default=None, description="Instance slice index")
+    sop_instance_uid: str = Field(default="", description="DICOM SOP Instance UID")
+    deauville_score: int | None = Field(
+        default=None, description="Deauville 1-5 score for PET"
+    )
+
+
+class SubmitReaderAssessmentDto(BaseModel):
+    """Blinded reader submission payload."""
+
+    reader_id: str = Field(..., description="Radiologist User ID")
+    reader_role: str = Field(..., description="READER_1, READER_2, or ADJUDICATOR")
+    reader_name: str = Field(default="Reader", description="Radiologist Display Name")
+    target_lesions: list[LesionMeasurementDto] = Field(default_factory=list)
+    non_target_status: str = Field(
+        default="NON_CR_NON_PD", description="CR, NON_CR_NON_PD, PD, NE"
+    )
+    new_lesions_present: bool = Field(default=False)
+    new_lesions_count: int = Field(default=0)
+    sum_longest_diameters_mm: float = Field(default=0.0)
+    baseline_sld_mm: float | None = Field(default=None)
+    nadir_sld_mm: float | None = Field(default=None)
+    overall_response: str = Field(..., description="CR, PR, SD, PD, NE")
+    assessment_notes: str | None = Field(default=None)
+    digital_signature: str = Field(default="")
+
+
+class StepUpAdjudicationSignOffDto(BaseModel):
+    """21 CFR Part 11 step-up electronic signature sign-off payload for Adjudication Chair."""
+
+    signer_id: str = Field(..., description="Adjudicator User ID")
+    signer_name: str = Field(..., description="Full Legal Name of Adjudicator")
+    password: str | None = Field(
+        default=None, description="Step-up credential / authentication secret"
+    )
+    step_up_token: str | None = Field(
+        default=None, description="Cryptographic step-up token"
+    )
+    signing_reason: str = Field(
+        default="ADJUDICATION_SIGN_OFF",
+        description="21 CFR Part 11 signature reason (e.g. ADJUDICATION_SIGN_OFF, APPROVAL)",
+    )
+    binding_reader: str = Field(
+        default="ADJUDICATOR",
+        description="Source of binding measurements: READER_1, READER_2, or ADJUDICATOR",
+    )
+    rationale: str = Field(
+        ..., description="Clinical justification for tie-breaker determination"
+    )
+    adjudicator_assessment: SubmitReaderAssessmentDto | None = Field(
+        default=None, description="Optional independent adjudicator measurement set"
+    )
+
+
+class BlindedReaderAssessmentDto(BaseModel):
+    """Blinded reader assessment representation."""
+
+    reader_id: str
+    reader_name: str
+    reader_role: str
+    timepoint_name: str
+    target_lesions: list[LesionMeasurementDto] = Field(default_factory=list)
+    non_target_status: str
+    new_lesions_present: bool
+    new_lesions_count: int
+    sum_longest_diameters_mm: float
+    overall_response: str
+    assessment_notes: str | None = None
+    submitted_at: str
+    digital_signature: str
+
+
+class AdjudicationSessionResponseDto(BaseModel):
+    """Dual-reader adjudication session response (dynamically filtered for blinding)."""
+
+    session_id: str
+    study_envelope_id: str | None = None
+    study_id: str
+    site_id: str
+    subject_id: str
+    timepoint_name: str
+    assessment_criteria: str
+    workflow_status: str
+    reader_1_status: str
+    reader_2_status: str
+    reader_1_assessment: BlindedReaderAssessmentDto | None = None
+    reader_2_assessment: BlindedReaderAssessmentDto | None = None
+    adjudicator_assessment: BlindedReaderAssessmentDto | None = None
+    sld_discordance_delta: float = 0.0
+    is_response_discordant: bool = False
+    discordance_reasons: list[str] = Field(default_factory=list)
+    final_consensus_response: str | None = None
+    final_consensus_sld_mm: float | None = None
+    binding_reader: str | None = None
+    adjudication_rationale: str | None = None
+    electronic_signature: dict | None = None
+    locked_at: datetime | str | None = None
+    locked_by: str | None = None
+    session_digest: str = ""
+    version_index: int = 1
+
+
+class EDCTumorBindingResponseDto(BaseModel):
+    """Direct EDC eCRF binding payload."""
+
+    form_id: str = "eCRF_TUMOR_ASSESSMENT"
+    study_id: str
+    site_id: str
+    subject_id: str
+    timepoint_name: str
+    assessment_criteria: str
+    target_lesions: list[dict] = Field(default_factory=list)
+    sum_longest_diameters_mm: float | None = None
+    baseline_sld_mm: float | None = None
+    nadir_sld_mm: float | None = None
+    pct_change_baseline: float | None = None
+    pct_change_nadir: float | None = None
+    non_target_status: str
+    new_lesions_present: bool
+    overall_response: str
+    adjudication_status: str
+    binding_source: str
+    manifest_sha256: str
+    signed_by: str | None = None
+    signed_at: str | None = None
+
+
+class SDTMDatasetExportResponseDto(BaseModel):
+    """CDISC SDTM TU, TR, RS dataset package."""
+
+    study_id: str
+    subject_id: str
+    timepoint_name: str
+    tu_records: list[dict] = Field(default_factory=list)
+    tr_records: list[dict] = Field(default_factory=list)
+    rs_records: list[dict] = Field(default_factory=list)
+    total_records: int = 0

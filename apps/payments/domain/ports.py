@@ -1,13 +1,10 @@
-"""Domain port interfaces for Site Payments.
-
-Requirements: ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-006
-"""
-
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Any
 
+from packages.hexagonal import RepositoryPort
 
-class IPaymentsRepository(ABC):
+
+class IPaymentsRepository(RepositoryPort):
     """Port interface defining persistence operations for Site Payments."""
 
     @abstractmethod
@@ -57,6 +54,7 @@ class IPaymentsRepository(ABC):
         site_id: str | None = None,
         subject_id: str | None = None,
         visit_code: str | None = None,
+        form_id: str | None = None,
         status: str | None = None,
         is_sdv_gated: bool | None = None,
     ) -> list[Any]: ...
@@ -72,6 +70,61 @@ class IPaymentsRepository(ABC):
         self,
         study_id: str | None = None,
         site_id: str | None = None,
+        status: str | None = None,
+    ) -> list[Any]: ...
+
+    # Self-Billing Invoices
+    @abstractmethod
+    async def save_invoice(self, invoice: Any) -> Any: ...
+
+    @abstractmethod
+    async def get_invoice_by_id(self, invoice_id: str) -> Any | None: ...
+
+    @abstractmethod
+    async def get_invoice_by_number(self, invoice_number: str) -> Any | None: ...
+
+    @abstractmethod
+    async def list_invoices(
+        self,
+        study_id: str | None = None,
+        site_id: str | None = None,
+        billing_cycle: str | None = None,
+        status: str | None = None,
+        erp_sync_status: str | None = None,
+    ) -> list[Any]: ...
+
+    @abstractmethod
+    async def save_invoice_line_items(self, line_items: list[Any]) -> list[Any]: ...
+
+    # Remittance Advice
+    @abstractmethod
+    async def save_remittance_advice(self, remittance: Any) -> Any: ...
+
+    @abstractmethod
+    async def get_remittance_advice_by_id(self, remittance_id: str) -> Any | None: ...
+
+    @abstractmethod
+    async def get_remittance_advice_by_invoice_id(
+        self, invoice_id: str
+    ) -> Any | None: ...
+
+    @abstractmethod
+    async def list_remittance_advices(
+        self,
+        study_id: str | None = None,
+        site_id: str | None = None,
+        dispatch_status: str | None = None,
+    ) -> list[Any]: ...
+
+    # Enterprise ERP Synchronization
+    @abstractmethod
+    async def save_erp_sync_log(self, sync_log: Any) -> Any: ...
+
+    @abstractmethod
+    async def list_erp_sync_logs(
+        self,
+        invoice_id: str | None = None,
+        erp_system: str | None = None,
         status: str | None = None,
     ) -> list[Any]: ...
 
@@ -95,4 +148,5 @@ class IPaymentsRepository(ABC):
         self,
         entity_type: str | None = None,
         entity_id: str | None = None,
+        user_id: str | None = None,
     ) -> list[Any]: ...

@@ -358,3 +358,217 @@ class MprVolumeMetadataEntity(BaseModel):
         default_factory=lambda: [MprPlane.AXIAL, MprPlane.SAGITTAL, MprPlane.CORONAL]
     )
     window_presets: dict[str, dict[str, float]] = Field(default_factory=dict)
+
+
+class ReaderRole(StrEnum):
+    """Blinded reader role assignments."""
+
+    READER_1 = "READER_1"
+    READER_2 = "READER_2"
+    ADJUDICATOR = "ADJUDICATOR"
+    CHAIR = "CHAIR"
+
+
+class AdjudicationWorkflowStatus(StrEnum):
+    """Lifecycle state of the blinded dual-read workflow."""
+
+    UNASSIGNED = "UNASSIGNED"
+    PENDING_PRIMARY_READS = "PENDING_PRIMARY_READS"
+    PENDING_READ_1 = "PENDING_READ_1"
+    PENDING_READ_2 = "PENDING_READ_2"
+    CONSENSUS_REACHED = "CONSENSUS_REACHED"
+    DISCORDANCE_DETECTED = "DISCORDANCE_DETECTED"
+    PENDING_ADJUDICATION = "PENDING_ADJUDICATION"
+    ADJUDICATED = "ADJUDICATED"
+
+
+class DiscordanceReason(StrEnum):
+    """Categorized triggers for adjudication tie-breaker escalation."""
+
+    OVERALL_RESPONSE_MISMATCH = "OVERALL_RESPONSE_MISMATCH"
+    SLD_DISCORDANCE_EXCEEDS_THRESHOLD = "SLD_DISCORDANCE_EXCEEDS_THRESHOLD"
+    NEW_LESION_DISCORDANCE = "NEW_LESION_DISCORDANCE"
+    NON_TARGET_STATUS_MISMATCH = "NON_TARGET_STATUS_MISMATCH"
+    TARGET_LESION_COUNT_MISMATCH = "TARGET_LESION_COUNT_MISMATCH"
+
+
+class LesionMeasurement(BaseModel):
+    """Individual target lesion measurement record."""
+
+    lesion_id: str
+    organ_site: str
+    longest_diameter_mm: float
+    short_axis_mm: float | None = None
+    slice_location: float | None = None
+    slice_index: int | None = None
+    sop_instance_uid: str
+    deauville_score: int | None = None
+
+
+class ReaderAssessment(BaseModel):
+    """Blinded assessment submitted by a certified central reader/radiologist."""
+
+    reader_id: str
+    reader_name: str = "Reader"
+    reader_role: ReaderRole
+    timepoint_name: str
+    target_lesions: list[LesionMeasurement] = Field(default_factory=list)
+    non_target_status: str = "NON_CR_NON_PD"
+    new_lesions_present: bool = False
+    new_lesions_count: int = 0
+    sum_longest_diameters_mm: float = 0.0
+    baseline_sld_mm: float | None = None
+    nadir_sld_mm: float | None = None
+    pct_change_baseline: float | None = None
+    pct_change_nadir: float | None = None
+    overall_response: RECISTResponseCode | str
+    assessment_notes: str | None = None
+    submitted_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+    digital_signature: str = ""
+
+
+class AdjudicationSessionEntity(BaseModel):
+    """Independent Review Charter session encapsulating dual-read and tie-breaker decisions."""
+
+    id: str
+    study_envelope_id: str | None = None
+    study_id: str
+    site_id: str
+    subject_id: str
+    timepoint_name: str
+    assessment_criteria: OncologicCriteria = OncologicCriteria.RECIST_1_1
+    reader_1_id: str
+    reader_1_name: str = "Reader 1"
+    reader_1_status: str = "PENDING"
+    reader_1_assessment: ReaderAssessment | None = None
+    reader_2_id: str
+    reader_2_name: str = "Reader 2"
+    reader_2_status: str = "PENDING"
+    reader_2_assessment: ReaderAssessment | None = None
+    adjudicator_id: str | None = None
+    adjudicator_name: str | None = "Adjudication Committee Chair"
+    adjudicator_assessment: ReaderAssessment | None = None
+    sld_discordance_delta: float = 0.0
+    is_response_discordant: bool = False
+    discordance_reasons: list[str] = Field(default_factory=list)
+    workflow_status: AdjudicationWorkflowStatus = (
+        AdjudicationWorkflowStatus.PENDING_PRIMARY_READS
+    )
+    final_consensus_response: str | None = None
+    final_consensus_sld_mm: float | None = None
+    binding_reader: str | None = None
+    adjudication_rationale: str | None = None
+    electronic_signature: dict[str, Any] | None = None
+    locked_at: datetime | str | None = None
+    locked_by: str | None = None
+    session_digest: str = ""
+    tenant_id: str = "tenant_default"
+    created_at: datetime | None = None
+    created_by: str = "system"
+    updated_at: datetime | None = None
+    reason_for_change: str | None = None
+    version_index: int = 1
+
+
+# Type alias for dual-reader session
+DualReaderAdjudicationSession = AdjudicationSessionEntity
+
+
+class SDTMTURecord(BaseModel):
+    """CDISC SDTM Tumor Identification (TU) domain record."""
+
+    STUDYID: str
+    DOMAIN: str = "TU"
+    USUBJID: str
+    TUSEQ: int
+    TULNKID: str
+    TUTESTCD: str = "TUMIDENT"
+    TUTEST: str = "Tumor Identification"
+    TUORRES: str
+    TUSTRESC: str
+    TUMETHOD: str | None = "CT SCAN"
+    TULOC: str | None = None
+    VISITNUM: float | int | None = None
+    VISIT: str | None = None
+    TUDTC: str | None = None
+    TUEVAL: str = "INDEPENDENT ASSESSOR"
+    TUEVALID: str | None = None
+
+
+class SDTMTRRecord(BaseModel):
+    """CDISC SDTM Tumor Results / Measurements (TR) domain record."""
+
+    STUDYID: str
+    DOMAIN: str = "TR"
+    USUBJID: str
+    TRSEQ: int
+    TRLNKID: str | None = None
+    TRTESTCD: str
+    TRTEST: str
+    TRORRES: str | None = None
+    TRORRESU: str | None = "mm"
+    TRSTRESC: str | None = None
+    TRSTRESN: float | None = None
+    TRSTRESU: str | None = "mm"
+    TRMETHOD: str | None = "CT SCAN"
+    VISITNUM: float | int | None = None
+    VISIT: str | None = None
+    TRDTC: str | None = None
+    TREVAL: str = "INDEPENDENT ASSESSOR"
+    TREVALID: str | None = None
+
+
+class SDTMRSRecord(BaseModel):
+    """CDISC SDTM Disease Response (RS) domain record."""
+
+    STUDYID: str
+    DOMAIN: str = "RS"
+    USUBJID: str
+    RSSEQ: int
+    RSTESTCD: str = "OVRLRESP"
+    RSTEST: str = "Overall Response"
+    RSORRES: str
+    RSSTRESC: str
+    RSMETHOD: str = "RECIST 1.1"
+    VISITNUM: float | int | None = None
+    VISIT: str | None = None
+    RSDTC: str | None = None
+    RSEVAL: str = "INDEPENDENT ASSESSOR"
+    RSEVALID: str | None = None
+    RSEVALSTAT: str | None = "FINAL"
+
+
+class EDCTumorIdentificationRecord(BaseModel):
+    """Direct EDC eCRF binding for Tumor Identification."""
+
+    lesion_id: str
+    lesion_type: str
+    organ_site: str
+    method: str
+    sop_instance_uid: str | None = None
+    slice_location: float | None = None
+
+
+class EDCTumorAssessmentForm(BaseModel):
+    """Direct EDC eCRF binding for Tumor Assessment form."""
+
+    form_id: str = "eCRF_TUMOR_ASSESSMENT"
+    study_id: str
+    site_id: str
+    subject_id: str
+    timepoint_name: str
+    assessment_criteria: str
+    target_lesions: list[EDCTumorIdentificationRecord] = Field(default_factory=list)
+    sum_longest_diameters_mm: float | None = None
+    baseline_sld_mm: float | None = None
+    nadir_sld_mm: float | None = None
+    pct_change_baseline: float | None = None
+    pct_change_nadir: float | None = None
+    non_target_status: str
+    new_lesions_present: bool
+    overall_response: str
+    adjudication_status: str
+    binding_source: str
+    manifest_sha256: str
+    signed_by: str | None = None
+    signed_at: str | None = None

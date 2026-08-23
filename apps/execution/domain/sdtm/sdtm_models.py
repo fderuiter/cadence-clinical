@@ -365,3 +365,172 @@ class SDTMRecordMH(AuditableModel):
     @classmethod
     def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
+
+
+class SDTMRecordTU(AuditableModel):
+    """
+    Mapped SDTM Record Tumor Identification (TU) domain schema.
+    """
+
+    STUDYID: str = Field(..., description="Study Identifier (Required)")
+    DOMAIN: str = Field("TU", description="Domain Abbreviation (Required)")
+    USUBJID: str = Field(..., description="Unique Subject Identifier (Required)")
+    TUSEQ: int = Field(..., description="Sequence Number (Required)")
+    TULNKID: str = Field(..., description="Link ID / Lesion Identifier (Required)")
+    TUTESTCD: str = Field(
+        "TUMIDENT", description="Tumor Identification Test Short Code (Required)"
+    )
+    TUTEST: str = Field(
+        "Tumor Identification", description="Tumor Identification Test Name (Required)"
+    )
+    TUORRES: str = Field(
+        ..., description="Classification of Identified Tumor / Lesion (Required)"
+    )
+    TUSTRESC: str = Field(
+        ..., description="Standardized Result in Character Format (Required)"
+    )
+    TUMETHOD: str | None = Field(
+        None, description="Method of Identification (e.g. CT SCAN, MRI)"
+    )
+    TULOC: str | None = Field(
+        None, description="Anatomical Location of Tumor (Expected)"
+    )
+    VISITNUM: float | int | None = Field(None, description="Visit Number")
+    VISIT: str | None = Field(None, description="Visit Name")
+    TUDTC: str | None = Field(None, description="Date/Time of Assessment")
+    TUEVAL: str | None = Field("INDEPENDENT ASSESSOR", description="Evaluator Role")
+    TUEVALID: str | None = Field(None, description="Evaluator Identifier")
+
+    @field_validator(
+        "STUDYID",
+        "DOMAIN",
+        "USUBJID",
+        "TULNKID",
+        "TUTESTCD",
+        "TUTEST",
+        "TUORRES",
+        "TUSTRESC",
+    )
+    @classmethod
+    def validate_non_empty_strings(cls, v: str) -> str:
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError("Field cannot be empty or consist only of whitespace.")
+        return v
+
+    @field_validator("TUSEQ")
+    @classmethod
+    def validate_sequence(cls, v: int) -> int:
+        if v < 1:
+            raise ValueError("TUSEQ must be greater than or equal to 1")
+        return v
+
+    @field_validator("TUDTC")
+    @classmethod
+    def validate_dates(cls, v: str | None) -> str | None:
+        return validate_dtc_format(v)
+
+
+class SDTMRecordTR(AuditableModel):
+    """
+    Mapped SDTM Record Tumor Results / Measurements (TR) domain schema.
+    """
+
+    STUDYID: str = Field(..., description="Study Identifier (Required)")
+    DOMAIN: str = Field("TR", description="Domain Abbreviation (Required)")
+    USUBJID: str = Field(..., description="Unique Subject Identifier (Required)")
+    TRSEQ: int = Field(..., description="Sequence Number (Required)")
+    TRLNKID: str | None = Field(None, description="Link ID / Lesion Identifier")
+    TRTESTCD: str = Field(
+        ..., description="Tumor Result Test Short Code (Required, e.g. LDIAM, SUMDIR)"
+    )
+    TRTEST: str = Field(..., description="Tumor Result Test Name (Required)")
+    TRORRES: str | None = Field(None, description="Original Result (Expected)")
+    TRORRESU: str | None = Field("mm", description="Original Units (Expected)")
+    TRSTRESC: str | None = Field(
+        None, description="Standardized Result in Character Format (Expected)"
+    )
+    TRSTRESN: float | None = Field(
+        None, description="Standardized Result in Numeric Format (Expected)"
+    )
+    TRSTRESU: str | None = Field("mm", description="Standardized Units (Expected)")
+    TRMETHOD: str | None = Field(
+        None, description="Measurement Method (e.g. CT SCAN, MRI)"
+    )
+    VISITNUM: float | int | None = Field(None, description="Visit Number")
+    VISIT: str | None = Field(None, description="Visit Name")
+    TRDTC: str | None = Field(None, description="Date/Time of Measurement")
+    TREVAL: str | None = Field("INDEPENDENT ASSESSOR", description="Evaluator Role")
+    TREVALID: str | None = Field(None, description="Evaluator Identifier")
+
+    @field_validator("STUDYID", "DOMAIN", "USUBJID", "TRTESTCD", "TRTEST")
+    @classmethod
+    def validate_non_empty_strings(cls, v: str) -> str:
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError("Field cannot be empty or consist only of whitespace.")
+        return v
+
+    @field_validator("TRSEQ")
+    @classmethod
+    def validate_sequence(cls, v: int) -> int:
+        if v < 1:
+            raise ValueError("TRSEQ must be greater than or equal to 1")
+        return v
+
+    @field_validator("TRDTC")
+    @classmethod
+    def validate_dates(cls, v: str | None) -> str | None:
+        return validate_dtc_format(v)
+
+
+class SDTMRecordRS(AuditableModel):
+    """
+    Mapped SDTM Record Disease Response (RS) domain schema.
+    """
+
+    STUDYID: str = Field(..., description="Study Identifier (Required)")
+    DOMAIN: str = Field("RS", description="Domain Abbreviation (Required)")
+    USUBJID: str = Field(..., description="Unique Subject Identifier (Required)")
+    RSSEQ: int = Field(..., description="Sequence Number (Required)")
+    RSTESTCD: str = Field(
+        "OVRLRESP", description="Response Assessment Test Short Code (Required)"
+    )
+    RSTEST: str = Field(
+        "Overall Response", description="Response Assessment Test Name (Required)"
+    )
+    RSORRES: str = Field(
+        ...,
+        description="Overall Response Classification (Required, e.g. CR, PR, SD, PD, NE)",
+    )
+    RSSTRESC: str = Field(
+        ..., description="Standardized Result in Character Format (Required)"
+    )
+    RSMETHOD: str | None = Field(
+        "RECIST 1.1", description="Assessment Criteria / Method (Expected)"
+    )
+    VISITNUM: float | int | None = Field(None, description="Visit Number")
+    VISIT: str | None = Field(None, description="Visit Name")
+    RSDTC: str | None = Field(None, description="Date/Time of Response Assessment")
+    RSEVAL: str | None = Field("INDEPENDENT ASSESSOR", description="Evaluator Role")
+    RSEVALID: str | None = Field(None, description="Evaluator Identifier")
+    RSEVALSTAT: str | None = Field(None, description="Evaluation Status")
+
+    @field_validator(
+        "STUDYID", "DOMAIN", "USUBJID", "RSTESTCD", "RSTEST", "RSORRES", "RSSTRESC"
+    )
+    @classmethod
+    def validate_non_empty_strings(cls, v: str) -> str:
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError("Field cannot be empty or consist only of whitespace.")
+        return v
+
+    @field_validator("RSSEQ")
+    @classmethod
+    def validate_sequence(cls, v: int) -> int:
+        if v < 1:
+            raise ValueError("RSSEQ must be greater than or equal to 1")
+        return v
+
+    @field_validator("RSDTC")
+    @classmethod
+    def validate_dates(cls, v: str | None) -> str | None:
+        return validate_dtc_format(v)
