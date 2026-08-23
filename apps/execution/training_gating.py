@@ -10,10 +10,14 @@ from __future__ import annotations
 
 import logging
 import os
+import time
+from abc import ABC, abstractmethod
 from typing import Any
 
 import httpx
 from fastapi import HTTPException, status
+
+from packages.security.signing import generate_gateway_signature
 
 logger = logging.getLogger("execution-training-gating")
 
@@ -47,13 +51,97 @@ class TrainingRequiredError(HTTPException):
         )
 
 
+class ITrainingVerificationClient(ABC):
+    """Abstract interface for verifying user qualification with knowledge/training service."""
+
+    @abstractmethod
+    async def get_qualification_status(
+        self,
+        user_id: str,
+        study_id: str,
+        protocol_version: str,
+        site_id: str | None = None,
+        user_role: str | None = None,
+    ) -> dict[str, Any]:
+        """Fetch user qualification gating status for study and protocol version."""
+        pass
+
+
+class TrainingVerificationClient(ITrainingVerificationClient):
+    """Asynchronous HTTP client to retrieve qualification status from the Knowledge/Training service."""
+
+    def __init__(
+        self,
+        base_url: str | None = None,
+        timeout: float = 3.0,
+    ) -> None:
+        self.base_url = (
+            base_url or os.getenv("KNOWLEDGE_SERVICE_URL") or "http://127.0.0.1:8006"
+        ).rstrip("/")
+        self.timeout = timeout
+
+    async def get_qualification_status(
+        self,
+        user_id: str,
+        study_id: str,
+        protocol_version: str,
+        site_id: str | None = None,
+        user_role: str | None = None,
+    ) -> dict[str, Any]:
+        timestamp = str(time.time())
+        secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(
+            "utf-8"
+        )  # pragma: allowlist secret
+        sig = generate_gateway_signature(
+            user_id="execution-service",
+            roles="system",
+            timestamp=timestamp,
+            secret=secret,
+        )
+        headers = {
+            "x-user-id": "execution-service",
+            "x-user-roles": "system",
+            "x-gateway-timestamp": timestamp,
+            "x-gateway-signature": sig,
+            "x-signature-version": "2",
+        }
+        params = {
+            "user_id": user_id,
+            "study_id": study_id,
+            "protocol_version": protocol_version,
+            "site_id": site_id or "",
+            "user_role": user_role or "",
+        }
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            resp = await client.get(
+                f"{self.base_url}/api/v1/training/gating-status",
+                params=params,
+                headers=headers,
+            )
+            if resp.status_code == 200:
+                return resp.json()
+            return {"is_qualified": True, "pending_curricula": []}
+
+
+_global_training_client: ITrainingVerificationClient = TrainingVerificationClient()
+
+
+def get_training_verification_client() -> ITrainingVerificationClient:
+    return _global_training_client
+
+
+def set_training_verification_client(client: ITrainingVerificationClient) -> None:
+    global _global_training_client
+    _global_training_client = client
+
+
 async def enforce_training_qualification_gate(
     user_id: str,
     study_id: str,
     protocol_version: str,
     site_id: str | None = None,
     user_role: str | None = None,
-    knowledge_session: Any | None = None,
+    training_client: ITrainingVerificationClient | None = None,
 ) -> None:
     """Verify training qualification for EDC write & signature permissions, raising TrainingRequiredError if incomplete.
 
@@ -62,32 +150,32 @@ async def enforce_training_qualification_gate(
     if not study_id or not protocol_version or not user_id:
         return
 
-    # In production/gateway mode, query knowledge microservice gating API
-    service_url = os.getenv("KNOWLEDGE_SERVICE_URL", "http://127.0.0.1:8006")
+    client = training_client or get_training_verification_client()
     try:
-        async with httpx.AsyncClient(timeout=2.0) as client:
-            resp = await client.get(
-                f"{service_url}/api/v1/training/gating-status",
-                params={
-                    "user_id": user_id,
-                    "study_id": study_id,
-                    "protocol_version": protocol_version,
-                    "site_id": site_id or "",
-                    "user_role": user_role or "",
-                },
+        data = await client.get_qualification_status(
+            user_id=user_id,
+            study_id=study_id,
+            protocol_version=protocol_version,
+            site_id=site_id,
+            user_role=user_role,
+        )
+        if not data.get("is_qualified", True):
+            logger.warning(
+                "EDC WRITE BLOCKED: User %s lacks mandatory training for protocol %s on study %s (site: %s)",
+                user_id,
+                protocol_version,
+                study_id,
+                site_id,
             )
-            if resp.status_code == 200:
-                data = resp.json()
-                if not data.get("is_qualified", True):
-                    raise TrainingRequiredError(
-                        study_id=study_id,
-                        protocol_version=protocol_version,
-                        user_id=user_id,
-                        site_id=site_id,
-                        pending_curricula=data.get("pending_curricula", []),
-                    )
+            raise TrainingRequiredError(
+                study_id=study_id,
+                protocol_version=protocol_version,
+                user_id=user_id,
+                site_id=site_id,
+                pending_curricula=data.get("pending_curricula", []),
+            )
     except TrainingRequiredError:
         raise
     except Exception as exc:
-        logger.debug("Could not query training service qualification status: %s", exc)
+        logger.debug("Could not verify training qualification status: %s", exc)
         return
