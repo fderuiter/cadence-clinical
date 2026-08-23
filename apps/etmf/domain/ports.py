@@ -185,6 +185,9 @@ class ETMFRepositoryPort(RepositoryPort[Any]):
         reason_for_change: str | None = None,
         metadata_json: dict[str, Any] | None = None,
         document_owner_id: str | None = None,
+        issue_date: Any | None = None,
+        expiration_date: Any | None = None,
+        **kwargs: Any,
     ) -> Any:
         pass
 

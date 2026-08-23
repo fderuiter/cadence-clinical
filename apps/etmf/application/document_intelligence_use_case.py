@@ -160,12 +160,14 @@ class StageClassifiedArtifactUseCase:
         max_v = await self.repo.get_max_version_index(study_id, site_id, art_code)
         version_index = max_v + 1
 
-        # Initial status: TECHNICAL_QC for CRA review
+        # Initial status: TECHNICAL_QC for CRA review (staged in DRAFT_AI state)
         init_status = DocumentStatus.TECHNICAL_QC.value
 
         meta_json = {
             "document_intelligence": report.model_dump(mode="json"),
             "staged_by_ai": True,
+            "ai_staging_status": "DRAFT_AI",
+            "confidence_score": report.primary_classification.confidence,
             "assigned_cra": assigned_cra,
         }
 
@@ -174,6 +176,11 @@ class StageClassifiedArtifactUseCase:
             if isinstance(content, bytes)
             else str(content)
         )
+
+        exp_dt = None
+        if report.extracted_metadata.expiration_date:
+            d = report.extracted_metadata.expiration_date
+            exp_dt = datetime(d.year, d.month, d.day, 0, 0, 0, tzinfo=UTC)
 
         created_doc = await self.repo.create_document(
             study_id=study_id,
@@ -192,6 +199,8 @@ class StageClassifiedArtifactUseCase:
             reason_for_change=reason_for_change,
             metadata_json=meta_json,
             document_owner_id=report.extracted_metadata.investigator_name or actor_id,
+            issue_date=report.extracted_metadata.issue_date,
+            expiration_date=exp_dt,
         )
 
         # Record Part 11 Audit Log
@@ -246,9 +255,26 @@ class CRAQCReviewUseCase:
                 raise ValueError(
                     "Must provide 'override_artifact_code' when overriding classification."
                 )
-            resolved = resolve_artifact(
-                doc.taxonomy_version, code=override_artifact_code
-            )
+            resolved = None
+            for v in [
+                getattr(doc, "taxonomy_version", None),
+                "v3.2.0-extended",
+                "v3.2.0-complete",
+                "v3.2.0",
+            ]:
+                if not v:
+                    continue
+                try:
+                    resolved = resolve_artifact(v, code=override_artifact_code)
+                    break
+                except Exception:
+                    continue
+
+            if not resolved:
+                raise ValueError(
+                    f"Unknown artifact code '{override_artifact_code}' in taxonomy catalogs."
+                )
+
             doc.artifact_code = resolved["artifact"].code
             doc.artifact_type = resolved["artifact"].name
             doc.zone = resolved["zone"].code

@@ -137,8 +137,20 @@ async def etmf_startup() -> None:
 
     start_outbox_worker()
 
+    from apps.etmf.workers.document_intelligence_worker import (
+        start_document_intelligence_worker,
+    )
+
+    start_document_intelligence_worker()
+
 
 async def etmf_shutdown() -> None:
+    from apps.etmf.workers.document_intelligence_worker import (
+        stop_document_intelligence_worker,
+    )
+
+    stop_document_intelligence_worker()
+
     from apps.etmf.adapters.workers.outbox_worker import stop_outbox_worker
 
     stop_outbox_worker()

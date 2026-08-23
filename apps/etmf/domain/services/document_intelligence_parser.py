@@ -17,12 +17,14 @@ class ParsedLayoutElement:
         text: str,
         page_number: int = 1,
         confidence: float = 1.0,
+        bbox: list[float] | tuple[float, float, float, float] | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> None:
         self.element_type = element_type
         self.text = text
         self.page_number = page_number
         self.confidence = confidence
+        self.bbox = list(bbox) if bbox is not None else None
         self.metadata = metadata or {}
 
 
@@ -106,10 +108,53 @@ class DocumentIntelligenceParser:
                 raw_bytes = content.encode("utf-8")
                 extracted_text = content
 
+        layout_elements: list[ParsedLayoutElement] = []
+
+        # Check if PyMuPDF (fitz) is available for binary PDF extraction
+        if modality == DocumentModality.PDF_BINARY and raw_bytes.startswith(b"%PDF"):
+            try:
+                import fitz
+
+                with fitz.open(stream=raw_bytes, filetype="pdf") as doc:
+                    pdf_blocks_text: list[str] = []
+                    for page_idx, page in enumerate(doc):
+                        page_num = page_idx + 1
+                        blocks = page.get_text("blocks")
+                        for b in blocks:
+                            if len(b) >= 7:
+                                x0, y0, x1, y1, b_text, b_no, b_type = b[:7]
+                                if b_text and b_text.strip():
+                                    clean_b_text = b_text.strip()
+                                    pdf_blocks_text.append(clean_b_text)
+                                    layout_elements.append(
+                                        ParsedLayoutElement(
+                                            element_type=(
+                                                "TEXT_BLOCK"
+                                                if b_type == 0
+                                                else "IMAGE_BLOCK"
+                                            ),
+                                            text=clean_b_text,
+                                            page_number=page_num,
+                                            confidence=0.98,
+                                            bbox=[
+                                                float(x0),
+                                                float(y0),
+                                                float(x1),
+                                                float(y1),
+                                            ],
+                                            metadata={
+                                                "block_no": b_no,
+                                                "block_type": b_type,
+                                            },
+                                        )
+                                    )
+                    if pdf_blocks_text:
+                        extracted_text = "\n".join(pdf_blocks_text)
+            except Exception:
+                pass
+
         sha256_hash = hashlib.sha256(raw_bytes).hexdigest()
         normalized_text = extracted_text.lower()
-
-        layout_elements: list[ParsedLayoutElement] = []
         detected_form_markers: list[str] = []
         detected_omb_numbers: list[str] = []
         detected_dates: list[str] = []
@@ -192,7 +237,11 @@ class DocumentIntelligenceParser:
             ),
             (r"(?:Site\s*(?:Number|ID|#)?)\s*[:=]\s*([A-Za-z0-9_-]+)", "site_id"),
             (
-                r"(?:Principal\s+Investigator|Investigator\s+Name|Name\s+of\s+Investigator)\s*[:=]\s*([A-Za-z\.\s,\-]+?)(?:\n|\r|\t|$)",
+                r"(?:Principal\s+Investigator|Investigator\s+Name|Name\s+of\s+Investigator|Investigator)\s*[:=]\s*([A-Za-z\.\s,\-]+?)(?:\n|\r|\t|Site|Date|Version|$)",
+                "investigator_name",
+            ),
+            (
+                r"(?:Curriculum\s+Vitae|CV)\s*(?:of|for|:|-)?\s*(Dr\.?\s+[A-Za-z\.\s,\-]+?)(?:\n|\r|\t|Site|Date|Principal|Version|$)",
                 "investigator_name",
             ),
             (
@@ -212,8 +261,8 @@ class DocumentIntelligenceParser:
         for pattern, key in kv_patterns:
             m = re.search(pattern, extracted_text, re.IGNORECASE)
             if m:
-                val = m.group(1).strip()
-                if val:
+                val = m.group(1).strip().rstrip(",").rstrip("-").strip()
+                if val and key not in detected_key_values:
                     detected_key_values[key] = val
                     layout_elements.append(
                         ParsedLayoutElement(

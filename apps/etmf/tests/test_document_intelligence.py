@@ -6,6 +6,7 @@
 from datetime import UTC, date, datetime
 from typing import Any
 
+import fitz
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -33,6 +34,9 @@ from apps.etmf.domain.services.signature_analyzer import (
     SignatureCompletenessAnalyzer,
 )
 from apps.etmf.main import app
+from apps.etmf.workers.document_intelligence_worker import (
+    DocumentIntelligenceWorker,
+)
 from packages.testing.security import create_test_auth_headers
 
 
@@ -121,6 +125,44 @@ async def test_multimodal_layout_parser_text_and_pdf():
 
 
 @pytest.mark.asyncio
+async def test_multimodal_layout_parser_pymupdf_blocks_and_bounding_boxes():
+    """Verify PyMuPDF binary PDF parser extracts visual bounding boxes and text blocks.
+
+    @req:PRD-TMF-006
+    """
+    # Create in-memory binary PDF using PyMuPDF (fitz)
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    p1 = fitz.Point(50, 72)
+    page.insert_text(
+        p1, "STATEMENT OF INVESTIGATOR (FDA Form 1572) OMB 0910-0014", fontsize=12
+    )
+    p2 = fitz.Point(50, 120)
+    page.insert_text(p2, "Protocol Number: STUDY-ONC-99 Site ID: SITE-01", fontsize=10)
+    p3 = fitz.Point(50, 160)
+    page.insert_text(p3, "Investigator Signature: /s/ Dr. Gregory House", fontsize=10)
+
+    pdf_bytes = doc.tobytes()
+    doc.close()
+
+    parser = DocumentIntelligenceParser()
+    parsed = parser.parse(
+        pdf_bytes, filename="form1572_binary.pdf", mime_type="application/pdf"
+    )
+
+    assert parsed.modality == DocumentModality.PDF_BINARY
+    assert len(parsed.layout_elements) >= 3
+
+    # Verify visual bounding boxes are extracted with float coordinates [x0, y0, x1, y1]
+    bbox_elements = [el for el in parsed.layout_elements if el.bbox is not None]
+    assert len(bbox_elements) >= 1
+    first_bbox = bbox_elements[0].bbox
+    assert isinstance(first_bbox, list)
+    assert len(first_bbox) == 4
+    assert first_bbox[0] >= 0.0 and first_bbox[2] > first_bbox[0]
+
+
+@pytest.mark.asyncio
 async def test_dia_reference_model_classifier_multi_signal():
     """Validate multi-signal DIA classifier accurately ranks standard and extension artifacts.
 
@@ -170,6 +212,105 @@ async def test_dia_reference_model_classifier_multi_signal():
 
 
 @pytest.mark.asyncio
+async def test_dia_classifier_benchmark_standard_regulatory_documents():
+    """Benchmark test verifying standard regulatory documents classify with >90% confidence.
+
+    @req:PRD-TMF-006
+    """
+    parser = DocumentIntelligenceParser()
+    classifier = DIAReferenceModelClassifier(default_catalog_version="v3.2.0-extended")
+
+    test_corpus = [
+        # (Content, Filename, Expected Artifact Code, Expected Name)
+        (
+            "STATEMENT OF INVESTIGATOR (FDA Form 1572) OMB 0910-0014",
+            "FDA_1572.pdf",
+            "05.02.01",
+            "FDA Form 1572",
+        ),
+        (
+            "Financial Disclosure Form (FDA 3454) OMB 0910-0396",
+            "Financial_Disclosure.pdf",
+            "05.02.02",
+            "Financial Disclosure",
+        ),
+        (
+            "Curriculum Vitae Dr. Emmet Brown MD Principal Investigator",
+            "Investigator_CV.pdf",
+            "05.02.03",
+            "Investigator CV",
+        ),
+        (
+            "Delegation of Authority and Site Responsibility Log",
+            "DOA_Log.pdf",
+            "05.02.04",
+            "Delegation of Authority Log",
+        ),
+        (
+            "IRB Approval Letter Institutional Review Board Ethics Clearance",
+            "IRB_Approval_Notice.pdf",
+            "04.01.01",
+            "IRB or IEC Approval",
+        ),
+        (
+            "State Medical Board Physician License Certification",
+            "Medical_License_Dr_Jones.pdf",
+            "05.02.98",
+            "Medical License",
+        ),
+        (
+            "Protocol Signature and Sign-off Approval Page",
+            "Protocol_Signoff.pdf",
+            "01.01.03",
+            "Protocol Signature Page",
+        ),
+        (
+            "Investigator's Brochure IB Edition 4 Clinical Drug Overview",
+            "Investigator_Brochure.pdf",
+            "02.01.01",
+            "Investigator's Brochure",
+        ),
+        (
+            "Informed Consent Form ICF Subject Information Sheet Version 2.0",
+            "Informed_Consent_Form.pdf",
+            "05.02.05",
+            "Informed Consent Form",
+        ),
+        (
+            "Central Laboratory Certificate CAP CLIA Accreditation",
+            "Lab_Certificate.pdf",
+            "08.01.01",
+            "Laboratory Accreditation / Certification",
+        ),
+        (
+            "Statistical Analysis Plan SAP Version 1.0 Final",
+            "Statistical_Analysis_Plan.pdf",
+            "11.01.01",
+            "Statistical Analysis Plan",
+        ),
+        (
+            "Clinical Study Report CSR Final Study Outcomes Summary",
+            "Clinical_Study_Report.pdf",
+            "11.02.01",
+            "Clinical Study Report",
+        ),
+    ]
+
+    for content, fn, expected_code, expected_name in test_corpus:
+        parsed = parser.parse(content, filename=fn)
+        primary, _, conf_tier, rec, _ = classifier.classify(parsed, filename=fn)
+
+        assert primary.artifact_code == expected_code, (
+            f"Failed for {fn}: got {primary.artifact_code}, expected {expected_code}"
+        )
+        assert primary.confidence >= 0.90, (
+            f"Confidence below 90% for {fn}: {primary.confidence}"
+        )
+        assert conf_tier == ClassificationConfidenceTier.HIGH
+        assert rec == QCRecommendation.AUTO_CLASSIFY
+
+
+@pytest.mark.asyncio
 async def test_regulatory_metadata_and_dates_extraction():
     """Verify accurate extraction of protocol ID, site ID, dates, and form identifiers.
 
@@ -196,6 +337,49 @@ async def test_regulatory_metadata_and_dates_extraction():
     assert meta.issue_date == date(2026, 6, 1)
     assert meta.expiration_date == date(2027, 6, 1)
     assert meta.form_identifier == "OMB-0910-0396"
+
+
+@pytest.mark.asyncio
+async def test_relational_envelope_population_and_persistence():
+    """Verify extracted dates and investigator metadata populate the relational envelope columns.
+
+    @req:PRD-TMF-006
+    """
+    repo = FakeETMFIntelligenceRepository()
+    stage_use_case = StageClassifiedArtifactUseCase(repo)
+
+    doc_content = """
+    Financial Disclosure Form (FDA 3454)
+    OMB 0910-0396
+    Protocol Number: STUDY-ALPHA
+    Site Number: SITE-88
+    Principal Investigator: Dr. Lisa Cuddy
+    Date of Issuance: 2026-04-10
+    Expiration Date: 2027-04-10
+    """
+
+    doc, report = await stage_use_case.execute(
+        content=doc_content,
+        filename="cuddy_financial_disclosure.pdf",
+        mime_type="application/pdf",
+        study_id="STUDY-ALPHA",
+        actor_id="crc.user",
+        actor_role="site_crc",
+        reason_for_change="Initial regulatory upload",
+        site_id="SITE-88",
+    )
+
+    # Verify relational envelope attributes directly on TMFDocument model
+    assert doc.status == "TECHNICAL_QC"
+    assert doc.artifact_code == "05.02.02"
+    assert doc.issue_date == date(2026, 4, 10)
+    assert doc.expiration_date is not None
+    assert doc.expiration_date.year == 2027
+    assert doc.expiration_date.month == 4
+    assert doc.expiration_date.day == 10
+    assert doc.document_owner_id == "Dr. Lisa Cuddy"
+    assert doc.metadata_json["ai_staging_status"] == "DRAFT_AI"
+    assert doc.metadata_json["confidence_score"] >= 0.90
 
 
 @pytest.mark.asyncio
@@ -235,6 +419,59 @@ async def test_signature_completeness_analyzer():
     res_digital = analyzer.analyze(parsed_digital, artifact_code="01.01.03")
     assert res_digital.status == SignaturePresenceStatus.FULLY_SIGNED
     assert len(res_digital.extracted_signatures) >= 2
+
+
+@pytest.mark.asyncio
+async def test_document_intelligence_worker_processing_and_polling():
+    """Verify background DocumentIntelligenceWorker processes pending documents into TECHNICAL_QC with Part 11 audit.
+
+    @req:PRD-TMF-006
+    """
+    repo = FakeETMFIntelligenceRepository()
+    worker = DocumentIntelligenceWorker(repo=repo)
+
+    # Ingest document in initial DRAFT status
+    doc = await repo.create_document(
+        study_id="STUDY-WORKER",
+        site_id="SITE-55",
+        artifact_type="Pending Classification",
+        filename="Investigator_CV_Dr_Watson.pdf",
+        content="Curriculum Vitae Dr. John Watson, MD Principal Investigator Site: SITE-55 Date: 2026-02-01 Expiration Date: 2028-02-01",
+        mime_type="application/pdf",
+        created_by="crc.uploader",
+        version_index=1,
+        status="DRAFT",
+        taxonomy_version="v3.2.0",
+        artifact_code="01.01.01",
+        zone=1,
+        section="01.01",
+        reason_for_change="Uploaded via site portal",
+        metadata_json={"needs_ai_processing": True},
+    )
+
+    # Run worker poll
+    processed_count = await worker.poll_and_process_pending()
+    assert processed_count == 1
+
+    # Reload document from repo
+    updated_doc = await repo.get_document_by_id(doc.id)
+    assert updated_doc.status == "TECHNICAL_QC"
+    assert updated_doc.artifact_code == "05.02.03"
+    assert updated_doc.artifact_type == "Investigator CV"
+    assert updated_doc.issue_date == date(2026, 2, 1)
+    assert updated_doc.expiration_date is not None
+    assert "Dr. John Watson" in updated_doc.document_owner_id
+    assert updated_doc.metadata_json["ai_staging_status"] == "DRAFT_AI"
+
+    # Verify Part 11 audit log
+    assert len(repo.audit_logs) >= 1
+    worker_audit = [
+        a
+        for a in repo.audit_logs
+        if a["action"] == "AI_DOCUMENT_INTELLIGENCE_PROCESSED"
+    ]
+    assert len(worker_audit) == 1
+    assert "Investigator CV" in worker_audit[0]["details"]
 
 
 @pytest.mark.asyncio
@@ -292,6 +529,63 @@ async def test_cra_qc_staging_and_review_workflow():
     assert approved_doc.approval_status == "APPROVED"
     assert len(repo.qc_transitions) == 1
     assert repo.qc_transitions[0]["to_status"] == "APPROVED"
+
+
+@pytest.mark.asyncio
+async def test_cra_qc_override_and_rejection_workflows():
+    """Verify CRA can override AI classification with alternative code or reject document with reason.
+
+    @req:PRD-TMF-006
+    """
+    repo = FakeETMFIntelligenceRepository()
+    stage_use_case = StageClassifiedArtifactUseCase(repo)
+    review_use_case = CRAQCReviewUseCase(repo)
+
+    # 1. Stage document
+    doc, _ = await stage_use_case.execute(
+        content="General Regulatory Document Text",
+        filename="ambiguous_doc.pdf",
+        mime_type="application/pdf",
+        study_id="STUDY-202",
+        actor_id="crc.user",
+        actor_role="site_crc",
+        reason_for_change="Initial upload",
+    )
+
+    # 2. Override classification to Medical License (05.02.98)
+    overridden_doc = await review_use_case.execute(
+        document_id=doc.id,
+        decision="OVERRIDE",
+        actor_id="cra.monitor",
+        actor_role="cra_monitor",
+        reason_for_change="CRA classified document as Medical License based on seal",
+        override_artifact_code="05.02.98",
+    )
+    assert overridden_doc.status == "APPROVED"
+    assert overridden_doc.artifact_code == "05.02.98"
+    assert overridden_doc.artifact_type == "Medical License"
+
+    # 3. Stage second document and reject
+    doc2, _ = await stage_use_case.execute(
+        content="Corrupted or illegible document text",
+        filename="corrupted.pdf",
+        mime_type="application/pdf",
+        study_id="STUDY-202",
+        actor_id="crc.user",
+        actor_role="site_crc",
+        reason_for_change="Initial upload",
+    )
+
+    rejected_doc = await review_use_case.execute(
+        document_id=doc2.id,
+        decision="REJECT",
+        actor_id="cra.monitor",
+        actor_role="cra_monitor",
+        reason_for_change="Document text is illegible and missing required signatures",
+        discrepancy_comment="Illegible scan",
+    )
+    assert rejected_doc.status == "REJECTED"
+    assert rejected_doc.approval_status == "REJECTED"
 
 
 @pytest.mark.asyncio

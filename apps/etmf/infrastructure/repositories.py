@@ -408,6 +408,9 @@ class SQLETMFRepository(ETMFRepositoryPort):
         reason_for_change: str | None = None,
         metadata_json: dict[str, Any] | None = None,
         document_owner_id: str | None = None,
+        issue_date: Any | None = None,
+        expiration_date: Any | None = None,
+        **kwargs: Any,
     ) -> TMFDocument:
         doc = TMFDocument(
             study_id=study_id,
@@ -426,6 +429,9 @@ class SQLETMFRepository(ETMFRepositoryPort):
             reason_for_change=reason_for_change,
             metadata_json=metadata_json,
             document_owner_id=document_owner_id,
+            issue_date=issue_date,
+            expiration_date=expiration_date,
+            **kwargs,
         )
         self.session.add(doc)
         await self.session.flush()
