@@ -5955,6 +5955,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/amendments/verify-training-gate:
+    post:
+      tags:
+      - Amendments
+      summary: Verify Training Gate Endpoint
+      description: 'Programmatically verify training qualification for EDC write and signature permissions.
+
+
+        Requirements: PRD-TRN-002'
+      operationId: verify_training_gate_endpoint_api_v1_execution_amendments_verify_training_gate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyTrainingGatingRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Verify Training Gate Endpoint Api V1 Execution Amendments Verify Training Gate Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/anomalies/evaluate:
     post:
       tags:
@@ -21854,6 +21885,11 @@ components:
           - type: string
           - type: 'null'
           title: Study Id
+        site_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Site Id
         visit_id:
           anyOf:
           - type: string
@@ -25265,6 +25301,39 @@ components:
       - status
       title: VerifyResponse
       description: Response model for PKCS#7 signature verification.
+    VerifyTrainingGatingRequest:
+      properties:
+        study_id:
+          type: string
+          title: Study Id
+          description: Clinical study ID
+        protocol_version:
+          type: string
+          title: Protocol Version
+          description: Active protocol version tag
+        user_id:
+          type: string
+          title: User Id
+          description: User ID to evaluate
+        site_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Site Id
+          description: Optional clinical site ID
+        user_role:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Role
+          description: Optional user clinical role
+      type: object
+      required:
+      - study_id
+      - protocol_version
+      - user_id
+      title: VerifyTrainingGatingRequest
+      description: Payload to verify user qualification for EDC write permissions.
     VisitCreate:
       properties:
         subject_id:

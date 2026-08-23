@@ -543,6 +543,26 @@
                 </router-link>
               </li>
               <li
+                id="tab-btn-training"
+                class="nav-item"
+                :class="{ active: $route.name === 'training' }"
+              >
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/training"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
+                    <span class="nav-icon">🎓</span>
+                    <span class="nav-label">Study Training &amp; Gating</span>
+                  </button>
+                </router-link>
+              </li>
+
+              <li
                 v-if="canAccess(['auditor', 'tmf_auditor', 'sponsor_admin'])"
                 id="tab-btn-audit"
                 class="nav-item"

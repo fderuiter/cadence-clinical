@@ -829,6 +829,473 @@
           }
         }
       }
+    },
+    "/api/v1/interop/lakehouse/ingest": {
+      "post": {
+        "tags": [
+          "CDR Lakehouse"
+        ],
+        "summary": "Ingest heterogeneous clinical stream data",
+        "description": "Ingest and normalize heterogeneous trial streams (EDC, ePRO, Labs, Wearables, FHIR, Imaging).",
+        "operationId": "ingest_stream_data_api_v1_interop_lakehouse_ingest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MultiStreamIngestPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/lakehouse/snapshots": {
+      "post": {
+        "tags": [
+          "CDR Lakehouse"
+        ],
+        "summary": "Create an immutable, version-pinned clinical data snapshot",
+        "description": "Pool lakehouse observations into an immutable, version-pinned snapshot sealed with SHA-256.",
+        "operationId": "create_snapshot_api_v1_interop_lakehouse_snapshots_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSnapshotRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CDR Lakehouse"
+        ],
+        "summary": "List version-pinned snapshots for a study",
+        "description": "Retrieve all sealed, version-pinned snapshots for the specified study.",
+        "operationId": "list_snapshots_api_v1_interop_lakehouse_snapshots_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study identifier",
+              "title": "Study Id"
+            },
+            "description": "Study identifier"
+          },
+          {
+            "name": "milestone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional milestone filter",
+              "title": "Milestone"
+            },
+            "description": "Optional milestone filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/lakehouse/snapshots/{snapshot_id}": {
+      "get": {
+        "tags": [
+          "CDR Lakehouse"
+        ],
+        "summary": "Retrieve snapshot metadata and seal info",
+        "description": "Fetch metadata and cryptographic digest for a specific snapshot.",
+        "operationId": "get_snapshot_details_api_v1_interop_lakehouse_snapshots__snapshot_id__get",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/lakehouse/snapshots/{snapshot_id}/query": {
+      "post": {
+        "tags": [
+          "CDR Lakehouse"
+        ],
+        "summary": "Query pooled records inside a version-pinned snapshot",
+        "description": "Query observations pooled inside a snapshot, enforcing role-based unblinded masking.",
+        "operationId": "query_snapshot_data_api_v1_interop_lakehouse_snapshots__snapshot_id__query_post",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnapshotDataQueryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotDataQueryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/lakehouse/snapshots/{snapshot_id}/data": {
+      "get": {
+        "tags": [
+          "CDR Lakehouse"
+        ],
+        "summary": "Fetch snapshot pool data records via GET",
+        "description": "Convenience endpoint to retrieve observations in a snapshot pool.",
+        "operationId": "get_snapshot_data_api_v1_interop_lakehouse_snapshots__snapshot_id__data_get",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Snapshot Id"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional subject filter",
+              "title": "Subject Id"
+            },
+            "description": "Optional subject filter"
+          },
+          {
+            "name": "domain",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional domain filter",
+              "title": "Domain"
+            },
+            "description": "Optional domain filter"
+          },
+          {
+            "name": "stream_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/DataStreamType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional stream filter",
+              "title": "Stream Type"
+            },
+            "description": "Optional stream filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotDataQueryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/lakehouse/snapshots/{snapshot_id}/verify": {
+      "post": {
+        "tags": [
+          "CDR Lakehouse"
+        ],
+        "summary": "Verify cryptographic SHA-256 integrity of sealed snapshot",
+        "description": "Recompute and verify the SHA-256 seal against all pooled records in the snapshot.",
+        "operationId": "verify_snapshot_api_v1_interop_lakehouse_snapshots__snapshot_id__verify_post",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifySnapshotResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/lakehouse/snapshots/{snapshot_id}/audit-trail": {
+      "get": {
+        "tags": [
+          "CDR Lakehouse"
+        ],
+        "summary": "Retrieve 21 CFR Part 11 audit log for a snapshot",
+        "description": "Retrieve all chronological 21 CFR Part 11 audit trail entries for a snapshot.",
+        "operationId": "get_snapshot_audit_trail_api_v1_interop_lakehouse_snapshots__snapshot_id__audit_trail_get",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotAuditTrailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/lakehouse/metrics/{study_id}": {
+      "get": {
+        "tags": [
+          "CDR Lakehouse"
+        ],
+        "summary": "Retrieve real-time Lakehouse stream and snapshot metrics",
+        "description": "Aggregate real-time data stream, subject, site, and snapshot metrics for a study.",
+        "operationId": "get_metrics_api_v1_interop_lakehouse_metrics__study_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LakehouseMetricsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -923,6 +1390,449 @@
         ],
         "title": "BulkSyncPayload",
         "description": "A bulk list of ePRO submissions for offline queue reconciliation."
+      },
+      "CanonicalClinicalRecord": {
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "title": "Record Id",
+            "description": "Unique canonical record UUID"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study identifier"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Site identifier"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "stream_type": {
+            "$ref": "#/components/schemas/DataStreamType",
+            "description": "Originating data stream type"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain",
+            "description": "Normalized CDISC domain (e.g. DM, AE, VS, LB, QS, TR)"
+          },
+          "item_code": {
+            "type": "string",
+            "title": "Item Code",
+            "description": "Canonical item code or test identifier"
+          },
+          "item_name": {
+            "type": "string",
+            "title": "Item Name",
+            "description": "Human-readable item name"
+          },
+          "observation_datetime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Observation Datetime",
+            "description": "Effective timestamp of observation"
+          },
+          "numeric_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numeric Value",
+            "description": "Quantitative value if applicable"
+          },
+          "text_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text Value",
+            "description": "Categorical or textual finding"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit",
+            "description": "Normalized standard unit"
+          },
+          "reference_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Low",
+            "description": "Reference range lower bound"
+          },
+          "reference_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference High",
+            "description": "Reference range upper bound"
+          },
+          "abnormal_flag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Abnormal Flag",
+            "description": "Abnormality flag"
+          },
+          "is_unblinded": {
+            "type": "boolean",
+            "title": "Is Unblinded",
+            "description": "Flag indicating if record contains unblinded data",
+            "default": false
+          },
+          "raw_payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Raw Payload",
+            "description": "Original raw stream payload"
+          },
+          "normalized_attributes": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Normalized Attributes",
+            "description": "Harmonized contextual attributes"
+          },
+          "data_hash": {
+            "type": "string",
+            "title": "Data Hash",
+            "description": "SHA-256 digest of normalized record fields"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Lakehouse ingestion timestamp"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "subject_id",
+          "stream_type",
+          "domain",
+          "item_code",
+          "item_name",
+          "observation_datetime",
+          "data_hash"
+        ],
+        "title": "CanonicalClinicalRecord",
+        "description": "Harmonized, canonical observation record stored in the Lakehouse repository."
+      },
+      "CentralLabIngestItem": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Clinical site identifier"
+          },
+          "specimen_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Specimen Id",
+            "description": "Lab specimen barcode or identifier"
+          },
+          "test_code": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Test Code",
+            "description": "Standard LOINC or lab-specific test code"
+          },
+          "test_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Test Name",
+            "description": "Descriptive laboratory test name (e.g. Hemoglobin, ALT)"
+          },
+          "numeric_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numeric Value",
+            "description": "Quantitative test result"
+          },
+          "string_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "String Value",
+            "description": "Qualitative test result or text finding"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit",
+            "description": "Unit of measurement (e.g. g/dL, U/L)"
+          },
+          "reference_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Low",
+            "description": "Normal lower reference range bound"
+          },
+          "reference_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference High",
+            "description": "Normal upper reference range bound"
+          },
+          "abnormal_flag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Abnormal Flag",
+            "description": "Diagnostic flag (e.g. NORMAL, HIGH, LOW, CRITICAL)"
+          },
+          "collection_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Collection Timestamp",
+            "description": "Specimen collection timestamp"
+          },
+          "accession_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accession Number",
+            "description": "Laboratory accession number"
+          },
+          "is_unblinded": {
+            "type": "boolean",
+            "title": "Is Unblinded",
+            "description": "Whether this lab test unblinds treatment arm",
+            "default": false
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Lab instrument and method metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "specimen_id",
+          "test_code",
+          "test_name",
+          "collection_timestamp"
+        ],
+        "title": "CentralLabIngestItem",
+        "description": "Raw ingestion payload for Central Diagnostic Laboratory feeds (HL7 / CSV)."
+      },
+      "ClinicalSnapshot": {
+        "properties": {
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id",
+            "description": "Snapshot identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study identifier"
+          },
+          "version_tag": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Version Tag",
+            "description": "Version tag (e.g. v1.0.0-INTERIM-1)"
+          },
+          "milestone": {
+            "$ref": "#/components/schemas/LockMilestoneType",
+            "description": "Associated database lock milestone"
+          },
+          "lock_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lock Id",
+            "description": "Reference to relational DataLock record"
+          },
+          "record_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Record Count",
+            "description": "Total records pooled in this snapshot",
+            "default": 0
+          },
+          "stream_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Stream Counts",
+            "description": "Breakdown of record counts by stream type"
+          },
+          "domain_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Domain Counts",
+            "description": "Breakdown of record counts by CDISC domain"
+          },
+          "sha256_digest": {
+            "type": "string",
+            "title": "Sha256 Digest",
+            "description": "Cryptographic SHA-256 digest sealing this snapshot pool"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Snapshot creation timestamp"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "User ID or service creating snapshot"
+          },
+          "reason_for_snapshot": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Reason For Snapshot",
+            "description": "GxP rationale / justification for snapshot creation"
+          },
+          "is_locked": {
+            "type": "boolean",
+            "title": "Is Locked",
+            "description": "Immutability flag (sealed snapshots cannot be modified)",
+            "default": true
+          },
+          "blinded_record_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Blinded Record Count",
+            "description": "Count of blinded records in pool",
+            "default": 0
+          },
+          "unblinded_record_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Unblinded Record Count",
+            "description": "Count of unblinded records in pool",
+            "default": 0
+          },
+          "snapshot_manifest": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Snapshot Manifest",
+            "description": "Cryptographic manifest metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "version_tag",
+          "milestone",
+          "sha256_digest",
+          "created_by",
+          "reason_for_snapshot"
+        ],
+        "title": "ClinicalSnapshot",
+        "description": "Immutable, version-pinned snapshot pool tied to a database lock milestone."
       },
       "ConceptMapListResponse": {
         "properties": {
@@ -1041,6 +1951,65 @@
         "title": "ConflictStrategy",
         "description": "Explicit validated conflict resolution strategies."
       },
+      "CreateSnapshotRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id",
+            "description": "Clinical study identifier (e.g. STUDY-901)"
+          },
+          "version_tag": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Version Tag",
+            "description": "Unique version tag (e.g. v1.0.0-INTERIM-1)"
+          },
+          "milestone": {
+            "$ref": "#/components/schemas/LockMilestoneType",
+            "description": "Target database lock milestone"
+          },
+          "lock_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lock Id",
+            "description": "Optional associated DataLock ID"
+          },
+          "reason_for_snapshot": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Reason For Snapshot",
+            "description": "Formal GxP justification for snapshot creation"
+          },
+          "filter_criteria": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SnapshotFilterCriteria"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional stream, domain, subject, and time cutoff filtering criteria"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "version_tag",
+          "milestone",
+          "reason_for_snapshot"
+        ],
+        "title": "CreateSnapshotRequest",
+        "description": "Request payload to pool lakehouse records into an immutable version-pinned snapshot."
+      },
       "CriterionExplanation": {
         "properties": {
           "criterion_id": {
@@ -1078,6 +2047,317 @@
           "is_indeterminate"
         ],
         "title": "CriterionExplanation"
+      },
+      "DataStreamType": {
+        "type": "string",
+        "enum": [
+          "EDC_ECRF",
+          "EPRO_ECOA",
+          "CENTRAL_LAB",
+          "LOCAL_LAB",
+          "IOT_WEARABLE",
+          "EHR_FHIR",
+          "MEDICAL_IMAGING"
+        ],
+        "title": "DataStreamType",
+        "description": "Supported heterogeneous clinical data stream types."
+      },
+      "EDCEcrfIngestItem": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id",
+            "description": "Unique subject/participant identifier"
+          },
+          "visit_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Visit Id",
+            "description": "Visit identifier (e.g. VIS_01, SCREENING)"
+          },
+          "form_oid": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Form Oid",
+            "description": "Form OID or form identifier (e.g. FORM_VS, FORM_AE)"
+          },
+          "field_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Field Name",
+            "description": "Item or field name (e.g. SYSBP, HR, AETERM)"
+          },
+          "value": {
+            "title": "Value",
+            "description": "Captured field value (numeric, string, boolean)"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit",
+            "description": "Measurement unit (e.g. mmHg, bpm)"
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Recorded At",
+            "description": "Timestamp of clinical observation or entry"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Form entry status (e.g. DRAFT, COMPLETED, SIGNED)",
+            "default": "COMPLETED"
+          },
+          "investigator_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigator Id",
+            "description": "Investigator or user identifier"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Clinical site identifier"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain",
+            "description": "Optional CDISC domain override (e.g. VS, AE, LB)"
+          },
+          "is_unblinded": {
+            "type": "boolean",
+            "title": "Is Unblinded",
+            "description": "Flag if field contains unblinded treatment/randomization data",
+            "default": false
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Additional EDC provenance metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "visit_id",
+          "form_oid",
+          "field_name",
+          "value",
+          "recorded_at"
+        ],
+        "title": "EDCEcrfIngestItem",
+        "description": "Raw ingestion payload for transactional EDC eCRFs."
+      },
+      "EHRFHIRIngestItem": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id",
+            "description": "Clinical trial subject identifier"
+          },
+          "resource_type": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Resource Type",
+            "description": "FHIR resource type (Observation, Condition, Encounter, MedicationRequest)"
+          },
+          "fhir_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Fhir Id",
+            "description": "FHIR resource ID"
+          },
+          "resource_payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Resource Payload",
+            "description": "Complete FHIR JSON resource object"
+          },
+          "coding_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coding Code",
+            "description": "Primary clinical coding (e.g. SNOMED-CT, LOINC, RxNorm, ICD-10)"
+          },
+          "coding_display": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coding Display",
+            "description": "Coding human-readable display string"
+          },
+          "effective_datetime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Effective Datetime",
+            "description": "Clinical occurrence or effective timestamp"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Site identifier"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "FHIR bundle header and source EHR metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "resource_type",
+          "fhir_id",
+          "resource_payload",
+          "effective_datetime"
+        ],
+        "title": "EHRFHIRIngestItem",
+        "description": "Raw ingestion payload for Electronic Health Record (EHR) HL7 FHIR bundles."
+      },
+      "EPROEcoaIngestItem": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id",
+            "description": "Unique subject identifier"
+          },
+          "diary_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Diary Id",
+            "description": "Questionnaire / diary form identifier"
+          },
+          "questionnaire_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Questionnaire Name",
+            "description": "Name of instrument (e.g. PROMIS-29, SF-36, EQ-5D)"
+          },
+          "answers": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Answers",
+            "description": "Map of question IDs to participant responses"
+          },
+          "total_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Score",
+            "description": "Computed questionnaire total or index score"
+          },
+          "device_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Device Timestamp",
+            "description": "Timestamp recorded by client device"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At",
+            "description": "Timestamp questionnaire was submitted"
+          },
+          "compliance_flag": {
+            "type": "boolean",
+            "title": "Compliance Flag",
+            "description": "Whether completion was within the scheduled time window",
+            "default": true
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Associated clinical site identifier"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Device and sensor sync metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "diary_id",
+          "questionnaire_name",
+          "answers",
+          "device_timestamp"
+        ],
+        "title": "EPROEcoaIngestItem",
+        "description": "Raw ingestion payload for subject-facing ePRO / eCOA questionnaires."
       },
       "EPROSubmissionPayload": {
         "properties": {
@@ -1364,6 +2644,146 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "IOTWearableIngestItem": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "device_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Device Id",
+            "description": "Unique medical device serial or UUID"
+          },
+          "device_type": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Device Type",
+            "description": "Device model / type (e.g. CGM, ACTIGRAPHY, SPIROMETER, ECG)"
+          },
+          "observation_type": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Observation Type",
+            "description": "Continuous observation stream category"
+          },
+          "telemetry_readings": {
+            "items": {
+              "$ref": "#/components/schemas/IoTTelemetryReading"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Telemetry Readings",
+            "description": "Batched time-series sensor readings"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds",
+            "description": "Aggregate recording duration"
+          },
+          "sample_rate_hz": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Rate Hz",
+            "description": "Device sampling rate in Hz"
+          },
+          "calibration_status": {
+            "type": "string",
+            "title": "Calibration Status",
+            "description": "Device calibration state",
+            "default": "CALIBRATED"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Site identifier"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Sensor firmware and battery status metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "device_id",
+          "device_type",
+          "observation_type",
+          "telemetry_readings"
+        ],
+        "title": "IOTWearableIngestItem",
+        "description": "Raw ingestion payload for connected sensors and wearable IoT streams."
+      },
+      "IngestResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study identifier"
+          },
+          "stream_type": {
+            "type": "string",
+            "title": "Stream Type",
+            "description": "Ingested stream type"
+          },
+          "records_ingested": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Records Ingested",
+            "description": "Number of canonical records created and persisted"
+          },
+          "unblinded_records": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Unblinded Records",
+            "description": "Number of unblinded records identified",
+            "default": 0
+          },
+          "record_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Record Ids",
+            "description": "List of generated canonical record UUIDs"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "stream_type",
+          "records_ingested"
+        ],
+        "title": "IngestResponse",
+        "description": "Response returned after ingesting heterogeneous stream records."
+      },
       "InstrumentCreateDTO": {
         "properties": {
           "study_id": {
@@ -1492,6 +2912,307 @@
         ],
         "title": "InstrumentResponseDTO"
       },
+      "IoTTelemetryReading": {
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp",
+            "description": "Observation timestamp"
+          },
+          "metric_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Metric Name",
+            "description": "Metric name (e.g. glucose, step_count, heart_rate, fev1)"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value",
+            "description": "Numeric telemetry value"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit",
+            "description": "Metric unit (e.g. mg/dL, steps, bpm, L)"
+          },
+          "flag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flag",
+            "description": "Telemetry quality flag (e.g. VALID, ARTIFACT, EXCURSION)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "timestamp",
+          "metric_name",
+          "value"
+        ],
+        "title": "IoTTelemetryReading",
+        "description": "Single time-series point from a connected sensor or wearable device."
+      },
+      "LakehouseMetrics": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study identifier"
+          },
+          "total_records": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Records",
+            "description": "Total canonical clinical records ingested",
+            "default": 0
+          },
+          "total_snapshots": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Snapshots",
+            "description": "Total sealed snapshots created",
+            "default": 0
+          },
+          "stream_breakdown": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Stream Breakdown",
+            "description": "Record counts per stream type"
+          },
+          "domain_breakdown": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Domain Breakdown",
+            "description": "Record counts per CDISC domain"
+          },
+          "subject_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Subject Count",
+            "description": "Distinct subject count",
+            "default": 0
+          },
+          "site_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Site Count",
+            "description": "Distinct site count",
+            "default": 0
+          },
+          "blinded_record_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Blinded Record Count",
+            "description": "Total blinded records",
+            "default": 0
+          },
+          "unblinded_record_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Unblinded Record Count",
+            "description": "Total unblinded records",
+            "default": 0
+          },
+          "latest_snapshot_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Snapshot Digest",
+            "description": "SHA-256 digest of latest sealed snapshot"
+          },
+          "last_ingested_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Ingested At",
+            "description": "Timestamp of most recent ingestion"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "LakehouseMetrics",
+        "description": "Aggregated real-time metrics for a study in the Lakehouse repository."
+      },
+      "LakehouseMetricsResponse": {
+        "properties": {
+          "metrics": {
+            "$ref": "#/components/schemas/LakehouseMetrics",
+            "description": "Real-time lakehouse repository metrics"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "metrics"
+        ],
+        "title": "LakehouseMetricsResponse",
+        "description": "Response containing aggregated lakehouse metrics."
+      },
+      "LocalLabIngestItem": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "site_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Site Id",
+            "description": "Local site identifier"
+          },
+          "test_code": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Test Code",
+            "description": "Local laboratory test code"
+          },
+          "test_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Test Name",
+            "description": "Local lab test name"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Value",
+            "description": "Test result value (numeric or text)"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit",
+            "description": "Result unit"
+          },
+          "reference_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Low",
+            "description": "Site reference range lower bound"
+          },
+          "reference_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference High",
+            "description": "Site reference range upper bound"
+          },
+          "abnormal_flag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Abnormal Flag",
+            "description": "Abnormal indicator (NORMAL, HIGH, LOW)"
+          },
+          "collection_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Collection Timestamp",
+            "description": "Sample collection timestamp"
+          },
+          "is_unblinded": {
+            "type": "boolean",
+            "title": "Is Unblinded",
+            "description": "Flag for unblinded specialized tests",
+            "default": false
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Site lab technician and kit metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "site_id",
+          "test_code",
+          "test_name",
+          "value",
+          "collection_timestamp"
+        ],
+        "title": "LocalLabIngestItem",
+        "description": "Raw ingestion payload for site local laboratory feeds."
+      },
+      "LockMilestoneType": {
+        "type": "string",
+        "enum": [
+          "INTERIM_ANALYSIS_1",
+          "INTERIM_ANALYSIS_2",
+          "DATABASE_LOCK",
+          "SAFETY_REVIEW",
+          "REGULATORY_SUBMISSION",
+          "PROTOCOL_FREEZE",
+          "ADJUDICATION_MILESTONE",
+          "CUSTOM"
+        ],
+        "title": "LockMilestoneType",
+        "description": "Clinical database lock and interim analysis milestones."
+      },
       "MappingTierStatisticsDTO": {
         "properties": {
           "total_extracted": {
@@ -1533,6 +3254,331 @@
         "type": "object",
         "title": "MappingTierStatisticsDTO",
         "description": "Aggregated metrics across mapping tiers."
+      },
+      "MedicalImagingIngestItem": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Site identifier"
+          },
+          "study_instance_uid": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Instance Uid",
+            "description": "DICOM Study Instance UID"
+          },
+          "series_instance_uid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series Instance Uid",
+            "description": "DICOM Series Instance UID"
+          },
+          "modality": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Modality",
+            "description": "Imaging modality (CT, MR, PET, PT, DX)"
+          },
+          "timepoint": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Timepoint",
+            "description": "Assessment timepoint (e.g. BASELINE, WEEK_6, WEEK_12)"
+          },
+          "lesions": {
+            "items": {
+              "$ref": "#/components/schemas/MedicalImagingLesion"
+            },
+            "type": "array",
+            "title": "Lesions",
+            "description": "Assessed target and non-target lesions"
+          },
+          "overall_response": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overall Response",
+            "description": "RECIST 1.1 overall response (CR, PR, SD, PD, NE)"
+          },
+          "sum_of_diameters_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sum Of Diameters Mm",
+            "description": "Sum of longest diameters for target lesions in mm"
+          },
+          "reader_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Reader Id",
+            "description": "Blinded independent central review (BICR) reader identifier"
+          },
+          "adjudication_tier": {
+            "type": "string",
+            "title": "Adjudication Tier",
+            "description": "Adjudication tier: PRIMARY_READER_1, PRIMARY_READER_2, TIE_BREAKER",
+            "default": "PRIMARY_READER_1"
+          },
+          "scan_datetime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scan Datetime",
+            "description": "DICOM acquisition timestamp"
+          },
+          "is_unblinded": {
+            "type": "boolean",
+            "title": "Is Unblinded",
+            "description": "Whether this adjudication unblinds arm",
+            "default": false
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Imaging charter and PACS archive metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "study_instance_uid",
+          "modality",
+          "timepoint",
+          "reader_id",
+          "scan_datetime"
+        ],
+        "title": "MedicalImagingIngestItem",
+        "description": "Raw ingestion payload for Blinded Medical Imaging and IRC adjudication results."
+      },
+      "MedicalImagingLesion": {
+        "properties": {
+          "lesion_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Lesion Id",
+            "description": "Target/non-target lesion identifier (e.g. T1, NT1)"
+          },
+          "lesion_type": {
+            "type": "string",
+            "title": "Lesion Type",
+            "description": "Lesion category: TARGET, NON_TARGET, NEW_LESION",
+            "default": "TARGET"
+          },
+          "site_location": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Site Location",
+            "description": "Anatomical site location (e.g. Liver, Right Lung, Lymph Node)"
+          },
+          "longest_diameter_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longest Diameter Mm",
+            "description": "Longest diameter measurement in mm"
+          },
+          "short_axis_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Axis Mm",
+            "description": "Short axis measurement in mm for lymph nodes"
+          },
+          "response_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Category",
+            "description": "Lesion status: PRESENT, ABSENT, NOT_EVALUATED"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "lesion_id",
+          "site_location"
+        ],
+        "title": "MedicalImagingLesion",
+        "description": "RECIST 1.1 or imaging lesion evaluation."
+      },
+      "MultiStreamIngestPayload": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id",
+            "description": "Clinical trial protocol ID (e.g. STUDY-901)"
+          },
+          "stream_type": {
+            "$ref": "#/components/schemas/DataStreamType",
+            "description": "Stream type being ingested"
+          },
+          "edc_items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EDCEcrfIngestItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edc Items",
+            "description": "EDC eCRF items when stream_type=EDC_ECRF"
+          },
+          "epro_items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EPROEcoaIngestItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epro Items",
+            "description": "ePRO items when stream_type=EPRO_ECOA"
+          },
+          "central_lab_items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CentralLabIngestItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Central Lab Items",
+            "description": "Central lab items when stream_type=CENTRAL_LAB"
+          },
+          "local_lab_items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/LocalLabIngestItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Lab Items",
+            "description": "Local lab items when stream_type=LOCAL_LAB"
+          },
+          "wearable_items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/IOTWearableIngestItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wearable Items",
+            "description": "IoT wearable items when stream_type=IOT_WEARABLE"
+          },
+          "fhir_items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EHRFHIRIngestItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fhir Items",
+            "description": "FHIR items when stream_type=EHR_FHIR"
+          },
+          "imaging_items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MedicalImagingIngestItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imaging Items",
+            "description": "Imaging items when stream_type=MEDICAL_IMAGING"
+          },
+          "reason_for_ingest": {
+            "type": "string",
+            "title": "Reason For Ingest",
+            "description": "GxP justification for ingestion",
+            "default": "Routine stream ingestion into CDR Lakehouse"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "stream_type"
+        ],
+        "title": "MultiStreamIngestPayload",
+        "description": "Unified payload container for ingesting one or more heterogeneous streams."
       },
       "OfflineSyncMarkers": {
         "properties": {
@@ -1832,6 +3878,316 @@
         ],
         "title": "SemanticMappedItemDTO",
         "description": "Individual mapped clinical observation or variable."
+      },
+      "SnapshotAuditTrailResponse": {
+        "properties": {
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id",
+            "description": "Snapshot identifier"
+          },
+          "audit_entries": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Audit Entries",
+            "description": "Audit trail entries"
+          },
+          "total_entries": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Entries",
+            "description": "Total audit records",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "snapshot_id"
+        ],
+        "title": "SnapshotAuditTrailResponse",
+        "description": "Response containing 21 CFR Part 11 immutable audit trail entries for a snapshot."
+      },
+      "SnapshotDataQueryRequest": {
+        "properties": {
+          "filter_criteria": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SnapshotFilterCriteria"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional slice and filter criteria"
+          },
+          "request_unblinded": {
+            "type": "boolean",
+            "title": "Request Unblinded",
+            "description": "Whether caller requests unblinded access (requires role)",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SnapshotDataQueryRequest",
+        "description": "Request payload for querying observations inside a version-pinned snapshot pool."
+      },
+      "SnapshotDataQueryResponse": {
+        "properties": {
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id",
+            "description": "Snapshot identifier"
+          },
+          "sha256_digest": {
+            "type": "string",
+            "title": "Sha256 Digest",
+            "description": "Cryptographic SHA-256 seal of snapshot pool"
+          },
+          "total_records": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Records",
+            "description": "Count of records returned",
+            "default": 0
+          },
+          "is_masked": {
+            "type": "boolean",
+            "title": "Is Masked",
+            "description": "True if any unblinded records were masked for blinded role",
+            "default": false
+          },
+          "masked_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Masked Count",
+            "description": "Count of unblinded records masked",
+            "default": 0
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/CanonicalClinicalRecord"
+            },
+            "type": "array",
+            "title": "Records",
+            "description": "Harmonized clinical records"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "snapshot_id",
+          "sha256_digest"
+        ],
+        "title": "SnapshotDataQueryResponse",
+        "description": "Response containing pooled canonical observations from a snapshot."
+      },
+      "SnapshotFilterCriteria": {
+        "properties": {
+          "subject_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Ids",
+            "description": "Optional filter by subject IDs"
+          },
+          "site_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Ids",
+            "description": "Optional filter by site IDs"
+          },
+          "stream_types": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DataStreamType"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stream Types",
+            "description": "Filter by stream types"
+          },
+          "domains": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domains",
+            "description": "Filter by CDISC domains"
+          },
+          "cutoff_datetime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cutoff Datetime",
+            "description": "Upper bound timestamp cutoff for snapshot pooling"
+          },
+          "include_unblinded": {
+            "type": "boolean",
+            "title": "Include Unblinded",
+            "description": "Whether to request unblinded records (requires unblinded role)",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SnapshotFilterCriteria",
+        "description": "Filter criteria used when generating or querying a version-pinned snapshot."
+      },
+      "SnapshotListResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study identifier"
+          },
+          "snapshots": {
+            "items": {
+              "$ref": "#/components/schemas/ClinicalSnapshot"
+            },
+            "type": "array",
+            "title": "Snapshots",
+            "description": "List of version-pinned snapshots"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total",
+            "description": "Total snapshots found",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "SnapshotListResponse",
+        "description": "Response containing list of snapshots for a study."
+      },
+      "SnapshotResponse": {
+        "properties": {
+          "snapshot": {
+            "$ref": "#/components/schemas/ClinicalSnapshot",
+            "description": "Snapshot metadata and cryptographic seal"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Status message",
+            "default": "Snapshot created and sealed successfully"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "snapshot"
+        ],
+        "title": "SnapshotResponse",
+        "description": "Response containing created or retrieved snapshot details."
+      },
+      "SnapshotVerificationResult": {
+        "properties": {
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id",
+            "description": "Verified snapshot identifier"
+          },
+          "version_tag": {
+            "type": "string",
+            "title": "Version Tag",
+            "description": "Snapshot version tag"
+          },
+          "stored_digest": {
+            "type": "string",
+            "title": "Stored Digest",
+            "description": "SHA-256 digest recorded at snapshot sealing"
+          },
+          "computed_digest": {
+            "type": "string",
+            "title": "Computed Digest",
+            "description": "SHA-256 digest dynamically recomputed over pool"
+          },
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid",
+            "description": "Whether digests match bit-for-bit (True = untampered)"
+          },
+          "record_count": {
+            "type": "integer",
+            "title": "Record Count",
+            "description": "Total verified record count"
+          },
+          "verified_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Verified At",
+            "description": "Verification timestamp"
+          },
+          "verified_by": {
+            "type": "string",
+            "title": "Verified By",
+            "description": "User ID performing verification"
+          },
+          "verification_message": {
+            "type": "string",
+            "title": "Verification Message",
+            "description": "Detailed integrity verification message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "snapshot_id",
+          "version_tag",
+          "stored_digest",
+          "computed_digest",
+          "is_valid",
+          "record_count",
+          "verified_by",
+          "verification_message"
+        ],
+        "title": "SnapshotVerificationResult",
+        "description": "Result of cryptographic SHA-256 integrity verification against a sealed snapshot."
       },
       "SubjectAssignmentCreateDTO": {
         "properties": {
@@ -2150,6 +4506,21 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VerifySnapshotResponse": {
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/SnapshotVerificationResult",
+            "description": "Integrity verification result"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "result"
+        ],
+        "title": "VerifySnapshotResponse",
+        "description": "Response for cryptographic SHA-256 integrity verification."
       }
     }
   }

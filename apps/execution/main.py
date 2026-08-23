@@ -112,6 +112,7 @@ from apps.execution.subject_lifecycle import (
     InvalidStateTransitionError,
     LockedFactorMutationError,
 )
+from apps.execution.training_gating import enforce_training_qualification_gate
 from apps.execution.translator import process_translation
 from apps.execution.trial_lock import TrialLockManager
 from apps.execution.ucum import convert_unit, get_normalized_representation
@@ -896,6 +897,7 @@ class ObservationCreate(BaseModel):
 
     subject_id: str
     study_id: str | None = None
+    site_id: str | None = None
     visit_id: str | None = None
     domain: str
     test_code: str
@@ -1887,6 +1889,19 @@ async def create_observation(
                     detail="Subject not registered; cannot infer study_id",
                 )
             study_id = subj_db.study_id
+
+        # Enforce training qualification gating (PRD-TRN-002)
+        u_id = current_user_id.get() or "system"
+        proto_tag = getattr(subj_db, "active_protocol_version", None) or "1.0.0"
+        s_id = getattr(payload, "site_id", None) or (
+            getattr(subj_db, "site_id", None) if subj_db else None
+        )
+        await enforce_training_qualification_gate(
+            user_id=u_id,
+            study_id=study_id,
+            protocol_version=proto_tag,
+            site_id=s_id,
+        )
 
         obs_date = payload.observation_date or datetime.now()
 
@@ -3066,6 +3081,16 @@ async def create_form_submission(
 ) -> FormSubmissionResponse:
     """Create a new FormSubmission in DRAFT status."""
     async with db_manager.get_session_maker()() as session:
+        # Enforce training qualification gating (PRD-TRN-002)
+        u_id = current_user_id.get() or "system"
+        proto_tag = payload.protocol_version or "1.0.0"
+        await enforce_training_qualification_gate(
+            user_id=u_id,
+            study_id=payload.study_id,
+            protocol_version=proto_tag,
+            site_id=payload.site_id,
+        )
+
         sub = FormSubmission(
             study_id=payload.study_id,
             site_id=payload.site_id,
@@ -3320,7 +3345,18 @@ async def approve_form_submission(
                 detail=f"PI approval must only be possible from COMPLETED status. Current: {sub.status}",
             )
 
+        # Enforce training qualification gating for PI approval (PRD-TRN-002)
+        u_id = current_user_id.get() or "system"
+        await enforce_training_qualification_gate(
+            user_id=u_id,
+            study_id=sub.study_id,
+            protocol_version=sub.protocol_version or "1.0.0",
+            site_id=sub.site_id,
+            user_role="Principal Investigator",
+        )
+
         sub.status = "APPROVED"
+
         sub.signature_manifest = payload.signature_manifest
         await session.commit()
 

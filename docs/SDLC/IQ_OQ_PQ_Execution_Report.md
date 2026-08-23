@@ -7,11 +7,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3383
-- **Passed:** 3353 🟢
+- **Total Automated Test Cases Run:** 3410
+- **Passed:** 3380 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 30 ⚪
-- **Overall Operational Pass Rate:** 99.11%
+- **Overall Operational Pass Rate:** 99.12%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -2186,6 +2186,21 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_upload_zip_archive_endpoint` | `apps.imaging.tests.test_imaging_endpoints` | PRD-IMG-001, PRD-IMG-002 | 🟢 PASSED | < 1s |
 | `test_single_dicom_ingestion_pipeline` | `apps.imaging.tests.test_imaging_pipeline` | PRD-IMG-001, PRD-IMG-002 | 🟢 PASSED | < 1s |
 | `test_zip_archive_multi_slice_ingestion` | `apps.imaging.tests.test_imaging_pipeline` | PRD-IMG-001, PRD-IMG-002 | 🟢 PASSED | < 1s |
+| `test_deterministic_record_hashing` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestCryptographicIntegrityAndBlinding` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_snapshot_pool_digest_reproducibility` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestCryptographicIntegrityAndBlinding` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unblinded_masking_partition` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestCryptographicIntegrityAndBlinding` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_lakehouse_rest_api_workflow` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestLakehouseAPIEndpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_snapshot_not_found_returns_404` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestLakehouseAPIEndpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_tamper_detection_in_snapshot_verification` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestLakehouseAPIEndpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unauthorized_unblinded_access_rejected_with_403` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestLakehouseAPIEndpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_central_lab` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestLakehouseNormalization` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_edc_ecrf` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestLakehouseNormalization` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_ehr_fhir` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestLakehouseNormalization` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_epro_ecoa` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestLakehouseNormalization` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_iot_wearables` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestLakehouseNormalization` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_local_lab` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestLakehouseNormalization` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_medical_imaging` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestLakehouseNormalization` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_full_lakehouse_ingest_pool_snapshot_verify_lifecycle` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestLakehouseServiceLayer` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_basic_detection_results` | `apps.interop.tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_get_line_and_col` | `apps.interop.tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_load_gitignore_patterns` | `apps.interop.tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2340,6 +2355,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_search_published_articles_success` | `apps.knowledge.tests.test_search` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
 | `test_search_relevance_ranking_order` | `apps.knowledge.tests.test_search` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
 | `test_search_rest_api_endpoint` | `apps.knowledge.tests.test_search` | PRD-SYS-KH-001 | 🟢 PASSED | < 1s |
+| `test_edc_write_qualification_gating_lifecycle` | `apps.knowledge.tests.test_training_amendment_edc_gating` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_part11_signature_certificate_and_vault_routing` | `apps.knowledge.tests.test_training_amendment_edc_gating` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_protocol_amendment_delta_curriculum_generation` | `apps.knowledge.tests.test_training_amendment_edc_gating` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rest_api_training_endpoints` | `apps.knowledge.tests.test_training_amendment_edc_gating` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_time_tracking_and_quiz_scoring_threshold` | `apps.knowledge.tests.test_training_amendment_edc_gating` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_publish_notification_failure_swallowed` | `apps.notifications.tests.test_clinical_workflow_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_publish_notification_success` | `apps.notifications.tests.test_clinical_workflow_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_router_send_dashboard_notification_sdv_drop` | `apps.notifications.tests.test_clinical_workflow_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2476,6 +2496,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_simulation_dataset_generator` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-001 | 🟢 PASSED | < 1s |
 | `test_terminal_digit_uniform_distribution_and_rounding_bias` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-001 | 🟢 PASSED | < 1s |
 | `test_variance_shrinkage_and_kullback_leibler_divergence` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-002 | 🟢 PASSED | < 1s |
+| `test_automated_kri_definitions_and_statistical_evaluations` | `apps.quality.tests.test_quality_transcelerate_ract_kri` | PRD-CSM-005 | 🟢 PASSED | < 1s |
+| `test_composite_site_risk_index_and_percentile_rankings` | `apps.quality.tests.test_quality_transcelerate_ract_kri` | PRD-CSM-005 | 🟢 PASSED | < 1s |
+| `test_one_click_centralized_monitoring_inspection_dossier_compilation` | `apps.quality.tests.test_quality_transcelerate_ract_kri` | PRD-CSM-006, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_ract_matrix_summary_and_default_seeding` | `apps.quality.tests.test_quality_transcelerate_ract_kri` | PRD-CSM-005 | 🟢 PASSED | < 1s |
+| `test_ract_risk_factor_lifecycle` | `apps.quality.tests.test_quality_transcelerate_ract_kri` | PRD-CSM-005 | 🟢 PASSED | < 1s |
+| `test_ract_validation_errors_and_unauthorized_access` | `apps.quality.tests.test_quality_transcelerate_ract_kri` | PRD-CSM-005, PRD-SYS-003 | 🟢 PASSED | < 1s |
+| `test_transcelerate_six_categories_and_kri_linkage` | `apps.quality.tests.test_quality_transcelerate_ract_kri` | PRD-CSM-005 | 🟢 PASSED | < 1s |
 | `test_audit_log_endpoint_properties` | `apps.quality.tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_capa_approval_closure_requires_quality_oversight` | `apps.quality.tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_capa_creation_validations` | `apps.quality.tests.test_quality_workflow` | PRD-SUB-001 | 🟢 PASSED | < 1s |
@@ -3664,28 +3691,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** d7c7987dfb664e991b8317fde5c7588cd88b94645eb8b470658cf1eea7a58528
+- **Cryptographic Hash (SHA-256):** a7ff4ca75c3d934aff7d8ef4d13ea85d6ec3a062c44e498f8ef2c838aa4e4e08
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUQEerwDMloImoRSmKTqby/1xDoWcwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUQGiLcQDUdDz/F2pB1gWse14FPk4wDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MjE1NDY0NVoXDTI3MDgyMzE1NDY0NVowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MjE2NTIxN1oXDTI3MDgyMzE2NTIxN1owUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAkqqL
-ukVfurMGcjUL/ZEMMARN8hYAIBMuk9atJlCqVvcxgPwVrVNt17wm2b7gEKHy8CVZ
-MfJZQRVn+fGCL9kuZLwH4sN55WaiLqpn/1FHz+NaG8TP9HTE3p3PdC1uewPtan8Z
-E+0XPAN7S7lww65cZtKoPImd+qXyNRph1neDVLDnas262OZrmEvxPJkT/5k2qR0V
-M4gPuXLE2oVr4xraFyPobWsy7KLHoIKqjKKpBkC/I0VfWL7NTwy2chZXBG6EYboS
-0ptaO/0N/RLIzIpyBXBMvXr1tB/xsR4t2em30zj3UrfDMa6Q0B/UAyPKNDVI7dRN
-QFdsiB2VNVtAlW94jQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAaTQ0a9l7Y3VIx
-X2tWghtvYw8bOP+tG0Zz4MFSHJi+cqHyJ0QXwgGx3Cp0a8n+D+brAuSkmt9rWSi6
-5Denl3VOvR4q87EmcDms/PU+LJR0nkG9Ouw0CpFFXqm3li5346iR/vnDoHoel4xx
-vr6+Fzu5/CdkXU08Vd3MA+AzpNqp+RW8OqCpkp3/SXaMz5oB0QqUOZts/ZUL1Env
-QtPEdu6Qa6aCDTr0eRamzSlSA/yenpvYc0ldFu0U7p0mcgSH2MKkYHiirCAAGiVT
-hgBFttPY9AHxbGBRgsLUwyDvg+7I9X2LeICU3Ielz343RrmuCDV+5xAtx+OpLS57
-lVJNMUx/
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAx5Y1
+cUWpSvdGYFpjHNk2RejOVASQ9BZnmzABaXo/G3Z++8r/BfEOgVTFSDFYiLs0+0Jo
+fcGinfadUbNyP2yNL+eY2iCqGRzUJUee6IwO2drt+fcIxU8kJYEQ7h6Vo2WfBamz
+DSl1TO6CuF4x5znYUlz2ARNSE09vNROmhHc3om/B1NcW08fHbrhWOqBEFttJS5nD
+G1kjKHw4ucT72YoriGCZDeHPanLh9yl9tiwC9Zq2QE6b/LxSb2lv4C36kXz6fAua
+n/jObp9HOlTjZAjpVrRp1BjoW6iiNxG/BN9QBMKD5lh2IfM6Er51+XmGA7YV+ott
+sZQKigPoEG9oKFufDQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBcRkrBwr8nEmyS
+TvmsRyoKCudJVZ2up1EQxmLlomuMWfUy1AwLHjWkaNJU/anIKWUHuDn5EMpcqM/m
+m3IybhbJZVyESp+TgiHeCNqgME5gMcv1DLfeOwcY86JHK+we8SLuvCnUJop4hNnY
+xKku8DqY2nlw/ym3fJZ/fo0zueSB9VVCGBRQIQLOvmSYbFZYjhY/2vlrBdmHXRyj
+AiOmTV6JuHKi+DdpkbcEx7dchkBzWYIhIJqWoD+7jte2UxBUlVM7E7XCCWcEOTEE
+MVnGwFoyhY2Y9MOI27wSTjpCi0CLew9f/En6rO8m/UniBMx3WrOCGjtuIUIkK8j5
+r8108s1l
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-LkBzkMp2rTeUcKcqpguuHED5YFFicko5cKmOnWOXnMbQmtyaYZIL3LQ317p6UZfKXSePqYlmRChz07Q9U0yWnW5XFa83EU8vZl24vB120wr1hreLC2TYxzn3Lveg9pfq+W4T5ar/nwuybKOLrnvRVE4XmGpQGnPPMRZInadUnZ9slquOrqJ44GXUWaaVlEWhX2Sj5HYvk0WCsBerAUpRkneNKTLdSTy3upduDVEVeSq7Ir3dwUj118CPPkk7JI5C+qmbCT1Rs33hTdJFKtRf/4H4UQogmeQIHbxiDDTZM+DrIUW7zPMXtFKaF4c+57HayrRvpVLdkR2geUamBkyOvw==
+MYNQmxJjrBwJ4GGQ7tqO2pT62r/pCjbGmIAC4ceqwMXvgQcSRkAwHGjpr5twFiXO5TjlQ2OYo1Stbudt8tQ5Gnd7bULbndW5j70R0gxqqnv5WmahccNUntFjNPAt2ACCNiIDaM/8gTKCG5z+ozEe4NI9cNAB0f8UQGnYhyQKFohiqiJOSHYULf9mEvGIfct3mFWUSQ1G9zwN5zVpZM8u+5ZA3dlqzpriennLTpWq5BQanC1Qk1LIVhCVwPu7bd4a2BG1Yg+Qgkazn/tsGtIoVrwHugboSJ4ph5Ys8MJwmJ8djNpMxvgXljlqlBMwN5LE4vwbColLK/nM5vga00aA7Q==
 -----END SIGNATURE-----

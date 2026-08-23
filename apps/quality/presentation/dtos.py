@@ -22,6 +22,7 @@ from apps.quality.domain.models import (
     FindingSeverity,
     ForensicsAnomalyFlag,
     ImageTransformationType,
+    RACTCategory,
     RCAMethodology,
     RiskCategory,
     RiskTier,
@@ -420,8 +421,152 @@ class SiteRiskProfileResponse(BaseModel):
     evaluation_date: str
     composite_risk_score: float
     risk_rank: int
+    percentile_rank: float = 0.0
+    risk_tier: str = "LOW"
     high_risk_kri_count: int
     active_deviations_count: int
+    created_at: str
+    created_by: str
+    version_index: int
+    reason_for_change: str
+
+
+# --- TransCelerate RACT DTOs (PRD-CSM-005) ---
+
+
+class RACTRiskFactorCreate(BaseModel):
+    study_id: str = Field(..., description="Study ID")
+    category: RACTCategory = Field(
+        ...,
+        description="Protocol risk category: SAFETY, CONSENT, STUDY_CONDUCT, DATA_INTEGRITY, IP_MANAGEMENT, TECHNOLOGY",
+    )
+    risk_topic: str = Field(
+        ...,
+        max_length=255,
+        description="Concise risk factor title / topic (e.g. Complex Dosing)",
+    )
+    risk_description: str = Field(
+        ..., description="Detailed description of the potential risk"
+    )
+    probability_score: int = Field(
+        ..., ge=1, le=3, description="Likelihood score: 1=Low, 2=Medium, 3=High"
+    )
+    impact_score: int = Field(
+        ..., ge=1, le=3, description="Impact severity score: 1=Low, 2=Medium, 3=High"
+    )
+    detectability_score: int = Field(
+        ...,
+        ge=1,
+        le=3,
+        description="Detectability score: 1=High (Easy), 2=Medium, 3=Low (Hard)",
+    )
+    mitigation_strategy: str = Field(
+        ..., description="Operational risk mitigation and control plan"
+    )
+    linked_kri_code: str | None = Field(
+        None, description="Optional code of linked automated Key Risk Indicator"
+    )
+
+
+class RACTRiskFactorUpdate(BaseModel):
+    risk_topic: str | None = Field(
+        None, max_length=255, description="Updated risk topic"
+    )
+    risk_description: str | None = Field(None, description="Updated risk description")
+    probability_score: int | None = Field(
+        None, ge=1, le=3, description="Updated probability score"
+    )
+    impact_score: int | None = Field(
+        None, ge=1, le=3, description="Updated impact score"
+    )
+    detectability_score: int | None = Field(
+        None, ge=1, le=3, description="Updated detectability score"
+    )
+    mitigation_strategy: str | None = Field(
+        None, description="Updated mitigation strategy"
+    )
+    linked_kri_code: str | None = Field(None, description="Updated linked KRI code")
+    is_active: bool | None = Field(None, description="Active status flag")
+
+
+class RACTRiskFactorResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    study_id: str
+    category: str
+    risk_topic: str
+    risk_description: str
+    probability_score: int
+    impact_score: int
+    detectability_score: int
+    total_risk_score: int
+    risk_tier: str
+    mitigation_strategy: str
+    linked_kri_code: str | None = None
+    is_active: bool = True
+    created_at: str
+    created_by: str
+    version_index: int
+    reason_for_change: str
+
+
+class RACTCategorySummary(BaseModel):
+    category: str
+    total_factors: int
+    high_count: int
+    medium_count: int
+    low_count: int
+    average_score: float
+    linked_kri_count: int
+
+
+class RACTMatrixSummaryResponse(BaseModel):
+    study_id: str
+    total_risk_factors: int
+    high_risk_count: int
+    medium_risk_count: int
+    low_risk_count: int
+    overall_average_score: float
+    linked_kri_coverage_percentage: float
+    category_summaries: list[RACTCategorySummary]
+    risk_factors: list[RACTRiskFactorResponse]
+
+
+# --- Centralized Monitoring Inspection Dossier DTOs (PRD-CSM-006) ---
+
+
+class CompileCSMDossierRequest(BaseModel):
+    study_id: str = Field(..., description="Clinical study ID")
+    dossier_name: str | None = Field(
+        None, description="Custom name for the compiled inspection dossier"
+    )
+    signer_name: str = Field(..., description="Full legal name of the reviewing signer")
+    signer_role: str = Field(
+        ..., description="Role of the signer (e.g. Lead Central Monitor / QA Lead)"
+    )
+    signature_meaning: str = Field(
+        "I approve this Centralized Monitoring Inspection Dossier in accordance with 21 CFR Part 11 and ICH E6(R3).",
+        description="21 CFR Part 11 controlled signing statement",
+    )
+
+
+class CSMDossierResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    study_id: str
+    dossier_name: str
+    generated_at: str
+    generated_by: str
+    status: str
+    ract_summary: dict[str, Any]
+    kri_surveillance_summary: dict[str, Any]
+    site_risk_rankings: list[dict[str, Any]]
+    anomaly_forensics_summary: dict[str, Any]
+    electronic_signature: dict[str, Any]
+    audit_trail_snapshot: list[dict[str, Any]]
+    merkle_seal: str | None = None
     created_at: str
     created_by: str
     version_index: int

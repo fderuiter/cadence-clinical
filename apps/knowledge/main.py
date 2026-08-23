@@ -12,6 +12,7 @@ import os
 
 from fastapi import FastAPI
 
+import apps.knowledge.infrastructure.training_models  # noqa: F401
 from apps.knowledge.adapters.database import db_manager, get_db_session
 from apps.knowledge.infrastructure.models import Base
 from apps.knowledge.presentation.routers.articles import (
@@ -19,6 +20,9 @@ from apps.knowledge.presentation.routers.articles import (
 )
 from apps.knowledge.presentation.routers.protocols import (
     router as protocols_router,
+)
+from apps.knowledge.presentation.routers.training import (
+    router as training_router,
 )
 from packages.database import get_relational_db_lifespan
 from packages.security import validate_branding
@@ -42,9 +46,10 @@ app = FastAPI(
 # Enforce secure gateway authentication on every request
 app.add_middleware(GatewayAuthMiddleware)
 
-# Mount the articles/categories/contextual-help router
+# Mount the articles/categories/contextual-help and training routers
 app.include_router(articles_router)
 app.include_router(protocols_router)
+app.include_router(training_router)
 
 
 @app.get("/health")

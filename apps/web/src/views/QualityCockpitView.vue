@@ -188,6 +188,13 @@
     <div class="quality-tabs-bar">
       <button
         class="quality-tab-btn"
+        :class="{ active: activeTab === 'ract' }"
+        @click="activeTab = 'ract'"
+      >
+        <span class="tab-icon">📋</span> TransCelerate RACT Matrix
+      </button>
+      <button
+        class="quality-tab-btn"
         :class="{ active: activeTab === 'rbqm' }"
         @click="activeTab = 'rbqm'"
       >
@@ -228,6 +235,14 @@
       >
         <span class="tab-icon">🔬</span> Statistical Forensics (CSM)
       </button>
+    </div>
+
+    <!-- Tab 0: TransCelerate RACT Matrix -->
+    <div
+      v-if="activeTab === 'ract'"
+      class="tab-content"
+    >
+      <RactMatrixViewer />
     </div>
 
     <!-- Tab 1: RBQM & Risk Index -->
@@ -1307,6 +1322,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import RactMatrixViewer from "@/components/quality/RactMatrixViewer.vue";
 import StatisticalForensicsViewer from "@/components/quality/StatisticalForensicsViewer.vue";
 
 

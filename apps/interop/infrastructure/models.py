@@ -264,3 +264,16 @@ class EPROSubmissionQuarantine(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), onupdate=func.now(), nullable=False
     )
+
+
+__all__ = [
+    "Base",
+    "ClinicalQuery",
+    "EPROSubmission",
+    "EPROSubmissionDefeated",
+    "EPROSubmissionQuarantine",
+    "Instrument",
+    "InteropAuditLog",
+    "SubjectAssignment",
+    "SubjectNotification",
+]

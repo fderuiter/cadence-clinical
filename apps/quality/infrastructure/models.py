@@ -30,6 +30,7 @@ from apps.quality.domain.models import (
     FindingSeverity,
     ForensicsAnomalyFlag,
     ImageTransformationType,
+    RACTCategory,
     RCAMethodology,
     RiskCategory,
     RiskTier,
@@ -405,10 +406,94 @@ class SiteRiskProfile(Base):
         Float, default=0.0, nullable=False
     )
     risk_rank: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    percentile_rank: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    risk_tier: Mapped[str] = mapped_column(
+        String(50), default=RiskTier.LOW, nullable=False
+    )
     high_risk_kri_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     active_deviations_count: Mapped[int] = mapped_column(
         Integer, default=0, nullable=False
     )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+
+class RACTRiskFactor(Base):
+    """
+    TransCelerate Risk Assessment and Categorization Tool (RACT) protocol risk factor
+    capturing category, probability, impact, detectability, composite score, and linked KRI.
+    """
+
+    __tablename__ = "quality_ract_risk_factors"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    category: Mapped[str] = mapped_column(
+        String(50), default=RACTCategory.SAFETY, nullable=False, index=True
+    )
+    risk_topic: Mapped[str] = mapped_column(String(255), nullable=False)
+    risk_description: Mapped[str] = mapped_column(String, nullable=False)
+    probability_score: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    impact_score: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    detectability_score: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    total_risk_score: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    risk_tier: Mapped[str] = mapped_column(
+        String(50), default=RiskTier.LOW, nullable=False
+    )
+    mitigation_strategy: Mapped[str] = mapped_column(String, nullable=False)
+    linked_kri_code: Mapped[str | None] = mapped_column(
+        String(50), nullable=True, index=True
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+
+class CentralizedMonitoringDossier(Base):
+    """
+    On-demand Centralized Monitoring Inspection Dossier summarizing RACT matrix,
+    KRI distributions, composite SRI rankings, forensics anomalies, and Part 11 e-signatures.
+    """
+
+    __tablename__ = "quality_csm_dossiers"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    dossier_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    generated_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="FINALIZED", nullable=False)
+    ract_summary: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    kri_surveillance_summary: Mapped[dict] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+    site_risk_rankings: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    anomaly_forensics_summary: Mapped[dict] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+    electronic_signature: Mapped[dict] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+    audit_trail_snapshot: Mapped[list] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    merkle_seal: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False

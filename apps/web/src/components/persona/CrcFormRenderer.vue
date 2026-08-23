@@ -129,10 +129,75 @@
         </div>
       </div>
 
+      <!-- Protocol Training Qualification Gating Banner (PRD-TRN-002) -->
+      <div
+        v-if="isTrainingGated"
+        id="training-gating-banner"
+        class="training-banner"
+        style="
+          background-color: #fffbeb;
+          border: 2px solid #f59e0b;
+          border-radius: 8px;
+          padding: 16px 20px;
+          margin-bottom: var(--spacing-md);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 12px;
+        "
+      >
+        <div>
+          <div
+            style="
+              font-size: 1.05rem;
+              font-weight: 700;
+              color: #92400e;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            "
+          >
+            <span>🎓</span>
+            <span>Mandatory Protocol Training Incomplete — EDC Write Gated</span>
+          </div>
+          <p style="margin: 4px 0 0 0; font-size: 0.875rem; color: #78350f">
+            Under ICH GCP E6(R2) §4 &amp; PRD-TRN-002, site staff must complete mandatory protocol amendment training before saving or signing eCRF entries.
+          </p>
+        </div>
+        <div>
+          <router-link
+            to="/training"
+            custom
+            v-slot="{ navigate }"
+          >
+            <button
+              id="btn-complete-training"
+              type="button"
+              class="btn btn-primary"
+              style="
+                background-color: #d97706;
+                color: white;
+                font-weight: bold;
+                padding: 8px 14px;
+                font-size: 0.85rem;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+              "
+              @click="navigate"
+            >
+              Complete Training Now ➡️
+            </button>
+          </router-link>
+        </div>
+      </div>
+
       <!-- Protocol Amendment Re-Consent Gating Banner -->
       <div
         v-if="isReconsentGated"
         id="reconsent-gating-banner"
+
         class="reconsent-banner"
         style="
           background-color: #fef2f2;
@@ -923,7 +988,9 @@ const props = defineProps({
   selectedSubjectId: { type: String, required: true },
   selectedVisitId: { type: String, required: true },
   isReconsentGated: { type: Boolean, required: true },
+  isTrainingGated: { type: Boolean, default: false },
   showEconsentModal: { type: Boolean, required: true },
+
   showPaperIcfModal: { type: Boolean, required: true },
   reconsentSubmitting: { type: Boolean, required: true },
   econsentSignerName: { type: String, required: true },

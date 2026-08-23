@@ -393,6 +393,7 @@ SERVICES = {
     "econsent": os.getenv("ECONSENT_URL", "http://localhost:8011"),
     "fileshare": os.getenv("FILESHARE_URL", "http://localhost:8013"),
     "imaging": os.getenv("IMAGING_URL", "http://localhost:8014"),
+    "knowledge": os.getenv("KNOWLEDGE_URL", "http://localhost:8015"),
 }
 
 
@@ -1521,6 +1522,10 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['fileshare']}/{path}"
     elif path.startswith("api/v1/compliance") or path.startswith("api/v1/tickets"):
         target_url = f"{SERVICES['tickets']}/{path}"
+    elif path.startswith("knowledge/"):
+        target_url = f"{SERVICES['knowledge']}/{path[len('knowledge/') :]}"
+    elif path.startswith("api/v1/knowledge") or path.startswith("api/v1/training"):
+        target_url = f"{SERVICES['knowledge']}/{path}"
     elif path == "events/publish":
         target_url = f"{SERVICES['eisf']}/events/publish"
     else:

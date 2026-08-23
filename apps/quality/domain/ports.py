@@ -158,11 +158,44 @@ class QualityRepositoryPort(RepositoryPort[Any]):
         pass
 
     @abstractmethod
-    async def get_qtl_breaches(self, study_id: str) -> Sequence[Any]:
+    def create_ract_risk_factor_entity(self, **kwargs) -> Any:
         pass
 
     @abstractmethod
-    async def save_qtl_breach(self, breach: Any) -> Any:
+    async def save_ract_risk_factor(self, factor: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def get_ract_risk_factors(
+        self,
+        study_id: str,
+        category: str | None = None,
+        is_active: bool | None = None,
+    ) -> Sequence[Any]:
+        pass
+
+    @abstractmethod
+    async def get_ract_risk_factor_by_id(self, factor_id: str) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def delete_ract_risk_factor(self, factor_id: str) -> bool:
+        pass
+
+    @abstractmethod
+    def create_csm_dossier_entity(self, **kwargs) -> Any:
+        pass
+
+    @abstractmethod
+    async def save_csm_dossier(self, dossier: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def get_csm_dossiers(self, study_id: str) -> Sequence[Any]:
+        pass
+
+    @abstractmethod
+    async def get_csm_dossier_by_id(self, dossier_id: str) -> Any | None:
         pass
 
     # --- Clinical Audits & Findings ---

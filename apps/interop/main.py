@@ -13,6 +13,9 @@ from apps.interop.infrastructure.models import Base
 from apps.interop.presentation.routers.interop import (
     router as interop_router,
 )
+from apps.interop.presentation.routers.lakehouse import (
+    router as lakehouse_router,
+)
 from packages.database import get_relational_db_lifespan
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
@@ -51,8 +54,9 @@ async def health_check() -> dict[str, str]:
     return {"status": "ok", "service": "interop"}
 
 
-# Include Interop router
+# Include Interop & Lakehouse routers
 app.include_router(interop_router)
+app.include_router(lakehouse_router)
 
 from apps.interop.infrastructure.designer_client import (  # noqa: E402
     fetch_eligibility_criteria,

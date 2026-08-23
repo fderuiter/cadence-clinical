@@ -46,11 +46,13 @@ from apps.quality.presentation.routers.forensics import (
 )
 from apps.quality.presentation.routers.rbqm import (
     map_ctq_to_response,
+    map_dossier_to_response,
     map_kri_definition_to_response,
     map_kri_eval_to_response,
     map_profile_to_response,
     map_qtl_breach_to_response,
     map_qtl_to_response,
+    map_ract_factor_to_response,
 )
 from apps.quality.presentation.routers.rbqm import (
     router as rbqm_router,
@@ -95,6 +97,7 @@ __all__ = [
     "map_data_integrity_finding_to_response",
     "map_data_integrity_run_to_response",
     "map_deviation_to_response",
+    "map_dossier_to_response",
     "map_effectiveness_check_to_response",
     "map_finding_to_response",
     "map_kri_definition_to_response",
@@ -102,6 +105,7 @@ __all__ = [
     "map_profile_to_response",
     "map_qtl_breach_to_response",
     "map_qtl_to_response",
+    "map_ract_factor_to_response",
     "map_rca_to_response",
     "map_run_to_response",
     "map_site_forensics_to_response",

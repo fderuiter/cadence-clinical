@@ -10,6 +10,7 @@ from apps.quality.adapters.models import (
     CAPAActionItem,
     CAPAEffectivenessCheck,
     CAPARecord,
+    CentralizedMonitoringDossier,
     CtQFactor,
     DataIntegrityFindingRecord,
     DataIntegritySentinelRun,
@@ -20,6 +21,7 @@ from apps.quality.adapters.models import (
     QualityAudit,
     QualityAuditLog,
     QualityToleranceLimit,
+    RACTRiskFactor,
     RootCauseAnalysis,
     SeriousBreachRecord,
     SiteForensicsRecord,
@@ -316,6 +318,83 @@ class SQLQualityRepository(QualityRepositoryPort):
         self.session.add(breach)
         await self.session.flush()
         return breach
+
+    # --- TransCelerate RACT & Centralized Monitoring Inspection Dossiers ---
+
+    def create_ract_risk_factor_entity(self, **kwargs) -> RACTRiskFactor:
+        return RACTRiskFactor(**kwargs)
+
+    @map_database_exceptions
+    async def save_ract_risk_factor(self, factor: RACTRiskFactor) -> RACTRiskFactor:
+        self.session.add(factor)
+        await self.session.flush()
+        return factor
+
+    @map_database_exceptions
+    async def get_ract_risk_factors(
+        self,
+        study_id: str,
+        category: str | None = None,
+        is_active: bool | None = None,
+    ) -> Sequence[RACTRiskFactor]:
+        stmt = select(RACTRiskFactor).where(RACTRiskFactor.study_id == study_id)
+        if category:
+            stmt = stmt.where(RACTRiskFactor.category == category)
+        if is_active is not None:
+            stmt = stmt.where(RACTRiskFactor.is_active.is_(is_active))
+        stmt = stmt.order_by(
+            RACTRiskFactor.total_risk_score.desc(), RACTRiskFactor.created_at.asc()
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
+    @map_database_exceptions
+    async def get_ract_risk_factor_by_id(self, factor_id: str) -> RACTRiskFactor | None:
+        stmt = select(RACTRiskFactor).where(RACTRiskFactor.id == factor_id)
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
+    @map_database_exceptions
+    async def delete_ract_risk_factor(self, factor_id: str) -> bool:
+        factor = await self.get_ract_risk_factor_by_id(factor_id)
+        if factor:
+            await self.session.delete(factor)
+            await self.session.flush()
+            return True
+        return False
+
+    def create_csm_dossier_entity(self, **kwargs) -> CentralizedMonitoringDossier:
+        return CentralizedMonitoringDossier(**kwargs)
+
+    @map_database_exceptions
+    async def save_csm_dossier(
+        self, dossier: CentralizedMonitoringDossier
+    ) -> CentralizedMonitoringDossier:
+        self.session.add(dossier)
+        await self.session.flush()
+        return dossier
+
+    @map_database_exceptions
+    async def get_csm_dossiers(
+        self, study_id: str
+    ) -> Sequence[CentralizedMonitoringDossier]:
+        stmt = (
+            select(CentralizedMonitoringDossier)
+            .where(CentralizedMonitoringDossier.study_id == study_id)
+            .order_by(CentralizedMonitoringDossier.generated_at.desc())
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
+    @map_database_exceptions
+    async def get_csm_dossier_by_id(
+        self, dossier_id: str
+    ) -> CentralizedMonitoringDossier | None:
+        stmt = select(CentralizedMonitoringDossier).where(
+            CentralizedMonitoringDossier.id == dossier_id
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
 
     # --- Clinical Audits & Findings ---
 

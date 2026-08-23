@@ -216,6 +216,22 @@ const routes = [
     },
   },
   {
+    path: "/lakehouse",
+    name: "lakehouse",
+    component: () => import("../views/LakehouseView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: [
+        "data_manager",
+        "sponsor_designer",
+        "sponsor_admin",
+        "sponsor_statistician",
+        "unblinded_statistician",
+        "super_admin",
+      ],
+    },
+  },
+  {
     path: "/exports",
     name: "exports",
     component: () => import("../views/ExportWizardView.vue"),
@@ -296,7 +312,16 @@ const routes = [
       requiresAuth: true,
     },
   },
+  {
+    path: "/training",
+    name: "training",
+    component: () => import("../views/StudyTrainingView.vue"),
+    meta: {
+      requiresAuth: true,
+    },
+  },
 ];
+
 
 export const router = createRouter({
   // Use a GitHub Pages-compatible history mode resolving from the configured Pages base path

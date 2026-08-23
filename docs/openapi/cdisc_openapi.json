@@ -18612,6 +18612,50 @@
         }
       }
     },
+    "/execution/api/v1/execution/amendments/verify-training-gate": {
+      "post": {
+        "tags": [
+          "Amendments"
+        ],
+        "summary": "Verify Training Gate Endpoint",
+        "description": "Programmatically verify training qualification for EDC write and signature permissions.\n\nRequirements: PRD-TRN-002",
+        "operationId": "Execution_verify_training_gate_endpoint_api_v1_execution_amendments_verify_training_gate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_VerifyTrainingGatingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Verify Training Gate Endpoint Api V1 Execution Amendments Verify Training Gate Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/execution/api/v1/execution/anomalies/evaluate": {
       "post": {
         "tags": [
@@ -32750,6 +32794,473 @@
         }
       }
     },
+    "/interop/api/v1/interop/lakehouse/ingest": {
+      "post": {
+        "tags": [
+          "CDR Lakehouse"
+        ],
+        "summary": "Ingest heterogeneous clinical stream data",
+        "description": "Ingest and normalize heterogeneous trial streams (EDC, ePRO, Labs, Wearables, FHIR, Imaging).",
+        "operationId": "Interop_ingest_stream_data_api_v1_interop_lakehouse_ingest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_MultiStreamIngestPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_IngestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/interop/api/v1/interop/lakehouse/snapshots": {
+      "post": {
+        "tags": [
+          "CDR Lakehouse"
+        ],
+        "summary": "Create an immutable, version-pinned clinical data snapshot",
+        "description": "Pool lakehouse observations into an immutable, version-pinned snapshot sealed with SHA-256.",
+        "operationId": "Interop_create_snapshot_api_v1_interop_lakehouse_snapshots_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_CreateSnapshotRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_SnapshotResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CDR Lakehouse"
+        ],
+        "summary": "List version-pinned snapshots for a study",
+        "description": "Retrieve all sealed, version-pinned snapshots for the specified study.",
+        "operationId": "Interop_list_snapshots_api_v1_interop_lakehouse_snapshots_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study identifier",
+              "title": "Study Id"
+            },
+            "description": "Study identifier"
+          },
+          {
+            "name": "milestone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional milestone filter",
+              "title": "Milestone"
+            },
+            "description": "Optional milestone filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_SnapshotListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/interop/api/v1/interop/lakehouse/snapshots/{snapshot_id}": {
+      "get": {
+        "tags": [
+          "CDR Lakehouse"
+        ],
+        "summary": "Retrieve snapshot metadata and seal info",
+        "description": "Fetch metadata and cryptographic digest for a specific snapshot.",
+        "operationId": "Interop_get_snapshot_details_api_v1_interop_lakehouse_snapshots__snapshot_id__get",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_SnapshotResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/interop/api/v1/interop/lakehouse/snapshots/{snapshot_id}/query": {
+      "post": {
+        "tags": [
+          "CDR Lakehouse"
+        ],
+        "summary": "Query pooled records inside a version-pinned snapshot",
+        "description": "Query observations pooled inside a snapshot, enforcing role-based unblinded masking.",
+        "operationId": "Interop_query_snapshot_data_api_v1_interop_lakehouse_snapshots__snapshot_id__query_post",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_SnapshotDataQueryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_SnapshotDataQueryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/interop/api/v1/interop/lakehouse/snapshots/{snapshot_id}/data": {
+      "get": {
+        "tags": [
+          "CDR Lakehouse"
+        ],
+        "summary": "Fetch snapshot pool data records via GET",
+        "description": "Convenience endpoint to retrieve observations in a snapshot pool.",
+        "operationId": "Interop_get_snapshot_data_api_v1_interop_lakehouse_snapshots__snapshot_id__data_get",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Snapshot Id"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional subject filter",
+              "title": "Subject Id"
+            },
+            "description": "Optional subject filter"
+          },
+          {
+            "name": "domain",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional domain filter",
+              "title": "Domain"
+            },
+            "description": "Optional domain filter"
+          },
+          {
+            "name": "stream_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Interop_DataStreamType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional stream filter",
+              "title": "Stream Type"
+            },
+            "description": "Optional stream filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_SnapshotDataQueryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/interop/api/v1/interop/lakehouse/snapshots/{snapshot_id}/verify": {
+      "post": {
+        "tags": [
+          "CDR Lakehouse"
+        ],
+        "summary": "Verify cryptographic SHA-256 integrity of sealed snapshot",
+        "description": "Recompute and verify the SHA-256 seal against all pooled records in the snapshot.",
+        "operationId": "Interop_verify_snapshot_api_v1_interop_lakehouse_snapshots__snapshot_id__verify_post",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_VerifySnapshotResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/interop/api/v1/interop/lakehouse/snapshots/{snapshot_id}/audit-trail": {
+      "get": {
+        "tags": [
+          "CDR Lakehouse"
+        ],
+        "summary": "Retrieve 21 CFR Part 11 audit log for a snapshot",
+        "description": "Retrieve all chronological 21 CFR Part 11 audit trail entries for a snapshot.",
+        "operationId": "Interop_get_snapshot_audit_trail_api_v1_interop_lakehouse_snapshots__snapshot_id__audit_trail_get",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_SnapshotAuditTrailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/interop/api/v1/interop/lakehouse/metrics/{study_id}": {
+      "get": {
+        "tags": [
+          "CDR Lakehouse"
+        ],
+        "summary": "Retrieve real-time Lakehouse stream and snapshot metrics",
+        "description": "Aggregate real-time data stream, subject, site, and snapshot metrics for a study.",
+        "operationId": "Interop_get_metrics_api_v1_interop_lakehouse_metrics__study_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_LakehouseMetricsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/knowledge/api/v1/knowledge/categories": {
       "get": {
         "tags": [
@@ -34462,6 +34973,710 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Knowledge_ProtocolSearchResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/knowledge/api/v1/training/curricula/generate-amendment": {
+      "post": {
+        "tags": [
+          "Study Training & Gating"
+        ],
+        "summary": "Generate Amendment Curriculum Endpoint",
+        "description": "Generate a delta-training curriculum upon protocol amendment publication.\n\nRequirements: PRD-TRN-001",
+        "operationId": "Knowledge_generate_amendment_curriculum_endpoint_api_v1_training_curricula_generate_amendment_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Knowledge_GenerateAmendmentCurriculumRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_TrainingCurriculumResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/knowledge/api/v1/training/curricula": {
+      "get": {
+        "tags": [
+          "Study Training & Gating"
+        ],
+        "summary": "List Curricula Endpoint",
+        "description": "List active training curricula.",
+        "operationId": "Knowledge_list_curricula_endpoint_api_v1_training_curricula_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Study scope filter",
+              "title": "Study Id"
+            },
+            "description": "Study scope filter"
+          },
+          {
+            "name": "protocol_version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Protocol version filter",
+              "title": "Protocol Version"
+            },
+            "description": "Protocol version filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_TrainingCurriculumResponse"
+                  },
+                  "title": "Response List Curricula Endpoint Api V1 Training Curricula Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/knowledge/api/v1/training/curricula/{curriculum_id}": {
+      "get": {
+        "tags": [
+          "Study Training & Gating"
+        ],
+        "summary": "Get Curriculum Endpoint",
+        "description": "Retrieve details for a single training curriculum.",
+        "operationId": "Knowledge_get_curriculum_endpoint_api_v1_training_curricula__curriculum_id__get",
+        "parameters": [
+          {
+            "name": "curriculum_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Curriculum Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_TrainingCurriculumResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/knowledge/api/v1/training/curricula/{curriculum_id}/assign": {
+      "post": {
+        "tags": [
+          "Study Training & Gating"
+        ],
+        "summary": "Assign Curriculum Endpoint",
+        "description": "Assign a training curriculum to a site user.",
+        "operationId": "Knowledge_assign_curriculum_endpoint_api_v1_training_curricula__curriculum_id__assign_post",
+        "parameters": [
+          {
+            "name": "curriculum_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Curriculum Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Knowledge_AssignCurriculumRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_TrainingAssignmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/knowledge/api/v1/training/assignments": {
+      "get": {
+        "tags": [
+          "Study Training & Gating"
+        ],
+        "summary": "List Assignments Endpoint",
+        "description": "List training assignments for a user or site.",
+        "operationId": "Knowledge_list_assignments_endpoint_api_v1_training_assignments_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_TrainingAssignmentResponse"
+                  },
+                  "title": "Response List Assignments Endpoint Api V1 Training Assignments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/knowledge/api/v1/training/assignments/{assignment_id}": {
+      "get": {
+        "tags": [
+          "Study Training & Gating"
+        ],
+        "summary": "Get Assignment Detail Endpoint",
+        "description": "Retrieve full details of an assignment including curriculum modules.",
+        "operationId": "Knowledge_get_assignment_detail_endpoint_api_v1_training_assignments__assignment_id__get",
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assignment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_TrainingAssignmentDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/knowledge/api/v1/training/assignments/{assignment_id}/progress": {
+      "post": {
+        "tags": [
+          "Study Training & Gating"
+        ],
+        "summary": "Record Progress Endpoint",
+        "description": "Record reading duration and time-on-page tracking.",
+        "operationId": "Knowledge_record_progress_endpoint_api_v1_training_assignments__assignment_id__progress_post",
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assignment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Knowledge_RecordProgressRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_TrainingAssignmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/knowledge/api/v1/training/assignments/{assignment_id}/submit-quiz": {
+      "post": {
+        "tags": [
+          "Study Training & Gating"
+        ],
+        "summary": "Submit Quiz Endpoint",
+        "description": "Submit comprehension quiz answers and evaluate score (>= 80% passing).\n\nRequirements: PRD-TRN-003",
+        "operationId": "Knowledge_submit_quiz_endpoint_api_v1_training_assignments__assignment_id__submit_quiz_post",
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assignment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Knowledge_SubmitQuizRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_QuizEvaluationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/knowledge/api/v1/training/assignments/{assignment_id}/sign-off": {
+      "post": {
+        "tags": [
+          "Study Training & Gating"
+        ],
+        "summary": "Sign Off Training Endpoint",
+        "description": "Capture 21 CFR Part 11 electronic signature, generate sealed PDF certificate, and push to eTMF & eISF.\n\nRequirements: PRD-TRN-003, PRD-TRN-004",
+        "operationId": "Knowledge_sign_off_training_endpoint_api_v1_training_assignments__assignment_id__sign_off_post",
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assignment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Knowledge_SignTrainingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_CertificateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/knowledge/api/v1/training/assignments/{assignment_id}/certificate": {
+      "get": {
+        "tags": [
+          "Study Training & Gating"
+        ],
+        "summary": "Get Certificate Endpoint",
+        "description": "Retrieve completion certificate for an assignment.",
+        "operationId": "Knowledge_get_certificate_endpoint_api_v1_training_assignments__assignment_id__certificate_get",
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assignment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_CertificateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/knowledge/api/v1/training/gating-status": {
+      "get": {
+        "tags": [
+          "Study Training & Gating"
+        ],
+        "summary": "Get Gating Status Endpoint",
+        "description": "Check whether a user is qualified for EDC write permissions on a protocol version.\n\nRequirements: PRD-TRN-002",
+        "operationId": "Knowledge_get_gating_status_endpoint_api_v1_training_gating_status_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "User identifier",
+              "title": "User Id"
+            },
+            "description": "User identifier"
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study identifier",
+              "title": "Study Id"
+            },
+            "description": "Study identifier"
+          },
+          {
+            "name": "protocol_version",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Active protocol version",
+              "title": "Protocol Version"
+            },
+            "description": "Active protocol version"
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional site identifier",
+              "title": "Site Id"
+            },
+            "description": "Optional site identifier"
+          },
+          {
+            "name": "user_role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional clinical role",
+              "title": "User Role"
+            },
+            "description": "Optional clinical role"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_QualificationGateResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/knowledge/api/v1/training/verify-gate": {
+      "post": {
+        "tags": [
+          "Study Training & Gating"
+        ],
+        "summary": "Verify Gate Endpoint",
+        "description": "Programmatically verify qualification gate for EDC write operations.\n\nRequirements: PRD-TRN-002",
+        "operationId": "Knowledge_verify_gate_endpoint_api_v1_training_verify_gate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Knowledge_VerifyGateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_QualificationGateResult"
                 }
               }
             }
@@ -39171,6 +40386,275 @@
         }
       }
     },
+    "/quality/api/v1/quality/rbqm/ract/factors": {
+      "post": {
+        "summary": "Create Ract Risk Factor",
+        "operationId": "Quality_create_ract_risk_factor_api_v1_quality_rbqm_ract_factors_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Quality_RACTRiskFactorCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_RACTRiskFactorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Ract Risk Factors",
+        "operationId": "Quality_list_ract_risk_factors_api_v1_quality_rbqm_ract_factors_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional RACT Category filter",
+              "title": "Category"
+            },
+            "description": "Optional RACT Category filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Quality_RACTRiskFactorResponse"
+                  },
+                  "title": "Response List Ract Risk Factors Api V1 Quality Rbqm Ract Factors Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quality/api/v1/quality/rbqm/ract/factors/{factor_id}": {
+      "put": {
+        "summary": "Update Ract Risk Factor",
+        "operationId": "Quality_update_ract_risk_factor_api_v1_quality_rbqm_ract_factors__factor_id__put",
+        "parameters": [
+          {
+            "name": "factor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Factor Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Quality_RACTRiskFactorUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_RACTRiskFactorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Ract Risk Factor",
+        "operationId": "Quality_delete_ract_risk_factor_api_v1_quality_rbqm_ract_factors__factor_id__delete",
+        "parameters": [
+          {
+            "name": "factor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Factor Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quality/api/v1/quality/rbqm/ract/seed-default": {
+      "post": {
+        "summary": "Seed Default Transcelerate Ract",
+        "operationId": "Quality_seed_default_transcelerate_ract_api_v1_quality_rbqm_ract_seed_default_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Quality_RACTRiskFactorResponse"
+                  },
+                  "title": "Response Seed Default Transcelerate Ract Api V1 Quality Rbqm Ract Seed Default Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quality/api/v1/quality/rbqm/ract/summary": {
+      "get": {
+        "summary": "Get Ract Matrix Summary",
+        "operationId": "Quality_get_ract_matrix_summary_api_v1_quality_rbqm_ract_summary_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_RACTMatrixSummaryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/quality/api/v1/quality/rbqm/ctq": {
       "post": {
         "summary": "Create Ctq Factor",
@@ -39661,6 +41145,128 @@
                     "$ref": "#/components/schemas/Quality_QTLBreachEventResponse"
                   },
                   "title": "Response List Qtl Breaches Api V1 Quality Rbqm Qtls Breaches Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quality/api/v1/quality/rbqm/csm/dossiers/compile": {
+      "post": {
+        "summary": "Compile Csm Dossier",
+        "operationId": "Quality_compile_csm_dossier_api_v1_quality_rbqm_csm_dossiers_compile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Quality_CompileCSMDossierRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_CSMDossierResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quality/api/v1/quality/rbqm/csm/dossiers": {
+      "get": {
+        "summary": "List Csm Dossiers",
+        "operationId": "Quality_list_csm_dossiers_api_v1_quality_rbqm_csm_dossiers_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Quality_CSMDossierResponse"
+                  },
+                  "title": "Response List Csm Dossiers Api V1 Quality Rbqm Csm Dossiers Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quality/api/v1/quality/rbqm/csm/dossiers/{dossier_id}": {
+      "get": {
+        "summary": "Get Csm Dossier",
+        "operationId": "Quality_get_csm_dossier_api_v1_quality_rbqm_csm_dossiers__dossier_id__get",
+        "parameters": [
+          {
+            "name": "dossier_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dossier Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_CSMDossierResponse"
                 }
               }
             }
@@ -73720,6 +75326,17 @@
             ],
             "title": "Study Id"
           },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
           "visit_id": {
             "anyOf": [
               {
@@ -79098,6 +80715,57 @@
         "title": "VerifyResponse",
         "description": "Response model for PKCS#7 signature verification."
       },
+      "Execution_VerifyTrainingGatingRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study ID"
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version",
+            "description": "Active protocol version tag"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "User ID to evaluate"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional clinical site ID"
+          },
+          "user_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Role",
+            "description": "Optional user clinical role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "protocol_version",
+          "user_id"
+        ],
+        "title": "VerifyTrainingGatingRequest",
+        "description": "Payload to verify user qualification for EDC write permissions."
+      },
       "Execution_VisitCreate": {
         "properties": {
           "subject_id": {
@@ -83936,6 +85604,449 @@
         "title": "BulkSyncPayload",
         "description": "A bulk list of ePRO submissions for offline queue reconciliation."
       },
+      "Interop_CanonicalClinicalRecord": {
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "title": "Record Id",
+            "description": "Unique canonical record UUID"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study identifier"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Site identifier"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "stream_type": {
+            "$ref": "#/components/schemas/Interop_DataStreamType",
+            "description": "Originating data stream type"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain",
+            "description": "Normalized CDISC domain (e.g. DM, AE, VS, LB, QS, TR)"
+          },
+          "item_code": {
+            "type": "string",
+            "title": "Item Code",
+            "description": "Canonical item code or test identifier"
+          },
+          "item_name": {
+            "type": "string",
+            "title": "Item Name",
+            "description": "Human-readable item name"
+          },
+          "observation_datetime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Observation Datetime",
+            "description": "Effective timestamp of observation"
+          },
+          "numeric_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numeric Value",
+            "description": "Quantitative value if applicable"
+          },
+          "text_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text Value",
+            "description": "Categorical or textual finding"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit",
+            "description": "Normalized standard unit"
+          },
+          "reference_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Low",
+            "description": "Reference range lower bound"
+          },
+          "reference_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference High",
+            "description": "Reference range upper bound"
+          },
+          "abnormal_flag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Abnormal Flag",
+            "description": "Abnormality flag"
+          },
+          "is_unblinded": {
+            "type": "boolean",
+            "title": "Is Unblinded",
+            "description": "Flag indicating if record contains unblinded data",
+            "default": false
+          },
+          "raw_payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Raw Payload",
+            "description": "Original raw stream payload"
+          },
+          "normalized_attributes": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Normalized Attributes",
+            "description": "Harmonized contextual attributes"
+          },
+          "data_hash": {
+            "type": "string",
+            "title": "Data Hash",
+            "description": "SHA-256 digest of normalized record fields"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Lakehouse ingestion timestamp"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "subject_id",
+          "stream_type",
+          "domain",
+          "item_code",
+          "item_name",
+          "observation_datetime",
+          "data_hash"
+        ],
+        "title": "CanonicalClinicalRecord",
+        "description": "Harmonized, canonical observation record stored in the Lakehouse repository."
+      },
+      "Interop_CentralLabIngestItem": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Clinical site identifier"
+          },
+          "specimen_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Specimen Id",
+            "description": "Lab specimen barcode or identifier"
+          },
+          "test_code": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Test Code",
+            "description": "Standard LOINC or lab-specific test code"
+          },
+          "test_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Test Name",
+            "description": "Descriptive laboratory test name (e.g. Hemoglobin, ALT)"
+          },
+          "numeric_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numeric Value",
+            "description": "Quantitative test result"
+          },
+          "string_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "String Value",
+            "description": "Qualitative test result or text finding"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit",
+            "description": "Unit of measurement (e.g. g/dL, U/L)"
+          },
+          "reference_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Low",
+            "description": "Normal lower reference range bound"
+          },
+          "reference_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference High",
+            "description": "Normal upper reference range bound"
+          },
+          "abnormal_flag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Abnormal Flag",
+            "description": "Diagnostic flag (e.g. NORMAL, HIGH, LOW, CRITICAL)"
+          },
+          "collection_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Collection Timestamp",
+            "description": "Specimen collection timestamp"
+          },
+          "accession_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accession Number",
+            "description": "Laboratory accession number"
+          },
+          "is_unblinded": {
+            "type": "boolean",
+            "title": "Is Unblinded",
+            "description": "Whether this lab test unblinds treatment arm",
+            "default": false
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Lab instrument and method metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "specimen_id",
+          "test_code",
+          "test_name",
+          "collection_timestamp"
+        ],
+        "title": "CentralLabIngestItem",
+        "description": "Raw ingestion payload for Central Diagnostic Laboratory feeds (HL7 / CSV)."
+      },
+      "Interop_ClinicalSnapshot": {
+        "properties": {
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id",
+            "description": "Snapshot identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study identifier"
+          },
+          "version_tag": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Version Tag",
+            "description": "Version tag (e.g. v1.0.0-INTERIM-1)"
+          },
+          "milestone": {
+            "$ref": "#/components/schemas/Interop_LockMilestoneType",
+            "description": "Associated database lock milestone"
+          },
+          "lock_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lock Id",
+            "description": "Reference to relational DataLock record"
+          },
+          "record_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Record Count",
+            "description": "Total records pooled in this snapshot",
+            "default": 0
+          },
+          "stream_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Stream Counts",
+            "description": "Breakdown of record counts by stream type"
+          },
+          "domain_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Domain Counts",
+            "description": "Breakdown of record counts by CDISC domain"
+          },
+          "sha256_digest": {
+            "type": "string",
+            "title": "Sha256 Digest",
+            "description": "Cryptographic SHA-256 digest sealing this snapshot pool"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Snapshot creation timestamp"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "User ID or service creating snapshot"
+          },
+          "reason_for_snapshot": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Reason For Snapshot",
+            "description": "GxP rationale / justification for snapshot creation"
+          },
+          "is_locked": {
+            "type": "boolean",
+            "title": "Is Locked",
+            "description": "Immutability flag (sealed snapshots cannot be modified)",
+            "default": true
+          },
+          "blinded_record_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Blinded Record Count",
+            "description": "Count of blinded records in pool",
+            "default": 0
+          },
+          "unblinded_record_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Unblinded Record Count",
+            "description": "Count of unblinded records in pool",
+            "default": 0
+          },
+          "snapshot_manifest": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Snapshot Manifest",
+            "description": "Cryptographic manifest metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "version_tag",
+          "milestone",
+          "sha256_digest",
+          "created_by",
+          "reason_for_snapshot"
+        ],
+        "title": "ClinicalSnapshot",
+        "description": "Immutable, version-pinned snapshot pool tied to a database lock milestone."
+      },
       "Interop_ConceptMapListResponse": {
         "properties": {
           "total_concepts": {
@@ -84053,6 +86164,65 @@
         "title": "ConflictStrategy",
         "description": "Explicit validated conflict resolution strategies."
       },
+      "Interop_CreateSnapshotRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id",
+            "description": "Clinical study identifier (e.g. STUDY-901)"
+          },
+          "version_tag": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Version Tag",
+            "description": "Unique version tag (e.g. v1.0.0-INTERIM-1)"
+          },
+          "milestone": {
+            "$ref": "#/components/schemas/Interop_LockMilestoneType",
+            "description": "Target database lock milestone"
+          },
+          "lock_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lock Id",
+            "description": "Optional associated DataLock ID"
+          },
+          "reason_for_snapshot": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Reason For Snapshot",
+            "description": "Formal GxP justification for snapshot creation"
+          },
+          "filter_criteria": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Interop_SnapshotFilterCriteria"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional stream, domain, subject, and time cutoff filtering criteria"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "version_tag",
+          "milestone",
+          "reason_for_snapshot"
+        ],
+        "title": "CreateSnapshotRequest",
+        "description": "Request payload to pool lakehouse records into an immutable version-pinned snapshot."
+      },
       "Interop_CriterionExplanation": {
         "properties": {
           "criterion_id": {
@@ -84090,6 +86260,317 @@
           "is_indeterminate"
         ],
         "title": "CriterionExplanation"
+      },
+      "Interop_DataStreamType": {
+        "type": "string",
+        "enum": [
+          "EDC_ECRF",
+          "EPRO_ECOA",
+          "CENTRAL_LAB",
+          "LOCAL_LAB",
+          "IOT_WEARABLE",
+          "EHR_FHIR",
+          "MEDICAL_IMAGING"
+        ],
+        "title": "DataStreamType",
+        "description": "Supported heterogeneous clinical data stream types."
+      },
+      "Interop_EDCEcrfIngestItem": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id",
+            "description": "Unique subject/participant identifier"
+          },
+          "visit_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Visit Id",
+            "description": "Visit identifier (e.g. VIS_01, SCREENING)"
+          },
+          "form_oid": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Form Oid",
+            "description": "Form OID or form identifier (e.g. FORM_VS, FORM_AE)"
+          },
+          "field_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Field Name",
+            "description": "Item or field name (e.g. SYSBP, HR, AETERM)"
+          },
+          "value": {
+            "title": "Value",
+            "description": "Captured field value (numeric, string, boolean)"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit",
+            "description": "Measurement unit (e.g. mmHg, bpm)"
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Recorded At",
+            "description": "Timestamp of clinical observation or entry"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Form entry status (e.g. DRAFT, COMPLETED, SIGNED)",
+            "default": "COMPLETED"
+          },
+          "investigator_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigator Id",
+            "description": "Investigator or user identifier"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Clinical site identifier"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain",
+            "description": "Optional CDISC domain override (e.g. VS, AE, LB)"
+          },
+          "is_unblinded": {
+            "type": "boolean",
+            "title": "Is Unblinded",
+            "description": "Flag if field contains unblinded treatment/randomization data",
+            "default": false
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Additional EDC provenance metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "visit_id",
+          "form_oid",
+          "field_name",
+          "value",
+          "recorded_at"
+        ],
+        "title": "EDCEcrfIngestItem",
+        "description": "Raw ingestion payload for transactional EDC eCRFs."
+      },
+      "Interop_EHRFHIRIngestItem": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id",
+            "description": "Clinical trial subject identifier"
+          },
+          "resource_type": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Resource Type",
+            "description": "FHIR resource type (Observation, Condition, Encounter, MedicationRequest)"
+          },
+          "fhir_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Fhir Id",
+            "description": "FHIR resource ID"
+          },
+          "resource_payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Resource Payload",
+            "description": "Complete FHIR JSON resource object"
+          },
+          "coding_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coding Code",
+            "description": "Primary clinical coding (e.g. SNOMED-CT, LOINC, RxNorm, ICD-10)"
+          },
+          "coding_display": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coding Display",
+            "description": "Coding human-readable display string"
+          },
+          "effective_datetime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Effective Datetime",
+            "description": "Clinical occurrence or effective timestamp"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Site identifier"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "FHIR bundle header and source EHR metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "resource_type",
+          "fhir_id",
+          "resource_payload",
+          "effective_datetime"
+        ],
+        "title": "EHRFHIRIngestItem",
+        "description": "Raw ingestion payload for Electronic Health Record (EHR) HL7 FHIR bundles."
+      },
+      "Interop_EPROEcoaIngestItem": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id",
+            "description": "Unique subject identifier"
+          },
+          "diary_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Diary Id",
+            "description": "Questionnaire / diary form identifier"
+          },
+          "questionnaire_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Questionnaire Name",
+            "description": "Name of instrument (e.g. PROMIS-29, SF-36, EQ-5D)"
+          },
+          "answers": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Answers",
+            "description": "Map of question IDs to participant responses"
+          },
+          "total_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Score",
+            "description": "Computed questionnaire total or index score"
+          },
+          "device_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Device Timestamp",
+            "description": "Timestamp recorded by client device"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At",
+            "description": "Timestamp questionnaire was submitted"
+          },
+          "compliance_flag": {
+            "type": "boolean",
+            "title": "Compliance Flag",
+            "description": "Whether completion was within the scheduled time window",
+            "default": true
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Associated clinical site identifier"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Device and sensor sync metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "diary_id",
+          "questionnaire_name",
+          "answers",
+          "device_timestamp"
+        ],
+        "title": "EPROEcoaIngestItem",
+        "description": "Raw ingestion payload for subject-facing ePRO / eCOA questionnaires."
       },
       "Interop_EPROSubmissionPayload": {
         "properties": {
@@ -84376,6 +86857,146 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "Interop_IOTWearableIngestItem": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "device_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Device Id",
+            "description": "Unique medical device serial or UUID"
+          },
+          "device_type": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Device Type",
+            "description": "Device model / type (e.g. CGM, ACTIGRAPHY, SPIROMETER, ECG)"
+          },
+          "observation_type": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Observation Type",
+            "description": "Continuous observation stream category"
+          },
+          "telemetry_readings": {
+            "items": {
+              "$ref": "#/components/schemas/Interop_IoTTelemetryReading"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Telemetry Readings",
+            "description": "Batched time-series sensor readings"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds",
+            "description": "Aggregate recording duration"
+          },
+          "sample_rate_hz": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Rate Hz",
+            "description": "Device sampling rate in Hz"
+          },
+          "calibration_status": {
+            "type": "string",
+            "title": "Calibration Status",
+            "description": "Device calibration state",
+            "default": "CALIBRATED"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Site identifier"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Sensor firmware and battery status metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "device_id",
+          "device_type",
+          "observation_type",
+          "telemetry_readings"
+        ],
+        "title": "IOTWearableIngestItem",
+        "description": "Raw ingestion payload for connected sensors and wearable IoT streams."
+      },
+      "Interop_IngestResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study identifier"
+          },
+          "stream_type": {
+            "type": "string",
+            "title": "Stream Type",
+            "description": "Ingested stream type"
+          },
+          "records_ingested": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Records Ingested",
+            "description": "Number of canonical records created and persisted"
+          },
+          "unblinded_records": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Unblinded Records",
+            "description": "Number of unblinded records identified",
+            "default": 0
+          },
+          "record_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Record Ids",
+            "description": "List of generated canonical record UUIDs"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "stream_type",
+          "records_ingested"
+        ],
+        "title": "IngestResponse",
+        "description": "Response returned after ingesting heterogeneous stream records."
+      },
       "Interop_InstrumentCreateDTO": {
         "properties": {
           "study_id": {
@@ -84504,6 +87125,307 @@
         ],
         "title": "InstrumentResponseDTO"
       },
+      "Interop_IoTTelemetryReading": {
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp",
+            "description": "Observation timestamp"
+          },
+          "metric_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Metric Name",
+            "description": "Metric name (e.g. glucose, step_count, heart_rate, fev1)"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value",
+            "description": "Numeric telemetry value"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit",
+            "description": "Metric unit (e.g. mg/dL, steps, bpm, L)"
+          },
+          "flag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flag",
+            "description": "Telemetry quality flag (e.g. VALID, ARTIFACT, EXCURSION)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "timestamp",
+          "metric_name",
+          "value"
+        ],
+        "title": "IoTTelemetryReading",
+        "description": "Single time-series point from a connected sensor or wearable device."
+      },
+      "Interop_LakehouseMetrics": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study identifier"
+          },
+          "total_records": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Records",
+            "description": "Total canonical clinical records ingested",
+            "default": 0
+          },
+          "total_snapshots": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Snapshots",
+            "description": "Total sealed snapshots created",
+            "default": 0
+          },
+          "stream_breakdown": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Stream Breakdown",
+            "description": "Record counts per stream type"
+          },
+          "domain_breakdown": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Domain Breakdown",
+            "description": "Record counts per CDISC domain"
+          },
+          "subject_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Subject Count",
+            "description": "Distinct subject count",
+            "default": 0
+          },
+          "site_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Site Count",
+            "description": "Distinct site count",
+            "default": 0
+          },
+          "blinded_record_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Blinded Record Count",
+            "description": "Total blinded records",
+            "default": 0
+          },
+          "unblinded_record_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Unblinded Record Count",
+            "description": "Total unblinded records",
+            "default": 0
+          },
+          "latest_snapshot_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Snapshot Digest",
+            "description": "SHA-256 digest of latest sealed snapshot"
+          },
+          "last_ingested_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Ingested At",
+            "description": "Timestamp of most recent ingestion"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "LakehouseMetrics",
+        "description": "Aggregated real-time metrics for a study in the Lakehouse repository."
+      },
+      "Interop_LakehouseMetricsResponse": {
+        "properties": {
+          "metrics": {
+            "$ref": "#/components/schemas/Interop_LakehouseMetrics",
+            "description": "Real-time lakehouse repository metrics"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "metrics"
+        ],
+        "title": "LakehouseMetricsResponse",
+        "description": "Response containing aggregated lakehouse metrics."
+      },
+      "Interop_LocalLabIngestItem": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "site_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Site Id",
+            "description": "Local site identifier"
+          },
+          "test_code": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Test Code",
+            "description": "Local laboratory test code"
+          },
+          "test_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Test Name",
+            "description": "Local lab test name"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Value",
+            "description": "Test result value (numeric or text)"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit",
+            "description": "Result unit"
+          },
+          "reference_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Low",
+            "description": "Site reference range lower bound"
+          },
+          "reference_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference High",
+            "description": "Site reference range upper bound"
+          },
+          "abnormal_flag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Abnormal Flag",
+            "description": "Abnormal indicator (NORMAL, HIGH, LOW)"
+          },
+          "collection_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Collection Timestamp",
+            "description": "Sample collection timestamp"
+          },
+          "is_unblinded": {
+            "type": "boolean",
+            "title": "Is Unblinded",
+            "description": "Flag for unblinded specialized tests",
+            "default": false
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Site lab technician and kit metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "site_id",
+          "test_code",
+          "test_name",
+          "value",
+          "collection_timestamp"
+        ],
+        "title": "LocalLabIngestItem",
+        "description": "Raw ingestion payload for site local laboratory feeds."
+      },
+      "Interop_LockMilestoneType": {
+        "type": "string",
+        "enum": [
+          "INTERIM_ANALYSIS_1",
+          "INTERIM_ANALYSIS_2",
+          "DATABASE_LOCK",
+          "SAFETY_REVIEW",
+          "REGULATORY_SUBMISSION",
+          "PROTOCOL_FREEZE",
+          "ADJUDICATION_MILESTONE",
+          "CUSTOM"
+        ],
+        "title": "LockMilestoneType",
+        "description": "Clinical database lock and interim analysis milestones."
+      },
       "Interop_MappingTierStatisticsDTO": {
         "properties": {
           "total_extracted": {
@@ -84545,6 +87467,331 @@
         "type": "object",
         "title": "MappingTierStatisticsDTO",
         "description": "Aggregated metrics across mapping tiers."
+      },
+      "Interop_MedicalImagingIngestItem": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Site identifier"
+          },
+          "study_instance_uid": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Instance Uid",
+            "description": "DICOM Study Instance UID"
+          },
+          "series_instance_uid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series Instance Uid",
+            "description": "DICOM Series Instance UID"
+          },
+          "modality": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Modality",
+            "description": "Imaging modality (CT, MR, PET, PT, DX)"
+          },
+          "timepoint": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Timepoint",
+            "description": "Assessment timepoint (e.g. BASELINE, WEEK_6, WEEK_12)"
+          },
+          "lesions": {
+            "items": {
+              "$ref": "#/components/schemas/Interop_MedicalImagingLesion"
+            },
+            "type": "array",
+            "title": "Lesions",
+            "description": "Assessed target and non-target lesions"
+          },
+          "overall_response": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overall Response",
+            "description": "RECIST 1.1 overall response (CR, PR, SD, PD, NE)"
+          },
+          "sum_of_diameters_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sum Of Diameters Mm",
+            "description": "Sum of longest diameters for target lesions in mm"
+          },
+          "reader_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Reader Id",
+            "description": "Blinded independent central review (BICR) reader identifier"
+          },
+          "adjudication_tier": {
+            "type": "string",
+            "title": "Adjudication Tier",
+            "description": "Adjudication tier: PRIMARY_READER_1, PRIMARY_READER_2, TIE_BREAKER",
+            "default": "PRIMARY_READER_1"
+          },
+          "scan_datetime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scan Datetime",
+            "description": "DICOM acquisition timestamp"
+          },
+          "is_unblinded": {
+            "type": "boolean",
+            "title": "Is Unblinded",
+            "description": "Whether this adjudication unblinds arm",
+            "default": false
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Imaging charter and PACS archive metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "study_instance_uid",
+          "modality",
+          "timepoint",
+          "reader_id",
+          "scan_datetime"
+        ],
+        "title": "MedicalImagingIngestItem",
+        "description": "Raw ingestion payload for Blinded Medical Imaging and IRC adjudication results."
+      },
+      "Interop_MedicalImagingLesion": {
+        "properties": {
+          "lesion_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Lesion Id",
+            "description": "Target/non-target lesion identifier (e.g. T1, NT1)"
+          },
+          "lesion_type": {
+            "type": "string",
+            "title": "Lesion Type",
+            "description": "Lesion category: TARGET, NON_TARGET, NEW_LESION",
+            "default": "TARGET"
+          },
+          "site_location": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Site Location",
+            "description": "Anatomical site location (e.g. Liver, Right Lung, Lymph Node)"
+          },
+          "longest_diameter_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longest Diameter Mm",
+            "description": "Longest diameter measurement in mm"
+          },
+          "short_axis_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Axis Mm",
+            "description": "Short axis measurement in mm for lymph nodes"
+          },
+          "response_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Category",
+            "description": "Lesion status: PRESENT, ABSENT, NOT_EVALUATED"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "lesion_id",
+          "site_location"
+        ],
+        "title": "MedicalImagingLesion",
+        "description": "RECIST 1.1 or imaging lesion evaluation."
+      },
+      "Interop_MultiStreamIngestPayload": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id",
+            "description": "Clinical trial protocol ID (e.g. STUDY-901)"
+          },
+          "stream_type": {
+            "$ref": "#/components/schemas/Interop_DataStreamType",
+            "description": "Stream type being ingested"
+          },
+          "edc_items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Interop_EDCEcrfIngestItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edc Items",
+            "description": "EDC eCRF items when stream_type=EDC_ECRF"
+          },
+          "epro_items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Interop_EPROEcoaIngestItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epro Items",
+            "description": "ePRO items when stream_type=EPRO_ECOA"
+          },
+          "central_lab_items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Interop_CentralLabIngestItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Central Lab Items",
+            "description": "Central lab items when stream_type=CENTRAL_LAB"
+          },
+          "local_lab_items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Interop_LocalLabIngestItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Lab Items",
+            "description": "Local lab items when stream_type=LOCAL_LAB"
+          },
+          "wearable_items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Interop_IOTWearableIngestItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wearable Items",
+            "description": "IoT wearable items when stream_type=IOT_WEARABLE"
+          },
+          "fhir_items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Interop_EHRFHIRIngestItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fhir Items",
+            "description": "FHIR items when stream_type=EHR_FHIR"
+          },
+          "imaging_items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Interop_MedicalImagingIngestItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imaging Items",
+            "description": "Imaging items when stream_type=MEDICAL_IMAGING"
+          },
+          "reason_for_ingest": {
+            "type": "string",
+            "title": "Reason For Ingest",
+            "description": "GxP justification for ingestion",
+            "default": "Routine stream ingestion into CDR Lakehouse"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "stream_type"
+        ],
+        "title": "MultiStreamIngestPayload",
+        "description": "Unified payload container for ingesting one or more heterogeneous streams."
       },
       "Interop_OfflineSyncMarkers": {
         "properties": {
@@ -84844,6 +88091,316 @@
         ],
         "title": "SemanticMappedItemDTO",
         "description": "Individual mapped clinical observation or variable."
+      },
+      "Interop_SnapshotAuditTrailResponse": {
+        "properties": {
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id",
+            "description": "Snapshot identifier"
+          },
+          "audit_entries": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Audit Entries",
+            "description": "Audit trail entries"
+          },
+          "total_entries": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Entries",
+            "description": "Total audit records",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "snapshot_id"
+        ],
+        "title": "SnapshotAuditTrailResponse",
+        "description": "Response containing 21 CFR Part 11 immutable audit trail entries for a snapshot."
+      },
+      "Interop_SnapshotDataQueryRequest": {
+        "properties": {
+          "filter_criteria": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Interop_SnapshotFilterCriteria"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional slice and filter criteria"
+          },
+          "request_unblinded": {
+            "type": "boolean",
+            "title": "Request Unblinded",
+            "description": "Whether caller requests unblinded access (requires role)",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SnapshotDataQueryRequest",
+        "description": "Request payload for querying observations inside a version-pinned snapshot pool."
+      },
+      "Interop_SnapshotDataQueryResponse": {
+        "properties": {
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id",
+            "description": "Snapshot identifier"
+          },
+          "sha256_digest": {
+            "type": "string",
+            "title": "Sha256 Digest",
+            "description": "Cryptographic SHA-256 seal of snapshot pool"
+          },
+          "total_records": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Records",
+            "description": "Count of records returned",
+            "default": 0
+          },
+          "is_masked": {
+            "type": "boolean",
+            "title": "Is Masked",
+            "description": "True if any unblinded records were masked for blinded role",
+            "default": false
+          },
+          "masked_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Masked Count",
+            "description": "Count of unblinded records masked",
+            "default": 0
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/Interop_CanonicalClinicalRecord"
+            },
+            "type": "array",
+            "title": "Records",
+            "description": "Harmonized clinical records"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "snapshot_id",
+          "sha256_digest"
+        ],
+        "title": "SnapshotDataQueryResponse",
+        "description": "Response containing pooled canonical observations from a snapshot."
+      },
+      "Interop_SnapshotFilterCriteria": {
+        "properties": {
+          "subject_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Ids",
+            "description": "Optional filter by subject IDs"
+          },
+          "site_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Ids",
+            "description": "Optional filter by site IDs"
+          },
+          "stream_types": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Interop_DataStreamType"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stream Types",
+            "description": "Filter by stream types"
+          },
+          "domains": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domains",
+            "description": "Filter by CDISC domains"
+          },
+          "cutoff_datetime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cutoff Datetime",
+            "description": "Upper bound timestamp cutoff for snapshot pooling"
+          },
+          "include_unblinded": {
+            "type": "boolean",
+            "title": "Include Unblinded",
+            "description": "Whether to request unblinded records (requires unblinded role)",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SnapshotFilterCriteria",
+        "description": "Filter criteria used when generating or querying a version-pinned snapshot."
+      },
+      "Interop_SnapshotListResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study identifier"
+          },
+          "snapshots": {
+            "items": {
+              "$ref": "#/components/schemas/Interop_ClinicalSnapshot"
+            },
+            "type": "array",
+            "title": "Snapshots",
+            "description": "List of version-pinned snapshots"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total",
+            "description": "Total snapshots found",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "SnapshotListResponse",
+        "description": "Response containing list of snapshots for a study."
+      },
+      "Interop_SnapshotResponse": {
+        "properties": {
+          "snapshot": {
+            "$ref": "#/components/schemas/Interop_ClinicalSnapshot",
+            "description": "Snapshot metadata and cryptographic seal"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Status message",
+            "default": "Snapshot created and sealed successfully"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "snapshot"
+        ],
+        "title": "SnapshotResponse",
+        "description": "Response containing created or retrieved snapshot details."
+      },
+      "Interop_SnapshotVerificationResult": {
+        "properties": {
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id",
+            "description": "Verified snapshot identifier"
+          },
+          "version_tag": {
+            "type": "string",
+            "title": "Version Tag",
+            "description": "Snapshot version tag"
+          },
+          "stored_digest": {
+            "type": "string",
+            "title": "Stored Digest",
+            "description": "SHA-256 digest recorded at snapshot sealing"
+          },
+          "computed_digest": {
+            "type": "string",
+            "title": "Computed Digest",
+            "description": "SHA-256 digest dynamically recomputed over pool"
+          },
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid",
+            "description": "Whether digests match bit-for-bit (True = untampered)"
+          },
+          "record_count": {
+            "type": "integer",
+            "title": "Record Count",
+            "description": "Total verified record count"
+          },
+          "verified_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Verified At",
+            "description": "Verification timestamp"
+          },
+          "verified_by": {
+            "type": "string",
+            "title": "Verified By",
+            "description": "User ID performing verification"
+          },
+          "verification_message": {
+            "type": "string",
+            "title": "Verification Message",
+            "description": "Detailed integrity verification message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "snapshot_id",
+          "version_tag",
+          "stored_digest",
+          "computed_digest",
+          "is_valid",
+          "record_count",
+          "verified_by",
+          "verification_message"
+        ],
+        "title": "SnapshotVerificationResult",
+        "description": "Result of cryptographic SHA-256 integrity verification against a sealed snapshot."
       },
       "Interop_SubjectAssignmentCreateDTO": {
         "properties": {
@@ -85162,6 +88719,21 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "Interop_VerifySnapshotResponse": {
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/Interop_SnapshotVerificationResult",
+            "description": "Integrity verification result"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "result"
+        ],
+        "title": "VerifySnapshotResponse",
+        "description": "Response for cryptographic SHA-256 integrity verification."
       },
       "Knowledge_ArticleApproveRequest": {
         "properties": {
@@ -85822,6 +89394,52 @@
         "title": "ArticleVersionResponse",
         "description": "Response schema for a KnowledgeArticleVersion snapshot."
       },
+      "Knowledge_AssignCurriculumRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Clinical site ID"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "Participant user ID"
+          },
+          "user_name": {
+            "type": "string",
+            "title": "User Name",
+            "description": "Participant legal printed name"
+          },
+          "user_role": {
+            "type": "string",
+            "title": "User Role",
+            "description": "Participant clinical role",
+            "default": "Principal Investigator"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "GxP reason for change",
+            "default": "Assign mandatory training curriculum"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "user_id",
+          "user_name"
+        ],
+        "title": "AssignCurriculumRequest",
+        "description": "Payload to assign a curriculum to a site user."
+      },
       "Knowledge_AuditChainVerificationResponse": {
         "properties": {
           "article_id": {
@@ -86178,6 +89796,130 @@
         "title": "CategoryResponse",
         "description": "Response schema for a KnowledgeCategory."
       },
+      "Knowledge_CertificateResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "assignment_id": {
+            "type": "string",
+            "title": "Assignment Id"
+          },
+          "curriculum_id": {
+            "type": "string",
+            "title": "Curriculum Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "user_name": {
+            "type": "string",
+            "title": "User Name"
+          },
+          "user_role": {
+            "type": "string",
+            "title": "User Role"
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version"
+          },
+          "score_achieved": {
+            "type": "number",
+            "title": "Score Achieved"
+          },
+          "time_spent_seconds": {
+            "type": "integer",
+            "title": "Time Spent Seconds"
+          },
+          "signature_manifestation": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Signature Manifestation"
+          },
+          "sha256_seal": {
+            "type": "string",
+            "title": "Sha256 Seal"
+          },
+          "pdf_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pdf Base64"
+          },
+          "etmf_doc_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etmf Doc Id"
+          },
+          "eisf_doc_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eisf Doc Id"
+          },
+          "routed_to_etmf": {
+            "type": "boolean",
+            "title": "Routed To Etmf"
+          },
+          "routed_to_eisf": {
+            "type": "boolean",
+            "title": "Routed To Eisf"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "assignment_id",
+          "curriculum_id",
+          "study_id",
+          "site_id",
+          "user_id",
+          "user_name",
+          "user_role",
+          "protocol_version",
+          "score_achieved",
+          "time_spent_seconds",
+          "signature_manifestation",
+          "sha256_seal",
+          "routed_to_etmf",
+          "routed_to_eisf",
+          "created_at"
+        ],
+        "title": "CertificateResponse",
+        "description": "Response payload for a verified training completion certificate."
+      },
       "Knowledge_ContextualHelpMappingCreate": {
         "properties": {
           "route_pattern": {
@@ -86483,6 +90225,81 @@
         "title": "ContextualHelpResolutionResponse",
         "description": "Dynamic resolution response for in-page contextual help."
       },
+      "Knowledge_GenerateAmendmentCurriculumRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique clinical study identifier"
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version",
+            "description": "Amended protocol version string (e.g. '2.0')"
+          },
+          "baseline_snapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Baseline Snapshot",
+            "description": "Baseline USDM protocol snapshot"
+          },
+          "amended_snapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Amended Snapshot",
+            "description": "Amended USDM protocol snapshot"
+          },
+          "target_roles": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Roles",
+            "description": "Optional target roles list"
+          },
+          "site_assignments": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Assignments",
+            "description": "Optional list of site personnel dictionaries to auto-assign"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "21 CFR Part 11 justification",
+            "default": "Generate delta-training curriculum for protocol amendment"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "protocol_version",
+          "baseline_snapshot",
+          "amended_snapshot"
+        ],
+        "title": "GenerateAmendmentCurriculumRequest",
+        "description": "Payload to generate a delta-training curriculum from protocol amendment snapshots."
+      },
       "Knowledge_HTTPValidationError": {
         "properties": {
           "detail": {
@@ -86744,6 +90561,559 @@
         "title": "ProtocolSearchResult",
         "description": "Matching protocol chunk with similarity score and citation marker."
       },
+      "Knowledge_QualificationGateResult": {
+        "properties": {
+          "is_qualified": {
+            "type": "boolean",
+            "title": "Is Qualified",
+            "description": "True if all mandatory protocol training is verified"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "Evaluated user ID"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Evaluated clinical study ID"
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version",
+            "description": "Active protocol version tag"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional clinical site ID"
+          },
+          "blocked_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Reason",
+            "description": "Explanation when write access is gated/blocked"
+          },
+          "pending_curricula": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Pending Curricula",
+            "description": "List of incomplete mandatory training curricula"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "is_qualified",
+          "user_id",
+          "study_id",
+          "protocol_version"
+        ],
+        "title": "QualificationGateResult",
+        "description": "Result of an EDC write-permission qualification check."
+      },
+      "Knowledge_QuizEvaluationResponse": {
+        "properties": {
+          "score_percentage": {
+            "type": "number",
+            "title": "Score Percentage"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "passing_threshold": {
+            "type": "number",
+            "title": "Passing Threshold"
+          },
+          "total_questions": {
+            "type": "integer",
+            "title": "Total Questions"
+          },
+          "correct_count": {
+            "type": "integer",
+            "title": "Correct Count"
+          },
+          "feedback": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Feedback"
+          }
+        },
+        "type": "object",
+        "required": [
+          "score_percentage",
+          "passed",
+          "passing_threshold",
+          "total_questions",
+          "correct_count"
+        ],
+        "title": "QuizEvaluationResponse",
+        "description": "Result of evaluating a comprehension quiz submission."
+      },
+      "Knowledge_RecordProgressRequest": {
+        "properties": {
+          "time_spent_delta_seconds": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Time Spent Delta Seconds",
+            "description": "Seconds spent in active training"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "GxP reason for change",
+            "default": "Record training time-on-page progress"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "time_spent_delta_seconds"
+        ],
+        "title": "RecordProgressRequest",
+        "description": "Payload to record time-on-page reading progress."
+      },
+      "Knowledge_SignTrainingRequest": {
+        "properties": {
+          "signer_name": {
+            "type": "string",
+            "title": "Signer Name",
+            "description": "Legal printed name of signer"
+          },
+          "signer_role": {
+            "type": "string",
+            "title": "Signer Role",
+            "description": "Clinical role (e.g. Principal Investigator, CRC)"
+          },
+          "meaning": {
+            "type": "string",
+            "title": "Meaning",
+            "description": "21 CFR Part 11 signature intent statement",
+            "default": "I certify that I have reviewed, understood, and agree to execute clinical procedures in accordance with this approved protocol curriculum."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "GxP reason for change",
+            "default": "21 CFR Part 11 digital sign-off on training completion"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "signer_name",
+          "signer_role"
+        ],
+        "title": "SignTrainingRequest",
+        "description": "Payload for 21 CFR Part 11 digital sign-off of completed training."
+      },
+      "Knowledge_SubmitQuizRequest": {
+        "properties": {
+          "answers": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Answers",
+            "description": "Dictionary mapping question ID to selected 0-indexed option"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "GxP reason for change",
+            "default": "Submit comprehension quiz for qualification"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "answers"
+        ],
+        "title": "SubmitQuizRequest",
+        "description": "Payload for submitting comprehension quiz answers."
+      },
+      "Knowledge_TrainingAssignmentDetailResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "curriculum_id": {
+            "type": "string",
+            "title": "Curriculum Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "user_name": {
+            "type": "string",
+            "title": "User Name"
+          },
+          "user_role": {
+            "type": "string",
+            "title": "User Role"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "time_spent_seconds": {
+            "type": "integer",
+            "title": "Time Spent Seconds"
+          },
+          "quiz_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quiz Score"
+          },
+          "attempts_count": {
+            "type": "integer",
+            "title": "Attempts Count"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "certificate_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certificate Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "curriculum": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Knowledge_TrainingCurriculumResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "curriculum_id",
+          "study_id",
+          "site_id",
+          "user_id",
+          "user_name",
+          "user_role",
+          "status",
+          "time_spent_seconds",
+          "attempts_count",
+          "created_at"
+        ],
+        "title": "TrainingAssignmentDetailResponse",
+        "description": "Detailed assignment payload including the parent curriculum and modules."
+      },
+      "Knowledge_TrainingAssignmentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "curriculum_id": {
+            "type": "string",
+            "title": "Curriculum Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "user_name": {
+            "type": "string",
+            "title": "User Name"
+          },
+          "user_role": {
+            "type": "string",
+            "title": "User Role"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "time_spent_seconds": {
+            "type": "integer",
+            "title": "Time Spent Seconds"
+          },
+          "quiz_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quiz Score"
+          },
+          "attempts_count": {
+            "type": "integer",
+            "title": "Attempts Count"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "certificate_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certificate Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "curriculum_id",
+          "study_id",
+          "site_id",
+          "user_id",
+          "user_name",
+          "user_role",
+          "status",
+          "time_spent_seconds",
+          "attempts_count",
+          "created_at"
+        ],
+        "title": "TrainingAssignmentResponse",
+        "description": "Response payload for a user's training assignment."
+      },
+      "Knowledge_TrainingCurriculumResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "target_roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Roles"
+          },
+          "is_mandatory": {
+            "type": "boolean",
+            "title": "Is Mandatory"
+          },
+          "passing_score": {
+            "type": "number",
+            "title": "Passing Score"
+          },
+          "min_reading_time_seconds": {
+            "type": "integer",
+            "title": "Min Reading Time Seconds"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "modules": {
+            "items": {
+              "$ref": "#/components/schemas/Knowledge_TrainingModuleSummary"
+            },
+            "type": "array",
+            "title": "Modules"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "protocol_version",
+          "title",
+          "description",
+          "target_roles",
+          "is_mandatory",
+          "passing_score",
+          "min_reading_time_seconds",
+          "is_active",
+          "created_at",
+          "created_by"
+        ],
+        "title": "TrainingCurriculumResponse",
+        "description": "Response payload for a training curriculum."
+      },
+      "Knowledge_TrainingModuleSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "curriculum_id": {
+            "type": "string",
+            "title": "Curriculum Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "module_type": {
+            "type": "string",
+            "title": "Module Type"
+          },
+          "content_text": {
+            "type": "string",
+            "title": "Content Text"
+          },
+          "video_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Url"
+          },
+          "document_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Reference"
+          },
+          "order_index": {
+            "type": "integer",
+            "title": "Order Index"
+          },
+          "min_reading_time_seconds": {
+            "type": "integer",
+            "title": "Min Reading Time Seconds"
+          },
+          "quiz_questions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Quiz Questions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "curriculum_id",
+          "title",
+          "module_type",
+          "content_text",
+          "order_index",
+          "min_reading_time_seconds"
+        ],
+        "title": "TrainingModuleSummary",
+        "description": "DTO summarizing a training module."
+      },
       "Knowledge_ValidationError": {
         "properties": {
           "loc": {
@@ -86783,6 +91153,58 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "Knowledge_VerifyGateRequest": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "User ID to verify"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study identifier"
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version",
+            "description": "Active protocol version tag"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional clinical site ID"
+          },
+          "user_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Role",
+            "description": "Optional user clinical role"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "user_id",
+          "study_id",
+          "protocol_version"
+        ],
+        "title": "VerifyGateRequest",
+        "description": "Request payload to verify EDC write-gating status."
       },
       "Notifications_HTTPValidationError": {
         "properties": {
@@ -92473,6 +96895,161 @@
         "type": "object",
         "title": "CAPAUpdate"
       },
+      "Quality_CSMDossierResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "dossier_name": {
+            "type": "string",
+            "title": "Dossier Name"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "generated_by": {
+            "type": "string",
+            "title": "Generated By"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "ract_summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Ract Summary"
+          },
+          "kri_surveillance_summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Kri Surveillance Summary"
+          },
+          "site_risk_rankings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Site Risk Rankings"
+          },
+          "anomaly_forensics_summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Anomaly Forensics Summary"
+          },
+          "electronic_signature": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Electronic Signature"
+          },
+          "audit_trail_snapshot": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Audit Trail Snapshot"
+          },
+          "merkle_seal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merkle Seal"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "dossier_name",
+          "generated_at",
+          "generated_by",
+          "status",
+          "ract_summary",
+          "kri_surveillance_summary",
+          "site_risk_rankings",
+          "anomaly_forensics_summary",
+          "electronic_signature",
+          "audit_trail_snapshot",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "CSMDossierResponse"
+      },
+      "Quality_CompileCSMDossierRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study ID"
+          },
+          "dossier_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dossier Name",
+            "description": "Custom name for the compiled inspection dossier"
+          },
+          "signer_name": {
+            "type": "string",
+            "title": "Signer Name",
+            "description": "Full legal name of the reviewing signer"
+          },
+          "signer_role": {
+            "type": "string",
+            "title": "Signer Role",
+            "description": "Role of the signer (e.g. Lead Central Monitor / QA Lead)"
+          },
+          "signature_meaning": {
+            "type": "string",
+            "title": "Signature Meaning",
+            "description": "21 CFR Part 11 controlled signing statement",
+            "default": "I approve this Centralized Monitoring Inspection Dossier in accordance with 21 CFR Part 11 and ICH E6(R3)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "signer_name",
+          "signer_role"
+        ],
+        "title": "CompileCSMDossierRequest"
+      },
       "Quality_CtQFactorCreate": {
         "properties": {
           "study_id": {
@@ -94295,6 +98872,402 @@
         ],
         "title": "QTLResponse"
       },
+      "Quality_RACTCategory": {
+        "type": "string",
+        "enum": [
+          "SAFETY",
+          "CONSENT",
+          "STUDY_CONDUCT",
+          "DATA_INTEGRITY",
+          "IP_MANAGEMENT",
+          "TECHNOLOGY"
+        ],
+        "title": "RACTCategory"
+      },
+      "Quality_RACTCategorySummary": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "total_factors": {
+            "type": "integer",
+            "title": "Total Factors"
+          },
+          "high_count": {
+            "type": "integer",
+            "title": "High Count"
+          },
+          "medium_count": {
+            "type": "integer",
+            "title": "Medium Count"
+          },
+          "low_count": {
+            "type": "integer",
+            "title": "Low Count"
+          },
+          "average_score": {
+            "type": "number",
+            "title": "Average Score"
+          },
+          "linked_kri_count": {
+            "type": "integer",
+            "title": "Linked Kri Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "total_factors",
+          "high_count",
+          "medium_count",
+          "low_count",
+          "average_score",
+          "linked_kri_count"
+        ],
+        "title": "RACTCategorySummary"
+      },
+      "Quality_RACTMatrixSummaryResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "total_risk_factors": {
+            "type": "integer",
+            "title": "Total Risk Factors"
+          },
+          "high_risk_count": {
+            "type": "integer",
+            "title": "High Risk Count"
+          },
+          "medium_risk_count": {
+            "type": "integer",
+            "title": "Medium Risk Count"
+          },
+          "low_risk_count": {
+            "type": "integer",
+            "title": "Low Risk Count"
+          },
+          "overall_average_score": {
+            "type": "number",
+            "title": "Overall Average Score"
+          },
+          "linked_kri_coverage_percentage": {
+            "type": "number",
+            "title": "Linked Kri Coverage Percentage"
+          },
+          "category_summaries": {
+            "items": {
+              "$ref": "#/components/schemas/Quality_RACTCategorySummary"
+            },
+            "type": "array",
+            "title": "Category Summaries"
+          },
+          "risk_factors": {
+            "items": {
+              "$ref": "#/components/schemas/Quality_RACTRiskFactorResponse"
+            },
+            "type": "array",
+            "title": "Risk Factors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "total_risk_factors",
+          "high_risk_count",
+          "medium_risk_count",
+          "low_risk_count",
+          "overall_average_score",
+          "linked_kri_coverage_percentage",
+          "category_summaries",
+          "risk_factors"
+        ],
+        "title": "RACTMatrixSummaryResponse"
+      },
+      "Quality_RACTRiskFactorCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Quality_RACTCategory",
+            "description": "Protocol risk category: SAFETY, CONSENT, STUDY_CONDUCT, DATA_INTEGRITY, IP_MANAGEMENT, TECHNOLOGY"
+          },
+          "risk_topic": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Risk Topic",
+            "description": "Concise risk factor title / topic (e.g. Complex Dosing)"
+          },
+          "risk_description": {
+            "type": "string",
+            "title": "Risk Description",
+            "description": "Detailed description of the potential risk"
+          },
+          "probability_score": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Probability Score",
+            "description": "Likelihood score: 1=Low, 2=Medium, 3=High"
+          },
+          "impact_score": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Impact Score",
+            "description": "Impact severity score: 1=Low, 2=Medium, 3=High"
+          },
+          "detectability_score": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Detectability Score",
+            "description": "Detectability score: 1=High (Easy), 2=Medium, 3=Low (Hard)"
+          },
+          "mitigation_strategy": {
+            "type": "string",
+            "title": "Mitigation Strategy",
+            "description": "Operational risk mitigation and control plan"
+          },
+          "linked_kri_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linked Kri Code",
+            "description": "Optional code of linked automated Key Risk Indicator"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "category",
+          "risk_topic",
+          "risk_description",
+          "probability_score",
+          "impact_score",
+          "detectability_score",
+          "mitigation_strategy"
+        ],
+        "title": "RACTRiskFactorCreate"
+      },
+      "Quality_RACTRiskFactorResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "risk_topic": {
+            "type": "string",
+            "title": "Risk Topic"
+          },
+          "risk_description": {
+            "type": "string",
+            "title": "Risk Description"
+          },
+          "probability_score": {
+            "type": "integer",
+            "title": "Probability Score"
+          },
+          "impact_score": {
+            "type": "integer",
+            "title": "Impact Score"
+          },
+          "detectability_score": {
+            "type": "integer",
+            "title": "Detectability Score"
+          },
+          "total_risk_score": {
+            "type": "integer",
+            "title": "Total Risk Score"
+          },
+          "risk_tier": {
+            "type": "string",
+            "title": "Risk Tier"
+          },
+          "mitigation_strategy": {
+            "type": "string",
+            "title": "Mitigation Strategy"
+          },
+          "linked_kri_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linked Kri Code"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "category",
+          "risk_topic",
+          "risk_description",
+          "probability_score",
+          "impact_score",
+          "detectability_score",
+          "total_risk_score",
+          "risk_tier",
+          "mitigation_strategy",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "RACTRiskFactorResponse"
+      },
+      "Quality_RACTRiskFactorUpdate": {
+        "properties": {
+          "risk_topic": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Topic",
+            "description": "Updated risk topic"
+          },
+          "risk_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Description",
+            "description": "Updated risk description"
+          },
+          "probability_score": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Probability Score",
+            "description": "Updated probability score"
+          },
+          "impact_score": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Impact Score",
+            "description": "Updated impact score"
+          },
+          "detectability_score": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detectability Score",
+            "description": "Updated detectability score"
+          },
+          "mitigation_strategy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mitigation Strategy",
+            "description": "Updated mitigation strategy"
+          },
+          "linked_kri_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linked Kri Code",
+            "description": "Updated linked KRI code"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active",
+            "description": "Active status flag"
+          }
+        },
+        "type": "object",
+        "title": "RACTRiskFactorUpdate"
+      },
       "Quality_RCACreateOrUpdate": {
         "properties": {
           "methodology": {
@@ -94927,6 +99900,16 @@
           "risk_rank": {
             "type": "integer",
             "title": "Risk Rank"
+          },
+          "percentile_rank": {
+            "type": "number",
+            "title": "Percentile Rank",
+            "default": 0.0
+          },
+          "risk_tier": {
+            "type": "string",
+            "title": "Risk Tier",
+            "default": "LOW"
           },
           "high_risk_kri_count": {
             "type": "integer",

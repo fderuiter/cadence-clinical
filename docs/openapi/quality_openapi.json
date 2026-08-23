@@ -749,6 +749,275 @@
         }
       }
     },
+    "/api/v1/quality/rbqm/ract/factors": {
+      "post": {
+        "summary": "Create Ract Risk Factor",
+        "operationId": "create_ract_risk_factor_api_v1_quality_rbqm_ract_factors_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RACTRiskFactorCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RACTRiskFactorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Ract Risk Factors",
+        "operationId": "list_ract_risk_factors_api_v1_quality_rbqm_ract_factors_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional RACT Category filter",
+              "title": "Category"
+            },
+            "description": "Optional RACT Category filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RACTRiskFactorResponse"
+                  },
+                  "title": "Response List Ract Risk Factors Api V1 Quality Rbqm Ract Factors Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/ract/factors/{factor_id}": {
+      "put": {
+        "summary": "Update Ract Risk Factor",
+        "operationId": "update_ract_risk_factor_api_v1_quality_rbqm_ract_factors__factor_id__put",
+        "parameters": [
+          {
+            "name": "factor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Factor Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RACTRiskFactorUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RACTRiskFactorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Ract Risk Factor",
+        "operationId": "delete_ract_risk_factor_api_v1_quality_rbqm_ract_factors__factor_id__delete",
+        "parameters": [
+          {
+            "name": "factor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Factor Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/ract/seed-default": {
+      "post": {
+        "summary": "Seed Default Transcelerate Ract",
+        "operationId": "seed_default_transcelerate_ract_api_v1_quality_rbqm_ract_seed_default_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RACTRiskFactorResponse"
+                  },
+                  "title": "Response Seed Default Transcelerate Ract Api V1 Quality Rbqm Ract Seed Default Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/ract/summary": {
+      "get": {
+        "summary": "Get Ract Matrix Summary",
+        "operationId": "get_ract_matrix_summary_api_v1_quality_rbqm_ract_summary_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RACTMatrixSummaryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/quality/rbqm/ctq": {
       "post": {
         "summary": "Create Ctq Factor",
@@ -1239,6 +1508,128 @@
                     "$ref": "#/components/schemas/QTLBreachEventResponse"
                   },
                   "title": "Response List Qtl Breaches Api V1 Quality Rbqm Qtls Breaches Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/csm/dossiers/compile": {
+      "post": {
+        "summary": "Compile Csm Dossier",
+        "operationId": "compile_csm_dossier_api_v1_quality_rbqm_csm_dossiers_compile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompileCSMDossierRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CSMDossierResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/csm/dossiers": {
+      "get": {
+        "summary": "List Csm Dossiers",
+        "operationId": "list_csm_dossiers_api_v1_quality_rbqm_csm_dossiers_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CSMDossierResponse"
+                  },
+                  "title": "Response List Csm Dossiers Api V1 Quality Rbqm Csm Dossiers Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/csm/dossiers/{dossier_id}": {
+      "get": {
+        "summary": "Get Csm Dossier",
+        "operationId": "get_csm_dossier_api_v1_quality_rbqm_csm_dossiers__dossier_id__get",
+        "parameters": [
+          {
+            "name": "dossier_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dossier Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CSMDossierResponse"
                 }
               }
             }
@@ -4159,6 +4550,161 @@
         "type": "object",
         "title": "CAPAUpdate"
       },
+      "CSMDossierResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "dossier_name": {
+            "type": "string",
+            "title": "Dossier Name"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "generated_by": {
+            "type": "string",
+            "title": "Generated By"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "ract_summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Ract Summary"
+          },
+          "kri_surveillance_summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Kri Surveillance Summary"
+          },
+          "site_risk_rankings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Site Risk Rankings"
+          },
+          "anomaly_forensics_summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Anomaly Forensics Summary"
+          },
+          "electronic_signature": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Electronic Signature"
+          },
+          "audit_trail_snapshot": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Audit Trail Snapshot"
+          },
+          "merkle_seal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merkle Seal"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "dossier_name",
+          "generated_at",
+          "generated_by",
+          "status",
+          "ract_summary",
+          "kri_surveillance_summary",
+          "site_risk_rankings",
+          "anomaly_forensics_summary",
+          "electronic_signature",
+          "audit_trail_snapshot",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "CSMDossierResponse"
+      },
+      "CompileCSMDossierRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study ID"
+          },
+          "dossier_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dossier Name",
+            "description": "Custom name for the compiled inspection dossier"
+          },
+          "signer_name": {
+            "type": "string",
+            "title": "Signer Name",
+            "description": "Full legal name of the reviewing signer"
+          },
+          "signer_role": {
+            "type": "string",
+            "title": "Signer Role",
+            "description": "Role of the signer (e.g. Lead Central Monitor / QA Lead)"
+          },
+          "signature_meaning": {
+            "type": "string",
+            "title": "Signature Meaning",
+            "description": "21 CFR Part 11 controlled signing statement",
+            "default": "I approve this Centralized Monitoring Inspection Dossier in accordance with 21 CFR Part 11 and ICH E6(R3)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "signer_name",
+          "signer_role"
+        ],
+        "title": "CompileCSMDossierRequest"
+      },
       "CtQFactorCreate": {
         "properties": {
           "study_id": {
@@ -5981,6 +6527,402 @@
         ],
         "title": "QTLResponse"
       },
+      "RACTCategory": {
+        "type": "string",
+        "enum": [
+          "SAFETY",
+          "CONSENT",
+          "STUDY_CONDUCT",
+          "DATA_INTEGRITY",
+          "IP_MANAGEMENT",
+          "TECHNOLOGY"
+        ],
+        "title": "RACTCategory"
+      },
+      "RACTCategorySummary": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "total_factors": {
+            "type": "integer",
+            "title": "Total Factors"
+          },
+          "high_count": {
+            "type": "integer",
+            "title": "High Count"
+          },
+          "medium_count": {
+            "type": "integer",
+            "title": "Medium Count"
+          },
+          "low_count": {
+            "type": "integer",
+            "title": "Low Count"
+          },
+          "average_score": {
+            "type": "number",
+            "title": "Average Score"
+          },
+          "linked_kri_count": {
+            "type": "integer",
+            "title": "Linked Kri Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "total_factors",
+          "high_count",
+          "medium_count",
+          "low_count",
+          "average_score",
+          "linked_kri_count"
+        ],
+        "title": "RACTCategorySummary"
+      },
+      "RACTMatrixSummaryResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "total_risk_factors": {
+            "type": "integer",
+            "title": "Total Risk Factors"
+          },
+          "high_risk_count": {
+            "type": "integer",
+            "title": "High Risk Count"
+          },
+          "medium_risk_count": {
+            "type": "integer",
+            "title": "Medium Risk Count"
+          },
+          "low_risk_count": {
+            "type": "integer",
+            "title": "Low Risk Count"
+          },
+          "overall_average_score": {
+            "type": "number",
+            "title": "Overall Average Score"
+          },
+          "linked_kri_coverage_percentage": {
+            "type": "number",
+            "title": "Linked Kri Coverage Percentage"
+          },
+          "category_summaries": {
+            "items": {
+              "$ref": "#/components/schemas/RACTCategorySummary"
+            },
+            "type": "array",
+            "title": "Category Summaries"
+          },
+          "risk_factors": {
+            "items": {
+              "$ref": "#/components/schemas/RACTRiskFactorResponse"
+            },
+            "type": "array",
+            "title": "Risk Factors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "total_risk_factors",
+          "high_risk_count",
+          "medium_risk_count",
+          "low_risk_count",
+          "overall_average_score",
+          "linked_kri_coverage_percentage",
+          "category_summaries",
+          "risk_factors"
+        ],
+        "title": "RACTMatrixSummaryResponse"
+      },
+      "RACTRiskFactorCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "category": {
+            "$ref": "#/components/schemas/RACTCategory",
+            "description": "Protocol risk category: SAFETY, CONSENT, STUDY_CONDUCT, DATA_INTEGRITY, IP_MANAGEMENT, TECHNOLOGY"
+          },
+          "risk_topic": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Risk Topic",
+            "description": "Concise risk factor title / topic (e.g. Complex Dosing)"
+          },
+          "risk_description": {
+            "type": "string",
+            "title": "Risk Description",
+            "description": "Detailed description of the potential risk"
+          },
+          "probability_score": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Probability Score",
+            "description": "Likelihood score: 1=Low, 2=Medium, 3=High"
+          },
+          "impact_score": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Impact Score",
+            "description": "Impact severity score: 1=Low, 2=Medium, 3=High"
+          },
+          "detectability_score": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Detectability Score",
+            "description": "Detectability score: 1=High (Easy), 2=Medium, 3=Low (Hard)"
+          },
+          "mitigation_strategy": {
+            "type": "string",
+            "title": "Mitigation Strategy",
+            "description": "Operational risk mitigation and control plan"
+          },
+          "linked_kri_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linked Kri Code",
+            "description": "Optional code of linked automated Key Risk Indicator"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "category",
+          "risk_topic",
+          "risk_description",
+          "probability_score",
+          "impact_score",
+          "detectability_score",
+          "mitigation_strategy"
+        ],
+        "title": "RACTRiskFactorCreate"
+      },
+      "RACTRiskFactorResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "risk_topic": {
+            "type": "string",
+            "title": "Risk Topic"
+          },
+          "risk_description": {
+            "type": "string",
+            "title": "Risk Description"
+          },
+          "probability_score": {
+            "type": "integer",
+            "title": "Probability Score"
+          },
+          "impact_score": {
+            "type": "integer",
+            "title": "Impact Score"
+          },
+          "detectability_score": {
+            "type": "integer",
+            "title": "Detectability Score"
+          },
+          "total_risk_score": {
+            "type": "integer",
+            "title": "Total Risk Score"
+          },
+          "risk_tier": {
+            "type": "string",
+            "title": "Risk Tier"
+          },
+          "mitigation_strategy": {
+            "type": "string",
+            "title": "Mitigation Strategy"
+          },
+          "linked_kri_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linked Kri Code"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "category",
+          "risk_topic",
+          "risk_description",
+          "probability_score",
+          "impact_score",
+          "detectability_score",
+          "total_risk_score",
+          "risk_tier",
+          "mitigation_strategy",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "RACTRiskFactorResponse"
+      },
+      "RACTRiskFactorUpdate": {
+        "properties": {
+          "risk_topic": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Topic",
+            "description": "Updated risk topic"
+          },
+          "risk_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Description",
+            "description": "Updated risk description"
+          },
+          "probability_score": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Probability Score",
+            "description": "Updated probability score"
+          },
+          "impact_score": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Impact Score",
+            "description": "Updated impact score"
+          },
+          "detectability_score": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detectability Score",
+            "description": "Updated detectability score"
+          },
+          "mitigation_strategy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mitigation Strategy",
+            "description": "Updated mitigation strategy"
+          },
+          "linked_kri_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linked Kri Code",
+            "description": "Updated linked KRI code"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active",
+            "description": "Active status flag"
+          }
+        },
+        "type": "object",
+        "title": "RACTRiskFactorUpdate"
+      },
       "RCACreateOrUpdate": {
         "properties": {
           "methodology": {
@@ -6613,6 +7555,16 @@
           "risk_rank": {
             "type": "integer",
             "title": "Risk Rank"
+          },
+          "percentile_rank": {
+            "type": "number",
+            "title": "Percentile Rank",
+            "default": 0.0
+          },
+          "risk_tier": {
+            "type": "string",
+            "title": "Risk Tier",
+            "default": "LOW"
           },
           "high_risk_kri_count": {
             "type": "integer",

@@ -407,9 +407,12 @@ def prevent_audit_log_and_locked_version_modification(
             enforcing 21 CFR Part 11 immutability requirements.
     """
     for obj in session.dirty:
-        if isinstance(obj, KnowledgeArticleAuditLog):
+        if type(obj).__name__ in (
+            "KnowledgeArticleAuditLog",
+            "TrainingAuditLog",
+        ):
             raise ValueError(
-                "Updates to KnowledgeArticleAuditLog are strictly forbidden "
+                f"Updates to {type(obj).__name__} are strictly forbidden "
                 "to comply with 21 CFR Part 11."
             )
         if isinstance(obj, KnowledgeArticleVersion):
@@ -429,9 +432,9 @@ def prevent_audit_log_and_locked_version_modification(
                 )
 
     for obj in session.deleted:
-        if isinstance(obj, KnowledgeArticleAuditLog):
+        if type(obj).__name__ in ("KnowledgeArticleAuditLog", "TrainingAuditLog"):
             raise ValueError(
-                "Deletions from KnowledgeArticleAuditLog are strictly forbidden "
+                f"Deletions from {type(obj).__name__} are strictly forbidden "
                 "to comply with 21 CFR Part 11."
             )
         if isinstance(obj, KnowledgeArticleVersion) and obj.is_locked:

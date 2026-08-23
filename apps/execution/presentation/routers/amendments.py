@@ -3,10 +3,12 @@
 Requirements: PRD-SYS-001, PRD-SUB-007
 """
 
+import os
 import uuid
 from datetime import UTC, datetime
 from typing import Any
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import or_, select
@@ -195,6 +197,22 @@ async def publish_amendment_endpoint(
                 )
         except Exception:
             pass
+
+    # Automated generation of delta-training curriculum (PRD-TRN-001)
+    try:
+        service_url = os.getenv("KNOWLEDGE_SERVICE_URL", "http://127.0.0.1:8006")
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            await client.post(
+                f"{service_url}/api/v1/training/curricula/amendment-delta",
+                json={
+                    "study_id": payload.study_id,
+                    "baseline_snapshot": payload.baseline_snapshot,
+                    "amended_snapshot": payload.amended_snapshot,
+                    "protocol_version": payload.version_number,
+                },
+            )
+    except Exception:
+        pass
 
     return PublishAmendmentResponse(
         amendment_id=amendment_id,
@@ -494,3 +512,52 @@ async def register_bulk_subject_reconsent(
         "reason_for_change": payload.reason_for_change,
         "timestamp": now.isoformat(),
     }
+
+
+class VerifyTrainingGatingRequest(BaseModel):
+    """Payload to verify user qualification for EDC write permissions."""
+
+    study_id: str = Field(..., description="Clinical study ID")
+    protocol_version: str = Field(..., description="Active protocol version tag")
+    user_id: str = Field(..., description="User ID to evaluate")
+    site_id: str | None = Field(default=None, description="Optional clinical site ID")
+    user_role: str | None = Field(
+        default=None, description="Optional user clinical role"
+    )
+
+
+@router.post("/verify-training-gate")
+async def verify_training_gate_endpoint(
+    payload: VerifyTrainingGatingRequest,
+    current_user: dict = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Programmatically verify training qualification for EDC write and signature permissions.
+
+    Requirements: PRD-TRN-002
+    """
+    from apps.execution.training_gating import (
+        TrainingRequiredError,
+        enforce_training_qualification_gate,
+    )
+
+    try:
+        await enforce_training_qualification_gate(
+            user_id=payload.user_id,
+            study_id=payload.study_id,
+            protocol_version=payload.protocol_version,
+            site_id=payload.site_id,
+            user_role=payload.user_role,
+        )
+        return {
+            "is_qualified": True,
+            "user_id": payload.user_id,
+            "study_id": payload.study_id,
+            "protocol_version": payload.protocol_version,
+            "site_id": payload.site_id,
+            "status": "UNLOCKED",
+        }
+    except TrainingRequiredError as e:
+        raise HTTPException(
+            status_code=e.status_code,
+            detail=e.detail,
+        )
