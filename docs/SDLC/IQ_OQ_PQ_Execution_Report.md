@@ -7,8 +7,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3593
-- **Passed:** 3563 🟢
+- **Total Automated Test Cases Run:** 3607
+- **Passed:** 3577 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 30 ⚪
 - **Overall Operational Pass Rate:** 99.17%
@@ -104,10 +104,16 @@ filelock                 3.32.0
 fonttools                4.63.0
 frozenlist               1.8.0
 fsspec                   2026.7.0
+google-api-core          2.34.0
+google-api-python-client 2.199.0
+google-auth              2.56.3
+google-auth-httplib2     0.4.1
+googleapis-common-protos 1.75.1
 greenlet                 3.5.4
 h11                      0.16.0
 hf-xet                   1.6.0
 httpcore                 1.0.9
+httplib2                 0.32.0
 httptools                0.8.0
 httpx                    0.28.1
 huggingface-hub          1.28.0
@@ -161,8 +167,11 @@ playwright               1.61.0
 pluggy                   1.6.0
 pre-commit               4.6.1
 propcache                0.5.2
+proto-plus               1.28.3
+protobuf                 7.36.0
 py-serializable          2.1.0
 pyasn1                   0.6.4
+pyasn1-modules           0.4.2
 pycparser                3.0
 pydantic                 2.13.4
 pydantic-core            2.46.4
@@ -221,6 +230,7 @@ typer                    0.27.1
 typing-extensions        4.16.0
 typing-inspection        0.4.2
 tzdata                   2026.3
+uritemplate              4.2.0
 urllib3                  2.7.0
 usdm                     0.67.0
 uvicorn                  0.51.0
@@ -2206,6 +2216,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_primary_reads_concordance_happy_path` | `apps.imaging.tests.test_adjudication` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_primary_reads_discordance_and_tie_breaker_escalation` | `apps.imaging.tests.test_adjudication` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sld_discordance_calculation` | `apps.imaging.tests.test_adjudication` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_workflow_discordance_and_part11_signoff` | `apps.imaging.tests.test_adjudication` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_workflow_session_not_found` | `apps.imaging.tests.test_adjudication` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_workflow_submit_reader_assessment_lifecycle` | `apps.imaging.tests.test_adjudication` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_caliper_annotation_crud_and_audit` | `apps.imaging.tests.test_dicom_viewer_recist` | PRD-IMG-004, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_lugano_partial_response_and_deauville_pet` | `apps.imaging.tests.test_dicom_viewer_recist` | PRD-IMG-004 | 🟢 PASSED | < 1s |
 | `test_lugano_ppd_and_spd_calculation` | `apps.imaging.tests.test_dicom_viewer_recist` | PRD-IMG-004 | 🟢 PASSED | < 1s |
@@ -2925,6 +2938,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_parse_port_entry_variations` | `packages.cli.tests.test_ports` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_resolve_all_service_ports_batch` | `packages.cli.tests.test_ports` | PRD-SYS-002 | 🟢 PASSED | < 1s |
 | `test_resolve_service_port_collision` | `packages.cli.tests.test_ports` | PRD-SYS-002 | 🟢 PASSED | < 1s |
+| `test_record_help` | `packages.cli.tests.test_record_command` | PRD-SYS-105 | 🟢 PASSED | < 1s |
+| `test_record_list_empty` | `packages.cli.tests.test_record_command` | PRD-SYS-105 | 🟢 PASSED | < 1s |
+| `test_record_list_with_runs` | `packages.cli.tests.test_record_command` | PRD-SYS-105 | 🟢 PASSED | < 1s |
+| `test_record_run_local_only` | `packages.cli.tests.test_record_command` | PRD-SYS-105 | 🟢 PASSED | < 1s |
+| `test_record_setup_gdrive_valid` | `packages.cli.tests.test_record_command` | PRD-SYS-105 | 🟢 PASSED | < 1s |
 | `test_ai_assisted_record_default_state_draft_ai` | `packages.compliance.tests.test_ai_assisted_audit_ledger` | PRD-SYS-051 | 🟢 PASSED | < 1s |
 | `test_ai_generation_manifest_structure` | `packages.compliance.tests.test_ai_assisted_audit_ledger` | PRD-SYS-051 | 🟢 PASSED | < 1s |
 | `test_approved_state_requires_hitl_fields` | `packages.compliance.tests.test_ai_assisted_audit_ledger` | PRD-SYS-051 | 🟢 PASSED | < 1s |
@@ -3352,6 +3370,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_s3_storage_provider_lifecycle` | `packages.storage.tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_s3_storage_provider_not_found` | `packages.storage.tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_checksum` | `packages.storage.tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_compute_sha256` | `packages.storage.tests.test_gdrive_client` | PRD-SYS-105 | 🟢 PASSED | < 1s |
+| `test_gdrive_client_create_folder` | `packages.storage.tests.test_gdrive_client` | PRD-SYS-105 | 🟢 PASSED | < 1s |
+| `test_gdrive_client_unconfigured` | `packages.storage.tests.test_gdrive_client` | PRD-SYS-105 | 🟢 PASSED | < 1s |
+| `test_gdrive_client_upload_file` | `packages.storage.tests.test_gdrive_client` | PRD-SYS-105 | 🟢 PASSED | < 1s |
+| `test_gdrive_client_validate_credentials` | `packages.storage.tests.test_gdrive_client` | PRD-SYS-105 | 🟢 PASSED | < 1s |
+| `test_generate_run_manifest` | `packages.storage.tests.test_gdrive_client` | PRD-SYS-105 | 🟢 PASSED | < 1s |
 | `test_automated_webhook_non_degraded_ingestion` | `packages.storage.tests.test_safe_binary_storage_watermark` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_native_docx_watermarking` | `packages.storage.tests.test_safe_binary_storage_watermark` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_native_pdf_watermarking` | `packages.storage.tests.test_safe_binary_storage_watermark` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3874,28 +3898,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 16f7c69004484a3e000366883e5e0dd71fb83d4219d834c7fae96bb1a5edf8cd
+- **Cryptographic Hash (SHA-256):** c7d90096996abbb1c45b31089875970fb0c52df9d0fb8421bdef130c39abc40b
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUMWGTFtJ7TVzhhAAOyyTwzNE2oD4wDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUI50UZXNyZs6iRf4l/4s6hcg+TDMwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MjIxMzkxOVoXDTI3MDgyMzIxMzkxOVowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MjIyMzM0OFoXDTI3MDgyMzIyMzM0OFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA35uJ
-ccBMmNUChVz5pqeyShxoT9fb9FyFBU+3sB1epMYlLprRKnAU2pwblpHBcrRvYyou
-YZIEdVJCspwESNeJ+ohwbdNoMqvLUAz6bs4myT7lfYM3Pg9U1b1VGc93QGLl3dcq
-rQiYePcGA4jyoFBTV0nEOaxRmMN8hRGe56AgTScFRqshf0Wp72oxp5FcYE2Jsw01
-NSw9Qabflrux3sNlpHEtWjNXdok3nxiR0FXw9mNliMN0DAGXZyCRvwMixBb9imvv
-1/V4l6lebybdp26NouqbtVrSxLyDTpEau4hkO8JF/L/xm78Sv8GyKZWhPFvJeeAs
-SLWqxJ9dSDp4EzvqoQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQB+v+dJxE3ym3DD
-5R+IRjdQTCokemGPzC1sqE5MCMgAiJcx0QjFQn23MsvOfyXIKbLTQ3mJTYHWMlW9
-c4ywtoMD7UxBwZ1tTd92JWEY+NXnXWDORBHKANKtNcKMduDVo4kJjgZqKp7DhKOx
-FwgKHDqofHVrvn3C2I/yDjOfav+4hLDlemSSZuVK+MgzUibNw+1XkQ40nSHKmKv6
-eiuc8Rm6rUJ2/fXQAxnXuGDO+qlocKtQkCeHRvrtGboe/Z2ROVe8UlPCfvCr1/Ps
-RTTMvZoNpuG5zB6pS5/VCvxjbRCwjLlt+WDhE5fi/SCwJIZaGSXnTlvUrTHt0irI
-7iWQektl
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA9bCm
+OEePcpKmCHOaUXIJXoix8zXUxiMmD4qmJeDrS1CZ9YVfEqPs2mwe7QBoVI/233Sd
+cMHe7jA2ixXE0vux+twXVA57CjnrYI/zjQpNLcn7KhJk7xEnBoD8aQVN4SbbOFr5
+fyvFNooTMsm9nvN2jbdgSH4klexeeQxUUyYcSMxb5n1mZzXnrEvmYYmV5x5eib4j
+f8AdYZne4h/50XnG0b0d4WhPAvm0oA4TvPaaJZISMM+NMtJJYOlGeuTJsjiTcGif
+U2HTCc02VQB1Lv2acCZB4jAP72zG/qxq7TAGmSpUlZpU3ZPMrFbcu1OsNSQjpr3C
+iemQczqU1aujhMxcDQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQDaBhCIk3aceh2/
+CaF2ccnitxbWaW30bb2W+a+7+8qoZ/EQ2GEtkJ/sKitQ8Rd1wEF+rWF39hXAsTG9
+lOZWuhYgNLVOKRmwmtDd8X371fJ7fSiEKkr48AjyCjgxJhOpLddMnbB0tOdLCmEo
+kmUqAJW9eD++Y5gVbe+lnOCqUYtPYc3vIwogO/1xdpqBwJ3aXMmRxJN6xJ6hA2Fv
+ssi2hAjvcgpboHEZqo6pIrcIp0/tNVu06DJYKLhS2KxWaWrurvRs2pfQqUCDE+og
+rEbwrJSV5okIWr/Y+HZtwvi2v8c/H7dRuAC06E8iYAC+BZgUmNGkolgOZggwi+NA
+U+HxbZMO
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-17owcEJuu9p/OBleclH/aIEp0Me2TkcmGObTMNNFkRZ7atw+boWEdHBjdGESOVBM8gpnpEFzEQZxp8X83txMVJPGYZqdgyBd/nl5IeLL3AJ1qB8CYeWqu6KT0vruVxWuDIuaFru/yYQXJwOEizgjX2ZwpTY9bhldjvu4B2qFjNjbNJxIunWB8X6zKtdMKgbI6sTRjL0hNTdkXJOUIpbzS5yK2XGqI7BRQNrNTPkjhmhbZUqUTC0GE/bYamY/M8XTpWRnYDcnaI1S4xRYSe27evFiseWYKIluI/Ci7jJyIKOowghITNnuMVfHLU+0lrUq41LLJsMbJo3b3JEAt9+qJQ==
+5ApSUnrogHIE9a1hwA7zlmY40Ayp2qhhwbqras5UmT6EZE8EsN3w3nedY+GDp9Q39XPg+vi+GMU7BL/GspZ/u/Lbn/yyU56lnKa/kYBPcrIb0GOnRxiA1CaA3pQj3mWdd1i5UqWe29aj5SG8nptBJb1VyrxehTyhQq+uVfEL45tjHnjF2MWWSAhRHPVGDBeAKBQ//0tHPADXBCQiiT3EVZVilhxbrhASUnqkPgggDdgt+zRN7MVZZNiaIdFfJkIMWbbG4EAl3RtR/IOxh0M1zFsZk+CB8MD+BQgLcKGGB3B/VZt5ioDwcgnQxuD3LZql+ovbTS7PznF490pvBuMB1A==
 -----END SIGNATURE-----

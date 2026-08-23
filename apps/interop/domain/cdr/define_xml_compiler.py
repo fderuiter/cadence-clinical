@@ -18,7 +18,9 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
 from typing import Any
-from xml.dom import minidom
+
+import defusedxml.ElementTree as DefusedET
+import defusedxml.minidom as minidom
 
 from apps.interop.domain.cdr.dataset_json_compiler import STANDARD_VARIABLE_SPECS
 from apps.interop.domain.cdr.models import (
@@ -835,7 +837,7 @@ class DefineXMLCompiler:
             )
 
         try:
-            root = ET.fromstring(xml_content.encode("utf-8"))
+            root = DefusedET.fromstring(xml_content.encode("utf-8"))
         except Exception as e:
             return DefineXMLValidationResult(
                 is_valid=False,

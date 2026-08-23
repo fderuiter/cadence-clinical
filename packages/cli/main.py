@@ -19,6 +19,7 @@ from packages.cli.commands.dev import dev_app
 from packages.cli.commands.doctor import doctor_app
 from packages.cli.commands.fix import fix_app
 from packages.cli.commands.gxp import gxp_app
+from packages.cli.commands.record import record_app
 from packages.cli.commands.scaffold import scaffold_app
 from packages.cli.commands.setup import setup_app
 from packages.cli.commands.test import test_app
@@ -74,6 +75,7 @@ app.add_typer(fix_app, name="fix")
 app.add_typer(db_app, name="db")
 app.add_typer(scaffold_app, name="scaffold")
 app.add_typer(setup_app, name="setup")
+app.add_typer(record_app, name="record")
 app.add_typer(gxp_app, name="gxp")
 app.add_typer(cdisc_app, name="cdisc")
 app.add_typer(mcp_app, name="mcp")

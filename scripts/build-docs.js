@@ -9,7 +9,7 @@ process.env.RTM_DRAFT = "true";
 
 // Ensure adequate heap allocation for large documentation bundles under VitePress
 if (!process.env.NODE_OPTIONS || !process.env.NODE_OPTIONS.includes("--max-old-space-size")) {
-  process.env.NODE_OPTIONS = `${process.env.NODE_OPTIONS || ""} --max-old-space-size=8192`.trim();
+  process.env.NODE_OPTIONS = `${process.env.NODE_OPTIONS || ""} --max-old-space-size=16384`.trim();
 }
 
 let pnpmCmd = "pnpm";

@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class ImagingModality(StrEnum):
@@ -470,10 +470,6 @@ class AdjudicationSessionEntity(BaseModel):
     version_index: int = 1
 
 
-# Type alias for dual-reader session
-DualReaderAdjudicationSession = AdjudicationSessionEntity
-
-
 class SDTMTURecord(BaseModel):
     """CDISC SDTM Tumor Identification (TU) domain record."""
 
@@ -572,3 +568,61 @@ class EDCTumorAssessmentForm(BaseModel):
     manifest_sha256: str
     signed_by: str | None = None
     signed_at: str | None = None
+
+
+class DualReaderAdjudicationSession(BaseModel):
+    """Independent Review Charter session encapsulating dual-read and tie-breaker decisions."""
+
+    id: str | None = None
+    session_id: str | None = None
+    study_envelope_id: str | None = None
+    study_id: str
+    site_id: str = "SITE-DEFAULT"
+    subject_id: str
+    timepoint_name: str
+    assessment_criteria: OncologicCriteria = OncologicCriteria.RECIST_1_1
+    reader_1_id: str = "rad_01"
+    reader_1_name: str = "Reader 1"
+    reader_1_status: str = "PENDING"
+    reader_1_assessment: ReaderAssessment | None = None
+    reader_2_id: str = "rad_02"
+    reader_2_name: str = "Reader 2"
+    reader_2_status: str = "PENDING"
+    reader_2_assessment: ReaderAssessment | None = None
+    adjudicator_id: str | None = None
+    adjudicator_name: str | None = "Adjudication Committee Chair"
+    adjudicator_assessment: ReaderAssessment | None = None
+    sld_discordance_delta: float = 0.0
+    is_response_discordant: bool = False
+    discordance_reasons: list[str] = Field(default_factory=list)
+    workflow_status: AdjudicationWorkflowStatus = (
+        AdjudicationWorkflowStatus.PENDING_PRIMARY_READS
+    )
+    final_consensus_response: RECISTResponseCode | str | None = None
+    final_consensus_sld_mm: float | None = None
+    binding_reader: str | None = None
+    adjudication_rationale: str | None = None
+    electronic_signature: dict[str, Any] | None = None
+    locked_at: str | None = None
+    locked_by: str | None = None
+    session_digest: str = ""
+    tenant_id: str = "tenant_default"
+    created_at: str | None = None
+    created_by: str = "system"
+    updated_at: str | None = None
+    reason_for_change: str | None = None
+    version_index: int = 1
+
+    @model_validator(mode="after")
+    def sync_id_and_session_id(self) -> DualReaderAdjudicationSession:
+        if self.session_id and not self.id:
+            self.id = self.session_id
+        elif self.id and not self.session_id:
+            self.session_id = self.id
+        elif not self.id and not self.session_id:
+            import uuid
+
+            new_id = str(uuid.uuid4())
+            self.id = new_id
+            self.session_id = new_id
+        return self

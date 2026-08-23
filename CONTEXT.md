@@ -360,3 +360,59 @@ A cryptographic data isolation boundary in the Clinical Data Repository that enc
 
 A blinded medical imaging adjudication rule evaluating Sum of Diameters (SOD) across independent dual readers under RECIST 1.1; deltas $> 20\%$ or discordant overall response classifications automatically escalate the event dossier to the Adjudication Committee Chair.
 
+### Automated Golden Path Video Recording
+
+A deterministic browser automation pipeline using Playwright to execute end-to-end clinical persona workflows in high-definition (1080p), capturing continuous, high-fidelity video artifacts and execution traces across all application views.
+
+### Triple Sentinel Verification Gate
+
+A composite automated quality assurance protocol enforcing: (1) DOM state transition and interaction assertions, (2) zero unhandled JavaScript console errors and zero unexpected HTTP 4xx/5xx network failures, and (3) verified backend 21 CFR Part 11 audit trail event emissions for all mutating clinical operations.
+
+### Google Drive Run Manifest Envelope
+
+A versioned, cloud-synchronized execution payload containing modular video recordings, an interactive HTML verification report, structured test telemetry, and SHA-256 cryptographic checksums uploaded to a designated Google Drive destination via headless service account authentication.
+
+### Demonstration-Paced E2E Recording
+
+An automated browser test execution mode that introduces human-perceptible pacing, smooth cursor simulation, and interaction highlighting during Playwright golden path runs to generate high-clarity video walkthroughs suitable for stakeholder demonstration, validation, and training.
+
+### Persona-Partitioned Golden Path Suite
+
+An end-to-end test and video capture architecture that organizes clinical application verification around authentic user personas (`sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `safety_physician`, `auditor`), executing role-specific workflows across all application routes and views with verified RBAC context transitions.
+
+### DDF Intermediate Representation (IR)
+
+A strongly-typed, version-agnostic domain structure representing normalized clinical study forms, items, rules, and multi-language narrative definitions that decouples protocol ingestion from downstream layout rendering.
+_Avoid_: Template dict, raw USDM payload
+
+### XPath Rule Compiler
+
+A deterministic recursive AST compiler that translates structured rule condition trees into OpenRosa-compliant XPath expressions for skip-logic relevants and validation constraints.
+_Avoid_: String concatenation, inline regex builder
+
+### DDF Job Runner
+
+An asynchronous execution adapter that wraps the in-memory DDF compiler inside database transaction lifecycles, managing translation job state transitions and 21 CFR Part 11 accessibility audit logs.
+_Avoid_: Monolithic translation worker
+
+### Quality Surveillance Runner
+
+A unified, autonomous quality monitoring engine that orchestrates multi-domain data harvesting from execution services, enforces sample-gated statistical power thresholds, executes statistical forensics and perceptual hash sentinels, and idempotently dispatches 21 CFR Part 11 deviations and KRI alerts.
+_Avoid_: Shallow forensics wrapper, manual anomaly scanner
+
+### Harvested Surveillance Bundle
+
+A strongly-typed aggregate container encapsulating normalized multi-site demographic profiles, longitudinal observation vectors, audit trail timestamps, and medical image perceptual hash manifests harvested across microservices for quality surveillance.
+_Avoid_: Raw observation arrays, loose JSON payloads
+
+### Blinded Dual-Reader Adjudication Workflow
+
+A deep clinical workflow module encapsulating independent dual-reader oncology evaluation (RECIST 1.1 / Lugano), automated delta threshold discordance detection, 21 CFR Part 11 cryptographic sealing, and persistence mutations behind a minimal two-method command interface.
+_Avoid_: Inline router orchestration, fragmented review handlers
+
+### Step-Up Adjudication Sign-Off
+
+A 21 CFR Part 11 compliant digital sealing operation where an Adjudication Committee Chair provides mandatory clinical justification rationale and generates a cryptographic SHA-256 signature manifest to bind discordant endpoints and synchronize EDC tumor assessments.
+_Avoid_: Unverified tie-breaking, manual database override
+
+

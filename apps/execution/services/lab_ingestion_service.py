@@ -25,12 +25,12 @@ import json
 import logging
 import re
 import uuid
-import xml.etree.ElementTree as ET
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
+import defusedxml.ElementTree as ET
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 

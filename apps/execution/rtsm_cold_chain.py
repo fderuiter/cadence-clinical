@@ -9,9 +9,9 @@ import io
 import json
 import math
 import uuid
-import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
 
+import defusedxml.ElementTree as ET
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 

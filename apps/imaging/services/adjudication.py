@@ -8,12 +8,14 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, model_validator
-
+from apps.imaging.domain.exceptions import (
+    AdjudicationSessionNotFoundError,
+    AdjudicationSignOffRationaleRequiredError,
+)
 from apps.imaging.domain.models import (
     AdjudicationWorkflowStatus,
     DiscordanceReason,
-    OncologicCriteria,
+    DualReaderAdjudicationSession,
     ReaderAssessment,
     ReaderRole,
     RECISTResponseCode,
@@ -21,67 +23,10 @@ from apps.imaging.domain.models import (
     SDTMTRRecord,
     SDTMTURecord,
 )
+from apps.imaging.ports.repository_port import ImagingAdjudicationRepositoryPort
 
 # Backward-compatible alias for existing imports
 RECISTResponse = RECISTResponseCode
-
-
-class DualReaderAdjudicationSession(BaseModel):
-    """Independent Review Charter session encapsulating dual-read and tie-breaker decisions."""
-
-    id: str | None = None
-    session_id: str | None = None
-    study_envelope_id: str | None = None
-    study_id: str
-    site_id: str = "SITE-DEFAULT"
-    subject_id: str
-    timepoint_name: str
-    assessment_criteria: OncologicCriteria = OncologicCriteria.RECIST_1_1
-    reader_1_id: str = "rad_01"
-    reader_1_name: str = "Reader 1"
-    reader_1_status: str = "PENDING"
-    reader_1_assessment: ReaderAssessment | None = None
-    reader_2_id: str = "rad_02"
-    reader_2_name: str = "Reader 2"
-    reader_2_status: str = "PENDING"
-    reader_2_assessment: ReaderAssessment | None = None
-    adjudicator_id: str | None = None
-    adjudicator_name: str | None = "Adjudication Committee Chair"
-    adjudicator_assessment: ReaderAssessment | None = None
-    sld_discordance_delta: float = 0.0
-    is_response_discordant: bool = False
-    discordance_reasons: list[str] = Field(default_factory=list)
-    workflow_status: AdjudicationWorkflowStatus = (
-        AdjudicationWorkflowStatus.PENDING_PRIMARY_READS
-    )
-    final_consensus_response: RECISTResponseCode | str | None = None
-    final_consensus_sld_mm: float | None = None
-    binding_reader: str | None = None
-    adjudication_rationale: str | None = None
-    electronic_signature: dict[str, Any] | None = None
-    locked_at: str | None = None
-    locked_by: str | None = None
-    session_digest: str = ""
-    tenant_id: str = "tenant_default"
-    created_at: str | None = None
-    created_by: str = "system"
-    updated_at: str | None = None
-    reason_for_change: str | None = None
-    version_index: int = 1
-
-    @model_validator(mode="after")
-    def sync_id_and_session_id(self) -> DualReaderAdjudicationSession:
-        if self.session_id and not self.id:
-            self.id = self.session_id
-        elif self.id and not self.session_id:
-            self.session_id = self.id
-        elif not self.id and not self.session_id:
-            import uuid
-
-            new_id = str(uuid.uuid4())
-            self.id = new_id
-            self.session_id = new_id
-        return self
 
 
 class ImagingAdjudicationEngine:
@@ -642,3 +587,301 @@ class ImagingAdjudicationEngine:
         session.session_digest = hashlib.sha256(
             json.dumps(manifest, sort_keys=True).encode()
         ).hexdigest()
+
+
+class AdjudicationWorkflow:
+    """Deep workflow service encapsulating blinded dual-reader state progression, discordance evaluation, 21 CFR Part 11 cryptographic sealing, and persistence mutations.
+
+    Presents a minimal public command interface with high leverage.
+
+    Requirements: PRD-IMG-003, PRD-IMG-005, PRD-IMG-006, PRD-SYS-001
+    """
+
+    def __init__(self, repository: ImagingAdjudicationRepositoryPort) -> None:
+        """Initializes the workflow service with an adjudication repository port."""
+        self._repository = repository
+
+    async def create_session(
+        self,
+        session: DualReaderAdjudicationSession,
+        actor_id: str,
+        reason_for_change: str | None = None,
+    ) -> DualReaderAdjudicationSession:
+        """Instantiates and persists a new Blinded Dual-Reader adjudication session.
+
+        Args:
+            session: The new DualReaderAdjudicationSession domain entity.
+            actor_id: Identity of the creating user.
+            reason_for_change: Optional GxP reason for creation.
+
+        Returns:
+            The persisted DualReaderAdjudicationSession entity.
+        """
+        ImagingAdjudicationEngine._update_session_digest(session)
+        saved = await self._repository.save(session)
+        await self._repository.record_audit_log(
+            action="ADJUDICATION_SESSION_CREATED",
+            actor_id=actor_id,
+            reason_for_change=reason_for_change,
+            details={
+                "session_id": saved.session_id or saved.id,
+                "subject_id": saved.subject_id,
+                "timepoint_name": saved.timepoint_name,
+                "reader_1_id": saved.reader_1_id,
+                "reader_2_id": saved.reader_2_id,
+                "adjudicator_id": saved.adjudicator_id,
+            },
+        )
+        return saved
+
+    async def submit_reader_assessment(
+        self,
+        session_id: str,
+        assessment: ReaderAssessment,
+        actor_id: str,
+        reason_for_change: str | None = None,
+    ) -> DualReaderAdjudicationSession:
+        """Processes a blinded reader assessment, automatically detects discordance, advances state, and persists audit logs.
+
+        Args:
+            session_id: The unique identifier of the adjudication session.
+            assessment: The domain reader assessment submission.
+            actor_id: Identity of the submitting reader/user.
+            reason_for_change: Optional Part 11 audit explanation.
+
+        Returns:
+            Updated DualReaderAdjudicationSession domain entity.
+
+        Raises:
+            AdjudicationSessionNotFoundError: If the session_id does not exist.
+        """
+        session = await self._repository.get_by_id(session_id)
+        if not session:
+            raise AdjudicationSessionNotFoundError(session_id)
+
+        is_r1 = (
+            assessment.reader_role == ReaderRole.READER_1
+            or assessment.reader_id == session.reader_1_id
+        )
+        is_r2 = (
+            assessment.reader_role == ReaderRole.READER_2
+            or assessment.reader_id == session.reader_2_id
+        )
+
+        if is_r1:
+            session.reader_1_assessment = assessment
+            session.reader_1_status = "COMPLETED"
+        elif is_r2:
+            session.reader_2_assessment = assessment
+            session.reader_2_status = "COMPLETED"
+        else:
+            session.adjudicator_assessment = assessment
+
+        # If both Reader 1 and Reader 2 have completed reads, trigger concordance engine
+        if session.reader_1_assessment and session.reader_2_assessment:
+            session = ImagingAdjudicationEngine.evaluate_primary_reads(
+                session, session.reader_1_assessment, session.reader_2_assessment
+            )
+        else:
+            session.workflow_status = (
+                AdjudicationWorkflowStatus.PENDING_PRIMARY_READS
+                if not session.reader_1_assessment and not session.reader_2_assessment
+                else (
+                    AdjudicationWorkflowStatus.PENDING_READ_2
+                    if is_r1
+                    else AdjudicationWorkflowStatus.PENDING_READ_1
+                )
+            )
+            ImagingAdjudicationEngine._update_session_digest(session)
+
+        session.version_index += 1
+        role_label = (
+            assessment.reader_role.value
+            if hasattr(assessment.reader_role, "value")
+            else str(assessment.reader_role)
+        )
+        session.reason_for_change = (
+            reason_for_change or f"Reader assessment submitted by {role_label}"
+        )
+
+        saved = await self._repository.save(session)
+
+        resp_val = (
+            assessment.overall_response.value
+            if hasattr(assessment.overall_response, "value")
+            else str(assessment.overall_response)
+        )
+        wf_val = (
+            saved.workflow_status.value
+            if hasattr(saved.workflow_status, "value")
+            else str(saved.workflow_status)
+        )
+        await self._repository.record_audit_log(
+            action="READER_ASSESSMENT_SUBMITTED",
+            actor_id=actor_id,
+            reason_for_change=reason_for_change,
+            details={
+                "session_id": session_id,
+                "reader_role": role_label,
+                "overall_response": resp_val,
+                "sum_longest_diameters_mm": assessment.sum_longest_diameters_mm,
+                "workflow_status": wf_val,
+            },
+        )
+        return saved
+
+    async def sign_off_adjudication(
+        self,
+        session_id: str,
+        signer_id: str,
+        signer_name: str,
+        signing_reason: str,
+        rationale: str,
+        binding_reader: str = "ADJUDICATOR",
+        adjudicator_assessment: ReaderAssessment | None = None,
+        ip_address: str = "127.0.0.1",
+        user_agent: str = "Cadence-Imaging/2.0",
+    ) -> DualReaderAdjudicationSession:
+        """Executes 21 CFR Part 11 step-up electronic signature sign-off for binding tie-breaker determination.
+
+        Args:
+            session_id: The unique identifier of the adjudication session.
+            signer_id: User identifier of the signing adjudicator.
+            signer_name: Full name of the signing adjudicator.
+            signing_reason: Part 11 reason code (e.g. ADJUDICATION_SIGN_OFF).
+            rationale: Mandatory clinical justification rationale.
+            binding_reader: Selection of binding reader ('READER_1', 'READER_2', or 'ADJUDICATOR').
+            adjudicator_assessment: Optional explicit assessment by adjudicator.
+            ip_address: Client IP address for audit trail.
+            user_agent: Client User Agent for audit trail.
+
+        Returns:
+            Locked and verified DualReaderAdjudicationSession domain entity.
+
+        Raises:
+            AdjudicationSessionNotFoundError: If the session_id does not exist.
+            AdjudicationSignOffRationaleRequiredError: If clinical rationale is empty.
+        """
+        if not rationale or not rationale.strip():
+            raise AdjudicationSignOffRationaleRequiredError()
+
+        session = await self._repository.get_by_id(session_id)
+        if not session:
+            raise AdjudicationSessionNotFoundError(session_id)
+
+        # 1. Step-up signature manifestation packaging
+        ts_now = datetime.now(UTC).isoformat()
+        manifest_bytes = (
+            f"{session_id}|{signer_id}|{signing_reason}|{ts_now}|{rationale}".encode()
+        )
+        signature_digest = hashlib.sha256(manifest_bytes).hexdigest()
+
+        signature_manifestation = {
+            "signer_id": signer_id,
+            "signer_name": signer_name,
+            "timestamp": ts_now,
+            "signing_reason": signing_reason,
+            "ip_address": ip_address,
+            "user_agent": user_agent,
+            "sha256_hash": signature_digest,
+            "step_up_verified": True,
+        }
+
+        # 2. Build or resolve adjudicator assessment
+        if adjudicator_assessment:
+            adj_assessment_obj = adjudicator_assessment
+            adj_assessment_obj.reader_id = signer_id
+            adj_assessment_obj.reader_name = signer_name
+            adj_assessment_obj.reader_role = ReaderRole.ADJUDICATOR
+            adj_assessment_obj.timepoint_name = session.timepoint_name
+            adj_assessment_obj.assessment_notes = rationale
+            adj_assessment_obj.submitted_at = ts_now
+            adj_assessment_obj.digital_signature = signature_digest
+        elif binding_reader == "READER_1" and session.reader_1_assessment:
+            r1 = session.reader_1_assessment
+            adj_assessment_obj = ReaderAssessment(
+                reader_id=signer_id,
+                reader_name=signer_name,
+                reader_role=ReaderRole.ADJUDICATOR,
+                timepoint_name=session.timepoint_name,
+                target_lesions=r1.target_lesions,
+                non_target_status=r1.non_target_status,
+                new_lesions_present=r1.new_lesions_present,
+                new_lesions_count=r1.new_lesions_count,
+                sum_longest_diameters_mm=r1.sum_longest_diameters_mm,
+                overall_response=r1.overall_response,
+                assessment_notes=rationale,
+                submitted_at=ts_now,
+                digital_signature=signature_digest,
+            )
+        elif binding_reader == "READER_2" and session.reader_2_assessment:
+            r2 = session.reader_2_assessment
+            adj_assessment_obj = ReaderAssessment(
+                reader_id=signer_id,
+                reader_name=signer_name,
+                reader_role=ReaderRole.ADJUDICATOR,
+                timepoint_name=session.timepoint_name,
+                target_lesions=r2.target_lesions,
+                non_target_status=r2.non_target_status,
+                new_lesions_present=r2.new_lesions_present,
+                new_lesions_count=r2.new_lesions_count,
+                sum_longest_diameters_mm=r2.sum_longest_diameters_mm,
+                overall_response=r2.overall_response,
+                assessment_notes=rationale,
+                submitted_at=ts_now,
+                digital_signature=signature_digest,
+            )
+        else:
+            adj_assessment_obj = ReaderAssessment(
+                reader_id=signer_id,
+                reader_name=signer_name,
+                reader_role=ReaderRole.ADJUDICATOR,
+                timepoint_name=session.timepoint_name,
+                overall_response="PR",
+                assessment_notes=rationale,
+                submitted_at=ts_now,
+                digital_signature=signature_digest,
+            )
+
+        # 3. Apply decision via domain engine
+        adjudicated = ImagingAdjudicationEngine.apply_adjudicator_decision(
+            session=session,
+            adjudicator_assessment=adj_assessment_obj,
+            rationale=rationale,
+            locked_by=signer_id,
+            binding_reader=binding_reader,
+            step_up_signature=signature_manifestation,
+        )
+        adjudicated.reason_for_change = (
+            f"21 CFR Part 11 Adjudication Sign-Off: {rationale}"
+        )
+
+        saved = await self._repository.save(adjudicated)
+
+        # 4. Synchronize TumorResponseAssessment record
+        await self._repository.record_tumor_response_assessment(
+            session=saved,
+            signature_digest=signature_digest,
+            actor_id=signer_id,
+            rationale=rationale,
+        )
+
+        # 5. Append 21 CFR Part 11 Audit Log
+        resp_val = (
+            saved.final_consensus_response.value
+            if hasattr(saved.final_consensus_response, "value")
+            else saved.final_consensus_response
+        )
+        await self._repository.record_audit_log(
+            action="ADJUDICATION_STEP_UP_SIGNED",
+            actor_id=signer_id,
+            reason_for_change=rationale,
+            details={
+                "session_id": session_id,
+                "final_response": resp_val,
+                "binding_reader": saved.binding_reader,
+                "session_digest": saved.session_digest,
+                "step_up_signature": signature_manifestation,
+            },
+        )
+        return saved

@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-23: Automated Golden Path Video Recording and GDrive Sync](2026-08-23-automated-golden-path-video-recording-and-gdrive-sync.md)
 - [2026-08-23: Medical Device and IVD Investigation Suite with UDI and Malfunction Quarantine](2026-08-23-medical-device-and-ivd-investigation-suite-with-udi-and-malfunction-quarantine.md)
 - [2026-08-22: Hermetic Containerized Statistical Computing Environment and Role-Gated Unblinded Data Vault](2026-08-22-hermetic-containerized-statistical-computing-environment-and-role-gated-unblinded-data-vault.md)
 - [2026-08-22: Reactive Cross-App Clinical Event Spine and Transactional Outbox](2026-08-22-reactive-cross-app-clinical-event-spine-and-transactional-outbox.md)
@@ -147,6 +148,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-01: Cryptographic Signature Verification Engine for Part 11 eSignatures](2026-08-01-cryptographic-signature-verification-engine-for-esignatures.md)
 
 ### 3. Clinical Data Interoperability & Standards
+- [2026-08-23: DDF Compiler Pipeline Architecture](2026-08-23-ddf-compiler-pipeline-architecture.md)
 - [2026-08-23: SMART on FHIR Ingestion Pipeline & CRC Source Data Reconciliation Drawer](2026-08-23-smart-backend-services-and-crc-reconciliation-drawer.md)
 - [2026-08-21: Hybrid Semantic Medical Coding Pipeline with pgvector](2026-08-21-hybrid-semantic-medical-coding-pipeline-with-pgvector.md)
 
@@ -184,6 +186,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+- [2026-08-23: Deep Adjudication Workflow Seam](2026-08-23-deep-adjudication-workflow-seam.md)
 - [2026-08-23: Participant Financial Wallet and EU CTR Lay Summary Portal](2026-08-23-participant-financial-wallet-and-eu-ctr-lay-summary-portal.md)
 - [2026-08-23: GxP Telehealth Video Consultation Direct to Patient Logistics and Tiered Pediatric Assent](2026-08-23-gxp-telehealth-video-consultation-direct-to-patient-logistics-and-tiered-pediatric-assent.md)
 - [2026-08-23: Cell & Gene Therapy Vein-to-Vein Chain of Custody and Identity](2026-08-23-cell-and-gene-therapy-vein-to-vein-chain-of-custody-and-identity.md)
@@ -233,6 +236,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-31: Randomization and Trial Supply Management](2026-08-31-randomization-and-trial-supply-management.md)
 
 ### 5. Compliance, Audit & Governance
+- [2026-08-23: Autonomous Cross-Domain Quality Surveillance Runner Architecture](2026-08-23-autonomous-cross-domain-quality-surveillance-runner-architecture.md)
 - [2026-08-18: Metadata-Bound Filtering and Consent Abstraction for Transaction Auditing](2026-08-18-metadata-bound-filtering-and-consent-abstraction-for-transaction-auditing.md)
 
 - [2026-08-15: Comprehensive Clinical Quality and RBQM eQMS Architecture](2026-08-15-comprehensive-clinical-quality-and-rbqm-eqms-architecture.md)

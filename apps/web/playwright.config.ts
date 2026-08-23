@@ -6,11 +6,14 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
-  reporter: "html",
+  outputDir: process.env.RECORDING_OUTPUT_DIR || "./test-results",
   use: {
     baseURL: "http://localhost:3000/cadence-clinical/",
     trace: "retain-on-failure",
-    video: "retain-on-failure",
+    video:
+      process.env.RECORD_VIDEO === "true"
+        ? { mode: "on", size: { width: 1920, height: 1080 } }
+        : "retain-on-failure",
     screenshot: "only-on-failure",
   },
   projects: [

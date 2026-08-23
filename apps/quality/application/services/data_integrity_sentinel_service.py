@@ -654,7 +654,7 @@ class PerceptualImageHashingEngine:
                     ]
                     return cls.resize_and_grayscale_matrix(raw_grid, target_w, target_h)
                 # Fallback: hash bytes deterministically to seed synthetic pixel grid
-                seed_val = int(hashlib.md5(matrix_or_bytes).hexdigest()[:8], 16)
+                seed_val = int(hashlib.sha256(matrix_or_bytes).hexdigest()[:8], 16)
                 rng = random.Random(seed_val)
                 return [
                     [float(rng.randint(0, 255)) for _ in range(target_w)]
