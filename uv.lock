@@ -34,6 +34,7 @@ members = [
     "packages-cli",
     "packages-compliance",
     "packages-database",
+    "packages-ddf",
     "packages-deid",
     "packages-hexagonal",
     "packages-security",
@@ -2378,6 +2379,23 @@ requires-dist = [
     { name = "packages-security", editable = "packages/security" },
     { name = "pydantic", specifier = ">=2.6.0" },
     { name = "sqlalchemy", specifier = ">=2.0.28" },
+]
+
+[[package]]
+name = "packages-ddf"
+version = "0.1.0"
+source = { editable = "packages/ddf" }
+dependencies = [
+    { name = "defusedxml" },
+    { name = "jinja2" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "defusedxml", specifier = ">=0.7.1,<0.8.0" },
+    { name = "jinja2", specifier = ">=3.1.6,<4.0.0" },
+    { name = "pydantic", specifier = ">=2.6.0" },
 ]
 
 [[package]]

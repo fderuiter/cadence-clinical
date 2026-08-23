@@ -1184,3 +1184,85 @@ class DataIntegritySimulationResponse(BaseModel):
     sample_subjects: list[dict[str, Any]]
     sample_audit_events: list[dict[str, Any]]
     sample_image_attachments: list[dict[str, Any]]
+
+
+# --- Autonomous Quality Surveillance Runner DTOs (ADR-2213) ---
+
+
+class QualitySurveillanceRunRequest(BaseModel):
+    study_id: str = Field(
+        ..., description="Target study ID for autonomous surveillance"
+    )
+    run_name: str | None = Field(
+        None, description="Optional custom name for the surveillance sweep"
+    )
+    auto_dispatch_deviations: bool = Field(
+        True,
+        description="Whether to automatically dispatch 21 CFR Part 11 Deviation records for high-risk anomalies",
+    )
+    target_variables: list[str] | None = Field(
+        None,
+        description="Optional list of target continuous variables for statistical CSM",
+    )
+    min_subjects_power: int = Field(
+        15,
+        ge=1,
+        description="Minimum subjects required per site for statistical distribution gating",
+    )
+    min_observations_power: int = Field(
+        50,
+        ge=1,
+        description="Minimum observations required per site for statistical distribution gating",
+    )
+    similarity_threshold: float = Field(
+        0.88,
+        ge=0.5,
+        le=1.0,
+        description="Cosine/Manhattan similarity threshold for duplicate patient detection",
+    )
+    hamming_threshold: int = Field(
+        5,
+        ge=0,
+        le=64,
+        description="Maximum perceptual image Hamming distance threshold",
+    )
+
+
+class SiteSurveillanceSummaryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    site_id: str
+    sample_size: int
+    observation_count: int
+    power_status: str
+    is_sample_gated: bool
+    composite_risk_score: float
+    risk_tier: str
+    anomalies_detected: list[str]
+    deviations_created: list[str]
+    kri_alerts_triggered: list[str]
+    details: dict[str, Any]
+
+
+class QualitySurveillanceRunResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    run_id: str
+    study_id: str
+    run_name: str
+    timestamp: str
+    total_sites: int
+    gated_sites_count: int
+    analyzed_sites_count: int
+    total_subjects: int
+    total_observations: int
+    total_images_scanned: int
+    total_events_scanned: int
+    anomalies_count: int
+    deviations_dispatched_count: int
+    status: str
+    site_summaries: list[SiteSurveillanceSummaryResponse]
+    findings: list[dict[str, Any]]
+    deviations: list[dict[str, Any]]
+    forensics_run_id: str | None = None
+    sentinel_run_id: str | None = None

@@ -240,6 +240,10 @@ A pharmacovigilance decision tree that evaluates Individual Case Safety Reports 
 
 A secure EDI communications adapter providing direct, encrypted Applicability Statement 2 transmission of ICH E2B(R3) safety XML packages to regulatory agencies with cryptographic Message Disposition Notification (MDN) verification.
 
+### Multi-Tier Regulatory Acknowledgement Lifecycle
+
+A monotonic regulatory verification state machine that tracks the end-to-end receipt of ICH E2B(R3) safety transmissions across perimeter transport (ACK A / MDN with SHA-256 MIC integrity check), schema syntax validation (ACK B), and health authority database ingestion (ACK C) with automated 21 CFR Part 11 audit ledger sealing.
+
 ### Multi-Echelon Clinical Supply Optimization
 
 An RTSM inventory pattern tracking investigational product shipments across manufacturing, central depots, regional depots, and sites with predictive automated replenishment based on real-time enrollment velocity.
@@ -414,5 +418,21 @@ _Avoid_: Inline router orchestration, fragmented review handlers
 
 A 21 CFR Part 11 compliant digital sealing operation where an Adjudication Committee Chair provides mandatory clinical justification rationale and generates a cryptographic SHA-256 signature manifest to bind discordant endpoints and synchronize EDC tumor assessments.
 _Avoid_: Unverified tie-breaking, manual database override
+
+### Site Payment Ledger Engine
+
+A deep domain module encapsulating investigator grant budget contracts, multi-tier overhead and withholding calculations, split payee configurations, real-time eCRF/SDV/milestone trigger processing, and dual-signoff holdback retention reserve governance behind a compact, database-backed interface.
+_Avoid_: Monolithic PaymentsService, 40-method repository CRUD wrappers
+
+### Self-Billing & ERP Gateway
+
+A deep domain module responsible for automated monthly and quarterly billing cycle compilation into self-billing invoices, cryptographic SHA-256 PDF remittance advice generation and 21 CFR Part 11 digital signing, enterprise ERP synchronization (SAP S/4HANA, NetSuite SuiteTalk), inbound webhook handling, and automated payment reconciliation.
+_Avoid_: Manual invoicing scripts, unsealed financial statements
+
+### Participant Compensation Service
+
+A deep domain module managing participant financial wallets, SoA-linked visit stipend rules, deterministic EDC visit verification triggers, mobile travel/meal expense reimbursement claims with OCR metadata extraction, coordinator 1-click approvals, digital payouts (Virtual Card/ACH), and EU CTR 536/2014 Article 37 Plain Language Lay Summary distribution with cryptographic receipt confirmation seals.
+_Avoid_: Fragmented participant wallet endpoints, unvalidated receipt workflows
+
 
 

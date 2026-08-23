@@ -7,8 +7,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3607
-- **Passed:** 3577 🟢
+- **Total Automated Test Cases Run:** 3625
+- **Passed:** 3595 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 30 ⚪
 - **Overall Operational Pass Rate:** 99.17%
@@ -146,6 +146,7 @@ openpyxl                 3.1.5
 packages-cli             0.1.0
 packages-compliance      0.1.0
 packages-database        0.1.0
+packages-ddf             0.1.0
 packages-deid            0.1.0
 packages-hexagonal       0.1.0
 packages-security        0.1.0
@@ -2568,6 +2569,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_clinical_staff_role_values` | `apps.org.tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_organization_type_values` | `apps.org.tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trial_duty_values` | `apps.org.tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_billing_and_erp_gateway_direct` | `apps.payments.tests.test_deep_domain_services` | ADR-2199, PRD-PAY-004, PRD-PAY-006 | 🟢 PASSED | < 1s |
+| `test_participant_compensation_service_direct` | `apps.payments.tests.test_deep_domain_services` | ADR-2199, PRD-PAY-002, PRD-PAY-004, PRD-PAY-006 | 🟢 PASSED | < 1s |
+| `test_site_payment_ledger_engine_direct` | `apps.payments.tests.test_deep_domain_services` | ADR-2199, PRD-PAY-002, PRD-PAY-003 | 🟢 PASSED | < 1s |
 | `test_automated_digital_disbursements` | `apps.payments.tests.test_patient_wallet_lay_summary_portal` | ADR-2199, PRD-PAT-001, PRD-PAT-002, PRD-SYS-127 | 🟢 PASSED | < 1s |
 | `test_eu_ctr_lay_summary_portal_and_confirmation_receipt` | `apps.payments.tests.test_patient_wallet_lay_summary_portal` | ADR-2199, PRD-PAT-003, PRD-SYS-127 | 🟢 PASSED | < 1s |
 | `test_participant_wallet_provisioning_and_payout_methods` | `apps.payments.tests.test_patient_wallet_lay_summary_portal` | ADR-2199, PRD-PAT-001, PRD-SYS-127 | 🟢 PASSED | < 1s |
@@ -2645,6 +2649,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_simulation_dataset_generator` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-001 | 🟢 PASSED | < 1s |
 | `test_terminal_digit_uniform_distribution_and_rounding_bias` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-001 | 🟢 PASSED | < 1s |
 | `test_variance_shrinkage_and_kullback_leibler_divergence` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-002 | 🟢 PASSED | < 1s |
+| `test_surveillance_router_endpoint_post_run` | `apps.quality.tests.test_quality_surveillance_runner` | PRD-CSM-001 | 🟢 PASSED | < 1s |
+| `test_surveillance_runner_e2e_autonomous_harvest` | `apps.quality.tests.test_quality_surveillance_runner` | PRD-CSM-001 | 🟢 PASSED | < 1s |
+| `test_surveillance_runner_idempotent_deviation_logging` | `apps.quality.tests.test_quality_surveillance_runner` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_surveillance_runner_sample_gating_ich_e6_r3` | `apps.quality.tests.test_quality_surveillance_runner` | PRD-CSM-001 | 🟢 PASSED | < 1s |
 | `test_automated_kri_definitions_and_statistical_evaluations` | `apps.quality.tests.test_quality_transcelerate_ract_kri` | PRD-CSM-005 | 🟢 PASSED | < 1s |
 | `test_composite_site_risk_index_and_percentile_rankings` | `apps.quality.tests.test_quality_transcelerate_ract_kri` | PRD-CSM-005 | 🟢 PASSED | < 1s |
 | `test_one_click_centralized_monitoring_inspection_dossier_compilation` | `apps.quality.tests.test_quality_transcelerate_ract_kri` | PRD-CSM-006, PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -3020,6 +3028,17 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_reset_db_safety_guard_non_local` | `packages.database.tests.test_reset_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reset_db_safety_guard_production` | `packages.database.tests.test_reset_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reset_db_success_offline` | `packages.database.tests.test_reset_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ir_builder_processes_items_and_rules` | `packages.ddf.tests.test_normalizer_and_ir` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalizer_missing_protocol_raises` | `packages.ddf.tests.test_normalizer_and_ir` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalizer_synthesizes_fallbacks` | `packages.ddf.tests.test_normalizer_and_ir` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_compile_condition_to_xpath_constants` | `packages.ddf.tests.test_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_compile_condition_to_xpath_field_ref` | `packages.ddf.tests.test_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_compile_condition_to_xpath_functions` | `packages.ddf.tests.test_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_compile_condition_to_xpath_logical_and_comparison` | `packages.ddf.tests.test_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_detect_circular_dependencies` | `packages.ddf.tests.test_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_extract_appearance` | `packages.ddf.tests.test_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_resolve_concept_id` | `packages.ddf.tests.test_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sanitize_identifier` | `packages.ddf.tests.test_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_co_reference_consistency_across_messages` | `packages.deid.tests.test_air_gap` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deidentify_and_rehydrate_basic_phi` | `packages.deid.tests.test_air_gap` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deidentify_batch_texts_embeddings` | `packages.deid.tests.test_air_gap` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3898,28 +3917,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** c7d90096996abbb1c45b31089875970fb0c52df9d0fb8421bdef130c39abc40b
+- **Cryptographic Hash (SHA-256):** e858bddb56a9e2a542c186a481ef1025dbef1f69d9408dc50f6259899ea6a731
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUI50UZXNyZs6iRf4l/4s6hcg+TDMwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUMI8l/EdMiVo+KPRRzpApAKSxv0YwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MjIyMzM0OFoXDTI3MDgyMzIyMzM0OFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MjIzMzIxN1oXDTI3MDgyMzIzMzIxN1owUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA9bCm
-OEePcpKmCHOaUXIJXoix8zXUxiMmD4qmJeDrS1CZ9YVfEqPs2mwe7QBoVI/233Sd
-cMHe7jA2ixXE0vux+twXVA57CjnrYI/zjQpNLcn7KhJk7xEnBoD8aQVN4SbbOFr5
-fyvFNooTMsm9nvN2jbdgSH4klexeeQxUUyYcSMxb5n1mZzXnrEvmYYmV5x5eib4j
-f8AdYZne4h/50XnG0b0d4WhPAvm0oA4TvPaaJZISMM+NMtJJYOlGeuTJsjiTcGif
-U2HTCc02VQB1Lv2acCZB4jAP72zG/qxq7TAGmSpUlZpU3ZPMrFbcu1OsNSQjpr3C
-iemQczqU1aujhMxcDQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQDaBhCIk3aceh2/
-CaF2ccnitxbWaW30bb2W+a+7+8qoZ/EQ2GEtkJ/sKitQ8Rd1wEF+rWF39hXAsTG9
-lOZWuhYgNLVOKRmwmtDd8X371fJ7fSiEKkr48AjyCjgxJhOpLddMnbB0tOdLCmEo
-kmUqAJW9eD++Y5gVbe+lnOCqUYtPYc3vIwogO/1xdpqBwJ3aXMmRxJN6xJ6hA2Fv
-ssi2hAjvcgpboHEZqo6pIrcIp0/tNVu06DJYKLhS2KxWaWrurvRs2pfQqUCDE+og
-rEbwrJSV5okIWr/Y+HZtwvi2v8c/H7dRuAC06E8iYAC+BZgUmNGkolgOZggwi+NA
-U+HxbZMO
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxnWP
+NzKsdD4N5Y5yUqLfFz8d4N4w/n3Ngf+okkgsDUwpRliXsCOVzLGOD487cOuxSqEo
+9Vuui5j23ZZU0FxggYGeAZgTlf7GGncHUlfQQvV9mZAUlcUOpp1QwhIQ0dfUqkSe
+U3RZN5MOVaAj7kEl93EC9qOvMxn9W5CfBgwQhLkzo10LNyn5KzXKBpiQawTQ6bY0
+duI6MrStGEf25LM7lJMz+gr07nMuiYXyBa042uIChm2PMfyvhsNQbqQHAzY/TDH9
+vpWtmd8D0s+xk0cRmRJqb6tE4Rouo2gyAQH5MqaFBjhbAywzmL+OChF1OV/eC5p7
+aE0domaX8Wzp/DDEJQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQA0nPo0s7/XQsMJ
+q7TQyYxhEUYNbleycAfWaY0udzbA1etWsu+HP/x38HNNL27c1y3mWXYOwIXpJUfv
+mPKMAe5W5OenwbUcnPZXxYe6x6tzRIUqIr+fTfRUPzcnZj/AXwEMmeoF0JrsngMG
+K2ywrXuWxYH0vv4vmcQmkNWxXnNg3K36LcGwfe6WcRNweW9h5bQ8OZomF3GooI04
+rfKl1QUby2oX+USheBsaDrYzLHnFnfETMJ/mNVACiZZK0LvJwdYvXeMBxoRxaJlz
+KoAr68H3RxMZTFwegIdw+Mjn3rRh1LxY96uyDgnNIQB+QaEI834gNPAm1YH301WH
+qb4KSbTM
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-5ApSUnrogHIE9a1hwA7zlmY40Ayp2qhhwbqras5UmT6EZE8EsN3w3nedY+GDp9Q39XPg+vi+GMU7BL/GspZ/u/Lbn/yyU56lnKa/kYBPcrIb0GOnRxiA1CaA3pQj3mWdd1i5UqWe29aj5SG8nptBJb1VyrxehTyhQq+uVfEL45tjHnjF2MWWSAhRHPVGDBeAKBQ//0tHPADXBCQiiT3EVZVilhxbrhASUnqkPgggDdgt+zRN7MVZZNiaIdFfJkIMWbbG4EAl3RtR/IOxh0M1zFsZk+CB8MD+BQgLcKGGB3B/VZt5ioDwcgnQxuD3LZql+ovbTS7PznF490pvBuMB1A==
+spw7PlHe76uImrhLtwanOLsLyPehcM8z4JyJfWPlHokxMRHb/6LoAR7otTDV0UkEE44QI5/SMEIjUHQqxQRwHpgykBV+JSjJuapWxQ2ujklFWYIFm1/AOFyzGnq05yJPGNI9ONF3MvGe25yYrjXwaY54oXpJTHuSM4vqYwDIkIO70hvUq07iBqE72AKsG6SqWXY9skKlpEf9HiRttZDogaJvM6t95kkKQbp4cSBKjTNAPHRI1FbIjHlmT4KaS6F1wCM9lsUHBJ8DEcprc0XCVx0fsOPpsEhAybMA06119obJCM2xZtHodlN/4hKQy3+EQneN3r/qkbz0OK+vWeglvg==
 -----END SIGNATURE-----

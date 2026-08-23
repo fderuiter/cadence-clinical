@@ -1,3 +1,5178 @@
 {
-  "duplicates": []
+  "duplicates": [
+    {
+      "loc1": {
+        "file": "apps/payments/services/pdf_remittance_generator.py",
+        "start": 361,
+        "end": 375
+      },
+      "loc2": {
+        "file": "apps/designer/adapters/document_renderer.py",
+        "start": 53,
+        "end": 70
+      },
+      "preview": "        pdf_buffer.write(f\"4 0 obj <</Length {len(stream_content)}>> stream\\n\".encode())\n        pdf_buffer.write(stream_content)\n        pdf_buffer.write(b\"\\nendstream\\nendobj\\n\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/payments/services/pdf_remittance_generator.py",
+        "start": 361,
+        "end": 375
+      },
+      "loc2": {
+        "file": "apps/designer/infrastructure/document_renderer.py",
+        "start": 53,
+        "end": 70
+      },
+      "preview": "        pdf_buffer.write(f\"4 0 obj <</Length {len(stream_content)}>> stream\\n\".encode())\n        pdf_buffer.write(stream_content)\n        pdf_buffer.write(b\"\\nendstream\\nendobj\\n\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/models.py",
+        "start": 17,
+        "end": 31
+      },
+      "loc2": {
+        "file": "apps/quality/presentation/dtos.py",
+        "start": 9,
+        "end": 23
+      },
+      "preview": "    ActionItemStatus,\n    AuditStatus,\n    AuditType,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/models.py",
+        "start": 18,
+        "end": 32
+      },
+      "loc2": {
+        "file": "apps/quality/presentation/dtos.py",
+        "start": 10,
+        "end": 24
+      },
+      "preview": "    AuditStatus,\n    AuditType,\n    BenfordConformity,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/models.py",
+        "start": 19,
+        "end": 33
+      },
+      "loc2": {
+        "file": "apps/quality/presentation/dtos.py",
+        "start": 11,
+        "end": 25
+      },
+      "preview": "    AuditType,\n    BenfordConformity,\n    BreachStatus,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/models.py",
+        "start": 20,
+        "end": 34
+      },
+      "loc2": {
+        "file": "apps/quality/presentation/dtos.py",
+        "start": 12,
+        "end": 26
+      },
+      "preview": "    BenfordConformity,\n    BreachStatus,\n    CAPAStatus,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/models.py",
+        "start": 21,
+        "end": 35
+      },
+      "loc2": {
+        "file": "apps/quality/presentation/dtos.py",
+        "start": 13,
+        "end": 27
+      },
+      "preview": "    BreachStatus,\n    CAPAStatus,\n    CAPAType,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/models.py",
+        "start": 22,
+        "end": 36
+      },
+      "loc2": {
+        "file": "apps/quality/presentation/dtos.py",
+        "start": 14,
+        "end": 28
+      },
+      "preview": "    CAPAStatus,\n    CAPAType,\n    DataIntegrityFindingStatus,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/models.py",
+        "start": 23,
+        "end": 37
+      },
+      "loc2": {
+        "file": "apps/quality/presentation/dtos.py",
+        "start": 15,
+        "end": 29
+      },
+      "preview": "    CAPAType,\n    DataIntegrityFindingStatus,\n    DataIntegritySentinelType,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/models.py",
+        "start": 24,
+        "end": 38
+      },
+      "loc2": {
+        "file": "apps/quality/presentation/dtos.py",
+        "start": 16,
+        "end": 30
+      },
+      "preview": "    DataIntegrityFindingStatus,\n    DataIntegritySentinelType,\n    DeviationSeverity,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/execution_client.py",
+        "start": 34,
+        "end": 50
+      },
+      "loc2": {
+        "file": "apps/safety/infrastructure/execution_client.py",
+        "start": 21,
+        "end": 37
+      },
+      "preview": "    \"\"\"\n    def __init__(\n        self,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/execution_client.py",
+        "start": 36,
+        "end": 51
+      },
+      "loc2": {
+        "file": "apps/safety/infrastructure/execution_client.py",
+        "start": 23,
+        "end": 38
+      },
+      "preview": "    def __init__(\n        self,\n        base_url: str | None = None,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/execution_client.py",
+        "start": 37,
+        "end": 52
+      },
+      "loc2": {
+        "file": "apps/safety/infrastructure/execution_client.py",
+        "start": 24,
+        "end": 39
+      },
+      "preview": "        self,\n        base_url: str | None = None,\n        timeout: float = 10.0,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/execution_client.py",
+        "start": 38,
+        "end": 53
+      },
+      "loc2": {
+        "file": "apps/safety/infrastructure/execution_client.py",
+        "start": 25,
+        "end": 40
+      },
+      "preview": "        base_url: str | None = None,\n        timeout: float = 10.0,\n    ) -> None:\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/execution_client.py",
+        "start": 39,
+        "end": 54
+      },
+      "loc2": {
+        "file": "apps/safety/infrastructure/execution_client.py",
+        "start": 26,
+        "end": 41
+      },
+      "preview": "        timeout: float = 10.0,\n    ) -> None:\n        self.base_url = (\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/execution_client.py",
+        "start": 58,
+        "end": 74
+      },
+      "loc2": {
+        "file": "apps/safety/adapters/ai_narrative_client.py",
+        "start": 50,
+        "end": 66
+      },
+      "preview": "        timestamp = str(time.time())\n        signature = generate_gateway_signature(\n            user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/execution_client.py",
+        "start": 58,
+        "end": 74
+      },
+      "loc2": {
+        "file": "apps/safety/infrastructure/execution_client.py",
+        "start": 45,
+        "end": 61
+      },
+      "preview": "        timestamp = str(time.time())\n        signature = generate_gateway_signature(\n            user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/execution_client.py",
+        "start": 60,
+        "end": 77
+      },
+      "loc2": {
+        "file": "apps/safety/infrastructure/execution_client.py",
+        "start": 47,
+        "end": 64
+      },
+      "preview": "        signature = generate_gateway_signature(\n            user_id=user_id,\n            roles=roles,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/execution_client.py",
+        "start": 61,
+        "end": 78
+      },
+      "loc2": {
+        "file": "apps/safety/infrastructure/execution_client.py",
+        "start": 48,
+        "end": 65
+      },
+      "preview": "            user_id=user_id,\n            roles=roles,\n            timestamp=timestamp,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/execution_client.py",
+        "start": 62,
+        "end": 79
+      },
+      "loc2": {
+        "file": "apps/safety/infrastructure/execution_client.py",
+        "start": 49,
+        "end": 66
+      },
+      "preview": "            roles=roles,\n            timestamp=timestamp,\n            secret=gateway_secret,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/execution_client.py",
+        "start": 63,
+        "end": 80
+      },
+      "loc2": {
+        "file": "apps/safety/infrastructure/execution_client.py",
+        "start": 50,
+        "end": 67
+      },
+      "preview": "            timestamp=timestamp,\n            secret=gateway_secret,\n            change_reason=change_reason,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/execution_client.py",
+        "start": 64,
+        "end": 81
+      },
+      "loc2": {
+        "file": "apps/safety/infrastructure/execution_client.py",
+        "start": 51,
+        "end": 68
+      },
+      "preview": "            secret=gateway_secret,\n            change_reason=change_reason,\n        )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/execution_client.py",
+        "start": 65,
+        "end": 82
+      },
+      "loc2": {
+        "file": "apps/safety/infrastructure/execution_client.py",
+        "start": 52,
+        "end": 69
+      },
+      "preview": "            change_reason=change_reason,\n        )\n        return {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/execution_client.py",
+        "start": 115,
+        "end": 133
+      },
+      "loc2": {
+        "file": "apps/safety/infrastructure/execution_client.py",
+        "start": 102,
+        "end": 120
+      },
+      "preview": "            data = response.json()\n            clinical_data = data.get(\"clinicalData\", {})\n            item_groups = clinical_data.get(\"itemGroupData\", {})\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/quality/infrastructure/execution_client.py",
+        "start": 116,
+        "end": 135
+      },
+      "loc2": {
+        "file": "apps/safety/infrastructure/execution_client.py",
+        "start": 103,
+        "end": 122
+      },
+      "preview": "            clinical_data = data.get(\"clinicalData\", {})\n            item_groups = clinical_data.get(\"itemGroupData\", {})\n            result: dict[str, list[dict[str, Any]]] = {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 899,
+        "end": 916
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1063,
+        "end": 1080
+      },
+      "preview": ".metric-icon-box {\n  display: flex;\n  align-items: center;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 900,
+        "end": 919
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1064,
+        "end": 1083
+      },
+      "preview": "  display: flex;\n  align-items: center;\n  justify-content: center;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+        "start": 901,
+        "end": 920
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+        "start": 1065,
+        "end": 1084
+      },
+      "preview": "  align-items: center;\n  justify-content: center;\n  width: 44px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 669,
+        "end": 686
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 805,
+        "end": 822
+      },
+      "preview": "});\n</script>\n<style scoped>\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 670,
+        "end": 687
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 806,
+        "end": 823
+      },
+      "preview": "</script>\n<style scoped>\n.dashboard-section {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 672,
+        "end": 690
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 808,
+        "end": 826
+      },
+      "preview": "<style scoped>\n.dashboard-section {\n  padding: 24px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 673,
+        "end": 691
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 809,
+        "end": 827
+      },
+      "preview": ".dashboard-section {\n  padding: 24px;\n  max-width: 1600px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 674,
+        "end": 692
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 810,
+        "end": 828
+      },
+      "preview": "  padding: 24px;\n  max-width: 1600px;\n  margin: 0 auto;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 675,
+        "end": 693
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 811,
+        "end": 829
+      },
+      "preview": "  max-width: 1600px;\n  margin: 0 auto;\n  font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 676,
+        "end": 696
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 812,
+        "end": 832
+      },
+      "preview": "  margin: 0 auto;\n  font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;\n  color: #1e293b;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 677,
+        "end": 697
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 813,
+        "end": 833
+      },
+      "preview": "  font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;\n  color: #1e293b;\n.section-header {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 678,
+        "end": 698
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 814,
+        "end": 834
+      },
+      "preview": "  color: #1e293b;\n.section-header {\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 681,
+        "end": 699
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 817,
+        "end": 835
+      },
+      "preview": ".section-header {\n  display: flex;\n  justify-content: space-between;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 682,
+        "end": 700
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 818,
+        "end": 836
+      },
+      "preview": "  display: flex;\n  justify-content: space-between;\n  align-items: flex-start;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 683,
+        "end": 701
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 819,
+        "end": 837
+      },
+      "preview": "  justify-content: space-between;\n  align-items: flex-start;\n  margin-bottom: 24px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 684,
+        "end": 702
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 820,
+        "end": 838
+      },
+      "preview": "  align-items: flex-start;\n  margin-bottom: 24px;\n  border-bottom: 1px solid #e2e8f0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 685,
+        "end": 703
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 821,
+        "end": 839
+      },
+      "preview": "  margin-bottom: 24px;\n  border-bottom: 1px solid #e2e8f0;\n  padding-bottom: 16px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 686,
+        "end": 706
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 822,
+        "end": 842
+      },
+      "preview": "  border-bottom: 1px solid #e2e8f0;\n  padding-bottom: 16px;\n.header-badge-row {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 687,
+        "end": 707
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 823,
+        "end": 843
+      },
+      "preview": "  padding-bottom: 16px;\n.header-badge-row {\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 690,
+        "end": 708
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 826,
+        "end": 844
+      },
+      "preview": ".header-badge-row {\n  display: flex;\n  gap: 8px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 691,
+        "end": 709
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 827,
+        "end": 845
+      },
+      "preview": "  display: flex;\n  gap: 8px;\n  margin-bottom: 8px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 692,
+        "end": 712
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 828,
+        "end": 848
+      },
+      "preview": "  gap: 8px;\n  margin-bottom: 8px;\n.badge {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 693,
+        "end": 713
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 829,
+        "end": 849
+      },
+      "preview": "  margin-bottom: 8px;\n.badge {\n  display: inline-flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 696,
+        "end": 714
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 832,
+        "end": 850
+      },
+      "preview": ".badge {\n  display: inline-flex;\n  align-items: center;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 697,
+        "end": 715
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 833,
+        "end": 851
+      },
+      "preview": "  display: inline-flex;\n  align-items: center;\n  padding: 4px 8px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 698,
+        "end": 718
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 834,
+        "end": 854
+      },
+      "preview": "  align-items: center;\n  padding: 4px 8px;\n  border-radius: 4px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 699,
+        "end": 719
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 835,
+        "end": 855
+      },
+      "preview": "  padding: 4px 8px;\n  border-radius: 4px;\n  font-size: 0.75rem;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 700,
+        "end": 720
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 836,
+        "end": 856
+      },
+      "preview": "  border-radius: 4px;\n  font-size: 0.75rem;\n  font-weight: 600;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 701,
+        "end": 721
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 837,
+        "end": 857
+      },
+      "preview": "  font-size: 0.75rem;\n  font-weight: 600;\n  letter-spacing: 0.02em;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 702,
+        "end": 724
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 838,
+        "end": 860
+      },
+      "preview": "  font-weight: 600;\n  letter-spacing: 0.02em;\n.badge-gxp {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 703,
+        "end": 725
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 839,
+        "end": 861
+      },
+      "preview": "  letter-spacing: 0.02em;\n.badge-gxp {\n  background-color: #ecfdf5;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 706,
+        "end": 726
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 842,
+        "end": 862
+      },
+      "preview": ".badge-gxp {\n  background-color: #ecfdf5;\n  color: #065f46;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 707,
+        "end": 727
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 843,
+        "end": 863
+      },
+      "preview": "  background-color: #ecfdf5;\n  color: #065f46;\n  border: 1px solid #a7f3d0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 708,
+        "end": 728
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 844,
+        "end": 864
+      },
+      "preview": "  color: #065f46;\n  border: 1px solid #a7f3d0;\n.badge-regulatory {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 709,
+        "end": 731
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 845,
+        "end": 867
+      },
+      "preview": "  border: 1px solid #a7f3d0;\n.badge-regulatory {\n  background-color: #eff6ff;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 712,
+        "end": 732
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 848,
+        "end": 868
+      },
+      "preview": ".badge-regulatory {\n  background-color: #eff6ff;\n  color: #1e40af;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 713,
+        "end": 733
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 849,
+        "end": 869
+      },
+      "preview": "  background-color: #eff6ff;\n  color: #1e40af;\n  border: 1px solid #bfdbfe;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 714,
+        "end": 734
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 850,
+        "end": 870
+      },
+      "preview": "  color: #1e40af;\n  border: 1px solid #bfdbfe;\n.badge-standard {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 715,
+        "end": 735
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 851,
+        "end": 871
+      },
+      "preview": "  border: 1px solid #bfdbfe;\n.badge-standard {\n  background-color: #f1f5f9;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 718,
+        "end": 736
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 854,
+        "end": 872
+      },
+      "preview": ".badge-standard {\n  background-color: #f1f5f9;\n  color: #475569;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 719,
+        "end": 739
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 855,
+        "end": 875
+      },
+      "preview": "  background-color: #f1f5f9;\n  color: #475569;\n  border: 1px solid #cbd5e1;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 720,
+        "end": 740
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 856,
+        "end": 876
+      },
+      "preview": "  color: #475569;\n  border: 1px solid #cbd5e1;\n.view-title {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 721,
+        "end": 741
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 857,
+        "end": 877
+      },
+      "preview": "  border: 1px solid #cbd5e1;\n.view-title {\n  font-size: 1.5rem;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 724,
+        "end": 742
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 860,
+        "end": 878
+      },
+      "preview": ".view-title {\n  font-size: 1.5rem;\n  font-weight: 700;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 725,
+        "end": 743
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 861,
+        "end": 879
+      },
+      "preview": "  font-size: 1.5rem;\n  font-weight: 700;\n  color: #0f172a;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 726,
+        "end": 746
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 862,
+        "end": 882
+      },
+      "preview": "  font-weight: 700;\n  color: #0f172a;\n  margin: 0 0 6px 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 727,
+        "end": 747
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 863,
+        "end": 883
+      },
+      "preview": "  color: #0f172a;\n  margin: 0 0 6px 0;\n.view-subtitle {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 728,
+        "end": 748
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 864,
+        "end": 884
+      },
+      "preview": "  margin: 0 0 6px 0;\n.view-subtitle {\n  font-size: 0.88rem;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 731,
+        "end": 749
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 867,
+        "end": 885
+      },
+      "preview": ".view-subtitle {\n  font-size: 0.88rem;\n  color: #64748b;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 732,
+        "end": 750
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 868,
+        "end": 886
+      },
+      "preview": "  font-size: 0.88rem;\n  color: #64748b;\n  margin: 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 733,
+        "end": 751
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 869,
+        "end": 887
+      },
+      "preview": "  color: #64748b;\n  margin: 0;\n  max-width: 900px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 734,
+        "end": 752
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 870,
+        "end": 888
+      },
+      "preview": "  margin: 0;\n  max-width: 900px;\n  line-height: 1.4;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 735,
+        "end": 753
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 871,
+        "end": 889
+      },
+      "preview": "  max-width: 900px;\n  line-height: 1.4;\n.stats-grid {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 736,
+        "end": 754
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 872,
+        "end": 890
+      },
+      "preview": "  line-height: 1.4;\n.stats-grid {\n  display: grid;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 739,
+        "end": 757
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 875,
+        "end": 893
+      },
+      "preview": ".stats-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 740,
+        "end": 758
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 876,
+        "end": 894
+      },
+      "preview": "  display: grid;\n  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));\n  gap: 16px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 741,
+        "end": 759
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 877,
+        "end": 895
+      },
+      "preview": "  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));\n  gap: 16px;\n  margin-bottom: 24px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 742,
+        "end": 760
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 878,
+        "end": 896
+      },
+      "preview": "  gap: 16px;\n  margin-bottom: 24px;\n.stat-card {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 743,
+        "end": 761
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 879,
+        "end": 897
+      },
+      "preview": "  margin-bottom: 24px;\n.stat-card {\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 746,
+        "end": 762
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 882,
+        "end": 898
+      },
+      "preview": ".stat-card {\n  display: flex;\n  align-items: center;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 747,
+        "end": 763
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 883,
+        "end": 899
+      },
+      "preview": "  display: flex;\n  align-items: center;\n  gap: 16px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 748,
+        "end": 764
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 884,
+        "end": 900
+      },
+      "preview": "  align-items: center;\n  gap: 16px;\n  padding: 16px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 749,
+        "end": 765
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 885,
+        "end": 901
+      },
+      "preview": "  gap: 16px;\n  padding: 16px;\n  background-color: #ffffff;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 750,
+        "end": 768
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 886,
+        "end": 904
+      },
+      "preview": "  padding: 16px;\n  background-color: #ffffff;\n  border: 1px solid #e2e8f0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 751,
+        "end": 769
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 887,
+        "end": 905
+      },
+      "preview": "  background-color: #ffffff;\n  border: 1px solid #e2e8f0;\n  border-radius: 8px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 752,
+        "end": 770
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 888,
+        "end": 906
+      },
+      "preview": "  border: 1px solid #e2e8f0;\n  border-radius: 8px;\n  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 753,
+        "end": 771
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 889,
+        "end": 907
+      },
+      "preview": "  border-radius: 8px;\n  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);\n.stat-icon {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 754,
+        "end": 774
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 890,
+        "end": 910
+      },
+      "preview": "  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);\n.stat-icon {\n  font-size: 1.75rem;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 757,
+        "end": 775
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 893,
+        "end": 911
+      },
+      "preview": ".stat-icon {\n  font-size: 1.75rem;\n  width: 48px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 758,
+        "end": 776
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 894,
+        "end": 912
+      },
+      "preview": "  font-size: 1.75rem;\n  width: 48px;\n  height: 48px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 759,
+        "end": 777
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 895,
+        "end": 913
+      },
+      "preview": "  width: 48px;\n  height: 48px;\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 760,
+        "end": 780
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 896,
+        "end": 916
+      },
+      "preview": "  height: 48px;\n  display: flex;\n  align-items: center;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 761,
+        "end": 781
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 897,
+        "end": 917
+      },
+      "preview": "  display: flex;\n  align-items: center;\n  justify-content: center;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 762,
+        "end": 782
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 898,
+        "end": 918
+      },
+      "preview": "  align-items: center;\n  justify-content: center;\n  border-radius: 8px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 763,
+        "end": 783
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 899,
+        "end": 919
+      },
+      "preview": "  justify-content: center;\n  border-radius: 8px;\n  background-color: #f8fafc;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 764,
+        "end": 784
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 900,
+        "end": 920
+      },
+      "preview": "  border-radius: 8px;\n  background-color: #f8fafc;\n.stat-value {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 765,
+        "end": 787
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 901,
+        "end": 923
+      },
+      "preview": "  background-color: #f8fafc;\n.stat-value {\n  font-size: 1.35rem;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 768,
+        "end": 788
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 904,
+        "end": 924
+      },
+      "preview": ".stat-value {\n  font-size: 1.35rem;\n  font-weight: 700;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 769,
+        "end": 789
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 905,
+        "end": 925
+      },
+      "preview": "  font-size: 1.35rem;\n  font-weight: 700;\n  color: #0f172a;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 770,
+        "end": 790
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 906,
+        "end": 926
+      },
+      "preview": "  font-weight: 700;\n  color: #0f172a;\n.stat-label {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 771,
+        "end": 791
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 907,
+        "end": 927
+      },
+      "preview": "  color: #0f172a;\n.stat-label {\n  font-size: 0.8rem;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 774,
+        "end": 792
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 910,
+        "end": 928
+      },
+      "preview": ".stat-label {\n  font-size: 0.8rem;\n  color: #64748b;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 775,
+        "end": 793
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 911,
+        "end": 929
+      },
+      "preview": "  font-size: 0.8rem;\n  color: #64748b;\n  margin-top: 2px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 776,
+        "end": 794
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 912,
+        "end": 930
+      },
+      "preview": "  color: #64748b;\n  margin-top: 2px;\n.view-tabs-bar {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 777,
+        "end": 795
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 913,
+        "end": 931
+      },
+      "preview": "  margin-top: 2px;\n.view-tabs-bar {\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 780,
+        "end": 796
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 916,
+        "end": 932
+      },
+      "preview": ".view-tabs-bar {\n  display: flex;\n  gap: 8px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 781,
+        "end": 797
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 917,
+        "end": 933
+      },
+      "preview": "  display: flex;\n  gap: 8px;\n  border-bottom: 2px solid #e2e8f0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 782,
+        "end": 800
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 918,
+        "end": 936
+      },
+      "preview": "  gap: 8px;\n  border-bottom: 2px solid #e2e8f0;\n  margin-bottom: 20px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 783,
+        "end": 801
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 919,
+        "end": 937
+      },
+      "preview": "  border-bottom: 2px solid #e2e8f0;\n  margin-bottom: 20px;\n.tab-btn {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 784,
+        "end": 804
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 920,
+        "end": 940
+      },
+      "preview": "  margin-bottom: 20px;\n.tab-btn {\n  padding: 10px 16px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 787,
+        "end": 805
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 923,
+        "end": 941
+      },
+      "preview": ".tab-btn {\n  padding: 10px 16px;\n  background: none;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 788,
+        "end": 806
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 924,
+        "end": 942
+      },
+      "preview": "  padding: 10px 16px;\n  background: none;\n  border: none;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 821,
+        "end": 837
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 945,
+        "end": 961
+      },
+      "preview": ".panel-box {\n  background-color: #ffffff;\n  border: 1px solid #e2e8f0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 822,
+        "end": 840
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 946,
+        "end": 964
+      },
+      "preview": "  background-color: #ffffff;\n  border: 1px solid #e2e8f0;\n  border-radius: 8px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 823,
+        "end": 841
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 947,
+        "end": 965
+      },
+      "preview": "  border: 1px solid #e2e8f0;\n  border-radius: 8px;\n  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 824,
+        "end": 842
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 948,
+        "end": 966
+      },
+      "preview": "  border-radius: 8px;\n  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);\n  margin-bottom: 20px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 825,
+        "end": 843
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 949,
+        "end": 967
+      },
+      "preview": "  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);\n  margin-bottom: 20px;\n.panel-header {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 826,
+        "end": 844
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 950,
+        "end": 968
+      },
+      "preview": "  margin-bottom: 20px;\n.panel-header {\n  display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 1119,
+        "end": 1139
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 981,
+        "end": 1001
+      },
+      "preview": ".table-container {\n  overflow-x: auto;\n.data-table {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 1120,
+        "end": 1140
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 982,
+        "end": 1002
+      },
+      "preview": "  overflow-x: auto;\n.data-table {\n  width: 100%;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 1123,
+        "end": 1141
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 985,
+        "end": 1003
+      },
+      "preview": ".data-table {\n  width: 100%;\n  border-collapse: collapse;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 1124,
+        "end": 1144
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 986,
+        "end": 1006
+      },
+      "preview": "  width: 100%;\n  border-collapse: collapse;\n  font-size: 0.88rem;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 1125,
+        "end": 1145
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 987,
+        "end": 1007
+      },
+      "preview": "  border-collapse: collapse;\n  font-size: 0.88rem;\n  text-align: left;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 1170,
+        "end": 1188
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 1137,
+        "end": 1155
+      },
+      "preview": ".btn {\n  display: inline-flex;\n  align-items: center;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 1171,
+        "end": 1189
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 1138,
+        "end": 1156
+      },
+      "preview": "  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 1172,
+        "end": 1192
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 1139,
+        "end": 1159
+      },
+      "preview": "  align-items: center;\n  justify-content: center;\n  padding: 8px 16px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 1173,
+        "end": 1193
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 1140,
+        "end": 1160
+      },
+      "preview": "  justify-content: center;\n  padding: 8px 16px;\n  border-radius: 6px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 1174,
+        "end": 1194
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 1141,
+        "end": 1161
+      },
+      "preview": "  padding: 8px 16px;\n  border-radius: 6px;\n  font-size: 0.88rem;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 1175,
+        "end": 1195
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 1142,
+        "end": 1162
+      },
+      "preview": "  border-radius: 6px;\n  font-size: 0.88rem;\n  font-weight: 600;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 1176,
+        "end": 1198
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 1143,
+        "end": 1165
+      },
+      "preview": "  font-size: 0.88rem;\n  font-weight: 600;\n  cursor: pointer;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/LaySummaryPortal.vue",
+        "start": 1177,
+        "end": 1199
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ParticipantWalletView.vue",
+        "start": 1144,
+        "end": 1166
+      },
+      "preview": "  font-weight: 600;\n  cursor: pointer;\n  transition: background-color 0.15s ease;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/models.py",
+        "start": 17,
+        "end": 32
+      },
+      "loc2": {
+        "file": "apps/interop/infrastructure/models.py",
+        "start": 278,
+        "end": 293
+      },
+      "preview": ")\n__all__ = [\n    \"Base\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/models.py",
+        "start": 19,
+        "end": 33
+      },
+      "loc2": {
+        "file": "apps/interop/infrastructure/models.py",
+        "start": 280,
+        "end": 294
+      },
+      "preview": "__all__ = [\n    \"Base\",\n    \"ClinicalQuery\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/models.py",
+        "start": 20,
+        "end": 34
+      },
+      "loc2": {
+        "file": "apps/interop/infrastructure/models.py",
+        "start": 281,
+        "end": 295
+      },
+      "preview": "    \"Base\",\n    \"ClinicalQuery\",\n    \"DeviceRegistrationRecord\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/sdtm_device_mapper.py",
+        "start": 93,
+        "end": 109
+      },
+      "loc2": {
+        "file": "apps/execution/sdtm_mapper.py",
+        "start": 1090,
+        "end": 1105
+      },
+      "preview": "    grouped: dict[str, list[Any]] = {}\n    for d in deficiencies:\n        study_id = _get_val(d, \"study_id\") or \"STUDY-001\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/sdtm_device_mapper.py",
+        "start": 95,
+        "end": 110
+      },
+      "loc2": {
+        "file": "apps/execution/sdtm_mapper.py",
+        "start": 1091,
+        "end": 1106
+      },
+      "preview": "    for d in deficiencies:\n        study_id = _get_val(d, \"study_id\") or \"STUDY-001\"\n        site_id = _get_val(d, \"site_id\") or \"SITE-001\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/sdtm_device_mapper.py",
+        "start": 96,
+        "end": 111
+      },
+      "loc2": {
+        "file": "apps/execution/sdtm_mapper.py",
+        "start": 1092,
+        "end": 1107
+      },
+      "preview": "        study_id = _get_val(d, \"study_id\") or \"STUDY-001\"\n        site_id = _get_val(d, \"site_id\") or \"SITE-001\"\n        subj_id = _get_val(d, \"subject_id\") or \"UNASSIGNED\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/sdtm_device_mapper.py",
+        "start": 97,
+        "end": 112
+      },
+      "loc2": {
+        "file": "apps/execution/sdtm_mapper.py",
+        "start": 1093,
+        "end": 1108
+      },
+      "preview": "        site_id = _get_val(d, \"site_id\") or \"SITE-001\"\n        subj_id = _get_val(d, \"subject_id\") or \"UNASSIGNED\"\n        usubjid = f\"{study_id}-{site_id}-{subj_id}\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/sdtm_device_mapper.py",
+        "start": 98,
+        "end": 114
+      },
+      "loc2": {
+        "file": "apps/execution/sdtm_mapper.py",
+        "start": 1094,
+        "end": 1110
+      },
+      "preview": "        subj_id = _get_val(d, \"subject_id\") or \"UNASSIGNED\"\n        usubjid = f\"{study_id}-{site_id}-{subj_id}\"\n        grouped.setdefault(usubjid, []).append(d)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/sdtm_device_mapper.py",
+        "start": 99,
+        "end": 115
+      },
+      "loc2": {
+        "file": "apps/execution/sdtm_mapper.py",
+        "start": 1095,
+        "end": 1111
+      },
+      "preview": "        usubjid = f\"{study_id}-{site_id}-{subj_id}\"\n        grouped.setdefault(usubjid, []).append(d)\n    for usubjid, items in grouped.items():\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/sdtm_device_mapper.py",
+        "start": 158,
+        "end": 174
+      },
+      "loc2": {
+        "file": "apps/execution/sdtm_mapper.py",
+        "start": 1160,
+        "end": 1175
+      },
+      "preview": "    grouped: dict[str, list[Any]] = {}\n    for d in devices:\n        study_id = _get_val(d, \"study_id\") or \"STUDY-001\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/sdtm_device_mapper.py",
+        "start": 160,
+        "end": 175
+      },
+      "loc2": {
+        "file": "apps/execution/sdtm_mapper.py",
+        "start": 1161,
+        "end": 1176
+      },
+      "preview": "    for d in devices:\n        study_id = _get_val(d, \"study_id\") or \"STUDY-001\"\n        site_id = _get_val(d, \"site_id\") or \"SITE-001\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/sdtm_device_mapper.py",
+        "start": 161,
+        "end": 176
+      },
+      "loc2": {
+        "file": "apps/execution/sdtm_mapper.py",
+        "start": 1162,
+        "end": 1177
+      },
+      "preview": "        study_id = _get_val(d, \"study_id\") or \"STUDY-001\"\n        site_id = _get_val(d, \"site_id\") or \"SITE-001\"\n        subj_id = _get_val(d, \"allocated_subject_id\") or \"INVENTORY\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/sdtm_device_mapper.py",
+        "start": 162,
+        "end": 177
+      },
+      "loc2": {
+        "file": "apps/execution/sdtm_mapper.py",
+        "start": 1163,
+        "end": 1178
+      },
+      "preview": "        site_id = _get_val(d, \"site_id\") or \"SITE-001\"\n        subj_id = _get_val(d, \"allocated_subject_id\") or \"INVENTORY\"\n        usubjid = f\"{study_id}-{site_id}-{subj_id}\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/sdtm_device_mapper.py",
+        "start": 163,
+        "end": 178
+      },
+      "loc2": {
+        "file": "apps/execution/sdtm_mapper.py",
+        "start": 1164,
+        "end": 1179
+      },
+      "preview": "        subj_id = _get_val(d, \"allocated_subject_id\") or \"INVENTORY\"\n        usubjid = f\"{study_id}-{site_id}-{subj_id}\"\n        grouped.setdefault(usubjid, []).append(d)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/sdtm_device_mapper.py",
+        "start": 164,
+        "end": 179
+      },
+      "loc2": {
+        "file": "apps/execution/sdtm_mapper.py",
+        "start": 1165,
+        "end": 1180
+      },
+      "preview": "        usubjid = f\"{study_id}-{site_id}-{subj_id}\"\n        grouped.setdefault(usubjid, []).append(d)\n    for usubjid, items in grouped.items():\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/sdtm_device_mapper.py",
+        "start": 165,
+        "end": 181
+      },
+      "loc2": {
+        "file": "apps/execution/sdtm_mapper.py",
+        "start": 1166,
+        "end": 1182
+      },
+      "preview": "        grouped.setdefault(usubjid, []).append(d)\n    for usubjid, items in grouped.items():\n        for seq, item in enumerate(items, start=1):\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/sdtm_device_mapper.py",
+        "start": 167,
+        "end": 182
+      },
+      "loc2": {
+        "file": "apps/execution/sdtm_mapper.py",
+        "start": 1168,
+        "end": 1183
+      },
+      "preview": "    for usubjid, items in grouped.items():\n        for seq, item in enumerate(items, start=1):\n            study_id = _get_val(item, \"study_id\") or \"STUDY-001\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/dct_models.py",
+        "start": 260,
+        "end": 274
+      },
+      "loc2": {
+        "file": "apps/interop/presentation/dct_dtos.py",
+        "start": 356,
+        "end": 370
+      },
+      "preview": "    shipment_id: str\n    tracking_number: str\n    courier_name: str\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/dct_models.py",
+        "start": 261,
+        "end": 275
+      },
+      "loc2": {
+        "file": "apps/interop/presentation/dct_dtos.py",
+        "start": 357,
+        "end": 371
+      },
+      "preview": "    tracking_number: str\n    courier_name: str\n    study_id: str\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/cdr/models.py",
+        "start": 332,
+        "end": 347
+      },
+      "loc2": {
+        "file": "apps/execution/domain/sdtm/sdtm_models.py",
+        "start": 398,
+        "end": 413
+      },
+      "preview": "    VISITNUM: float | int | None = Field(None, description=\"Visit Number\")\n    VISIT: str | None = Field(None, description=\"Visit Name\")\n    TUDTC: str | None = Field(None, description=\"Date/Time of Assessment\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/cdr/models.py",
+        "start": 333,
+        "end": 348
+      },
+      "loc2": {
+        "file": "apps/execution/domain/sdtm/sdtm_models.py",
+        "start": 399,
+        "end": 414
+      },
+      "preview": "    VISIT: str | None = Field(None, description=\"Visit Name\")\n    TUDTC: str | None = Field(None, description=\"Date/Time of Assessment\")\n    TUEVAL: str | None = Field(\"INDEPENDENT ASSESSOR\", description=\"Evaluator Role\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/cdr/sdtm_pipeline.py",
+        "start": 57,
+        "end": 71
+      },
+      "loc2": {
+        "file": "apps/interop/domain/cdr/adam_pipeline.py",
+        "start": 33,
+        "end": 47
+      },
+      "preview": "def _parse_date(dt_val: datetime | str | None) -> date | None:\n    \"\"\"Parse date from datetime, ISO string, or None.\"\"\"\n    if dt_val is None:\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/cdr/sdtm_pipeline.py",
+        "start": 58,
+        "end": 72
+      },
+      "loc2": {
+        "file": "apps/interop/domain/cdr/adam_pipeline.py",
+        "start": 34,
+        "end": 48
+      },
+      "preview": "    \"\"\"Parse date from datetime, ISO string, or None.\"\"\"\n    if dt_val is None:\n        return None\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/domain/cdr/sdtm_pipeline.py",
+        "start": 59,
+        "end": 73
+      },
+      "loc2": {
+        "file": "apps/interop/domain/cdr/adam_pipeline.py",
+        "start": 35,
+        "end": 49
+      },
+      "preview": "    if dt_val is None:\n        return None\n    if isinstance(dt_val, datetime):\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/presentation/routers/cdr_pipeline.py",
+        "start": 87,
+        "end": 104
+      },
+      "loc2": {
+        "file": "apps/interop/presentation/routers/lakehouse.py",
+        "start": 64,
+        "end": 82
+      },
+      "preview": "    user_id = (\n        getattr(request.state, \"user_id\", None)\n        or request.headers.get(\"X-User-Id\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/presentation/routers/cdr_pipeline.py",
+        "start": 88,
+        "end": 106
+      },
+      "loc2": {
+        "file": "apps/interop/presentation/routers/lakehouse.py",
+        "start": 65,
+        "end": 84
+      },
+      "preview": "        getattr(request.state, \"user_id\", None)\n        or request.headers.get(\"X-User-Id\")\n        or request.headers.get(\"x-user-id\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 16,
+        "end": 33
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 15,
+        "end": 32
+      },
+      "preview": ")\nDEFAULT_JURISDICTION_PRESETS: dict[str, list[dict[str, Any]]] = {\n    \"US\": [\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 18,
+        "end": 35
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 17,
+        "end": 34
+      },
+      "preview": "DEFAULT_JURISDICTION_PRESETS: dict[str, list[dict[str, Any]]] = {\n    \"US\": [\n            \"facet\": \"REGULATORY_IRB\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 19,
+        "end": 36
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 18,
+        "end": 35
+      },
+      "preview": "    \"US\": [\n            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"FDA_1572\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 21,
+        "end": 37
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 20,
+        "end": 36
+      },
+      "preview": "            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"FDA_1572\",\n            \"criterion_name\": \"Form FDA 1572 Statement of Investigator\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 22,
+        "end": 38
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 21,
+        "end": 37
+      },
+      "preview": "            \"criterion_code\": \"FDA_1572\",\n            \"criterion_name\": \"Form FDA 1572 Statement of Investigator\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 23,
+        "end": 39
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 22,
+        "end": 38
+      },
+      "preview": "            \"criterion_name\": \"Form FDA 1572 Statement of Investigator\",\n            \"is_mandatory\": True,\n            \"description\": \"21 CFR 312.60 signed Form FDA 1572\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 24,
+        "end": 40
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 23,
+        "end": 39
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"21 CFR 312.60 signed Form FDA 1572\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 25,
+        "end": 42
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 24,
+        "end": 41
+      },
+      "preview": "            \"description\": \"21 CFR 312.60 signed Form FDA 1572\",\n        },\n            \"facet\": \"REGULATORY_IRB\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 26,
+        "end": 43
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 25,
+        "end": 42
+      },
+      "preview": "        },\n            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"LOCAL_IRB_APPROVAL\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 28,
+        "end": 44
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 27,
+        "end": 43
+      },
+      "preview": "            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"LOCAL_IRB_APPROVAL\",\n            \"criterion_name\": \"Institutional Review Board (IRB) Approval\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 29,
+        "end": 45
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 28,
+        "end": 44
+      },
+      "preview": "            \"criterion_code\": \"LOCAL_IRB_APPROVAL\",\n            \"criterion_name\": \"Institutional Review Board (IRB) Approval\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 30,
+        "end": 46
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 29,
+        "end": 45
+      },
+      "preview": "            \"criterion_name\": \"Institutional Review Board (IRB) Approval\",\n            \"is_mandatory\": True,\n            \"description\": \"21 CFR 56 / ICH GCP 4.4 approval letter\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 31,
+        "end": 47
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 30,
+        "end": 46
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"21 CFR 56 / ICH GCP 4.4 approval letter\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 32,
+        "end": 49
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 31,
+        "end": 48
+      },
+      "preview": "            \"description\": \"21 CFR 56 / ICH GCP 4.4 approval letter\",\n        },\n            \"facet\": \"REGULATORY_IRB\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 33,
+        "end": 50
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 32,
+        "end": 49
+      },
+      "preview": "        },\n            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"FINANCIAL_DISCLOSURE\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 35,
+        "end": 51
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 34,
+        "end": 50
+      },
+      "preview": "            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"FINANCIAL_DISCLOSURE\",\n            \"criterion_name\": \"Financial Disclosure Form (FDF)\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 36,
+        "end": 52
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 35,
+        "end": 51
+      },
+      "preview": "            \"criterion_code\": \"FINANCIAL_DISCLOSURE\",\n            \"criterion_name\": \"Financial Disclosure Form (FDF)\",\n            \"is_mandatory\": False,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 37,
+        "end": 53
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 36,
+        "end": 52
+      },
+      "preview": "            \"criterion_name\": \"Financial Disclosure Form (FDF)\",\n            \"is_mandatory\": False,\n            \"description\": \"21 CFR 54 Financial Disclosure\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 38,
+        "end": 54
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 37,
+        "end": 53
+      },
+      "preview": "            \"is_mandatory\": False,\n            \"description\": \"21 CFR 54 Financial Disclosure\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 39,
+        "end": 56
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 38,
+        "end": 55
+      },
+      "preview": "            \"description\": \"21 CFR 54 Financial Disclosure\",\n        },\n            \"facet\": \"CTA_BUDGET\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 40,
+        "end": 57
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 39,
+        "end": 56
+      },
+      "preview": "        },\n            \"facet\": \"CTA_BUDGET\",\n            \"criterion_code\": \"SITE_CONTRACT\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 42,
+        "end": 58
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 41,
+        "end": 57
+      },
+      "preview": "            \"facet\": \"CTA_BUDGET\",\n            \"criterion_code\": \"SITE_CONTRACT\",\n            \"criterion_name\": \"Executed Clinical Trial Agreement (CTA)\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 43,
+        "end": 59
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 42,
+        "end": 58
+      },
+      "preview": "            \"criterion_code\": \"SITE_CONTRACT\",\n            \"criterion_name\": \"Executed Clinical Trial Agreement (CTA)\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 44,
+        "end": 60
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 43,
+        "end": 59
+      },
+      "preview": "            \"criterion_name\": \"Executed Clinical Trial Agreement (CTA)\",\n            \"is_mandatory\": True,\n            \"description\": \"Fully executed site contract and budget schedule\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 45,
+        "end": 61
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 44,
+        "end": 60
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Fully executed site contract and budget schedule\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 46,
+        "end": 63
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 45,
+        "end": 62
+      },
+      "preview": "            \"description\": \"Fully executed site contract and budget schedule\",\n        },\n            \"facet\": \"EISF_BASELINE\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 47,
+        "end": 64
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 46,
+        "end": 63
+      },
+      "preview": "        },\n            \"facet\": \"EISF_BASELINE\",\n            \"criterion_code\": \"EISF_BASELINE_CERT\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 49,
+        "end": 65
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 48,
+        "end": 64
+      },
+      "preview": "            \"facet\": \"EISF_BASELINE\",\n            \"criterion_code\": \"EISF_BASELINE_CERT\",\n            \"criterion_name\": \"Certified eISF Regulatory Binder Baseline\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 50,
+        "end": 66
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 49,
+        "end": 65
+      },
+      "preview": "            \"criterion_code\": \"EISF_BASELINE_CERT\",\n            \"criterion_name\": \"Certified eISF Regulatory Binder Baseline\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 51,
+        "end": 67
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 50,
+        "end": 66
+      },
+      "preview": "            \"criterion_name\": \"Certified eISF Regulatory Binder Baseline\",\n            \"is_mandatory\": True,\n            \"description\": \"Baseline investigator CV, medical licenses, and lab certifications\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 52,
+        "end": 68
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 51,
+        "end": 67
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Baseline investigator CV, medical licenses, and lab certifications\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 53,
+        "end": 70
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 52,
+        "end": 69
+      },
+      "preview": "            \"description\": \"Baseline investigator CV, medical licenses, and lab certifications\",\n        },\n            \"facet\": \"DOA_LOG\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 54,
+        "end": 71
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 53,
+        "end": 70
+      },
+      "preview": "        },\n            \"facet\": \"DOA_LOG\",\n            \"criterion_code\": \"DOA_LOG\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 56,
+        "end": 72
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 55,
+        "end": 71
+      },
+      "preview": "            \"facet\": \"DOA_LOG\",\n            \"criterion_code\": \"DOA_LOG\",\n            \"criterion_name\": \"PI Signed Delegation of Authority (DOA) Log\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 57,
+        "end": 73
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 56,
+        "end": 72
+      },
+      "preview": "            \"criterion_code\": \"DOA_LOG\",\n            \"criterion_name\": \"PI Signed Delegation of Authority (DOA) Log\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 58,
+        "end": 74
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 57,
+        "end": 73
+      },
+      "preview": "            \"criterion_name\": \"PI Signed Delegation of Authority (DOA) Log\",\n            \"is_mandatory\": True,\n            \"description\": \"ICH GCP E6(R2) 4.1.5 signed site delegation log\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 59,
+        "end": 75
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 58,
+        "end": 74
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"ICH GCP E6(R2) 4.1.5 signed site delegation log\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 60,
+        "end": 77
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 59,
+        "end": 76
+      },
+      "preview": "            \"description\": \"ICH GCP E6(R2) 4.1.5 signed site delegation log\",\n        },\n            \"facet\": \"STAFF_TRAINING\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 61,
+        "end": 79
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 60,
+        "end": 78
+      },
+      "preview": "        },\n            \"facet\": \"STAFF_TRAINING\",\n            \"criterion_code\": \"GCP_TRAINING\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 63,
+        "end": 80
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 62,
+        "end": 79
+      },
+      "preview": "            \"facet\": \"STAFF_TRAINING\",\n            \"criterion_code\": \"GCP_TRAINING\",\n            \"criterion_name\": \"GCP & Protocol Amendment Training\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 64,
+        "end": 81
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 63,
+        "end": 80
+      },
+      "preview": "            \"criterion_code\": \"GCP_TRAINING\",\n            \"criterion_name\": \"GCP & Protocol Amendment Training\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 65,
+        "end": 82
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 64,
+        "end": 81
+      },
+      "preview": "            \"criterion_name\": \"GCP & Protocol Amendment Training\",\n            \"is_mandatory\": True,\n            \"description\": \"ICH GCP E6(R2) Section 4 staff training verification\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 66,
+        "end": 83
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 65,
+        "end": 82
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"ICH GCP E6(R2) Section 4 staff training verification\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 67,
+        "end": 84
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 66,
+        "end": 83
+      },
+      "preview": "            \"description\": \"ICH GCP E6(R2) Section 4 staff training verification\",\n        },\n            \"facet\": \"IP_DEPOT_RELEASE\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 68,
+        "end": 86
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 67,
+        "end": 85
+      },
+      "preview": "        },\n            \"facet\": \"IP_DEPOT_RELEASE\",\n            \"criterion_code\": \"IP_RELEASE_AUTHORIZATION\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 70,
+        "end": 87
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 69,
+        "end": 86
+      },
+      "preview": "            \"facet\": \"IP_DEPOT_RELEASE\",\n            \"criterion_code\": \"IP_RELEASE_AUTHORIZATION\",\n            \"criterion_name\": \"Investigational Product Depot Greenlight Release\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 71,
+        "end": 88
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 70,
+        "end": 87
+      },
+      "preview": "            \"criterion_code\": \"IP_RELEASE_AUTHORIZATION\",\n            \"criterion_name\": \"Investigational Product Depot Greenlight Release\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 72,
+        "end": 89
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 71,
+        "end": 88
+      },
+      "preview": "            \"criterion_name\": \"Investigational Product Depot Greenlight Release\",\n            \"is_mandatory\": True,\n            \"description\": \"Depot release authorization for investigational drug shipment\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 73,
+        "end": 90
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 72,
+        "end": 89
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Depot release authorization for investigational drug shipment\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 74,
+        "end": 91
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 73,
+        "end": 90
+      },
+      "preview": "            \"description\": \"Depot release authorization for investigational drug shipment\",\n        },\n    \"EU\": [\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 75,
+        "end": 93
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 74,
+        "end": 92
+      },
+      "preview": "        },\n    \"EU\": [\n            \"facet\": \"REGULATORY_IRB\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 77,
+        "end": 94
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 76,
+        "end": 93
+      },
+      "preview": "    \"EU\": [\n            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"EU_CTR_PART_I\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 79,
+        "end": 95
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 78,
+        "end": 94
+      },
+      "preview": "            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"EU_CTR_PART_I\",\n            \"criterion_name\": \"EU CTR Part I Authorisation\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 80,
+        "end": 96
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 79,
+        "end": 95
+      },
+      "preview": "            \"criterion_code\": \"EU_CTR_PART_I\",\n            \"criterion_name\": \"EU CTR Part I Authorisation\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 81,
+        "end": 97
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 80,
+        "end": 96
+      },
+      "preview": "            \"criterion_name\": \"EU CTR Part I Authorisation\",\n            \"is_mandatory\": True,\n            \"description\": \"Regulation (EU) No 536/2014 Part I scientific assessment approval\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 82,
+        "end": 98
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 81,
+        "end": 97
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Regulation (EU) No 536/2014 Part I scientific assessment approval\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 83,
+        "end": 100
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 82,
+        "end": 99
+      },
+      "preview": "            \"description\": \"Regulation (EU) No 536/2014 Part I scientific assessment approval\",\n        },\n            \"facet\": \"REGULATORY_IRB\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 84,
+        "end": 101
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 83,
+        "end": 100
+      },
+      "preview": "        },\n            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"EU_CTR_PART_II_EC\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 86,
+        "end": 102
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 85,
+        "end": 101
+      },
+      "preview": "            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"EU_CTR_PART_II_EC\",\n            \"criterion_name\": \"EU CTR Part II & Ethics Committee Decision\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 87,
+        "end": 103
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 86,
+        "end": 102
+      },
+      "preview": "            \"criterion_code\": \"EU_CTR_PART_II_EC\",\n            \"criterion_name\": \"EU CTR Part II & Ethics Committee Decision\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 88,
+        "end": 104
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 87,
+        "end": 103
+      },
+      "preview": "            \"criterion_name\": \"EU CTR Part II & Ethics Committee Decision\",\n            \"is_mandatory\": True,\n            \"description\": \"Member State Part II ethical decision and site suitability\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 89,
+        "end": 105
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 88,
+        "end": 104
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Member State Part II ethical decision and site suitability\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 90,
+        "end": 107
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 89,
+        "end": 106
+      },
+      "preview": "            \"description\": \"Member State Part II ethical decision and site suitability\",\n        },\n            \"facet\": \"CTA_BUDGET\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 91,
+        "end": 108
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 90,
+        "end": 107
+      },
+      "preview": "        },\n            \"facet\": \"CTA_BUDGET\",\n            \"criterion_code\": \"SITE_CONTRACT\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 93,
+        "end": 109
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 92,
+        "end": 108
+      },
+      "preview": "            \"facet\": \"CTA_BUDGET\",\n            \"criterion_code\": \"SITE_CONTRACT\",\n            \"criterion_name\": \"Executed Clinical Trial Agreement (CTA)\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 94,
+        "end": 110
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 93,
+        "end": 109
+      },
+      "preview": "            \"criterion_code\": \"SITE_CONTRACT\",\n            \"criterion_name\": \"Executed Clinical Trial Agreement (CTA)\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 95,
+        "end": 111
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 94,
+        "end": 110
+      },
+      "preview": "            \"criterion_name\": \"Executed Clinical Trial Agreement (CTA)\",\n            \"is_mandatory\": True,\n            \"description\": \"National institutional clinical trial agreement\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 96,
+        "end": 112
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 95,
+        "end": 111
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"National institutional clinical trial agreement\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 97,
+        "end": 114
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 96,
+        "end": 113
+      },
+      "preview": "            \"description\": \"National institutional clinical trial agreement\",\n        },\n            \"facet\": \"EISF_BASELINE\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 98,
+        "end": 115
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 97,
+        "end": 114
+      },
+      "preview": "        },\n            \"facet\": \"EISF_BASELINE\",\n            \"criterion_code\": \"EISF_BASELINE_CERT\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 100,
+        "end": 116
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 99,
+        "end": 115
+      },
+      "preview": "            \"facet\": \"EISF_BASELINE\",\n            \"criterion_code\": \"EISF_BASELINE_CERT\",\n            \"criterion_name\": \"Certified eISF Regulatory Binder Baseline\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 101,
+        "end": 117
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 100,
+        "end": 116
+      },
+      "preview": "            \"criterion_code\": \"EISF_BASELINE_CERT\",\n            \"criterion_name\": \"Certified eISF Regulatory Binder Baseline\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 102,
+        "end": 118
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 101,
+        "end": 117
+      },
+      "preview": "            \"criterion_name\": \"Certified eISF Regulatory Binder Baseline\",\n            \"is_mandatory\": True,\n            \"description\": \"Certified investigator dossiers and site facilities\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 103,
+        "end": 119
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 102,
+        "end": 118
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Certified investigator dossiers and site facilities\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 104,
+        "end": 121
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 103,
+        "end": 120
+      },
+      "preview": "            \"description\": \"Certified investigator dossiers and site facilities\",\n        },\n            \"facet\": \"DOA_LOG\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 105,
+        "end": 122
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 104,
+        "end": 121
+      },
+      "preview": "        },\n            \"facet\": \"DOA_LOG\",\n            \"criterion_code\": \"DOA_LOG\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 107,
+        "end": 123
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 106,
+        "end": 122
+      },
+      "preview": "            \"facet\": \"DOA_LOG\",\n            \"criterion_code\": \"DOA_LOG\",\n            \"criterion_name\": \"PI Signed Delegation of Authority (DOA) Log\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 108,
+        "end": 124
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 107,
+        "end": 123
+      },
+      "preview": "            \"criterion_code\": \"DOA_LOG\",\n            \"criterion_name\": \"PI Signed Delegation of Authority (DOA) Log\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 109,
+        "end": 125
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 108,
+        "end": 124
+      },
+      "preview": "            \"criterion_name\": \"PI Signed Delegation of Authority (DOA) Log\",\n            \"is_mandatory\": True,\n            \"description\": \"Delegation of trial tasks log\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 110,
+        "end": 126
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 109,
+        "end": 125
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Delegation of trial tasks log\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 111,
+        "end": 128
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 110,
+        "end": 127
+      },
+      "preview": "            \"description\": \"Delegation of trial tasks log\",\n        },\n            \"facet\": \"STAFF_TRAINING\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 112,
+        "end": 130
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 111,
+        "end": 129
+      },
+      "preview": "        },\n            \"facet\": \"STAFF_TRAINING\",\n            \"criterion_code\": \"GCP_TRAINING\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 114,
+        "end": 131
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 113,
+        "end": 130
+      },
+      "preview": "            \"facet\": \"STAFF_TRAINING\",\n            \"criterion_code\": \"GCP_TRAINING\",\n            \"criterion_name\": \"GCP & Protocol Training\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 115,
+        "end": 132
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 114,
+        "end": 131
+      },
+      "preview": "            \"criterion_code\": \"GCP_TRAINING\",\n            \"criterion_name\": \"GCP & Protocol Training\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 116,
+        "end": 133
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 115,
+        "end": 132
+      },
+      "preview": "            \"criterion_name\": \"GCP & Protocol Training\",\n            \"is_mandatory\": True,\n            \"description\": \"GCP and protocol version training certificates\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 117,
+        "end": 134
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 116,
+        "end": 133
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"GCP and protocol version training certificates\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 118,
+        "end": 135
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 117,
+        "end": 134
+      },
+      "preview": "            \"description\": \"GCP and protocol version training certificates\",\n        },\n            \"facet\": \"IP_DEPOT_RELEASE\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 119,
+        "end": 137
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 118,
+        "end": 136
+      },
+      "preview": "        },\n            \"facet\": \"IP_DEPOT_RELEASE\",\n            \"criterion_code\": \"IP_RELEASE_AUTHORIZATION\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 121,
+        "end": 138
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 120,
+        "end": 137
+      },
+      "preview": "            \"facet\": \"IP_DEPOT_RELEASE\",\n            \"criterion_code\": \"IP_RELEASE_AUTHORIZATION\",\n            \"criterion_name\": \"Investigational Product Depot Greenlight Release\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 122,
+        "end": 139
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 121,
+        "end": 138
+      },
+      "preview": "            \"criterion_code\": \"IP_RELEASE_AUTHORIZATION\",\n            \"criterion_name\": \"Investigational Product Depot Greenlight Release\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 123,
+        "end": 140
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 122,
+        "end": 139
+      },
+      "preview": "            \"criterion_name\": \"Investigational Product Depot Greenlight Release\",\n            \"is_mandatory\": True,\n            \"description\": \"QP release and depot greenlight release authorization\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 124,
+        "end": 141
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 123,
+        "end": 140
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"QP release and depot greenlight release authorization\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 125,
+        "end": 142
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 124,
+        "end": 141
+      },
+      "preview": "            \"description\": \"QP release and depot greenlight release authorization\",\n        },\n    \"JP\": [\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 126,
+        "end": 144
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 125,
+        "end": 143
+      },
+      "preview": "        },\n    \"JP\": [\n            \"facet\": \"REGULATORY_IRB\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 128,
+        "end": 145
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 127,
+        "end": 144
+      },
+      "preview": "    \"JP\": [\n            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"PMDA_NOTIFICATION\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 130,
+        "end": 146
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 129,
+        "end": 145
+      },
+      "preview": "            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"PMDA_NOTIFICATION\",\n            \"criterion_name\": \"PMDA Clinical Trial Notification (CTN)\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 131,
+        "end": 147
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 130,
+        "end": 146
+      },
+      "preview": "            \"criterion_code\": \"PMDA_NOTIFICATION\",\n            \"criterion_name\": \"PMDA Clinical Trial Notification (CTN)\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 132,
+        "end": 148
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 131,
+        "end": 147
+      },
+      "preview": "            \"criterion_name\": \"PMDA Clinical Trial Notification (CTN)\",\n            \"is_mandatory\": True,\n            \"description\": \"Japan PMDA notification and 30-day review completion\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 133,
+        "end": 149
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 132,
+        "end": 148
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Japan PMDA notification and 30-day review completion\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 134,
+        "end": 151
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 133,
+        "end": 150
+      },
+      "preview": "            \"description\": \"Japan PMDA notification and 30-day review completion\",\n        },\n            \"facet\": \"REGULATORY_IRB\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 135,
+        "end": 152
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 134,
+        "end": 151
+      },
+      "preview": "        },\n            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"LOCAL_IRB_APPROVAL\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 137,
+        "end": 153
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 136,
+        "end": 152
+      },
+      "preview": "            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"LOCAL_IRB_APPROVAL\",\n            \"criterion_name\": \"Institutional Review Board (IRB) Approval\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 138,
+        "end": 154
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 137,
+        "end": 153
+      },
+      "preview": "            \"criterion_code\": \"LOCAL_IRB_APPROVAL\",\n            \"criterion_name\": \"Institutional Review Board (IRB) Approval\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 139,
+        "end": 155
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 138,
+        "end": 154
+      },
+      "preview": "            \"criterion_name\": \"Institutional Review Board (IRB) Approval\",\n            \"is_mandatory\": True,\n            \"description\": \"Local medical institution IRB approval certificate\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 140,
+        "end": 156
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 139,
+        "end": 155
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Local medical institution IRB approval certificate\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 141,
+        "end": 158
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 140,
+        "end": 157
+      },
+      "preview": "            \"description\": \"Local medical institution IRB approval certificate\",\n        },\n            \"facet\": \"CTA_BUDGET\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 142,
+        "end": 159
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 141,
+        "end": 158
+      },
+      "preview": "        },\n            \"facet\": \"CTA_BUDGET\",\n            \"criterion_code\": \"SITE_CONTRACT\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 144,
+        "end": 160
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 143,
+        "end": 159
+      },
+      "preview": "            \"facet\": \"CTA_BUDGET\",\n            \"criterion_code\": \"SITE_CONTRACT\",\n            \"criterion_name\": \"Executed Site Agreement\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 145,
+        "end": 161
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 144,
+        "end": 160
+      },
+      "preview": "            \"criterion_code\": \"SITE_CONTRACT\",\n            \"criterion_name\": \"Executed Site Agreement\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 146,
+        "end": 162
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 145,
+        "end": 161
+      },
+      "preview": "            \"criterion_name\": \"Executed Site Agreement\",\n            \"is_mandatory\": True,\n            \"description\": \"Tripartite / site clinical trial contract\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 147,
+        "end": 163
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 146,
+        "end": 162
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Tripartite / site clinical trial contract\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 148,
+        "end": 165
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 147,
+        "end": 164
+      },
+      "preview": "            \"description\": \"Tripartite / site clinical trial contract\",\n        },\n            \"facet\": \"EISF_BASELINE\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 149,
+        "end": 166
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 148,
+        "end": 165
+      },
+      "preview": "        },\n            \"facet\": \"EISF_BASELINE\",\n            \"criterion_code\": \"EISF_BASELINE_CERT\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 151,
+        "end": 167
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 150,
+        "end": 166
+      },
+      "preview": "            \"facet\": \"EISF_BASELINE\",\n            \"criterion_code\": \"EISF_BASELINE_CERT\",\n            \"criterion_name\": \"Certified eISF Regulatory Binder Baseline\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 152,
+        "end": 168
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 151,
+        "end": 167
+      },
+      "preview": "            \"criterion_code\": \"EISF_BASELINE_CERT\",\n            \"criterion_name\": \"Certified eISF Regulatory Binder Baseline\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 153,
+        "end": 169
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 152,
+        "end": 168
+      },
+      "preview": "            \"criterion_name\": \"Certified eISF Regulatory Binder Baseline\",\n            \"is_mandatory\": True,\n            \"description\": \"Investigator CVs and local lab reference ranges\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 154,
+        "end": 170
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 153,
+        "end": 169
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Investigator CVs and local lab reference ranges\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 155,
+        "end": 172
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 154,
+        "end": 171
+      },
+      "preview": "            \"description\": \"Investigator CVs and local lab reference ranges\",\n        },\n            \"facet\": \"DOA_LOG\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 156,
+        "end": 173
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 155,
+        "end": 172
+      },
+      "preview": "        },\n            \"facet\": \"DOA_LOG\",\n            \"criterion_code\": \"DOA_LOG\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 158,
+        "end": 174
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 157,
+        "end": 173
+      },
+      "preview": "            \"facet\": \"DOA_LOG\",\n            \"criterion_code\": \"DOA_LOG\",\n            \"criterion_name\": \"PI Signed Delegation of Authority (DOA) Log\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 159,
+        "end": 175
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 158,
+        "end": 174
+      },
+      "preview": "            \"criterion_code\": \"DOA_LOG\",\n            \"criterion_name\": \"PI Signed Delegation of Authority (DOA) Log\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 160,
+        "end": 176
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 159,
+        "end": 175
+      },
+      "preview": "            \"criterion_name\": \"PI Signed Delegation of Authority (DOA) Log\",\n            \"is_mandatory\": True,\n            \"description\": \"Trial responsibility delegation record\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 161,
+        "end": 177
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 160,
+        "end": 176
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Trial responsibility delegation record\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 162,
+        "end": 179
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 161,
+        "end": 178
+      },
+      "preview": "            \"description\": \"Trial responsibility delegation record\",\n        },\n            \"facet\": \"STAFF_TRAINING\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 163,
+        "end": 181
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 162,
+        "end": 180
+      },
+      "preview": "        },\n            \"facet\": \"STAFF_TRAINING\",\n            \"criterion_code\": \"GCP_TRAINING\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 165,
+        "end": 182
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 164,
+        "end": 181
+      },
+      "preview": "            \"facet\": \"STAFF_TRAINING\",\n            \"criterion_code\": \"GCP_TRAINING\",\n            \"criterion_name\": \"J-GCP & Protocol Training\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 166,
+        "end": 183
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 165,
+        "end": 182
+      },
+      "preview": "            \"criterion_code\": \"GCP_TRAINING\",\n            \"criterion_name\": \"J-GCP & Protocol Training\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 167,
+        "end": 184
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 166,
+        "end": 183
+      },
+      "preview": "            \"criterion_name\": \"J-GCP & Protocol Training\",\n            \"is_mandatory\": True,\n            \"description\": \"Japanese GCP training verification\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 168,
+        "end": 185
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 167,
+        "end": 184
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Japanese GCP training verification\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 169,
+        "end": 186
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 168,
+        "end": 185
+      },
+      "preview": "            \"description\": \"Japanese GCP training verification\",\n        },\n            \"facet\": \"IP_DEPOT_RELEASE\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 170,
+        "end": 188
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 169,
+        "end": 187
+      },
+      "preview": "        },\n            \"facet\": \"IP_DEPOT_RELEASE\",\n            \"criterion_code\": \"IP_RELEASE_AUTHORIZATION\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 172,
+        "end": 189
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 171,
+        "end": 188
+      },
+      "preview": "            \"facet\": \"IP_DEPOT_RELEASE\",\n            \"criterion_code\": \"IP_RELEASE_AUTHORIZATION\",\n            \"criterion_name\": \"Investigational Product Depot Greenlight Release\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 173,
+        "end": 190
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 172,
+        "end": 189
+      },
+      "preview": "            \"criterion_code\": \"IP_RELEASE_AUTHORIZATION\",\n            \"criterion_name\": \"Investigational Product Depot Greenlight Release\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 174,
+        "end": 191
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 173,
+        "end": 190
+      },
+      "preview": "            \"criterion_name\": \"Investigational Product Depot Greenlight Release\",\n            \"is_mandatory\": True,\n            \"description\": \"Release confirmation for local depot dispatch\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 175,
+        "end": 192
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 174,
+        "end": 191
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Release confirmation for local depot dispatch\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 176,
+        "end": 193
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 175,
+        "end": 192
+      },
+      "preview": "            \"description\": \"Release confirmation for local depot dispatch\",\n        },\n    \"GB\": [\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 177,
+        "end": 195
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 176,
+        "end": 194
+      },
+      "preview": "        },\n    \"GB\": [\n            \"facet\": \"REGULATORY_IRB\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 179,
+        "end": 196
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 178,
+        "end": 195
+      },
+      "preview": "    \"GB\": [\n            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"MHRA_AUTHORIZATION\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 181,
+        "end": 197
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 180,
+        "end": 196
+      },
+      "preview": "            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"MHRA_AUTHORIZATION\",\n            \"criterion_name\": \"MHRA Clinical Trial Authorisation (CTA)\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 182,
+        "end": 198
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 181,
+        "end": 197
+      },
+      "preview": "            \"criterion_code\": \"MHRA_AUTHORIZATION\",\n            \"criterion_name\": \"MHRA Clinical Trial Authorisation (CTA)\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 183,
+        "end": 199
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 182,
+        "end": 198
+      },
+      "preview": "            \"criterion_name\": \"MHRA Clinical Trial Authorisation (CTA)\",\n            \"is_mandatory\": True,\n            \"description\": \"UK MHRA Clinical Trial Authorisation\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 184,
+        "end": 200
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 183,
+        "end": 199
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"UK MHRA Clinical Trial Authorisation\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 185,
+        "end": 202
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 184,
+        "end": 201
+      },
+      "preview": "            \"description\": \"UK MHRA Clinical Trial Authorisation\",\n        },\n            \"facet\": \"REGULATORY_IRB\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 186,
+        "end": 203
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 185,
+        "end": 202
+      },
+      "preview": "        },\n            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"UK_REC_APPROVAL\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 188,
+        "end": 204
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 187,
+        "end": 203
+      },
+      "preview": "            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"UK_REC_APPROVAL\",\n            \"criterion_name\": \"HRA & Research Ethics Committee (REC) Approval\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 189,
+        "end": 205
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 188,
+        "end": 204
+      },
+      "preview": "            \"criterion_code\": \"UK_REC_APPROVAL\",\n            \"criterion_name\": \"HRA & Research Ethics Committee (REC) Approval\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 190,
+        "end": 206
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 189,
+        "end": 205
+      },
+      "preview": "            \"criterion_name\": \"HRA & Research Ethics Committee (REC) Approval\",\n            \"is_mandatory\": True,\n            \"description\": \"Health Research Authority & REC favorable opinion\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 191,
+        "end": 207
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 190,
+        "end": 206
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Health Research Authority & REC favorable opinion\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 192,
+        "end": 209
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 191,
+        "end": 208
+      },
+      "preview": "            \"description\": \"Health Research Authority & REC favorable opinion\",\n        },\n            \"facet\": \"CTA_BUDGET\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 193,
+        "end": 210
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 192,
+        "end": 209
+      },
+      "preview": "        },\n            \"facet\": \"CTA_BUDGET\",\n            \"criterion_code\": \"SITE_CONTRACT\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 195,
+        "end": 211
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 194,
+        "end": 210
+      },
+      "preview": "            \"facet\": \"CTA_BUDGET\",\n            \"criterion_code\": \"SITE_CONTRACT\",\n            \"criterion_name\": \"model Clinical Trial Agreement (mCTA)\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 196,
+        "end": 212
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 195,
+        "end": 211
+      },
+      "preview": "            \"criterion_code\": \"SITE_CONTRACT\",\n            \"criterion_name\": \"model Clinical Trial Agreement (mCTA)\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 197,
+        "end": 213
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 196,
+        "end": 212
+      },
+      "preview": "            \"criterion_name\": \"model Clinical Trial Agreement (mCTA)\",\n            \"is_mandatory\": True,\n            \"description\": \"UK NHS model Clinical Trial Agreement\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 198,
+        "end": 214
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 197,
+        "end": 213
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"UK NHS model Clinical Trial Agreement\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 199,
+        "end": 216
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 198,
+        "end": 215
+      },
+      "preview": "            \"description\": \"UK NHS model Clinical Trial Agreement\",\n        },\n            \"facet\": \"EISF_BASELINE\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 200,
+        "end": 217
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 199,
+        "end": 216
+      },
+      "preview": "        },\n            \"facet\": \"EISF_BASELINE\",\n            \"criterion_code\": \"EISF_BASELINE_CERT\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 202,
+        "end": 218
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 201,
+        "end": 217
+      },
+      "preview": "            \"facet\": \"EISF_BASELINE\",\n            \"criterion_code\": \"EISF_BASELINE_CERT\",\n            \"criterion_name\": \"Certified eISF Regulatory Binder Baseline\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 203,
+        "end": 219
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 202,
+        "end": 218
+      },
+      "preview": "            \"criterion_code\": \"EISF_BASELINE_CERT\",\n            \"criterion_name\": \"Certified eISF Regulatory Binder Baseline\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 204,
+        "end": 220
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 203,
+        "end": 219
+      },
+      "preview": "            \"criterion_name\": \"Certified eISF Regulatory Binder Baseline\",\n            \"is_mandatory\": True,\n            \"description\": \"Investigator credentials and NHS site readiness\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 205,
+        "end": 221
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 204,
+        "end": 220
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Investigator credentials and NHS site readiness\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 206,
+        "end": 223
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 205,
+        "end": 222
+      },
+      "preview": "            \"description\": \"Investigator credentials and NHS site readiness\",\n        },\n            \"facet\": \"DOA_LOG\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 207,
+        "end": 224
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 206,
+        "end": 223
+      },
+      "preview": "        },\n            \"facet\": \"DOA_LOG\",\n            \"criterion_code\": \"DOA_LOG\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 209,
+        "end": 225
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 208,
+        "end": 224
+      },
+      "preview": "            \"facet\": \"DOA_LOG\",\n            \"criterion_code\": \"DOA_LOG\",\n            \"criterion_name\": \"PI Signed Delegation of Authority (DOA) Log\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 210,
+        "end": 226
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 209,
+        "end": 225
+      },
+      "preview": "            \"criterion_code\": \"DOA_LOG\",\n            \"criterion_name\": \"PI Signed Delegation of Authority (DOA) Log\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 211,
+        "end": 227
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 210,
+        "end": 226
+      },
+      "preview": "            \"criterion_name\": \"PI Signed Delegation of Authority (DOA) Log\",\n            \"is_mandatory\": True,\n            \"description\": \"Delegation of authority record\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 212,
+        "end": 228
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 211,
+        "end": 227
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Delegation of authority record\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 213,
+        "end": 230
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 212,
+        "end": 229
+      },
+      "preview": "            \"description\": \"Delegation of authority record\",\n        },\n            \"facet\": \"STAFF_TRAINING\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 214,
+        "end": 232
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 213,
+        "end": 231
+      },
+      "preview": "        },\n            \"facet\": \"STAFF_TRAINING\",\n            \"criterion_code\": \"GCP_TRAINING\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 216,
+        "end": 233
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 215,
+        "end": 232
+      },
+      "preview": "            \"facet\": \"STAFF_TRAINING\",\n            \"criterion_code\": \"GCP_TRAINING\",\n            \"criterion_name\": \"UK GCP & Protocol Training\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 217,
+        "end": 234
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 216,
+        "end": 233
+      },
+      "preview": "            \"criterion_code\": \"GCP_TRAINING\",\n            \"criterion_name\": \"UK GCP & Protocol Training\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 218,
+        "end": 235
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 217,
+        "end": 234
+      },
+      "preview": "            \"criterion_name\": \"UK GCP & Protocol Training\",\n            \"is_mandatory\": True,\n            \"description\": \"NIHR GCP training and protocol amendment training\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 219,
+        "end": 236
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 218,
+        "end": 235
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"NIHR GCP training and protocol amendment training\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 220,
+        "end": 237
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 219,
+        "end": 236
+      },
+      "preview": "            \"description\": \"NIHR GCP training and protocol amendment training\",\n        },\n            \"facet\": \"IP_DEPOT_RELEASE\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 221,
+        "end": 239
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 220,
+        "end": 238
+      },
+      "preview": "        },\n            \"facet\": \"IP_DEPOT_RELEASE\",\n            \"criterion_code\": \"IP_RELEASE_AUTHORIZATION\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 223,
+        "end": 240
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 222,
+        "end": 239
+      },
+      "preview": "            \"facet\": \"IP_DEPOT_RELEASE\",\n            \"criterion_code\": \"IP_RELEASE_AUTHORIZATION\",\n            \"criterion_name\": \"Investigational Product Depot Greenlight Release\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 224,
+        "end": 241
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 223,
+        "end": 240
+      },
+      "preview": "            \"criterion_code\": \"IP_RELEASE_AUTHORIZATION\",\n            \"criterion_name\": \"Investigational Product Depot Greenlight Release\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 225,
+        "end": 242
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 224,
+        "end": 241
+      },
+      "preview": "            \"criterion_name\": \"Investigational Product Depot Greenlight Release\",\n            \"is_mandatory\": True,\n            \"description\": \"UK QP release and depot distribution authorization\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 226,
+        "end": 243
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 225,
+        "end": 242
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"UK QP release and depot distribution authorization\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 227,
+        "end": 244
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 226,
+        "end": 243
+      },
+      "preview": "            \"description\": \"UK QP release and depot distribution authorization\",\n        },\n    \"GLOBAL\": [\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 228,
+        "end": 246
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 227,
+        "end": 245
+      },
+      "preview": "        },\n    \"GLOBAL\": [\n            \"facet\": \"REGULATORY_IRB\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 230,
+        "end": 247
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 229,
+        "end": 246
+      },
+      "preview": "    \"GLOBAL\": [\n            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"REGULATORY_APPROVAL\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 232,
+        "end": 248
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 231,
+        "end": 247
+      },
+      "preview": "            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"REGULATORY_APPROVAL\",\n            \"criterion_name\": \"Regulatory Authority Approval\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 233,
+        "end": 249
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 232,
+        "end": 248
+      },
+      "preview": "            \"criterion_code\": \"REGULATORY_APPROVAL\",\n            \"criterion_name\": \"Regulatory Authority Approval\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 234,
+        "end": 250
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 233,
+        "end": 249
+      },
+      "preview": "            \"criterion_name\": \"Regulatory Authority Approval\",\n            \"is_mandatory\": True,\n            \"description\": \"National competent authority authorization\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 235,
+        "end": 251
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 234,
+        "end": 250
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"National competent authority authorization\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 236,
+        "end": 253
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 235,
+        "end": 252
+      },
+      "preview": "            \"description\": \"National competent authority authorization\",\n        },\n            \"facet\": \"REGULATORY_IRB\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 237,
+        "end": 254
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 236,
+        "end": 253
+      },
+      "preview": "        },\n            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"LOCAL_IRB_APPROVAL\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 239,
+        "end": 255
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 238,
+        "end": 254
+      },
+      "preview": "            \"facet\": \"REGULATORY_IRB\",\n            \"criterion_code\": \"LOCAL_IRB_APPROVAL\",\n            \"criterion_name\": \"Ethics Committee / IRB Approval\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 240,
+        "end": 256
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 239,
+        "end": 255
+      },
+      "preview": "            \"criterion_code\": \"LOCAL_IRB_APPROVAL\",\n            \"criterion_name\": \"Ethics Committee / IRB Approval\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 241,
+        "end": 257
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 240,
+        "end": 256
+      },
+      "preview": "            \"criterion_name\": \"Ethics Committee / IRB Approval\",\n            \"is_mandatory\": True,\n            \"description\": \"Independent Ethics Committee favorable opinion\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 242,
+        "end": 258
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 241,
+        "end": 257
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Independent Ethics Committee favorable opinion\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 243,
+        "end": 260
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 242,
+        "end": 259
+      },
+      "preview": "            \"description\": \"Independent Ethics Committee favorable opinion\",\n        },\n            \"facet\": \"CTA_BUDGET\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 244,
+        "end": 261
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 243,
+        "end": 260
+      },
+      "preview": "        },\n            \"facet\": \"CTA_BUDGET\",\n            \"criterion_code\": \"SITE_CONTRACT\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 246,
+        "end": 262
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 245,
+        "end": 261
+      },
+      "preview": "            \"facet\": \"CTA_BUDGET\",\n            \"criterion_code\": \"SITE_CONTRACT\",\n            \"criterion_name\": \"Executed Clinical Trial Agreement\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 247,
+        "end": 263
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 246,
+        "end": 262
+      },
+      "preview": "            \"criterion_code\": \"SITE_CONTRACT\",\n            \"criterion_name\": \"Executed Clinical Trial Agreement\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 248,
+        "end": 264
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 247,
+        "end": 263
+      },
+      "preview": "            \"criterion_name\": \"Executed Clinical Trial Agreement\",\n            \"is_mandatory\": True,\n            \"description\": \"Fully executed site agreement\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 249,
+        "end": 265
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 248,
+        "end": 264
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Fully executed site agreement\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 250,
+        "end": 267
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 249,
+        "end": 266
+      },
+      "preview": "            \"description\": \"Fully executed site agreement\",\n        },\n            \"facet\": \"EISF_BASELINE\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 251,
+        "end": 268
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 250,
+        "end": 267
+      },
+      "preview": "        },\n            \"facet\": \"EISF_BASELINE\",\n            \"criterion_code\": \"EISF_BASELINE_CERT\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 253,
+        "end": 269
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 252,
+        "end": 268
+      },
+      "preview": "            \"facet\": \"EISF_BASELINE\",\n            \"criterion_code\": \"EISF_BASELINE_CERT\",\n            \"criterion_name\": \"Certified eISF Baseline\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 254,
+        "end": 270
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 253,
+        "end": 269
+      },
+      "preview": "            \"criterion_code\": \"EISF_BASELINE_CERT\",\n            \"criterion_name\": \"Certified eISF Baseline\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 255,
+        "end": 271
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 254,
+        "end": 270
+      },
+      "preview": "            \"criterion_name\": \"Certified eISF Baseline\",\n            \"is_mandatory\": True,\n            \"description\": \"Baseline essential documents\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 256,
+        "end": 272
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 255,
+        "end": 271
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Baseline essential documents\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 257,
+        "end": 274
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 256,
+        "end": 273
+      },
+      "preview": "            \"description\": \"Baseline essential documents\",\n        },\n            \"facet\": \"DOA_LOG\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 258,
+        "end": 275
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 257,
+        "end": 274
+      },
+      "preview": "        },\n            \"facet\": \"DOA_LOG\",\n            \"criterion_code\": \"DOA_LOG\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 260,
+        "end": 276
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 259,
+        "end": 275
+      },
+      "preview": "            \"facet\": \"DOA_LOG\",\n            \"criterion_code\": \"DOA_LOG\",\n            \"criterion_name\": \"PI Signed Delegation of Authority Log\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 261,
+        "end": 277
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 260,
+        "end": 276
+      },
+      "preview": "            \"criterion_code\": \"DOA_LOG\",\n            \"criterion_name\": \"PI Signed Delegation of Authority Log\",\n            \"is_mandatory\": True,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 262,
+        "end": 278
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 261,
+        "end": 277
+      },
+      "preview": "            \"criterion_name\": \"PI Signed Delegation of Authority Log\",\n            \"is_mandatory\": True,\n            \"description\": \"Delegation log\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/application/site_startup_service.py",
+        "start": 263,
+        "end": 279
+      },
+      "loc2": {
+        "file": "apps/designer/presentation/routers/startup_matrix.py",
+        "start": 262,
+        "end": 278
+      },
+      "preview": "            \"is_mandatory\": True,\n            \"description\": \"Delegation log\",\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/domain/models.py",
+        "start": 91,
+        "end": 105
+      },
+      "loc2": {
+        "file": "apps/ctms/presentation/dtos.py",
+        "start": 435,
+        "end": 449
+      },
+      "preview": "    facet_regulatory_irb: bool = False\n    facet_cta_budget: bool = False\n    facet_eisf_baseline: bool = False\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/domain/models.py",
+        "start": 92,
+        "end": 106
+      },
+      "loc2": {
+        "file": "apps/ctms/presentation/dtos.py",
+        "start": 436,
+        "end": 450
+      },
+      "preview": "    facet_cta_budget: bool = False\n    facet_eisf_baseline: bool = False\n    facet_doa_log: bool = False\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/domain/models.py",
+        "start": 93,
+        "end": 107
+      },
+      "loc2": {
+        "file": "apps/ctms/presentation/dtos.py",
+        "start": 437,
+        "end": 451
+      },
+      "preview": "    facet_eisf_baseline: bool = False\n    facet_doa_log: bool = False\n    facet_staff_training: bool = False\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/domain/models.py",
+        "start": 94,
+        "end": 108
+      },
+      "loc2": {
+        "file": "apps/ctms/presentation/dtos.py",
+        "start": 438,
+        "end": 452
+      },
+      "preview": "    facet_doa_log: bool = False\n    facet_staff_training: bool = False\n    facet_ip_release: bool = False\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/domain/models.py",
+        "start": 95,
+        "end": 109
+      },
+      "loc2": {
+        "file": "apps/ctms/presentation/dtos.py",
+        "start": 439,
+        "end": 453
+      },
+      "preview": "    facet_staff_training: bool = False\n    facet_ip_release: bool = False\n    contract_approved: bool = False\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/domain/models.py",
+        "start": 96,
+        "end": 110
+      },
+      "loc2": {
+        "file": "apps/ctms/presentation/dtos.py",
+        "start": 440,
+        "end": 454
+      },
+      "preview": "    facet_ip_release: bool = False\n    contract_approved: bool = False\n    irb_approved: bool = False\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/domain/models.py",
+        "start": 97,
+        "end": 111
+      },
+      "loc2": {
+        "file": "apps/ctms/presentation/dtos.py",
+        "start": 441,
+        "end": 455
+      },
+      "preview": "    contract_approved: bool = False\n    irb_approved: bool = False\n    form_1572_approved: bool = False\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/domain/models.py",
+        "start": 98,
+        "end": 112
+      },
+      "loc2": {
+        "file": "apps/ctms/presentation/dtos.py",
+        "start": 442,
+        "end": 456
+      },
+      "preview": "    irb_approved: bool = False\n    form_1572_approved: bool = False\n    doa_signed_off: bool = False\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/domain/models.py",
+        "start": 99,
+        "end": 113
+      },
+      "loc2": {
+        "file": "apps/ctms/presentation/dtos.py",
+        "start": 443,
+        "end": 457
+      },
+      "preview": "    form_1572_approved: bool = False\n    doa_signed_off: bool = False\n    ip_ready: bool = False\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/ctms/domain/models.py",
+        "start": 100,
+        "end": 114
+      },
+      "loc2": {
+        "file": "apps/ctms/presentation/dtos.py",
+        "start": 444,
+        "end": 458
+      },
+      "preview": "    doa_signed_off: bool = False\n    ip_ready: bool = False\n    greenlight_token: str | None = None\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/knowledge/services/training_service.py",
+        "start": 56,
+        "end": 74
+      },
+      "loc2": {
+        "file": "apps/execution/services/amendment_diff.py",
+        "start": 29,
+        "end": 47
+      },
+      "preview": "        v1_num = snapshot_v1.get(\"version\", \"1.0\")\n        v2_num = snapshot_v2.get(\"version\", \"2.0\")\n        v1_acts = {a[\"id\"]: a for a in snapshot_v1.get(\"activities\", []) if \"id\" in a}\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/knowledge/services/training_service.py",
+        "start": 57,
+        "end": 75
+      },
+      "loc2": {
+        "file": "apps/execution/services/amendment_diff.py",
+        "start": 30,
+        "end": 48
+      },
+      "preview": "        v2_num = snapshot_v2.get(\"version\", \"2.0\")\n        v1_acts = {a[\"id\"]: a for a in snapshot_v1.get(\"activities\", []) if \"id\" in a}\n        v2_acts = {a[\"id\"]: a for a in snapshot_v2.get(\"activities\", []) if \"id\" in a}\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/knowledge/services/training_service.py",
+        "start": 59,
+        "end": 76
+      },
+      "loc2": {
+        "file": "apps/execution/services/amendment_diff.py",
+        "start": 32,
+        "end": 49
+      },
+      "preview": "        v1_acts = {a[\"id\"]: a for a in snapshot_v1.get(\"activities\", []) if \"id\" in a}\n        v2_acts = {a[\"id\"]: a for a in snapshot_v2.get(\"activities\", []) if \"id\" in a}\n        added_act_ids = set(v2_acts.keys()) - set(v1_acts.keys())\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/knowledge/services/training_service.py",
+        "start": 60,
+        "end": 78
+      },
+      "loc2": {
+        "file": "apps/execution/services/amendment_diff.py",
+        "start": 33,
+        "end": 51
+      },
+      "preview": "        v2_acts = {a[\"id\"]: a for a in snapshot_v2.get(\"activities\", []) if \"id\" in a}\n        added_act_ids = set(v2_acts.keys()) - set(v1_acts.keys())\n        removed_act_ids = set(v1_acts.keys()) - set(v2_acts.keys())\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/knowledge/services/training_service.py",
+        "start": 62,
+        "end": 79
+      },
+      "loc2": {
+        "file": "apps/execution/services/amendment_diff.py",
+        "start": 35,
+        "end": 52
+      },
+      "preview": "        added_act_ids = set(v2_acts.keys()) - set(v1_acts.keys())\n        removed_act_ids = set(v1_acts.keys()) - set(v2_acts.keys())\n        common_act_ids = set(v1_acts.keys()) & set(v2_acts.keys())\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/knowledge/services/training_service.py",
+        "start": 63,
+        "end": 80
+      },
+      "loc2": {
+        "file": "apps/execution/services/amendment_diff.py",
+        "start": 36,
+        "end": 53
+      },
+      "preview": "        removed_act_ids = set(v1_acts.keys()) - set(v2_acts.keys())\n        common_act_ids = set(v1_acts.keys()) & set(v2_acts.keys())\n        added_activities = [v2_acts[aid] for aid in sorted(added_act_ids)]\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/knowledge/services/training_service.py",
+        "start": 64,
+        "end": 81
+      },
+      "loc2": {
+        "file": "apps/execution/services/amendment_diff.py",
+        "start": 37,
+        "end": 54
+      },
+      "preview": "        common_act_ids = set(v1_acts.keys()) & set(v2_acts.keys())\n        added_activities = [v2_acts[aid] for aid in sorted(added_act_ids)]\n        removed_activities = [v1_acts[aid] for aid in sorted(removed_act_ids)]\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/knowledge/services/training_service.py",
+        "start": 66,
+        "end": 82
+      },
+      "loc2": {
+        "file": "apps/execution/services/amendment_diff.py",
+        "start": 39,
+        "end": 55
+      },
+      "preview": "        added_activities = [v2_acts[aid] for aid in sorted(added_act_ids)]\n        removed_activities = [v1_acts[aid] for aid in sorted(removed_act_ids)]\n        modified_fields: list[dict[str, Any]] = []\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/knowledge/services/training_service.py",
+        "start": 67,
+        "end": 84
+      },
+      "loc2": {
+        "file": "apps/execution/services/amendment_diff.py",
+        "start": 40,
+        "end": 57
+      },
+      "preview": "        removed_activities = [v1_acts[aid] for aid in sorted(removed_act_ids)]\n        modified_fields: list[dict[str, Any]] = []\n        for aid in sorted(common_act_ids):\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/greenlight_gating.py",
+        "start": 83,
+        "end": 97
+      },
+      "loc2": {
+        "file": "apps/execution/training_gating.py",
+        "start": 90,
+        "end": 104
+      },
+      "preview": "    ) -> dict[str, Any]:\n        timestamp = str(time.time())\n        secret = os.getenv(\"GATEWAY_SECRET\", \"internal-gateway-secret-12345\").encode(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/greenlight_gating.py",
+        "start": 84,
+        "end": 98
+      },
+      "loc2": {
+        "file": "apps/execution/training_gating.py",
+        "start": 91,
+        "end": 105
+      },
+      "preview": "        timestamp = str(time.time())\n        secret = os.getenv(\"GATEWAY_SECRET\", \"internal-gateway-secret-12345\").encode(\n            \"utf-8\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/greenlight_gating.py",
+        "start": 85,
+        "end": 99
+      },
+      "loc2": {
+        "file": "apps/execution/training_gating.py",
+        "start": 92,
+        "end": 106
+      },
+      "preview": "        secret = os.getenv(\"GATEWAY_SECRET\", \"internal-gateway-secret-12345\").encode(\n            \"utf-8\"\n        )  # pragma: allowlist secret\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/routers/__init__.py",
+        "start": 16,
+        "end": 31
+      },
+      "loc2": {
+        "file": "apps/execution/presentation/routers/__init__.py",
+        "start": 4,
+        "end": 31
+      },
+      "preview": ")\n__all__ = [\n    \"amendments_router\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/routers/__init__.py",
+        "start": 18,
+        "end": 32
+      },
+      "loc2": {
+        "file": "apps/execution/presentation/routers/__init__.py",
+        "start": 18,
+        "end": 32
+      },
+      "preview": "__all__ = [\n    \"amendments_router\",\n    \"anonymization_router\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/domain/rtsm_models.py",
+        "start": 142,
+        "end": 157
+      },
+      "loc2": {
+        "file": "apps/execution/presentation/routers/rtsm_schemas.py",
+        "start": 173,
+        "end": 188
+      },
+      "preview": "    model_config = ConfigDict(strict=True)\n    study_id: str\n    site_id: str\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/domain/rtsm_models.py",
+        "start": 144,
+        "end": 158
+      },
+      "loc2": {
+        "file": "apps/execution/presentation/routers/rtsm_schemas.py",
+        "start": 175,
+        "end": 189
+      },
+      "preview": "    study_id: str\n    site_id: str\n    kit_type: str\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/domain/rtsm_models.py",
+        "start": 145,
+        "end": 159
+      },
+      "loc2": {
+        "file": "apps/execution/presentation/routers/rtsm_schemas.py",
+        "start": 176,
+        "end": 190
+      },
+      "preview": "    site_id: str\n    kit_type: str\n    forecast_generated_at: datetime\n..."
+    }
+  ]
 }

@@ -69,6 +69,9 @@ from apps.quality.presentation.routers.serious_breaches import (
 from apps.quality.presentation.routers.serious_breaches import (
     router as serious_breaches_router,
 )
+from apps.quality.presentation.routers.surveillance import (
+    router as surveillance_router,
+)
 
 router = APIRouter()
 
@@ -79,6 +82,7 @@ router.include_router(capas_router)
 router.include_router(rbqm_router)
 router.include_router(forensics_router)
 router.include_router(data_integrity_router)
+router.include_router(surveillance_router)
 router.include_router(audits_router)
 router.include_router(serious_breaches_router)
 router.include_router(audit_logs_router)

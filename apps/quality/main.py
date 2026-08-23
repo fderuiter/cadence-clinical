@@ -19,6 +19,10 @@ from apps.quality.application.services.quality_service import (
     QualityService,
     QualityServiceError,
 )
+from apps.quality.application.services.quality_surveillance_runner import (
+    QualitySurveillanceError,
+    QualitySurveillanceRunner,
+)
 from apps.quality.application.services.rbqm_service import (
     RBQMService,
     RBQMServiceError,
@@ -129,6 +133,14 @@ async def data_integrity_service_error_handler(
     )
 
 
+@app.exception_handler(QualitySurveillanceError)
+async def quality_surveillance_error_handler(request, exc: QualitySurveillanceError):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": str(exc)},
+    )
+
+
 _repo_instance = SQLQualityRepository()
 
 
@@ -160,6 +172,17 @@ def get_forensics_service() -> StatisticalForensicsService:
 def get_data_integrity_service() -> DataIntegritySentinelService:
     """FastAPI dependency to retrieve the DataIntegritySentinelService."""
     return DataIntegritySentinelService(_repo_instance)
+
+
+def get_quality_surveillance_runner() -> QualitySurveillanceRunner:
+    """FastAPI dependency to retrieve the QualitySurveillanceRunner."""
+    return QualitySurveillanceRunner(
+        repo=_repo_instance,
+        forensics_service=get_forensics_service(),
+        data_integrity_service=get_data_integrity_service(),
+        rbqm_service=get_rbqm_service(),
+        quality_service=get_quality_service(),
+    )
 
 
 def get_user_context(principal: Principal):
@@ -218,6 +241,7 @@ __all__ = [
     "get_data_integrity_service",
     "get_forensics_service",
     "get_quality_service",
+    "get_quality_surveillance_runner",
     "get_rbqm_service",
     "get_serious_breach_service",
     "get_user_context",

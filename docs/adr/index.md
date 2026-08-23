@@ -186,6 +186,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+- [2026-08-23: Decompose Payments Domain Modules](2026-08-23-decompose-payments-domain-modules.md)
+- [2026-08-23: Deep Regulatory Transmission Gateway and Multi-Tier Acknowledgement Seam](2026-08-23-deep-regulatory-transmission-gateway-and-multi-tier-acknowledgement-seam.md)
 - [2026-08-23: Deep Adjudication Workflow Seam](2026-08-23-deep-adjudication-workflow-seam.md)
 - [2026-08-23: Participant Financial Wallet and EU CTR Lay Summary Portal](2026-08-23-participant-financial-wallet-and-eu-ctr-lay-summary-portal.md)
 - [2026-08-23: GxP Telehealth Video Consultation Direct to Patient Logistics and Tiered Pediatric Assent](2026-08-23-gxp-telehealth-video-consultation-direct-to-patient-logistics-and-tiered-pediatric-assent.md)
