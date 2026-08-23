@@ -249,6 +249,24 @@ export interface ConsentSignature {
   is_deleted: boolean;
 }
 
+export interface CtmsBudgetAdjustment {
+  id: string;
+  grant_id: string;
+  site_id: string;
+  study_id: string;
+  adjustment_type: string;
+  description: string;
+  amount: number;
+  currency: string;
+  status: string;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
 export interface CtmsBudgetLineItem {
   id: string;
   grant_id: string;
@@ -298,6 +316,20 @@ export interface CtmsCraAllocation {
   status: string;
   effective_start_date: string;
   effective_end_date?: string | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
+export interface CtmsCurrencyExchangeRate {
+  id: string;
+  base_currency: string;
+  target_currency: string;
+  rate: number;
+  effective_date: string;
+  expiry_date?: string | null;
+  is_active: boolean;
   created_at: string;
   created_by: string;
   reason_for_change: string;
@@ -421,13 +453,48 @@ export interface CtmsGeneratedLetter {
   version_index: number;
 }
 
+export interface CtmsGrantContractAmendment {
+  id: string;
+  grant_id: string;
+  amendment_number: number;
+  effective_date: string;
+  previous_budget: number;
+  revised_budget: number;
+  previous_version_index: number;
+  new_version_index: number;
+  summary_of_changes: string;
+  status: string;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  signature_manifestation?: Record<string, any> | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
 export interface CtmsInvestigatorGrant {
   id: string;
   study_id: string;
   site_id: string;
+  contract_title?: string | null;
+  template_id?: string | null;
+  tier_level: string;
+  institution_name?: string | null;
   total_budget: number;
   currency: string;
+  sponsor_currency: string;
+  exchange_rate: number;
+  overhead_percentage: number;
+  withholding_percentage: number;
+  fixed_startup_fee: number;
+  fixed_closeout_fee: number;
+  irb_fee: number;
+  patient_stipend_per_visit: number;
+  travel_reimbursement_per_visit: number;
   status: string;
+  executed_at?: string | null;
+  executed_by?: string | null;
   created_at: string;
   created_by: string;
   reason_for_change: string;
@@ -563,11 +630,15 @@ export interface CtmsProcedurePaymentGrid {
   id: string;
   grant_id: string;
   visit_name: string;
+  activity_id?: string | null;
+  form_id?: string | null;
   procedure_code: string;
   procedure_name: string;
   base_amount: number;
   overhead_percentage: number;
   withholding_percentage: number;
+  patient_stipend: number;
+  travel_reimbursement: number;
   is_active: boolean;
   created_at: string;
   created_by: string;
@@ -647,6 +718,28 @@ export interface CtmsRegulatoryForm {
   signature_manifestation?: Record<string, any> | null;
   signer?: string | null;
   signing_timestamp?: string | null;
+}
+
+export interface CtmsSiteBudgetTemplate {
+  id: string;
+  template_name: string;
+  study_id?: string | null;
+  tier_level: string;
+  currency: string;
+  overhead_percentage: number;
+  withholding_percentage: number;
+  fixed_startup_fee: number;
+  fixed_closeout_fee: number;
+  irb_fee: number;
+  patient_stipend_amount: number;
+  travel_reimbursement_rate: number;
+  fixed_fees: Record<string, any>;
+  procedure_items: Record<string, any>;
+  is_active: boolean;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
 }
 
 export interface CtmsSiteGreenlightGate {

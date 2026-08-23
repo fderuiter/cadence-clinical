@@ -131,3 +131,8 @@ class DeidentificationCertificateRecord(BaseModel):
     timestamp: str
     signature: str
     created_at: datetime | None = None
+
+
+# Type aliases for hexagonal port compatibility
+ImagingStudyEnvelopeEntity = ImagingStudyEnvelope
+DeidentificationCertificateEntity = DeidentificationCertificateRecord
