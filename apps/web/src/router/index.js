@@ -135,6 +135,23 @@ const routes = [
     },
   },
   {
+    path: "/imaging",
+    name: "imaging",
+    component: () => import("../views/ImagingView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: [
+        "site_investigator",
+        "crc",
+        "data_manager",
+        "sponsor_admin",
+        "cra",
+        "monitor",
+        "sponsor_designer",
+      ],
+    },
+  },
+  {
     path: "/ctms",
     name: "ctms",
     component: () => import("../views/CtmsView.vue"),

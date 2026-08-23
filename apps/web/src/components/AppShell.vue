@@ -339,6 +339,36 @@
               <li
                 v-if="
                   canAccess([
+                    'site_investigator',
+                    'crc',
+                    'data_manager',
+                    'sponsor_admin',
+                    'cra',
+                    'monitor',
+                    'sponsor_designer',
+                  ])
+                "
+                id="tab-btn-imaging"
+                class="nav-item"
+                :class="{ active: $route.name === 'imaging' }"
+              >
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/imaging"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
+                    <span class="nav-icon">🔬</span>
+                    <span class="nav-label">DICOM &amp; RECIST Viewer</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
+                v-if="
+                  canAccess([
                     'data_manager',
                     'sponsor_designer',
                     'sponsor_admin',

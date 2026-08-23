@@ -23,6 +23,7 @@ members = [
     "apps-interop",
     "apps-notifications",
     "apps-org",
+    "apps-payments",
     "apps-quality",
     "apps-safety",
     "apps-tickets",
@@ -525,6 +526,31 @@ requires-dist = [
 name = "apps-org"
 version = "0.1.0"
 source = { editable = "apps/org" }
+dependencies = [
+    { name = "asyncpg" },
+    { name = "fastapi" },
+    { name = "packages-database" },
+    { name = "packages-security" },
+    { name = "pydantic" },
+    { name = "sqlalchemy" },
+    { name = "sqlmodel" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "asyncpg", specifier = ">=0.29.0" },
+    { name = "fastapi", specifier = ">=0.139.2,<0.140.0" },
+    { name = "packages-database", editable = "packages/database" },
+    { name = "packages-security", editable = "packages/security" },
+    { name = "pydantic", specifier = ">=2.6.0" },
+    { name = "sqlalchemy", specifier = ">=2.0.28" },
+    { name = "sqlmodel", specifier = ">=0.0.39" },
+]
+
+[[package]]
+name = "apps-payments"
+version = "0.1.0"
+source = { editable = "apps/payments" }
 dependencies = [
     { name = "asyncpg" },
     { name = "fastapi" },

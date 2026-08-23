@@ -7,11 +7,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3231
-- **Passed:** 2832 🟢
+- **Total Automated Test Cases Run:** 3257
+- **Passed:** 2853 🟢
 - **Failed/Errors:** 377 🔴
-- **Skipped:** 22 ⚪
-- **Overall Operational Pass Rate:** 87.65%
+- **Skipped:** 27 ⚪
+- **Overall Operational Pass Rate:** 87.60%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -2287,6 +2287,25 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_query_aging_generates_notification` | `apps.notifications.tests.test_clinical_workflow_notifications_integration` | PRD-QRY-002 | 🟢 PASSED | < 1s |
 | `test_sdv_drop_generates_notification` | `apps.notifications.tests.test_clinical_workflow_notifications_integration` | PRD-QRY-006 | 🟢 PASSED | < 1s |
 | `test_trial_lock_generates_notification` | `apps.notifications.tests.test_clinical_workflow_notifications_integration` | PRD-SYS-003, PRD-SYS-004 | 🟢 PASSED | < 1s |
+| `test_start_stop_notification_worker_integration` | `apps.notifications.tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_worker_gxp_exponential_retry_and_dlq` | `apps.notifications.tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_worker_resolves_cra_for_document_expiry` | `apps.notifications.tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_worker_resolves_crc_for_edc_query` | `apps.notifications.tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_worker_resolves_safety_officer_for_sae_flag` | `apps.notifications.tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_direct_transition_open_to_resolved` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_email_delivery_channel_failure_and_exhaustion` | `apps.notifications.tests.test_notifications` | PRD-SYS-003 | 🟢 PASSED | < 1s |
+| `test_email_delivery_channel_success` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_lifecycle_transitions_and_justifications` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_diary_alert_rendering` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_multi_channel_edge_case_in_app_succeeds_email_exhausts` | `apps.notifications.tests.test_notifications` | PRD-SYS-003 | 🟢 PASSED | < 1s |
+| `test_notification_creation_and_auditing` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notification_detail_visibility` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notification_list_visibility_and_filtering` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notifications_database_schema_creation` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notifications_health_check` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notifications_negative_security_paths` | `apps.notifications.tests.test_notifications` | PRD-SYS-004 | 🟢 PASSED | < 1s |
+| `test_webhook_delivery_channel_failure_and_retry_backoff` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_webhook_delivery_channel_success` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reconsent_template_mapping_and_rendering` | `apps.notifications.tests.test_reconsent_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reconsent_worker_recipient_resolution` | `apps.notifications.tests.test_reconsent_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_complete_doa_workflow_lifecycle` | `apps.org.tests.test_doa_workflow` | *Regression/Helper* | 🔴 FAILED | < 1s |
@@ -3184,6 +3203,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_fail_fast_without_report_and_draft_flag` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_missing_report_gxp_sync_dry_run` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_success_with_draft_flag` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_layout_gating_approved_and_logged` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_gating_missing_justification_rejected` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_integration` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_invisible` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_overlap` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_scrambled_sequence` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_validation_valid` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_aggregate_eligibility_evaluation_scenarios` | `scripts.tests.test_m4_challenger1_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_document_renderer_fallback` | `scripts.tests.test_m4_challenger1_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_sync_reconciliation_signature_enforcement_errors` | `scripts.tests.test_m4_challenger1_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3512,28 +3538,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 0e9061ff63b3a020ad3179df8cea2ef589a8807252011a71d5adf82710961a2e
+- **Cryptographic Hash (SHA-256):** 2368e7638bd080ff856320450683f7d17ada6ec0bd9c98c903fe5cc0674c0396
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUQdv7ziqGTDxLXefzU0FuxTz+DxcwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUT03JjitQXZVnWnLkLvDD0UaPonUwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MjA0MTYxOVoXDTI3MDgyMzA0MTYxOVowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MjA0MTY0M1oXDTI3MDgyMzA0MTY0M1owUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApzRz
-cIUeq3iYHoS0Sly3lcB2ks2uHd51qd8nccIriOVw/p9UvcOURCCpdV4jNpEN7l+c
-uo/0Xqos9Q85tjTA0NgJPWZ2/DP+FXIjiJysAbmtzAuYkp6INptVKcOxeSZES7t5
-LFjHrFgFr6iX645JHtR43UcKKA/utnZTSMQQfjS7TL0RnGk99MT53QQL8971x0ba
-oRJEucgBcKCjTNZdjYdrLUk9RL69Uc8fynakwH3ghQYPnFGwcyuj0DfoMYx3jmsy
-iGEVqRb591ertM8+fDynroj4q7TwRds7IGbufXFWeTdnhL7mR6V/cvlIi2v4Uk3Z
-pwSSYldKsP7Reyb5hQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBiiclRCWXjIxuI
-v61lOPOfk5c9lM4M2lhcC/6F3+ox27cMXhqvV88WwhyO/zdmBylpq9wUVDCNQcuB
-jwMG223f9/W18Jsipp3/0KO3VEjjDbjbjh/thg2cSXbhDwUlTecvNOKB6hlzJ4z7
-npXUjbKeDTU+JDQvPGxZyDZhOaUeQUNVUKSYFBXimaVYqiBoDBNPHk4STxrCPA7e
-Ghff1NlHPkhjIsoj9v8X0AuZVUWduUU2PX455Od0rntevpq8dXVkoCWZwp57rJxG
-OZ/vtM/M8BHTCWGGRcZo6WPHQGGgBB4/YNqXZr5Ouoz626fIAtNwVooasqWqHgA7
-RRApeHen
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyQuQ
++MAlbeRUmULXXaMGd5eRS2Uc8Ghh7Jh+6OWIxzwy/IOpFipCze2H30B7SilDmH3P
+/jXs8DjFaLqush7FIk15Tg9I4k6io++7c82Yx85SOoLSTMYoQW4RQwesNh56vT+f
+z9Q8FKKNwRbzT9ptIkqk9Yu3gxW3SvJs1IpVv5oMG1Ypsmfu9OnW45GOSEvIFaWF
+tiEHSOHR44UD8xoSrYEIaplW8ifENKe+jCaMVOzKCxADUHlZ9B14DJjiVZcFUYqE
+S49mSMBCebrc/guDnIH1ImTdXo/DSK2wZJrvl4Xy/P/ERhU3FF9JrraPWCMXE9X9
+nlYrJJ3B6oIWqlfR4wIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQC5Ym9ULj3fpfK+
+YsdtxKgcW7tlPPzL+5Ges6NWIVsvEpBwggkQA2WnhAiUeyepWsJqfD6MKC5HfytB
+SrOb7oKHwR0qmQNqDjhoTe9ej/0mSUtJrzhii9P6CseHy8hVwfDRv+KI4PTSH9s1
+GXadmA81a9qUms3IiNkDClMhDGapxLe2b2ogmS0wW2lVg2jN3KDaJFDDo1ZmiXzy
+DpSmV8VW/FffgrqAeugV+fkHOgfzvces0TfWr6cR7CaAESwRd1aoeCsi831PhKW+
+no3ai2Do7ibBRkM5zp9a4dZHfj7YFhHNlep8RZAWtINilrddKRocYgNxYrpiMXAD
+8ztUIY9v
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-H3z6XaUpaxCmpMmy6rZBl3IFZckc0Mc1Q78m4NSi0F4ESDPufMOUkDKj+gxC2oqZt1ZjtACkjDcmNS46S1XSctwBipDFsJ3eKN2oHxNuwwit3HgIbMChlwVCeCU+MKP6221tnF5j7YmBdM+HHD2LMyYM2ke1IqL2Ltdrgl+RTmknZUMKKerI2/df1XO6OW/QDdiQtbYVLj4a1ULbR3zKcU7La/z2BRkZUA2RQW9BVpwIBoHf/9sLHihOrAZRdZp6fScXiFtBSzCWhcRu4YbFPNLirYMj/0rxoxEgbTfBCRpA9/NcZaRDygSjJQh92PgmeRB14V+E6ACXuVqsR2vonw==
+YJ0VeulDaOlDPMasUIGdoX0o8Nu8QK+JeAYqNFPnpkgbreGGoPG1YoPLS2nkPgqbXFxTfJFBpGJCr7+8Kq+tw+LkZf+xRt+J4M8RQ2eWl35/oyBdAjLFRpVluBhm8XUc4GB+epO8JMp8diKj8sfx4vS5ExSaeme4/yV6qJv5t4dQaJEJHb2XLOxhJW11eGmxAl4D/L55JJaqgmAiOaEuHdpkL/aUmf83HVry0rknohJeyWQwBC/xYJRjkeIkSEYRYUISSQnn/en81EUpkCTpMYemVRKynZ6oMeIerLPiFNL3InO18Q28dw0gVEZ2JauzgYXZIKRCB0dPf8l0jbAYiQ==
 -----END SIGNATURE-----

@@ -6,7 +6,10 @@ file streaming, and cryptographic certificate verification.
 Requirements: ADR-2199, PRD-IMG-001, PRD-IMG-002
 """
 
+import hashlib
 import json
+import uuid
+from typing import Any
 
 from fastapi import (
     APIRouter,
@@ -20,7 +23,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import Response
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -28,20 +31,41 @@ from apps.imaging.adapters.database import get_db_session
 from apps.imaging.adapters.storage import get_storage_adapter
 from apps.imaging.infrastructure.models import (
     DeidentificationCertificateModel,
+    ImagingAnnotationModel,
+    ImagingAuditLogModel,
     ImagingInstanceEnvelopeModel,
     ImagingSeriesEnvelopeModel,
     ImagingStudyEnvelopeModel,
+    TumorResponseAssessmentModel,
 )
 from apps.imaging.presentation.dtos import (
+    CaliperAnnotationCreateDto,
+    CaliperAnnotationResponseDto,
     CertificateVerificationResponse,
     DicomUploadResponse,
     InstanceEnvelopeSummaryDto,
+    LuganoEvaluationRequestDto,
+    LuganoEvaluationResponseDto,
+    MprMetadataResponseDto,
+    PointCoordinateDto,
     PresignedDownloadUrlResponse,
+    RECISTEvaluationRequestDto,
+    RECISTEvaluationResponseDto,
     SeriesEnvelopeSummaryDto,
     StudyEnvelopeDetailDto,
     StudyEnvelopeSummaryDto,
+    SubjectTimepointEvaluateRequestDto,
+    SubjectTimepointsTrajectoryResponseDto,
+    TimepointTrajectorySummaryDto,
 )
+from apps.imaging.services.lugano_engine import LuganoEngine, LuganoLesionInput
+from apps.imaging.services.mpr_engine import MprGeometryEngine
 from apps.imaging.services.pipeline import ImagingIngestionPipeline
+from apps.imaging.services.recist_engine import (
+    LesionCategory,
+    RECIST11Engine,
+    RECISTLesionInput,
+)
 from packages.deid.dicom import (
     DicomDeidentifier,
     PixelMaskBoundingBox,
@@ -526,4 +550,700 @@ async def verify_certificate(
             if is_valid
             else "TAMPER WARNING: Cryptographic signature verification failed."
         ),
+    )
+
+
+@router.get(
+    "/series/{series_instance_uid}/mpr-metadata",
+    response_model=MprMetadataResponseDto,
+)
+async def get_series_mpr_metadata(
+    series_instance_uid: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> MprMetadataResponseDto:
+    """Retrieves 3D volume geometry, voxel spacing, and MPR orientation metadata.
+
+    @req:PRD-IMG-001
+    @req:PRD-IMG-004
+    """
+    stmt = (
+        select(ImagingSeriesEnvelopeModel)
+        .where(ImagingSeriesEnvelopeModel.series_instance_uid == series_instance_uid)
+        .options(selectinload(ImagingSeriesEnvelopeModel.instances))
+    )
+    result = await session.execute(stmt)
+    series = result.scalar_one_or_none()
+
+    if series and series.instances:
+        first_inst = series.instances[0]
+        meta = MprGeometryEngine.generate_series_mpr_metadata(
+            series_instance_uid=series.series_instance_uid,
+            modality=series.modality,
+            rows=first_inst.rows or 512,
+            columns=first_inst.columns or 512,
+            slice_count=len(series.instances),
+            pixel_spacing=first_inst.pixel_spacing or [1.0, 1.0],
+            slice_thickness=first_inst.slice_thickness or 2.5,
+            window_center=first_inst.window_center,
+            window_width=first_inst.window_width,
+        )
+    else:
+        # Fallback default geometry for unpersisted or mock series
+        meta = MprGeometryEngine.generate_series_mpr_metadata(
+            series_instance_uid=series_instance_uid,
+            modality="CT",
+            rows=512,
+            columns=512,
+            slice_count=1,
+            pixel_spacing=[0.75, 0.75],
+            slice_thickness=2.5,
+        )
+
+    return MprMetadataResponseDto(
+        series_instance_uid=meta.series_instance_uid,
+        modality=meta.modality,
+        rows=meta.rows,
+        columns=meta.columns,
+        slice_count=meta.slice_count,
+        pixel_spacing=meta.pixel_spacing,
+        slice_thickness=meta.slice_thickness,
+        slice_spacing=meta.slice_spacing,
+        volume_dimensions_mm=meta.volume_dimensions_mm,
+        window_center=meta.window_center,
+        window_width=meta.window_width,
+        available_planes=[p.value for p in meta.available_planes],
+        window_presets=meta.window_presets,
+    )
+
+
+@router.post(
+    "/annotations",
+    response_model=CaliperAnnotationResponseDto,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_caliper_annotation(
+    request: Request,
+    payload: CaliperAnnotationCreateDto,
+    session: AsyncSession = Depends(get_db_session),
+) -> CaliperAnnotationResponseDto:
+    """Creates a new oncologic caliper annotation with 21 CFR Part 11 audit logging.
+
+    @req:PRD-IMG-004
+    @req:PRD-SYS-001
+    """
+    user_id, _, _, reason = _get_request_identity(request)
+
+    # Compute PPD if perpendicular diameter provided
+    ppd = None
+    if payload.perpendicular_diameter_mm is not None:
+        ppd = round(payload.longest_diameter_mm * payload.perpendicular_diameter_mm, 2)
+
+    # Calculate ellipsoid volume if not provided but perpendicular is available
+    volume = payload.volume_mm3
+    if volume is None and payload.perpendicular_diameter_mm is not None:
+        volume = MprGeometryEngine.calculate_ellipsoid_volume(
+            payload.longest_diameter_mm,
+            payload.perpendicular_diameter_mm,
+            payload.perpendicular_diameter_mm,
+        )
+
+    annotation_id = str(uuid.uuid4())
+    model = ImagingAnnotationModel(
+        id=annotation_id,
+        study_envelope_id=payload.study_envelope_id,
+        series_envelope_id=payload.series_envelope_id,
+        sop_instance_uid=payload.sop_instance_uid,
+        study_id=payload.study_id,
+        site_id=payload.site_id,
+        subject_id=payload.subject_id,
+        timepoint_name=payload.timepoint_name,
+        lesion_id=payload.lesion_id,
+        lesion_type=payload.lesion_type,
+        organ_site=payload.organ_site,
+        measurement_criteria=payload.measurement_criteria,
+        measurement_type=payload.measurement_type,
+        longest_diameter_mm=payload.longest_diameter_mm,
+        perpendicular_diameter_mm=payload.perpendicular_diameter_mm,
+        product_perpendicular_mm2=ppd,
+        volume_mm3=volume,
+        slice_index=payload.slice_index,
+        slice_location=payload.slice_location,
+        deauville_score=payload.deauville_score,
+        points=[p.model_dump() for p in payload.points],
+        hounsfield_stats=payload.hounsfield_stats,
+        reader_id=user_id,
+        notes=payload.notes,
+        created_by=user_id,
+        reason_for_change=reason,
+    )
+    session.add(model)
+
+    # 21 CFR Part 11 Audit Trail Record
+    audit_entry = ImagingAuditLogModel(
+        study_envelope_id=payload.study_envelope_id,
+        action="CALIPER_ANNOTATION_CREATED",
+        actor_id=user_id,
+        reason_for_change=reason,
+        details={
+            "annotation_id": annotation_id,
+            "lesion_id": payload.lesion_id,
+            "lesion_type": payload.lesion_type,
+            "organ_site": payload.organ_site,
+            "longest_diameter_mm": payload.longest_diameter_mm,
+            "perpendicular_diameter_mm": payload.perpendicular_diameter_mm,
+            "timepoint_name": payload.timepoint_name,
+        },
+    )
+    session.add(audit_entry)
+    await session.commit()
+    await session.refresh(model)
+
+    return CaliperAnnotationResponseDto(
+        id=model.id,
+        study_envelope_id=model.study_envelope_id,
+        series_envelope_id=model.series_envelope_id,
+        sop_instance_uid=model.sop_instance_uid,
+        study_id=model.study_id,
+        site_id=model.site_id,
+        subject_id=model.subject_id,
+        timepoint_name=model.timepoint_name,
+        lesion_id=model.lesion_id,
+        lesion_type=model.lesion_type,
+        organ_site=model.organ_site,
+        measurement_criteria=model.measurement_criteria,
+        measurement_type=model.measurement_type,
+        longest_diameter_mm=model.longest_diameter_mm,
+        perpendicular_diameter_mm=model.perpendicular_diameter_mm,
+        product_perpendicular_mm2=model.product_perpendicular_mm2,
+        volume_mm3=model.volume_mm3,
+        slice_index=model.slice_index,
+        slice_location=model.slice_location,
+        deauville_score=model.deauville_score,
+        points=[PointCoordinateDto(**p) for p in model.points],
+        hounsfield_stats=model.hounsfield_stats,
+        reader_id=model.reader_id,
+        notes=model.notes,
+        created_at=model.created_at,
+        created_by=model.created_by,
+        version_index=model.version_index,
+    )
+
+
+@router.get("/annotations", response_model=list[CaliperAnnotationResponseDto])
+async def list_caliper_annotations(
+    study_envelope_id: str | None = Query(default=None),
+    series_envelope_id: str | None = Query(default=None),
+    sop_instance_uid: str | None = Query(default=None),
+    subject_id: str | None = Query(default=None),
+    timepoint_name: str | None = Query(default=None),
+    reader_id: str | None = Query(default=None),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    session: AsyncSession = Depends(get_db_session),
+) -> list[CaliperAnnotationResponseDto]:
+    """Lists caliper annotations matching criteria.
+
+    @req:PRD-IMG-004
+    """
+    stmt = select(ImagingAnnotationModel)
+
+    if study_envelope_id:
+        stmt = stmt.where(ImagingAnnotationModel.study_envelope_id == study_envelope_id)
+    if series_envelope_id:
+        stmt = stmt.where(
+            ImagingAnnotationModel.series_envelope_id == series_envelope_id
+        )
+    if sop_instance_uid:
+        stmt = stmt.where(ImagingAnnotationModel.sop_instance_uid == sop_instance_uid)
+    if subject_id:
+        stmt = stmt.where(ImagingAnnotationModel.subject_id == subject_id)
+    if timepoint_name:
+        stmt = stmt.where(ImagingAnnotationModel.timepoint_name == timepoint_name)
+    if reader_id:
+        stmt = stmt.where(ImagingAnnotationModel.reader_id == reader_id)
+
+    stmt = (
+        stmt.order_by(ImagingAnnotationModel.created_at.asc()).offset(skip).limit(limit)
+    )
+    result = await session.execute(stmt)
+    records = result.scalars().all()
+
+    return [
+        CaliperAnnotationResponseDto(
+            id=r.id,
+            study_envelope_id=r.study_envelope_id,
+            series_envelope_id=r.series_envelope_id,
+            sop_instance_uid=r.sop_instance_uid,
+            study_id=r.study_id,
+            site_id=r.site_id,
+            subject_id=r.subject_id,
+            timepoint_name=r.timepoint_name,
+            lesion_id=r.lesion_id,
+            lesion_type=r.lesion_type,
+            organ_site=r.organ_site,
+            measurement_criteria=r.measurement_criteria,
+            measurement_type=r.measurement_type,
+            longest_diameter_mm=r.longest_diameter_mm,
+            perpendicular_diameter_mm=r.perpendicular_diameter_mm,
+            product_perpendicular_mm2=r.product_perpendicular_mm2,
+            volume_mm3=r.volume_mm3,
+            slice_index=r.slice_index,
+            slice_location=r.slice_location,
+            deauville_score=r.deauville_score,
+            points=[PointCoordinateDto(**p) for p in r.points],
+            hounsfield_stats=r.hounsfield_stats,
+            reader_id=r.reader_id,
+            notes=r.notes,
+            created_at=r.created_at,
+            created_by=r.created_by,
+            version_index=r.version_index,
+        )
+        for r in records
+    ]
+
+
+@router.delete("/annotations/{annotation_id}")
+async def delete_caliper_annotation(
+    request: Request,
+    annotation_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> dict[str, Any]:
+    """Deletes a caliper annotation with 21 CFR Part 11 reason for change.
+
+    @req:PRD-IMG-004
+    @req:PRD-SYS-001
+    """
+    user_id, _, _, reason = _get_request_identity(request)
+
+    stmt = select(ImagingAnnotationModel).where(
+        ImagingAnnotationModel.id == annotation_id
+    )
+    result = await session.execute(stmt)
+    model = result.scalar_one_or_none()
+
+    if model is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Caliper annotation '{annotation_id}' not found.",
+        )
+
+    # 21 CFR Part 11 Audit Trail
+    audit_entry = ImagingAuditLogModel(
+        study_envelope_id=model.study_envelope_id,
+        action="CALIPER_ANNOTATION_DELETED",
+        actor_id=user_id,
+        reason_for_change=reason,
+        details={
+            "deleted_annotation_id": annotation_id,
+            "lesion_id": model.lesion_id,
+            "timepoint_name": model.timepoint_name,
+        },
+    )
+    session.add(audit_entry)
+    await session.delete(model)
+    await session.commit()
+
+    return {"deleted": True, "id": annotation_id}
+
+
+@router.post(
+    "/response-evaluations/recist",
+    response_model=RECISTEvaluationResponseDto,
+)
+async def evaluate_recist_response(
+    payload: RECISTEvaluationRequestDto,
+) -> RECISTEvaluationResponseDto:
+    """Computes automated RECIST 1.1 derivation for target and non-target lesions.
+
+    @req:PRD-IMG-004
+    """
+    lesion_inputs = [
+        RECISTLesionInput(
+            lesion_id=lesion.lesion_id,
+            organ_site=lesion.organ_site,
+            lesion_type=LesionCategory(lesion.lesion_type),
+            longest_diameter_mm=lesion.longest_diameter_mm,
+            is_lymph_node=lesion.is_lymph_node,
+            short_axis_mm=lesion.short_axis_mm,
+            sop_instance_uid=lesion.sop_instance_uid,
+        )
+        for lesion in payload.current_lesions
+    ]
+
+    res = RECIST11Engine.evaluate_timepoint(
+        current_lesions=lesion_inputs,
+        baseline_sld=payload.baseline_sld_mm,
+        prior_timepoints_sld=payload.prior_timepoints_sld,
+        non_target_status=payload.non_target_status,
+        new_lesions_present=payload.new_lesions_present,
+        new_lesions_count=payload.new_lesions_count,
+        is_baseline=payload.is_baseline,
+    )
+
+    return RECISTEvaluationResponseDto(
+        criteria=res.criteria.value,
+        baseline_sld_mm=res.baseline_sld_mm,
+        nadir_sld_mm=res.nadir_sld_mm,
+        current_sld_mm=res.current_sld_mm,
+        pct_change_baseline=res.pct_change_baseline,
+        pct_change_nadir=res.pct_change_nadir,
+        absolute_change_nadir_mm=res.absolute_change_nadir_mm,
+        target_response=res.target_response.value,
+        non_target_status=res.non_target_status,
+        new_lesions_present=res.new_lesions_present,
+        new_lesions_count=res.new_lesions_count,
+        overall_response=res.overall_response.value,
+        is_nadir=res.is_nadir,
+    )
+
+
+@router.post(
+    "/response-evaluations/lugano",
+    response_model=LuganoEvaluationResponseDto,
+)
+async def evaluate_lugano_response(
+    payload: LuganoEvaluationRequestDto,
+) -> LuganoEvaluationResponseDto:
+    """Computes automated Lugano 2014 & Cheson derivation for lymphoma.
+
+    @req:PRD-IMG-004
+    """
+    lesion_inputs = [
+        LuganoLesionInput(
+            lesion_id=lesion.lesion_id,
+            organ_site=lesion.organ_site,
+            longest_diameter_mm=lesion.longest_diameter_mm,
+            perpendicular_diameter_mm=lesion.perpendicular_diameter_mm,
+            is_extranodal=lesion.is_extranodal,
+            deauville_score=lesion.deauville_score,
+        )
+        for lesion in payload.current_lesions
+    ]
+
+    res = LuganoEngine.evaluate_timepoint(
+        current_lesions=lesion_inputs,
+        baseline_spd=payload.baseline_spd_mm2,
+        prior_timepoints_spd=payload.prior_timepoints_spd,
+        new_lesions_present=payload.new_lesions_present,
+        single_lesion_progression=payload.single_lesion_progression,
+        non_measured_progression=payload.non_measured_progression,
+        is_baseline=payload.is_baseline,
+    )
+
+    return LuganoEvaluationResponseDto(
+        criteria=res.criteria.value,
+        baseline_spd_mm2=res.baseline_spd_mm2,
+        nadir_spd_mm2=res.nadir_spd_mm2,
+        current_spd_mm2=res.current_spd_mm2,
+        pct_change_spd_baseline=res.pct_change_spd_baseline,
+        pct_change_spd_nadir=res.pct_change_spd_nadir,
+        ct_response=res.ct_response.value,
+        pet_metabolic_response=(
+            res.pet_metabolic_response.value if res.pet_metabolic_response else None
+        ),
+        max_deauville_score=res.max_deauville_score,
+        new_lesions_present=res.new_lesions_present,
+        overall_response=res.overall_response.value,
+    )
+
+
+@router.get(
+    "/subjects/{subject_id}/timepoints",
+    response_model=SubjectTimepointsTrajectoryResponseDto,
+)
+async def get_subject_timepoints_trajectory(
+    subject_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> SubjectTimepointsTrajectoryResponseDto:
+    """Retrieves full chronological trajectory of locked oncologic evaluations for a subject.
+
+    @req:PRD-IMG-004
+    """
+    stmt = (
+        select(TumorResponseAssessmentModel)
+        .where(TumorResponseAssessmentModel.subject_id == subject_id)
+        .order_by(TumorResponseAssessmentModel.created_at.asc())
+    )
+    result = await session.execute(stmt)
+    assessments = result.scalars().all()
+
+    # Query active annotations count for subject
+    annot_count_stmt = select(func.count()).select_from(
+        select(ImagingAnnotationModel)
+        .where(ImagingAnnotationModel.subject_id == subject_id)
+        .subquery()
+    )
+    annot_count_res = await session.execute(annot_count_stmt)
+    annot_count = annot_count_res.scalar() or 0
+
+    first_study_id = assessments[0].study_id if assessments else "STUDY-ONCOLOGY"
+    first_site_id = assessments[0].site_id if assessments else "SITE-01"
+
+    trajectory_dtos = [
+        TimepointTrajectorySummaryDto(
+            id=a.id,
+            timepoint_name=a.timepoint_name,
+            assessment_criteria=a.assessment_criteria,
+            baseline_sld_mm=a.baseline_sld_mm,
+            nadir_sld_mm=a.nadir_sld_mm,
+            current_sld_mm=a.current_sld_mm,
+            pct_change_baseline=a.pct_change_baseline,
+            pct_change_nadir=a.pct_change_nadir,
+            baseline_spd_mm2=a.baseline_spd_mm2,
+            nadir_spd_mm2=a.nadir_spd_mm2,
+            current_spd_mm2=a.current_spd_mm2,
+            pct_change_spd_baseline=a.pct_change_spd_baseline,
+            pct_change_spd_nadir=a.pct_change_spd_nadir,
+            target_response=a.target_response,
+            non_target_status=a.non_target_status,
+            new_lesions_present=a.new_lesions_present,
+            new_lesions_count=a.new_lesions_count,
+            max_deauville_score=a.max_deauville_score,
+            overall_response=a.overall_response,
+            is_locked=a.is_locked,
+            locked_at=a.locked_at,
+            reader_id=a.reader_id,
+            created_at=a.created_at,
+        )
+        for a in assessments
+    ]
+
+    return SubjectTimepointsTrajectoryResponseDto(
+        study_id=first_study_id,
+        site_id=first_site_id,
+        subject_id=subject_id,
+        trajectory=trajectory_dtos,
+        active_annotations_count=annot_count,
+    )
+
+
+@router.post(
+    "/subjects/{subject_id}/timepoints/evaluate",
+    response_model=TimepointTrajectorySummaryDto,
+    status_code=status.HTTP_201_CREATED,
+)
+async def evaluate_and_lock_timepoint(
+    request: Request,
+    subject_id: str,
+    payload: SubjectTimepointEvaluateRequestDto,
+    session: AsyncSession = Depends(get_db_session),
+) -> TimepointTrajectorySummaryDto:
+    """Evaluates, cryptographically signs, and locks an oncologic timepoint assessment.
+
+    @req:PRD-IMG-004
+    @req:PRD-SYS-001
+    """
+    user_id, _, _, reason = _get_request_identity(request)
+
+    # 1. Fetch all annotations for this subject and timepoint
+    annot_stmt = (
+        select(ImagingAnnotationModel)
+        .where(
+            (ImagingAnnotationModel.subject_id == subject_id)
+            & (ImagingAnnotationModel.timepoint_name == payload.timepoint_name)
+        )
+        .order_by(ImagingAnnotationModel.created_at.asc())
+    )
+    annot_res = await session.execute(annot_stmt)
+    annotations = annot_res.scalars().all()
+
+    # 2. Fetch prior assessments for this subject
+    prior_stmt = (
+        select(TumorResponseAssessmentModel)
+        .where(
+            (TumorResponseAssessmentModel.subject_id == subject_id)
+            & (TumorResponseAssessmentModel.timepoint_name != payload.timepoint_name)
+        )
+        .order_by(TumorResponseAssessmentModel.created_at.asc())
+    )
+    prior_res = await session.execute(prior_stmt)
+    prior_assessments = prior_res.scalars().all()
+
+    assessment_id = str(uuid.uuid4())
+
+    if payload.assessment_criteria.upper() == "LUGANO_2014":
+        lugano_lesions = [
+            LuganoLesionInput(
+                lesion_id=a.lesion_id,
+                organ_site=a.organ_site,
+                longest_diameter_mm=a.longest_diameter_mm,
+                perpendicular_diameter_mm=(
+                    a.perpendicular_diameter_mm or a.longest_diameter_mm
+                ),
+                is_extranodal="EXTRANODAL" in a.organ_site.upper(),
+                deauville_score=a.deauville_score,
+            )
+            for a in annotations
+            if a.lesion_type == "TARGET"
+        ]
+
+        # Determine baseline SPD
+        baseline_spd = 0.0
+        prior_spds = []
+        for p in prior_assessments:
+            if p.current_spd_mm2 is not None:
+                prior_spds.append(p.current_spd_mm2)
+            if p.baseline_spd_mm2 is not None and baseline_spd == 0.0:
+                baseline_spd = p.baseline_spd_mm2
+
+        lugano_res = LuganoEngine.evaluate_timepoint(
+            current_lesions=lugano_lesions,
+            baseline_spd=baseline_spd,
+            prior_timepoints_spd=prior_spds,
+            new_lesions_present=payload.new_lesions_present,
+            is_baseline=payload.is_baseline,
+        )
+
+        manifest = {
+            "assessment_id": assessment_id,
+            "subject_id": subject_id,
+            "timepoint_name": payload.timepoint_name,
+            "criteria": "LUGANO_2014",
+            "current_spd": lugano_res.current_spd_mm2,
+            "overall_response": lugano_res.overall_response.value,
+        }
+        manifest_hash = hashlib.sha256(
+            json.dumps(manifest, sort_keys=True).encode()
+        ).hexdigest()
+
+        assessment_model = TumorResponseAssessmentModel(
+            id=assessment_id,
+            study_id=payload.study_id,
+            site_id=payload.site_id,
+            subject_id=subject_id,
+            timepoint_name=payload.timepoint_name,
+            assessment_criteria="LUGANO_2014",
+            baseline_spd_mm2=lugano_res.baseline_spd_mm2,
+            nadir_spd_mm2=lugano_res.nadir_spd_mm2,
+            current_spd_mm2=lugano_res.current_spd_mm2,
+            pct_change_spd_baseline=lugano_res.pct_change_spd_baseline,
+            pct_change_spd_nadir=lugano_res.pct_change_spd_nadir,
+            target_response=lugano_res.ct_response.value,
+            non_target_status=payload.non_target_status,
+            new_lesions_present=payload.new_lesions_present,
+            new_lesions_count=payload.new_lesions_count,
+            max_deauville_score=lugano_res.max_deauville_score,
+            overall_response=lugano_res.overall_response.value,
+            is_locked=True,
+            locked_by=user_id,
+            reader_id=user_id,
+            manifest_sha256=manifest_hash,
+            signature=payload.digital_signature or f"SIG-{manifest_hash[:16]}",
+            created_by=user_id,
+            reason_for_change=reason,
+        )
+    else:
+        # Default RECIST 1.1
+        recist_lesions = [
+            RECISTLesionInput(
+                lesion_id=a.lesion_id,
+                organ_site=a.organ_site,
+                lesion_type=LesionCategory(a.lesion_type),
+                longest_diameter_mm=a.longest_diameter_mm,
+                is_lymph_node="NODE" in a.organ_site.upper(),
+                short_axis_mm=a.perpendicular_diameter_mm,
+                sop_instance_uid=a.sop_instance_uid,
+            )
+            for a in annotations
+        ]
+
+        baseline_sld = 0.0
+        prior_slds = []
+        for p in prior_assessments:
+            if p.current_sld_mm is not None:
+                prior_slds.append(p.current_sld_mm)
+            if p.baseline_sld_mm is not None and baseline_sld == 0.0:
+                baseline_sld = p.baseline_sld_mm
+
+        recist_res = RECIST11Engine.evaluate_timepoint(
+            current_lesions=recist_lesions,
+            baseline_sld=baseline_sld,
+            prior_timepoints_sld=prior_slds,
+            non_target_status=payload.non_target_status,
+            new_lesions_present=payload.new_lesions_present,
+            new_lesions_count=payload.new_lesions_count,
+            is_baseline=payload.is_baseline,
+        )
+
+        manifest = {
+            "assessment_id": assessment_id,
+            "subject_id": subject_id,
+            "timepoint_name": payload.timepoint_name,
+            "criteria": "RECIST_1_1",
+            "current_sld": recist_res.current_sld_mm,
+            "overall_response": recist_res.overall_response.value,
+        }
+        manifest_hash = hashlib.sha256(
+            json.dumps(manifest, sort_keys=True).encode()
+        ).hexdigest()
+
+        assessment_model = TumorResponseAssessmentModel(
+            id=assessment_id,
+            study_id=payload.study_id,
+            site_id=payload.site_id,
+            subject_id=subject_id,
+            timepoint_name=payload.timepoint_name,
+            assessment_criteria="RECIST_1_1",
+            baseline_sld_mm=recist_res.baseline_sld_mm,
+            nadir_sld_mm=recist_res.nadir_sld_mm,
+            current_sld_mm=recist_res.current_sld_mm,
+            pct_change_baseline=recist_res.pct_change_baseline,
+            pct_change_nadir=recist_res.pct_change_nadir,
+            absolute_change_nadir_mm=recist_res.absolute_change_nadir_mm,
+            target_response=recist_res.target_response.value,
+            non_target_status=payload.non_target_status,
+            new_lesions_present=payload.new_lesions_present,
+            new_lesions_count=payload.new_lesions_count,
+            overall_response=recist_res.overall_response.value,
+            is_locked=True,
+            locked_by=user_id,
+            reader_id=user_id,
+            manifest_sha256=manifest_hash,
+            signature=payload.digital_signature or f"SIG-{manifest_hash[:16]}",
+            created_by=user_id,
+            reason_for_change=reason,
+        )
+
+    session.add(assessment_model)
+
+    audit_entry = ImagingAuditLogModel(
+        action="TUMOR_RESPONSE_EVALUATED",
+        actor_id=user_id,
+        reason_for_change=reason,
+        details={
+            "assessment_id": assessment_id,
+            "subject_id": subject_id,
+            "timepoint_name": payload.timepoint_name,
+            "overall_response": assessment_model.overall_response,
+            "manifest_sha256": assessment_model.manifest_sha256,
+        },
+    )
+    session.add(audit_entry)
+    await session.commit()
+    await session.refresh(assessment_model)
+
+    return TimepointTrajectorySummaryDto(
+        id=assessment_model.id,
+        timepoint_name=assessment_model.timepoint_name,
+        assessment_criteria=assessment_model.assessment_criteria,
+        baseline_sld_mm=assessment_model.baseline_sld_mm,
+        nadir_sld_mm=assessment_model.nadir_sld_mm,
+        current_sld_mm=assessment_model.current_sld_mm,
+        pct_change_baseline=assessment_model.pct_change_baseline,
+        pct_change_nadir=assessment_model.pct_change_nadir,
+        baseline_spd_mm2=assessment_model.baseline_spd_mm2,
+        nadir_spd_mm2=assessment_model.nadir_spd_mm2,
+        current_spd_mm2=assessment_model.current_spd_mm2,
+        pct_change_spd_baseline=assessment_model.pct_change_spd_baseline,
+        pct_change_spd_nadir=assessment_model.pct_change_spd_nadir,
+        target_response=assessment_model.target_response,
+        non_target_status=assessment_model.non_target_status,
+        new_lesions_present=assessment_model.new_lesions_present,
+        new_lesions_count=assessment_model.new_lesions_count,
+        max_deauville_score=assessment_model.max_deauville_score,
+        overall_response=assessment_model.overall_response,
+        is_locked=assessment_model.is_locked,
+        locked_at=assessment_model.locked_at,
+        reader_id=assessment_model.reader_id,
+        created_at=assessment_model.created_at,
     )

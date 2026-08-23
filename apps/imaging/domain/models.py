@@ -136,3 +136,225 @@ class DeidentificationCertificateRecord(BaseModel):
 # Type aliases for hexagonal port compatibility
 ImagingStudyEnvelopeEntity = ImagingStudyEnvelope
 DeidentificationCertificateEntity = DeidentificationCertificateRecord
+
+
+class LesionMeasurementType(StrEnum):
+    """Supported oncologic caliper measurement types."""
+
+    RECIST_1D = "1D_RECIST"
+    PERPENDICULAR_2D = "2D_PERPENDICULAR"
+    ELLIPSOID_3D = "3D_ELLIPSOID"
+    ROI_STATISTICS = "ROI_STATISTICS"
+
+
+class LesionCategory(StrEnum):
+    """Lesion categorization under oncologic response criteria."""
+
+    TARGET = "TARGET"
+    NON_TARGET = "NON_TARGET"
+    NEW_LESION = "NEW_LESION"
+
+
+class OncologicCriteria(StrEnum):
+    """Supported oncologic response assessment criteria."""
+
+    RECIST_1_1 = "RECIST_1_1"
+    LUGANO_2014 = "LUGANO_2014"
+    RANO = "RANO"
+
+
+class RECISTResponseCode(StrEnum):
+    """RECIST 1.1 Response classifications."""
+
+    CR = "CR"  # Complete Response
+    PR = "PR"  # Partial Response
+    SD = "SD"  # Stable Disease
+    PD = "PD"  # Progressive Disease
+    NE = "NE"  # Not Evaluable
+
+
+class LuganoResponseCode(StrEnum):
+    """Lugano 2014 Response classifications for lymphoma."""
+
+    CR = "CR"  # Complete Response
+    PR = "PR"  # Partial Response
+    SD = "SD"  # Stable Disease
+    PD = "PD"  # Progressive Disease
+    NE = "NE"  # Not Evaluable
+    CMR = "CMR"  # Complete Metabolic Response
+    PMR = "PMR"  # Partial Metabolic Response
+    NMR = "NMR"  # No Metabolic Response
+    PMD = "PMD"  # Progressive Metabolic Disease
+
+
+class MprPlane(StrEnum):
+    """Multi-Planar Reconstruction viewing planes."""
+
+    AXIAL = "AXIAL"
+    SAGITTAL = "SAGITTAL"
+    CORONAL = "CORONAL"
+
+
+class PointCoordinate(BaseModel):
+    """2D or 3D point in pixel space or patient physical space."""
+
+    x: float
+    y: float
+    z: float | None = None
+
+
+class CaliperAnnotationEntity(BaseModel):
+    """Domain model for a caliper annotation placed on a DICOM series/slice."""
+
+    id: str
+    study_envelope_id: str
+    series_envelope_id: str
+    sop_instance_uid: str
+    study_id: str
+    site_id: str
+    subject_id: str
+    timepoint_name: str
+    lesion_id: str
+    lesion_type: LesionCategory
+    organ_site: str
+    measurement_criteria: OncologicCriteria = OncologicCriteria.RECIST_1_1
+    measurement_type: LesionMeasurementType = LesionMeasurementType.RECIST_1D
+    longest_diameter_mm: float
+    perpendicular_diameter_mm: float | None = None
+    product_perpendicular_mm2: float | None = None
+    volume_mm3: float | None = None
+    slice_index: int | None = None
+    slice_location: float | None = None
+    deauville_score: int | None = None
+    points: list[PointCoordinate] = Field(default_factory=list)
+    hounsfield_stats: dict[str, float] | None = None
+    reader_id: str = "system"
+    notes: str | None = None
+    created_at: datetime | None = None
+    created_by: str = "system"
+    updated_at: datetime | None = None
+    reason_for_change: str | None = None
+    version_index: int = 1
+
+
+class RECISTLesionInput(BaseModel):
+    """Input representation of a target or non-target lesion for RECIST evaluation."""
+
+    lesion_id: str
+    organ_site: str
+    lesion_type: LesionCategory
+    longest_diameter_mm: float
+    is_lymph_node: bool = False
+    short_axis_mm: float | None = None
+    sop_instance_uid: str | None = None
+
+
+class RECIST11ResponseResult(BaseModel):
+    """Result of RECIST 1.1 oncologic response evaluation."""
+
+    criteria: OncologicCriteria = OncologicCriteria.RECIST_1_1
+    baseline_sld_mm: float
+    nadir_sld_mm: float
+    current_sld_mm: float
+    pct_change_baseline: float
+    pct_change_nadir: float
+    absolute_change_nadir_mm: float
+    target_response: RECISTResponseCode
+    non_target_status: str
+    new_lesions_present: bool
+    new_lesions_count: int = 0
+    overall_response: RECISTResponseCode
+    is_nadir: bool = False
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
+class LuganoLesionInput(BaseModel):
+    """Input representation of a measurable target lesion for Lugano evaluation."""
+
+    lesion_id: str
+    organ_site: str
+    longest_diameter_mm: float
+    perpendicular_diameter_mm: float
+    is_extranodal: bool = False
+    deauville_score: int | None = None
+
+
+class LuganoResponseResult(BaseModel):
+    """Result of Lugano 2014 response evaluation."""
+
+    criteria: OncologicCriteria = OncologicCriteria.LUGANO_2014
+    baseline_spd_mm2: float
+    nadir_spd_mm2: float
+    current_spd_mm2: float
+    pct_change_spd_baseline: float
+    pct_change_spd_nadir: float
+    ct_response: LuganoResponseCode
+    pet_metabolic_response: LuganoResponseCode | None = None
+    max_deauville_score: int | None = None
+    new_lesions_present: bool = False
+    overall_response: LuganoResponseCode
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
+class TimepointEvaluationEntity(BaseModel):
+    """Domain model of a finalized and signed timepoint response assessment."""
+
+    id: str
+    study_id: str
+    site_id: str
+    subject_id: str
+    timepoint_name: str
+    assessment_criteria: OncologicCriteria
+    baseline_sld_mm: float | None = None
+    nadir_sld_mm: float | None = None
+    current_sld_mm: float | None = None
+    pct_change_baseline: float | None = None
+    pct_change_nadir: float | None = None
+    baseline_spd_mm2: float | None = None
+    nadir_spd_mm2: float | None = None
+    current_spd_mm2: float | None = None
+    pct_change_spd_baseline: float | None = None
+    pct_change_spd_nadir: float | None = None
+    target_response: str
+    non_target_status: str
+    new_lesions_present: bool
+    new_lesions_count: int = 0
+    max_deauville_score: int | None = None
+    overall_response: str
+    is_locked: bool = False
+    locked_at: datetime | None = None
+    locked_by: str | None = None
+    reader_id: str = "system"
+    manifest_sha256: str = ""
+    signature: str = ""
+    created_at: datetime | None = None
+    created_by: str = "system"
+    updated_at: datetime | None = None
+    reason_for_change: str | None = None
+    version_index: int = 1
+
+
+class MprVolumeMetadataEntity(BaseModel):
+    """Domain model for Multi-Planar Reconstruction volume geometry."""
+
+    series_instance_uid: str
+    modality: str
+    rows: int
+    columns: int
+    slice_count: int
+    pixel_spacing: list[float]
+    slice_thickness: float
+    slice_spacing: float
+    patient_orientation_row: list[float] = Field(
+        default_factory=lambda: [1.0, 0.0, 0.0]
+    )
+    patient_orientation_col: list[float] = Field(
+        default_factory=lambda: [0.0, 1.0, 0.0]
+    )
+    volume_dimensions_mm: list[float] = Field(default_factory=list)
+    window_center: float | None = None
+    window_width: float | None = None
+    available_planes: list[MprPlane] = Field(
+        default_factory=lambda: [MprPlane.AXIAL, MprPlane.SAGITTAL, MprPlane.CORONAL]
+    )
+    window_presets: dict[str, dict[str, float]] = Field(default_factory=dict)

@@ -1,0 +1,621 @@
+<template>
+  <div class="mpr-viewer-container">
+    <!-- Viewer Toolbar -->
+    <div class="mpr-toolbar">
+      <div class="toolbar-group">
+        <label for="layout-mode-select" class="toolbar-label">Layout:</label>
+        <select
+          id="layout-mode-select"
+          v-model="layoutMode"
+          class="toolbar-select"
+          aria-label="Viewport Layout Mode"
+        >
+          <option value="mpr-tri-view">MPR Tri-View (Axial / Sag / Cor)</option>
+          <option value="axial-only">Axial View Only</option>
+          <option value="sagittal-only">Sagittal View Only</option>
+          <option value="coronal-only">Coronal View Only</option>
+        </select>
+      </div>
+
+      <div class="toolbar-group">
+        <label for="window-preset-select" class="toolbar-label">W/L Preset:</label>
+        <select
+          id="window-preset-select"
+          v-model="selectedPreset"
+          class="toolbar-select"
+          aria-label="Window Level Preset"
+          @change="applyWindowPreset"
+        >
+          <option value="SOFT_TISSUE">Soft Tissue (W:350 L:40)</option>
+          <option value="LUNG">Lung (W:1500 L:-600)</option>
+          <option value="BONE">Bone (W:2000 L:400)</option>
+          <option value="BRAIN">Brain (W:80 L:40)</option>
+          <option value="LIVER">Liver (W:150 L:30)</option>
+          <option value="CUSTOM">Custom</option>
+        </select>
+      </div>
+
+      <div class="toolbar-group">
+        <button
+          type="button"
+          class="toolbar-btn"
+          :class="{ active: isCrosshairEnabled }"
+          title="Toggle Synchronized MPR Crosshairs"
+          @click="isCrosshairEnabled = !isCrosshairEnabled"
+        >
+          <span class="btn-icon">🎯</span> Crosshairs
+        </button>
+
+        <button
+          type="button"
+          class="toolbar-btn"
+          :class="{ active: isInverted }"
+          title="Invert Grayscale Color Map"
+          @click="isInverted = !isInverted"
+        >
+          <span class="btn-icon">🌓</span> Invert
+        </button>
+
+        <button
+          type="button"
+          class="toolbar-btn"
+          title="Reset Zoom & Pan"
+          @click="resetView"
+        >
+          <span class="btn-icon">🔄</span> Reset
+        </button>
+      </div>
+
+      <div class="toolbar-group cine-group">
+        <button
+          type="button"
+          class="toolbar-btn"
+          :class="{ active: isCinePlaying }"
+          :title="isCinePlaying ? 'Pause Cine Playback' : 'Play Cine Loop'"
+          @click="toggleCine"
+        >
+          <span class="btn-icon">{{ isCinePlaying ? '⏸️' : '▶️' }}</span> Cine
+        </button>
+        <span class="cine-speed-label">{{ cineFps }} fps</span>
+      </div>
+    </div>
+
+    <!-- Viewports Canvas Grid -->
+    <div class="viewports-grid" :class="layoutMode">
+      <!-- Axial Viewport -->
+      <div
+        v-if="layoutMode === 'mpr-tri-view' || layoutMode === 'axial-only'"
+        class="viewport-card axial-card"
+      >
+        <div class="viewport-header">
+          <span class="plane-badge axial-badge">AXIAL (Z: {{ axialSlice + 1 }} / {{ maxSlices }})</span>
+          <span class="slice-loc-label">Loc: {{ (axialSlice * 2.5).toFixed(1) }} mm</span>
+        </div>
+        <div class="canvas-wrapper">
+          <canvas
+            ref="axialCanvasRef"
+            class="mpr-canvas"
+            width="380"
+            height="380"
+            @mousedown="startPanOrMeasure($event, 'AXIAL')"
+            @mousemove="onCanvasMouseMove($event, 'AXIAL')"
+            @mouseup="stopPanOrMeasure"
+            @wheel.prevent="onWheelScroll($event, 'AXIAL')"
+          ></canvas>
+        </div>
+        <div class="slice-slider-box">
+          <input
+            v-model.number="axialSlice"
+            type="range"
+            min="0"
+            :max="maxSlices - 1"
+            class="slice-slider"
+            aria-label="Axial Slice Navigator"
+          />
+        </div>
+      </div>
+
+      <!-- Sagittal Viewport -->
+      <div
+        v-if="layoutMode === 'mpr-tri-view' || layoutMode === 'sagittal-only'"
+        class="viewport-card sagittal-card"
+      >
+        <div class="viewport-header">
+          <span class="plane-badge sagittal-badge">SAGITTAL (X: {{ sagittalSlice + 1 }} / 512)</span>
+          <span class="slice-loc-label">Reconstructed</span>
+        </div>
+        <div class="canvas-wrapper">
+          <canvas
+            ref="sagittalCanvasRef"
+            class="mpr-canvas"
+            width="380"
+            height="380"
+            @mousedown="startPanOrMeasure($event, 'SAGITTAL')"
+            @mousemove="onCanvasMouseMove($event, 'SAGITTAL')"
+            @mouseup="stopPanOrMeasure"
+            @wheel.prevent="onWheelScroll($event, 'SAGITTAL')"
+          ></canvas>
+        </div>
+        <div class="slice-slider-box">
+          <input
+            v-model.number="sagittalSlice"
+            type="range"
+            min="0"
+            max="511"
+            class="slice-slider"
+            aria-label="Sagittal Slice Navigator"
+          />
+        </div>
+      </div>
+
+      <!-- Coronal Viewport -->
+      <div
+        v-if="layoutMode === 'mpr-tri-view' || layoutMode === 'coronal-only'"
+        class="viewport-card coronal-card"
+      >
+        <div class="viewport-header">
+          <span class="plane-badge coronal-badge">CORONAL (Y: {{ coronalSlice + 1 }} / 512)</span>
+          <span class="slice-loc-label">Reconstructed</span>
+        </div>
+        <div class="canvas-wrapper">
+          <canvas
+            ref="coronalCanvasRef"
+            class="mpr-canvas"
+            width="380"
+            height="380"
+            @mousedown="startPanOrMeasure($event, 'CORONAL')"
+            @mousemove="onCanvasMouseMove($event, 'CORONAL')"
+            @mouseup="stopPanOrMeasure"
+            @wheel.prevent="onWheelScroll($event, 'CORONAL')"
+          ></canvas>
+        </div>
+        <div class="slice-slider-box">
+          <input
+            v-model.number="coronalSlice"
+            type="range"
+            min="0"
+            max="511"
+            class="slice-slider"
+            aria-label="Coronal Slice Navigator"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, onUnmounted, watch } from "vue";
+
+const props = defineProps({
+  seriesUid: {
+    type: String,
+    default: "",
+  },
+  activeAnnotations: {
+    type: Array,
+    default: () => [],
+  },
+  activeTool: {
+    type: String,
+    default: "POINTER",
+  },
+});
+
+const emit = defineEmits(["caliperCreated", "coordinateSelected"]);
+
+const layoutMode = ref("mpr-tri-view");
+const selectedPreset = ref("SOFT_TISSUE");
+const isCrosshairEnabled = ref(true);
+const isInverted = ref(false);
+const isCinePlaying = ref(false);
+const cineFps = ref(15);
+
+const maxSlices = ref(48);
+const axialSlice = ref(24);
+const sagittalSlice = ref(256);
+const coronalSlice = ref(256);
+
+const axialCanvasRef = ref(null);
+const sagittalCanvasRef = ref(null);
+const coronalCanvasRef = ref(null);
+
+let cineInterval = null;
+const isDrawing = ref(false);
+const drawStart = ref(null);
+
+const PRESET_MAP = {
+  SOFT_TISSUE: { center: 40, width: 350 },
+  LUNG: { center: -600, width: 1500 },
+  BONE: { center: 400, width: 2000 },
+  BRAIN: { center: 40, width: 80 },
+  LIVER: { center: 30, width: 150 },
+};
+
+function applyWindowPreset() {
+  if (selectedPreset.value !== "CUSTOM" && PRESET_MAP[selectedPreset.value]) {
+    renderAllViewports();
+  }
+}
+
+function resetView() {
+  axialSlice.value = Math.floor(maxSlices.value / 2);
+  sagittalSlice.value = 256;
+  coronalSlice.value = 256;
+  renderAllViewports();
+}
+
+function toggleCine() {
+  isCinePlaying.value = !isCinePlaying.value;
+  if (isCinePlaying.value) {
+    cineInterval = setInterval(() => {
+      axialSlice.value = (axialSlice.value + 1) % maxSlices.value;
+    }, 1000 / cineFps.value);
+  } else if (cineInterval) {
+    clearInterval(cineInterval);
+    cineInterval = null;
+  }
+}
+
+function onWheelScroll(event, plane) {
+  const delta = Math.sign(event.deltaY);
+  if (plane === "AXIAL") {
+    axialSlice.value = Math.max(0, Math.min(maxSlices.value - 1, axialSlice.value + delta));
+  } else if (plane === "SAGITTAL") {
+    sagittalSlice.value = Math.max(0, Math.min(511, sagittalSlice.value + delta * 4));
+  } else if (plane === "CORONAL") {
+    coronalSlice.value = Math.max(0, Math.min(511, coronalSlice.value + delta * 4));
+  }
+}
+
+function startPanOrMeasure(event, plane) {
+  const canvas = event.target;
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+
+  isDrawing.value = true;
+  drawStart.value = { x, y, plane };
+
+  if (props.activeTool === "POINTER") {
+    // Crosshair sync
+    if (plane === "AXIAL") {
+      sagittalSlice.value = Math.floor((x / canvas.width) * 512);
+      coronalSlice.value = Math.floor((y / canvas.height) * 512);
+    }
+  }
+}
+
+function onCanvasMouseMove(event, plane) {
+  if (!isDrawing.value) return;
+  const canvas = event.target;
+  const rect = canvas.getBoundingClientRect();
+  const currentX = event.clientX - rect.left;
+  const currentY = event.clientY - rect.top;
+
+  if (props.activeTool === "POINTER") {
+    if (plane === "AXIAL") {
+      sagittalSlice.value = Math.max(0, Math.min(511, Math.floor((currentX / canvas.width) * 512)));
+      coronalSlice.value = Math.max(0, Math.min(511, Math.floor((currentY / canvas.height) * 512)));
+    }
+  }
+}
+
+function stopPanOrMeasure(event) {
+  if (!isDrawing.value) return;
+  isDrawing.value = false;
+
+  if (drawStart.value && props.activeTool.startsWith("CALIPER_")) {
+    const canvas = event.target;
+    const rect = canvas.getBoundingClientRect();
+    const endX = event.clientX - rect.left;
+    const endY = event.clientY - rect.top;
+
+    const dx = endX - drawStart.value.x;
+    const dy = endY - drawStart.value.y;
+    const pixelDistance = Math.sqrt(dx * dx + dy * dy);
+    // Assuming 0.75 mm/pixel scaling
+    const lengthMm = Number((pixelDistance * 0.75).toFixed(2));
+
+    if (lengthMm > 2.0) {
+      emit("caliperCreated", {
+        plane: drawStart.value.plane,
+        tool: props.activeTool,
+        lengthMm,
+        points: [
+          { x: drawStart.value.x, y: drawStart.value.y },
+          { x: endX, y: endY },
+        ],
+        sliceIndex: axialSlice.value,
+      });
+    }
+  }
+  drawStart.value = null;
+  renderAllViewports();
+}
+
+function renderViewport(canvas, plane, sliceVal) {
+  if (!canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const w = canvas.width;
+  const h = canvas.height;
+
+  // Background
+  ctx.fillStyle = isInverted.value ? "#ffffff" : "#0a0f1d";
+  ctx.fillRect(0, 0, w, h);
+
+  // Draw simulated anatomical structure (e.g. Thorax / Liver / Lesion)
+  const centerX = w / 2;
+  const centerY = h / 2;
+  const grad = ctx.createRadialGradient(centerX, centerY, 20, centerX, centerY, w * 0.45);
+
+  if (isInverted.value) {
+    grad.addColorStop(0, "#1e293b");
+    grad.addColorStop(0.4, "#64748b");
+    grad.addColorStop(0.8, "#cbd5e1");
+    grad.addColorStop(1, "#f8fafc");
+  } else {
+    grad.addColorStop(0, "#f8fafc");
+    grad.addColorStop(0.3, "#94a3b8");
+    grad.addColorStop(0.7, "#334155");
+    grad.addColorStop(1, "#0f172a");
+  }
+
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  if (plane === "AXIAL") {
+    ctx.ellipse(centerX, centerY, w * 0.4, h * 0.35, 0, 0, Math.PI * 2);
+  } else if (plane === "SAGITTAL") {
+    ctx.ellipse(centerX, centerY, w * 0.35, h * 0.42, 0, 0, Math.PI * 2);
+  } else {
+    ctx.ellipse(centerX, centerY, w * 0.42, h * 0.4, 0, 0, Math.PI * 2);
+  }
+  ctx.fill();
+
+  // Draw simulated target tumor lesion in center-right quadrant
+  ctx.fillStyle = isInverted.value ? "#0f172a" : "#ffffff";
+  ctx.beginPath();
+  const tumorX = centerX + 40;
+  const tumorY = centerY - 20;
+  const tumorRadius = 22 + Math.sin(sliceVal * 0.15) * 6;
+  ctx.arc(tumorX, tumorY, Math.max(8, tumorRadius), 0, Math.PI * 2);
+  ctx.fill();
+
+  // Render crosshairs
+  if (isCrosshairEnabled.value) {
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(56, 189, 248, 0.65)"; // Sky blue crosshairs
+    ctx.setLineDash([4, 4]);
+
+    const crossX = (sagittalSlice.value / 512) * w;
+    const crossY = (coronalSlice.value / 512) * h;
+
+    ctx.beginPath();
+    ctx.moveTo(crossX, 0);
+    ctx.lineTo(crossX, h);
+    ctx.moveTo(0, crossY);
+    ctx.lineTo(w, crossY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Render active annotations for this slice
+  props.activeAnnotations.forEach((annot, idx) => {
+    if (annot.points && annot.points.length >= 2) {
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = annot.lesion_type === "NEW_LESION" ? "#ef4444" : "#10b981";
+      ctx.beginPath();
+      ctx.moveTo(annot.points[0].x, annot.points[0].y);
+      ctx.lineTo(annot.points[1].x, annot.points[1].y);
+      ctx.stroke();
+
+      // Caliper end ticks
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(annot.points[0].x, annot.points[0].y, 3, 0, Math.PI * 2);
+      ctx.arc(annot.points[1].x, annot.points[1].y, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Label
+      ctx.fillStyle = "#38bdf8";
+      ctx.font = "bold 11px sans-serif";
+      const midX = (annot.points[0].x + annot.points[1].x) / 2;
+      const midY = (annot.points[0].y + annot.points[1].y) / 2 - 8;
+      ctx.fillText(`${annot.lesion_id || 'L' + (idx + 1)}: ${annot.longest_diameter_mm}mm`, midX, midY);
+    }
+  });
+}
+
+function renderAllViewports() {
+  renderViewport(axialCanvasRef.value, "AXIAL", axialSlice.value);
+  renderViewport(sagittalCanvasRef.value, "SAGITTAL", sagittalSlice.value);
+  renderViewport(coronalCanvasRef.value, "CORONAL", coronalSlice.value);
+}
+
+watch([axialSlice, sagittalSlice, coronalSlice, isInverted, isCrosshairEnabled, () => props.activeAnnotations], () => {
+  renderAllViewports();
+});
+
+onMounted(() => {
+  renderAllViewports();
+});
+
+onUnmounted(() => {
+  if (cineInterval) {
+    clearInterval(cineInterval);
+  }
+});
+</script>
+
+<style scoped>
+.mpr-viewer-container {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--semantic-color-surface-sunken, #090d16);
+  border-radius: var(--semantic-border-radius-md, 8px);
+  border: 1px solid var(--semantic-color-border, #334155);
+  overflow: hidden;
+  height: 100%;
+}
+
+.mpr-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background-color: #0f172a;
+  border-bottom: 1px solid #1e293b;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toolbar-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.toolbar-select {
+  background-color: #1e293b;
+  color: #f8fafc;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.toolbar-btn {
+  background-color: #1e293b;
+  color: #cbd5e1;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.toolbar-btn:hover {
+  background-color: #334155;
+  color: #ffffff;
+}
+
+.toolbar-btn.active {
+  background-color: #0284c7;
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+.cine-speed-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.viewports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+  padding: 12px;
+  flex: 1;
+  overflow: auto;
+}
+
+.viewports-grid.axial-only,
+.viewports-grid.sagittal-only,
+.viewports-grid.coronal-only {
+  grid-template-columns: 1fr;
+}
+
+.viewport-card {
+  display: flex;
+  flex-direction: column;
+  background-color: #0d1322;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.viewport-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background-color: #111827;
+  border-bottom: 1px solid #1f2937;
+}
+
+.plane-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.03em;
+}
+
+.axial-badge {
+  background-color: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.sagittal-badge {
+  background-color: rgba(52, 211, 153, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+}
+
+.coronal-badge {
+  background-color: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+}
+
+.slice-loc-label {
+  font-size: 0.72rem;
+  color: #9ca3af;
+}
+
+.canvas-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 6px;
+  background-color: #030712;
+  flex: 1;
+}
+
+.mpr-canvas {
+  width: 100%;
+  max-width: 380px;
+  aspect-ratio: 1 / 1;
+  background-color: #000000;
+  cursor: crosshair;
+  border-radius: 4px;
+}
+
+.slice-slider-box {
+  padding: 6px 12px;
+  background-color: #111827;
+  border-top: 1px solid #1f2937;
+  display: flex;
+  align-items: center;
+}
+
+.slice-slider {
+  width: 100%;
+  accent-color: #0284c7;
+  cursor: pointer;
+}
+</style>

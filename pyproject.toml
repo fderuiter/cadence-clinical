@@ -47,6 +47,7 @@ apps-imaging = { workspace = true }
 apps-interop = { workspace = true }
 apps-notifications = { workspace = true }
 apps-org = { workspace = true }
+apps-payments = { workspace = true }
 apps-quality = { workspace = true }
 apps-safety = { workspace = true }
 apps-tickets = { workspace = true }

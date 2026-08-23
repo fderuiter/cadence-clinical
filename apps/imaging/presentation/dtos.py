@@ -130,3 +130,222 @@ class PresignedDownloadUrlResponse(BaseModel):
     sop_instance_uid: str
     download_url: str
     expires_in_seconds: int = 3600
+
+
+class PointCoordinateDto(BaseModel):
+    """2D or 3D point in pixel space or patient physical space."""
+
+    x: float
+    y: float
+    z: float | None = None
+
+
+class CaliperAnnotationCreateDto(BaseModel):
+    """Request payload to create a new oncologic caliper annotation."""
+
+    study_envelope_id: str | None = None
+    series_envelope_id: str | None = None
+    sop_instance_uid: str | None = None
+    study_id: str
+    site_id: str
+    subject_id: str
+    timepoint_name: str
+    lesion_id: str
+    lesion_type: str = "TARGET"  # TARGET, NON_TARGET, NEW_LESION
+    organ_site: str
+    measurement_criteria: str = "RECIST_1_1"  # RECIST_1_1, LUGANO_2014, RANO
+    measurement_type: str = (
+        "1D_RECIST"  # 1D_RECIST, 2D_PERPENDICULAR, 3D_ELLIPSOID, ROI_STATISTICS
+    )
+    longest_diameter_mm: float
+    perpendicular_diameter_mm: float | None = None
+    volume_mm3: float | None = None
+    slice_index: int | None = None
+    slice_location: float | None = None
+    deauville_score: int | None = None
+    points: list[PointCoordinateDto] = Field(default_factory=list)
+    hounsfield_stats: dict[str, float] | None = None
+    notes: str | None = None
+
+
+class CaliperAnnotationResponseDto(BaseModel):
+    """Response representing a stored caliper annotation."""
+
+    id: str
+    study_envelope_id: str | None = None
+    series_envelope_id: str | None = None
+    sop_instance_uid: str | None = None
+    study_id: str
+    site_id: str
+    subject_id: str
+    timepoint_name: str
+    lesion_id: str
+    lesion_type: str
+    organ_site: str
+    measurement_criteria: str
+    measurement_type: str
+    longest_diameter_mm: float
+    perpendicular_diameter_mm: float | None = None
+    product_perpendicular_mm2: float | None = None
+    volume_mm3: float | None = None
+    slice_index: int | None = None
+    slice_location: float | None = None
+    deauville_score: int | None = None
+    points: list[PointCoordinateDto] = Field(default_factory=list)
+    hounsfield_stats: dict[str, float] | None = None
+    reader_id: str
+    notes: str | None = None
+    created_at: datetime | None = None
+    created_by: str
+    version_index: int
+
+
+class RECISTLesionInputDto(BaseModel):
+    """Input representation of a target lesion for RECIST derivation."""
+
+    lesion_id: str
+    organ_site: str
+    lesion_type: str = "TARGET"
+    longest_diameter_mm: float
+    is_lymph_node: bool = False
+    short_axis_mm: float | None = None
+    sop_instance_uid: str | None = None
+
+
+class RECISTEvaluationRequestDto(BaseModel):
+    """Request payload to derive RECIST 1.1 tumor response."""
+
+    current_lesions: list[RECISTLesionInputDto]
+    baseline_sld_mm: float = 0.0
+    prior_timepoints_sld: list[float] = Field(default_factory=list)
+    non_target_status: str = "NON_CR_NON_PD"
+    new_lesions_present: bool = False
+    new_lesions_count: int = 0
+    is_baseline: bool = False
+
+
+class RECISTEvaluationResponseDto(BaseModel):
+    """Response containing derived RECIST 1.1 parameters and overall response classification."""
+
+    criteria: str = "RECIST_1_1"
+    baseline_sld_mm: float
+    nadir_sld_mm: float
+    current_sld_mm: float
+    pct_change_baseline: float
+    pct_change_nadir: float
+    absolute_change_nadir_mm: float
+    target_response: str
+    non_target_status: str
+    new_lesions_present: bool
+    new_lesions_count: int
+    overall_response: str
+    is_nadir: bool
+
+
+class LuganoLesionInputDto(BaseModel):
+    """Input representation of a target lesion for Lugano derivation."""
+
+    lesion_id: str
+    organ_site: str
+    longest_diameter_mm: float
+    perpendicular_diameter_mm: float
+    is_extranodal: bool = False
+    deauville_score: int | None = None
+
+
+class LuganoEvaluationRequestDto(BaseModel):
+    """Request payload to derive Lugano 2014 / Cheson response."""
+
+    current_lesions: list[LuganoLesionInputDto]
+    baseline_spd_mm2: float = 0.0
+    prior_timepoints_spd: list[float] = Field(default_factory=list)
+    new_lesions_present: bool = False
+    single_lesion_progression: bool = False
+    non_measured_progression: bool = False
+    is_baseline: bool = False
+
+
+class LuganoEvaluationResponseDto(BaseModel):
+    """Response containing derived Lugano 2014 parameters."""
+
+    criteria: str = "LUGANO_2014"
+    baseline_spd_mm2: float
+    nadir_spd_mm2: float
+    current_spd_mm2: float
+    pct_change_spd_baseline: float
+    pct_change_spd_nadir: float
+    ct_response: str
+    pet_metabolic_response: str | None = None
+    max_deauville_score: int | None = None
+    new_lesions_present: bool
+    overall_response: str
+
+
+class MprMetadataResponseDto(BaseModel):
+    """Response containing 3D volume geometry and MPR slice configuration."""
+
+    series_instance_uid: str
+    modality: str
+    rows: int
+    columns: int
+    slice_count: int
+    pixel_spacing: list[float]
+    slice_thickness: float
+    slice_spacing: float
+    volume_dimensions_mm: list[float]
+    window_center: float | None = None
+    window_width: float | None = None
+    available_planes: list[str]
+    window_presets: dict[str, dict[str, float]]
+
+
+class SubjectTimepointEvaluateRequestDto(BaseModel):
+    """Request to compute, lock, and persist a timepoint evaluation for a subject."""
+
+    study_id: str
+    site_id: str
+    timepoint_name: str
+    assessment_criteria: str = "RECIST_1_1"  # RECIST_1_1, LUGANO_2014
+    non_target_status: str = "NON_CR_NON_PD"
+    new_lesions_present: bool = False
+    new_lesions_count: int = 0
+    is_baseline: bool = False
+    digital_signature: str | None = None
+
+
+class TimepointTrajectorySummaryDto(BaseModel):
+    """Chronological timepoint summary in a subject's oncology tumor trajectory."""
+
+    id: str
+    timepoint_name: str
+    assessment_criteria: str
+    baseline_sld_mm: float | None = None
+    nadir_sld_mm: float | None = None
+    current_sld_mm: float | None = None
+    pct_change_baseline: float | None = None
+    pct_change_nadir: float | None = None
+    baseline_spd_mm2: float | None = None
+    nadir_spd_mm2: float | None = None
+    current_spd_mm2: float | None = None
+    pct_change_spd_baseline: float | None = None
+    pct_change_spd_nadir: float | None = None
+    target_response: str
+    non_target_status: str
+    new_lesions_present: bool
+    new_lesions_count: int
+    max_deauville_score: int | None = None
+    overall_response: str
+    is_locked: bool
+    locked_at: datetime | None = None
+    reader_id: str
+    created_at: datetime | None = None
+
+
+class SubjectTimepointsTrajectoryResponseDto(BaseModel):
+    """Full chronological trajectory of oncologic measurements for a subject."""
+
+    study_id: str
+    site_id: str
+    subject_id: str
+    trajectory: list[TimepointTrajectorySummaryDto] = Field(default_factory=list)
+    active_annotations_count: int = 0
