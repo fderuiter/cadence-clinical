@@ -1,40 +1,20 @@
-import hashlib
-import hmac
 import time
 
 from fastapi.testclient import TestClient
 
 from apps.designer.db import MOCK_TERMINOLOGY, db_query_counts, terminology_cache
 from apps.designer.main import app
+from packages.testing.security import create_test_auth_headers
 
 client = TestClient(app)
 
 
 def get_auth_headers():
-    import json
-
-    user_id = "test-user"
-    roles = "sponsor_designer"
-    change_reason = "system_operation"
-    timestamp = str(time.time())
-    payload = {
-        "change_reason": change_reason,
-        "roles": roles,
-        "timestamp": timestamp,
-        "user_id": user_id,
-    }
-    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-    signature = hmac.new(
-        b"internal-gateway-secret-12345", serialized.encode(), hashlib.sha256
-    ).hexdigest()
-    return {
-        "X-User-Id": user_id,
-        "X-User-Roles": roles,
-        "X-Gateway-Timestamp": timestamp,
-        "X-Gateway-Signature": signature,
-        "X-Signature-Version": "2",
-        "X-Change-Reason": change_reason,
-    }
+    return create_test_auth_headers(
+        user_id="test-user",
+        roles=["sponsor_designer"],
+        change_reason="system_operation",
+    )
 
 
 def test_legacy_endpoint_returns_original_schema():

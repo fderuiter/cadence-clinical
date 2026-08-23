@@ -15,8 +15,7 @@ import packages  # noqa: F401
 from apps.ctms.database import db_manager
 from apps.ctms.main import app
 from apps.ctms.models import Base
-from apps.execution.database.models import Base as ExecutionModelBase
-from apps.gateway.main import generate_signature
+from packages.testing.security import generate_signature
 
 GATEWAY_SECRET = os.getenv(
     "GATEWAY_SECRET", default="internal-gateway-secret-12345"
@@ -35,7 +34,6 @@ async def setup_db():
         cursor.close()
 
     async with db_manager.engine.begin() as conn:
-        await conn.run_sync(ExecutionModelBase.metadata.create_all)
         await conn.run_sync(Base.metadata.create_all)
     yield
     async with db_manager.engine.begin() as conn:

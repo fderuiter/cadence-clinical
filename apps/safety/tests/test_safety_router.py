@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 import packages  # noqa: F401
 from apps.execution.main import app
-from apps.execution.tests.test_lock_router import _make_auth_headers
+from packages.testing.security import create_test_auth_headers
 
 client = TestClient(app)
 
@@ -17,9 +17,9 @@ def test_dispatch_safety_report_post_endpoint() -> None:
 
     Requirements: PRD-SYS-001
     """
-    headers = _make_auth_headers(
+    headers = create_test_auth_headers(
         user_id="pv_officer_01",
-        roles="safety_officer",
+        roles=["safety_officer"],
         change_reason="Expedited Safety Dispatch",
     )
 
@@ -48,7 +48,11 @@ def test_reconcile_sae_cases_post_endpoint() -> None:
 
     Requirements: PRD-SYS-001
     """
-    headers = _make_auth_headers()
+    headers = create_test_auth_headers(
+        user_id="pv_officer_01",
+        roles=["safety_officer"],
+        change_reason="Expedited Safety Reconciliation",
+    )
 
     xml_sample = """<?xml version="1.0" encoding="UTF-8"?>
     <icsr>

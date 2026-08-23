@@ -2,8 +2,16 @@ import httpx
 import pytest
 
 from apps.designer.main import app as designer_app
-from apps.designer.tests.test_designer_differences import get_auth_headers
 from apps.execution.main import app as execution_app
+from packages.testing.security import create_test_auth_headers
+
+
+def get_auth_headers():
+    return create_test_auth_headers(
+        user_id="test-user",
+        roles=["sponsor_designer"],
+        change_reason="test_validation",
+    )
 
 
 @pytest.mark.asyncio
