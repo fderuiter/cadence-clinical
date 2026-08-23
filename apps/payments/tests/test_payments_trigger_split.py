@@ -408,8 +408,13 @@ async def test_cra_sdv_verification_gating_workflow(client: AsyncClient):
     assert unlocked_p["sdv_verified_by"] == "cra_monitor_jane"
     assert unlocked_p["sdv_verified_at"] is not None
 
-    # Step 3: Now approval succeeds
-    approve_ok = await client.post(app_path, headers=app_headers)
+    # Step 3: Now approval succeeds with fresh signature token
+    app_headers_ok = get_auth_headers(
+        roles="Grants Manager",
+        change_reason="Approve verified payable",
+        action=app_path,
+    )
+    approve_ok = await client.post(app_path, headers=app_headers_ok)
     assert approve_ok.status_code == 200
     assert approve_ok.json()["status"] == "APPROVED"
 

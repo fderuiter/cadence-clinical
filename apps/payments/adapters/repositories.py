@@ -155,7 +155,6 @@ class SQLAlchemyPaymentsRepository(IPaymentsRepository):
         return payable
 
     async def get_payable_by_id(self, payable_id: str) -> PayableModel | None:
-        self.session.expire_all()
         stmt = (
             select(PayableModel)
             .where(PayableModel.id == payable_id)
@@ -168,7 +167,6 @@ class SQLAlchemyPaymentsRepository(IPaymentsRepository):
         return result.scalars().first()
 
     async def get_payable_by_event_id(self, event_id: str) -> PayableModel | None:
-        self.session.expire_all()
         stmt = (
             select(PayableModel)
             .where(PayableModel.trigger_event_id == event_id)
@@ -190,7 +188,6 @@ class SQLAlchemyPaymentsRepository(IPaymentsRepository):
         status: str | None = None,
         is_sdv_gated: bool | None = None,
     ) -> list[PayableModel]:
-        self.session.expire_all()
         stmt = select(PayableModel).options(
             selectinload(PayableModel.allocations),
             selectinload(PayableModel.holdback_reserve),

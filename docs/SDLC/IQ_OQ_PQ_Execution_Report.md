@@ -7,11 +7,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3257
-- **Passed:** 2853 🟢
+- **Total Automated Test Cases Run:** 3268
+- **Passed:** 2864 🟢
 - **Failed/Errors:** 377 🔴
 - **Skipped:** 27 ⚪
-- **Overall Operational Pass Rate:** 87.60%
+- **Overall Operational Pass Rate:** 87.64%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -2340,6 +2340,17 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_clinical_staff_role_values` | `apps.org.tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_organization_type_values` | `apps.org.tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trial_duty_values` | `apps.org.tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_batch_event_ingestion_and_queries` | `apps.payments.tests.test_payments_endpoints` | ADR-2199, PRD-PAY-002, PRD-PAY-003 | 🟢 PASSED | < 1s |
+| `test_health_check_endpoint` | `apps.payments.tests.test_payments_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_budget_contract_creation_and_split_payee_configuration` | `apps.payments.tests.test_payments_trigger_split` | ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-006 | 🟢 PASSED | < 1s |
+| `test_cra_sdv_verification_gating_workflow` | `apps.payments.tests.test_payments_trigger_split` | ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-006 | 🟢 PASSED | < 1s |
+| `test_ctms_milestone_completion_event_trigger` | `apps.payments.tests.test_payments_trigger_split` | ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-006 | 🟢 PASSED | < 1s |
+| `test_deterministic_idempotency_prevents_duplicate_payables` | `apps.payments.tests.test_payments_trigger_split` | ADR-2199, PRD-PAY-002 | 🟢 PASSED | < 1s |
+| `test_holdback_retention_reserve_and_dual_signoff_release` | `apps.payments.tests.test_payments_trigger_split` | ADR-2199, PRD-PAY-003, PRD-PAY-006 | 🟢 PASSED | < 1s |
+| `test_payment_audit_ledger_immutable_tracking` | `apps.payments.tests.test_payments_trigger_split` | ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-006 | 🟢 PASSED | < 1s |
+| `test_rbac_financial_permissions_and_auditor_isolation` | `apps.payments.tests.test_payments_trigger_split` | ADR-2199, PRD-PAY-002 | 🟢 PASSED | < 1s |
+| `test_real_time_ecrf_submission_trigger_and_split_allocation` | `apps.payments.tests.test_payments_trigger_split` | ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-006 | 🟢 PASSED | < 1s |
+| `test_split_payee_validation_failure_on_invalid_percentage` | `apps.payments.tests.test_payments_trigger_split` | PRD-PAY-003 | 🟢 PASSED | < 1s |
 | `test_audit_engagement_lifecycle` | `apps.quality.tests.test_audit_service` | PRD-QLT-006 | 🟢 PASSED | < 1s |
 | `test_audit_findings_and_one_click_capa_promotion` | `apps.quality.tests.test_audit_service` | PRD-QLT-006 | 🟢 PASSED | < 1s |
 | `test_inspection_readiness_dossier_compilation_and_tamper_seal` | `apps.quality.tests.test_audit_service` | PRD-QLT-008 | 🟢 PASSED | < 1s |
@@ -3538,28 +3549,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 2368e7638bd080ff856320450683f7d17ada6ec0bd9c98c903fe5cc0674c0396
+- **Cryptographic Hash (SHA-256):** 5f7611779b2b2eb4541c8b0037a15b8553ba344a4955aa0b6f1176e0d4a39246
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUT03JjitQXZVnWnLkLvDD0UaPonUwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUZCVjW1OY5vCLLUblqgIGQY7mLyYwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MjA0MTY0M1oXDTI3MDgyMzA0MTY0M1owUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MjA0MTgyOFoXDTI3MDgyMzA0MTgyOFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyQuQ
-+MAlbeRUmULXXaMGd5eRS2Uc8Ghh7Jh+6OWIxzwy/IOpFipCze2H30B7SilDmH3P
-/jXs8DjFaLqush7FIk15Tg9I4k6io++7c82Yx85SOoLSTMYoQW4RQwesNh56vT+f
-z9Q8FKKNwRbzT9ptIkqk9Yu3gxW3SvJs1IpVv5oMG1Ypsmfu9OnW45GOSEvIFaWF
-tiEHSOHR44UD8xoSrYEIaplW8ifENKe+jCaMVOzKCxADUHlZ9B14DJjiVZcFUYqE
-S49mSMBCebrc/guDnIH1ImTdXo/DSK2wZJrvl4Xy/P/ERhU3FF9JrraPWCMXE9X9
-nlYrJJ3B6oIWqlfR4wIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQC5Ym9ULj3fpfK+
-YsdtxKgcW7tlPPzL+5Ges6NWIVsvEpBwggkQA2WnhAiUeyepWsJqfD6MKC5HfytB
-SrOb7oKHwR0qmQNqDjhoTe9ej/0mSUtJrzhii9P6CseHy8hVwfDRv+KI4PTSH9s1
-GXadmA81a9qUms3IiNkDClMhDGapxLe2b2ogmS0wW2lVg2jN3KDaJFDDo1ZmiXzy
-DpSmV8VW/FffgrqAeugV+fkHOgfzvces0TfWr6cR7CaAESwRd1aoeCsi831PhKW+
-no3ai2Do7ibBRkM5zp9a4dZHfj7YFhHNlep8RZAWtINilrddKRocYgNxYrpiMXAD
-8ztUIY9v
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2L7Y
+ts/D7SqRuSK6M7hC7QfK4zjCcpAIMa39gRI1w9bBsuUFlLHocaif5mT5FeJfdUoa
+1o0qZteNeyJokgC7KsLZLr2jX3I7+Q/OmqLa2iClcguP6F2YblV7u50piLyayAr5
+wbyvthbwmbNQ6jc6nACXD8FjEA1WZHB1LthaX5GcSXHTCkQ0a/SahZgRa3P5kNBX
+I4nQ79GiH65U5/PyMh+KpwKc7u2C0+c1PCLSXsyARHp1Cx8NLeIDJ0GduY/SEogV
+WeAbq9LMs3IT8P8aCpqs6pGmWD26i6UTqtoGB2tazvNEfPZNVzkv2fFNQeuD4VNS
+FOBi9M+Rlqe2SZ58CQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQCZncERgtj/G4J1
+zaTqpQendftCBTtYTXbbygfGibrJvgweGpfwJcjM/sIHQkvhb9/CTL1u4AkbYDL6
+XBugbsPzpc+2afwMT8Prhho3e9xCpfPEu8xoR4GA0kWWbw+NG1ODIh29fgOyoz/m
+fNWgR4nAqjkCt+I/Jbkupv8jiQhMCyuf0vN/Bqm7Kw1yWKl3c7bRttZre2jM0sL9
+lTKXhNtx1k1fpBy+xhVXUn2EG/IwJ6Xn/IMasAoXiQBysIPrX3c9+Pky/RMdEJHF
+kjiX2EE8irHHIcSy1AVlWyQpuLLkCOVPNQ2zuy2xPt8VF+aZ+HfUHoeLB+3MOcPN
+uFUK6yd+
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-YJ0VeulDaOlDPMasUIGdoX0o8Nu8QK+JeAYqNFPnpkgbreGGoPG1YoPLS2nkPgqbXFxTfJFBpGJCr7+8Kq+tw+LkZf+xRt+J4M8RQ2eWl35/oyBdAjLFRpVluBhm8XUc4GB+epO8JMp8diKj8sfx4vS5ExSaeme4/yV6qJv5t4dQaJEJHb2XLOxhJW11eGmxAl4D/L55JJaqgmAiOaEuHdpkL/aUmf83HVry0rknohJeyWQwBC/xYJRjkeIkSEYRYUISSQnn/en81EUpkCTpMYemVRKynZ6oMeIerLPiFNL3InO18Q28dw0gVEZ2JauzgYXZIKRCB0dPf8l0jbAYiQ==
+dscnyWN+VmkkGhn1LUxLjLmWO/IURyKsFwqisJ6pZKEkgflyvSW4W0Gy6JCLeN1yrkkyjdeKLSb3IJAbyBHRO3pz/E83qcM6EDdU0bC611PoThcZDslaRybtjIyxeYNb6kYY/KMSzFH0z9ik/595FGgyZnw7PPbMZ7+a6EIYXvWlWNvP6L/dWLLjJB/fMMEUDu4hiqEnoMtxsI/nx9oEw+zqFj5E465sCdlrIr3bOX61HgNYjII5YSEoFmkHhDEUbUK7rNDzhBE0OCWRz6lcKj1KKUyMj/2nBHtZeZUPyd8eKzzi3if60glruaRt2LgxxQ/46ZvOdFTF6RD6fHgoZQ==
 -----END SIGNATURE-----

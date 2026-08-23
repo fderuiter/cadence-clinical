@@ -471,8 +471,9 @@ class PaymentsService:
                 else PayableStatus.TRIGGERED.value
             )
 
+            payable_id = str(uuid.uuid4())
             payable = PayableModel(
-                id=str(uuid.uuid4()),
+                id=payable_id,
                 study_id=study_id,
                 site_id=site_id,
                 contract_id=contract.id,
@@ -500,14 +501,13 @@ class PaymentsService:
                 or f"Triggered from eCRF form submission '{form_id}' on visit '{visit_code}'",
                 version_index=contract.version_index,
             )
-            saved_payable = await self.repo.save_payable(payable)
 
             # Split allocations
             alloc_models: list[PayableAllocationModel] = []
             for alloc_calc in breakdown.allocations:
                 alloc_model = PayableAllocationModel(
                     id=str(uuid.uuid4()),
-                    payable_id=saved_payable.id,
+                    payable_id=payable_id,
                     payee_id=alloc_calc.payee_id,
                     payee_name=alloc_calc.payee_name,
                     payee_role=alloc_calc.payee_role,
@@ -523,23 +523,24 @@ class PaymentsService:
                 )
                 alloc_models.append(alloc_model)
 
-            await self.repo.save_payable_allocations(alloc_models)
-
             # Holdback reserve record (10% retention)
             holdback = HoldbackReserveModel(
                 id=str(uuid.uuid4()),
                 study_id=study_id,
                 site_id=site_id,
                 contract_id=contract.id,
-                payable_id=saved_payable.id,
+                payable_id=payable_id,
                 holdback_amount=breakdown.withholding_amount,
                 currency=breakdown.currency,
                 status=HoldbackStatus.HELD.value,
                 created_by=actor_id,
-                reason_for_change=f"10% holdback reserve retained for payable {saved_payable.id}",
+                reason_for_change=f"10% holdback reserve retained for payable {payable_id}",
                 version_index=contract.version_index,
             )
-            await self.repo.save_holdback_reserve(holdback)
+
+            payable.allocations = alloc_models
+            payable.holdback_reserve = holdback
+            saved_payable = await self.repo.save_payable(payable)
 
             audit_action = (
                 AuditAction.PAYABLE_GATED_PENDING_SDV.value
@@ -574,10 +575,7 @@ class PaymentsService:
                 version_index=contract.version_index,
             )
 
-            # Reload full payable entity
-            refreshed = await self.repo.get_payable_by_id(saved_payable.id)
-            if refreshed:
-                generated_payables.append(refreshed)
+            generated_payables.append(saved_payable)
 
         return generated_payables
 
@@ -676,8 +674,9 @@ class PaymentsService:
             fee_schedule=fs, contract=contract, split_payees=split_payees
         )
 
+        payable_id = str(uuid.uuid4())
         payable = PayableModel(
-            id=str(uuid.uuid4()),
+            id=payable_id,
             study_id=study_id,
             site_id=site_id,
             contract_id=contract.id,
@@ -707,14 +706,13 @@ class PaymentsService:
             or f"Triggered from CRA SDV verification on visit '{visit_code}'",
             version_index=contract.version_index,
         )
-        saved_payable = await self.repo.save_payable(payable)
 
         # Split allocations
         alloc_models: list[PayableAllocationModel] = []
         for alloc_calc in breakdown.allocations:
             alloc_model = PayableAllocationModel(
                 id=str(uuid.uuid4()),
-                payable_id=saved_payable.id,
+                payable_id=payable_id,
                 payee_id=alloc_calc.payee_id,
                 payee_name=alloc_calc.payee_name,
                 payee_role=alloc_calc.payee_role,
@@ -730,23 +728,24 @@ class PaymentsService:
             )
             alloc_models.append(alloc_model)
 
-        await self.repo.save_payable_allocations(alloc_models)
-
         # Holdback reserve
         holdback = HoldbackReserveModel(
             id=str(uuid.uuid4()),
             study_id=study_id,
             site_id=site_id,
             contract_id=contract.id,
-            payable_id=saved_payable.id,
+            payable_id=payable_id,
             holdback_amount=breakdown.withholding_amount,
             currency=breakdown.currency,
             status=HoldbackStatus.HELD.value,
             created_by=verified_by,
-            reason_for_change=f"10% holdback reserve retained for payable {saved_payable.id}",
+            reason_for_change=f"10% holdback reserve retained for payable {payable_id}",
             version_index=contract.version_index,
         )
-        await self.repo.save_holdback_reserve(holdback)
+
+        payable.allocations = alloc_models
+        payable.holdback_reserve = holdback
+        saved_payable = await self.repo.save_payable(payable)
 
         await self.repo.record_audit_log(
             entity_type="PAYABLE",
@@ -766,7 +765,7 @@ class PaymentsService:
             reason_for_change=reason_for_change or "Direct CRA SDV Trigger",
             version_index=contract.version_index,
         )
-        return await self.repo.get_payable_by_id(saved_payable.id)
+        return saved_payable
 
     async def process_milestone_completion_event(
         self,
@@ -797,8 +796,9 @@ class PaymentsService:
         withholding_amt = round(amount * (withholding_rate / 100.0), 2)
         net_amt = round(amount - withholding_amt, 2)
 
+        payable_id = str(uuid.uuid4())
         payable = PayableModel(
-            id=str(uuid.uuid4()),
+            id=payable_id,
             study_id=study_id,
             site_id=site_id,
             contract_id=contract.id,
@@ -826,7 +826,6 @@ class PaymentsService:
             or f"Milestone achieved: {milestone_name} ({milestone_code})",
             version_index=contract.version_index,
         )
-        saved_payable = await self.repo.save_payable(payable)
 
         # Split allocations
         split_payees = await self.repo.list_split_payees(
@@ -841,7 +840,7 @@ class PaymentsService:
                 n_share = round(net_amt * (pct / 100.0), 2)
                 alloc_model = PayableAllocationModel(
                     id=str(uuid.uuid4()),
-                    payable_id=saved_payable.id,
+                    payable_id=payable_id,
                     payee_id=sp.payee_id,
                     payee_name=sp.payee_name,
                     payee_role=sp.payee_role,
@@ -860,7 +859,7 @@ class PaymentsService:
             alloc_models.append(
                 PayableAllocationModel(
                     id=str(uuid.uuid4()),
-                    payable_id=saved_payable.id,
+                    payable_id=payable_id,
                     payee_id=f"PAYEE-{contract.site_id}",
                     payee_name=f"Site {contract.site_id} Research Account",
                     payee_role="INSTITUTION",
@@ -875,7 +874,6 @@ class PaymentsService:
                     version_index=contract.version_index,
                 )
             )
-        await self.repo.save_payable_allocations(alloc_models)
 
         # Holdback reserve
         holdback = HoldbackReserveModel(
@@ -883,7 +881,7 @@ class PaymentsService:
             study_id=study_id,
             site_id=site_id,
             contract_id=contract.id,
-            payable_id=saved_payable.id,
+            payable_id=payable_id,
             holdback_amount=withholding_amt,
             currency=contract.currency,
             status=HoldbackStatus.HELD.value,
@@ -891,7 +889,10 @@ class PaymentsService:
             reason_for_change=f"Holdback for milestone {milestone_code}",
             version_index=contract.version_index,
         )
-        await self.repo.save_holdback_reserve(holdback)
+
+        payable.allocations = alloc_models
+        payable.holdback_reserve = holdback
+        saved_payable = await self.repo.save_payable(payable)
 
         await self.repo.record_audit_log(
             entity_type="PAYABLE",
@@ -910,8 +911,7 @@ class PaymentsService:
             reason_for_change=reason_for_change or "Milestone Achievement Trigger",
             version_index=contract.version_index,
         )
-        refreshed = await self.repo.get_payable_by_id(saved_payable.id)
-        return refreshed or saved_payable
+        return saved_payable
 
     # ==========================================
     # 5. Holdback Retention & Release Governance
