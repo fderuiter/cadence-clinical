@@ -4,6 +4,7 @@ from typing import Any
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     DateTime,
     Float,
     ForeignKey,
@@ -18,6 +19,81 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, rela
 
 class Base(DeclarativeBase):
     pass
+
+
+class ICSRReportingEvaluation(Base):
+    """
+    Represents a deterministic multi-country expedited safety reporting evaluation record
+    with real-time countdown clocks, threshold alert tracking, and 21 CFR Part 11
+    Safety Physician electronic signature approval gating.
+
+    Requirements: PRD-PVG-001, PRD-PVG-008
+    """
+
+    __tablename__ = "safety_reporting_evaluations"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    case_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    receipt_date: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+
+    # Seriousness criteria
+    seriousness_death: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    seriousness_life_threatening: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    seriousness_hospitalization: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    seriousness_disability: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    seriousness_congenital_anomaly: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    seriousness_other: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+
+    # Causality and Expectedness
+    causality: Mapped[str] = mapped_column(String(50), nullable=False)
+    expectedness: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    # Deterministic conclusions
+    is_serious: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_unexpected: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_causal: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_susar: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    any_expedited: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    shortest_timeframe_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # Evaluated authority outcomes (JSON)
+    evaluations: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSON, nullable=False, default=list
+    )
+
+    # 21 CFR Part 11 Electronic Signature Gating
+    approval_status: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="DRAFT", index=True
+    )
+    approved_by_user_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    esignature_manifest_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+
+    # Part 11 Audit fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
 class SafetyCaseICSR(Base):

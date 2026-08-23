@@ -2,19 +2,24 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from apps.ctms.domain.models import (
+    BudgetAdjustmentEntity,
     CountryRegulatoryMilestoneEntity,
     CTMSAuditLogEntity,
     CTMSDelegationEntity,
+    CurrencyExchangeRateEntity,
     DeviationActionItemEntity,
     EssentialDocumentEntity,
     ETMFSyncRecordEntity,
     FinancialInvoiceEntity,
+    GrantContractAmendmentEntity,
+    InvestigatorGrantEntity,
     IPDestructionCertificateEntity,
     IPKitRecordEntity,
     IPTemperatureExcursionEntity,
     ProcedurePaymentGridEntity,
     ProtocolDeviationEntity,
     RBQMKRIMetricEntity,
+    SiteBudgetTemplateEntity,
     SiteGreenlightGateEntity,
     SiteRiskScoreEntity,
 )
@@ -175,13 +180,98 @@ class IRBQMRepository(RepositoryPort[Any]):
 
 
 class IFinancialsRepository(RepositoryPort[Any]):
-    """Repository port for Procedure Payment Grids and Invoices."""
+    """Repository port for Procedure Payment Grids, Budget Templates, Amendments, and Invoices."""
 
     async def get_by_id(self, entity_id: str) -> Any | None:
         return None
 
     async def save(self, entity: Any) -> Any:
         return entity
+
+    @abstractmethod
+    async def save_budget_template(
+        self, template: SiteBudgetTemplateEntity
+    ) -> SiteBudgetTemplateEntity:
+        pass
+
+    @abstractmethod
+    async def get_budget_template(
+        self, template_id: str
+    ) -> SiteBudgetTemplateEntity | None:
+        pass
+
+    @abstractmethod
+    async def list_budget_templates(
+        self, study_id: str | None = None
+    ) -> list[SiteBudgetTemplateEntity]:
+        pass
+
+    @abstractmethod
+    async def get_investigator_grant(
+        self, grant_id: str
+    ) -> InvestigatorGrantEntity | None:
+        pass
+
+    @abstractmethod
+    async def update_grant_budget_and_version(
+        self, grant_id: str, revised_budget: float, new_version: int
+    ) -> None:
+        pass
+
+    @abstractmethod
+    async def save_grant_amendment(
+        self, amendment: GrantContractAmendmentEntity
+    ) -> GrantContractAmendmentEntity:
+        pass
+
+    @abstractmethod
+    async def get_grant_amendment(
+        self, amendment_id: str
+    ) -> GrantContractAmendmentEntity | None:
+        pass
+
+    @abstractmethod
+    async def list_grant_amendments(
+        self, grant_id: str
+    ) -> list[GrantContractAmendmentEntity]:
+        pass
+
+    @abstractmethod
+    async def save_exchange_rate(
+        self, rate: CurrencyExchangeRateEntity
+    ) -> CurrencyExchangeRateEntity:
+        pass
+
+    @abstractmethod
+    async def get_exchange_rate(
+        self, base_currency: str, target_currency: str
+    ) -> CurrencyExchangeRateEntity | None:
+        pass
+
+    @abstractmethod
+    async def list_exchange_rates(self) -> list[CurrencyExchangeRateEntity]:
+        pass
+
+    @abstractmethod
+    async def save_budget_adjustment(
+        self, adjustment: BudgetAdjustmentEntity
+    ) -> BudgetAdjustmentEntity:
+        pass
+
+    @abstractmethod
+    async def get_budget_adjustment(
+        self, adjustment_id: str
+    ) -> BudgetAdjustmentEntity | None:
+        pass
+
+    @abstractmethod
+    async def list_budget_adjustments(
+        self,
+        grant_id: str | None = None,
+        study_id: str | None = None,
+        site_id: str | None = None,
+    ) -> list[BudgetAdjustmentEntity]:
+        pass
 
     @abstractmethod
     async def save_procedure_grid(
@@ -191,7 +281,10 @@ class IFinancialsRepository(RepositoryPort[Any]):
 
     @abstractmethod
     async def list_procedure_grids(
-        self, grant_id: str
+        self,
+        grant_id: str,
+        is_active_only: bool = False,
+        version_index: int | None = None,
     ) -> list[ProcedurePaymentGridEntity]:
         pass
 

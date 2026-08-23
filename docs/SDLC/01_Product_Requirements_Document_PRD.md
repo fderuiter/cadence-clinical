@@ -1238,12 +1238,155 @@ To support hybrid and decentralized clinical trials via universal BYOD / PWA pat
 #### PRD-DCT-006: Tiered Pediatric Assent & Legally Authorized Representative (LAR) Consent
 - The eConsent subsystem (`apps/econsent`) must support multi-tier consent workflows: age-appropriate multimedia pediatric assent (e.g. animated comprehension videos for ages 7-11, simplified text for ages 12-17) paired with simultaneous parent/guardian Legally Authorized Representative (LAR) electronic signatures.
 
-## 16. Definition of Done (DoD) & Bi-directional Traceability
+---
+
+## 16. Study Startup (SSU) & Automated Greenlight Site Activation Engine
+
+To provide comprehensive country-aware study startup workflows, ethics/IRB submission tracking, clinical trial agreement (CTA) redlining, and an un-bypassable cryptographic site activation gate preventing non-compliant trial execution.
+
+#### PRD-SSU-001: Dynamic Country-Specific Prerequisite Rules Matrix
+- The system (`apps/designer` and `apps/ctms`) must allow study authors to author and maintain country-level and study-wide prerequisite rule matrices governing site activation (e.g. FDA 1572 + IRB in the US; EU CTR Part I/II + EC in the EU; PMDA notification in Japan).
+- Rules matrices must support custom prerequisite types (regulatory approvals, site contract execution, eISF baseline certification, personnel qualification, training verification, depot drug availability).
+
+#### PRD-SSU-002: Multi-Factor Greenlight Site Activation Evaluator
+- The Greenlight engine (`apps/ctms`) must dynamically evaluate real-time site activation readiness across 6 key operational facets:
+  1. Regulatory authority and IRB/Ethics Committee approval certificates.
+  2. Executed Clinical Trial Agreement (CTA) and investigator budget schedules.
+  3. Certified baseline eISF essential regulatory documents.
+  4. Principal Investigator executed Delegation of Authority (DOA) log.
+  5. Verified protocol amendment and GCP training completions for all active site personnel.
+  6. Investigational Product (IP) depot greenlight release authorization.
+- GxP override exceptions must require executive sponsor dual-signature electronic authorization with mandatory Part 11 justification logging.
+
+#### PRD-SSU-003: Programmatic RTSM & EDC Execution Gating
+- Once all prerequisites are digitally verified, the system must issue an HMAC-signed cryptographic Site Activation Token and broadcast a `SiteGreenlightApproved` event across the event spine.
+- `apps/execution` (EDC) and RTSM must reject subject randomization, drug kit shipment release, and eCRF data entry for any non-greenlight site with an immutable audit log entry and HTTP 403 response.
+
+---
+
+## 17. eSource & Real-Time EHR-to-EDC Ingestion (SMART on FHIR)
+
+To automate clinical data extraction from hospital Electronic Health Record (EHR) systems using HL7 FHIR USCDI standards, eliminating manual data transcription while maintaining strict source provenance.
+
+#### PRD-ESR-001: SMART Backend Services Automated Ingestion
+- The interoperability service (`apps/interop`) must implement SMART on FHIR Backend Services authentication (asymmetric private-key JWT OAuth2) to connect securely to hospital EHR systems (Epic, Cerner, Allscripts).
+- Ingestion pipelines must extract structured clinical resources (`Patient`, `Condition`, `MedicationRequest`, `MedicationStatement`, `Observation` vital signs and laboratory results) mapped to standardized CDASH domains.
+
+#### PRD-ESR-002: Clinical Research Coordinator (CRC) Reconciliation Drawer
+- The platform UI (`apps/web`) must provide a split-screen EHR reconciliation drawer displaying incoming EHR data side-by-side with current eCRF fields, source timestamps, and FHIR resource provenance identifiers.
+- The interface must support non-destructive 1-click actions: "Accept & Commit", "Reject with Reason", or "Raise Discrepancy Query", strictly prohibiting silent background data overwrites.
+
+#### PRD-ESR-003: Immutable Source Data Provenance & Part 11 Audit Attribution
+- Every committed eSource data value must record complete provenance metadata (source EHR system identifier, FHIR resource type and ID, extraction timestamp, and committing coordinator electronic signature) in the GxP audit ledger.
+
+---
+
+## 18. Laboratory Data Management, Reference Ranges & Toxicity Grading
+
+To provide centralized governance of central and local laboratory feeds, standardized unit conversions, and automated CTCAE/DAIDS toxicity grading with adverse event auto-drafting.
+
+#### PRD-LBM-001: Multi-Format Lab Ingestion & LOINC Standardization
+- The lab management engine must ingest central laboratory data feeds (HL7, CDISC LAB v1.0.1, CSV/sFTP) and manual local lab batch entry.
+- All lab analytes must map to standard LOINC concept codes with automated mathematical unit conversion between Conventional and SI units (e.g. mg/dL to mmol/L, g/dL to g/L).
+
+#### PRD-LBM-002: Age/Sex Reference Range Governance & Uncalibrated Safeguards
+- The system must enforce age-, sex-, and ethnicity-specific standard normal reference ranges (Lower Limit of Normal LLN and Upper Limit of Normal ULN).
+- Local hospital labs must maintain active, verified reference range certificates in the eISF; data entry for labs with uncalibrated or expired ranges must trigger an immediate uncalibrated range warning in the eCRF.
+
+#### PRD-LBM-003: Automated CTCAE / DAIDS Toxicity Grading & AE Auto-Drafting
+- Laboratory results must be evaluated in real-time against protocol-pinned toxicity scales (NCI-CTCAE v5.0 or DAIDS) to compute Grade 1–4 severity classifications.
+- Clinically significant Grade 3 or Grade 4 laboratory abnormalities must automatically trigger a staged Adverse Event eCRF draft routed directly to the Principal Investigator review queue.
+
+---
+
+## 19. Clinical Endpoint Adjudication Committee (CEC) Management Suite
+
+To provide a blinded, chartered expert adjudication environment for major clinical endpoints (e.g. MACE, stroke, cause of death, disease progression) with automated dossier packaging and CDISC SDTM CE domain compilation.
+
+#### PRD-CEC-001: Automated Patient Event Dossier Compilation & PHI Redaction
+- When a candidate endpoint event is reported in EDC, the system must automatically assemble a comprehensive patient dossier bundling eCRFs, lab panels, ECGs, hospital discharge summaries, and imaging reports.
+- Outbound dossier packages must undergo in-flight de-identification, masking patient identifiers, site numbers, and treating physician names.
+
+#### PRD-CEC-002: 2+1 Independent Blinded Reader & Tie-Breaker Workflow
+- Dossiers must be assigned to two independent primary reviewers blinded to treatment arm.
+- If both reviewers agree (concordant diagnosis), the adjudication is finalized immediately. If discordant, the system must automatically escalate the dossier to a tie-breaker Committee Chair or schedule a virtual consensus committee meeting.
+
+#### PRD-CEC-003: Bi-Directional EDC Feedback & CDISC SDTM CE Domain Export
+- Approved consensus adjudication decisions must write back to the subject casebook and compile automatically into the CDISC SDTM CE (Clinical Events) dataset with full 21 CFR Part 11 electronic signature attribution.
+
+---
+
+## 20. Aggregate Pharmacovigilance & Periodic Regulatory Reporting
+
+To automate the compilation of annual Development Safety Update Reports (DSUR), Periodic Safety Update Reports (PSUR), and investigator safety update packages from live trial data.
+
+#### PRD-AGG-001: Immutable Point-in-Time Regulatory Safety Snapshot
+- When compiling an annual DSUR or PSUR, the system must create a cryptographically sealed, immutable dataset snapshot of all SAEs, SUSARs, and exposure metrics for the reporting window (e.g. DIBD anniversary), guaranteeing 100% audit reproducibility.
+
+#### PRD-AGG-002: Cumulative & Interval Exposure Calculations
+- The engine must compute cumulative and interval patient-years of exposure stratified by treatment arm, demographic subgroup, age bracket, and dosage cohort.
+
+#### PRD-AGG-003: Automated MedDRA SOC/PT Summary Tabulations & QPPV Sign-off
+- The aggregate reporter must generate standard summary cross-tabulations of SAEs, fatal events, and adverse events of special interest (AESI) grouped by MedDRA System Organ Class and Preferred Term.
+- The compiled aggregate safety package must require formal electronic signature review and approval by the Qualified Person for Pharmacovigilance (QPPV).
+
+---
+
+## 21. Medical Device & In-Vitro Diagnostic (IVD) Clinical Investigation
+
+To provide specialized regulatory and operational support for medical device and IVD trials compliant with ISO 14155:2020, EU MDR (2017/745), and IVDR (2017/746).
+
+#### PRD-DEV-001: Unique Device Identifier (UDI) & Serialized Inventory Tracking
+- The system must track medical device inventory in RTSM using standard UDI barcodes, parsing Device Identifiers (DI) and Production Identifiers (PI: lot number, serial number, expiration date, manufacturing date).
+
+#### PRD-DEV-002: Device Deficiency & Malfunction eCRF Capture
+- eCRFs must support standardized device deficiency, malfunction, and usability error reporting workflows, capturing device return status and root-cause evaluations.
+
+#### PRD-DEV-003: Automated Adverse Device Effect (ADE) & RTSM Quarantine Triggers
+- Logging a device deficiency or malfunction must automatically:
+  1. Trigger an Adverse Device Effect (ADE / SADE / USADE) safety investigation in `apps/safety`.
+  2. Immediately quarantine the affected device serial number (and optionally the site's entire device lot) in RTSM, preventing further patient allocation.
+
+---
+
+## 22. Participant Financial Wallet & Plain-Language Lay Summary Distribution
+
+To automate patient stipend and travel reimbursement disbursements and facilitate compliant distribution of lay summaries under EU CTR 536/2014.
+
+#### PRD-PAT-001: SoA-Linked Stipend Matrix & Automated Payable Credits
+- Protocol authors must configure participant visit compensation rules directly in the Schedule of Activities (SoA) matrix in `apps/designer`.
+- When an in-person or remote visit is marked verified in EDC, the subject's mobile wallet must automatically receive scheduled stipend credits.
+
+#### PRD-PAT-002: Mobile Travel Expense Submission & Receipt OCR
+- Participants must be able to photograph and submit travel/meal expense receipts via the Subject Portal mobile app.
+- Optical Character Recognition (OCR) must extract receipt date, merchant, and total amount, routing the expense claim to the site coordinator for 1-click review and digital disbursement via virtual card or ACH.
+
+#### PRD-PAT-003: Plain-Language Lay Summary Portal
+- The Subject Portal must provide a secure channel for delivering IRB/Ethics Committee approved Plain Language Summaries of trial results to consented trial participants per EU CTR Regulation No 536/2014 Article 37.
+
+---
+
+## 23. Reactive Cross-App Clinical Event Spine & Outbox Architecture
+
+To ensure reliable, resilient, and audit-compliant event propagation across all 20 platform microservices without cascading failures or sibling database coupling.
+
+#### PRD-EVT-001: Transactional Outbox Pattern & Zero Data Loss
+- All domain state transitions (`SiteGreenlightApproved`, `EhrDataIngested`, `Grade3ToxicityDetected`, `EndpointAdjudicated`, `DeviceMalfunctionReported`, `VisitCompletedPayableTriggered`) must be atomically written to a local `transactional_outbox` table within the same database transaction as the entity mutation.
+- Asynchronous relay workers must stream outbox events to the centralized event broker with exponential backoff and guaranteed at-least-once delivery.
+
+#### PRD-EVT-002: Deterministic Idempotency & Replay Auditability
+- Consuming microservices must process incoming events using deterministic idempotency keys (`{entity_type}:{entity_id}:{event_type}:{version_index}`), preventing duplicate operations during network redeliveries.
+- The event log must support full point-in-time replay for disaster recovery, simulation, and regulatory inspection audits.
+
+---
+
+## 24. Definition of Done (DoD) & Bi-directional Traceability
 
 This Product Requirements Document represents the definitive, legally compliant system configuration for Cadence Clinical. To satisfy the Definition of Done (DoD) for GxP system validation:
 
-1. **Requirement Mapping:** Every requirement key (`PRD-SYS-XXX` through `PRD-QRY-XXX`) defined in this document must map directly to:
-   - A database schema schema attribute or application-layer class in the **Technical Design Document (TDD)**.
+1. **Requirement Mapping:** Every requirement key (`PRD-SYS-XXX` through `PRD-EVT-XXX`) defined in this document must map directly to:
+   - A database schema attribute or application-layer class in the **Technical Design Document (TDD)**.
    - An automated unit, integration, or manual verification script in the **Quality Assurance (QA) & Validation Plan**.
 2. **Regulatory Conformity:** No features may be added or modified without updating this document and acquiring the necessary regulatory/QA signatures.
 3. **Audit Readiness:** All configurations are compiled in real-time. This PRD itself is cryptographically sealed in the software build pipeline to prevent retroactive tampering or undocumented requirement modifications.
+

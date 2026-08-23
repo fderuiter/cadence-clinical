@@ -2258,6 +2258,196 @@
         }
       }
     },
+    "/ctms/api/v1/ctms/financials/templates": {
+      "post": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Create Budget Template",
+        "operationId": "Ctms_create_budget_template_api_v1_ctms_financials_templates_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_SiteBudgetTemplateCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_SiteBudgetTemplateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "List Budget Templates",
+        "operationId": "Ctms_list_budget_templates_api_v1_ctms_financials_templates_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Ctms_SiteBudgetTemplateResponse"
+                  },
+                  "title": "Response List Budget Templates Api V1 Ctms Financials Templates Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ctms/api/v1/ctms/financials/templates/{template_id}": {
+      "get": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Get Budget Template",
+        "operationId": "Ctms_get_budget_template_api_v1_ctms_financials_templates__template_id__get",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_SiteBudgetTemplateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ctms/api/v1/ctms/financials/grants/{grant_id}/apply-template": {
+      "post": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Apply Template To Grant",
+        "operationId": "Ctms_apply_template_to_grant_api_v1_ctms_financials_grants__grant_id__apply_template_post",
+        "parameters": [
+          {
+            "name": "grant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Grant Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_ApplyTemplateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Ctms_ProcedurePaymentGridResponse"
+                  },
+                  "title": "Response Apply Template To Grant Api V1 Ctms Financials Grants  Grant Id  Apply Template Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ctms/api/v1/ctms/financials/procedure-grids": {
       "post": {
         "tags": [
@@ -2312,6 +2502,32 @@
             "schema": {
               "type": "string",
               "title": "Grant Id"
+            }
+          },
+          {
+            "name": "is_active_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Is Active Only"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version Index"
             }
           }
         ],
@@ -2368,6 +2584,48 @@
               "type": "string",
               "title": "Visit Name"
             }
+          },
+          {
+            "name": "version_index",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version Index"
+            }
+          },
+          {
+            "name": "currency",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "USD",
+              "title": "Currency"
+            }
+          },
+          {
+            "name": "target_currency",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Currency"
+            }
           }
         ],
         "responses": {
@@ -2377,6 +2635,417 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Ctms_VisitPayableCalculationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ctms/api/v1/ctms/financials/grants/{grant_id}/amend": {
+      "post": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Execute Contract Amendment",
+        "operationId": "Ctms_execute_contract_amendment_api_v1_ctms_financials_grants__grant_id__amend_post",
+        "parameters": [
+          {
+            "name": "grant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Grant Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_ContractAmendmentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ContractAmendmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ctms/api/v1/ctms/financials/grants/{grant_id}/amendments": {
+      "get": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "List Grant Amendments",
+        "operationId": "Ctms_list_grant_amendments_api_v1_ctms_financials_grants__grant_id__amendments_get",
+        "parameters": [
+          {
+            "name": "grant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Grant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Ctms_ContractAmendmentResponse"
+                  },
+                  "title": "Response List Grant Amendments Api V1 Ctms Financials Grants  Grant Id  Amendments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ctms/api/v1/ctms/financials/amendments/{amendment_id}": {
+      "get": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Get Grant Amendment",
+        "operationId": "Ctms_get_grant_amendment_api_v1_ctms_financials_amendments__amendment_id__get",
+        "parameters": [
+          {
+            "name": "amendment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Amendment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ContractAmendmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ctms/api/v1/ctms/financials/exchange-rates": {
+      "get": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "List Exchange Rates",
+        "operationId": "Ctms_list_exchange_rates_api_v1_ctms_financials_exchange_rates_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Ctms_CurrencyExchangeRateResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Exchange Rates Api V1 Ctms Financials Exchange Rates Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Set Exchange Rate",
+        "operationId": "Ctms_set_exchange_rate_api_v1_ctms_financials_exchange_rates_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_CurrencyExchangeRateCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_CurrencyExchangeRateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ctms/api/v1/ctms/financials/convert": {
+      "post": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Convert Currency",
+        "operationId": "Ctms_convert_currency_api_v1_ctms_financials_convert_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_CurrencyConvertRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_CurrencyConvertResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ctms/api/v1/ctms/financials/adjustments": {
+      "post": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Create Budget Adjustment",
+        "operationId": "Ctms_create_budget_adjustment_api_v1_ctms_financials_adjustments_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_BudgetAdjustmentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_BudgetAdjustmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "List Budget Adjustments",
+        "operationId": "Ctms_list_budget_adjustments_api_v1_ctms_financials_adjustments_get",
+        "parameters": [
+          {
+            "name": "grant_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Grant Id"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Ctms_BudgetAdjustmentResponse"
+                  },
+                  "title": "Response List Budget Adjustments Api V1 Ctms Financials Adjustments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ctms/api/v1/ctms/financials/adjustments/{adjustment_id}/approve": {
+      "post": {
+        "tags": [
+          "CTMS Financials"
+        ],
+        "summary": "Approve Budget Adjustment",
+        "operationId": "Ctms_approve_budget_adjustment_api_v1_ctms_financials_adjustments__adjustment_id__approve_post",
+        "parameters": [
+          {
+            "name": "adjustment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Adjustment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_BudgetAdjustmentResponse"
                 }
               }
             }
@@ -27479,6 +28148,430 @@
         }
       }
     },
+    "/imaging/api/v1/imaging/upload": {
+      "post": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Upload Dicom",
+        "description": "Uploads and de-identifies DICOM file(s) or ZIP archives in-flight before persisting to S3.\n\n@req:PRD-IMG-001\n@req:PRD-IMG-002",
+        "operationId": "Imaging_upload_dicom_api_v1_imaging_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Imaging_Body_upload_dicom_api_v1_imaging_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_DicomUploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/imaging/api/v1/imaging/deidentify": {
+      "post": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Deidentify In Flight",
+        "description": "Performs in-memory de-identification on an uploaded DICOM file without persistent storage.\n\nReturns the clean, de-identified DICOM bytes with certificate metadata headers.\n\n@req:PRD-IMG-002",
+        "operationId": "Imaging_deidentify_in_flight_api_v1_imaging_deidentify_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Imaging_Body_deidentify_in_flight_api_v1_imaging_deidentify_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/imaging/api/v1/imaging/studies": {
+      "get": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "List Studies",
+        "description": "Lists de-identified study metadata envelopes matching query filters.\n\n@req:PRD-IMG-001",
+        "operationId": "Imaging_list_studies_api_v1_imaging_studies_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by Protocol ID",
+              "title": "Study Id"
+            },
+            "description": "Filter by Protocol ID"
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by Site ID",
+              "title": "Site Id"
+            },
+            "description": "Filter by Site ID"
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by Subject UUID",
+              "title": "Subject Id"
+            },
+            "description": "Filter by Subject UUID"
+          },
+          {
+            "name": "modality",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by Modality",
+              "title": "Modality"
+            },
+            "description": "Filter by Modality"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Imaging_StudyEnvelopeSummaryDto"
+                  },
+                  "title": "Response List Studies Api V1 Imaging Studies Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/imaging/api/v1/imaging/studies/{study_uid}": {
+      "get": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Get Study Detail",
+        "description": "Retrieves full study envelope hierarchy including series and instance envelopes.\n\n@req:PRD-IMG-001",
+        "operationId": "Imaging_get_study_detail_api_v1_imaging_studies__study_uid__get",
+        "parameters": [
+          {
+            "name": "study_uid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Uid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_StudyEnvelopeDetailDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/imaging/api/v1/imaging/instances/{sop_instance_uid}/file": {
+      "get": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Download Instance File",
+        "description": "Streams the stored de-identified DICOM binary file.\n\n@req:PRD-IMG-001",
+        "operationId": "Imaging_download_instance_file_api_v1_imaging_instances__sop_instance_uid__file_get",
+        "parameters": [
+          {
+            "name": "sop_instance_uid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sop Instance Uid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/imaging/api/v1/imaging/instances/{sop_instance_uid}/presigned-url": {
+      "get": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Get Presigned Download Url",
+        "description": "Generates a secure, short-lived presigned URL for direct object storage download.\n\n@req:PRD-IMG-001",
+        "operationId": "Imaging_get_presigned_download_url_api_v1_imaging_instances__sop_instance_uid__presigned_url_get",
+        "parameters": [
+          {
+            "name": "sop_instance_uid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sop Instance Uid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_PresignedDownloadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/imaging/api/v1/imaging/certificates/{certificate_id}/verify": {
+      "get": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Verify Certificate",
+        "description": "Verifies the cryptographic HMAC-SHA256 signature of a de-identification certificate.\n\n@req:PRD-IMG-002",
+        "operationId": "Imaging_verify_certificate_api_v1_imaging_certificates__certificate_id__verify_get",
+        "parameters": [
+          {
+            "name": "certificate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Certificate Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_CertificateVerificationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/imaging/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Service health check endpoint.",
+        "operationId": "Imaging_health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/interop/health": {
       "get": {
         "summary": "Health Check",
@@ -35100,6 +36193,301 @@
         }
       }
     },
+    "/safety/api/v1/safety/rules/evaluate": {
+      "post": {
+        "summary": "Evaluate Expedited Safety Rules Endpoint",
+        "description": "Evaluate adverse event against global expedited safety reporting rules and persist evaluation.\n\nRequirements: PRD-PVG-001, PRD-PVG-008, ADR-2199",
+        "operationId": "Safety_evaluate_expedited_safety_rules_endpoint_api_v1_safety_rules_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Safety_ICSRRuleEvaluationInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_ICSRRuleEvaluationSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/safety/api/v1/safety/rules/evaluations/{id}": {
+      "get": {
+        "summary": "Get Expedited Safety Evaluation Endpoint",
+        "description": "Retrieve safety reporting evaluation with updated real-time Day 0 countdown clocks.\n\nRequirements: PRD-PVG-001",
+        "operationId": "Safety_get_expedited_safety_evaluation_endpoint_api_v1_safety_rules_evaluations__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_ICSRRuleEvaluationSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/safety/api/v1/safety/rules/evaluations": {
+      "get": {
+        "summary": "List Expedited Safety Evaluations Endpoint",
+        "description": "List safety evaluations filtered by study, case, or expedited status with live countdowns.\n\nRequirements: PRD-PVG-001",
+        "operationId": "Safety_list_expedited_safety_evaluations_endpoint_api_v1_safety_rules_evaluations_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "approval_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Approval Status"
+            }
+          },
+          {
+            "name": "any_expedited",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Any Expedited"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Safety_ICSRRuleEvaluationSummary"
+                  },
+                  "title": "Response List Expedited Safety Evaluations Endpoint Api V1 Safety Rules Evaluations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/safety/api/v1/safety/rules/evaluations/{id}/sign": {
+      "post": {
+        "summary": "Sign Expedited Safety Evaluation Endpoint",
+        "description": "Apply a 21 CFR Part 11 electronic signature by a qualified Safety Physician to approve an ICSR evaluation.\n\nRequirements: PRD-PVG-008",
+        "operationId": "Safety_sign_expedited_safety_evaluation_endpoint_api_v1_safety_rules_evaluations__id__sign_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Safety_SignICSRRuleEvaluationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_SignICSRRuleEvaluationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/safety/api/v1/safety/rules/countdown-alerts": {
+      "get": {
+        "summary": "Get Safety Countdown Alerts Endpoint",
+        "description": "Retrieve all active expedited safety evaluations with WARNING (>=75%), CRITICAL (>=90%), or OVERDUE countdown clocks.\n\nRequirements: PRD-PVG-001",
+        "operationId": "Safety_get_safety_countdown_alerts_endpoint_api_v1_safety_rules_countdown_alerts_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Safety_ICSRRuleEvaluationSummary"
+                  },
+                  "title": "Response Get Safety Countdown Alerts Endpoint Api V1 Safety Rules Countdown Alerts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/tickets/api/v1/tickets": {
       "post": {
         "summary": "Create Ticket",
@@ -38157,6 +39545,174 @@
         ],
         "title": "ValidationError"
       },
+      "Ctms_ApplyTemplateRequest": {
+        "properties": {
+          "template_id": {
+            "type": "string",
+            "title": "Template Id",
+            "description": "Site budget template ID to apply"
+          }
+        },
+        "type": "object",
+        "required": [
+          "template_id"
+        ],
+        "title": "ApplyTemplateRequest"
+      },
+      "Ctms_BudgetAdjustmentCreate": {
+        "properties": {
+          "grant_id": {
+            "type": "string",
+            "title": "Grant Id",
+            "description": "Investigator grant ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "adjustment_type": {
+            "type": "string",
+            "title": "Adjustment Type",
+            "description": "Type (PASSTHROUGH_REIMBURSEMENT, PROTOCOL_DEVIATION_PENALTY, OUT_OF_WINDOW_PENALTY, SITE_BONUS, DISCRETIONARY_CREDIT)"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Clinical/operational justification"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount",
+            "description": "Adjustment value (positive credit or negative deduction)"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "description": "Currency code",
+            "default": "USD"
+          }
+        },
+        "type": "object",
+        "required": [
+          "grant_id",
+          "site_id",
+          "study_id",
+          "adjustment_type",
+          "description",
+          "amount"
+        ],
+        "title": "BudgetAdjustmentCreate"
+      },
+      "Ctms_BudgetAdjustmentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "grant_id": {
+            "type": "string",
+            "title": "Grant Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "adjustment_type": {
+            "type": "string",
+            "title": "Adjustment Type"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "grant_id",
+          "site_id",
+          "study_id",
+          "adjustment_type",
+          "description",
+          "amount",
+          "currency",
+          "status",
+          "approved_by",
+          "approved_at",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "BudgetAdjustmentResponse"
+      },
       "Ctms_BudgetLineItemCreate": {
         "properties": {
           "category": {
@@ -38660,6 +40216,177 @@
         ],
         "title": "ConflictStrategy"
       },
+      "Ctms_ContractAmendmentCreate": {
+        "properties": {
+          "summary_of_changes": {
+            "type": "string",
+            "title": "Summary Of Changes",
+            "description": "Detailed summary of contract changes"
+          },
+          "revised_budget": {
+            "type": "number",
+            "title": "Revised Budget",
+            "description": "New amended total grant budget"
+          },
+          "updated_procedures": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated Procedures",
+            "description": "Optional updated fee schedule items"
+          },
+          "signature_manifestation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Manifestation",
+            "description": "Electronic signature payload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary_of_changes",
+          "revised_budget"
+        ],
+        "title": "ContractAmendmentCreate"
+      },
+      "Ctms_ContractAmendmentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "grant_id": {
+            "type": "string",
+            "title": "Grant Id"
+          },
+          "amendment_number": {
+            "type": "integer",
+            "title": "Amendment Number"
+          },
+          "effective_date": {
+            "type": "string",
+            "title": "Effective Date"
+          },
+          "previous_budget": {
+            "type": "number",
+            "title": "Previous Budget"
+          },
+          "revised_budget": {
+            "type": "number",
+            "title": "Revised Budget"
+          },
+          "previous_version_index": {
+            "type": "integer",
+            "title": "Previous Version Index"
+          },
+          "new_version_index": {
+            "type": "integer",
+            "title": "New Version Index"
+          },
+          "summary_of_changes": {
+            "type": "string",
+            "title": "Summary Of Changes"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "signature_manifestation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Manifestation"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "grant_id",
+          "amendment_number",
+          "effective_date",
+          "previous_budget",
+          "revised_budget",
+          "previous_version_index",
+          "new_version_index",
+          "summary_of_changes",
+          "status",
+          "approved_by",
+          "approved_at",
+          "signature_manifestation",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "ContractAmendmentResponse"
+      },
       "Ctms_CountryMilestoneCreate": {
         "properties": {
           "study_id": {
@@ -38847,6 +40574,180 @@
           "version_index"
         ],
         "title": "CountryMilestoneResponse"
+      },
+      "Ctms_CurrencyConvertRequest": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "title": "Amount",
+            "description": "Monetary amount to convert"
+          },
+          "from_currency": {
+            "type": "string",
+            "title": "From Currency",
+            "description": "Source ISO currency",
+            "default": "USD"
+          },
+          "to_currency": {
+            "type": "string",
+            "title": "To Currency",
+            "description": "Target ISO currency"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "to_currency"
+        ],
+        "title": "CurrencyConvertRequest"
+      },
+      "Ctms_CurrencyConvertResponse": {
+        "properties": {
+          "original_amount": {
+            "type": "number",
+            "title": "Original Amount"
+          },
+          "from_currency": {
+            "type": "string",
+            "title": "From Currency"
+          },
+          "to_currency": {
+            "type": "string",
+            "title": "To Currency"
+          },
+          "exchange_rate": {
+            "type": "number",
+            "title": "Exchange Rate"
+          },
+          "converted_amount": {
+            "type": "number",
+            "title": "Converted Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "original_amount",
+          "from_currency",
+          "to_currency",
+          "exchange_rate",
+          "converted_amount"
+        ],
+        "title": "CurrencyConvertResponse"
+      },
+      "Ctms_CurrencyExchangeRateCreate": {
+        "properties": {
+          "base_currency": {
+            "type": "string",
+            "title": "Base Currency",
+            "description": "Base ISO currency (e.g. USD)",
+            "default": "USD"
+          },
+          "target_currency": {
+            "type": "string",
+            "title": "Target Currency",
+            "description": "Target ISO currency (e.g. EUR)"
+          },
+          "rate": {
+            "type": "number",
+            "title": "Rate",
+            "description": "Exchange multiplier from base to target"
+          },
+          "expiry_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiry Date",
+            "description": "Optional expiry ISO date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_currency",
+          "rate"
+        ],
+        "title": "CurrencyExchangeRateCreate"
+      },
+      "Ctms_CurrencyExchangeRateResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "base_currency": {
+            "type": "string",
+            "title": "Base Currency"
+          },
+          "target_currency": {
+            "type": "string",
+            "title": "Target Currency"
+          },
+          "rate": {
+            "type": "number",
+            "title": "Rate"
+          },
+          "effective_date": {
+            "type": "string",
+            "title": "Effective Date"
+          },
+          "expiry_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiry Date"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "base_currency",
+          "target_currency",
+          "rate",
+          "effective_date",
+          "expiry_date",
+          "is_active",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "CurrencyExchangeRateResponse"
       },
       "Ctms_DOALogResponse": {
         "properties": {
@@ -41022,6 +42923,42 @@
             "title": "Withholding Percentage",
             "description": "Retention/Withholding % (e.g. 10%)",
             "default": 0.0
+          },
+          "activity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activity Id",
+            "description": "Optional CDISC USDM protocol activity ID"
+          },
+          "form_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form Id",
+            "description": "Optional eCRF form ID linkage"
+          },
+          "patient_stipend": {
+            "type": "number",
+            "title": "Patient Stipend",
+            "description": "Per-procedure patient stipend",
+            "default": 0.0
+          },
+          "travel_reimbursement": {
+            "type": "number",
+            "title": "Travel Reimbursement",
+            "description": "Per-procedure travel reimbursement",
+            "default": 0.0
           }
         },
         "type": "object",
@@ -41067,6 +43004,38 @@
           "withholding_percentage": {
             "type": "number",
             "title": "Withholding Percentage"
+          },
+          "activity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activity Id"
+          },
+          "form_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form Id"
+          },
+          "patient_stipend": {
+            "type": "number",
+            "title": "Patient Stipend",
+            "default": 0.0
+          },
+          "travel_reimbursement": {
+            "type": "number",
+            "title": "Travel Reimbursement",
+            "default": 0.0
           },
           "is_active": {
             "type": "boolean",
@@ -41699,6 +43668,231 @@
         ],
         "title": "RevokeDelegationRequest"
       },
+      "Ctms_SiteBudgetTemplateCreate": {
+        "properties": {
+          "template_name": {
+            "type": "string",
+            "title": "Template Name",
+            "description": "Template unique title"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Optional study ID scope"
+          },
+          "tier_level": {
+            "type": "string",
+            "title": "Tier Level",
+            "description": "Tier classification (TIER_1_ACADEMIC, TIER_2_COMMUNITY, TIER_3_REGIONAL)",
+            "default": "STANDARD"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "description": "Currency (USD, EUR, GBP, etc.)",
+            "default": "USD"
+          },
+          "overhead_percentage": {
+            "type": "number",
+            "title": "Overhead Percentage",
+            "description": "Default institutional overhead %",
+            "default": 0.0
+          },
+          "withholding_percentage": {
+            "type": "number",
+            "title": "Withholding Percentage",
+            "description": "Default withholding %",
+            "default": 0.0
+          },
+          "fixed_startup_fee": {
+            "type": "number",
+            "title": "Fixed Startup Fee",
+            "description": "Fixed site startup fee",
+            "default": 0.0
+          },
+          "fixed_closeout_fee": {
+            "type": "number",
+            "title": "Fixed Closeout Fee",
+            "description": "Fixed site closeout fee",
+            "default": 0.0
+          },
+          "irb_fee": {
+            "type": "number",
+            "title": "Irb Fee",
+            "description": "Initial IRB/Ethics review fee",
+            "default": 0.0
+          },
+          "patient_stipend_amount": {
+            "type": "number",
+            "title": "Patient Stipend Amount",
+            "description": "Per-visit patient stipend",
+            "default": 0.0
+          },
+          "travel_reimbursement_rate": {
+            "type": "number",
+            "title": "Travel Reimbursement Rate",
+            "description": "Per-visit travel reimbursement",
+            "default": 0.0
+          },
+          "fixed_fees": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Fixed Fees",
+            "description": "List of fixed milestone/setup fees",
+            "default": []
+          },
+          "procedure_items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Procedure Items",
+            "description": "List of procedure schedule items",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "template_name"
+        ],
+        "title": "SiteBudgetTemplateCreate"
+      },
+      "Ctms_SiteBudgetTemplateResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "template_name": {
+            "type": "string",
+            "title": "Template Name"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id"
+          },
+          "tier_level": {
+            "type": "string",
+            "title": "Tier Level"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "overhead_percentage": {
+            "type": "number",
+            "title": "Overhead Percentage"
+          },
+          "withholding_percentage": {
+            "type": "number",
+            "title": "Withholding Percentage"
+          },
+          "fixed_startup_fee": {
+            "type": "number",
+            "title": "Fixed Startup Fee"
+          },
+          "fixed_closeout_fee": {
+            "type": "number",
+            "title": "Fixed Closeout Fee"
+          },
+          "irb_fee": {
+            "type": "number",
+            "title": "Irb Fee"
+          },
+          "patient_stipend_amount": {
+            "type": "number",
+            "title": "Patient Stipend Amount"
+          },
+          "travel_reimbursement_rate": {
+            "type": "number",
+            "title": "Travel Reimbursement Rate"
+          },
+          "fixed_fees": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Fixed Fees"
+          },
+          "procedure_items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Procedure Items"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "template_name",
+          "study_id",
+          "tier_level",
+          "currency",
+          "overhead_percentage",
+          "withholding_percentage",
+          "fixed_startup_fee",
+          "fixed_closeout_fee",
+          "irb_fee",
+          "patient_stipend_amount",
+          "travel_reimbursement_rate",
+          "fixed_fees",
+          "procedure_items",
+          "is_active",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "SiteBudgetTemplateResponse"
+      },
       "Ctms_SiteGreenlightGateResponse": {
         "properties": {
           "id": {
@@ -42143,6 +44337,85 @@
           "net_amount": {
             "type": "number",
             "title": "Net Amount"
+          },
+          "visit_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Name"
+          },
+          "procedures_count": {
+            "type": "integer",
+            "title": "Procedures Count",
+            "default": 0
+          },
+          "base_amount": {
+            "type": "number",
+            "title": "Base Amount",
+            "default": 0.0
+          },
+          "overhead_amount": {
+            "type": "number",
+            "title": "Overhead Amount",
+            "default": 0.0
+          },
+          "patient_stipend_total": {
+            "type": "number",
+            "title": "Patient Stipend Total",
+            "default": 0.0
+          },
+          "travel_reimbursement_total": {
+            "type": "number",
+            "title": "Travel Reimbursement Total",
+            "default": 0.0
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "USD"
+          },
+          "target_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Currency"
+          },
+          "exchange_rate": {
+            "type": "number",
+            "title": "Exchange Rate",
+            "default": 1.0
+          },
+          "converted_net_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Converted Net Amount"
+          },
+          "version_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Index"
           }
         },
         "type": "object",
@@ -66710,6 +68983,892 @@
         ],
         "title": "ValidationError"
       },
+      "Imaging_Body_deidentify_in_flight_api_v1_imaging_deidentify_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "date_shift_days": {
+            "type": "integer",
+            "title": "Date Shift Days",
+            "default": 0
+          },
+          "apply_pixel_mask": {
+            "type": "boolean",
+            "title": "Apply Pixel Mask",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "study_id",
+          "site_id",
+          "subject_id"
+        ],
+        "title": "Body_deidentify_in_flight_api_v1_imaging_deidentify_post"
+      },
+      "Imaging_Body_upload_dicom_api_v1_imaging_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical Trial Protocol ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Clinical Site ID"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Trial Subject UUID"
+          },
+          "date_shift_days": {
+            "type": "integer",
+            "title": "Date Shift Days",
+            "description": "Optional date shift in days",
+            "default": 0
+          },
+          "apply_pixel_mask": {
+            "type": "boolean",
+            "title": "Apply Pixel Mask",
+            "description": "Whether to mask burned-in pixel text",
+            "default": true
+          },
+          "custom_pixel_masks_json": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Pixel Masks Json",
+            "description": "Optional JSON array of custom pixel boxes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "study_id",
+          "site_id",
+          "subject_id"
+        ],
+        "title": "Body_upload_dicom_api_v1_imaging_upload_post"
+      },
+      "Imaging_CertificateVerificationResponse": {
+        "properties": {
+          "certificate_id": {
+            "type": "string",
+            "title": "Certificate Id"
+          },
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          },
+          "source_sha256": {
+            "type": "string",
+            "title": "Source Sha256"
+          },
+          "target_sha256": {
+            "type": "string",
+            "title": "Target Sha256"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "scrubbed_tags_count": {
+            "type": "integer",
+            "title": "Scrubbed Tags Count"
+          },
+          "pixel_mask_applied": {
+            "type": "boolean",
+            "title": "Pixel Mask Applied"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "operator_identity": {
+            "type": "string",
+            "title": "Operator Identity"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "certificate_id",
+          "is_valid",
+          "source_sha256",
+          "target_sha256",
+          "subject_id",
+          "site_id",
+          "study_id",
+          "scrubbed_tags_count",
+          "pixel_mask_applied",
+          "timestamp",
+          "operator_identity",
+          "message"
+        ],
+        "title": "CertificateVerificationResponse",
+        "description": "Response returned when validating a cryptographic de-identification certificate."
+      },
+      "Imaging_DicomDeidCertificate": {
+        "properties": {
+          "certificate_id": {
+            "type": "string",
+            "title": "Certificate Id",
+            "description": "Unique UUID for this de-identification event"
+          },
+          "source_sha256": {
+            "type": "string",
+            "title": "Source Sha256",
+            "description": "SHA-256 digest of source DICOM binary"
+          },
+          "target_sha256": {
+            "type": "string",
+            "title": "Target Sha256",
+            "description": "SHA-256 digest of de-identified target DICOM binary"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical Trial Protocol ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Clinical Site ID / Code"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Clinical Trial Subject UUID"
+          },
+          "original_study_instance_uid_hash": {
+            "type": "string",
+            "title": "Original Study Instance Uid Hash",
+            "description": "One-way hash of original StudyInstanceUID"
+          },
+          "original_sop_instance_uid_hash": {
+            "type": "string",
+            "title": "Original Sop Instance Uid Hash",
+            "description": "One-way hash of original SOPInstanceUID"
+          },
+          "anonymized_study_instance_uid": {
+            "type": "string",
+            "title": "Anonymized Study Instance Uid",
+            "description": "Generated anonymized StudyInstanceUID"
+          },
+          "anonymized_sop_instance_uid": {
+            "type": "string",
+            "title": "Anonymized Sop Instance Uid",
+            "description": "Generated anonymized SOPInstanceUID"
+          },
+          "scrubbed_tags_count": {
+            "type": "integer",
+            "title": "Scrubbed Tags Count",
+            "description": "Total count of scrubbed or replaced DICOM header tags"
+          },
+          "scrubbed_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scrubbed Tags",
+            "description": "List of scrubbed or pseudonymized tag keywords"
+          },
+          "pixel_mask_applied": {
+            "type": "boolean",
+            "title": "Pixel Mask Applied",
+            "description": "Whether burned-in pixel PHI masking was executed",
+            "default": false
+          },
+          "pixel_masks": {
+            "items": {
+              "$ref": "#/components/schemas/Imaging_PixelMaskBoundingBox"
+            },
+            "type": "array",
+            "title": "Pixel Masks",
+            "description": "List of bounding boxes masked during pixel de-identification"
+          },
+          "operator_identity": {
+            "type": "string",
+            "title": "Operator Identity",
+            "description": "Identity of the operator or service executing de-identification",
+            "default": "cadence.imaging.pipeline"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "ISO 8601 UTC timestamp of the de-identification operation"
+          },
+          "signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature",
+            "description": "HMAC-SHA256 cryptographic signature"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_sha256",
+          "target_sha256",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "original_study_instance_uid_hash",
+          "original_sop_instance_uid_hash",
+          "anonymized_study_instance_uid",
+          "anonymized_sop_instance_uid",
+          "scrubbed_tags_count"
+        ],
+        "title": "DicomDeidCertificate",
+        "description": "Immutable, tamper-evident cryptographic de-identification certificate."
+      },
+      "Imaging_DicomUploadResponse": {
+        "properties": {
+          "study_envelope_id": {
+            "type": "string",
+            "title": "Study Envelope Id"
+          },
+          "study_instance_uid": {
+            "type": "string",
+            "title": "Study Instance Uid"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "processed_instances_count": {
+            "type": "integer",
+            "title": "Processed Instances Count"
+          },
+          "processed_series_count": {
+            "type": "integer",
+            "title": "Processed Series Count"
+          },
+          "modalities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Modalities"
+          },
+          "certificates": {
+            "items": {
+              "$ref": "#/components/schemas/Imaging_DicomDeidCertificate"
+            },
+            "type": "array",
+            "title": "Certificates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_envelope_id",
+          "study_instance_uid",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "processed_instances_count",
+          "processed_series_count",
+          "modalities",
+          "certificates"
+        ],
+        "title": "DicomUploadResponse",
+        "description": "Response returned upon successful upload and de-identification of DICOM files."
+      },
+      "Imaging_HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/Imaging_ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Imaging_InstanceEnvelopeSummaryDto": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "sop_instance_uid": {
+            "type": "string",
+            "title": "Sop Instance Uid"
+          },
+          "sop_class_uid": {
+            "type": "string",
+            "title": "Sop Class Uid"
+          },
+          "instance_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Number"
+          },
+          "rows": {
+            "type": "integer",
+            "title": "Rows"
+          },
+          "columns": {
+            "type": "integer",
+            "title": "Columns"
+          },
+          "bits_allocated": {
+            "type": "integer",
+            "title": "Bits Allocated"
+          },
+          "pixel_spacing": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pixel Spacing"
+          },
+          "slice_thickness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slice Thickness"
+          },
+          "slice_location": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slice Location"
+          },
+          "object_key": {
+            "type": "string",
+            "title": "Object Key"
+          },
+          "checksum_sha256": {
+            "type": "string",
+            "title": "Checksum Sha256"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "burned_in_phi_masked": {
+            "type": "boolean",
+            "title": "Burned In Phi Masked"
+          },
+          "certificate_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certificate Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "sop_instance_uid",
+          "sop_class_uid",
+          "rows",
+          "columns",
+          "bits_allocated",
+          "object_key",
+          "checksum_sha256",
+          "size_bytes",
+          "burned_in_phi_masked"
+        ],
+        "title": "InstanceEnvelopeSummaryDto",
+        "description": "Summary of a stored de-identified instance envelope."
+      },
+      "Imaging_PixelMaskBoundingBox": {
+        "properties": {
+          "x_min": {
+            "type": "integer",
+            "title": "X Min",
+            "description": "Top-left X coordinate (0-indexed column)"
+          },
+          "y_min": {
+            "type": "integer",
+            "title": "Y Min",
+            "description": "Top-left Y coordinate (0-indexed row)"
+          },
+          "x_max": {
+            "type": "integer",
+            "title": "X Max",
+            "description": "Bottom-right X coordinate (column)"
+          },
+          "y_max": {
+            "type": "integer",
+            "title": "Y Max",
+            "description": "Bottom-right Y coordinate (row)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "x_min",
+          "y_min",
+          "x_max",
+          "y_max"
+        ],
+        "title": "PixelMaskBoundingBox",
+        "description": "Bounding box coordinates for burned-in pixel PHI masking."
+      },
+      "Imaging_PresignedDownloadUrlResponse": {
+        "properties": {
+          "sop_instance_uid": {
+            "type": "string",
+            "title": "Sop Instance Uid"
+          },
+          "download_url": {
+            "type": "string",
+            "title": "Download Url"
+          },
+          "expires_in_seconds": {
+            "type": "integer",
+            "title": "Expires In Seconds",
+            "default": 3600
+          }
+        },
+        "type": "object",
+        "required": [
+          "sop_instance_uid",
+          "download_url"
+        ],
+        "title": "PresignedDownloadUrlResponse",
+        "description": "Response containing a short-lived presigned URL for secure instance download."
+      },
+      "Imaging_SeriesEnvelopeSummaryDto": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "series_instance_uid": {
+            "type": "string",
+            "title": "Series Instance Uid"
+          },
+          "series_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series Number"
+          },
+          "modality": {
+            "type": "string",
+            "title": "Modality"
+          },
+          "body_part_examined": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Part Examined"
+          },
+          "series_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series Description"
+          },
+          "instance_count": {
+            "type": "integer",
+            "title": "Instance Count"
+          },
+          "protocol_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Name"
+          },
+          "instances": {
+            "items": {
+              "$ref": "#/components/schemas/Imaging_InstanceEnvelopeSummaryDto"
+            },
+            "type": "array",
+            "title": "Instances"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "series_instance_uid",
+          "modality",
+          "instance_count"
+        ],
+        "title": "SeriesEnvelopeSummaryDto",
+        "description": "Summary of a stored de-identified series envelope."
+      },
+      "Imaging_StudyEnvelopeDetailDto": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_instance_uid": {
+            "type": "string",
+            "title": "Study Instance Uid"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "modalities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Modalities"
+          },
+          "study_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Date"
+          },
+          "study_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Description"
+          },
+          "series_count": {
+            "type": "integer",
+            "title": "Series Count"
+          },
+          "instance_count": {
+            "type": "integer",
+            "title": "Instance Count"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "adjudication_status": {
+            "type": "string",
+            "title": "Adjudication Status"
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/Imaging_SeriesEnvelopeSummaryDto"
+            },
+            "type": "array",
+            "title": "Series"
+          },
+          "certificate_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Certificate Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_instance_uid",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "modalities",
+          "series_count",
+          "instance_count",
+          "status",
+          "adjudication_status",
+          "tenant_id",
+          "created_by",
+          "version_index"
+        ],
+        "title": "StudyEnvelopeDetailDto",
+        "description": "Full detail of a stored de-identified study envelope including nested series."
+      },
+      "Imaging_StudyEnvelopeSummaryDto": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_instance_uid": {
+            "type": "string",
+            "title": "Study Instance Uid"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "modalities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Modalities"
+          },
+          "study_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Date"
+          },
+          "study_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Description"
+          },
+          "series_count": {
+            "type": "integer",
+            "title": "Series Count"
+          },
+          "instance_count": {
+            "type": "integer",
+            "title": "Instance Count"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "adjudication_status": {
+            "type": "string",
+            "title": "Adjudication Status"
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_instance_uid",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "modalities",
+          "series_count",
+          "instance_count",
+          "status",
+          "adjudication_status",
+          "tenant_id",
+          "created_by",
+          "version_index"
+        ],
+        "title": "StudyEnvelopeSummaryDto",
+        "description": "Summary of a stored de-identified study envelope."
+      },
+      "Imaging_ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
       "Interop_AcknowledgeNotificationRequest": {
         "properties": {
           "reason_for_change": {
@@ -74130,6 +77289,104 @@
         "title": "AIReviewStatus",
         "description": "Lifecycle review statuses for AI-generated or AI-assisted clinical entities."
       },
+      "Safety_AuthorityRuleEvaluationResult": {
+        "properties": {
+          "authority": {
+            "$ref": "#/components/schemas/Safety_ReportingAuthority",
+            "description": "Health authority identifier"
+          },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code",
+            "description": "ISO 3166-1 alpha-2 country code"
+          },
+          "is_expedited": {
+            "type": "boolean",
+            "title": "Is Expedited",
+            "description": "Whether expedited reporting is statutorily mandated"
+          },
+          "timeframe_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeframe Days",
+            "description": "Statutory timeframe in calendar days (e.g. 7 or 15)"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date",
+            "description": "Due date/time in ISO 8601 format if expedited"
+          },
+          "rule_name": {
+            "type": "string",
+            "title": "Rule Name",
+            "description": "Statutory rule title"
+          },
+          "statutory_citation": {
+            "type": "string",
+            "title": "Statutory Citation",
+            "description": "Regulatory citation (e.g. 21 CFR 312.32(c)(1)(i))"
+          },
+          "classification": {
+            "$ref": "#/components/schemas/Safety_ExpeditedClassification",
+            "description": "Expedited reporting classification category"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale",
+            "description": "Deterministic decision rationale"
+          },
+          "countdown": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Safety_CountdownClockStatus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Real-time countdown clock if expedited"
+          }
+        },
+        "type": "object",
+        "required": [
+          "authority",
+          "country_code",
+          "is_expedited",
+          "rule_name",
+          "statutory_citation",
+          "classification",
+          "rationale"
+        ],
+        "title": "AuthorityRuleEvaluationResult",
+        "description": "Deterministic evaluation outcome for a specific regulatory health authority."
+      },
+      "Safety_CausalityCategory": {
+        "type": "string",
+        "enum": [
+          "RELATED",
+          "SUSPECTED",
+          "POSSIBLY_RELATED",
+          "PROBABLY_RELATED",
+          "DEFINITELY_RELATED",
+          "NOT_RELATED",
+          "UNLIKELY"
+        ],
+        "title": "CausalityCategory",
+        "description": "Causality assessment classification."
+      },
       "Safety_ClinicalTimelineEvent": {
         "properties": {
           "event_id": {
@@ -74216,6 +77473,93 @@
         "title": "ClinicalTimelineEvent",
         "description": "Normalized, de-identified clinical event record from execution eCRF datasets."
       },
+      "Safety_ClockAlertLevel": {
+        "type": "string",
+        "enum": [
+          "NORMAL",
+          "WARNING",
+          "CRITICAL",
+          "OVERDUE"
+        ],
+        "title": "ClockAlertLevel",
+        "description": "Countdown clock threshold alert levels."
+      },
+      "Safety_CountdownClockStatus": {
+        "properties": {
+          "clock_start_date": {
+            "type": "string",
+            "title": "Clock Start Date",
+            "description": "Day 0 initial receipt date in ISO 8601 format"
+          },
+          "clock_due_date": {
+            "type": "string",
+            "title": "Clock Due Date",
+            "description": "Calculated due date in ISO 8601 format"
+          },
+          "total_hours": {
+            "type": "number",
+            "title": "Total Hours",
+            "description": "Total statutory duration in hours"
+          },
+          "elapsed_hours": {
+            "type": "number",
+            "title": "Elapsed Hours",
+            "description": "Hours elapsed since Day 0 receipt date"
+          },
+          "elapsed_percentage": {
+            "type": "number",
+            "title": "Elapsed Percentage",
+            "description": "Percentage of statutory clock elapsed (0.0 - 100.0+)"
+          },
+          "remaining_hours": {
+            "type": "number",
+            "title": "Remaining Hours",
+            "description": "Remaining hours before deadline"
+          },
+          "is_overdue": {
+            "type": "boolean",
+            "title": "Is Overdue",
+            "description": "Whether statutory reporting deadline has expired",
+            "default": false
+          },
+          "alert_level": {
+            "$ref": "#/components/schemas/Safety_ClockAlertLevel",
+            "description": "Current alert threshold level",
+            "default": "NORMAL"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clock_start_date",
+          "clock_due_date",
+          "total_hours",
+          "elapsed_hours",
+          "elapsed_percentage",
+          "remaining_hours"
+        ],
+        "title": "CountdownClockStatus",
+        "description": "Real-time statutory countdown clock status."
+      },
+      "Safety_ExpectednessCategory": {
+        "type": "string",
+        "enum": [
+          "EXPECTED",
+          "UNEXPECTED"
+        ],
+        "title": "ExpectednessCategory",
+        "description": "Expectedness determination against Reference Safety Information (RSI)."
+      },
+      "Safety_ExpeditedClassification": {
+        "type": "string",
+        "enum": [
+          "SUSAR_FATAL_LIFE_THREATENING_7_DAY",
+          "SUSAR_SERIOUS_UNEXPECTED_15_DAY",
+          "NON_EXPEDITED_PERIODIC",
+          "EXEMPT"
+        ],
+        "title": "ExpeditedClassification",
+        "description": "Regulatory classification category for adverse event reporting."
+      },
       "Safety_GroundedClaim": {
         "properties": {
           "claim_id": {
@@ -74270,6 +77614,17 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "Safety_ICSRApprovalStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "PHYSICIAN_APPROVED",
+          "TRANSMITTED",
+          "REJECTED"
+        ],
+        "title": "ICSRApprovalStatus",
+        "description": "Part 11 approval and review status for ICSR reporting determinations."
       },
       "Safety_ICSRDataExportRequest": {
         "properties": {
@@ -74522,6 +77877,271 @@
         ],
         "title": "ICSRReportIdentifiers",
         "description": "ICSR report-level identification details."
+      },
+      "Safety_ICSRRuleEvaluationInput": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id",
+            "description": "Worldwide unique case ID or ICSR ID"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Protocol / Study identifier"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject / USUBJID identifier"
+          },
+          "receipt_date": {
+            "type": "string",
+            "title": "Receipt Date",
+            "description": "Day 0 receipt date/time in ISO 8601 or CDISC DTC format"
+          },
+          "seriousness_death": {
+            "type": "boolean",
+            "title": "Seriousness Death",
+            "description": "Results in death",
+            "default": false
+          },
+          "seriousness_life_threatening": {
+            "type": "boolean",
+            "title": "Seriousness Life Threatening",
+            "description": "Is life-threatening",
+            "default": false
+          },
+          "seriousness_hospitalization": {
+            "type": "boolean",
+            "title": "Seriousness Hospitalization",
+            "description": "Requires or prolongs hospitalization",
+            "default": false
+          },
+          "seriousness_disability": {
+            "type": "boolean",
+            "title": "Seriousness Disability",
+            "description": "Results in persistent or significant disability",
+            "default": false
+          },
+          "seriousness_congenital_anomaly": {
+            "type": "boolean",
+            "title": "Seriousness Congenital Anomaly",
+            "description": "Results in congenital anomaly or birth defect",
+            "default": false
+          },
+          "seriousness_other": {
+            "type": "boolean",
+            "title": "Seriousness Other",
+            "description": "Other medically important serious event",
+            "default": false
+          },
+          "causality": {
+            "$ref": "#/components/schemas/Safety_CausalityCategory",
+            "description": "Medical causality / relatedness",
+            "default": "SUSPECTED"
+          },
+          "expectedness": {
+            "$ref": "#/components/schemas/Safety_ExpectednessCategory",
+            "description": "Expectedness per Reference Safety Information (RSI)",
+            "default": "UNEXPECTED"
+          },
+          "target_authorities": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Safety_ReportingAuthority"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Authorities",
+            "description": "List of target authorities to evaluate (evaluates all if omitted)"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change",
+            "description": "GxP reason for evaluation / change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "study_id",
+          "subject_id",
+          "receipt_date"
+        ],
+        "title": "ICSRRuleEvaluationInput",
+        "description": "Input payload for deterministic multi-country safety reporting evaluation."
+      },
+      "Safety_ICSRRuleEvaluationSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique evaluation record ID"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id",
+            "description": "Case identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study identifier"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "receipt_date": {
+            "type": "string",
+            "title": "Receipt Date",
+            "description": "Day 0 receipt timestamp"
+          },
+          "is_serious": {
+            "type": "boolean",
+            "title": "Is Serious",
+            "description": "Whether any seriousness criterion is met"
+          },
+          "is_unexpected": {
+            "type": "boolean",
+            "title": "Is Unexpected",
+            "description": "Whether event is unexpected per RSI"
+          },
+          "is_causal": {
+            "type": "boolean",
+            "title": "Is Causal",
+            "description": "Whether event is suspected/causally related"
+          },
+          "is_susar": {
+            "type": "boolean",
+            "title": "Is Susar",
+            "description": "Whether event qualifies as SUSAR (Serious + Unexpected + Related)"
+          },
+          "any_expedited": {
+            "type": "boolean",
+            "title": "Any Expedited",
+            "description": "Whether any authority requires expedited reporting"
+          },
+          "shortest_timeframe_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shortest Timeframe Days",
+            "description": "Shortest applicable statutory timeframe in days"
+          },
+          "overall_alert_level": {
+            "$ref": "#/components/schemas/Safety_ClockAlertLevel",
+            "description": "Highest active alert level across authorities",
+            "default": "NORMAL"
+          },
+          "evaluations": {
+            "items": {
+              "$ref": "#/components/schemas/Safety_AuthorityRuleEvaluationResult"
+            },
+            "type": "array",
+            "title": "Evaluations",
+            "description": "Per-authority evaluation outcomes"
+          },
+          "approval_status": {
+            "$ref": "#/components/schemas/Safety_ICSRApprovalStatus",
+            "description": "Part 11 review / approval status",
+            "default": "DRAFT"
+          },
+          "approved_by_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By User Id",
+            "description": "User ID of approving Safety Physician"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At",
+            "description": "Timestamp of Part 11 approval signature"
+          },
+          "esignature_manifest_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Esignature Manifest Id",
+            "description": "Cryptographic electronic signature manifest identifier"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Creation timestamp"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Creator user ID"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "GxP reason for change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Audit version index",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "study_id",
+          "subject_id",
+          "receipt_date",
+          "is_serious",
+          "is_unexpected",
+          "is_causal",
+          "is_susar",
+          "any_expedited",
+          "created_at",
+          "created_by",
+          "reason_for_change"
+        ],
+        "title": "ICSRRuleEvaluationSummary",
+        "description": "Comprehensive summary of multi-country ICSR reporting evaluation."
       },
       "Safety_ICSRSuspectDrug": {
         "properties": {
@@ -74883,6 +78503,18 @@
         ],
         "title": "NarrativeSignResponse",
         "description": "Response payload returned upon successful Part 11 signing."
+      },
+      "Safety_ReportingAuthority": {
+        "type": "string",
+        "enum": [
+          "US_FDA",
+          "EMA",
+          "PMDA",
+          "MHRA",
+          "HEALTH_CANADA"
+        ],
+        "title": "ReportingAuthority",
+        "description": "Supported global health authorities for expedited safety reporting."
       },
       "Safety_SAEDiscrepancyResponse": {
         "properties": {
@@ -75550,6 +79182,84 @@
         ],
         "title": "SafetyNarrativeSection",
         "description": "A structured narrative section containing formatted prose and grounded claim references."
+      },
+      "Safety_SignICSRRuleEvaluationRequest": {
+        "properties": {
+          "reason_for_change": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Reason For Change",
+            "description": "Mandatory 21 CFR Part 11 reason for electronic signature"
+          },
+          "signature_secret": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Secret",
+            "description": "Physician re-authentication signing secret / credential"
+          },
+          "meaning_of_signature": {
+            "type": "string",
+            "title": "Meaning Of Signature",
+            "description": "Part 11 declaration of signature intent",
+            "default": "Approval of Expedited ICSR Regulatory Submission and Causality Assessment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "SignICSRRuleEvaluationRequest",
+        "description": "Request payload for 21 CFR Part 11 Safety Physician electronic signature."
+      },
+      "Safety_SignICSRRuleEvaluationResponse": {
+        "properties": {
+          "evaluation_id": {
+            "type": "string",
+            "title": "Evaluation Id",
+            "description": "Evaluation record ID"
+          },
+          "approval_status": {
+            "$ref": "#/components/schemas/Safety_ICSRApprovalStatus",
+            "description": "Updated approval status"
+          },
+          "approved_by_user_id": {
+            "type": "string",
+            "title": "Approved By User Id",
+            "description": "User ID of signing Safety Physician"
+          },
+          "approved_at": {
+            "type": "string",
+            "title": "Approved At",
+            "description": "Timestamp of signature approval"
+          },
+          "esignature_manifest_id": {
+            "type": "string",
+            "title": "Esignature Manifest Id",
+            "description": "Cryptographic electronic signature manifest ID"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Confirmation message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evaluation_id",
+          "approval_status",
+          "approved_by_user_id",
+          "approved_at",
+          "esignature_manifest_id",
+          "message"
+        ],
+        "title": "SignICSRRuleEvaluationResponse",
+        "description": "Response payload for 21 CFR Part 11 Safety Physician electronic signature."
       },
       "Safety_TimelineEventType": {
         "type": "string",

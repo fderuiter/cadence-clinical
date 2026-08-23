@@ -1,0 +1,1323 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cadence Clinical - Medical Imaging & Adjudication Service",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/imaging/upload": {
+      "post": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Upload Dicom",
+        "description": "Uploads and de-identifies DICOM file(s) or ZIP archives in-flight before persisting to S3.\n\n@req:PRD-IMG-001\n@req:PRD-IMG-002",
+        "operationId": "upload_dicom_api_v1_imaging_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_dicom_api_v1_imaging_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DicomUploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/deidentify": {
+      "post": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Deidentify In Flight",
+        "description": "Performs in-memory de-identification on an uploaded DICOM file without persistent storage.\n\nReturns the clean, de-identified DICOM bytes with certificate metadata headers.\n\n@req:PRD-IMG-002",
+        "operationId": "deidentify_in_flight_api_v1_imaging_deidentify_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_deidentify_in_flight_api_v1_imaging_deidentify_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/studies": {
+      "get": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "List Studies",
+        "description": "Lists de-identified study metadata envelopes matching query filters.\n\n@req:PRD-IMG-001",
+        "operationId": "list_studies_api_v1_imaging_studies_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by Protocol ID",
+              "title": "Study Id"
+            },
+            "description": "Filter by Protocol ID"
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by Site ID",
+              "title": "Site Id"
+            },
+            "description": "Filter by Site ID"
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by Subject UUID",
+              "title": "Subject Id"
+            },
+            "description": "Filter by Subject UUID"
+          },
+          {
+            "name": "modality",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by Modality",
+              "title": "Modality"
+            },
+            "description": "Filter by Modality"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StudyEnvelopeSummaryDto"
+                  },
+                  "title": "Response List Studies Api V1 Imaging Studies Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/studies/{study_uid}": {
+      "get": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Get Study Detail",
+        "description": "Retrieves full study envelope hierarchy including series and instance envelopes.\n\n@req:PRD-IMG-001",
+        "operationId": "get_study_detail_api_v1_imaging_studies__study_uid__get",
+        "parameters": [
+          {
+            "name": "study_uid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Uid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyEnvelopeDetailDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/instances/{sop_instance_uid}/file": {
+      "get": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Download Instance File",
+        "description": "Streams the stored de-identified DICOM binary file.\n\n@req:PRD-IMG-001",
+        "operationId": "download_instance_file_api_v1_imaging_instances__sop_instance_uid__file_get",
+        "parameters": [
+          {
+            "name": "sop_instance_uid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sop Instance Uid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/instances/{sop_instance_uid}/presigned-url": {
+      "get": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Get Presigned Download Url",
+        "description": "Generates a secure, short-lived presigned URL for direct object storage download.\n\n@req:PRD-IMG-001",
+        "operationId": "get_presigned_download_url_api_v1_imaging_instances__sop_instance_uid__presigned_url_get",
+        "parameters": [
+          {
+            "name": "sop_instance_uid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sop Instance Uid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresignedDownloadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/certificates/{certificate_id}/verify": {
+      "get": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Verify Certificate",
+        "description": "Verifies the cryptographic HMAC-SHA256 signature of a de-identification certificate.\n\n@req:PRD-IMG-002",
+        "operationId": "verify_certificate_api_v1_imaging_certificates__certificate_id__verify_get",
+        "parameters": [
+          {
+            "name": "certificate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Certificate Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CertificateVerificationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Service health check endpoint.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_deidentify_in_flight_api_v1_imaging_deidentify_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "date_shift_days": {
+            "type": "integer",
+            "title": "Date Shift Days",
+            "default": 0
+          },
+          "apply_pixel_mask": {
+            "type": "boolean",
+            "title": "Apply Pixel Mask",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "study_id",
+          "site_id",
+          "subject_id"
+        ],
+        "title": "Body_deidentify_in_flight_api_v1_imaging_deidentify_post"
+      },
+      "Body_upload_dicom_api_v1_imaging_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical Trial Protocol ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Clinical Site ID"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Trial Subject UUID"
+          },
+          "date_shift_days": {
+            "type": "integer",
+            "title": "Date Shift Days",
+            "description": "Optional date shift in days",
+            "default": 0
+          },
+          "apply_pixel_mask": {
+            "type": "boolean",
+            "title": "Apply Pixel Mask",
+            "description": "Whether to mask burned-in pixel text",
+            "default": true
+          },
+          "custom_pixel_masks_json": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Pixel Masks Json",
+            "description": "Optional JSON array of custom pixel boxes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "study_id",
+          "site_id",
+          "subject_id"
+        ],
+        "title": "Body_upload_dicom_api_v1_imaging_upload_post"
+      },
+      "CertificateVerificationResponse": {
+        "properties": {
+          "certificate_id": {
+            "type": "string",
+            "title": "Certificate Id"
+          },
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          },
+          "source_sha256": {
+            "type": "string",
+            "title": "Source Sha256"
+          },
+          "target_sha256": {
+            "type": "string",
+            "title": "Target Sha256"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "scrubbed_tags_count": {
+            "type": "integer",
+            "title": "Scrubbed Tags Count"
+          },
+          "pixel_mask_applied": {
+            "type": "boolean",
+            "title": "Pixel Mask Applied"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "operator_identity": {
+            "type": "string",
+            "title": "Operator Identity"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "certificate_id",
+          "is_valid",
+          "source_sha256",
+          "target_sha256",
+          "subject_id",
+          "site_id",
+          "study_id",
+          "scrubbed_tags_count",
+          "pixel_mask_applied",
+          "timestamp",
+          "operator_identity",
+          "message"
+        ],
+        "title": "CertificateVerificationResponse",
+        "description": "Response returned when validating a cryptographic de-identification certificate."
+      },
+      "DicomDeidCertificate": {
+        "properties": {
+          "certificate_id": {
+            "type": "string",
+            "title": "Certificate Id",
+            "description": "Unique UUID for this de-identification event"
+          },
+          "source_sha256": {
+            "type": "string",
+            "title": "Source Sha256",
+            "description": "SHA-256 digest of source DICOM binary"
+          },
+          "target_sha256": {
+            "type": "string",
+            "title": "Target Sha256",
+            "description": "SHA-256 digest of de-identified target DICOM binary"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical Trial Protocol ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Clinical Site ID / Code"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Clinical Trial Subject UUID"
+          },
+          "original_study_instance_uid_hash": {
+            "type": "string",
+            "title": "Original Study Instance Uid Hash",
+            "description": "One-way hash of original StudyInstanceUID"
+          },
+          "original_sop_instance_uid_hash": {
+            "type": "string",
+            "title": "Original Sop Instance Uid Hash",
+            "description": "One-way hash of original SOPInstanceUID"
+          },
+          "anonymized_study_instance_uid": {
+            "type": "string",
+            "title": "Anonymized Study Instance Uid",
+            "description": "Generated anonymized StudyInstanceUID"
+          },
+          "anonymized_sop_instance_uid": {
+            "type": "string",
+            "title": "Anonymized Sop Instance Uid",
+            "description": "Generated anonymized SOPInstanceUID"
+          },
+          "scrubbed_tags_count": {
+            "type": "integer",
+            "title": "Scrubbed Tags Count",
+            "description": "Total count of scrubbed or replaced DICOM header tags"
+          },
+          "scrubbed_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scrubbed Tags",
+            "description": "List of scrubbed or pseudonymized tag keywords"
+          },
+          "pixel_mask_applied": {
+            "type": "boolean",
+            "title": "Pixel Mask Applied",
+            "description": "Whether burned-in pixel PHI masking was executed",
+            "default": false
+          },
+          "pixel_masks": {
+            "items": {
+              "$ref": "#/components/schemas/PixelMaskBoundingBox"
+            },
+            "type": "array",
+            "title": "Pixel Masks",
+            "description": "List of bounding boxes masked during pixel de-identification"
+          },
+          "operator_identity": {
+            "type": "string",
+            "title": "Operator Identity",
+            "description": "Identity of the operator or service executing de-identification",
+            "default": "cadence.imaging.pipeline"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "ISO 8601 UTC timestamp of the de-identification operation"
+          },
+          "signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature",
+            "description": "HMAC-SHA256 cryptographic signature"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_sha256",
+          "target_sha256",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "original_study_instance_uid_hash",
+          "original_sop_instance_uid_hash",
+          "anonymized_study_instance_uid",
+          "anonymized_sop_instance_uid",
+          "scrubbed_tags_count"
+        ],
+        "title": "DicomDeidCertificate",
+        "description": "Immutable, tamper-evident cryptographic de-identification certificate."
+      },
+      "DicomUploadResponse": {
+        "properties": {
+          "study_envelope_id": {
+            "type": "string",
+            "title": "Study Envelope Id"
+          },
+          "study_instance_uid": {
+            "type": "string",
+            "title": "Study Instance Uid"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "processed_instances_count": {
+            "type": "integer",
+            "title": "Processed Instances Count"
+          },
+          "processed_series_count": {
+            "type": "integer",
+            "title": "Processed Series Count"
+          },
+          "modalities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Modalities"
+          },
+          "certificates": {
+            "items": {
+              "$ref": "#/components/schemas/DicomDeidCertificate"
+            },
+            "type": "array",
+            "title": "Certificates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_envelope_id",
+          "study_instance_uid",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "processed_instances_count",
+          "processed_series_count",
+          "modalities",
+          "certificates"
+        ],
+        "title": "DicomUploadResponse",
+        "description": "Response returned upon successful upload and de-identification of DICOM files."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InstanceEnvelopeSummaryDto": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "sop_instance_uid": {
+            "type": "string",
+            "title": "Sop Instance Uid"
+          },
+          "sop_class_uid": {
+            "type": "string",
+            "title": "Sop Class Uid"
+          },
+          "instance_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance Number"
+          },
+          "rows": {
+            "type": "integer",
+            "title": "Rows"
+          },
+          "columns": {
+            "type": "integer",
+            "title": "Columns"
+          },
+          "bits_allocated": {
+            "type": "integer",
+            "title": "Bits Allocated"
+          },
+          "pixel_spacing": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pixel Spacing"
+          },
+          "slice_thickness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slice Thickness"
+          },
+          "slice_location": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slice Location"
+          },
+          "object_key": {
+            "type": "string",
+            "title": "Object Key"
+          },
+          "checksum_sha256": {
+            "type": "string",
+            "title": "Checksum Sha256"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "burned_in_phi_masked": {
+            "type": "boolean",
+            "title": "Burned In Phi Masked"
+          },
+          "certificate_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certificate Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "sop_instance_uid",
+          "sop_class_uid",
+          "rows",
+          "columns",
+          "bits_allocated",
+          "object_key",
+          "checksum_sha256",
+          "size_bytes",
+          "burned_in_phi_masked"
+        ],
+        "title": "InstanceEnvelopeSummaryDto",
+        "description": "Summary of a stored de-identified instance envelope."
+      },
+      "PixelMaskBoundingBox": {
+        "properties": {
+          "x_min": {
+            "type": "integer",
+            "title": "X Min",
+            "description": "Top-left X coordinate (0-indexed column)"
+          },
+          "y_min": {
+            "type": "integer",
+            "title": "Y Min",
+            "description": "Top-left Y coordinate (0-indexed row)"
+          },
+          "x_max": {
+            "type": "integer",
+            "title": "X Max",
+            "description": "Bottom-right X coordinate (column)"
+          },
+          "y_max": {
+            "type": "integer",
+            "title": "Y Max",
+            "description": "Bottom-right Y coordinate (row)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "x_min",
+          "y_min",
+          "x_max",
+          "y_max"
+        ],
+        "title": "PixelMaskBoundingBox",
+        "description": "Bounding box coordinates for burned-in pixel PHI masking."
+      },
+      "PresignedDownloadUrlResponse": {
+        "properties": {
+          "sop_instance_uid": {
+            "type": "string",
+            "title": "Sop Instance Uid"
+          },
+          "download_url": {
+            "type": "string",
+            "title": "Download Url"
+          },
+          "expires_in_seconds": {
+            "type": "integer",
+            "title": "Expires In Seconds",
+            "default": 3600
+          }
+        },
+        "type": "object",
+        "required": [
+          "sop_instance_uid",
+          "download_url"
+        ],
+        "title": "PresignedDownloadUrlResponse",
+        "description": "Response containing a short-lived presigned URL for secure instance download."
+      },
+      "SeriesEnvelopeSummaryDto": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "series_instance_uid": {
+            "type": "string",
+            "title": "Series Instance Uid"
+          },
+          "series_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series Number"
+          },
+          "modality": {
+            "type": "string",
+            "title": "Modality"
+          },
+          "body_part_examined": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Part Examined"
+          },
+          "series_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series Description"
+          },
+          "instance_count": {
+            "type": "integer",
+            "title": "Instance Count"
+          },
+          "protocol_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Name"
+          },
+          "instances": {
+            "items": {
+              "$ref": "#/components/schemas/InstanceEnvelopeSummaryDto"
+            },
+            "type": "array",
+            "title": "Instances"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "series_instance_uid",
+          "modality",
+          "instance_count"
+        ],
+        "title": "SeriesEnvelopeSummaryDto",
+        "description": "Summary of a stored de-identified series envelope."
+      },
+      "StudyEnvelopeDetailDto": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_instance_uid": {
+            "type": "string",
+            "title": "Study Instance Uid"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "modalities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Modalities"
+          },
+          "study_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Date"
+          },
+          "study_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Description"
+          },
+          "series_count": {
+            "type": "integer",
+            "title": "Series Count"
+          },
+          "instance_count": {
+            "type": "integer",
+            "title": "Instance Count"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "adjudication_status": {
+            "type": "string",
+            "title": "Adjudication Status"
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/SeriesEnvelopeSummaryDto"
+            },
+            "type": "array",
+            "title": "Series"
+          },
+          "certificate_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Certificate Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_instance_uid",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "modalities",
+          "series_count",
+          "instance_count",
+          "status",
+          "adjudication_status",
+          "tenant_id",
+          "created_by",
+          "version_index"
+        ],
+        "title": "StudyEnvelopeDetailDto",
+        "description": "Full detail of a stored de-identified study envelope including nested series."
+      },
+      "StudyEnvelopeSummaryDto": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_instance_uid": {
+            "type": "string",
+            "title": "Study Instance Uid"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "modalities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Modalities"
+          },
+          "study_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Date"
+          },
+          "study_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Description"
+          },
+          "series_count": {
+            "type": "integer",
+            "title": "Series Count"
+          },
+          "instance_count": {
+            "type": "integer",
+            "title": "Instance Count"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "adjudication_status": {
+            "type": "string",
+            "title": "Adjudication Status"
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_instance_uid",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "modalities",
+          "series_count",
+          "instance_count",
+          "status",
+          "adjudication_status",
+          "tenant_id",
+          "created_by",
+          "version_index"
+        ],
+        "title": "StudyEnvelopeSummaryDto",
+        "description": "Summary of a stored de-identified study envelope."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

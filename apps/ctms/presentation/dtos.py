@@ -553,7 +553,161 @@ class SiteRiskScoreResponse(BaseModel):
     version_index: int
 
 
-# 4. Procedure Financials & Invoices
+# 4. Procedure Financials, Budget Templates & Invoices
+class SiteBudgetTemplateCreate(BaseModel):
+    template_name: str = Field(..., description="Template unique title")
+    study_id: str | None = Field(None, description="Optional study ID scope")
+    tier_level: str = Field(
+        "STANDARD",
+        description="Tier classification (TIER_1_ACADEMIC, TIER_2_COMMUNITY, TIER_3_REGIONAL)",
+    )
+    currency: str = Field("USD", description="Currency (USD, EUR, GBP, etc.)")
+    overhead_percentage: float = Field(
+        0.0, description="Default institutional overhead %"
+    )
+    withholding_percentage: float = Field(0.0, description="Default withholding %")
+    fixed_startup_fee: float = Field(0.0, description="Fixed site startup fee")
+    fixed_closeout_fee: float = Field(0.0, description="Fixed site closeout fee")
+    irb_fee: float = Field(0.0, description="Initial IRB/Ethics review fee")
+    patient_stipend_amount: float = Field(0.0, description="Per-visit patient stipend")
+    travel_reimbursement_rate: float = Field(
+        0.0, description="Per-visit travel reimbursement"
+    )
+    fixed_fees: list[dict[str, Any]] = Field(
+        default=[], description="List of fixed milestone/setup fees"
+    )
+    procedure_items: list[dict[str, Any]] = Field(
+        default=[], description="List of procedure schedule items"
+    )
+
+
+class SiteBudgetTemplateResponse(BaseModel):
+    id: str
+    template_name: str
+    study_id: str | None
+    tier_level: str
+    currency: str
+    overhead_percentage: float
+    withholding_percentage: float
+    fixed_startup_fee: float
+    fixed_closeout_fee: float
+    irb_fee: float
+    patient_stipend_amount: float
+    travel_reimbursement_rate: float
+    fixed_fees: list[dict[str, Any]]
+    procedure_items: list[dict[str, Any]]
+    is_active: bool
+    created_at: str | None
+    created_by: str
+    reason_for_change: str
+    version_index: int
+
+
+class ApplyTemplateRequest(BaseModel):
+    template_id: str = Field(..., description="Site budget template ID to apply")
+
+
+class ContractAmendmentCreate(BaseModel):
+    summary_of_changes: str = Field(
+        ..., description="Detailed summary of contract changes"
+    )
+    revised_budget: float = Field(..., description="New amended total grant budget")
+    updated_procedures: list[dict[str, Any]] | None = Field(
+        None, description="Optional updated fee schedule items"
+    )
+    signature_manifestation: dict[str, Any] | None = Field(
+        None, description="Electronic signature payload"
+    )
+
+
+class ContractAmendmentResponse(BaseModel):
+    id: str
+    grant_id: str
+    amendment_number: int
+    effective_date: str
+    previous_budget: float
+    revised_budget: float
+    previous_version_index: int
+    new_version_index: int
+    summary_of_changes: str
+    status: str
+    approved_by: str | None
+    approved_at: str | None
+    signature_manifestation: dict[str, Any] | None
+    created_at: str | None
+    created_by: str
+    reason_for_change: str
+    version_index: int
+
+
+class CurrencyExchangeRateCreate(BaseModel):
+    base_currency: str = Field("USD", description="Base ISO currency (e.g. USD)")
+    target_currency: str = Field(..., description="Target ISO currency (e.g. EUR)")
+    rate: float = Field(..., description="Exchange multiplier from base to target")
+    expiry_date: str | None = Field(None, description="Optional expiry ISO date")
+
+
+class CurrencyExchangeRateResponse(BaseModel):
+    id: str
+    base_currency: str
+    target_currency: str
+    rate: float
+    effective_date: str
+    expiry_date: str | None
+    is_active: bool
+    created_at: str | None
+    created_by: str
+    reason_for_change: str
+    version_index: int
+
+
+class CurrencyConvertRequest(BaseModel):
+    amount: float = Field(..., description="Monetary amount to convert")
+    from_currency: str = Field("USD", description="Source ISO currency")
+    to_currency: str = Field(..., description="Target ISO currency")
+
+
+class CurrencyConvertResponse(BaseModel):
+    original_amount: float
+    from_currency: str
+    to_currency: str
+    exchange_rate: float
+    converted_amount: float
+
+
+class BudgetAdjustmentCreate(BaseModel):
+    grant_id: str = Field(..., description="Investigator grant ID")
+    site_id: str = Field(..., description="Site ID")
+    study_id: str = Field(..., description="Study ID")
+    adjustment_type: str = Field(
+        ...,
+        description="Type (PASSTHROUGH_REIMBURSEMENT, PROTOCOL_DEVIATION_PENALTY, OUT_OF_WINDOW_PENALTY, SITE_BONUS, DISCRETIONARY_CREDIT)",
+    )
+    description: str = Field(..., description="Clinical/operational justification")
+    amount: float = Field(
+        ..., description="Adjustment value (positive credit or negative deduction)"
+    )
+    currency: str = Field("USD", description="Currency code")
+
+
+class BudgetAdjustmentResponse(BaseModel):
+    id: str
+    grant_id: str
+    site_id: str
+    study_id: str
+    adjustment_type: str
+    description: str
+    amount: float
+    currency: str
+    status: str
+    approved_by: str | None
+    approved_at: str | None
+    created_at: str | None
+    created_by: str
+    reason_for_change: str
+    version_index: int
+
+
 class ProcedurePaymentGridCreate(BaseModel):
     grant_id: str = Field(..., description="Grant ID")
     visit_name: str = Field(
@@ -566,6 +720,14 @@ class ProcedurePaymentGridCreate(BaseModel):
     withholding_percentage: float = Field(
         0.0, description="Retention/Withholding % (e.g. 10%)"
     )
+    activity_id: str | None = Field(
+        None, description="Optional CDISC USDM protocol activity ID"
+    )
+    form_id: str | None = Field(None, description="Optional eCRF form ID linkage")
+    patient_stipend: float = Field(0.0, description="Per-procedure patient stipend")
+    travel_reimbursement: float = Field(
+        0.0, description="Per-procedure travel reimbursement"
+    )
 
 
 class ProcedurePaymentGridResponse(BaseModel):
@@ -577,6 +739,10 @@ class ProcedurePaymentGridResponse(BaseModel):
     base_amount: float
     overhead_percentage: float
     withholding_percentage: float
+    activity_id: str | None = None
+    form_id: str | None = None
+    patient_stipend: float = 0.0
+    travel_reimbursement: float = 0.0
     is_active: bool
     created_at: str | None
     created_by: str
@@ -623,6 +789,17 @@ class VisitPayableCalculationResponse(BaseModel):
     gross_amount: float
     withholding_amount: float
     net_amount: float
+    visit_name: str | None = None
+    procedures_count: int = 0
+    base_amount: float = 0.0
+    overhead_amount: float = 0.0
+    patient_stipend_total: float = 0.0
+    travel_reimbursement_total: float = 0.0
+    currency: str = "USD"
+    target_currency: str | None = None
+    exchange_rate: float = 1.0
+    converted_net_amount: float | None = None
+    version_index: int | None = None
 
 
 # 5. IP Accountability & Temperature Excursions

@@ -1171,6 +1171,168 @@ The Interoperability service exposes a secure, advisory endpoint allowing extern
 
 ---
 
+
+### 6.5 Automated Site Financials & Trigger-to-Payable Engine Design
+
+To automate site grant disbursements, `apps/ctms` operates a declarative JSON-based formula calculation engine evaluating procedure fee schedules, institutional overhead markups, split payees, and withholding reserves upon EDC data entry and CRA monitoring sign-off.
+
+```mermaid
+flowchart LR
+    A[EDC Form Submission / CRA SDV] -->|Outbox Event| B[Payment Event Listener]
+    B --> C{Active Budget Schedule}
+    C --> D[Procedure Fee Matrix]
+    C --> E[Institutional Overhead Markup]
+    C --> F[Holdback Reserve 10%]
+    D & E & F --> G[Calculated PaymentLineItem]
+    G --> H[(PaymentAuditLog)]
+    G --> I[Automated Self-Billing PDF & ERP Webhook]
+```
+
+#### 6.5.1 Mathematical Fee & Holdback Derivations
+For a given completed visit procedure $k$:
+$$	ext{Gross Procedure Fee} = 	ext{BaseRate}_k 	imes (1 + 	ext{OverheadRate})$$
+$$	ext{Net Payable} = 	ext{Gross Procedure Fee} 	imes (1 - 	ext{HoldbackRate})$$
+$$	ext{Withholding Reserve} = 	ext{Gross Procedure Fee} 	imes 	ext{HoldbackRate}$$
+
+Split payee disbursements allocate $	ext{Net Payable}$ across payee ratios:
+$$	ext{PayeeDisbursement}_i = 	ext{Net Payable} 	imes 	ext{SplitRatio}_i, \quad \sum 	ext{SplitRatio}_i = 1.0$$
+
+---
+
+### 6.6 Medical Imaging & Blinded Central Endpoint Adjudication Architecture
+
+`apps/fileshare` and `apps/web` provide zero-footprint web DICOM viewing, in-flight pixel and header PHI de-identification, and dual-blinded independent review charter (IRC) adjudication workflows.
+
+```mermaid
+flowchart TD
+    Site[Site Coordinator Upload] --> Ingest[In-Flight PyDICOM De-ID Filter]
+    Ingest -->|Strip Header PHI + Mask Pixel Burn-in| S3[(MinIO / S3 Encrypted Storage)]
+    Ingest --> Manifest[(De-Identification SHA-256 Manifest)]
+    S3 --> WebGL[CornerstoneJS / WebGL Client-Side MPR Viewer]
+    WebGL --> Reader1[Blinded Reader 1 - RECIST 1.1 SLD]
+    WebGL --> Reader2[Blinded Reader 2 - RECIST 1.1 SLD]
+    Reader1 & Reader2 --> Concordance{Concordance Check}
+    Concordance -->|Concordant| AutoCommit[Bind to EDC eCRF & SDTM TU/TR/RS]
+    Concordance -->|Discordant| TieBreaker[Adjudication Committee Chair Step-Up Sign-Off]
+    TieBreaker --> AutoCommit
+```
+
+#### 6.6.1 RECIST 1.1 Derivation Logic
+For target lesions $L_1, \dots, L_m$:
+$$	ext{Sum of Longest Diameters (SLD)}_t = \sum_{j=1}^m 	ext{Diameter}_{j,t}$$
+$$\%	ext{ Change from Baseline} = rac{	ext{SLD}_t - 	ext{SLD}_{	ext{baseline}}}{	ext{SLD}_{	ext{baseline}}} 	imes 100$$
+$$\%	ext{ Change from Nadir} = rac{	ext{SLD}_t - 	ext{SLD}_{	ext{nadir}}}{	ext{SLD}_{	ext{nadir}}} 	imes 100$$
+
+Response Categorization:
+- **Complete Response (CR):** Disappearance of all target lesions; all pathological lymph nodes $< 10	ext{ mm}$ short axis.
+- **Partial Response (PR):** $\ge 30\%$ decrease in SLD taking as reference the baseline SLD.
+- **Progressive Disease (PD):** $\ge 20\%$ increase in SLD taking as reference the smallest sum on study (nadir), with an absolute increase of at least $5	ext{ mm}$, or appearance of new lesions.
+- **Stable Disease (SD):** Neither sufficient shrinkage to qualify for PR nor sufficient increase to qualify for PD.
+
+---
+
+### 6.7 Native AS2 Regulatory B2B Gateway & Pharmacovigilance Signal Engine
+
+`apps/safety` provides automated expedited regulatory reporting rules, direct B2B AS2 electronic transmission of ICH E2B(R3) XML, and vectorized statistical disproportionality signal detection.
+
+```mermaid
+flowchart LR
+    SAE[SAE Case Intake] --> Rules[Deterministic Multi-Country Rules Engine]
+    Rules -->|FDA 7/15-day & EMA 7/15-day Clocks| Clock[Statutory Countdown Timer]
+    Clock --> XML[ICH E2B-R3 XML Serialization]
+    XML --> AS2[Async Python AS2 S/MIME Client]
+    AS2 -->|B2B EDI Transmission| Authority[FDA ESG / EMA EudraVigilance Gateway]
+    Authority --> MDN[Synchronous / Asynchronous MDN Receipt]
+    MDN --> Parser[ACK A/B/C Signature Verification]
+```
+
+#### 6.7.1 Disproportionality Signal Calculations (2x2 Contingency Matrix)
+
+| Contingency Table | Target Event (+) | All Other Events (-) | Total |
+| :--- | :--- | :--- | :--- |
+| **Investigational Drug (+)** | $a$ | $b$ | $a+b$ |
+| **All Other Drugs / Control (-)** | $c$ | $d$ | $c+d$ |
+| **Total** | $a+c$ | $b+d$ | $N = a+b+c+d$ |
+
+- **Proportional Reporting Ratio (PRR):**
+  $$	ext{PRR} = rac{a / (a+b)}{c / (c+d)}, \quad \chi^2 = rac{N (|ad - bc| - N/2)^2}{(a+b)(c+d)(a+c)(b+d)}$$
+- **Reporting Odds Ratio (ROR):**
+  $$	ext{ROR} = rac{ad}{bc}, \quad 95\% 	ext{ CI} = e^{\ln(	ext{ROR}) \pm 1.96 \sqrt{rac{1}{a} + rac{1}{b} + rac{1}{c} + rac{1}{d}}}$$
+- **Multi-item Gamma Poisson Shrinker (MGPS / EBGM):** Computes Bayesian shrinkage estimates $	ext{EBGM} = E(\lambda | a, E)$ where $E = rac{(a+b)(a+c)}{N}$.
+
+---
+
+### 6.8 Multi-Echelon RTSM Supply Optimization & Cold Chain MKT Engine
+
+`apps/execution` models multi-echelon supply chains, stochastic Monte Carlo resupply forecasting, Arrhenius Mean Kinetic Temperature (MKT) cold-chain excursion analytics, and adaptive oncology dose-escalation algorithms.
+
+#### 6.8.1 Mean Kinetic Temperature (Arrhenius Model)
+$$	ext{MKT} = rac{rac{\Delta H}{R}}{-\ln \left( rac{1}{n} \sum_{i=1}^n \exp\left( -rac{\Delta H / R}{T_i + 273.15} ight) ight)} - 273.15$$
+where $\Delta H / R = 10000	ext{ K}$ is the standard universal activation energy / gas constant ratio, and $T_i$ is the temperature in degrees Celsius at timepoint $i$.
+
+#### 6.8.2 Bayesian Optimal Interval (BOIN) DLT Boundaries
+For target toxicity rate $\phi$ (e.g. 0.25):
+- **Escalation Boundary:** $\lambda_e = rac{\ln\left( rac{1 - \phi_1}{1 - \phi} ight)}{\ln\left( rac{\phi (1 - \phi_1)}{\phi_1 (1 - \phi)} ight)}$
+- **De-escalation Boundary:** $\lambda_d = rac{\ln\left( rac{1 - \phi}{1 - \phi_2} ight)}{\ln\left( rac{\phi_2 (1 - \phi)}{\phi (1 - \phi_2)} ight)}$
+where $\phi_1 = 0.6\phi$ and $\phi_2 = 1.4\phi$. If observed DLT rate $\hat{p}_j \le \lambda_e$, escalate dose; if $\hat{p}_j \ge \lambda_d$, de-escalate dose; otherwise stay at current dose level.
+
+---
+
+### 6.9 Centralized Statistical Monitoring (CSM) & Multi-Variate Anomaly Sentinels
+
+`apps/quality` executes automated cross-site statistical surveillance under ICH E6(R3) to detect fabricated data, terminal digit rounding biases, and anomalous variance shrinkage.
+
+#### 6.9.1 Benford's Law Chi-Square Test
+Leading digit distribution $P(d) = \log_{10}\left(1 + rac{1}{d}ight)$ for $d \in \{1, \dots, 9\}$.
+$$\chi^2 = \sum_{d=1}^9 rac{(O_d - E_d)^2}{E_d}, \quad 	ext{where } E_d = N \cdot P(d)$$
+
+#### 6.9.2 Mahalanobis Distance for Variance Shrinkage
+For a site feature vector $\mathbf{x}_s$ and global trial covariance matrix $\mathbf{\Sigma}$:
+$$D_M(\mathbf{x}_s) = \sqrt{(\mathbf{x}_s - oldsymbol{\mu})^T \mathbf{\Sigma}^{-1} (\mathbf{x}_s - oldsymbol{\mu})}$$
+
+#### 6.9.3 Perceptual Image Hashing (pHash)
+Medical image attachments are evaluated via Discrete Cosine Transform (DCT) 64-bit perceptual hashing. Hamming distance $H(p_1, p_2) \le 3$ flags potential duplicate or reused image attachments across different subjects or sites.
+
+---
+
+### 6.10 Clinical Data Repository (CDR) & Validated Containerized SCE Sandbox
+
+`apps/interop` and `apps/designer` operate a centralized clinical lakehouse aggregating multi-source trial streams, continuous SDTM/ADaM automated pipelines, and a 21 CFR Part 11 compliant containerized statistical computing environment.
+
+```mermaid
+flowchart TD
+    MultiSource[EDC + ePRO + Labs + Sensors + EHR FHIR + Imaging] --> Lakehouse[(Version-Pinned Clinical Lakehouse)]
+    Lakehouse --> SDTM[Automated SDTM Transformer - DM, AE, CM, VS, LB, EX, TU, TR, RS]
+    SDTM --> ADaM[Analysis Derivations - ADSL, ADAE, ADTTE, BDS]
+    ADaM --> Serializer[CDISC Dataset-JSON 1.1/2.0 & Define-XML 2.1 Compiler]
+    Lakehouse --> SCE[Containerized Rootless SCE Sandbox - R / Python]
+    SCE --> Lockfile[Immutable renv.lock / uv.lock Integrity]
+    SCE --> Manifest[Signed Reproducible Execution Manifest]
+```
+
+---
+
+### 6.11 Connected Study Training Gating Interceptor
+
+`apps/gateway` and `apps/knowledge` enforce programmatic write-gating on clinical data capture based on real-time qualification compliance.
+
+```mermaid
+flowchart LR
+    Req[Mutating eCRF Request] --> Gateway[GatewayAuthMiddleware]
+    Gateway --> Check{Active Protocol Training Verified?}
+    Check -->|Yes| Exec[Execute EDC Transaction]
+    Check -->|No| Reject[HTTP 403 Forbidden - TRAINING_REQUIRED]
+    Reject --> UI[Render Read-Only Mode & Training Redirect]
+```
+
+---
+
+### 6.12 Continuous IoT Sensor Telemetry & WebRTC Telehealth
+
+`apps/interop` and `apps/subject-portal` provide streaming biometric ingestion (CGM, actigraphy, spirometry) normalized into Open mHealth / FHIR Observation schemas alongside peer-to-peer WebRTC telehealth video consultations with synchronized eConsent review.
+
+---
+
 ## 7. ISO 14971 Risk Controls & Architectural Hazard Analysis
 
 In compliance with ISO 14971:2019, this section identifies critical software hazards, analyzes their downstream impact, and links them directly to the architectural safety controls implemented in Cadence Clinical.

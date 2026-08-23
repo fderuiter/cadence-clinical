@@ -309,9 +309,38 @@ class InvestigatorGrant(Base):
     )
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    contract_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    template_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    tier_level: Mapped[str] = mapped_column(
+        String(50), default="STANDARD", nullable=False
+    )
+    institution_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     total_budget: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
+    sponsor_currency: Mapped[str] = mapped_column(
+        String(10), default="USD", nullable=False
+    )
+    exchange_rate: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    overhead_percentage: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    withholding_percentage: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    fixed_startup_fee: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    fixed_closeout_fee: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    irb_fee: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    patient_stipend_per_visit: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    travel_reimbursement_per_visit: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
     status: Mapped[str] = mapped_column(String(50), default="DRAFT", nullable=False)
+    executed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    executed_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Standard Part 11 Audit Fields
     created_at: Mapped[datetime] = mapped_column(
@@ -769,6 +798,164 @@ class SiteRiskScore(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
+class SiteBudgetTemplate(Base):
+    """
+    Represents a reusable multi-tier site budget contract template.
+    """
+
+    __tablename__ = "ctms_site_budget_templates"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    template_name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    study_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    tier_level: Mapped[str] = mapped_column(
+        String(50), default="STANDARD", nullable=False
+    )
+    currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
+    overhead_percentage: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    withholding_percentage: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    fixed_startup_fee: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    fixed_closeout_fee: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    irb_fee: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    patient_stipend_amount: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    travel_reimbursement_rate: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    fixed_fees: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    procedure_items: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class GrantContractAmendment(Base):
+    """
+    Preserves historical fee schedules and budget adjustments upon contract amendments under 21 CFR Part 11.
+    """
+
+    __tablename__ = "ctms_grant_contract_amendments"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    grant_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("ctms_investigator_grants.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    amendment_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    effective_date: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    previous_budget: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    revised_budget: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    previous_version_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    new_version_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    summary_of_changes: Mapped[str] = mapped_column(String(2000), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="EXECUTED", nullable=False)
+    approved_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    signature_manifestation: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, nullable=True
+    )
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class CurrencyExchangeRate(Base):
+    """
+    Versioned currency conversion rate table for multi-currency grant budgets.
+    """
+
+    __tablename__ = "ctms_currency_exchange_rates"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    base_currency: Mapped[str] = mapped_column(
+        String(10), default="USD", nullable=False, index=True
+    )
+    target_currency: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
+    rate: Mapped[float] = mapped_column(Float, nullable=False)
+    effective_date: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    expiry_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class BudgetAdjustment(Base):
+    """
+    Tracks manual and automated adjustments (passthrough expense reimbursements, protocol deviation penalties).
+    """
+
+    __tablename__ = "ctms_budget_adjustments"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    grant_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("ctms_investigator_grants.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    adjustment_type: Mapped[str] = mapped_column(
+        String(100), nullable=False
+    )  # PASSTHROUGH_REIMBURSEMENT, PROTOCOL_DEVIATION_PENALTY, OUT_OF_WINDOW_PENALTY, SITE_BONUS, DISCRETIONARY_CREDIT
+    description: Mapped[str] = mapped_column(String(1000), nullable=False)
+    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="PENDING", nullable=False)
+    approved_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
 class ProcedurePaymentGrid(Base):
     """Tracks visit and procedure payment matrices for investigator grants."""
 
@@ -784,6 +971,8 @@ class ProcedurePaymentGrid(Base):
         index=True,
     )
     visit_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    activity_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    form_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     procedure_code: Mapped[str] = mapped_column(String(100), nullable=False)
     procedure_name: Mapped[str] = mapped_column(String(255), nullable=False)
     base_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
@@ -791,6 +980,10 @@ class ProcedurePaymentGrid(Base):
         Float, default=0.0, nullable=False
     )
     withholding_percentage: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    patient_stipend: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    travel_reimbursement: Mapped[float] = mapped_column(
         Float, default=0.0, nullable=False
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

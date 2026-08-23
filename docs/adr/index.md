@@ -10,6 +10,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-22: Hermetic Containerized Statistical Computing Environment and Role-Gated Unblinded Data Vault](2026-08-22-hermetic-containerized-statistical-computing-environment-and-role-gated-unblinded-data-vault.md)
+- [2026-08-22: Reactive Cross-App Clinical Event Spine and Transactional Outbox](2026-08-22-reactive-cross-app-clinical-event-spine-and-transactional-outbox.md)
 - [2026-08-22: Sovereign All-in-One eClinical Suite Expansion](2026-08-22-sovereign-all-in-one-eclinical-suite-expansion.md)
 - [2026-08-21: Asynchronous Cross-Domain eCRF Anomaly Detection Worker](2026-08-21-asynchronous-cross-domain-ecrf-anomaly-detection-worker.md)
 - [2026-08-21: Asynchronous Protocol Digitization Stage DAG with USDM Compilation](2026-08-21-asynchronous-protocol-digitization-stage-dag-with-usdm-compilation.md)
@@ -179,6 +181,9 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+- [2026-08-22: Cumulative Mean Kinetic Temperature Stability Budget Engine](2026-08-22-cumulative-mean-kinetic-temperature-stability-budget-engine.md)
+- [2026-08-22: Country-Aware Greenlight Site Activation and Execution Gating Engine](2026-08-22-country-aware-greenlight-site-activation-and-execution-gating-engine.md)
+- [2026-08-22: Automated Site Financials Fee Matrix and Real-Time Payable Engine](2026-08-22-automated-site-financials-fee-matrix-and-real-time-payable-engine.md)
 - [2026-08-21: Generative Pharmacovigilance Safety Narratives with Part 11 E-Signature](2026-08-21-generative-pharmacovigilance-safety-narratives-with-part-11-e-signature.md)
 - [2026-08-21: Multimodal eTMF and eISF Document Intelligence and DIA Reference Model Classifier](2026-08-21-multimodal-etmf-and-eisf-document-intelligence-and-dia-reference-model-classifier.md)
 - [2026-08-21: Grounded Protocol Knowledge Hub and Support Ticket RAG Triage](2026-08-21-grounded-protocol-knowledge-hub-and-support-ticket-rag-triage.md)

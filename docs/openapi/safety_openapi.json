@@ -785,6 +785,301 @@
           }
         }
       }
+    },
+    "/api/v1/safety/rules/evaluate": {
+      "post": {
+        "summary": "Evaluate Expedited Safety Rules Endpoint",
+        "description": "Evaluate adverse event against global expedited safety reporting rules and persist evaluation.\n\nRequirements: PRD-PVG-001, PRD-PVG-008, ADR-2199",
+        "operationId": "evaluate_expedited_safety_rules_endpoint_api_v1_safety_rules_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ICSRRuleEvaluationInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ICSRRuleEvaluationSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/rules/evaluations/{id}": {
+      "get": {
+        "summary": "Get Expedited Safety Evaluation Endpoint",
+        "description": "Retrieve safety reporting evaluation with updated real-time Day 0 countdown clocks.\n\nRequirements: PRD-PVG-001",
+        "operationId": "get_expedited_safety_evaluation_endpoint_api_v1_safety_rules_evaluations__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ICSRRuleEvaluationSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/rules/evaluations": {
+      "get": {
+        "summary": "List Expedited Safety Evaluations Endpoint",
+        "description": "List safety evaluations filtered by study, case, or expedited status with live countdowns.\n\nRequirements: PRD-PVG-001",
+        "operationId": "list_expedited_safety_evaluations_endpoint_api_v1_safety_rules_evaluations_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "approval_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Approval Status"
+            }
+          },
+          {
+            "name": "any_expedited",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Any Expedited"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ICSRRuleEvaluationSummary"
+                  },
+                  "title": "Response List Expedited Safety Evaluations Endpoint Api V1 Safety Rules Evaluations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/rules/evaluations/{id}/sign": {
+      "post": {
+        "summary": "Sign Expedited Safety Evaluation Endpoint",
+        "description": "Apply a 21 CFR Part 11 electronic signature by a qualified Safety Physician to approve an ICSR evaluation.\n\nRequirements: PRD-PVG-008",
+        "operationId": "sign_expedited_safety_evaluation_endpoint_api_v1_safety_rules_evaluations__id__sign_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignICSRRuleEvaluationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignICSRRuleEvaluationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/rules/countdown-alerts": {
+      "get": {
+        "summary": "Get Safety Countdown Alerts Endpoint",
+        "description": "Retrieve all active expedited safety evaluations with WARNING (>=75%), CRITICAL (>=90%), or OVERDUE countdown clocks.\n\nRequirements: PRD-PVG-001",
+        "operationId": "get_safety_countdown_alerts_endpoint_api_v1_safety_rules_countdown_alerts_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ICSRRuleEvaluationSummary"
+                  },
+                  "title": "Response Get Safety Countdown Alerts Endpoint Api V1 Safety Rules Countdown Alerts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -799,6 +1094,104 @@
         ],
         "title": "AIReviewStatus",
         "description": "Lifecycle review statuses for AI-generated or AI-assisted clinical entities."
+      },
+      "AuthorityRuleEvaluationResult": {
+        "properties": {
+          "authority": {
+            "$ref": "#/components/schemas/ReportingAuthority",
+            "description": "Health authority identifier"
+          },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code",
+            "description": "ISO 3166-1 alpha-2 country code"
+          },
+          "is_expedited": {
+            "type": "boolean",
+            "title": "Is Expedited",
+            "description": "Whether expedited reporting is statutorily mandated"
+          },
+          "timeframe_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeframe Days",
+            "description": "Statutory timeframe in calendar days (e.g. 7 or 15)"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date",
+            "description": "Due date/time in ISO 8601 format if expedited"
+          },
+          "rule_name": {
+            "type": "string",
+            "title": "Rule Name",
+            "description": "Statutory rule title"
+          },
+          "statutory_citation": {
+            "type": "string",
+            "title": "Statutory Citation",
+            "description": "Regulatory citation (e.g. 21 CFR 312.32(c)(1)(i))"
+          },
+          "classification": {
+            "$ref": "#/components/schemas/ExpeditedClassification",
+            "description": "Expedited reporting classification category"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale",
+            "description": "Deterministic decision rationale"
+          },
+          "countdown": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CountdownClockStatus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Real-time countdown clock if expedited"
+          }
+        },
+        "type": "object",
+        "required": [
+          "authority",
+          "country_code",
+          "is_expedited",
+          "rule_name",
+          "statutory_citation",
+          "classification",
+          "rationale"
+        ],
+        "title": "AuthorityRuleEvaluationResult",
+        "description": "Deterministic evaluation outcome for a specific regulatory health authority."
+      },
+      "CausalityCategory": {
+        "type": "string",
+        "enum": [
+          "RELATED",
+          "SUSPECTED",
+          "POSSIBLY_RELATED",
+          "PROBABLY_RELATED",
+          "DEFINITELY_RELATED",
+          "NOT_RELATED",
+          "UNLIKELY"
+        ],
+        "title": "CausalityCategory",
+        "description": "Causality assessment classification."
       },
       "ClinicalTimelineEvent": {
         "properties": {
@@ -886,6 +1279,93 @@
         "title": "ClinicalTimelineEvent",
         "description": "Normalized, de-identified clinical event record from execution eCRF datasets."
       },
+      "ClockAlertLevel": {
+        "type": "string",
+        "enum": [
+          "NORMAL",
+          "WARNING",
+          "CRITICAL",
+          "OVERDUE"
+        ],
+        "title": "ClockAlertLevel",
+        "description": "Countdown clock threshold alert levels."
+      },
+      "CountdownClockStatus": {
+        "properties": {
+          "clock_start_date": {
+            "type": "string",
+            "title": "Clock Start Date",
+            "description": "Day 0 initial receipt date in ISO 8601 format"
+          },
+          "clock_due_date": {
+            "type": "string",
+            "title": "Clock Due Date",
+            "description": "Calculated due date in ISO 8601 format"
+          },
+          "total_hours": {
+            "type": "number",
+            "title": "Total Hours",
+            "description": "Total statutory duration in hours"
+          },
+          "elapsed_hours": {
+            "type": "number",
+            "title": "Elapsed Hours",
+            "description": "Hours elapsed since Day 0 receipt date"
+          },
+          "elapsed_percentage": {
+            "type": "number",
+            "title": "Elapsed Percentage",
+            "description": "Percentage of statutory clock elapsed (0.0 - 100.0+)"
+          },
+          "remaining_hours": {
+            "type": "number",
+            "title": "Remaining Hours",
+            "description": "Remaining hours before deadline"
+          },
+          "is_overdue": {
+            "type": "boolean",
+            "title": "Is Overdue",
+            "description": "Whether statutory reporting deadline has expired",
+            "default": false
+          },
+          "alert_level": {
+            "$ref": "#/components/schemas/ClockAlertLevel",
+            "description": "Current alert threshold level",
+            "default": "NORMAL"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clock_start_date",
+          "clock_due_date",
+          "total_hours",
+          "elapsed_hours",
+          "elapsed_percentage",
+          "remaining_hours"
+        ],
+        "title": "CountdownClockStatus",
+        "description": "Real-time statutory countdown clock status."
+      },
+      "ExpectednessCategory": {
+        "type": "string",
+        "enum": [
+          "EXPECTED",
+          "UNEXPECTED"
+        ],
+        "title": "ExpectednessCategory",
+        "description": "Expectedness determination against Reference Safety Information (RSI)."
+      },
+      "ExpeditedClassification": {
+        "type": "string",
+        "enum": [
+          "SUSAR_FATAL_LIFE_THREATENING_7_DAY",
+          "SUSAR_SERIOUS_UNEXPECTED_15_DAY",
+          "NON_EXPEDITED_PERIODIC",
+          "EXEMPT"
+        ],
+        "title": "ExpeditedClassification",
+        "description": "Regulatory classification category for adverse event reporting."
+      },
       "GroundedClaim": {
         "properties": {
           "claim_id": {
@@ -940,6 +1420,17 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "ICSRApprovalStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "PHYSICIAN_APPROVED",
+          "TRANSMITTED",
+          "REJECTED"
+        ],
+        "title": "ICSRApprovalStatus",
+        "description": "Part 11 approval and review status for ICSR reporting determinations."
       },
       "ICSRDataExportRequest": {
         "properties": {
@@ -1192,6 +1683,271 @@
         ],
         "title": "ICSRReportIdentifiers",
         "description": "ICSR report-level identification details."
+      },
+      "ICSRRuleEvaluationInput": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id",
+            "description": "Worldwide unique case ID or ICSR ID"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Protocol / Study identifier"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject / USUBJID identifier"
+          },
+          "receipt_date": {
+            "type": "string",
+            "title": "Receipt Date",
+            "description": "Day 0 receipt date/time in ISO 8601 or CDISC DTC format"
+          },
+          "seriousness_death": {
+            "type": "boolean",
+            "title": "Seriousness Death",
+            "description": "Results in death",
+            "default": false
+          },
+          "seriousness_life_threatening": {
+            "type": "boolean",
+            "title": "Seriousness Life Threatening",
+            "description": "Is life-threatening",
+            "default": false
+          },
+          "seriousness_hospitalization": {
+            "type": "boolean",
+            "title": "Seriousness Hospitalization",
+            "description": "Requires or prolongs hospitalization",
+            "default": false
+          },
+          "seriousness_disability": {
+            "type": "boolean",
+            "title": "Seriousness Disability",
+            "description": "Results in persistent or significant disability",
+            "default": false
+          },
+          "seriousness_congenital_anomaly": {
+            "type": "boolean",
+            "title": "Seriousness Congenital Anomaly",
+            "description": "Results in congenital anomaly or birth defect",
+            "default": false
+          },
+          "seriousness_other": {
+            "type": "boolean",
+            "title": "Seriousness Other",
+            "description": "Other medically important serious event",
+            "default": false
+          },
+          "causality": {
+            "$ref": "#/components/schemas/CausalityCategory",
+            "description": "Medical causality / relatedness",
+            "default": "SUSPECTED"
+          },
+          "expectedness": {
+            "$ref": "#/components/schemas/ExpectednessCategory",
+            "description": "Expectedness per Reference Safety Information (RSI)",
+            "default": "UNEXPECTED"
+          },
+          "target_authorities": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ReportingAuthority"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Authorities",
+            "description": "List of target authorities to evaluate (evaluates all if omitted)"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change",
+            "description": "GxP reason for evaluation / change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "study_id",
+          "subject_id",
+          "receipt_date"
+        ],
+        "title": "ICSRRuleEvaluationInput",
+        "description": "Input payload for deterministic multi-country safety reporting evaluation."
+      },
+      "ICSRRuleEvaluationSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique evaluation record ID"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id",
+            "description": "Case identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study identifier"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "receipt_date": {
+            "type": "string",
+            "title": "Receipt Date",
+            "description": "Day 0 receipt timestamp"
+          },
+          "is_serious": {
+            "type": "boolean",
+            "title": "Is Serious",
+            "description": "Whether any seriousness criterion is met"
+          },
+          "is_unexpected": {
+            "type": "boolean",
+            "title": "Is Unexpected",
+            "description": "Whether event is unexpected per RSI"
+          },
+          "is_causal": {
+            "type": "boolean",
+            "title": "Is Causal",
+            "description": "Whether event is suspected/causally related"
+          },
+          "is_susar": {
+            "type": "boolean",
+            "title": "Is Susar",
+            "description": "Whether event qualifies as SUSAR (Serious + Unexpected + Related)"
+          },
+          "any_expedited": {
+            "type": "boolean",
+            "title": "Any Expedited",
+            "description": "Whether any authority requires expedited reporting"
+          },
+          "shortest_timeframe_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shortest Timeframe Days",
+            "description": "Shortest applicable statutory timeframe in days"
+          },
+          "overall_alert_level": {
+            "$ref": "#/components/schemas/ClockAlertLevel",
+            "description": "Highest active alert level across authorities",
+            "default": "NORMAL"
+          },
+          "evaluations": {
+            "items": {
+              "$ref": "#/components/schemas/AuthorityRuleEvaluationResult"
+            },
+            "type": "array",
+            "title": "Evaluations",
+            "description": "Per-authority evaluation outcomes"
+          },
+          "approval_status": {
+            "$ref": "#/components/schemas/ICSRApprovalStatus",
+            "description": "Part 11 review / approval status",
+            "default": "DRAFT"
+          },
+          "approved_by_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By User Id",
+            "description": "User ID of approving Safety Physician"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At",
+            "description": "Timestamp of Part 11 approval signature"
+          },
+          "esignature_manifest_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Esignature Manifest Id",
+            "description": "Cryptographic electronic signature manifest identifier"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Creation timestamp"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Creator user ID"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "GxP reason for change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Audit version index",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "study_id",
+          "subject_id",
+          "receipt_date",
+          "is_serious",
+          "is_unexpected",
+          "is_causal",
+          "is_susar",
+          "any_expedited",
+          "created_at",
+          "created_by",
+          "reason_for_change"
+        ],
+        "title": "ICSRRuleEvaluationSummary",
+        "description": "Comprehensive summary of multi-country ICSR reporting evaluation."
       },
       "ICSRSuspectDrug": {
         "properties": {
@@ -1553,6 +2309,18 @@
         ],
         "title": "NarrativeSignResponse",
         "description": "Response payload returned upon successful Part 11 signing."
+      },
+      "ReportingAuthority": {
+        "type": "string",
+        "enum": [
+          "US_FDA",
+          "EMA",
+          "PMDA",
+          "MHRA",
+          "HEALTH_CANADA"
+        ],
+        "title": "ReportingAuthority",
+        "description": "Supported global health authorities for expedited safety reporting."
       },
       "SAEDiscrepancyResponse": {
         "properties": {
@@ -2220,6 +2988,84 @@
         ],
         "title": "SafetyNarrativeSection",
         "description": "A structured narrative section containing formatted prose and grounded claim references."
+      },
+      "SignICSRRuleEvaluationRequest": {
+        "properties": {
+          "reason_for_change": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Reason For Change",
+            "description": "Mandatory 21 CFR Part 11 reason for electronic signature"
+          },
+          "signature_secret": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Secret",
+            "description": "Physician re-authentication signing secret / credential"
+          },
+          "meaning_of_signature": {
+            "type": "string",
+            "title": "Meaning Of Signature",
+            "description": "Part 11 declaration of signature intent",
+            "default": "Approval of Expedited ICSR Regulatory Submission and Causality Assessment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "SignICSRRuleEvaluationRequest",
+        "description": "Request payload for 21 CFR Part 11 Safety Physician electronic signature."
+      },
+      "SignICSRRuleEvaluationResponse": {
+        "properties": {
+          "evaluation_id": {
+            "type": "string",
+            "title": "Evaluation Id",
+            "description": "Evaluation record ID"
+          },
+          "approval_status": {
+            "$ref": "#/components/schemas/ICSRApprovalStatus",
+            "description": "Updated approval status"
+          },
+          "approved_by_user_id": {
+            "type": "string",
+            "title": "Approved By User Id",
+            "description": "User ID of signing Safety Physician"
+          },
+          "approved_at": {
+            "type": "string",
+            "title": "Approved At",
+            "description": "Timestamp of signature approval"
+          },
+          "esignature_manifest_id": {
+            "type": "string",
+            "title": "Esignature Manifest Id",
+            "description": "Cryptographic electronic signature manifest ID"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Confirmation message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evaluation_id",
+          "approval_status",
+          "approved_by_user_id",
+          "approved_at",
+          "esignature_manifest_id",
+          "message"
+        ],
+        "title": "SignICSRRuleEvaluationResponse",
+        "description": "Response payload for 21 CFR Part 11 Safety Physician electronic signature."
       },
       "TimelineEventType": {
         "type": "string",

@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -172,19 +174,129 @@ class SiteRiskScoreEntity(BaseModel):
 
 
 # ==========================================
-# 4. Procedure Financials & Invoices
 # ==========================================
+# 4. Procedure Financials, Budget Contracts & Invoices
+# ==========================================
+
+
+class SiteBudgetTemplateEntity(BaseModel):
+    id: str | None = None
+    template_name: str
+    study_id: str | None = None
+    tier_level: str = (
+        "STANDARD"  # TIER_1_ACADEMIC, TIER_2_COMMUNITY, TIER_3_REGIONAL, STANDARD
+    )
+    currency: str = "USD"
+    overhead_percentage: float = 0.0
+    withholding_percentage: float = 0.0
+    fixed_startup_fee: float = 0.0
+    fixed_closeout_fee: float = 0.0
+    irb_fee: float = 0.0
+    patient_stipend_amount: float = 0.0
+    travel_reimbursement_rate: float = 0.0
+    fixed_fees: list[dict[str, Any]] = []
+    procedure_items: list[dict[str, Any]] = []
+    is_active: bool = True
+    created_at: str | None = None
+    created_by: str
+    reason_for_change: str
+    version_index: int = 1
+
+
+class InvestigatorGrantEntity(BaseModel):
+    id: str | None = None
+    study_id: str
+    site_id: str
+    contract_title: str | None = None
+    template_id: str | None = None
+    tier_level: str = "STANDARD"
+    institution_name: str | None = None
+    total_budget: float = 0.0
+    currency: str = "USD"
+    sponsor_currency: str = "USD"
+    exchange_rate: float = 1.0
+    overhead_percentage: float = 0.0
+    withholding_percentage: float = 0.0
+    fixed_startup_fee: float = 0.0
+    fixed_closeout_fee: float = 0.0
+    irb_fee: float = 0.0
+    patient_stipend_per_visit: float = 0.0
+    travel_reimbursement_per_visit: float = 0.0
+    status: str = "DRAFT"
+    is_active: bool = True
+    executed_at: str | None = None
+    executed_by: str | None = None
+    created_at: str | None = None
+    created_by: str
+    reason_for_change: str
+    version_index: int = 1
+
+
+class GrantContractAmendmentEntity(BaseModel):
+    id: str | None = None
+    grant_id: str
+    amendment_number: int
+    effective_date: str
+    previous_budget: float = 0.0
+    revised_budget: float = 0.0
+    previous_version_index: int = 1
+    new_version_index: int = 2
+    summary_of_changes: str
+    status: str = "EXECUTED"
+    approved_by: str | None = None
+    approved_at: str | None = None
+    signature_manifestation: dict[str, Any] | None = None
+    created_at: str | None = None
+    created_by: str
+    reason_for_change: str
+    version_index: int = 1
+
+
+class CurrencyExchangeRateEntity(BaseModel):
+    id: str | None = None
+    base_currency: str = "USD"
+    target_currency: str
+    rate: float
+    effective_date: str
+    expiry_date: str | None = None
+    is_active: bool = True
+    created_at: str | None = None
+    created_by: str
+    reason_for_change: str
+    version_index: int = 1
+
+
+class BudgetAdjustmentEntity(BaseModel):
+    id: str | None = None
+    grant_id: str
+    site_id: str
+    study_id: str
+    adjustment_type: str  # PASSTHROUGH_REIMBURSEMENT, PROTOCOL_DEVIATION_PENALTY, OUT_OF_WINDOW_PENALTY, SITE_BONUS, DISCRETIONARY_CREDIT
+    description: str
+    amount: float
+    currency: str = "USD"
+    status: str = "PENDING"
+    approved_by: str | None = None
+    approved_at: str | None = None
+    created_at: str | None = None
+    created_by: str
+    reason_for_change: str
+    version_index: int = 1
 
 
 class ProcedurePaymentGridEntity(BaseModel):
     id: str | None = None
     grant_id: str
     visit_name: str
+    activity_id: str | None = None
+    form_id: str | None = None
     procedure_code: str
     procedure_name: str
     base_amount: float
     overhead_percentage: float = 0.0
     withholding_percentage: float = 0.0
+    patient_stipend: float = 0.0
+    travel_reimbursement: float = 0.0
     is_active: bool = True
     created_at: str | None = None
     created_by: str

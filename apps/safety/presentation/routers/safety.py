@@ -17,6 +17,13 @@ from fastapi import (
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.safety.domain.expedited_rules import (
+    ClockAlertLevel,
+    ICSRRuleEvaluationInput,
+    ICSRRuleEvaluationSummary,
+    SignICSRRuleEvaluationRequest,
+    SignICSRRuleEvaluationResponse,
+)
 from apps.safety.domain.narrative_models import (
     NarrativeGenerateRequest,
     NarrativeSignRequest,
@@ -47,6 +54,9 @@ from apps.safety.presentation.dtos import (
     SafetyExportJobResponse,
 )
 from apps.safety.processor import process_sae_reconciliation
+from apps.safety.services.expedited_rules_engine import (
+    ExpeditedSafetyReportingRulesEngine,
+)
 from apps.safety.services.narrative_service import SafetyNarrativeService
 from packages.database import DatabaseSessionDependency
 
@@ -1144,3 +1154,180 @@ async def export_safety_narrative_e2b_endpoint(
         media_type="application/xml",
         headers={"Content-Disposition": f"attachment; filename=narrative_{id}.xml"},
     )
+
+
+# =========================================================================
+# Deterministic Multi-Country Expedited Safety Reporting Rules Engine (PRD-PVG-001, PRD-PVG-008)
+# =========================================================================
+
+
+@router.post(
+    "/api/v1/safety/rules/evaluate",
+    response_model=ICSRRuleEvaluationSummary,
+    status_code=201,
+)
+async def evaluate_expedited_safety_rules_endpoint(
+    request: Request,
+    payload: ICSRRuleEvaluationInput,
+    session: AsyncSession = Depends(get_db_session),
+) -> ICSRRuleEvaluationSummary:
+    """Evaluate adverse event against global expedited safety reporting rules and persist evaluation.
+
+    Requirements: PRD-PVG-001, PRD-PVG-008, ADR-2199
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    effective_reason = (
+        payload.reason_for_change or change_reason or "Evaluate Expedited Safety Rules"
+    )
+
+    engine = ExpeditedSafetyReportingRulesEngine()
+    summary = await engine.evaluate_and_persist(
+        session=session,
+        input_data=payload,
+        user_id=user_id,
+        reason_for_change=effective_reason,
+    )
+    await session.commit()
+    return summary
+
+
+@router.get(
+    "/api/v1/safety/rules/evaluations/{id}",
+    response_model=ICSRRuleEvaluationSummary,
+)
+async def get_expedited_safety_evaluation_endpoint(
+    request: Request,
+    id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> ICSRRuleEvaluationSummary:
+    """Retrieve safety reporting evaluation with updated real-time Day 0 countdown clocks.
+
+    Requirements: PRD-PVG-001
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    engine = ExpeditedSafetyReportingRulesEngine()
+    summary = await engine.get_evaluation(
+        session=session,
+        evaluation_id=id,
+        user_id=user_id,
+        reason_for_change=change_reason,
+    )
+    await session.commit()
+    return summary
+
+
+@router.get(
+    "/api/v1/safety/rules/evaluations",
+    response_model=list[ICSRRuleEvaluationSummary],
+)
+async def list_expedited_safety_evaluations_endpoint(
+    request: Request,
+    study_id: str | None = None,
+    case_id: str | None = None,
+    subject_id: str | None = None,
+    approval_status: str | None = None,
+    any_expedited: bool | None = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[ICSRRuleEvaluationSummary]:
+    """List safety evaluations filtered by study, case, or expedited status with live countdowns.
+
+    Requirements: PRD-PVG-001
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    engine = ExpeditedSafetyReportingRulesEngine()
+    evaluations = await engine.list_evaluations(
+        session=session,
+        study_id=study_id,
+        case_id=case_id,
+        subject_id=subject_id,
+        approval_status=approval_status,
+        any_expedited=any_expedited,
+    )
+    await write_safety_audit_log(
+        session=session,
+        user_id=user_id,
+        action="EXPEDITED_SAFETY_EVALUATIONS_LIST",
+        details=f"Listed expedited safety evaluations (study: {study_id}, case: {case_id}, status: {approval_status}).",
+        change_reason=change_reason or "List expedited safety evaluations",
+        version_index=1,
+    )
+    await session.commit()
+    return evaluations
+
+
+@router.post(
+    "/api/v1/safety/rules/evaluations/{id}/sign",
+    response_model=SignICSRRuleEvaluationResponse,
+)
+async def sign_expedited_safety_evaluation_endpoint(
+    request: Request,
+    id: str,
+    payload: SignICSRRuleEvaluationRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> SignICSRRuleEvaluationResponse:
+    """Apply a 21 CFR Part 11 electronic signature by a qualified Safety Physician to approve an ICSR evaluation.
+
+    Requirements: PRD-PVG-008
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    effective_reason = payload.reason_for_change or change_reason
+    if not effective_reason or not effective_reason.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Reason for change is mandatory for 21 CFR Part 11 electronic signatures.",
+        )
+
+    engine = ExpeditedSafetyReportingRulesEngine()
+    response = await engine.sign_evaluation(
+        session=session,
+        evaluation_id=id,
+        user_id=user_id,
+        user_roles=user_role,
+        reason_for_change=effective_reason,
+        signature_secret=payload.signature_secret,
+        meaning_of_signature=payload.meaning_of_signature,
+    )
+    await session.commit()
+    return response
+
+
+@router.get(
+    "/api/v1/safety/rules/countdown-alerts",
+    response_model=list[ICSRRuleEvaluationSummary],
+)
+async def get_safety_countdown_alerts_endpoint(
+    request: Request,
+    study_id: str | None = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[ICSRRuleEvaluationSummary]:
+    """Retrieve all active expedited safety evaluations with WARNING (>=75%), CRITICAL (>=90%), or OVERDUE countdown clocks.
+
+    Requirements: PRD-PVG-001
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    engine = ExpeditedSafetyReportingRulesEngine()
+    evaluations = await engine.list_evaluations(
+        session=session,
+        study_id=study_id,
+        any_expedited=True,
+    )
+    alerting = [
+        e
+        for e in evaluations
+        if e.overall_alert_level
+        in {
+            ClockAlertLevel.WARNING,
+            ClockAlertLevel.CRITICAL,
+            ClockAlertLevel.OVERDUE,
+        }
+    ]
+    await write_safety_audit_log(
+        session=session,
+        user_id=user_id,
+        action="EXPEDITED_SAFETY_COUNTDOWN_ALERTS_QUERY",
+        details=f"Queried expedited safety countdown alerts (study: {study_id}, found: {len(alerting)}).",
+        change_reason=change_reason or "Query countdown alerts",
+        version_index=1,
+    )
+    await session.commit()
+    return alerting

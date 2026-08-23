@@ -1,0 +1,15 @@
+[project]
+name = "cadence-imaging"
+version = "0.1.0"
+description = "Cadence Medical Imaging, In-Flight DICOM PHI De-Identification & S3 Envelope Storage Microservice"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi",
+    "sqlalchemy[asyncio]",
+    "aiosqlite",
+    "asyncpg",
+    "pydantic>=2",
+    "httpx",
+    "pydicom",
+    "numpy",
+]

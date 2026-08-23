@@ -28,6 +28,7 @@ members = [
     "apps-tickets",
     "cadence-clinical",
     "cadence-fileshare",
+    "cadence-imaging",
     "cadence-knowledge",
     "packages-cli",
     "packages-compliance",
@@ -872,6 +873,7 @@ dependencies = [
     { name = "litellm" },
     { name = "neo4j" },
     { name = "pydantic" },
+    { name = "pydicom" },
     { name = "pymupdf" },
     { name = "python-docx" },
     { name = "python-jose", extra = ["cryptography"] },
@@ -932,6 +934,7 @@ requires-dist = [
     { name = "playwright", marker = "extra == 'dev'", specifier = ">=1.40.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.6.1" },
     { name = "pydantic", specifier = ">=2.6.0" },
+    { name = "pydicom", specifier = ">=3.0.2" },
     { name = "pymupdf", specifier = ">=1.24.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.1.1" },
     { name = "pytest-archon", marker = "extra == 'dev'", specifier = ">=0.0.5" },
@@ -977,6 +980,33 @@ requires-dist = [
     { name = "fastapi" },
     { name = "httpx" },
     { name = "pydantic", specifier = ">=2" },
+    { name = "sqlalchemy", extras = ["asyncio"] },
+]
+
+[[package]]
+name = "cadence-imaging"
+version = "0.1.0"
+source = { virtual = "apps/imaging" }
+dependencies = [
+    { name = "aiosqlite" },
+    { name = "asyncpg" },
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "numpy" },
+    { name = "pydantic" },
+    { name = "pydicom" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiosqlite" },
+    { name = "asyncpg" },
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "numpy" },
+    { name = "pydantic", specifier = ">=2" },
+    { name = "pydicom" },
     { name = "sqlalchemy", extras = ["asyncio"] },
 ]
 
@@ -2704,6 +2734,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/68/ca/31c57507b13119d7d3cfa1576dad2911a4861e3be07b579395f4e9d393f9/pydantic_settings-2.15.0.tar.gz", hash = "sha256:694b793e84f766ba76a90ebdefc01d0a9a045dab0382bee70393da93712ad117", size = 261253, upload-time = "2026-08-07T09:24:57.419Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/30/a4/2bffa9f8e804325a09867f0e9d30795c80ea9f8d62560bd1b6ad6220eb2f/pydantic_settings-2.15.0-py3-none-any.whl", hash = "sha256:0ba092c291c94baceb5eff768aa0d56400a457585bc0175925a5a5510303da42", size = 69413, upload-time = "2026-08-07T09:24:55.839Z" },
+]
+
+[[package]]
+name = "pydicom"
+version = "3.0.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7a/de/52aaf905f1f0ae7aba85996e2592ea2c1fe49157f3cfbcd1871965bdb51d/pydicom-3.0.2.tar.gz", hash = "sha256:5942bfc2d72c6fa4b3b5b62c527f54b7f2355f21d6f5d296df6bb30188df6a4f", size = 2886792, upload-time = "2026-03-19T21:46:20.935Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/46/e0/60466c6d712dad2cf807df315e39863e91609ffd1064ecb835994460bbda/pydicom-3.0.2-py3-none-any.whl", hash = "sha256:abf971a5440f84dbaf42c4b6758e30e62480902584f8b270b9a5d146e278a07b", size = 2376822, upload-time = "2026-03-19T21:46:19.042Z" },
 ]
 
 [[package]]

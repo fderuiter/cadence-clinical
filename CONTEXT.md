@@ -276,4 +276,87 @@ A continuous qualification engine that maps protocol amendments and operational 
 
 An IoT ingestion pipeline parsing continuous biometric data (CGM, actigraphy, spirometry, blood pressure) via standard Open mHealth / FHIR formats with automated time-series outlier flags and compliance tracking.
 
+### Greenlight Site Activation Engine
+
+An automated multi-factor governance sentinel that programmatically prevents RTSM subject randomization, IP kit shipment, and eCRF data entry until all prerequisite conditions (IRB approval certificate, executed CTA, verified eISF binder, executed DOA log, PI and site staff training certifications, and depot release) are digitally verified.
+
+### SMART on FHIR eSource Ingestion
+
+An interoperability pipeline extracting structured clinical data (demographics, vital signs, laboratory results, concomitant medications) directly from hospital Electronic Health Record (EHR) systems via HL7 FHIR USCDI standards into draft eCRFs with explicit source provenance and CRC click-to-commit review.
+
+### Automated Laboratory Toxicity Grading
+
+A clinical safety evaluation engine that harmonizes central and local laboratory test results across disparate reference ranges and units (SI and conventional), evaluates values against standardized toxicity scales (NCI-CTCAE v5.0, DAIDS), and automatically generates staged Adverse Event drafts upon detection of Grade 3 or 4 toxicities.
+
+### Clinical Endpoint Adjudication Committee (CEC)
+
+A chartered, independent panel of clinical specialists responsible for evaluating blinded, de-identified patient event dossiers (medical narratives, diagnostic records, laboratory panels, imaging reports) against standardized diagnostic criteria to produce verified endpoint classifications (e.g. MACE, stroke, mortality) for statistical analysis and CDISC SDTM CE domain export.
+
+### Aggregate Safety Compilation Engine
+
+An automated pharmacovigilance reporting system that calculates cumulative and interval patient-years of exposure, tabulates SAE and SUSAR line listings by MedDRA System Organ Class and Preferred Term against Reference Safety Information (RSI), and compiles structured annual Development Safety Update Reports (DSUR), Periodic Safety Update Reports (PSUR), and investigator safety notifications.
+
+### Medical Device Investigation Lifecycle
+
+A regulatory and operational framework supporting ISO 14155:2020, EU MDR (2017/745), and IVDR (2017/746) standards, encompassing Unique Device Identifier (UDI) barcode tracking, device batch/serial accountability, device deficiency and malfunction handling, and specialized Adverse Device Effect (ADE / SADE / USADE) reporting.
+
+### Patient Financial Wallet & Lay Summary Distribution
+
+A patient-facing portal capability facilitating automated expense claim submission, receipt optical character recognition (OCR), approval workflows, and digital disbursement of travel stipends and participant compensation via virtual debit cards or direct ACH, alongside a secure channel for disseminating IRB-approved Plain Language Summaries of clinical trial results per EU CTR 536/2014.
+
+### Declarative Procedure-Fee Rule Engine
+
+A deterministic financial calculation model evaluating procedure fee matrices, institutional overhead markups, and payee splits as pure mathematical expressions upon EDC and SDV triggers.
+
+### Client-Side WebGL Multi-Planar Reconstruction (MPR)
+
+A zero-footprint browser imaging pipeline rendering axial, sagittal, and coronal views from streamed DICOM byte ranges with client-side window/level adjustment and caliper tools.
+
+### Native S/MIME AS2 Client
+
+An asynchronous EDI transmission protocol implementing S/MIME encryption, SHA-256 digital signing, and Message Disposition Notification (MDN) verification for B2B regulatory submission.
+
+### Vectorized Disproportionality Signal Engine
+
+A high-throughput pharmacovigilance surveillance algorithm computing PRR, ROR, and Empirical Bayes Geometric Mean (EBGM) across 2x2 contingency matrices using vectorized array operations.
+
+### Stochastic Monte Carlo Supply Resupply
+
+An RTSM inventory forecasting model running probabilistic simulations across screening velocity, enrollment distributions, and visit schedules to compute automated depot replenishment orders.
+
+### Perceptual Image Hash (pHash) Sentinel
+
+A computer vision fraud detection algorithm computing frequency-domain visual hashes on medical image attachments to detect duplicated or manipulated scans across clinical sites.
+
+### Containerized Reproducible SCE Sandbox
+
+A 21 CFR Part 11 compliant execution environment running isolated R and Python statistical scripts against version-pinned data snapshots with immutable package lockfile validation (`renv` and `uv.lock`).
+
+### Gateway Training Interceptor
+
+A security middleware pattern that intercepts mutating eCRF API requests and evaluates active protocol training claims, rejecting unqualified write attempts with HTTP 403.
+
+### Normalized Open mHealth Telemetry Pipeline
+
+A streaming IoT time-series adapter converting continuous wearable and medical sensor streams (CGM, actigraphy, spirometry) into standardized Open mHealth and HL7 FHIR Observation schemas.
+
+### Cumulative MKT Stability Ledger
+
+A cold chain product-lot budget tracking cumulative thermal exposure minutes and calculated Mean Kinetic Temperature (MKT) across all transit legs and depot hops against stability budgets (USP <1079> / PDA TR 39), instantly quarantining compromised kits upon threshold breach.
+
+### Bayesian BOIN Dose Escalation State Machine
+
+An adaptive oncology trial allocation model that evaluates safety in batched cohorts of 3 subjects, calculating real-time Dose-Limiting Toxicity (DLT) rates against target toxicity boundaries ($\lambda_e = 0.236, \lambda_d = 0.358$) to output deterministic dose modification recommendations (Escalate, Stay, De-escalate).
+
+### Sample-Gated Statistical Surveillance
+
+An ICH E6(R2)/(R3) data integrity pattern that activates statistical fraud tests (Benford's Law, digit preference, variance shrinkage, multivariate distance) only after a site achieves minimum statistical power thresholds ($N \ge 15$ subjects or $\ge 50$ longitudinal data points) and automatically dispatches confirmed anomalies into CRA Monitoring Visit Report (MVR) action items.
+
+### Role-Gated Unblinded Data Vault
+
+A cryptographic data isolation boundary in the Clinical Data Repository that encrypts and restricts access to unblinded treatment arm variables (`ARMCD`, `TRT01P`) from blinded study personnel and standard statisticians, granting access only to authorized Unblinded Statisticians and IDMC members until formal database lock.
+
+### Automated 20% SOD Discordance Trigger
+
+A blinded medical imaging adjudication rule evaluating Sum of Diameters (SOD) across independent dual readers under RECIST 1.1; deltas $> 20\%$ or discordant overall response classifications automatically escalate the event dossier to the Adjudication Committee Chair.
 

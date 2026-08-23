@@ -8,32 +8,42 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.ctms.adapters.database import db_manager
 from apps.ctms.adapters.models import (
+    BudgetAdjustment,
     CountryRegulatoryMilestone,
+    CurrencyExchangeRate,
     DeviationActionItem,
     EssentialDocument,
     ETMFSyncRecord,
     FinancialInvoice,
+    GrantContractAmendment,
+    InvestigatorGrant,
     IPDestructionCertificate,
     IPKitRecord,
     IPTemperatureExcursion,
     ProcedurePaymentGrid,
     ProtocolDeviation,
     RBQMKRIMetric,
+    SiteBudgetTemplate,
     SiteGreenlightGate,
     SiteRiskScore,
 )
 from apps.ctms.domain.models import (
+    BudgetAdjustmentEntity,
     CountryRegulatoryMilestoneEntity,
+    CurrencyExchangeRateEntity,
     DeviationActionItemEntity,
     EssentialDocumentEntity,
     ETMFSyncRecordEntity,
     FinancialInvoiceEntity,
+    GrantContractAmendmentEntity,
+    InvestigatorGrantEntity,
     IPDestructionCertificateEntity,
     IPKitRecordEntity,
     IPTemperatureExcursionEntity,
     ProcedurePaymentGridEntity,
     ProtocolDeviationEntity,
     RBQMKRIMetricEntity,
+    SiteBudgetTemplateEntity,
     SiteGreenlightGateEntity,
     SiteRiskScoreEntity,
 )
@@ -698,20 +708,422 @@ class SQLAlchemyFinancialsRepository(IFinancialsRepository):
             return await self.save_invoice(entity)
         if isinstance(entity, ProcedurePaymentGridEntity):
             return await self.save_procedure_grid(entity)
+        if isinstance(entity, SiteBudgetTemplateEntity):
+            return await self.save_budget_template(entity)
+        if isinstance(entity, GrantContractAmendmentEntity):
+            return await self.save_grant_amendment(entity)
+        if isinstance(entity, CurrencyExchangeRateEntity):
+            return await self.save_exchange_rate(entity)
+        if isinstance(entity, BudgetAdjustmentEntity):
+            return await self.save_budget_adjustment(entity)
         return entity
+
+    @map_database_exceptions
+    async def save_budget_template(
+        self, template: SiteBudgetTemplateEntity
+    ) -> SiteBudgetTemplateEntity:
+        if template.id:
+            stmt = select(SiteBudgetTemplate).where(
+                SiteBudgetTemplate.id.is_(template.id)
+            )
+            res = await self.session.execute(stmt)
+            model = res.scalars().first()
+            if model:
+                model.template_name = template.template_name
+                model.study_id = template.study_id
+                model.tier_level = template.tier_level
+                model.currency = template.currency
+                model.overhead_percentage = template.overhead_percentage
+                model.withholding_percentage = template.withholding_percentage
+                model.fixed_startup_fee = template.fixed_startup_fee
+                model.fixed_closeout_fee = template.fixed_closeout_fee
+                model.irb_fee = template.irb_fee
+                model.patient_stipend_amount = template.patient_stipend_amount
+                model.travel_reimbursement_rate = template.travel_reimbursement_rate
+                model.fixed_fees = template.fixed_fees
+                model.procedure_items = template.procedure_items
+                model.is_active = template.is_active
+                model.reason_for_change = template.reason_for_change
+                model.version_index = template.version_index
+                self.session.add(model)
+                await self.session.flush()
+                return self._to_budget_template_entity(model)
+
+        model = SiteBudgetTemplate(
+            template_name=template.template_name,
+            study_id=template.study_id,
+            tier_level=template.tier_level,
+            currency=template.currency,
+            overhead_percentage=template.overhead_percentage,
+            withholding_percentage=template.withholding_percentage,
+            fixed_startup_fee=template.fixed_startup_fee,
+            fixed_closeout_fee=template.fixed_closeout_fee,
+            irb_fee=template.irb_fee,
+            patient_stipend_amount=template.patient_stipend_amount,
+            travel_reimbursement_rate=template.travel_reimbursement_rate,
+            fixed_fees=template.fixed_fees,
+            procedure_items=template.procedure_items,
+            is_active=template.is_active,
+            created_by=template.created_by,
+            reason_for_change=template.reason_for_change,
+            version_index=template.version_index,
+        )
+        self.session.add(model)
+        await self.session.flush()
+        return self._to_budget_template_entity(model)
+
+    @map_database_exceptions
+    async def get_budget_template(
+        self, template_id: str
+    ) -> SiteBudgetTemplateEntity | None:
+        stmt = select(SiteBudgetTemplate).where(SiteBudgetTemplate.id.is_(template_id))
+        res = await self.session.execute(stmt)
+        model = res.scalars().first()
+        if not model:
+            return None
+        return self._to_budget_template_entity(model)
+
+    @map_database_exceptions
+    async def list_budget_templates(
+        self, study_id: str | None = None
+    ) -> list[SiteBudgetTemplateEntity]:
+        stmt = select(SiteBudgetTemplate).where(SiteBudgetTemplate.is_active.is_(True))
+        if study_id:
+            stmt = stmt.where(
+                (SiteBudgetTemplate.study_id.is_(study_id))
+                | (SiteBudgetTemplate.study_id.is_(None))
+            )
+        res = await self.session.execute(stmt)
+        models = res.scalars().all()
+        return [self._to_budget_template_entity(m) for m in models]
+
+    @map_database_exceptions
+    async def get_investigator_grant(
+        self, grant_id: str
+    ) -> InvestigatorGrantEntity | None:
+        stmt = select(InvestigatorGrant).where(InvestigatorGrant.id.is_(grant_id))
+        res = await self.session.execute(stmt)
+        model = res.scalars().first()
+        if not model:
+            return None
+        return InvestigatorGrantEntity(
+            id=model.id,
+            study_id=model.study_id,
+            site_id=model.site_id,
+            contract_title=model.contract_title,
+            template_id=model.template_id,
+            tier_level=model.tier_level,
+            institution_name=model.institution_name,
+            total_budget=model.total_budget,
+            currency=model.currency,
+            sponsor_currency=model.sponsor_currency,
+            exchange_rate=model.exchange_rate,
+            overhead_percentage=model.overhead_percentage,
+            withholding_percentage=model.withholding_percentage,
+            fixed_startup_fee=model.fixed_startup_fee,
+            fixed_closeout_fee=model.fixed_closeout_fee,
+            irb_fee=model.irb_fee,
+            patient_stipend_per_visit=model.patient_stipend_per_visit,
+            travel_reimbursement_per_visit=model.travel_reimbursement_per_visit,
+            status=model.status,
+            executed_at=model.executed_at.isoformat() if model.executed_at else None,
+            executed_by=model.executed_by,
+            is_active=getattr(model, "is_active", True),
+            created_at=model.created_at.isoformat() if model.created_at else None,
+            created_by=model.created_by,
+            reason_for_change=model.reason_for_change,
+            version_index=model.version_index,
+        )
+
+    @map_database_exceptions
+    async def update_grant_budget_and_version(
+        self, grant_id: str, revised_budget: float, new_version: int
+    ) -> None:
+        stmt = select(InvestigatorGrant).where(InvestigatorGrant.id.is_(grant_id))
+        res = await self.session.execute(stmt)
+        model = res.scalars().first()
+        if model:
+            model.total_budget = revised_budget
+            model.version_index = new_version
+            await self.session.flush()
+
+    @map_database_exceptions
+    async def save_grant_amendment(
+        self, amendment: GrantContractAmendmentEntity
+    ) -> GrantContractAmendmentEntity:
+        model = GrantContractAmendment(
+            grant_id=amendment.grant_id,
+            amendment_number=amendment.amendment_number,
+            effective_date=datetime.fromisoformat(amendment.effective_date)
+            if amendment.effective_date
+            else datetime.now(UTC),
+            previous_budget=amendment.previous_budget,
+            revised_budget=amendment.revised_budget,
+            previous_version_index=amendment.previous_version_index,
+            new_version_index=amendment.new_version_index,
+            summary_of_changes=amendment.summary_of_changes,
+            status=amendment.status,
+            approved_by=amendment.approved_by,
+            approved_at=datetime.fromisoformat(amendment.approved_at)
+            if amendment.approved_at
+            else None,
+            signature_manifestation=amendment.signature_manifestation,
+            created_by=amendment.created_by,
+            reason_for_change=amendment.reason_for_change,
+            version_index=amendment.version_index,
+        )
+        self.session.add(model)
+        await self.session.flush()
+        return self._to_amendment_entity(model)
+
+    @map_database_exceptions
+    async def get_grant_amendment(
+        self, amendment_id: str
+    ) -> GrantContractAmendmentEntity | None:
+        stmt = select(GrantContractAmendment).where(
+            GrantContractAmendment.id.is_(amendment_id)
+        )
+        res = await self.session.execute(stmt)
+        model = res.scalars().first()
+        if not model:
+            return None
+        return self._to_amendment_entity(model)
+
+    @map_database_exceptions
+    async def list_grant_amendments(
+        self, grant_id: str
+    ) -> list[GrantContractAmendmentEntity]:
+        stmt = (
+            select(GrantContractAmendment)
+            .where(GrantContractAmendment.grant_id.is_(grant_id))
+            .order_by(GrantContractAmendment.amendment_number.asc())
+        )
+        res = await self.session.execute(stmt)
+        models = res.scalars().all()
+        return [self._to_amendment_entity(m) for m in models]
+
+    @map_database_exceptions
+    async def save_exchange_rate(
+        self, rate: CurrencyExchangeRateEntity
+    ) -> CurrencyExchangeRateEntity:
+        if rate.id:
+            stmt = select(CurrencyExchangeRate).where(
+                CurrencyExchangeRate.id.is_(rate.id)
+            )
+            res = await self.session.execute(stmt)
+            model = res.scalars().first()
+            if model:
+                model.rate = rate.rate
+                model.expiry_date = (
+                    datetime.fromisoformat(rate.expiry_date)
+                    if rate.expiry_date
+                    else None
+                )
+                model.is_active = rate.is_active
+                model.reason_for_change = rate.reason_for_change
+                model.version_index = rate.version_index
+                self.session.add(model)
+                await self.session.flush()
+                return self._to_exchange_rate_entity(model)
+
+        model = CurrencyExchangeRate(
+            base_currency=rate.base_currency.upper(),
+            target_currency=rate.target_currency.upper(),
+            rate=rate.rate,
+            effective_date=datetime.fromisoformat(rate.effective_date)
+            if rate.effective_date
+            else datetime.now(UTC),
+            expiry_date=datetime.fromisoformat(rate.expiry_date)
+            if rate.expiry_date
+            else None,
+            is_active=rate.is_active,
+            created_by=rate.created_by,
+            reason_for_change=rate.reason_for_change,
+            version_index=rate.version_index,
+        )
+        self.session.add(model)
+        await self.session.flush()
+        return self._to_exchange_rate_entity(model)
+
+    @map_database_exceptions
+    async def get_exchange_rate(
+        self, base_currency: str, target_currency: str
+    ) -> CurrencyExchangeRateEntity | None:
+        if base_currency.upper() == target_currency.upper():
+            return CurrencyExchangeRateEntity(
+                base_currency=base_currency.upper(),
+                target_currency=target_currency.upper(),
+                rate=1.0,
+                effective_date=datetime.now(UTC).isoformat(),
+                is_active=True,
+                created_by="system",
+                reason_for_change="Parity rate",
+                version_index=1,
+            )
+
+        stmt = (
+            select(CurrencyExchangeRate)
+            .where(
+                CurrencyExchangeRate.base_currency.is_(base_currency.upper()),
+                CurrencyExchangeRate.target_currency.is_(target_currency.upper()),
+                CurrencyExchangeRate.is_active.is_(True),
+            )
+            .order_by(CurrencyExchangeRate.effective_date.desc())
+        )
+        res = await self.session.execute(stmt)
+        model = res.scalars().first()
+        if not model:
+            # Check inverse
+            stmt_inv = (
+                select(CurrencyExchangeRate)
+                .where(
+                    CurrencyExchangeRate.base_currency.is_(target_currency.upper()),
+                    CurrencyExchangeRate.target_currency.is_(base_currency.upper()),
+                    CurrencyExchangeRate.is_active.is_(True),
+                )
+                .order_by(CurrencyExchangeRate.effective_date.desc())
+            )
+            res_inv = await self.session.execute(stmt_inv)
+            model_inv = res_inv.scalars().first()
+            if model_inv and model_inv.rate > 0:
+                return CurrencyExchangeRateEntity(
+                    base_currency=base_currency.upper(),
+                    target_currency=target_currency.upper(),
+                    rate=round(1.0 / model_inv.rate, 6),
+                    effective_date=model_inv.effective_date.isoformat(),
+                    is_active=True,
+                    created_by=model_inv.created_by,
+                    reason_for_change=f"Inverted from {target_currency}/{base_currency}",
+                    version_index=model_inv.version_index,
+                )
+            return None
+        return self._to_exchange_rate_entity(model)
+
+    @map_database_exceptions
+    async def list_exchange_rates(self) -> list[CurrencyExchangeRateEntity]:
+        stmt = (
+            select(CurrencyExchangeRate)
+            .where(CurrencyExchangeRate.is_active.is_(True))
+            .order_by(CurrencyExchangeRate.base_currency.asc())
+        )
+        res = await self.session.execute(stmt)
+        models = res.scalars().all()
+        return [self._to_exchange_rate_entity(m) for m in models]
+
+    @map_database_exceptions
+    async def save_budget_adjustment(
+        self, adjustment: BudgetAdjustmentEntity
+    ) -> BudgetAdjustmentEntity:
+        if adjustment.id:
+            stmt = select(BudgetAdjustment).where(
+                BudgetAdjustment.id.is_(adjustment.id)
+            )
+            res = await self.session.execute(stmt)
+            model = res.scalars().first()
+            if model:
+                model.status = adjustment.status
+                model.approved_by = adjustment.approved_by
+                model.approved_at = (
+                    datetime.fromisoformat(adjustment.approved_at)
+                    if adjustment.approved_at
+                    else None
+                )
+                model.reason_for_change = adjustment.reason_for_change
+                model.version_index = adjustment.version_index
+                self.session.add(model)
+                await self.session.flush()
+                return self._to_adjustment_entity(model)
+
+        model = BudgetAdjustment(
+            grant_id=adjustment.grant_id,
+            site_id=adjustment.site_id,
+            study_id=adjustment.study_id,
+            adjustment_type=adjustment.adjustment_type,
+            description=adjustment.description,
+            amount=adjustment.amount,
+            currency=adjustment.currency.upper(),
+            status=adjustment.status,
+            approved_by=adjustment.approved_by,
+            approved_at=datetime.fromisoformat(adjustment.approved_at)
+            if adjustment.approved_at
+            else None,
+            created_by=adjustment.created_by,
+            reason_for_change=adjustment.reason_for_change,
+            version_index=adjustment.version_index,
+        )
+        self.session.add(model)
+        await self.session.flush()
+        return self._to_adjustment_entity(model)
+
+    @map_database_exceptions
+    async def get_budget_adjustment(
+        self, adjustment_id: str
+    ) -> BudgetAdjustmentEntity | None:
+        stmt = select(BudgetAdjustment).where(BudgetAdjustment.id.is_(adjustment_id))
+        res = await self.session.execute(stmt)
+        model = res.scalars().first()
+        if not model:
+            return None
+        return self._to_adjustment_entity(model)
+
+    @map_database_exceptions
+    async def list_budget_adjustments(
+        self,
+        grant_id: str | None = None,
+        study_id: str | None = None,
+        site_id: str | None = None,
+    ) -> list[BudgetAdjustmentEntity]:
+        stmt = select(BudgetAdjustment)
+        if grant_id:
+            stmt = stmt.where(BudgetAdjustment.grant_id.is_(grant_id))
+        if study_id:
+            stmt = stmt.where(BudgetAdjustment.study_id.is_(study_id))
+        if site_id:
+            stmt = stmt.where(BudgetAdjustment.site_id.is_(site_id))
+        res = await self.session.execute(stmt)
+        models = res.scalars().all()
+        return [self._to_adjustment_entity(m) for m in models]
 
     @map_database_exceptions
     async def save_procedure_grid(
         self, grid: ProcedurePaymentGridEntity
     ) -> ProcedurePaymentGridEntity:
+        if grid.id:
+            stmt = select(ProcedurePaymentGrid).where(
+                ProcedurePaymentGrid.id.is_(grid.id)
+            )
+            res = await self.session.execute(stmt)
+            model = res.scalars().first()
+            if model:
+                model.visit_name = grid.visit_name
+                model.activity_id = grid.activity_id
+                model.form_id = grid.form_id
+                model.procedure_code = grid.procedure_code
+                model.procedure_name = grid.procedure_name
+                model.base_amount = grid.base_amount
+                model.overhead_percentage = grid.overhead_percentage
+                model.withholding_percentage = grid.withholding_percentage
+                model.patient_stipend = grid.patient_stipend
+                model.travel_reimbursement = grid.travel_reimbursement
+                model.is_active = grid.is_active
+                model.reason_for_change = grid.reason_for_change
+                model.version_index = grid.version_index
+                self.session.add(model)
+                await self.session.flush()
+                return self._to_grid_entity(model)
+
         model = ProcedurePaymentGrid(
             grant_id=grid.grant_id,
             visit_name=grid.visit_name,
+            activity_id=grid.activity_id,
+            form_id=grid.form_id,
             procedure_code=grid.procedure_code,
             procedure_name=grid.procedure_name,
             base_amount=grid.base_amount,
             overhead_percentage=grid.overhead_percentage,
             withholding_percentage=grid.withholding_percentage,
+            patient_stipend=grid.patient_stipend,
+            travel_reimbursement=grid.travel_reimbursement,
             is_active=grid.is_active,
             created_by=grid.created_by,
             reason_for_change=grid.reason_for_change,
@@ -723,11 +1135,18 @@ class SQLAlchemyFinancialsRepository(IFinancialsRepository):
 
     @map_database_exceptions
     async def list_procedure_grids(
-        self, grant_id: str
+        self,
+        grant_id: str,
+        is_active_only: bool = False,
+        version_index: int | None = None,
     ) -> list[ProcedurePaymentGridEntity]:
         stmt = select(ProcedurePaymentGrid).where(
             ProcedurePaymentGrid.grant_id.is_(grant_id)
         )
+        if is_active_only:
+            stmt = stmt.where(ProcedurePaymentGrid.is_active.is_(True))
+        if version_index is not None:
+            stmt = stmt.where(ProcedurePaymentGrid.version_index.is_(version_index))
         res = await self.session.execute(stmt)
         models = res.scalars().all()
         return [self._to_grid_entity(m) for m in models]
@@ -811,6 +1230,90 @@ class SQLAlchemyFinancialsRepository(IFinancialsRepository):
         models = res.scalars().all()
         return [self._to_invoice_entity(m) for m in models]
 
+    def _to_budget_template_entity(
+        self, model: SiteBudgetTemplate
+    ) -> SiteBudgetTemplateEntity:
+        return SiteBudgetTemplateEntity(
+            id=model.id,
+            template_name=model.template_name,
+            study_id=model.study_id,
+            tier_level=model.tier_level,
+            currency=model.currency,
+            overhead_percentage=model.overhead_percentage,
+            withholding_percentage=model.withholding_percentage,
+            fixed_startup_fee=model.fixed_startup_fee,
+            fixed_closeout_fee=model.fixed_closeout_fee,
+            irb_fee=model.irb_fee,
+            patient_stipend_amount=model.patient_stipend_amount,
+            travel_reimbursement_rate=model.travel_reimbursement_rate,
+            fixed_fees=model.fixed_fees or [],
+            procedure_items=model.procedure_items or [],
+            is_active=model.is_active,
+            created_at=model.created_at.isoformat() if model.created_at else None,
+            created_by=model.created_by,
+            reason_for_change=model.reason_for_change,
+            version_index=model.version_index,
+        )
+
+    def _to_amendment_entity(
+        self, model: GrantContractAmendment
+    ) -> GrantContractAmendmentEntity:
+        return GrantContractAmendmentEntity(
+            id=model.id,
+            grant_id=model.grant_id,
+            amendment_number=model.amendment_number,
+            effective_date=model.effective_date.isoformat(),
+            previous_budget=model.previous_budget,
+            revised_budget=model.revised_budget,
+            previous_version_index=model.previous_version_index,
+            new_version_index=model.new_version_index,
+            summary_of_changes=model.summary_of_changes,
+            status=model.status,
+            approved_by=model.approved_by,
+            approved_at=model.approved_at.isoformat() if model.approved_at else None,
+            signature_manifestation=model.signature_manifestation,
+            created_at=model.created_at.isoformat() if model.created_at else None,
+            created_by=model.created_by,
+            reason_for_change=model.reason_for_change,
+            version_index=model.version_index,
+        )
+
+    def _to_exchange_rate_entity(
+        self, model: CurrencyExchangeRate
+    ) -> CurrencyExchangeRateEntity:
+        return CurrencyExchangeRateEntity(
+            id=model.id,
+            base_currency=model.base_currency,
+            target_currency=model.target_currency,
+            rate=model.rate,
+            effective_date=model.effective_date.isoformat(),
+            expiry_date=model.expiry_date.isoformat() if model.expiry_date else None,
+            is_active=model.is_active,
+            created_at=model.created_at.isoformat() if model.created_at else None,
+            created_by=model.created_by,
+            reason_for_change=model.reason_for_change,
+            version_index=model.version_index,
+        )
+
+    def _to_adjustment_entity(self, model: BudgetAdjustment) -> BudgetAdjustmentEntity:
+        return BudgetAdjustmentEntity(
+            id=model.id,
+            grant_id=model.grant_id,
+            site_id=model.site_id,
+            study_id=model.study_id,
+            adjustment_type=model.adjustment_type,
+            description=model.description,
+            amount=model.amount,
+            currency=model.currency,
+            status=model.status,
+            approved_by=model.approved_by,
+            approved_at=model.approved_at.isoformat() if model.approved_at else None,
+            created_at=model.created_at.isoformat() if model.created_at else None,
+            created_by=model.created_by,
+            reason_for_change=model.reason_for_change,
+            version_index=model.version_index,
+        )
+
     def _to_grid_entity(
         self, model: ProcedurePaymentGrid
     ) -> ProcedurePaymentGridEntity:
@@ -818,11 +1321,15 @@ class SQLAlchemyFinancialsRepository(IFinancialsRepository):
             id=model.id,
             grant_id=model.grant_id,
             visit_name=model.visit_name,
+            activity_id=model.activity_id,
+            form_id=model.form_id,
             procedure_code=model.procedure_code,
             procedure_name=model.procedure_name,
             base_amount=model.base_amount,
             overhead_percentage=model.overhead_percentage,
             withholding_percentage=model.withholding_percentage,
+            patient_stipend=model.patient_stipend,
+            travel_reimbursement=model.travel_reimbursement,
             is_active=model.is_active,
             created_at=model.created_at.isoformat() if model.created_at else None,
             created_by=model.created_by,

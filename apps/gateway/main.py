@@ -392,6 +392,7 @@ SERVICES = {
     "eisf": os.getenv("EISF_URL", "http://localhost:8010"),
     "econsent": os.getenv("ECONSENT_URL", "http://localhost:8011"),
     "fileshare": os.getenv("FILESHARE_URL", "http://localhost:8013"),
+    "imaging": os.getenv("IMAGING_URL", "http://localhost:8014"),
 }
 
 
