@@ -8,10 +8,10 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 3593
-- **Passed:** 3562 🟢
-- **Failed/Errors:** 1 🔴
+- **Passed:** 3563 🟢
+- **Failed/Errors:** 0 🔴
 - **Skipped:** 30 ⚪
-- **Overall Operational Pass Rate:** 99.14%
+- **Overall Operational Pass Rate:** 99.17%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -3827,7 +3827,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_feature_matrix_validation_ignoring_helper_and_excluded_services` | `tests.validation.test_feature_matrix_gating` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_feature_matrix_validation_missing_service` | `tests.validation.test_feature_matrix_gating` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_feature_matrix_validation_success` | `tests.validation.test_feature_matrix_gating` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_committed_typescript_schema_is_up_to_date` | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_committed_typescript_schema_is_up_to_date` | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_formatting_and_whitespace_immunity` | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_pending_delta_schema_drift` | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_simulated_field_name_rename_drift` | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3874,28 +3874,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 8326b0f0eae2f5c3362717704039ee409e6de5f814861eb6f41d9ced8b97bb86
+- **Cryptographic Hash (SHA-256):** 16f7c69004484a3e000366883e5e0dd71fb83d4219d834c7fae96bb1a5edf8cd
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUSPvudBl3Hk/WHkC5Zk64pyhtYGEwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUMWGTFtJ7TVzhhAAOyyTwzNE2oD4wDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MjIxMzgyNFoXDTI3MDgyMzIxMzgyNFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MjIxMzkxOVoXDTI3MDgyMzIxMzkxOVowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwOZ/
-zkDTuDTXaWgNdrTY1KsGHfyCxBO/59FhjEew+4TEvn0SSZBMKslwd7PvbhUjOlWQ
-mShm24xRdbznDfow1ETRCAv3r0QKNTcknzEO0nuAKOn3xRxnh9SC0q9g+WbXPIO5
-LpeYOsysSsoeeUSFq+eHPI+KQVkyL2/QiS0KPNGkzda2bKp0s6qqzY7PHVa5xIkh
-9eCUKKPSkX46T6W5n7cTPCRaBWaCnHNWcGjloHHTrHboDzYJbjpKnJI/PnTJPGq1
-o70KjhKAv9zFFjQ9kTZdiR5yY6Jj+H6azHAfFUzmsa2IiZI2GFf2Q/UROz+osvR9
-uFdSVRjEj4iccQN7lwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQCC4TmYbA+pjB+t
-cUWCO0fHFA2WeJqYE/WMRDLEeO579E3aoa0N7Z6ng+hxyHzjw8bZlsQRWazRXs3k
-YinkYVkp0l/SqJ1bzJfw+y6ySg6SsX11e2gQWaVzvv4If2pJzU9g6kBzQb4qgXpr
-HyRzpy68XTt1L35HSKxEh83GwCc3HHdbNFqq38BeFy3J5sSRannZORoNE2Isj/Mt
-qReedTWAv4YE/teuc/Z9dLtViHVALPR0yuhUS+CUhgG6aCqluqehE8oumU9VL7QK
-FoXGt4BSK3q7RJ4kM1DL2L5KqYYtmVYibtIWtqfd52NYJzBToWnJ4b6uF84xx/Id
-Igxt9SAB
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA35uJ
+ccBMmNUChVz5pqeyShxoT9fb9FyFBU+3sB1epMYlLprRKnAU2pwblpHBcrRvYyou
+YZIEdVJCspwESNeJ+ohwbdNoMqvLUAz6bs4myT7lfYM3Pg9U1b1VGc93QGLl3dcq
+rQiYePcGA4jyoFBTV0nEOaxRmMN8hRGe56AgTScFRqshf0Wp72oxp5FcYE2Jsw01
+NSw9Qabflrux3sNlpHEtWjNXdok3nxiR0FXw9mNliMN0DAGXZyCRvwMixBb9imvv
+1/V4l6lebybdp26NouqbtVrSxLyDTpEau4hkO8JF/L/xm78Sv8GyKZWhPFvJeeAs
+SLWqxJ9dSDp4EzvqoQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQB+v+dJxE3ym3DD
+5R+IRjdQTCokemGPzC1sqE5MCMgAiJcx0QjFQn23MsvOfyXIKbLTQ3mJTYHWMlW9
+c4ywtoMD7UxBwZ1tTd92JWEY+NXnXWDORBHKANKtNcKMduDVo4kJjgZqKp7DhKOx
+FwgKHDqofHVrvn3C2I/yDjOfav+4hLDlemSSZuVK+MgzUibNw+1XkQ40nSHKmKv6
+eiuc8Rm6rUJ2/fXQAxnXuGDO+qlocKtQkCeHRvrtGboe/Z2ROVe8UlPCfvCr1/Ps
+RTTMvZoNpuG5zB6pS5/VCvxjbRCwjLlt+WDhE5fi/SCwJIZaGSXnTlvUrTHt0irI
+7iWQektl
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-bOA+wnsz+thZFmupa6CsZ45A+8oijCtaF6EmYWnp0ystrF9mlpeBv1gnYay9gkpK9w3pjV1XjaUaVjjr/hhCWgVvvv9IMZ3mGas30EoRPnCsrr2/Oh+A4cSGKSu1ijvWvFvoKRw6cBuxuY5P8Wd87S1D5UlBSdn4DOJpOHJXvPO6ymVtMLghSqUH0r3zE8gbp9IFJu19j1/Eirz4JdttIVbMepsNxiZvD/Jftii0LntclngebXhGIGiRQVlhJPRxPzXMHw49iT6v3JPJlKkkAAxMUCjzlGYMy8mRyfYIZWmf1aDMEMBrscqUAbXccXnVIFyVGf5g9j3xmUSChSI9DQ==
+17owcEJuu9p/OBleclH/aIEp0Me2TkcmGObTMNNFkRZ7atw+boWEdHBjdGESOVBM8gpnpEFzEQZxp8X83txMVJPGYZqdgyBd/nl5IeLL3AJ1qB8CYeWqu6KT0vruVxWuDIuaFru/yYQXJwOEizgjX2ZwpTY9bhldjvu4B2qFjNjbNJxIunWB8X6zKtdMKgbI6sTRjL0hNTdkXJOUIpbzS5yK2XGqI7BRQNrNTPkjhmhbZUqUTC0GE/bYamY/M8XTpWRnYDcnaI1S4xRYSe27evFiseWYKIluI/Ci7jJyIKOowghITNnuMVfHLU+0lrUq41LLJsMbJo3b3JEAt9+qJQ==
 -----END SIGNATURE-----
