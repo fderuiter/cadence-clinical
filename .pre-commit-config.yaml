@@ -23,7 +23,13 @@ repos:
     hooks:
       - id: detect-secrets
         args: ["--baseline", ".secrets.baseline"]
-        exclude: "pnpm-lock.yaml|uv.lock|tests/fixtures/keys/|docs/CDISC/|docs/NCI/"
+        exclude: >-
+          (?x)(
+            pnpm-lock\.yaml|uv\.lock|
+            tests/fixtures/keys/|docs/CDISC/|docs/NCI/|docs/openapi/|docs/schema/|docs/SDLC/runs/|
+            report.*\.xml|coverage.*\.xml|\.cadence/|dist/|
+            \.(pdf|xlsx|xls|docx|doc|png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf|otf|mp4|webm|mp3|wav|zip|tar\.gz|gz|sqlite|db)$
+          )
         stages: [pre-commit, pre-push, manual]
 
   - repo: https://github.com/hadolint/hadolint

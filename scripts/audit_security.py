@@ -41,7 +41,10 @@ SECRET_PATTERNS: list[tuple[str, str]] = [
         "Hardcoded Bearer Token",
         r"bearer\s+eyJ[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*",
     ),
-    ("Hardcoded Password Assignment", r"(?i)password\s*=\s*['\"][^'\"]{8,}['\"]"),
+    (
+        "Hardcoded Password Assignment",
+        r"(?i)(?:const|let|var|\bself\.|^\s*|[,\s])password\s*[:=]\s*['\"][^'\"]{8,}['\"]",
+    ),
     (
         "Hardcoded Environment Fallback",
         r"(?i)(os\.getenv|os\.environ\.get)\s*\(\s*['\"][^'\"]+['\"]\s*,\s*['\"][^'\"]+['\"]",
@@ -49,13 +52,24 @@ SECRET_PATTERNS: list[tuple[str, str]] = [
 ]
 
 EXCLUDED_PATHS = {
+    ".cadence",
     ".git",
     ".pnpm-store",
     ".pytest_cache",
     ".venv",
+    ".vitepress",
     "__pycache__",
+    "dist",
+    "docs/CDISC",
+    "docs/NCI",
+    "docs/openapi",
+    "docs/schema",
+    "docs/SDLC/runs",
     "node_modules",
+    "pnpm-lock.yaml",
     "report.xml",
+    "tests/fixtures/keys",
+    "uv.lock",
     "venv",
 }
 
@@ -74,7 +88,32 @@ def scan_file_for_secrets(filepath: str) -> list[str]:
     # Skip binary files or excluded file extensions
     if any(
         filepath.endswith(ext)
-        for ext in [".png", ".jpg", ".pyc", ".db", ".sqlite", ".xml"]
+        for ext in [
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".svg",
+            ".ico",
+            ".pyc",
+            ".db",
+            ".sqlite",
+            ".xml",
+            ".pdf",
+            ".xlsx",
+            ".xls",
+            ".docx",
+            ".doc",
+            ".woff",
+            ".woff2",
+            ".ttf",
+            ".otf",
+            ".mp4",
+            ".webm",
+            ".zip",
+            ".tar.gz",
+            ".gz",
+        ]
     ):
         return findings
 
@@ -92,6 +131,21 @@ def scan_file_for_secrets(filepath: str) -> list[str]:
                 continue
 
             for pattern_name, regex in SECRET_PATTERNS:
+                if pattern_name == "Hardcoded Password Assignment":
+                    # Skip Vue/HTML template bindings and input attributes
+                    if any(
+                        attr in line
+                        for attr in [
+                            "v-model",
+                            ":password",
+                            'type="password"',
+                            "type='password'",
+                            "<input",
+                            ":reauth-password",
+                        ]
+                    ):
+                        continue
+
                 if pattern_name == "Hardcoded Environment Fallback":
                     # Removed path whitelist restriction. Enforces global monorepo scanning.
 

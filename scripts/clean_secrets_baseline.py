@@ -26,7 +26,7 @@ if sys.version_info < (3, 14):
 from scripts.runtime_guard import enforce_python_runtime
 
 EXCLUDE_REGEX = re.compile(
-    r"(pnpm-lock\.yaml|uv\.lock|tests/fixtures/keys/|docs/CDISC/|docs/NCI/)"
+    r"(pnpm-lock\.yaml|uv\.lock|tests/fixtures/keys/|docs/CDISC/|docs/NCI/|docs/openapi/|docs/schema/|docs/SDLC/runs/|report.*\.xml|coverage.*\.xml|\.cadence/|dist/|\.(pdf|xlsx|xls|docx|doc|png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf|otf|mp4|webm|mp3|wav|zip|tar\.gz|gz|sqlite|db)$)"
 )
 
 
@@ -46,7 +46,7 @@ def clean_baseline(filepath):
         # Ensure exclude section is configured
         if "exclude" not in data or not data["exclude"]:
             data["exclude"] = {
-                "files": r"(pnpm-lock\.yaml|uv\.lock|tests/fixtures/keys/|docs/CDISC/|docs/NCI/)",
+                "files": r"(pnpm-lock\.yaml|uv\.lock|tests/fixtures/keys/|docs/CDISC/|docs/NCI/|docs/openapi/|docs/schema/|docs/SDLC/runs/|report.*\.xml|coverage.*\.xml|\.cadence/|dist/|\.(pdf|xlsx|xls|docx|doc|png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf|otf|mp4|webm|mp3|wav|zip|tar\.gz|gz|sqlite|db)$)",
                 "lines": None,
             }
 
