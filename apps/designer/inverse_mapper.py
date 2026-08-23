@@ -5,30 +5,20 @@ Inverse USDM mapper for Phase 2 - Bidirectional Import & Export Mapping.
 from typing import Any
 
 from apps.designer.db import MOCK_TERMINOLOGY
-from apps.designer.rules import ExpressionNode, detect_circular_dependencies
+from packages.ddf.rules import (
+    ExpressionNode,
+    detect_circular_dependencies,
+)
+from packages.ddf.rules import (
+    resolve_concept_id as canonical_resolve_concept_id,
+)
 
 
 def resolve_concept_id(concept_dict: dict[str, Any] | None) -> str | None:
-    """Resolves a terminology concept ID (key) given a concept dict with a 'code'.
-    Searches first within the terminology cache, falling back to MOCK_TERMINOLOGY,
-    and then defaulting to the code itself.
-    """
-    if not concept_dict or not isinstance(concept_dict, dict):
-        return None
-    code = concept_dict.get("code")
-    if not code:
-        return None
-
-    # Try _original_id first
-    if "_original_id" in concept_dict and concept_dict["_original_id"]:
-        return str(concept_dict["_original_id"])
-
-    # Search terminology_cache details
-    for k, details in MOCK_TERMINOLOGY.items():
-        if isinstance(details, dict) and details.get("code") == code:
-            return k
-
-    return str(code)
+    """Resolves a terminology concept ID (key) given a concept dict with a 'code'."""
+    return canonical_resolve_concept_id(
+        concept_dict, terminology_cache=MOCK_TERMINOLOGY
+    )
 
 
 def map_usdm_to_study(usdm_data: dict[str, Any]) -> dict[str, Any]:

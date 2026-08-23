@@ -43413,7 +43413,7 @@
     "/payments/api/v1/payments/contracts": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Create Budget Contract",
         "description": "Creates or versions an active investigator grant contract schedule.",
@@ -43453,7 +43453,7 @@
       },
       "get": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "List Budget Contracts",
         "description": "Lists budget contracts matching filters.",
@@ -43533,7 +43533,7 @@
     "/payments/api/v1/payments/contracts/{contract_id}": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Get Budget Contract",
         "description": "Retrieves a single budget contract by ID.",
@@ -43576,7 +43576,7 @@
     "/payments/api/v1/payments/contracts/{contract_id}/fee-schedules": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Add Fee Schedule",
         "description": "Adds a procedure reimbursement rate item to the contract fee schedule.",
@@ -43627,7 +43627,7 @@
       },
       "get": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "List Fee Schedules",
         "description": "Lists procedure fee schedules configured for a contract.",
@@ -43716,7 +43716,7 @@
     "/payments/api/v1/payments/contracts/{contract_id}/split-payees": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Configure Split Payees",
         "description": "Configures multi-party split payee allocation percentages (must sum to 100%).",
@@ -43771,7 +43771,7 @@
       },
       "get": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "List Split Payees",
         "description": "Lists configured split payee shares for a contract.",
@@ -43828,7 +43828,7 @@
     "/payments/api/v1/payments/events/ecrf-submission": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Ingest Ecrf Submission Event",
         "description": "Real-time event listener ingesting eCRF submission to trigger payables.",
@@ -43874,7 +43874,7 @@
     "/payments/api/v1/payments/events/cra-sdv-verification": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Ingest Cra Sdv Verification Event",
         "description": "Real-time event listener ingesting CRA SDV verification to unlock payables.",
@@ -43924,7 +43924,7 @@
     "/payments/api/v1/payments/events/milestone-completion": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Ingest Milestone Completion Event",
         "description": "Real-time event listener ingesting CTMS milestone completion.",
@@ -43966,7 +43966,7 @@
     "/payments/api/v1/payments/events/batch": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Ingest Batch Events",
         "description": "Ingests batch of mixed clinical financial events.",
@@ -44010,7 +44010,7 @@
     "/payments/api/v1/payments/payables": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "List Payables",
         "description": "Lists payables with split allocations and holdback reserve status.",
@@ -44160,7 +44160,7 @@
     "/payments/api/v1/payments/payables/{payable_id}": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Get Payable",
         "description": "Retrieves payable details by ID.",
@@ -44203,7 +44203,7 @@
     "/payments/api/v1/payments/payables/{payable_id}/approve": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Approve Payable",
         "description": "Approves a payable for disbursement.",
@@ -44246,7 +44246,7 @@
     "/payments/api/v1/payments/holdbacks": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "List Holdback Reserves",
         "description": "Lists 10% holdback retention reserves.",
@@ -44332,7 +44332,7 @@
     "/payments/api/v1/payments/holdbacks/release": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Release Holdback Reserves",
         "description": "Releases holdback retention reserves with dual DM and Quality oversight sign-offs.",
@@ -44374,7 +44374,7 @@
     "/payments/api/v1/payments/audit-logs": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "List Payment Audit Logs",
         "description": "Queries immutable 21 CFR Part 11 payment transaction audit logs.",
@@ -44460,7 +44460,7 @@
     "/payments/api/v1/payments/invoices/compile": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Compile Billing Cycle",
         "description": "Automates monthly or quarterly billing cycle compilation into a self-billing invoice.",
@@ -44502,7 +44502,7 @@
     "/payments/api/v1/payments/invoices": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "List Invoices",
         "description": "Lists compiled self-billing invoices matching filter criteria.",
@@ -44620,7 +44620,7 @@
     "/payments/api/v1/payments/invoices/{invoice_id}": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Get Invoice",
         "description": "Retrieves full self-billing invoice details with line items and remittance advice.",
@@ -44663,7 +44663,7 @@
     "/payments/api/v1/payments/invoices/{invoice_id}/approve": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Approve Self Billing Invoice",
         "description": "Approves a draft self-billing invoice for ERP synchronization and disbursement.",
@@ -44706,7 +44706,7 @@
     "/payments/api/v1/payments/invoices/{invoice_id}/remittance-advice": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Get Remittance Advice",
         "description": "Retrieves remittance advice statement record for an invoice.",
@@ -44749,7 +44749,7 @@
     "/payments/api/v1/payments/invoices/{invoice_id}/remittance-advice/pdf": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Download Remittance Advice Pdf",
         "description": "Downloads binary PDF remittance advice statement.",
@@ -44790,7 +44790,7 @@
     "/payments/api/v1/payments/invoices/{invoice_id}/remittance-advice/sign": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Sign Remittance Advice",
         "description": "Applies 21 CFR Part 11 cryptographic digital signature to remittance advice statement.",
@@ -44843,7 +44843,7 @@
     "/payments/api/v1/payments/invoices/{invoice_id}/remittance-advice/verify-signature": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Verify Remittance Advice Signature",
         "description": "Verifies cryptographic signature validity and tamper resistance of remittance advice statement.",
@@ -44886,7 +44886,7 @@
     "/payments/api/v1/payments/invoices/{invoice_id}/remittance-advice/dispatch": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Dispatch Remittance Advice",
         "description": "Dispatches signed remittance advice statement via automated email notification.",
@@ -44939,7 +44939,7 @@
     "/payments/api/v1/payments/invoices/{invoice_id}/erp-export": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Export Invoice To Erp",
         "description": "Exports invoice into standardized ERP transmission format (SAP/NetSuite).",
@@ -44994,7 +44994,7 @@
     "/payments/api/v1/payments/erp/webhook": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Process Erp Webhook",
         "description": "Inbound enterprise ERP webhook receiver for payment execution and reconciliation status updates.",
@@ -45036,7 +45036,7 @@
     "/payments/api/v1/payments/invoices/{invoice_id}/reconcile": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Reconcile Invoice Payment",
         "description": "Reconciles payment execution against self-billing invoice and underlying payables.",
@@ -45089,7 +45089,7 @@
     "/payments/api/v1/payments/invoices/{invoice_id}/erp-logs": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "List Erp Sync Logs",
         "description": "Lists ERP synchronization history and webhook audit records for an invoice.",
@@ -45168,7 +45168,7 @@
     "/payments/api/v1/payments/participant/wallets": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Get Or Create Participant Wallet",
         "description": "Provisions or retrieves a participant financial wallet.",
@@ -45208,7 +45208,7 @@
       },
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "List Participant Wallets",
         "description": "Lists participant financial wallets filtered by study and/or site.",
@@ -45278,7 +45278,7 @@
     "/payments/api/v1/payments/participant/wallets/{wallet_id}": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Get Participant Wallet By Id",
         "description": "Retrieves participant wallet details and current balance.",
@@ -45321,7 +45321,7 @@
     "/payments/api/v1/payments/participant/wallets/subject/{study_id}/{subject_id}": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Get Participant Wallet By Subject",
         "description": "Retrieves participant wallet by study ID and subject ID.",
@@ -45373,7 +45373,7 @@
     "/payments/api/v1/payments/participant/wallets/{wallet_id}/payout-methods": {
       "put": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Update Participant Wallet Payout Methods",
         "description": "Updates payout credentials (virtual card / direct ACH) for a participant wallet.",
@@ -45426,7 +45426,7 @@
     "/payments/api/v1/payments/participant/wallets/{wallet_id}/disburse": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Disburse Participant Funds",
         "description": "Dispatches digital funds payout (Virtual Card / Direct ACH) with 21 CFR Part 11 ledger recording.",
@@ -45479,7 +45479,7 @@
     "/payments/api/v1/payments/participant/wallets/{wallet_id}/transactions": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "List Wallet Transactions",
         "description": "Retrieves immutable financial transaction history for a participant wallet.",
@@ -45526,7 +45526,7 @@
     "/payments/api/v1/payments/participant/disbursements": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "List Participant Disbursements",
         "description": "Lists all digital disbursements dispatched across participant wallets.",
@@ -45612,7 +45612,7 @@
     "/payments/api/v1/payments/participant/stipend-rules": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Create Participant Stipend Rule",
         "description": "Configures participant visit compensation rules linked to the Schedule of Activities.",
@@ -45652,7 +45652,7 @@
       },
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "List Participant Stipend Rules",
         "description": "Lists SoA protocol stipend compensation rules for a study.",
@@ -45716,7 +45716,7 @@
     "/payments/api/v1/payments/participant/events/visit-verified": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Ingest Visit Verified Event",
         "description": "Receives verified clinic visit completion from EDC and credits stipend to participant wallet.",
@@ -45760,7 +45760,7 @@
     "/payments/api/v1/payments/participant/expenses/ocr-extract": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Extract Receipt Ocr",
         "description": "Performs OCR metadata extraction on a travel/meal expense receipt.",
@@ -45802,7 +45802,7 @@
     "/payments/api/v1/payments/participant/expenses": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Submit Participant Expense Claim",
         "description": "Submits a mobile travel/meal expense reimbursement claim for coordinator review.",
@@ -45842,7 +45842,7 @@
       },
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "List Participant Expense Claims",
         "description": "Lists submitted expense claims filtered by study, site, subject, or review status.",
@@ -45944,7 +45944,7 @@
     "/payments/api/v1/payments/participant/expenses/{claim_id}/review": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Review Participant Expense Claim",
         "description": "Processes 1-click coordinator review and approval/rejection of a travel expense claim.",
@@ -45997,7 +45997,7 @@
     "/payments/api/v1/payments/lay-summaries": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Create Lay Summary",
         "description": "Drafts or creates an EU CTR Regulation No 536/2014 Article 37 Plain Language Lay Summary.",
@@ -46037,7 +46037,7 @@
       },
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "List Lay Summaries",
         "description": "Lists published and drafted plain-language trial summaries.",
@@ -46123,7 +46123,7 @@
     "/payments/api/v1/payments/lay-summaries/{summary_id}": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Get Lay Summary",
         "description": "Retrieves details of a plain-language trial summary.",
@@ -46166,7 +46166,7 @@
     "/payments/api/v1/payments/lay-summaries/{summary_id}/publish": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Publish Lay Summary",
         "description": "Formally publishes an IRB-approved lay summary for participant access.",
@@ -46219,7 +46219,7 @@
     "/payments/api/v1/payments/lay-summaries/{summary_id}/confirm-receipt": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Confirm Lay Summary Receipt",
         "description": "Records participant confirmation of lay summary receipt with comprehension score and SHA-256 seal.",
@@ -46272,7 +46272,7 @@
     "/payments/api/v1/payments/lay-summaries/{summary_id}/receipts": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "List Lay Summary Receipts",
         "description": "Lists confirmation receipts for a lay summary for regulatory compliance audits.",
@@ -48637,6 +48637,45 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Quality_DataIntegritySimulationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quality/api/v1/quality/surveillance/run": {
+      "post": {
+        "summary": "Execute Quality Surveillance Run",
+        "description": "Executes a complete, autonomous cross-domain quality surveillance run.\n\nHarvests clinical data across domains, enforces sample power gating,\nevaluates statistical forensics & computer vision sentinels,\nand idempotently dispatches 21 CFR Part 11 Deviations.",
+        "operationId": "Quality_execute_quality_surveillance_run_api_v1_quality_surveillance_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Quality_QualitySurveillanceRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_QualitySurveillanceRunResponse"
                 }
               }
             }
@@ -119556,6 +119595,209 @@
         ],
         "title": "QTLResponse"
       },
+      "Quality_QualitySurveillanceRunRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target study ID for autonomous surveillance"
+          },
+          "run_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Name",
+            "description": "Optional custom name for the surveillance sweep"
+          },
+          "auto_dispatch_deviations": {
+            "type": "boolean",
+            "title": "Auto Dispatch Deviations",
+            "description": "Whether to automatically dispatch 21 CFR Part 11 Deviation records for high-risk anomalies",
+            "default": true
+          },
+          "target_variables": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Variables",
+            "description": "Optional list of target continuous variables for statistical CSM"
+          },
+          "min_subjects_power": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Min Subjects Power",
+            "description": "Minimum subjects required per site for statistical distribution gating",
+            "default": 15
+          },
+          "min_observations_power": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Min Observations Power",
+            "description": "Minimum observations required per site for statistical distribution gating",
+            "default": 50
+          },
+          "similarity_threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.5,
+            "title": "Similarity Threshold",
+            "description": "Cosine/Manhattan similarity threshold for duplicate patient detection",
+            "default": 0.88
+          },
+          "hamming_threshold": {
+            "type": "integer",
+            "maximum": 64.0,
+            "minimum": 0.0,
+            "title": "Hamming Threshold",
+            "description": "Maximum perceptual image Hamming distance threshold",
+            "default": 5
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "QualitySurveillanceRunRequest"
+      },
+      "Quality_QualitySurveillanceRunResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "run_name": {
+            "type": "string",
+            "title": "Run Name"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "total_sites": {
+            "type": "integer",
+            "title": "Total Sites"
+          },
+          "gated_sites_count": {
+            "type": "integer",
+            "title": "Gated Sites Count"
+          },
+          "analyzed_sites_count": {
+            "type": "integer",
+            "title": "Analyzed Sites Count"
+          },
+          "total_subjects": {
+            "type": "integer",
+            "title": "Total Subjects"
+          },
+          "total_observations": {
+            "type": "integer",
+            "title": "Total Observations"
+          },
+          "total_images_scanned": {
+            "type": "integer",
+            "title": "Total Images Scanned"
+          },
+          "total_events_scanned": {
+            "type": "integer",
+            "title": "Total Events Scanned"
+          },
+          "anomalies_count": {
+            "type": "integer",
+            "title": "Anomalies Count"
+          },
+          "deviations_dispatched_count": {
+            "type": "integer",
+            "title": "Deviations Dispatched Count"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "site_summaries": {
+            "items": {
+              "$ref": "#/components/schemas/Quality_SiteSurveillanceSummaryResponse"
+            },
+            "type": "array",
+            "title": "Site Summaries"
+          },
+          "findings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Findings"
+          },
+          "deviations": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Deviations"
+          },
+          "forensics_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forensics Run Id"
+          },
+          "sentinel_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentinel Run Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "study_id",
+          "run_name",
+          "timestamp",
+          "total_sites",
+          "gated_sites_count",
+          "analyzed_sites_count",
+          "total_subjects",
+          "total_observations",
+          "total_images_scanned",
+          "total_events_scanned",
+          "anomalies_count",
+          "deviations_dispatched_count",
+          "status",
+          "site_summaries",
+          "findings",
+          "deviations"
+        ],
+        "title": "QualitySurveillanceRunResponse"
+      },
       "Quality_RACTCategory": {
         "type": "string",
         "enum": [
@@ -120636,6 +120878,79 @@
           "reason_for_change"
         ],
         "title": "SiteRiskProfileResponse"
+      },
+      "Quality_SiteSurveillanceSummaryResponse": {
+        "properties": {
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "sample_size": {
+            "type": "integer",
+            "title": "Sample Size"
+          },
+          "observation_count": {
+            "type": "integer",
+            "title": "Observation Count"
+          },
+          "power_status": {
+            "type": "string",
+            "title": "Power Status"
+          },
+          "is_sample_gated": {
+            "type": "boolean",
+            "title": "Is Sample Gated"
+          },
+          "composite_risk_score": {
+            "type": "number",
+            "title": "Composite Risk Score"
+          },
+          "risk_tier": {
+            "type": "string",
+            "title": "Risk Tier"
+          },
+          "anomalies_detected": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Anomalies Detected"
+          },
+          "deviations_created": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Deviations Created"
+          },
+          "kri_alerts_triggered": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kri Alerts Triggered"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "site_id",
+          "sample_size",
+          "observation_count",
+          "power_status",
+          "is_sample_gated",
+          "composite_risk_score",
+          "risk_tier",
+          "anomalies_detected",
+          "deviations_created",
+          "kri_alerts_triggered",
+          "details"
+        ],
+        "title": "SiteSurveillanceSummaryResponse"
       },
       "Quality_StatisticalForensicsAnalyzeRequest": {
         "properties": {

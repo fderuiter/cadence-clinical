@@ -1,7 +1,7 @@
 """XPath Rule Compiler for Digital Data Flow.
 
 Recursively compiles structured rule conditions into OpenRosa-compliant XPath expressions
-for eCRF visibility skip logic and field validation constraints.
+for eCRF visibility skip logic and field validation constraints across Designer and Execution.
 """
 
 from __future__ import annotations
@@ -72,10 +72,15 @@ def extract_appearance(item: dict[str, Any]) -> str | None:
     return None
 
 
-def compile_condition_to_xpath(node: Any) -> str:
+def compile_condition_to_xpath(node: Any, root_prefix: str = "") -> str:
     """Recursively compiles a structured rule condition (dict or ExpressionNode) into an XPath expression string.
 
-    References to fields are sanitized using `sanitize_identifier`.
+    Args:
+        node: The AST ExpressionNode or rule condition dictionary.
+        root_prefix: Optional root path prefix (e.g. '/clinical_data' for Designer).
+
+    Returns:
+        The compiled XPath expression string.
     """
     if not node:
         return ""
@@ -118,8 +123,32 @@ def compile_condition_to_xpath(node: Any) -> str:
         )
         if not field_id:
             return ""
-        sanitized = sanitize_identifier(field_id)
-        return f"/{sanitized}"
+
+        parts = []
+        if root_prefix:
+            parts.append(root_prefix.strip("/"))
+
+        visit_rel = getattr(ref, "visit_relative", None) or (
+            ref.get("visit_relative") if isinstance(ref, dict) else None
+        )
+        visit_id = getattr(ref, "visit_id", None) or (
+            ref.get("visit_id") if isinstance(ref, dict) else None
+        )
+        form_id = getattr(ref, "form_id", None) or (
+            ref.get("form_id") if isinstance(ref, dict) else None
+        )
+
+        if visit_rel:
+            parts.append(visit_rel)
+        elif visit_id:
+            parts.append(visit_id)
+        if form_id:
+            parts.append(form_id)
+
+        sanitized = sanitize_identifier(field_id) if not root_prefix else field_id
+        parts.append(sanitized)
+
+        return f"/{'/'.join(parts)}"
 
     if node_type == "logical":
         operator = (
@@ -135,10 +164,13 @@ def compile_condition_to_xpath(node: Any) -> str:
         if not operator or not operands:
             return ""
         if operator == "not":
-            return f"not({compile_condition_to_xpath(operands[0])})"
-        op_lower = f" {operator.lower()} "
-        compiled_ops = [compile_condition_to_xpath(op) for op in operands]
-        return f"({op_lower.join(compiled_ops)})"
+            return f"not({compile_condition_to_xpath(operands[0], root_prefix=root_prefix)})"
+        op_fmt = operator.upper() if root_prefix else operator.lower()
+        op_join = f" {op_fmt} "
+        compiled_ops = [
+            compile_condition_to_xpath(op, root_prefix=root_prefix) for op in operands
+        ]
+        return f"({op_join.join(compiled_ops)})"
 
     if node_type == "comparison":
         operator = (
@@ -154,8 +186,8 @@ def compile_condition_to_xpath(node: Any) -> str:
         if not operator or not operands or len(operands) < 2:
             return ""
         op_symbol = "=" if operator == "==" else operator
-        left = compile_condition_to_xpath(operands[0])
-        right = compile_condition_to_xpath(operands[1])
+        left = compile_condition_to_xpath(operands[0], root_prefix=root_prefix)
+        right = compile_condition_to_xpath(operands[1], root_prefix=root_prefix)
         return f"({left} {op_symbol} {right})"
 
     if node_type == "function":
@@ -174,22 +206,28 @@ def compile_condition_to_xpath(node: Any) -> str:
         if operator in ("is_empty", "empty"):
             if len(operands) != 1:
                 raise ValueError(f"Function '{operator}' requires exactly 1 operand")
-            return f"empty({compile_condition_to_xpath(operands[0])})"
+            return f"empty({compile_condition_to_xpath(operands[0], root_prefix=root_prefix)})"
         if operator == "is_not_empty":
             if len(operands) != 1:
                 raise ValueError(f"Function '{operator}' requires exactly 1 operand")
-            return f"not(empty({compile_condition_to_xpath(operands[0])}))"
+            return f"not(empty({compile_condition_to_xpath(operands[0], root_prefix=root_prefix)}))"
         if operator == "indexed-repeat":
             if len(operands) != 3:
                 raise ValueError(f"Function '{operator}' requires exactly 3 operands")
-            compiled_ops = [compile_condition_to_xpath(op) for op in operands]
+            compiled_ops = [
+                compile_condition_to_xpath(op, root_prefix=root_prefix)
+                for op in operands
+            ]
             return f"indexed-repeat({', '.join(compiled_ops)})"
 
-        compiled_ops = [compile_condition_to_xpath(op) for op in operands]
+        compiled_ops = [
+            compile_condition_to_xpath(op, root_prefix=root_prefix) for op in operands
+        ]
         return f"{operator}({', '.join(compiled_ops)})"
 
     return ""
 
 
-# Alias for Designer compatibility
-compile_to_xpath = compile_condition_to_xpath
+def compile_to_xpath(node: Any, root_prefix: str = "/clinical_data") -> str:
+    """Convenience alias compiling an ExpressionNode into XPath for Designer."""
+    return compile_condition_to_xpath(node, root_prefix=root_prefix)

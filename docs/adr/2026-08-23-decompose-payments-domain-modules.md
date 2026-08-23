@@ -42,7 +42,7 @@ Chosen option: **Option A**.
 1. `SitePaymentLedgerEngine` (`apps/payments/services/site_payment_ledger_engine.py`) owns contracts, fee schedules, split payee configs, trigger processing, payable approvals, and holdbacks.
 2. `BillingAndErpGateway` (`apps/payments/services/billing_and_erp_gateway.py`) owns self-billing cycles, PDF remittance generation/signing, ERP export, webhooks, and bank reconciliation.
 3. `ParticipantCompensationService` (`apps/payments/services/participant_compensation_service.py`) owns wallets, stipend rules, visit triggers, OCR receipt expenses, disbursements, transactions, and lay summaries.
-4. `record_payment_audit_log` (`apps/payments/domain/audit.py`) centralizes Part 11 audit logging.
+4. `record_payment_audit_log` (`apps/payments/services/audit.py`) centralizes Part 11 audit logging.
 5. Modular sub-routers (`apps/payments/presentation/routers/site_ledger.py`, `apps/payments/presentation/routers/billing_erp.py`, `apps/payments/presentation/routers/participant.py`) aggregated into `apps/payments/presentation/routers/payments.py`.
 
 ## 5. Consequences & Trade-offs
@@ -58,7 +58,7 @@ Chosen option: **Option A**.
 ## 6. Implementation & Verification
 
 * **Created:**
-  - `apps/payments/domain/audit.py`
+  - `apps/payments/services/audit.py`
   - `apps/payments/services/site_payment_ledger_engine.py`
   - `apps/payments/services/billing_and_erp_gateway.py`
   - `apps/payments/services/participant_compensation_service.py`

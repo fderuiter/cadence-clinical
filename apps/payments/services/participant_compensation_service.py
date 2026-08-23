@@ -20,7 +20,6 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from apps.payments.domain.audit import record_payment_audit_log
 from apps.payments.domain.models import AuditAction, ReceiptOcrResult
 from apps.payments.infrastructure.models import (
     LaySummaryModel,
@@ -31,6 +30,7 @@ from apps.payments.infrastructure.models import (
     ParticipantTransactionModel,
     ParticipantWalletModel,
 )
+from apps.payments.services.audit import record_payment_audit_log
 
 
 class ParticipantCompensationService:

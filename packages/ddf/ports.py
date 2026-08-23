@@ -1,14 +1,14 @@
 """Ports and Protocols for Digital Data Flow (DDF) Extensibility."""
 
-from typing import Protocol, runtime_checkable
+from abc import ABC, abstractmethod
 
 from packages.ddf.models import AccessibilityReport
 
 
-@runtime_checkable
-class AccessibilityValidatorPort(Protocol):
+class AccessibilityValidatorPort(ABC):
     """Port interface for evaluating XML/XForms layout and WCAG accessibility."""
 
+    @abstractmethod
     async def validate(self, openrosa_xml: str) -> AccessibilityReport:
         """Evaluates layout accessibility on the given OpenRosa XML string.
 

@@ -7,8 +7,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3625
-- **Passed:** 3595 🟢
+- **Total Automated Test Cases Run:** 3627
+- **Passed:** 3597 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 30 ⚪
 - **Overall Operational Pass Rate:** 99.17%
@@ -3028,6 +3028,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_reset_db_safety_guard_non_local` | `packages.database.tests.test_reset_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reset_db_safety_guard_production` | `packages.database.tests.test_reset_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reset_db_success_offline` | `packages.database.tests.test_reset_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ddf_compiler_accessibility_failure_raises` | `packages.ddf.tests.test_compiler` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ddf_compiler_end_to_end_success` | `packages.ddf.tests.test_compiler` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ir_builder_processes_items_and_rules` | `packages.ddf.tests.test_normalizer_and_ir` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalizer_missing_protocol_raises` | `packages.ddf.tests.test_normalizer_and_ir` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalizer_synthesizes_fallbacks` | `packages.ddf.tests.test_normalizer_and_ir` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3917,28 +3919,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** e858bddb56a9e2a542c186a481ef1025dbef1f69d9408dc50f6259899ea6a731
+- **Cryptographic Hash (SHA-256):** 3f8bcd04c0d4fd7c052b42b074dfd2884c05b8222b179ce6eb28451155029d71
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUAT4PoQtWgMGusm7PFfLJkrbIWWowDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUR5v773wPVGctnfhfygC8BAH2WMcwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MjIzMzIyNloXDTI3MDgyMzIzMzIyNlowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MjIzNDQxM1oXDTI3MDgyMzIzNDQxM1owUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyT5p
-SDwgVWqP7HCs6piwvPsXfkxZxyrmezaHo7do8wec1OcUXyXwx62Lo8nWEwS/GQVi
-OAb5OyrVd1Pi0CgvItpsu2I09XGPsTGQkJMw4CLYSUtDzjGGpxT0n8ep2lmRbqlg
-vOjf8ba52cfm/3kq8m0lStozsJbbuaV2pnlI1jtDIQdE2yzUYQkw3pZffxR66p8f
-5yOABq9BgaYhERKRdimuy+lHyV018/K3f37WOJTUYNoTFq7wLZiEAx+QxutSsXZ9
-5WK70wLA/I4rIOhnQPlrNH4uJtpBQwMEUqy402bbk9WksNrAd704j3LXR9z6wNFj
-ugxANv7GOJwCBR3ihwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQClz34ruCkpgyvK
-h3hLhYKO0aZlia/c8jPbjSSkEMYiE94SdoMctTw88rLo+AX9NAdJgzpsawljfed9
-RQcYoJbv2Xr/5vxIt4b6lEdM2OrzbXaSehVmd9sMHrKrA+ZID+dnvRFv7AL2CJCU
-97fbYA9NhcW7DEbcgahriiIyxmC4Y/XzGwFP0mhpxH1apZ/jMG79d40pEC8RYsBS
-JApnI3VOBSwjOoZM+xi//KZj02Jrx6UJlpqQUfTN1m/iVj3eJfQeN/HUnQjA/kGh
-qguTItloL9rpI8dhrFQEwAfSqWYxyZrTHgBhQLcvF6esQ/78PBi66v2X3zoee4vR
-0WAUoOTa
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0vt/
+dobAB3i0lelLNJfvSTJerR96DulHSVHtovbMmfJKG5HZKNMW87QLBfCsEYZXxEVf
+6s19nf9hGOTPHBR6LFwUECfGv9bnFB3Hbk2dV5McznoAUMa9uIX1xNfWhh5/jxZp
+LYDkp13kpSObeU4ho+iMS2rCYPlQjsyl0OJl77P33ioVQrpaTFQlspxBpZnUiDcE
+9Y7Q1HmNci8zjN7pVhMxFJCFYXSLa2qkNmu9qavvoLVLIvNt4vJCHw/wxFJ+f2o6
+qlhoNmkULwG20KDIxR+9i+SQh+0+V9Z5wXAfwzg7+2CC6Uc95ioZQCMYn0Wj16tn
+drcQ+Mxk1CEyDaR7RwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAzr9AB4mubYdkg
+62n6plxnRKDVGRGh2hN9tTI5Xq4hhBlEultwnT5eq2CWPL59CZR/ET1vRvwMwkU6
+7w+0gu90iBw3wqQWrWiybyMxVDXyzNQjH/F5OTk4sni9HsnXpK0TtQdpVH1Lt78W
+qoI7B8C95vku0iVM7H+Wpbuo1JMGVcCVa4k9YsSSK97Rw7cr33SJOt3DKHOpj61v
+usZxkxiCc9LyP7SJQ5mFHTESIAIab9vhIQmLZ5Pd0VkmhJolH+rHBrvR0zsBH5AH
+sRPBcl4m234EVT25UnCDxvIFQkWpwRkzMljT2+8YWV0rFxvFgkd14gTtC3vzh1qW
+QswOarmQ
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-gJ60WBc+2MBrwDLLl29PqZL7VoIuPS/8YmSP915Q9RPmtsb2euYjJFK2afOsw+TYcFdGdP7h2CDgXV+A8GaCP0JTNW3zcK8COUF7NbWSFAwY0XZ7YOhM3f/9MEI574QlDMeGYQ8tEF588w/xuxF5qhYg80KN71412KSJovCw7Jm28DhRgC4e6N5AXQ/uQx1BN9mWHl78L2JofcqWBWZF6r5vt7ESfISMyNlQ+Ab8kfAB7LK/c5Aye1adOyMCITqGAnEhQsh16dHoFG1V1Ljd8cJoWQmOMAwB2O7JqgRnHXhQHxo4LZgE95lHNEZ5F8iVNekmBI7wVq2ufrwO1XmPoA==
+fhpbxhQFV9dSQS9hZGY0yNX+kb1TuWEWDPaWCsxDB4SDUpCn4DTsKR0Oa9gsmcTfmL7JVbT8X9q+QJnvr1rseofmhCpGxVTNWdV354x+tpLmtYzNoTx53t/0jdaW1tzbQW1UfMEJ6trH0weyijDdR9XVF+/uXfe+hOzYXEcrbe9CiICPFbmIsir9r8kpOm0j56l7saqX+esU2odAfeeXRE9C21W/IsOKvJ10FM0oqeJ0BK5dbg+np1QAwm3htYrSSeU2VeSV+Cn65U2wj559TToqUgm4P/rZwYl/lM7XzLN/YZby8AzAR2BwmkFI9hxuNaLONNXnIMKBXCSyc6a4uQ==
 -----END SIGNATURE-----

@@ -20,7 +20,6 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from apps.payments.domain.audit import record_payment_audit_log
 from apps.payments.domain.models import (
     AuditAction,
     ErpExportEnvelope,
@@ -40,6 +39,7 @@ from apps.payments.infrastructure.models import (
     SplitPayeeConfigModel,
 )
 from apps.payments.presentation.dtos import ErpWebhookPayload
+from apps.payments.services.audit import record_payment_audit_log
 from apps.payments.services.pdf_remittance_generator import (
     RemittanceAdvicePdfGenerator,
 )

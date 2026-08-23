@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Literal
+from typing import Any
 
 import usdm_model
 import yaml
-from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic import BaseModel, Field, ValidationError
+
+from packages.ddf.rules import (
+    ExpressionNode,
+    FieldReference,
+    detect_circular_dependencies,
+    extract_field_references,
+)
 
 
 class ValidationIssue(BaseModel):
@@ -35,121 +42,6 @@ class USDMValidationReport(BaseModel):
     version_resolution_evidence: list[str] = Field(
         default_factory=list, description="Evidence used to resolve version"
     )
-
-
-class FieldReference(BaseModel):
-    """
-    Represents a structured field reference within an expression tree.
-    """
-
-    field_id: str
-    form_id: str | None = None
-    visit_id: str | None = None
-    visit_relative: str | None = None  # e.g., "previous", "next"
-
-
-class ExpressionNode(BaseModel):
-    """
-    A recursive node in a structured clinical expression tree.
-    """
-
-    type: Literal["logical", "comparison", "function", "field_ref", "constant"]
-    operator: str | None = None
-    operands: list[ExpressionNode] | None = None
-    value: Any | None = None
-    field_ref: FieldReference | None = None
-
-    @model_validator(mode="after")
-    def validate_node(self) -> ExpressionNode:
-        if self.type == "constant":
-            if self.value is None:
-                raise ValueError("Constant node must provide a 'value'")
-        elif self.type == "field_ref":
-            if self.field_ref is None:
-                raise ValueError("Field reference node must provide 'field_ref'")
-        elif self.type == "logical":
-            if self.operator not in ("and", "or", "not"):
-                raise ValueError(f"Invalid logical operator: '{self.operator}'")
-        return self
-
-
-def extract_field_references(node: ExpressionNode) -> list[FieldReference]:
-    """
-    Traverses the ExpressionNode tree to collect all FieldReferences.
-    """
-    refs = []
-    if node.type == "field_ref" and node.field_ref:
-        refs.append(node.field_ref)
-    if node.operands:
-        for op in node.operands:
-            refs.extend(extract_field_references(op))
-    return refs
-
-
-def detect_circular_dependencies(rules: list[dict[str, Any]]) -> list[str]:
-    """
-    Analyzes skip-logic rules to detect circular visibility dependencies.
-    """
-    # Filter for active skip logic rules
-    skip_rules = [
-        r
-        for r in rules
-        if r.get("type") == "skip_logic" and not r.get("is_deleted", False)
-    ]
-
-    # Build adjacency list: target_field -> referenced_fields
-    adj = {}
-    for rule in skip_rules:
-        target = rule.get("target_field")
-        if not target:
-            continue
-
-        cond_node = rule.get("condition")
-        if not cond_node:
-            continue
-
-        if isinstance(cond_node, dict):
-            try:
-                cond_node = ExpressionNode(**cond_node)
-            except Exception:
-                continue
-
-        refs = extract_field_references(cond_node)
-        ref_fields = {ref.field_id for ref in refs}
-        adj[target] = list(ref_fields)
-
-    state = {}  # node -> 0 (unvisited/absent), 1 (visiting), 2 (visited)
-    cycles = []
-    parent = {}
-
-    def dfs(node: str) -> bool:
-        state[node] = 1
-        for neighbor in adj.get(node, []):
-            if neighbor not in state or state[neighbor] == 0:
-                parent[neighbor] = node
-                if dfs(neighbor):
-                    return True
-            elif state[neighbor] == 1:
-                # Cycle detected! Construct cycle path using parent pointers
-                path = [neighbor]
-                curr = node
-                while curr != neighbor:
-                    path.append(curr)
-                    curr = parent.get(curr)
-                    if curr is None:
-                        break
-                path.append(neighbor)
-                path.reverse()
-                cycles.append(" -> ".join(path))
-                return True
-        state[node] = 2
-        return False
-
-    for node in adj:
-        if node not in state or state[node] == 0:
-            dfs(node)
-
-    return cycles
 
 
 def safe_parse_payload(raw_text: str) -> tuple[dict[str, Any], str]:
@@ -548,3 +440,19 @@ def validate_usdm_payload(
         warnings=warnings,
         version_resolution_evidence=evidence,
     )
+
+
+__all__ = [
+    "ExpressionNode",
+    "FieldReference",
+    "USDMValidationReport",
+    "ValidationIssue",
+    "detect_circular_dependencies",
+    "detect_stochastic_operators",
+    "extract_field_references",
+    "normalize_usdm_payload",
+    "resolve_usdm_version",
+    "safe_parse_payload",
+    "traverse_rules_in_payload",
+    "validate_usdm_payload",
+]

@@ -9,11 +9,11 @@ Requirements: ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-004, PRD-PAY-006
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.payments.domain.audit import list_payment_audit_logs
 from apps.payments.presentation.dtos import (
     ErpWebhookPayload,
     SplitPayeeConfigItem,
 )
+from apps.payments.services.audit import list_payment_audit_logs
 from apps.payments.services.billing_and_erp_gateway import (
     BillingAndErpGateway,
 )

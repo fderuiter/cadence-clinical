@@ -17,10 +17,6 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from apps.payments.domain.audit import (
-    list_payment_audit_logs,
-    record_payment_audit_log,
-)
 from apps.payments.domain.models import (
     AuditAction,
     ContractStatus,
@@ -40,6 +36,10 @@ from apps.payments.infrastructure.models import (
     SplitPayeeConfigModel,
 )
 from apps.payments.presentation.dtos import SplitPayeeConfigItem
+from apps.payments.services.audit import (
+    list_payment_audit_logs,
+    record_payment_audit_log,
+)
 
 
 class SitePaymentLedgerEngine:

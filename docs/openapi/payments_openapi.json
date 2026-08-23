@@ -8,7 +8,7 @@
     "/api/v1/payments/contracts": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Create Budget Contract",
         "description": "Creates or versions an active investigator grant contract schedule.",
@@ -48,7 +48,7 @@
       },
       "get": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "List Budget Contracts",
         "description": "Lists budget contracts matching filters.",
@@ -128,7 +128,7 @@
     "/api/v1/payments/contracts/{contract_id}": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Get Budget Contract",
         "description": "Retrieves a single budget contract by ID.",
@@ -171,7 +171,7 @@
     "/api/v1/payments/contracts/{contract_id}/fee-schedules": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Add Fee Schedule",
         "description": "Adds a procedure reimbursement rate item to the contract fee schedule.",
@@ -222,7 +222,7 @@
       },
       "get": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "List Fee Schedules",
         "description": "Lists procedure fee schedules configured for a contract.",
@@ -311,7 +311,7 @@
     "/api/v1/payments/contracts/{contract_id}/split-payees": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Configure Split Payees",
         "description": "Configures multi-party split payee allocation percentages (must sum to 100%).",
@@ -366,7 +366,7 @@
       },
       "get": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "List Split Payees",
         "description": "Lists configured split payee shares for a contract.",
@@ -423,7 +423,7 @@
     "/api/v1/payments/events/ecrf-submission": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Ingest Ecrf Submission Event",
         "description": "Real-time event listener ingesting eCRF submission to trigger payables.",
@@ -469,7 +469,7 @@
     "/api/v1/payments/events/cra-sdv-verification": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Ingest Cra Sdv Verification Event",
         "description": "Real-time event listener ingesting CRA SDV verification to unlock payables.",
@@ -519,7 +519,7 @@
     "/api/v1/payments/events/milestone-completion": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Ingest Milestone Completion Event",
         "description": "Real-time event listener ingesting CTMS milestone completion.",
@@ -561,7 +561,7 @@
     "/api/v1/payments/events/batch": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Ingest Batch Events",
         "description": "Ingests batch of mixed clinical financial events.",
@@ -605,7 +605,7 @@
     "/api/v1/payments/payables": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "List Payables",
         "description": "Lists payables with split allocations and holdback reserve status.",
@@ -755,7 +755,7 @@
     "/api/v1/payments/payables/{payable_id}": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Get Payable",
         "description": "Retrieves payable details by ID.",
@@ -798,7 +798,7 @@
     "/api/v1/payments/payables/{payable_id}/approve": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Approve Payable",
         "description": "Approves a payable for disbursement.",
@@ -841,7 +841,7 @@
     "/api/v1/payments/holdbacks": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "List Holdback Reserves",
         "description": "Lists 10% holdback retention reserves.",
@@ -927,7 +927,7 @@
     "/api/v1/payments/holdbacks/release": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "Release Holdback Reserves",
         "description": "Releases holdback retention reserves with dual DM and Quality oversight sign-offs.",
@@ -969,7 +969,7 @@
     "/api/v1/payments/audit-logs": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Site Payment Ledger"
         ],
         "summary": "List Payment Audit Logs",
         "description": "Queries immutable 21 CFR Part 11 payment transaction audit logs.",
@@ -1055,7 +1055,7 @@
     "/api/v1/payments/invoices/compile": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Compile Billing Cycle",
         "description": "Automates monthly or quarterly billing cycle compilation into a self-billing invoice.",
@@ -1097,7 +1097,7 @@
     "/api/v1/payments/invoices": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "List Invoices",
         "description": "Lists compiled self-billing invoices matching filter criteria.",
@@ -1215,7 +1215,7 @@
     "/api/v1/payments/invoices/{invoice_id}": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Get Invoice",
         "description": "Retrieves full self-billing invoice details with line items and remittance advice.",
@@ -1258,7 +1258,7 @@
     "/api/v1/payments/invoices/{invoice_id}/approve": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Approve Self Billing Invoice",
         "description": "Approves a draft self-billing invoice for ERP synchronization and disbursement.",
@@ -1301,7 +1301,7 @@
     "/api/v1/payments/invoices/{invoice_id}/remittance-advice": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Get Remittance Advice",
         "description": "Retrieves remittance advice statement record for an invoice.",
@@ -1344,7 +1344,7 @@
     "/api/v1/payments/invoices/{invoice_id}/remittance-advice/pdf": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Download Remittance Advice Pdf",
         "description": "Downloads binary PDF remittance advice statement.",
@@ -1385,7 +1385,7 @@
     "/api/v1/payments/invoices/{invoice_id}/remittance-advice/sign": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Sign Remittance Advice",
         "description": "Applies 21 CFR Part 11 cryptographic digital signature to remittance advice statement.",
@@ -1438,7 +1438,7 @@
     "/api/v1/payments/invoices/{invoice_id}/remittance-advice/verify-signature": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Verify Remittance Advice Signature",
         "description": "Verifies cryptographic signature validity and tamper resistance of remittance advice statement.",
@@ -1481,7 +1481,7 @@
     "/api/v1/payments/invoices/{invoice_id}/remittance-advice/dispatch": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Dispatch Remittance Advice",
         "description": "Dispatches signed remittance advice statement via automated email notification.",
@@ -1534,7 +1534,7 @@
     "/api/v1/payments/invoices/{invoice_id}/erp-export": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Export Invoice To Erp",
         "description": "Exports invoice into standardized ERP transmission format (SAP/NetSuite).",
@@ -1589,7 +1589,7 @@
     "/api/v1/payments/erp/webhook": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Process Erp Webhook",
         "description": "Inbound enterprise ERP webhook receiver for payment execution and reconciliation status updates.",
@@ -1631,7 +1631,7 @@
     "/api/v1/payments/invoices/{invoice_id}/reconcile": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "Reconcile Invoice Payment",
         "description": "Reconciles payment execution against self-billing invoice and underlying payables.",
@@ -1684,7 +1684,7 @@
     "/api/v1/payments/invoices/{invoice_id}/erp-logs": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Billing & ERP Gateway"
         ],
         "summary": "List Erp Sync Logs",
         "description": "Lists ERP synchronization history and webhook audit records for an invoice.",
@@ -1763,7 +1763,7 @@
     "/api/v1/payments/participant/wallets": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Get Or Create Participant Wallet",
         "description": "Provisions or retrieves a participant financial wallet.",
@@ -1803,7 +1803,7 @@
       },
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "List Participant Wallets",
         "description": "Lists participant financial wallets filtered by study and/or site.",
@@ -1873,7 +1873,7 @@
     "/api/v1/payments/participant/wallets/{wallet_id}": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Get Participant Wallet By Id",
         "description": "Retrieves participant wallet details and current balance.",
@@ -1916,7 +1916,7 @@
     "/api/v1/payments/participant/wallets/subject/{study_id}/{subject_id}": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Get Participant Wallet By Subject",
         "description": "Retrieves participant wallet by study ID and subject ID.",
@@ -1968,7 +1968,7 @@
     "/api/v1/payments/participant/wallets/{wallet_id}/payout-methods": {
       "put": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Update Participant Wallet Payout Methods",
         "description": "Updates payout credentials (virtual card / direct ACH) for a participant wallet.",
@@ -2021,7 +2021,7 @@
     "/api/v1/payments/participant/wallets/{wallet_id}/disburse": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Disburse Participant Funds",
         "description": "Dispatches digital funds payout (Virtual Card / Direct ACH) with 21 CFR Part 11 ledger recording.",
@@ -2074,7 +2074,7 @@
     "/api/v1/payments/participant/wallets/{wallet_id}/transactions": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "List Wallet Transactions",
         "description": "Retrieves immutable financial transaction history for a participant wallet.",
@@ -2121,7 +2121,7 @@
     "/api/v1/payments/participant/disbursements": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "List Participant Disbursements",
         "description": "Lists all digital disbursements dispatched across participant wallets.",
@@ -2207,7 +2207,7 @@
     "/api/v1/payments/participant/stipend-rules": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Create Participant Stipend Rule",
         "description": "Configures participant visit compensation rules linked to the Schedule of Activities.",
@@ -2247,7 +2247,7 @@
       },
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "List Participant Stipend Rules",
         "description": "Lists SoA protocol stipend compensation rules for a study.",
@@ -2311,7 +2311,7 @@
     "/api/v1/payments/participant/events/visit-verified": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Ingest Visit Verified Event",
         "description": "Receives verified clinic visit completion from EDC and credits stipend to participant wallet.",
@@ -2355,7 +2355,7 @@
     "/api/v1/payments/participant/expenses/ocr-extract": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Extract Receipt Ocr",
         "description": "Performs OCR metadata extraction on a travel/meal expense receipt.",
@@ -2397,7 +2397,7 @@
     "/api/v1/payments/participant/expenses": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Submit Participant Expense Claim",
         "description": "Submits a mobile travel/meal expense reimbursement claim for coordinator review.",
@@ -2437,7 +2437,7 @@
       },
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "List Participant Expense Claims",
         "description": "Lists submitted expense claims filtered by study, site, subject, or review status.",
@@ -2539,7 +2539,7 @@
     "/api/v1/payments/participant/expenses/{claim_id}/review": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Review Participant Expense Claim",
         "description": "Processes 1-click coordinator review and approval/rejection of a travel expense claim.",
@@ -2592,7 +2592,7 @@
     "/api/v1/payments/lay-summaries": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Create Lay Summary",
         "description": "Drafts or creates an EU CTR Regulation No 536/2014 Article 37 Plain Language Lay Summary.",
@@ -2632,7 +2632,7 @@
       },
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "List Lay Summaries",
         "description": "Lists published and drafted plain-language trial summaries.",
@@ -2718,7 +2718,7 @@
     "/api/v1/payments/lay-summaries/{summary_id}": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Get Lay Summary",
         "description": "Retrieves details of a plain-language trial summary.",
@@ -2761,7 +2761,7 @@
     "/api/v1/payments/lay-summaries/{summary_id}/publish": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Publish Lay Summary",
         "description": "Formally publishes an IRB-approved lay summary for participant access.",
@@ -2814,7 +2814,7 @@
     "/api/v1/payments/lay-summaries/{summary_id}/confirm-receipt": {
       "post": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "Confirm Lay Summary Receipt",
         "description": "Records participant confirmation of lay summary receipt with comprehension score and SHA-256 seal.",
@@ -2867,7 +2867,7 @@
     "/api/v1/payments/lay-summaries/{summary_id}/receipts": {
       "get": {
         "tags": [
-          "Site Payments"
+          "Participant Compensation"
         ],
         "summary": "List Lay Summary Receipts",
         "description": "Lists confirmation receipts for a lay summary for regulatory compliance audits.",

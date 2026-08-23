@@ -400,7 +400,9 @@ class PaymentAuditLogModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         UTCDateTime, default=func.now(), nullable=False, index=True
     )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_by: Mapped[str] = mapped_column(
+        String(255), default="system", nullable=False
+    )
     reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 

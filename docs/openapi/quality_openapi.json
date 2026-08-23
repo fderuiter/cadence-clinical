@@ -2288,6 +2288,45 @@
         }
       }
     },
+    "/api/v1/quality/surveillance/run": {
+      "post": {
+        "summary": "Execute Quality Surveillance Run",
+        "description": "Executes a complete, autonomous cross-domain quality surveillance run.\n\nHarvests clinical data across domains, enforces sample power gating,\nevaluates statistical forensics & computer vision sentinels,\nand idempotently dispatches 21 CFR Part 11 Deviations.",
+        "operationId": "execute_quality_surveillance_run_api_v1_quality_surveillance_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QualitySurveillanceRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualitySurveillanceRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/quality/audits": {
       "post": {
         "summary": "Create Audit",
@@ -6527,6 +6566,209 @@
         ],
         "title": "QTLResponse"
       },
+      "QualitySurveillanceRunRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target study ID for autonomous surveillance"
+          },
+          "run_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Name",
+            "description": "Optional custom name for the surveillance sweep"
+          },
+          "auto_dispatch_deviations": {
+            "type": "boolean",
+            "title": "Auto Dispatch Deviations",
+            "description": "Whether to automatically dispatch 21 CFR Part 11 Deviation records for high-risk anomalies",
+            "default": true
+          },
+          "target_variables": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Variables",
+            "description": "Optional list of target continuous variables for statistical CSM"
+          },
+          "min_subjects_power": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Min Subjects Power",
+            "description": "Minimum subjects required per site for statistical distribution gating",
+            "default": 15
+          },
+          "min_observations_power": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Min Observations Power",
+            "description": "Minimum observations required per site for statistical distribution gating",
+            "default": 50
+          },
+          "similarity_threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.5,
+            "title": "Similarity Threshold",
+            "description": "Cosine/Manhattan similarity threshold for duplicate patient detection",
+            "default": 0.88
+          },
+          "hamming_threshold": {
+            "type": "integer",
+            "maximum": 64.0,
+            "minimum": 0.0,
+            "title": "Hamming Threshold",
+            "description": "Maximum perceptual image Hamming distance threshold",
+            "default": 5
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "QualitySurveillanceRunRequest"
+      },
+      "QualitySurveillanceRunResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "run_name": {
+            "type": "string",
+            "title": "Run Name"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "total_sites": {
+            "type": "integer",
+            "title": "Total Sites"
+          },
+          "gated_sites_count": {
+            "type": "integer",
+            "title": "Gated Sites Count"
+          },
+          "analyzed_sites_count": {
+            "type": "integer",
+            "title": "Analyzed Sites Count"
+          },
+          "total_subjects": {
+            "type": "integer",
+            "title": "Total Subjects"
+          },
+          "total_observations": {
+            "type": "integer",
+            "title": "Total Observations"
+          },
+          "total_images_scanned": {
+            "type": "integer",
+            "title": "Total Images Scanned"
+          },
+          "total_events_scanned": {
+            "type": "integer",
+            "title": "Total Events Scanned"
+          },
+          "anomalies_count": {
+            "type": "integer",
+            "title": "Anomalies Count"
+          },
+          "deviations_dispatched_count": {
+            "type": "integer",
+            "title": "Deviations Dispatched Count"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "site_summaries": {
+            "items": {
+              "$ref": "#/components/schemas/SiteSurveillanceSummaryResponse"
+            },
+            "type": "array",
+            "title": "Site Summaries"
+          },
+          "findings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Findings"
+          },
+          "deviations": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Deviations"
+          },
+          "forensics_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forensics Run Id"
+          },
+          "sentinel_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentinel Run Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "study_id",
+          "run_name",
+          "timestamp",
+          "total_sites",
+          "gated_sites_count",
+          "analyzed_sites_count",
+          "total_subjects",
+          "total_observations",
+          "total_images_scanned",
+          "total_events_scanned",
+          "anomalies_count",
+          "deviations_dispatched_count",
+          "status",
+          "site_summaries",
+          "findings",
+          "deviations"
+        ],
+        "title": "QualitySurveillanceRunResponse"
+      },
       "RACTCategory": {
         "type": "string",
         "enum": [
@@ -7607,6 +7849,79 @@
           "reason_for_change"
         ],
         "title": "SiteRiskProfileResponse"
+      },
+      "SiteSurveillanceSummaryResponse": {
+        "properties": {
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "sample_size": {
+            "type": "integer",
+            "title": "Sample Size"
+          },
+          "observation_count": {
+            "type": "integer",
+            "title": "Observation Count"
+          },
+          "power_status": {
+            "type": "string",
+            "title": "Power Status"
+          },
+          "is_sample_gated": {
+            "type": "boolean",
+            "title": "Is Sample Gated"
+          },
+          "composite_risk_score": {
+            "type": "number",
+            "title": "Composite Risk Score"
+          },
+          "risk_tier": {
+            "type": "string",
+            "title": "Risk Tier"
+          },
+          "anomalies_detected": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Anomalies Detected"
+          },
+          "deviations_created": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Deviations Created"
+          },
+          "kri_alerts_triggered": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kri Alerts Triggered"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "site_id",
+          "sample_size",
+          "observation_count",
+          "power_status",
+          "is_sample_gated",
+          "composite_risk_score",
+          "risk_tier",
+          "anomalies_detected",
+          "deviations_created",
+          "kri_alerts_triggered",
+          "details"
+        ],
+        "title": "SiteSurveillanceSummaryResponse"
       },
       "StatisticalForensicsAnalyzeRequest": {
         "properties": {
