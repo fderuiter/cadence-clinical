@@ -761,6 +761,12 @@
             "minimum": 1.0,
             "title": "Top K",
             "default": 5
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id",
+            "description": "Tenant identifier.",
+            "default": "default"
           }
         },
         "type": "object",

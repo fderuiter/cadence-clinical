@@ -24349,6 +24349,66 @@
         }
       }
     },
+    "/fileshare/api/v1/fileshare/files/{file_id}/upload-complete": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Complete File Upload",
+        "description": "Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
+        "operationId": "Fileshare_complete_file_upload_api_v1_fileshare_files__file_id__upload_complete_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Fileshare_UploadCompleteRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/fileshare/api/v1/fileshare/files/{file_id}/complete-upload": {
       "post": {
         "tags": [
@@ -24357,6 +24417,66 @@
         "summary": "Complete File Upload",
         "description": "Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
         "operationId": "Fileshare_complete_file_upload_api_v1_fileshare_files__file_id__complete_upload_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Fileshare_UploadCompleteRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fileshare/api/v1/fileshare/files/{file_id}/complete": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Complete File Upload",
+        "description": "Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
+        "operationId": "Fileshare_complete_file_upload_api_v1_fileshare_files__file_id__complete_post",
         "parameters": [
           {
             "name": "file_id",
@@ -24536,6 +24656,69 @@
             "schema": {
               "type": "string",
               "title": "File Id"
+            }
+          },
+          {
+            "name": "original",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Original"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_FileDownloadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fileshare/api/v1/fileshare/files/{file_id}/preview-url": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get Preview Url",
+        "description": "Retrieve short-lived presigned preview URL (PDF rendition if available, otherwise original).",
+        "operationId": "Fileshare_get_preview_url_api_v1_fileshare_files__file_id__preview_url_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "original",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Original"
             }
           }
         ],
@@ -24805,6 +24988,117 @@
                     "$ref": "#/components/schemas/Fileshare_FileAuditLogResponse"
                   },
                   "title": "Response Get File Audit Logs Api V1 Fileshare Files  File Id  Audit Logs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fileshare/api/v1/fileshare/files/{file_id}/activity": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get File Activity Feed",
+        "description": "Retrieve paginated per-document activity feed audit log entries for inspection readiness.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, 21 CFR Part 11",
+        "operationId": "Fileshare_get_file_activity_feed_api_v1_fileshare_files__file_id__activity_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From Date"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To Date"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_ActivityFeedResponse"
                 }
               }
             }
@@ -25587,6 +25881,66 @@
         }
       }
     },
+    "/fileshare/api/v1/files/{file_id}/upload-complete": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Complete File Upload",
+        "description": "Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
+        "operationId": "Fileshare_complete_file_upload_api_v1_files__file_id__upload_complete_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Fileshare_UploadCompleteRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/fileshare/api/v1/files/{file_id}/complete-upload": {
       "post": {
         "tags": [
@@ -25595,6 +25949,66 @@
         "summary": "Complete File Upload",
         "description": "Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
         "operationId": "Fileshare_complete_file_upload_api_v1_files__file_id__complete_upload_post",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Fileshare_UploadCompleteRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_FileRecordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fileshare/api/v1/files/{file_id}/complete": {
+      "post": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Complete File Upload",
+        "description": "Finalize singlepart or multipart upload and trigger asynchronous video transcoding if applicable.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002",
+        "operationId": "Fileshare_complete_file_upload_api_v1_files__file_id__complete_post",
         "parameters": [
           {
             "name": "file_id",
@@ -25774,6 +26188,69 @@
             "schema": {
               "type": "string",
               "title": "File Id"
+            }
+          },
+          {
+            "name": "original",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Original"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_FileDownloadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fileshare/api/v1/files/{file_id}/preview-url": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get Preview Url",
+        "description": "Retrieve short-lived presigned preview URL (PDF rendition if available, otherwise original).",
+        "operationId": "Fileshare_get_preview_url_api_v1_files__file_id__preview_url_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "original",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Original"
             }
           }
         ],
@@ -26043,6 +26520,117 @@
                     "$ref": "#/components/schemas/Fileshare_FileAuditLogResponse"
                   },
                   "title": "Response Get File Audit Logs Api V1 Files  File Id  Audit Logs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fileshare/api/v1/files/{file_id}/activity": {
+      "get": {
+        "tags": [
+          "Fileshare"
+        ],
+        "summary": "Get File Activity Feed",
+        "description": "Retrieve paginated per-document activity feed audit log entries for inspection readiness.\n\nRequirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, 21 CFR Part 11",
+        "operationId": "Fileshare_get_file_activity_feed_api_v1_files__file_id__activity_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From Date"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To Date"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fileshare_ActivityFeedResponse"
                 }
               }
             }
@@ -37399,6 +37987,12 @@
             "minimum": 1.0,
             "title": "Top K",
             "default": 5
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id",
+            "description": "Tenant identifier.",
+            "default": "default"
           }
         },
         "type": "object",
@@ -58117,6 +58711,7 @@
           "CONCOMITANT_MED_WITHOUT_AE",
           "MARKED_LAB_ABNORMALITY_WITHOUT_AE",
           "CRITICAL_VITALS_WITHOUT_AE",
+          "VITALS_INCONSISTENT_WITH_HISTORY",
           "DRUG_DISCONTINUATION_WITHOUT_AE",
           "TEMPORAL_SEQUENCE_MISMATCH",
           "AI_CONTEXTUAL_INCONSISTENCY"
@@ -64769,6 +65364,80 @@
         ],
         "title": "WHODrugMatch"
       },
+      "Fileshare_ActivityFeedEntryResponse": {
+        "properties": {
+          "event_type": {
+            "type": "string",
+            "title": "Event Type"
+          },
+          "actor_user_id": {
+            "type": "string",
+            "title": "Actor User Id"
+          },
+          "actor_display_name": {
+            "type": "string",
+            "title": "Actor Display Name"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_type",
+          "actor_user_id",
+          "actor_display_name",
+          "timestamp"
+        ],
+        "title": "ActivityFeedEntryResponse",
+        "description": "Response schema for a single per-document activity feed event."
+      },
+      "Fileshare_ActivityFeedResponse": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/Fileshare_ActivityFeedEntryResponse"
+            },
+            "type": "array",
+            "title": "Entries"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entries",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "ActivityFeedResponse",
+        "description": "Paginated response schema for per-document activity feed."
+      },
       "Fileshare_ApprovalStatus": {
         "type": "string",
         "enum": [
@@ -64779,6 +65448,17 @@
         ],
         "title": "ApprovalStatus",
         "description": "Lifecycle status for document approval and 21 CFR Part 11 electronic signatures."
+      },
+      "Fileshare_ConversionStatus": {
+        "type": "string",
+        "enum": [
+          "NOT_REQUIRED",
+          "PENDING",
+          "READY",
+          "FAILED"
+        ],
+        "title": "ConversionStatus",
+        "description": "Lifecycle status of document format conversion (Office to PDF)."
       },
       "Fileshare_FileApproveRequest": {
         "properties": {
@@ -64907,6 +65587,22 @@
               }
             ],
             "title": "Access Count"
+          },
+          "is_rendition": {
+            "type": "boolean",
+            "title": "Is Rendition",
+            "default": false
+          },
+          "rendition_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendition Key"
           }
         },
         "type": "object",
@@ -65107,6 +65803,32 @@
             ],
             "title": "Transcode Error"
           },
+          "pdf_rendition_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pdf Rendition Key"
+          },
+          "conversion_status": {
+            "$ref": "#/components/schemas/Fileshare_ConversionStatus",
+            "default": "NOT_REQUIRED"
+          },
+          "conversion_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversion Error"
+          },
           "approval_status": {
             "$ref": "#/components/schemas/Fileshare_ApprovalStatus",
             "default": "PENDING_APPROVAL"
@@ -65272,6 +65994,18 @@
             "minimum": 0.0,
             "title": "Size Bytes"
           },
+          "is_multipart": {
+            "type": "boolean",
+            "title": "Is Multipart",
+            "default": false
+          },
+          "parts_count": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Parts Count",
+            "default": 1
+          },
           "checksum_sha256": {
             "anyOf": [
               {
@@ -65289,19 +66023,8 @@
             "type": "string",
             "maxLength": 1000,
             "minLength": 5,
-            "title": "Reason For Change"
-          },
-          "is_multipart": {
-            "type": "boolean",
-            "title": "Is Multipart",
-            "default": false
-          },
-          "parts_count": {
-            "type": "integer",
-            "maximum": 10000.0,
-            "minimum": 1.0,
-            "title": "Parts Count",
-            "default": 1
+            "title": "Reason For Change",
+            "default": "Initial file upload"
           }
         },
         "type": "object",
@@ -65309,8 +66032,7 @@
           "study_id",
           "filename",
           "mime_type",
-          "size_bytes",
-          "reason_for_change"
+          "size_bytes"
         ],
         "title": "FileUploadUrlRequest",
         "description": "Request payload to initiate a single-part or multipart upload session."
@@ -65391,7 +66113,7 @@
           "object_key"
         ],
         "title": "FileUploadUrlResponse",
-        "description": "Response containing allocated file record details and presigned upload URLs."
+        "description": "Response containing presigned target URL(s) for uploading."
       },
       "Fileshare_GuestLinkCreateRequest": {
         "properties": {
