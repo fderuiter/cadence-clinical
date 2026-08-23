@@ -87,7 +87,7 @@ async def test_ddf_compiler_end_to_end_success():
     assert "Systolic Blood Pressure" in result.odm_xml
     assert 'data id="study-oncology-01"' in result.openrosa_xml
     assert 'appearance="w2"' in result.openrosa_xml
-    assert 'constraint="(/sys_bp >= 50)"' in result.openrosa_xml
+    assert 'constraint="(/sys_bp &gt;= 50)"' in result.openrosa_xml
     assert result.form_hash is not None
     assert len(result.form_hash) == 64
     assert result.accessibility_report is not None
