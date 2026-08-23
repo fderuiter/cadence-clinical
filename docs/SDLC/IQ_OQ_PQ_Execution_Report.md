@@ -1,3 +1,6 @@
+> ⚠️ **DRAFT ONLY — UNVERIFIED GxP COMPLIANCE DOCUMENT** ⚠️
+> *This document was generated in draft mode with missing test results. It is NOT eligible for GxP production release.*
+
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
 *Execution Date:* 2026-07-23 22:38:25 UTC
 *Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B
@@ -7,11 +10,12 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3268
+- **Total Automated Test Cases Run:** 3315
 - **Passed:** 2864 🟢
+- **Unverified (Draft):** 47 ⚪
 - **Failed/Errors:** 377 🔴
 - **Skipped:** 27 ⚪
-- **Overall Operational Pass Rate:** 87.64%
+- **Overall Operational Pass Rate:** 86.40%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -608,6 +612,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_rendered_protocol_document_with_usdm_study` | `apps.designer.tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_soa_matrix_view` | `apps.designer.tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_synopsis_view_parsing` | `apps.designer.tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_protocol_version_ref_accepted_statuses` | `apps.designer.tests.test_protocol_version_ref` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_protocol_version_ref_accepted_statuses[ACTIVE]` | `apps.designer.tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_protocol_version_ref_accepted_statuses[ARCHIVED]` | `apps.designer.tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_protocol_version_ref_accepted_statuses[DRAFT]` | `apps.designer.tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -916,6 +921,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_eisf_sync_unmapped_propagation` | `apps.eisf.tests.test_eisf_sync` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_document_record_instantiation_defaults` | `apps.eisf.tests.test_eisf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_taxonomy_querying_returns_8_mandatory_sections` | `apps.eisf.tests.test_eisf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_exception_route` | `apps.etmf.presentation.routers.etmf` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_cra_qc_override_and_rejection_workflows` | `apps.etmf.tests.test_document_intelligence` | PRD-TMF-006 | 🟢 PASSED | < 1s |
 | `test_cra_qc_staging_and_review_workflow` | `apps.etmf.tests.test_document_intelligence` | PRD-TMF-006 | 🟢 PASSED | < 1s |
 | `test_dia_classifier_benchmark_standard_regulatory_documents` | `apps.etmf.tests.test_document_intelligence` | PRD-TMF-006 | 🟢 PASSED | < 1s |
@@ -1367,6 +1373,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_scrubber_preserves_date_intervals` | `apps.execution.tests.test_deident_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scrubber_subject_id_non_reversible` | `apps.execution.tests.test_deident_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sdtm_json_builder_integration` | `apps.execution.tests.test_deident_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_derivation_boundary_dates` | `apps.execution.tests.test_demographics` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_age_derivation_boundary_dates[2000-05-14-2020-05-15-20.00273785078713]` | `apps.execution.tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_age_derivation_boundary_dates[2000-05-15-2020-05-15-20.0]` | `apps.execution.tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_age_derivation_boundary_dates[2000-05-15-None-None]` | `apps.execution.tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1385,6 +1392,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_age_derivation_boundary_dates[invalid-date-string-2020-05-15-None]` | `apps.execution.tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_custom_gender_preservation` | `apps.execution.tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_demographics_encryption_decryption_roundtrip` | `apps.execution.tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization` | `apps.execution.tests.test_demographics` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_gender_normalization[  female  -F]` | `apps.execution.tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gender_normalization[  male  -M]` | `apps.execution.tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gender_normalization[-U]` | `apps.execution.tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1638,11 +1646,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_cache_ttl_configuration` | `apps.execution.tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cache_unavailability_graceful_degradation` | `apps.execution.tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_meddra_matching_integration` | `apps.execution.tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_term` | `apps.execution.tests.test_medical_coding_matcher` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_normalize_term[Clinical history of hepatitises-clinic hepatitis]` | `apps.execution.tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_term[Mild headache-headache]` | `apps.execution.tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_term[Onset of acute gastritis-gastritis]` | `apps.execution.tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_term[Severe recurring pain, chronic-pain]` | `apps.execution.tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_similarity_computations` | `apps.execution.tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stem_word` | `apps.execution.tests.test_medical_coding_matcher` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_stem_word[allergies-allergy]` | `apps.execution.tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_stem_word[clinical-clinic]` | `apps.execution.tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_stem_word[headaches-headache]` | `apps.execution.tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1670,9 +1680,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_certificate_revocation_verification` | `apps.execution.tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_esignature_duplicate_serial_rejection` | `apps.execution.tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_esignature_tamper_detection_e2e` | `apps.execution.tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_private_key` | `apps.execution.tests.test_part11_esignatures` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_tampered_pdf_fails_verification` | `apps.execution.tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_valid_certificate_pem_substring_no_false_positive` | `apps.execution.tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_valid_part11_signature_verification` | `apps.execution.tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_x509_cert` | `apps.execution.tests.test_part11_esignatures` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_pdf_redaction_engine_bounding_box` | `apps.execution.tests.test_pdf_redactor` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_pdf_redaction_engine_purges_metadata_and_fields` | `apps.execution.tests.test_pdf_redactor` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_pdf_redaction_overlay_generation` | `apps.execution.tests.test_pdf_redactor` | PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -2076,6 +2088,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_middleware_tenant_missing_fallback` | `apps.gateway.tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_tenant_signature_tampering_rejected` | `apps.gateway.tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_unblinded_access_edge_cases` | `apps.gateway.tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_unblinded_access_parametrization` | `apps.gateway.tests.test_security_middleware` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_middleware_unblinded_access_parametrization[-False]` | `apps.gateway.tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_unblinded_access_parametrization[0-False]` | `apps.gateway.tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_unblinded_access_parametrization[1-True]` | `apps.gateway.tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2113,6 +2126,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_recist_sld_calculation` | `apps.imaging.tests.test_dicom_viewer_recist` | PRD-IMG-004 | 🟢 PASSED | < 1s |
 | `test_response_evaluations_endpoints` | `apps.imaging.tests.test_dicom_viewer_recist` | PRD-IMG-004 | 🟢 PASSED | < 1s |
 | `test_subject_timepoint_evaluation_and_trajectory` | `apps.imaging.tests.test_dicom_viewer_recist` | PRD-IMG-004, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_blinded_dual_reader_isolation_unit` | `apps.imaging.tests.test_imaging_dual_reader_adjudication` | PRD-IMG-003 | ⚪ UNVERIFIED | N/A |
+| `test_discordance_detection_criteria_unit` | `apps.imaging.tests.test_imaging_dual_reader_adjudication` | PRD-IMG-005 | ⚪ UNVERIFIED | N/A |
+| `test_discordant_dual_reads_and_step_up_adjudication_sign_off_api` | `apps.imaging.tests.test_imaging_dual_reader_adjudication` | PRD-IMG-003, PRD-IMG-005, PRD-IMG-006, PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
+| `test_dual_reader_routing_and_concordance_api` | `apps.imaging.tests.test_imaging_dual_reader_adjudication` | PRD-IMG-003, PRD-IMG-005 | ⚪ UNVERIFIED | N/A |
+| `test_edc_ecrf_binding_and_sdtm_derivation_unit` | `apps.imaging.tests.test_imaging_dual_reader_adjudication` | PRD-IMG-006 | ⚪ UNVERIFIED | N/A |
 | `test_health_check` | `apps.imaging.tests.test_imaging_endpoints` | PRD-IMG-001 | 🟢 PASSED | < 1s |
 | `test_in_flight_deidentify_stream_endpoint` | `apps.imaging.tests.test_imaging_endpoints` | PRD-IMG-002 | 🟢 PASSED | < 1s |
 | `test_list_and_get_studies_endpoints` | `apps.imaging.tests.test_imaging_endpoints` | PRD-IMG-001 | 🟢 PASSED | < 1s |
@@ -2331,6 +2349,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_personnel_crud_api` | `apps.org.tests.test_org_service` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_resolve_assignments_endpoint` | `apps.org.tests.test_org_service` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_site_crud_api` | `apps.org.tests.test_org_service` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_audit_fields_change_reason_validation` | `apps.org.tests.test_organization_domain` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_audit_fields_change_reason_validation[   ]` | `apps.org.tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_change_reason_validation[\n]` | `apps.org.tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_change_reason_validation[\t]` | `apps.org.tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2342,6 +2361,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_trial_duty_values` | `apps.org.tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_batch_event_ingestion_and_queries` | `apps.payments.tests.test_payments_endpoints` | ADR-2199, PRD-PAY-002, PRD-PAY-003 | 🟢 PASSED | < 1s |
 | `test_health_check_endpoint` | `apps.payments.tests.test_payments_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_compilation_with_no_payables_fails_gracefully` | `apps.payments.tests.test_payments_self_billing_invoicing` | ADR-2199, PRD-PAY-004, PRD-PAY-006 | ⚪ UNVERIFIED | N/A |
+| `test_compile_monthly_billing_cycle_and_invoice_aggregation` | `apps.payments.tests.test_payments_self_billing_invoicing` | ADR-2199, PRD-PAY-004, PRD-PAY-006 | ⚪ UNVERIFIED | N/A |
+| `test_erp_synchronization_and_webhook_reconciliation` | `apps.payments.tests.test_payments_self_billing_invoicing` | ADR-2199, PRD-PAY-004, PRD-PAY-006 | ⚪ UNVERIFIED | N/A |
+| `test_netsuite_export_and_invoices_filtering` | `apps.payments.tests.test_payments_self_billing_invoicing` | ADR-2199, PRD-PAY-004, PRD-PAY-006 | ⚪ UNVERIFIED | N/A |
+| `test_rbac_permissions_for_invoicing` | `apps.payments.tests.test_payments_self_billing_invoicing` | ADR-2199, PRD-PAY-004, PRD-PAY-006 | ⚪ UNVERIFIED | N/A |
+| `test_remittance_advice_pdf_download_and_tamper_detection` | `apps.payments.tests.test_payments_self_billing_invoicing` | ADR-2199, PRD-PAY-004, PRD-PAY-006 | ⚪ UNVERIFIED | N/A |
+| `test_unsigned_remittance_advice_verification` | `apps.payments.tests.test_payments_self_billing_invoicing` | ADR-2199, PRD-PAY-004, PRD-PAY-006 | ⚪ UNVERIFIED | N/A |
 | `test_budget_contract_creation_and_split_payee_configuration` | `apps.payments.tests.test_payments_trigger_split` | ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-006 | 🟢 PASSED | < 1s |
 | `test_cra_sdv_verification_gating_workflow` | `apps.payments.tests.test_payments_trigger_split` | ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-006 | 🟢 PASSED | < 1s |
 | `test_ctms_milestone_completion_event_trigger` | `apps.payments.tests.test_payments_trigger_split` | ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-006 | 🟢 PASSED | < 1s |
@@ -2537,6 +2563,18 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_safety_health_check` | `apps.safety.tests.test_safety_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_successful_export_and_transmission` | `apps.safety.tests.test_safety_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unauthenticated_requests_are_rejected` | `apps.safety.tests.test_safety_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_dsur_periodic_report_compilation_and_line_listings` | `apps.safety.tests.test_safety_signal_detection_disproportionality` | PRD-PVG-004 | ⚪ UNVERIFIED | N/A |
+| `test_empirical_bayes_shrinkage_mgps_ebgm_and_eb05` | `apps.safety.tests.test_safety_signal_detection_disproportionality` | PRD-PVG-003 | ⚪ UNVERIFIED | N/A |
+| `test_external_benchmark_dataset_comparison` | `apps.safety.tests.test_safety_signal_detection_disproportionality` | PRD-PVG-003 | ⚪ UNVERIFIED | N/A |
+| `test_fastapi_rest_signal_detection_and_alerts_endpoints` | `apps.safety.tests.test_safety_signal_detection_disproportionality` | ADR-2199, PRD-PVG-003, PRD-PVG-004, PRD-PVG-008, PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
+| `test_multi_item_mgps_interaction_shrinkage` | `apps.safety.tests.test_safety_signal_detection_disproportionality` | PRD-PVG-003 | ⚪ UNVERIFIED | N/A |
+| `test_prr_calculation_point_estimate_and_ci` | `apps.safety.tests.test_safety_signal_detection_disproportionality` | PRD-PVG-003 | ⚪ UNVERIFIED | N/A |
+| `test_psur_periodic_report_compilation_and_part11_signature` | `apps.safety.tests.test_safety_signal_detection_disproportionality` | PRD-PVG-004, PRD-PVG-008 | ⚪ UNVERIFIED | N/A |
+| `test_pt_and_soc_level_stratification_scan` | `apps.safety.tests.test_safety_signal_detection_disproportionality` | PRD-PVG-003 | ⚪ UNVERIFIED | N/A |
+| `test_ror_point_estimate_and_confidence_interval` | `apps.safety.tests.test_safety_signal_detection_disproportionality` | PRD-PVG-003 | ⚪ UNVERIFIED | N/A |
+| `test_signal_alert_review_and_part11_esignature_approval` | `apps.safety.tests.test_safety_signal_detection_disproportionality` | ADR-2199, PRD-PVG-003, PRD-PVG-008 | ⚪ UNVERIFIED | N/A |
+| `test_signal_alert_triggering_and_severity_workflow` | `apps.safety.tests.test_safety_signal_detection_disproportionality` | PRD-PVG-003, PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
+| `test_yates_chi_square_continuity_correction` | `apps.safety.tests.test_safety_signal_detection_disproportionality` | PRD-PVG-003 | ⚪ UNVERIFIED | N/A |
 | `test_disproportionality_metrics_null_signal` | `apps.safety.tests.test_signal_detection_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_disproportionality_metrics_strong_signal` | `apps.safety.tests.test_signal_detection_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_safety_dataset_batch` | `apps.safety.tests.test_signal_detection_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2765,6 +2803,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_legacy_passthrough_parity` | `packages.deid.tests.test_unified_compliance_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_new_hipaa_categories_redaction` | `packages.deid.tests.test_unified_compliance_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trailing_punctuation_clinical_identifiers` | `packages.deid.tests.test_unified_compliance_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_all_services_have_ports` | `packages.hexagonal.tests.test_hexagonal_architecture` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
 | `test_all_services_have_ports[ai_gateway]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_all_services_have_ports[ctms]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_all_services_have_ports[designer]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2782,6 +2821,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_all_services_have_ports[quality]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_all_services_have_ports[safety]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_all_services_have_ports[tickets]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_application_layer_isolation` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_application_layer_isolation[ai_gateway]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_application_layer_isolation[ctms]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_application_layer_isolation[designer]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2799,6 +2839,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_application_layer_isolation[quality]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_application_layer_isolation[safety]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_application_layer_isolation[tickets]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_decoupled_api_routers_have_no_direct_db_imports` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_decoupled_api_routers_have_no_direct_db_imports[ai_gateway]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_decoupled_api_routers_have_no_direct_db_imports[ctms]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_decoupled_api_routers_have_no_direct_db_imports[designer]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2817,6 +2858,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_decoupled_api_routers_have_no_direct_db_imports[safety]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_decoupled_api_routers_have_no_direct_db_imports[tickets]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_designer_core_isolation` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_domain_layer_isolation` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_domain_layer_isolation[ai_gateway]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_domain_layer_isolation[ctms]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_domain_layer_isolation[designer]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2834,6 +2876,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_domain_layer_isolation[quality]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_domain_layer_isolation[safety]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_domain_layer_isolation[tickets]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_entrypoint_is_thin` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_main_entrypoint_is_thin[ai_gateway]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_entrypoint_is_thin[ctms]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_entrypoint_is_thin[designer]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2852,6 +2895,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_main_entrypoint_is_thin[safety]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_entrypoint_is_thin[tickets]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_entrypoints_count_integrity` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_singular_adapter_directory` | `packages.hexagonal.tests.test_hexagonal_architecture` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
 | `test_no_singular_adapter_directory[ai_gateway]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_no_singular_adapter_directory[ctms]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_no_singular_adapter_directory[designer]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2869,6 +2913,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_no_singular_adapter_directory[quality]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_no_singular_adapter_directory[safety]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_no_singular_adapter_directory[tickets]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_presentation_layer_driver_isolation` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_presentation_layer_driver_isolation[ai_gateway]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_presentation_layer_driver_isolation[ctms]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_presentation_layer_driver_isolation[designer]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2887,6 +2932,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_presentation_layer_driver_isolation[safety]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_presentation_layer_driver_isolation[tickets]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_repository_ports_count_integrity` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_service_repository_ports_subclass_base` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_service_repository_ports_subclass_base[ai_gateway]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_service_repository_ports_subclass_base[ctms]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_service_repository_ports_subclass_base[designer]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2918,6 +2964,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_base_entity_equality` | `packages.hexagonal.tests.test_hexagonal_kernel` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_domain_error_http_mappings` | `packages.hexagonal.tests.test_hexagonal_kernel` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_value_object_equality` | `packages.hexagonal.tests.test_hexagonal_kernel` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_routers_contain_no_direct_db_calls` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
 | `test_api_routers_contain_no_direct_db_calls[ai_gateway]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_api_routers_contain_no_direct_db_calls[ctms]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_routers_contain_no_direct_db_calls[designer]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2936,6 +2983,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_api_routers_contain_no_direct_db_calls[safety]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_api_routers_contain_no_direct_db_calls[tickets]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_designer_graph_modifications_with_mock_repositories` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_domain_models_contain_zero_database_imports` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
 | `test_domain_models_contain_zero_database_imports[ai_gateway]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_domain_models_contain_zero_database_imports[ctms]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_domain_models_contain_zero_database_imports[designer]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3083,6 +3131,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_security_helpers` | `packages.testing.tests.test_testing_package` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_command_envelope_serialization` | `packages.tooling_core.tests.test_tooling_core` | PRD-SYS-049 | 🟢 PASSED | < 1s |
 | `test_zoom_inspect_handler` | `packages.tooling_core.tests.test_tooling_core` | PRD-SYS-049 | 🟢 PASSED | < 1s |
+| `test_domain_model_creation` | `scripts.scaffold_service` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_cross_service_import_isolation` | `scripts.test_m4_challenger2_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_protocol_version_ref_invalid_status` | `scripts.test_m4_challenger2_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_protocol_version_ref_invalid_study_id` | `scripts.test_m4_challenger2_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3249,6 +3298,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_dynamic_pydantic_model_import_failure_allow_degraded` | `scripts.tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_dynamic_pydantic_model_import_failure_strict_mode` | `scripts.tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_exclude_tests_from_codebase_map` | `scripts.tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_func` | `scripts.tests.test_markdown_validator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_html_comment_filtering` | `scripts.tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_is_potential_path_ref` | `scripts.tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_json_block_validation` | `scripts.tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3300,6 +3350,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_pq_test_missing_fail_fast` | `scripts.tests.test_rtm_generation_pq_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_pq_test_skipped` | `scripts.tests.test_rtm_generation_pq_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_enforce_python_runtime_fails_on_outdated_version` | `scripts.tests.test_runtime_guard` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_enforce_python_runtime_matrix` | `scripts.tests.test_runtime_guard` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_enforce_python_runtime_matrix[outdated_version0-3.7.0]` | `scripts.tests.test_runtime_guard` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_enforce_python_runtime_matrix[outdated_version1-3.10.12]` | `scripts.tests.test_runtime_guard` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_enforce_python_runtime_matrix[outdated_version2-3.11.8]` | `scripts.tests.test_runtime_guard` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3549,28 +3600,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 5f7611779b2b2eb4541c8b0037a15b8553ba344a4955aa0b6f1176e0d4a39246
+- **Cryptographic Hash (SHA-256):** e27c2b6388502fa8782826f19352393c0188bb4e43df30326f1fce46f3e9a4e4
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUZCVjW1OY5vCLLUblqgIGQY7mLyYwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUJv/Grnow+kiMdxJFSgqkHLLddkIwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MjA0MTgyOFoXDTI3MDgyMzA0MTgyOFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MjA1MDgyMloXDTI3MDgyMzA1MDgyMlowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2L7Y
-ts/D7SqRuSK6M7hC7QfK4zjCcpAIMa39gRI1w9bBsuUFlLHocaif5mT5FeJfdUoa
-1o0qZteNeyJokgC7KsLZLr2jX3I7+Q/OmqLa2iClcguP6F2YblV7u50piLyayAr5
-wbyvthbwmbNQ6jc6nACXD8FjEA1WZHB1LthaX5GcSXHTCkQ0a/SahZgRa3P5kNBX
-I4nQ79GiH65U5/PyMh+KpwKc7u2C0+c1PCLSXsyARHp1Cx8NLeIDJ0GduY/SEogV
-WeAbq9LMs3IT8P8aCpqs6pGmWD26i6UTqtoGB2tazvNEfPZNVzkv2fFNQeuD4VNS
-FOBi9M+Rlqe2SZ58CQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQCZncERgtj/G4J1
-zaTqpQendftCBTtYTXbbygfGibrJvgweGpfwJcjM/sIHQkvhb9/CTL1u4AkbYDL6
-XBugbsPzpc+2afwMT8Prhho3e9xCpfPEu8xoR4GA0kWWbw+NG1ODIh29fgOyoz/m
-fNWgR4nAqjkCt+I/Jbkupv8jiQhMCyuf0vN/Bqm7Kw1yWKl3c7bRttZre2jM0sL9
-lTKXhNtx1k1fpBy+xhVXUn2EG/IwJ6Xn/IMasAoXiQBysIPrX3c9+Pky/RMdEJHF
-kjiX2EE8irHHIcSy1AVlWyQpuLLkCOVPNQ2zuy2xPt8VF+aZ+HfUHoeLB+3MOcPN
-uFUK6yd+
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtOdh
+oS4qdQDJf+19aS/dDZOws4A+ZAcUADUI9Q7bV2j/t7LvN6r/633aPRCiCAXO2X6V
+YMnRngede0SV+SRXlQ08sFlHWGG8kW0MB3XKseOPOxnDWSOd+S5c1dB+arqlrq60
+2n0lzqgZWvUe+7iBu+wN8ONKjfex192auZkgw8BLQKVdMdMx7W9fz/wkMn0+v9BJ
+lqicEWxoGPUEfJwBlWy/Tl7O0qMeXuMktCfs9J26xgz/3YLNyC42w/YrJYmEOt9u
+yNGgs674ma0zQr9hGcsT5JLU+n6+o68Y1xDTrsPxrDA6i/qR9ShWv0t0Nt7/HxS0
+tGSlyN/dWUwe5kuZBQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBveXpWYRIW81t3
+218Sa/OTHBUoE+8HzVPWQoxYYpriVSboL7L/RqF/JjmtK9YwoXSJCuHLAFM32Eo2
+wptemQ13nGwVIDkZrd8zC7wIoKmu6kMc+WwroFT3Kol670dyg7/e+N7jiSt1IUZV
+2Yo32cA1C5P896aDoZW3CsBqzGFXjyOPJGzrXHSAr1Npq0znF+CRAUWpbDPl6dRX
+dKv+X1B0aycygLLmjtXFQ/aGmQm7rzLwrDln8cb+zhDkGMzaahpwy/WXcQg8BuzB
+cbSrf9bdNhesOB49rt8qSZdOV6GmupMYhSbssxj4TK0T4d7rKLm/DM8uiU+ykxTG
+uqYvRNu+
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-dscnyWN+VmkkGhn1LUxLjLmWO/IURyKsFwqisJ6pZKEkgflyvSW4W0Gy6JCLeN1yrkkyjdeKLSb3IJAbyBHRO3pz/E83qcM6EDdU0bC611PoThcZDslaRybtjIyxeYNb6kYY/KMSzFH0z9ik/595FGgyZnw7PPbMZ7+a6EIYXvWlWNvP6L/dWLLjJB/fMMEUDu4hiqEnoMtxsI/nx9oEw+zqFj5E465sCdlrIr3bOX61HgNYjII5YSEoFmkHhDEUbUK7rNDzhBE0OCWRz6lcKj1KKUyMj/2nBHtZeZUPyd8eKzzi3if60glruaRt2LgxxQ/46ZvOdFTF6RD6fHgoZQ==
+f5srpXGeW66zIa76eN7ogsPXudV6ozKLAw/XPl1x+3IFMem+s3b0g4i2e4+U77Vz+FoTa+/lK4snOVNUSs3hE/ZXQMBiBRGpr13dShcglmkHRNTb/0jCpr0X+XQSFSYFgIbDK5mVZM+mYWgbyOHBSNbnfeUeQ3p4B044gGduLTPOVk7r9RfS6WD+Lg8vP3hVC/nJQjTnxfyVRnrDtCWDpIB99GrVN8RhZ/a073YxGezl6z2fW+ImVo3Wg8TOBO9jCYqmsJCH9sZi2aNUweO5NrV1zLcvAg21lrqyRA8MzsnWPqf9ITkIEMZ75VxHCmg3iPEPrVqQKxaFUPO9aAGZWQ==
 -----END SIGNATURE-----

@@ -451,6 +451,168 @@ class AS2TransmissionAuditLog(Base):
     )
 
 
+class SafetySignalDetectionRun(Base):
+    """
+    Represents an automated statistical safety signal detection scan run.
+
+    Requirements: PRD-PVG-003, ADR-2199
+    """
+
+    __tablename__ = "safety_signal_detection_runs"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    target_drug: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    benchmark_dataset: Mapped[str] = mapped_column(
+        String(100), nullable=False, default="INTERNAL_TRIAL_POOL"
+    )
+    total_cases_analyzed: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    signals_detected_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    summary_metrics: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSON, nullable=False, default=list
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    alerts: Mapped[list[SafetySignalAlert]] = relationship(
+        "SafetySignalAlert",
+        back_populates="detection_run",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+
+class SafetySignalAlert(Base):
+    """
+    Represents an automated or triaged Signal Review alert triggered on statistical threshold breaches.
+
+    Requirements: PRD-PVG-003, PRD-PVG-008, ADR-2199
+    """
+
+    __tablename__ = "safety_signal_alerts"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    detection_run_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("safety_signal_detection_runs.id"),
+        nullable=True,
+        index=True,
+    )
+    study_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    target_drug: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    meddra_term: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    term_level: Mapped[str] = mapped_column(String(50), nullable=False, default="PT")
+    meddra_soc: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+
+    # Statistical indices
+    case_count_a: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    expected_count_e: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    prr: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    prr_ci_lower: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    prr_ci_upper: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    chi_square_yates: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    ror: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    ror_ci_lower: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    ror_ci_upper: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    ebgm: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    eb05: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    eb95: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+
+    # Operational review fields
+    severity: Mapped[str] = mapped_column(
+        String(50), default="HIGH", nullable=False, index=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(50), default="TRIGGERED", nullable=False, index=True
+    )
+    triage_summary: Mapped[str] = mapped_column(String(2000), nullable=False)
+    assigned_safety_officer: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    review_decision: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    review_justification: Mapped[str | None] = mapped_column(
+        String(2000), nullable=True
+    )
+    clinical_summary: Mapped[str | None] = mapped_column(String(4000), nullable=True)
+    reviewed_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    esignature_manifest_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+
+    # 21 CFR Part 11 Audit fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    detection_run: Mapped[SafetySignalDetectionRun | None] = relationship(
+        "SafetySignalDetectionRun", back_populates="alerts"
+    )
+
+
+class PeriodicSafetyReportRecord(Base):
+    """
+    Represents an aggregate periodic safety report record (ICH E2F DSUR, ICH E2C(R2) PSUR / PBRER)
+    with electronic signature approval and audit trail.
+
+    Requirements: PRD-PVG-004, PRD-PVG-008, ADR-2199
+    """
+
+    __tablename__ = "periodic_safety_reports"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    report_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="DSUR", index=True
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    compound_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    period_start: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    period_end: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(50), default="DRAFT", nullable=False, index=True
+    )
+    total_subject_exposure: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    total_saes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    report_payload: Mapped[dict[str, Any]] = mapped_column(
+        JSON, nullable=False, default=dict
+    )
+
+    approved_by_user_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    esignature_manifest_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
 @event.listens_for(Session, "before_flush")
 def prevent_audit_log_modification(session: Session, flush_context, instances) -> None:
     for obj in session.dirty:

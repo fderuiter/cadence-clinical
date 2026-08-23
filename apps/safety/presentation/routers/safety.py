@@ -39,11 +39,14 @@ from apps.safety.infrastructure.database import db_manager
 from apps.safety.infrastructure.models import (
     AS2Transmission,
     ExportJob,
+    PeriodicSafetyReportRecord,
     SAEDiscrepancy,
     SAEReconciliationJob,
     SAEReconciliationRun,
     SafetyAuditLog,
     SafetyCaseICSR,
+    SafetySignalAlert,
+    SafetySignalDetectionRun,
     write_as2_audit_log,
     write_audit_log,
 )
@@ -54,6 +57,10 @@ from apps.safety.presentation.dtos import (
     ICSRDataExportRequest,
     MDNProcessRequestDTO,
     MDNProcessResponseDTO,
+    PeriodicReportCompilationRequest,
+    PeriodicReportResponseDTO,
+    PeriodicReportSignRequest,
+    PeriodicReportSignResponse,
     RegulatoryAckProcessRequestDTO,
     RegulatoryAckProcessResponseDTO,
     SAEDiscrepancyResponse,
@@ -66,6 +73,12 @@ from apps.safety.presentation.dtos import (
     SafetyCaseICSRResponse,
     SafetyExportJobCreate,
     SafetyExportJobResponse,
+    SafetySignalAlertDTO,
+    SafetySignalAlertReviewRequest,
+    SafetySignalAlertSignRequest,
+    SafetySignalAlertSignResponse,
+    SignalDetectionScanRequest,
+    SignalDetectionScanResponse,
 )
 from apps.safety.processor import process_sae_reconciliation
 from apps.safety.services.as2_gateway_client import AS2GatewayClient
@@ -73,6 +86,8 @@ from apps.safety.services.expedited_rules_engine import (
     ExpeditedSafetyReportingRulesEngine,
 )
 from apps.safety.services.narrative_service import SafetyNarrativeService
+from apps.safety.services.periodic_report_compiler import PeriodicSafetyReportCompiler
+from apps.safety.services.signal_alert_service import SafetySignalAlertService
 from packages.database import DatabaseSessionDependency
 
 router = APIRouter()
@@ -1716,3 +1731,451 @@ async def retry_as2_transmission_endpoint(
 
     await session.commit()
     return map_transmission_to_response(retry_tx)
+
+
+# =========================================================================
+# Disproportionality Signal Detection & Alert Workflow Endpoints (PRD-PVG-003)
+# =========================================================================
+
+
+def map_alert_to_dto(alert: SafetySignalAlert) -> SafetySignalAlertDTO:
+    """Serializes a SafetySignalAlert ORM entity to a Pydantic DTO."""
+    return SafetySignalAlertDTO(
+        id=alert.id,
+        detection_run_id=alert.detection_run_id,
+        study_id=alert.study_id,
+        target_drug=alert.target_drug,
+        meddra_term=alert.meddra_term,
+        term_level=alert.term_level,
+        meddra_soc=alert.meddra_soc,
+        case_count_a=alert.case_count_a,
+        expected_count_e=alert.expected_count_e,
+        prr=alert.prr,
+        prr_ci_lower=alert.prr_ci_lower,
+        prr_ci_upper=alert.prr_ci_upper,
+        chi_square_yates=alert.chi_square_yates,
+        ror=alert.ror,
+        ror_ci_lower=alert.ror_ci_lower,
+        ror_ci_upper=alert.ror_ci_upper,
+        ebgm=alert.ebgm,
+        eb05=alert.eb05,
+        eb95=alert.eb95,
+        severity=alert.severity,
+        status=alert.status,
+        triage_summary=alert.triage_summary,
+        assigned_safety_officer=alert.assigned_safety_officer,
+        review_decision=alert.review_decision,
+        review_justification=alert.review_justification,
+        clinical_summary=alert.clinical_summary,
+        reviewed_by=alert.reviewed_by,
+        reviewed_at=alert.reviewed_at.isoformat() if alert.reviewed_at else None,
+        esignature_manifest_id=alert.esignature_manifest_id,
+        created_at=alert.created_at.isoformat() if alert.created_at else "",
+        created_by=alert.created_by,
+        reason_for_change=alert.reason_for_change,
+        version_index=alert.version_index,
+    )
+
+
+@router.post(
+    "/api/v1/safety/signals/detect",
+    response_model=SignalDetectionScanResponse,
+    status_code=200,
+)
+async def execute_signal_detection_scan_endpoint(
+    request: Request,
+    payload: SignalDetectionScanRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> SignalDetectionScanResponse:
+    """Execute statistical disproportionality signal detection (PRR, ROR, EBGM/MGPS) across PT and SOC pairs.
+
+    Requirements: PRD-PVG-003, ADR-2199
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    service = SafetySignalAlertService(session=session)
+    result = await service.execute_scan(
+        request=payload,
+        user_id=user_id,
+        reason_for_change=change_reason
+        or "Automated Disproportionality Signal Detection Scan",
+    )
+    await session.commit()
+    return result
+
+
+@router.get(
+    "/api/v1/safety/signals/runs",
+    response_model=list[dict[str, Any]],
+)
+async def list_signal_detection_runs_endpoint(
+    request: Request,
+    study_id: str | None = None,
+    target_drug: str | None = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[dict[str, Any]]:
+    """List historical disproportionality signal detection scan runs.
+
+    Requirements: PRD-PVG-003, ADR-2199
+    """
+    stmt = select(SafetySignalDetectionRun)
+    if study_id:
+        stmt = stmt.where(SafetySignalDetectionRun.study_id == study_id)
+    if target_drug:
+        stmt = stmt.where(SafetySignalDetectionRun.target_drug == target_drug)
+
+    stmt = stmt.order_by(SafetySignalDetectionRun.created_at.desc())
+    res = await session.execute(stmt)
+    runs = res.scalars().all()
+
+    return [
+        {
+            "id": r.id,
+            "study_id": r.study_id,
+            "target_drug": r.target_drug,
+            "benchmark_dataset": r.benchmark_dataset,
+            "total_cases_analyzed": r.total_cases_analyzed,
+            "signals_detected_count": r.signals_detected_count,
+            "created_at": r.created_at.isoformat() if r.created_at else "",
+            "created_by": r.created_by,
+        }
+        for r in runs
+    ]
+
+
+@router.get(
+    "/api/v1/safety/signals/runs/{id}",
+    response_model=dict[str, Any],
+)
+async def get_signal_detection_run_endpoint(
+    request: Request,
+    id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> dict[str, Any]:
+    """Retrieve full metric tables and details for a signal detection scan run.
+
+    Requirements: PRD-PVG-003, ADR-2199
+    """
+    stmt = select(SafetySignalDetectionRun).where(SafetySignalDetectionRun.id == id)
+    res = await session.execute(stmt)
+    run = res.scalars().first()
+    if not run:
+        raise HTTPException(
+            status_code=404, detail=f"Signal Detection Run '{id}' not found"
+        )
+
+    return {
+        "id": run.id,
+        "study_id": run.study_id,
+        "target_drug": run.target_drug,
+        "benchmark_dataset": run.benchmark_dataset,
+        "total_cases_analyzed": run.total_cases_analyzed,
+        "signals_detected_count": run.signals_detected_count,
+        "summary_metrics": run.summary_metrics,
+        "created_at": run.created_at.isoformat() if run.created_at else "",
+        "created_by": run.created_by,
+    }
+
+
+@router.get(
+    "/api/v1/safety/signals/alerts",
+    response_model=list[SafetySignalAlertDTO],
+)
+async def list_signal_alerts_endpoint(
+    request: Request,
+    study_id: str | None = None,
+    target_drug: str | None = None,
+    status: str | None = None,
+    severity: str | None = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[SafetySignalAlertDTO]:
+    """List safety signal review alerts with optional filtering by status, severity, or study.
+
+    Requirements: PRD-PVG-003, ADR-2199
+    """
+    service = SafetySignalAlertService(session=session)
+    alerts = await service.list_alerts(
+        study_id=study_id,
+        target_drug=target_drug,
+        status=status,
+        severity=severity,
+    )
+    return [map_alert_to_dto(a) for a in alerts]
+
+
+@router.get(
+    "/api/v1/safety/signals/alerts/{id}",
+    response_model=SafetySignalAlertDTO,
+)
+async def get_signal_alert_endpoint(
+    request: Request,
+    id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> SafetySignalAlertDTO:
+    """Retrieve details of an individual safety signal review alert.
+
+    Requirements: PRD-PVG-003, ADR-2199
+    """
+    service = SafetySignalAlertService(session=session)
+    alert = await service.get_alert(id)
+    if not alert:
+        raise HTTPException(
+            status_code=404, detail=f"Safety Signal Alert '{id}' not found"
+        )
+    return map_alert_to_dto(alert)
+
+
+@router.post(
+    "/api/v1/safety/signals/alerts/{id}/review",
+    response_model=SafetySignalAlertDTO,
+)
+async def review_signal_alert_endpoint(
+    request: Request,
+    id: str,
+    payload: SafetySignalAlertReviewRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> SafetySignalAlertDTO:
+    """Review and update the clinical triage disposition of a safety signal alert.
+
+    Requirements: PRD-PVG-003, ADR-2199
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    service = SafetySignalAlertService(session=session)
+    try:
+        updated = await service.review_alert(
+            alert_id=id,
+            request=payload,
+            user_id=user_id,
+            reason_for_change=change_reason
+            or f"Signal review assessment: {payload.decision.value}",
+        )
+        await session.commit()
+        return map_alert_to_dto(updated)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post(
+    "/api/v1/safety/signals/alerts/{id}/sign",
+    response_model=SafetySignalAlertSignResponse,
+)
+async def sign_signal_alert_endpoint(
+    request: Request,
+    id: str,
+    payload: SafetySignalAlertSignRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> SafetySignalAlertSignResponse:
+    """Apply a 21 CFR Part 11 Electronic Signature to approve a safety signal disposition.
+
+    Requirements: PRD-PVG-003, PRD-PVG-008, ADR-2199
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    effective_user = payload.user_id or user_id
+    service = SafetySignalAlertService(session=session)
+    try:
+        sign_res = await service.sign_alert_review(
+            alert_id=id,
+            decision=payload.decision,
+            justification=payload.justification,
+            clinical_summary=payload.clinical_summary,
+            user_id=effective_user,
+            user_roles=[user_role] if isinstance(user_role, str) else user_role,
+            reason_for_change=change_reason
+            or f"Sign-off signal review: {payload.decision.value}",
+            signature_secret=payload.signature_secret,
+            meaning_of_signature=payload.meaning_of_signature,
+        )
+        await session.commit()
+        return sign_res
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# =========================================================================
+# Periodic Aggregate Safety Reports Endpoints (DSUR, PSUR/PBRER) (PRD-PVG-004)
+# =========================================================================
+
+
+def map_periodic_report_to_dto(
+    record: PeriodicSafetyReportRecord,
+) -> PeriodicReportResponseDTO:
+    """Serializes PeriodicSafetyReportRecord to DTO."""
+    payload = record.report_payload or {}
+    line_listings = payload.get("line_listings", [])
+    tabulations = payload.get("summary_tabulations", [])
+    signals = payload.get("signal_summary", [])
+
+    return PeriodicReportResponseDTO(
+        id=record.id,
+        report_type=record.report_type,
+        study_id=record.study_id,
+        compound_name=record.compound_name,
+        reporting_period_start=record.period_start.isoformat()[:10]
+        if record.period_start
+        else "",
+        reporting_period_end=record.period_end.isoformat()[:10]
+        if record.period_end
+        else "",
+        status=record.status,
+        total_subject_exposure=record.total_subject_exposure,
+        total_saes=record.total_saes,
+        line_listings_count=len(line_listings),
+        summary_tabulations_count=len(tabulations),
+        signals_included_count=len(signals),
+        payload=payload,
+        approved_by_user_id=record.approved_by_user_id,
+        approved_at=record.approved_at.isoformat() if record.approved_at else None,
+        esignature_manifest_id=record.esignature_manifest_id,
+        created_at=record.created_at.isoformat() if record.created_at else "",
+        created_by=record.created_by,
+        reason_for_change=record.reason_for_change,
+        version_index=record.version_index,
+    )
+
+
+@router.post(
+    "/api/v1/safety/periodic-reports/compile",
+    response_model=PeriodicReportResponseDTO,
+    status_code=201,
+)
+async def compile_periodic_safety_report_endpoint(
+    request: Request,
+    payload: PeriodicReportCompilationRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> PeriodicReportResponseDTO:
+    """Compile an aggregate periodic safety report (ICH E2F DSUR, ICH E2C(R2) PSUR/PBRER).
+
+    Requirements: PRD-PVG-004, ADR-2199
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    service = SafetySignalAlertService(session=session)
+    result = await service.compile_periodic_report(
+        request=payload,
+        user_id=user_id,
+        reason_for_change=change_reason
+        or f"Compile {payload.report_type.value} Periodic Safety Report",
+    )
+    await session.commit()
+    return result
+
+
+@router.get(
+    "/api/v1/safety/periodic-reports",
+    response_model=list[PeriodicReportResponseDTO],
+)
+async def list_periodic_safety_reports_endpoint(
+    request: Request,
+    study_id: str | None = None,
+    compound_name: str | None = None,
+    report_type: str | None = None,
+    status: str | None = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[PeriodicReportResponseDTO]:
+    """List compiled periodic regulatory safety reports with optional filters.
+
+    Requirements: PRD-PVG-004, ADR-2199
+    """
+    stmt = select(PeriodicSafetyReportRecord)
+    if study_id:
+        stmt = stmt.where(PeriodicSafetyReportRecord.study_id == study_id)
+    if compound_name:
+        stmt = stmt.where(PeriodicSafetyReportRecord.compound_name == compound_name)
+    if report_type:
+        stmt = stmt.where(PeriodicSafetyReportRecord.report_type == report_type)
+    if status:
+        stmt = stmt.where(PeriodicSafetyReportRecord.status == status)
+
+    stmt = stmt.order_by(PeriodicSafetyReportRecord.created_at.desc())
+    res = await session.execute(stmt)
+    records = res.scalars().all()
+    return [map_periodic_report_to_dto(r) for r in records]
+
+
+@router.get(
+    "/api/v1/safety/periodic-reports/{id}",
+    response_model=PeriodicReportResponseDTO,
+)
+async def get_periodic_safety_report_endpoint(
+    request: Request,
+    id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> PeriodicReportResponseDTO:
+    """Retrieve full structured JSON payload of a periodic regulatory safety report by ID.
+
+    Requirements: PRD-PVG-004, ADR-2199
+    """
+    stmt = select(PeriodicSafetyReportRecord).where(PeriodicSafetyReportRecord.id == id)
+    res = await session.execute(stmt)
+    record = res.scalars().first()
+    if not record:
+        raise HTTPException(
+            status_code=404, detail=f"Periodic Safety Report '{id}' not found"
+        )
+    return map_periodic_report_to_dto(record)
+
+
+@router.post(
+    "/api/v1/safety/periodic-reports/{id}/sign",
+    response_model=PeriodicReportSignResponse,
+)
+async def sign_periodic_safety_report_endpoint(
+    request: Request,
+    id: str,
+    payload: PeriodicReportSignRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> PeriodicReportSignResponse:
+    """Apply a 21 CFR Part 11 Electronic Signature to approve a Periodic Safety Report.
+
+    Requirements: PRD-PVG-004, PRD-PVG-008, ADR-2199
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    effective_user = payload.user_id or user_id
+    service = SafetySignalAlertService(session=session)
+    try:
+        sign_res = await service.sign_periodic_report(
+            report_id=id,
+            user_id=effective_user,
+            user_roles=[user_role] if isinstance(user_role, str) else user_role,
+            reason_for_change=change_reason
+            or "21 CFR Part 11 Approval of Periodic Safety Report",
+            signature_secret=payload.signature_secret,
+            meaning_of_signature=payload.meaning_of_signature,
+        )
+        await session.commit()
+        return sign_res
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get(
+    "/api/v1/safety/periodic-reports/{id}/export",
+    response_class=Response,
+)
+async def export_periodic_safety_report_html_endpoint(
+    request: Request,
+    id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> Response:
+    """Export a publication-ready HTML representation of a periodic safety report.
+
+    Requirements: PRD-PVG-004, ADR-2199
+    """
+    stmt = select(PeriodicSafetyReportRecord).where(PeriodicSafetyReportRecord.id == id)
+    res = await session.execute(stmt)
+    record = res.scalars().first()
+    if not record:
+        raise HTTPException(
+            status_code=404, detail=f"Periodic Safety Report '{id}' not found"
+        )
+
+    from apps.safety.domain.periodic_report_models import PeriodicReportPayload
+
+    payload_obj = PeriodicReportPayload(**record.report_payload)
+    html_content = PeriodicSafetyReportCompiler.render_html_report(payload_obj)
+
+    return Response(
+        content=html_content,
+        media_type="text/html",
+        headers={
+            "Content-Disposition": f"inline; filename={record.report_type}_{record.study_id}_{record.id}.html"
+        },
+    )
