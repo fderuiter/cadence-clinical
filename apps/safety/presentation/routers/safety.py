@@ -6,7 +6,7 @@ import json
 import logging
 import os
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import (
@@ -41,6 +41,7 @@ from apps.safety.domain.narrative_models import (
 from apps.safety.infrastructure.database import db_manager
 from apps.safety.infrastructure.models import (
     AS2Transmission,
+    DeviceSafetyInvestigation,
     ExportJob,
     PeriodicSafetyReportRecord,
     SAEDiscrepancy,
@@ -57,6 +58,10 @@ from apps.safety.presentation.dtos import (
     AS2OutboundTransmissionRequestDTO,
     AS2TransmissionAuditLogDTO,
     AS2TransmissionResponseDTO,
+    DeviceSafetyInvestigationAdjudicateDTO,
+    DeviceSafetyInvestigationCreateDTO,
+    DeviceSafetyInvestigationResponseDTO,
+    DeviceVigilanceReportResponseDTO,
     ICSRDataExportRequest,
     MDNProcessRequestDTO,
     MDNProcessResponseDTO,
@@ -2382,4 +2387,379 @@ async def export_periodic_safety_report_xml_endpoint(
     """
     return await export_periodic_safety_report_endpoint(
         request=request, id=id, format="xml", session=session
+    )
+
+
+# =========================================================================
+# Medical Device & IVD Safety Investigation Suite (ISO 14155 / EU MDR / IVDR)
+# Requirements: PRD-SYS-126, PRD-DEV-003, PRD-DEV-004, ADR-2209
+# =========================================================================
+
+
+def map_device_investigation_to_dto(
+    inv: DeviceSafetyInvestigation,
+) -> DeviceSafetyInvestigationResponseDTO:
+    """Serializes a DeviceSafetyInvestigation ORM entity to a Pydantic DTO with countdown clocks."""
+    now_ts = datetime.now(UTC)
+    due = (
+        inv.vigilance_due_date
+        if inv.vigilance_due_date.tzinfo
+        else inv.vigilance_due_date.replace(tzinfo=UTC)
+    )
+    days_remaining = (due.date() - now_ts.date()).days
+    is_overdue = days_remaining < 0 and inv.status != "CLOSED"
+
+    return DeviceSafetyInvestigationResponseDTO(
+        id=inv.id,
+        case_number=inv.case_number,
+        study_id=inv.study_id,
+        site_id=inv.site_id,
+        subject_id=inv.subject_id,
+        deficiency_id=inv.deficiency_id,
+        device_name=inv.device_name,
+        device_udi_di=inv.device_udi_di,
+        lot_number=inv.lot_number,
+        serial_number=inv.serial_number,
+        classification=inv.classification,
+        causality=inv.causality,
+        is_usade=inv.is_usade,
+        vigilance_reporting_required=inv.vigilance_reporting_required,
+        vigilance_deadline_days=inv.vigilance_deadline_days,
+        vigilance_due_date=inv.vigilance_due_date.isoformat(),
+        days_remaining=days_remaining,
+        is_overdue=is_overdue,
+        notified_body_notified=inv.notified_body_notified,
+        competent_authority_notified=inv.competent_authority_notified,
+        status=inv.status,
+        investigation_notes=inv.investigation_notes,
+        root_cause_summary=inv.root_cause_summary,
+        capa_required=inv.capa_required,
+        capa_reference=inv.capa_reference,
+        fsca_required=inv.fsca_required,
+        safety_physician_user_id=inv.safety_physician_user_id,
+        adjudicated_at=inv.adjudicated_at.isoformat() if inv.adjudicated_at else None,
+        esignature_manifest_id=inv.esignature_manifest_id,
+        created_at=inv.created_at.isoformat() if inv.created_at else "",
+        created_by=inv.created_by,
+        reason_for_change=inv.reason_for_change,
+        version_index=inv.version_index,
+    )
+
+
+@router.post(
+    "/api/v1/safety/device-investigations",
+    response_model=DeviceSafetyInvestigationResponseDTO,
+    status_code=201,
+)
+async def open_device_safety_investigation_endpoint(
+    request: Request,
+    payload: DeviceSafetyInvestigationCreateDTO,
+    session: AsyncSession = Depends(get_db_session),
+) -> DeviceSafetyInvestigationResponseDTO:
+    """Opens a new Adverse Device Effect (ADE / SADE / USADE) safety investigation case.
+
+    Calculates vigilance reporting deadlines according to ISO 14155 and EU MDR / IVDR.
+
+    Requirements: PRD-SYS-126, PRD-DEV-003, ISO 14155:2020, ADR-2209
+    """
+    user_id, change_reason, _ = get_user_context(request)
+    now_ts = datetime.now(UTC).replace(tzinfo=None)
+
+    case_num = (
+        payload.case_number or f"DEV-{payload.study_id}-{uuid.uuid4().hex[:6].upper()}"
+    )
+
+    # Determine vigilance reporting deadline:
+    # 2 days: Public health threat
+    # 10 days: SADE / USADE / Death / Serious deterioration
+    # 15 days: General reportable incident / ADE
+    classification = payload.classification.upper()
+    deadline_days = 10 if classification in ("SADE", "USADE") else 15
+
+    due_date = now_ts + timedelta(days=deadline_days)
+
+    investigation = DeviceSafetyInvestigation(
+        case_number=case_num,
+        study_id=payload.study_id,
+        site_id=payload.site_id,
+        subject_id=payload.subject_id,
+        deficiency_id=payload.deficiency_id,
+        device_name=payload.device_name,
+        device_udi_di=payload.device_udi_di,
+        lot_number=payload.lot_number,
+        serial_number=payload.serial_number,
+        classification=classification,
+        causality=payload.causality,
+        is_usade=payload.is_usade or classification == "USADE",
+        vigilance_reporting_required=True,
+        vigilance_deadline_days=deadline_days,
+        vigilance_due_date=due_date,
+        notified_body_notified=False,
+        competent_authority_notified=False,
+        status="OPEN",
+        investigation_notes=payload.investigation_notes,
+        created_at=now_ts,
+        created_by=user_id,
+        reason_for_change=payload.reason_for_change or change_reason,
+        version_index=1,
+    )
+    session.add(investigation)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        created_by=user_id,
+        action="DEVICE_SAFETY_INVESTIGATION_OPENED",
+        details=f"Opened device safety case {case_num} ({classification}) for deficiency {payload.deficiency_id}",
+        reason_for_change=payload.reason_for_change or change_reason,
+        record_id=investigation.id,
+    )
+    await session.commit()
+    return map_device_investigation_to_dto(investigation)
+
+
+@router.get(
+    "/api/v1/safety/device-investigations",
+    response_model=list[DeviceSafetyInvestigationResponseDTO],
+    status_code=200,
+)
+async def list_device_safety_investigations_endpoint(
+    study_id: str | None = None,
+    site_id: str | None = None,
+    classification: str | None = None,
+    status: str | None = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[DeviceSafetyInvestigationResponseDTO]:
+    """Lists device safety investigation cases matching query parameters.
+
+    Requirements: PRD-SYS-126, PRD-DEV-003, ADR-2209
+    """
+    stmt = select(DeviceSafetyInvestigation)
+    if study_id:
+        stmt = stmt.where(DeviceSafetyInvestigation.study_id == study_id)
+    if site_id:
+        stmt = stmt.where(DeviceSafetyInvestigation.site_id == site_id)
+    if classification:
+        stmt = stmt.where(
+            DeviceSafetyInvestigation.classification == classification.upper()
+        )
+    if status:
+        stmt = stmt.where(DeviceSafetyInvestigation.status == status.upper())
+
+    stmt = stmt.order_by(DeviceSafetyInvestigation.created_at.desc())
+    res = await session.execute(stmt)
+    cases = res.scalars().all()
+    return [map_device_investigation_to_dto(c) for c in cases]
+
+
+@router.get(
+    "/api/v1/safety/device-investigations/{investigation_id}",
+    response_model=DeviceSafetyInvestigationResponseDTO,
+    status_code=200,
+)
+async def get_device_safety_investigation_endpoint(
+    investigation_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> DeviceSafetyInvestigationResponseDTO:
+    """Retrieves a single device safety investigation case by ID.
+
+    Requirements: PRD-SYS-126, PRD-DEV-003, ADR-2209
+    """
+    stmt = select(DeviceSafetyInvestigation).where(
+        DeviceSafetyInvestigation.id == investigation_id
+    )
+    res = await session.execute(stmt)
+    case = res.scalars().first()
+    if not case:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Device safety investigation '{investigation_id}' not found.",
+        )
+    return map_device_investigation_to_dto(case)
+
+
+@router.put(
+    "/api/v1/safety/device-investigations/{investigation_id}/adjudicate",
+    response_model=DeviceSafetyInvestigationResponseDTO,
+    status_code=200,
+)
+async def adjudicate_device_safety_investigation_endpoint(
+    request: Request,
+    investigation_id: str,
+    payload: DeviceSafetyInvestigationAdjudicateDTO,
+    session: AsyncSession = Depends(get_db_session),
+) -> DeviceSafetyInvestigationResponseDTO:
+    """Formally adjudicates Adverse Device Effect causality and SADE determination with Part 11 e-signature.
+
+    Requirements: PRD-SYS-126, PRD-DEV-003, 21 CFR Part 11, ISO 14155:2020, ADR-2209
+    """
+    user_id, change_reason, _ = get_user_context(request)
+    stmt = select(DeviceSafetyInvestigation).where(
+        DeviceSafetyInvestigation.id == investigation_id
+    )
+    res = await session.execute(stmt)
+    case = res.scalars().first()
+    if not case:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Device safety investigation '{investigation_id}' not found.",
+        )
+
+    if not payload.signature_token or len(payload.signature_token) < 5:
+        raise HTTPException(
+            status_code=400,
+            detail="Electronic signature token is required for Safety Physician adjudication.",
+        )
+
+    now_ts = datetime.now(UTC).replace(tzinfo=None)
+    case.classification = payload.classification.upper()
+    case.causality = payload.causality.upper()
+    case.is_usade = payload.is_usade or case.classification == "USADE"
+    if payload.investigation_notes:
+        case.investigation_notes = payload.investigation_notes
+    if payload.root_cause_summary:
+        case.root_cause_summary = payload.root_cause_summary
+    case.capa_required = payload.capa_required
+    case.capa_reference = payload.capa_reference
+    case.fsca_required = payload.fsca_required
+    case.status = "RESOLVED"
+    case.safety_physician_user_id = user_id
+    case.adjudicated_at = now_ts
+    case.esignature_manifest_id = payload.signature_token
+    case.version_index += 1
+    case.reason_for_change = payload.reason_for_change or change_reason
+
+    session.add(case)
+    await write_audit_log(
+        session=session,
+        created_by=user_id,
+        action="DEVICE_SAFETY_INVESTIGATION_ADJUDICATED",
+        details=(
+            f"Adjudicated case {case.case_number}: classification={case.classification}, "
+            f"causality={case.causality}, capa_required={case.capa_required}"
+        ),
+        reason_for_change=payload.reason_for_change or change_reason,
+        version_index=case.version_index,
+        record_id=case.id,
+    )
+    await session.commit()
+    return map_device_investigation_to_dto(case)
+
+
+@router.post(
+    "/api/v1/safety/device-investigations/{investigation_id}/regulatory-report",
+    response_model=DeviceVigilanceReportResponseDTO,
+    status_code=200,
+)
+async def generate_device_vigilance_report_endpoint(
+    request: Request,
+    investigation_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> DeviceVigilanceReportResponseDTO:
+    """Generates an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2 JSON/XML).
+
+    Requirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, ADR-2209
+    """
+    stmt = select(DeviceSafetyInvestigation).where(
+        DeviceSafetyInvestigation.id == investigation_id
+    )
+    res = await session.execute(stmt)
+    case = res.scalars().first()
+    if not case:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Device safety investigation '{investigation_id}' not found.",
+        )
+
+    summary_text = (
+        f"Investigational Medical Device Incident Report for {case.device_name} "
+        f"(UDI-DI: {case.device_udi_di}, Lot: {case.lot_number}, Serial: {case.serial_number or 'N/A'}). "
+        f"Classification: {case.classification}. Causality: {case.causality}. "
+        f"Evaluation: {case.root_cause_summary or case.investigation_notes or 'Under Investigation'}."
+    )
+
+    payload_json = {
+        "mir_version": "7.2",
+        "regulatory_framework": "EU_MDR_2017_745",
+        "administrative_information": {
+            "report_reference_number": f"MIR-{case.case_number}",
+            "report_type": "INITIAL_INCIDENT_REPORT"
+            if case.status == "OPEN"
+            else "FINAL_INVESTIGATION_REPORT",
+            "competent_authority": "EUDAMED / National Competent Authority",
+            "reporting_date": datetime.now(UTC).isoformat(),
+            "vigilance_due_date": case.vigilance_due_date.isoformat(),
+        },
+        "device_identification": {
+            "brand_name": case.device_name,
+            "udi_di": case.device_udi_di,
+            "lot_number": case.lot_number,
+            "serial_number": case.serial_number,
+            "clinical_investigation_study_id": case.study_id,
+            "investigation_site_id": case.site_id,
+            "subject_identifier": case.subject_id,
+        },
+        "incident_information": {
+            "deficiency_id": case.deficiency_id,
+            "safety_classification": case.classification,
+            "causal_relationship": case.causality,
+            "is_unanticipated_sade": case.is_usade,
+            "summary": summary_text,
+        },
+        "investigation_and_actions": {
+            "root_cause_analysis": case.root_cause_summary,
+            "capa_initiated": case.capa_required,
+            "capa_reference": case.capa_reference,
+            "fsca_required": case.fsca_required,
+            "status": case.status,
+            "safety_physician": case.safety_physician_user_id,
+            "adjudicated_at": case.adjudicated_at.isoformat()
+            if case.adjudicated_at
+            else None,
+        },
+    }
+
+    payload_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<ManufacturerIncidentReport version="7.2" xmlns="urn:eudamed:mdr:mir:v7.2">
+  <AdministrativeInformation>
+    <ReportReference>{payload_json["administrative_information"]["report_reference_number"]}</ReportReference>
+    <ReportType>{payload_json["administrative_information"]["report_type"]}</ReportType>
+    <VigilanceDueDate>{case.vigilance_due_date.isoformat()}</VigilanceDueDate>
+  </AdministrativeInformation>
+  <DeviceIdentification>
+    <BrandName>{case.device_name}</BrandName>
+    <UDI_DI>{case.device_udi_di}</UDI_DI>
+    <LotNumber>{case.lot_number}</LotNumber>
+    <SerialNumber>{case.serial_number or ""}</SerialNumber>
+    <StudyIdentifier>{case.study_id}</StudyIdentifier>
+    <SiteIdentifier>{case.site_id}</SiteIdentifier>
+    <SubjectIdentifier>{case.subject_id or ""}</SubjectIdentifier>
+  </DeviceIdentification>
+  <IncidentInformation>
+    <Classification>{case.classification}</Classification>
+    <Causality>{case.causality}</Causality>
+    <IsUSADE>{str(case.is_usade).lower()}</IsUSADE>
+    <Description>{summary_text}</Description>
+  </IncidentInformation>
+  <ActionsTaken>
+    <CAPARequired>{str(case.capa_required).lower()}</CAPARequired>
+    <FSCARequired>{str(case.fsca_required).lower()}</FSCARequired>
+    <Status>{case.status}</Status>
+  </ActionsTaken>
+</ManufacturerIncidentReport>"""
+
+    return DeviceVigilanceReportResponseDTO(
+        case_number=case.case_number,
+        report_type="EU_MDR_MIR_V7_2",
+        reporting_authority="EUDAMED / National Competent Authority",
+        device_name=case.device_name,
+        udi_di=case.device_udi_di,
+        lot_number=case.lot_number,
+        serial_number=case.serial_number,
+        classification=case.classification,
+        incident_summary=summary_text,
+        vigilance_deadline_days=case.vigilance_deadline_days,
+        vigilance_due_date=case.vigilance_due_date.isoformat(),
+        payload_json=payload_json,
+        payload_xml=payload_xml,
     )

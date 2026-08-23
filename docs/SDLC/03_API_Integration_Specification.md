@@ -10392,6 +10392,443 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/devices/parse-udi:
+    post:
+      tags:
+      - Medical Device & IVD Suite
+      summary: Parse Udi
+      description: 'Parses and validates a Unique Device Identifier (UDI) barcode string.
+
+
+        Supports GS1-128, GS1-DataMatrix (AIs 01, 10, 11, 17, 21, 8012), and HIBCC formats.
+
+
+        @req:PRD-DEV-001, @req:PRD-SYS-126, @req:ADR-2209'
+      operationId: parse_udi_api_v1_execution_devices_parse_udi_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UDIParseRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParsedUDI'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/devices/inventory:
+    post:
+      tags:
+      - Medical Device & IVD Suite
+      summary: Register Inventory
+      description: 'Registers serialized investigational medical device and IVD inventory items in RTSM.
+
+
+        @req:PRD-DEV-001, @req:PRD-SYS-126, @req:ADR-2209'
+      operationId: register_inventory_api_v1_execution_devices_inventory_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceInventoryCreateRequest'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeviceInventoryResponse'
+                title: Response Register Inventory Api V1 Execution Devices Inventory Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - Medical Device & IVD Suite
+      summary: List Inventory
+      description: 'Retrieves investigational medical device inventory matching query filters.
+
+
+        @req:PRD-DEV-001, @req:PRD-SYS-126, @req:ADR-2209'
+      operationId: list_inventory_api_v1_execution_devices_inventory_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Study Identifier
+          title: Study Id
+        description: Study Identifier
+      - name: site_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional Site Identifier
+          title: Site Id
+        description: Optional Site Identifier
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional Status filter
+          title: Status
+        description: Optional Status filter
+      - name: udi_di
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional UDI-DI filter
+          title: Udi Di
+        description: Optional UDI-DI filter
+      - name: lot_number
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional Lot filter
+          title: Lot Number
+        description: Optional Lot filter
+      - name: serial_number
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional Serial filter
+          title: Serial Number
+        description: Optional Serial filter
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeviceInventoryResponse'
+                title: Response List Inventory Api V1 Execution Devices Inventory Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/devices/dispense:
+    post:
+      tags:
+      - Medical Device & IVD Suite
+      summary: Dispense
+      description: 'Dispenses an investigational medical device to a study participant.
+
+
+        Enforces strict quarantine and expiration blocking rules.
+
+
+        @req:PRD-DEV-001, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209'
+      operationId: dispense_api_v1_execution_devices_dispense_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceDispensationRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceDispensationResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/devices/deficiencies:
+    post:
+      tags:
+      - Medical Device & IVD Suite
+      summary: Log Deficiency
+      description: 'Logs a device deficiency/malfunction and triggers automated quarantine + safety cases.
+
+
+        @req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209'
+      operationId: log_deficiency_api_v1_execution_devices_deficiencies_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceDeficiencyCreateRequest'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceDeficiencyResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - Medical Device & IVD Suite
+      summary: List Deficiencies
+      description: 'Lists reported medical device deficiencies and malfunctions for a study.
+
+
+        @req:PRD-DEV-002, @req:PRD-SYS-126, @req:ADR-2209'
+      operationId: list_deficiencies_api_v1_execution_devices_deficiencies_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Study Identifier
+          title: Study Id
+        description: Study Identifier
+      - name: site_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional Site Identifier
+          title: Site Id
+        description: Optional Site Identifier
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional Status filter
+          title: Status
+        description: Optional Status filter
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeviceDeficiencyResponse'
+                title: Response List Deficiencies Api V1 Execution Devices Deficiencies Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/devices/deficiencies/{deficiency_id}:
+    get:
+      tags:
+      - Medical Device & IVD Suite
+      summary: Get Deficiency
+      description: 'Retrieves a single device deficiency report by ID.
+
+
+        @req:PRD-DEV-002, @req:PRD-SYS-126, @req:ADR-2209'
+      operationId: get_deficiency_api_v1_execution_devices_deficiencies__deficiency_id__get
+      parameters:
+      - name: deficiency_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Deficiency Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceDeficiencyResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/devices/quarantine:
+    post:
+      tags:
+      - Medical Device & IVD Suite
+      summary: Initiate Quarantine
+      description: 'Manually places a device serial or lot into QUARANTINED status with dispensation blocking.
+
+
+        @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209'
+      operationId: initiate_quarantine_api_v1_execution_devices_quarantine_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceQuarantineCreateRequest'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceQuarantineResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - Medical Device & IVD Suite
+      summary: List Quarantines
+      description: 'Lists device quarantine records for a clinical trial study.
+
+
+        @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209'
+      operationId: list_quarantines_api_v1_execution_devices_quarantine_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Study Identifier
+          title: Study Id
+        description: Study Identifier
+      - name: site_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional Site Identifier
+          title: Site Id
+        description: Optional Site Identifier
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional Status filter
+          title: Status
+        description: Optional Status filter
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeviceQuarantineResponse'
+                title: Response List Quarantines Api V1 Execution Devices Quarantine Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/devices/quarantine/release:
+    post:
+      tags:
+      - Medical Device & IVD Suite
+      summary: Release Quarantine
+      description: 'Releases a device quarantine record under 21 CFR Part 11 electronic signature.
+
+
+        @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209'
+      operationId: release_quarantine_api_v1_execution_devices_quarantine_release_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceQuarantineReleaseRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceQuarantineResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/devices/summary:
+    get:
+      tags:
+      - Medical Device & IVD Suite
+      summary: Get Device Summary
+      description: 'Retrieves operational metrics for the Medical Device & IVD Investigation console.
+
+
+        @req:PRD-DEV-001, @req:PRD-DEV-002, @req:PRD-DEV-003, @req:PRD-SYS-126, @req:ADR-2209'
+      operationId: get_device_summary_api_v1_execution_devices_summary_get
+      parameters:
+      - name: study_id
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Study Identifier
+          title: Study Id
+        description: Study Identifier
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceInvestigationSummary'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /events/study-published:
     post:
       summary: Study Published
@@ -17549,6 +17986,17 @@ components:
       - payload
       title: UpdateVisitRequest
       description: Request model for updating a Visit library object.
+    ActionTakenDevice:
+      type: string
+      enum:
+      - QUARANTINED_AT_SITE
+      - RETURNED_TO_SPONSOR
+      - REPLACED
+      - DISPOSED
+      - REPAIRED
+      - NONE
+      title: ActionTakenDevice
+      description: Action taken with the investigational medical device upon deficiency.
     AdaptiveTrialConfigDTO:
       properties:
         study_id:
@@ -21408,6 +21856,797 @@ components:
       type: object
       title: Demographics
       description: Pydantic schema representing demographic details.
+    DeviceClassification:
+      type: string
+      enum:
+      - CLASS_I
+      - CLASS_IIA
+      - CLASS_IIB
+      - CLASS_III
+      - IVD_CLASS_A
+      - IVD_CLASS_B
+      - IVD_CLASS_C
+      - IVD_CLASS_D
+      title: DeviceClassification
+      description: Regulatory risk classification per EU MDR (Classes I, IIa, IIb, III) and IVDR (Classes A-D).
+    DeviceDeficiencyCreateRequest:
+      properties:
+        study_id:
+          type: string
+          minLength: 1
+          title: Study Id
+        site_id:
+          type: string
+          minLength: 1
+          title: Site Id
+        subject_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subject Id
+        device_inventory_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Device Inventory Id
+        udi_di:
+          type: string
+          minLength: 3
+          title: Udi Di
+        lot_number:
+          type: string
+          minLength: 1
+          title: Lot Number
+        serial_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Serial Number
+        device_name:
+          type: string
+          minLength: 1
+          title: Device Name
+          default: Investigational Medical Device
+        deficiency_type:
+          $ref: '#/components/schemas/DeviceDeficiencyType'
+          default: MALFUNCTION
+        deficiency_description:
+          type: string
+          minLength: 5
+          title: Deficiency Description
+        incident_date:
+          type: string
+          format: date-time
+          title: Incident Date
+        awareness_date:
+          type: string
+          format: date-time
+          title: Awareness Date
+        could_lead_to_sade:
+          type: boolean
+          title: Could Lead To Sade
+          default: false
+        patient_involved:
+          type: boolean
+          title: Patient Involved
+          default: false
+        health_impact:
+          $ref: '#/components/schemas/HealthImpact'
+          default: NONE
+        action_taken_device:
+          $ref: '#/components/schemas/ActionTakenDevice'
+          default: QUARANTINED_AT_SITE
+        device_returned_to_sponsor:
+          type: boolean
+          title: Device Returned To Sponsor
+          default: false
+        return_tracking_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Return Tracking Number
+        quarantine_scope:
+          $ref: '#/components/schemas/QuarantineScope'
+          default: DEVICE_SERIAL
+        reason_for_change:
+          type: string
+          minLength: 5
+          title: Reason For Change
+          default: Report investigational medical device deficiency / malfunction
+        signature_token:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Signature Token
+      type: object
+      required:
+      - study_id
+      - site_id
+      - udi_di
+      - lot_number
+      - deficiency_description
+      - incident_date
+      title: DeviceDeficiencyCreateRequest
+      description: Request payload for reporting a device deficiency or malfunction.
+    DeviceDeficiencyResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        study_id:
+          type: string
+          title: Study Id
+        site_id:
+          type: string
+          title: Site Id
+        subject_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subject Id
+        device_inventory_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Device Inventory Id
+        udi_di:
+          type: string
+          title: Udi Di
+        lot_number:
+          type: string
+          title: Lot Number
+        serial_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Serial Number
+        device_name:
+          type: string
+          title: Device Name
+        deficiency_type:
+          type: string
+          title: Deficiency Type
+        deficiency_description:
+          type: string
+          title: Deficiency Description
+        incident_date:
+          type: string
+          format: date-time
+          title: Incident Date
+        awareness_date:
+          type: string
+          format: date-time
+          title: Awareness Date
+        could_lead_to_sade:
+          type: boolean
+          title: Could Lead To Sade
+        patient_involved:
+          type: boolean
+          title: Patient Involved
+        health_impact:
+          type: string
+          title: Health Impact
+        action_taken_device:
+          type: string
+          title: Action Taken Device
+        device_returned_to_sponsor:
+          type: boolean
+          title: Device Returned To Sponsor
+        return_tracking_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Return Tracking Number
+        root_cause_analysis:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Root Cause Analysis
+        sponsor_evaluation:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sponsor Evaluation
+        quarantine_triggered:
+          type: boolean
+          title: Quarantine Triggered
+        quarantine_scope:
+          type: string
+          title: Quarantine Scope
+        safety_case_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Safety Case Id
+        safety_classification:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Safety Classification
+        investigation_status:
+          type: string
+          title: Investigation Status
+        quarantine_record_ids:
+          items:
+            type: string
+          type: array
+          title: Quarantine Record Ids
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        created_by:
+          type: string
+          title: Created By
+        reason_for_change:
+          type: string
+          title: Reason For Change
+        version_index:
+          type: integer
+          title: Version Index
+      type: object
+      required:
+      - id
+      - study_id
+      - site_id
+      - subject_id
+      - device_inventory_id
+      - udi_di
+      - lot_number
+      - serial_number
+      - device_name
+      - deficiency_type
+      - deficiency_description
+      - incident_date
+      - awareness_date
+      - could_lead_to_sade
+      - patient_involved
+      - health_impact
+      - action_taken_device
+      - device_returned_to_sponsor
+      - return_tracking_number
+      - root_cause_analysis
+      - sponsor_evaluation
+      - quarantine_triggered
+      - quarantine_scope
+      - safety_case_id
+      - safety_classification
+      - investigation_status
+      - created_at
+      - created_by
+      - reason_for_change
+      - version_index
+      title: DeviceDeficiencyResponse
+      description: Response model for reported device deficiency.
+    DeviceDeficiencyType:
+      type: string
+      enum:
+      - MALFUNCTION
+      - USABILITY_ERROR
+      - INADEQUATE_LABELING
+      - DESIGN_DEFECT
+      - PACKAGING_BREACH
+      - SOFTWARE_FAULT
+      title: DeviceDeficiencyType
+      description: Standardized device deficiency types per ISO 14155:2020 Clause 3.15.
+    DeviceDispensationRequest:
+      properties:
+        study_id:
+          type: string
+          minLength: 1
+          title: Study Id
+        site_id:
+          type: string
+          minLength: 1
+          title: Site Id
+        subject_id:
+          type: string
+          minLength: 1
+          title: Subject Id
+        device_inventory_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Device Inventory Id
+        serial_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Serial Number
+        scanned_barcode:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Scanned Barcode
+        reason_for_change:
+          type: string
+          minLength: 5
+          title: Reason For Change
+          default: Investigational device dispensation to participant
+      type: object
+      required:
+      - study_id
+      - site_id
+      - subject_id
+      title: DeviceDispensationRequest
+      description: Request payload for dispensing a device to a clinical study participant.
+    DeviceDispensationResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          default: SUCCESS
+        message:
+          type: string
+          title: Message
+        device:
+          $ref: '#/components/schemas/DeviceInventoryResponse'
+        dispensed_at:
+          type: string
+          format: date-time
+          title: Dispensed At
+      type: object
+      required:
+      - message
+      - device
+      - dispensed_at
+      title: DeviceDispensationResponse
+      description: Response model for device dispensation.
+    DeviceInventoryCreateRequest:
+      properties:
+        study_id:
+          type: string
+          minLength: 1
+          title: Study Id
+        site_id:
+          type: string
+          minLength: 1
+          title: Site Id
+        device_identifier:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Device Identifier
+        brand_name:
+          type: string
+          minLength: 1
+          title: Brand Name
+        device_model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Device Model
+        device_type:
+          $ref: '#/components/schemas/DeviceType'
+          default: THERAPEUTIC
+        device_classification:
+          $ref: '#/components/schemas/DeviceClassification'
+          default: CLASS_IIA
+        raw_barcode:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Raw Barcode
+        udi_di:
+          type: string
+          minLength: 3
+          title: Udi Di
+        lot_number:
+          type: string
+          minLength: 1
+          title: Lot Number
+        serial_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Serial Number
+        expiration_date:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Expiration Date
+        manufacturing_date:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Manufacturing Date
+        software_version:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Software Version
+        quantity:
+          type: integer
+          maximum: 1000.0
+          minimum: 1.0
+          title: Quantity
+          default: 1
+        reason_for_change:
+          type: string
+          minLength: 5
+          title: Reason For Change
+          default: Investigational medical device inventory intake
+      type: object
+      required:
+      - study_id
+      - site_id
+      - brand_name
+      - udi_di
+      - lot_number
+      title: DeviceInventoryCreateRequest
+      description: Request payload for registering investigational devices in RTSM.
+    DeviceInventoryResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        study_id:
+          type: string
+          title: Study Id
+        site_id:
+          type: string
+          title: Site Id
+        device_identifier:
+          type: string
+          title: Device Identifier
+        brand_name:
+          type: string
+          title: Brand Name
+        device_model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Device Model
+        device_type:
+          type: string
+          title: Device Type
+        device_classification:
+          type: string
+          title: Device Classification
+        udi_di:
+          type: string
+          title: Udi Di
+        udi_pi:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Udi Pi
+        udi_carrier_format:
+          type: string
+          title: Udi Carrier Format
+        lot_number:
+          type: string
+          title: Lot Number
+        serial_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Serial Number
+        expiration_date:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Expiration Date
+        manufacturing_date:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Manufacturing Date
+        software_version:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Software Version
+        status:
+          type: string
+          title: Status
+        is_dispensation_blocked:
+          type: boolean
+          title: Is Dispensation Blocked
+        allocated_subject_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Allocated Subject Id
+        dispensed_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Dispensed At
+        dispensed_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Dispensed By
+        quarantined_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Quarantined At
+        quarantined_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Quarantined By
+        quarantine_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Quarantine Reason
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        created_by:
+          type: string
+          title: Created By
+        reason_for_change:
+          type: string
+          title: Reason For Change
+        version_index:
+          type: integer
+          title: Version Index
+      type: object
+      required:
+      - id
+      - study_id
+      - site_id
+      - device_identifier
+      - brand_name
+      - device_model
+      - device_type
+      - device_classification
+      - udi_di
+      - udi_pi
+      - udi_carrier_format
+      - lot_number
+      - serial_number
+      - expiration_date
+      - manufacturing_date
+      - software_version
+      - status
+      - is_dispensation_blocked
+      - allocated_subject_id
+      - dispensed_at
+      - dispensed_by
+      - quarantined_at
+      - quarantined_by
+      - quarantine_reason
+      - created_at
+      - created_by
+      - reason_for_change
+      - version_index
+      title: DeviceInventoryResponse
+      description: Detailed response model for investigational device inventory item.
+    DeviceInvestigationSummary:
+      properties:
+        study_id:
+          type: string
+          title: Study Id
+        total_devices:
+          type: integer
+          title: Total Devices
+          default: 0
+        available_devices:
+          type: integer
+          title: Available Devices
+          default: 0
+        dispensed_devices:
+          type: integer
+          title: Dispensed Devices
+          default: 0
+        quarantined_devices:
+          type: integer
+          title: Quarantined Devices
+          default: 0
+        total_deficiencies:
+          type: integer
+          title: Total Deficiencies
+          default: 0
+        open_safety_cases:
+          type: integer
+          title: Open Safety Cases
+          default: 0
+        sade_count:
+          type: integer
+          title: Sade Count
+          default: 0
+        active_quarantines:
+          type: integer
+          title: Active Quarantines
+          default: 0
+      type: object
+      required:
+      - study_id
+      title: DeviceInvestigationSummary
+      description: Dashboard metrics and counts for device investigations.
+    DeviceQuarantineCreateRequest:
+      properties:
+        study_id:
+          type: string
+          minLength: 1
+          title: Study Id
+        site_id:
+          type: string
+          minLength: 1
+          title: Site Id
+        scope:
+          $ref: '#/components/schemas/QuarantineScope'
+          default: DEVICE_SERIAL
+        device_inventory_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Device Inventory Id
+        lot_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Lot Number
+        serial_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Serial Number
+        reason:
+          type: string
+          minLength: 5
+          title: Reason
+        reason_for_change:
+          type: string
+          minLength: 5
+          title: Reason For Change
+          default: Initiate medical device quarantine
+      type: object
+      required:
+      - study_id
+      - site_id
+      - reason
+      title: DeviceQuarantineCreateRequest
+      description: Request payload for manual or programmatic device quarantine.
+    DeviceQuarantineReleaseRequest:
+      properties:
+        quarantine_id:
+          type: string
+          minLength: 1
+          title: Quarantine Id
+        release_justification:
+          type: string
+          minLength: 10
+          title: Release Justification
+        signature_token:
+          type: string
+          minLength: 10
+          title: Signature Token
+        reason_for_change:
+          type: string
+          minLength: 5
+          title: Reason For Change
+          default: Authorized medical device quarantine release
+      type: object
+      required:
+      - quarantine_id
+      - release_justification
+      - signature_token
+      title: DeviceQuarantineReleaseRequest
+      description: Request payload for releasing a device from quarantine under Part 11 signature.
+    DeviceQuarantineResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        study_id:
+          type: string
+          title: Study Id
+        site_id:
+          type: string
+          title: Site Id
+        deficiency_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Deficiency Id
+        device_inventory_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Device Inventory Id
+        lot_number:
+          type: string
+          title: Lot Number
+        serial_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Serial Number
+        scope:
+          type: string
+          title: Scope
+        status:
+          type: string
+          title: Status
+        reason:
+          type: string
+          title: Reason
+        quarantined_at:
+          type: string
+          format: date-time
+          title: Quarantined At
+        quarantined_by:
+          type: string
+          title: Quarantined By
+        released_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Released At
+        released_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Released By
+        release_justification:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Release Justification
+        impacted_device_count:
+          type: integer
+          title: Impacted Device Count
+          default: 1
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        created_by:
+          type: string
+          title: Created By
+        reason_for_change:
+          type: string
+          title: Reason For Change
+        version_index:
+          type: integer
+          title: Version Index
+      type: object
+      required:
+      - id
+      - study_id
+      - site_id
+      - deficiency_id
+      - device_inventory_id
+      - lot_number
+      - serial_number
+      - scope
+      - status
+      - reason
+      - quarantined_at
+      - quarantined_by
+      - released_at
+      - released_by
+      - release_justification
+      - created_at
+      - created_by
+      - reason_for_change
+      - version_index
+      title: DeviceQuarantineResponse
+      description: Response model for quarantine records.
+    DeviceType:
+      type: string
+      enum:
+      - THERAPEUTIC
+      - DIAGNOSTIC_IVD
+      - IMPLANTABLE
+      - SAMD
+      - COMBINATION
+      title: DeviceType
+      description: Classification of device modality according to ISO 14155 and EU MDR/IVDR.
     DiagnosticAttachment:
       properties:
         attachment_id:
@@ -22682,6 +23921,17 @@ components:
       - DAIDS_V2_1
       title: GradingScaleEnum
       description: Toxicity grading system standard.
+    HealthImpact:
+      type: string
+      enum:
+      - NONE
+      - MILD_TRANSIENT
+      - SERIOUS_DETERIORATION
+      - PERMANENT_IMPAIRMENT
+      - LIFE_THREATENING
+      - DEATH
+      title: HealthImpact
+      description: Clinical severity and patient consequence per ISO 14155.
     IPKitCreateRequest:
       properties:
         study_id:
@@ -24936,6 +26186,57 @@ components:
       - packed_at
       title: PackingManifestResponse
       description: Response schema for packing manifests.
+    ParsedUDI:
+      properties:
+        raw_barcode:
+          type: string
+          title: Raw Barcode
+        udi_carrier_format:
+          $ref: '#/components/schemas/UDICarrierFormat'
+          default: GS1_128
+        udi_di:
+          type: string
+          title: Udi Di
+        lot_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Lot Number
+        serial_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Serial Number
+        expiration_date:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Expiration Date
+        manufacturing_date:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Manufacturing Date
+        software_version:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Software Version
+        is_valid:
+          type: boolean
+          title: Is Valid
+          default: true
+        validation_errors:
+          items:
+            type: string
+          type: array
+          title: Validation Errors
+      type: object
+      required:
+      - raw_barcode
+      - udi_di
+      title: ParsedUDI
+      description: Result of UDI barcode parsing and validation.
     PredictiveForecastRequest:
       properties:
         study_id:
@@ -25209,6 +26510,14 @@ components:
 
 
         Requirements: PRD-SYS-001'
+    QuarantineScope:
+      type: string
+      enum:
+      - DEVICE_SERIAL
+      - SITE_LOT
+      - STUDY_GLOBAL_LOT
+      title: QuarantineScope
+      description: Scope of quarantine trigger.
     QueryCancel:
       properties:
         reason:
@@ -28125,6 +29434,28 @@ components:
       - value
       - unit
       title: UCUMUnitValue
+    UDICarrierFormat:
+      type: string
+      enum:
+      - GS1_128
+      - GS1_DATAMATRIX
+      - HIBCC_128
+      - HIBCC_DATAMATRIX
+      - RAW_UDI
+      title: UDICarrierFormat
+      description: Barcode and UDI standard formats.
+    UDIParseRequest:
+      properties:
+        raw_barcode:
+          type: string
+          minLength: 3
+          title: Raw Barcode
+          description: Raw barcode string (GS1 / HIBCC / Raw UDI)
+      type: object
+      required:
+      - raw_barcode
+      title: UDIParseRequest
+      description: Request payload for barcode parsing.
     UnblindRequest:
       properties:
         reason_code:

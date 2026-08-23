@@ -112,6 +112,16 @@ class AuditAction(StrEnum):
     REMITTANCE_ADVICE_DISPATCHED = "REMITTANCE_ADVICE_DISPATCHED"
     ERP_PAYMENT_SYNCED = "ERP_PAYMENT_SYNCED"
     ERP_WEBHOOK_PROCESSED = "ERP_WEBHOOK_PROCESSED"
+    PARTICIPANT_WALLET_CREATED = "PARTICIPANT_WALLET_CREATED"
+    PARTICIPANT_STIPEND_RULE_CREATED = "PARTICIPANT_STIPEND_RULE_CREATED"
+    PARTICIPANT_STIPEND_CREDITED = "PARTICIPANT_STIPEND_CREDITED"
+    EXPENSE_CLAIM_SUBMITTED = "EXPENSE_CLAIM_SUBMITTED"
+    EXPENSE_CLAIM_APPROVED = "EXPENSE_CLAIM_APPROVED"
+    EXPENSE_CLAIM_REJECTED = "EXPENSE_CLAIM_REJECTED"
+    DIGITAL_DISBURSEMENT_DISPATCHED = "DIGITAL_DISBURSEMENT_DISPATCHED"
+    LAY_SUMMARY_CREATED = "LAY_SUMMARY_CREATED"
+    LAY_SUMMARY_PUBLISHED = "LAY_SUMMARY_PUBLISHED"
+    LAY_SUMMARY_RECEIPT_CONFIRMED = "LAY_SUMMARY_RECEIPT_CONFIRMED"
 
 
 class SplitAllocationCalculation(BaseModel):
@@ -532,6 +542,194 @@ class PaymentAuditLogModel(BaseModel):
     details: str | None = None
     user_id: str = "system"
     user_roles: str = "Grants Manager"
+    created_at: Any | None = None
+    created_by: str = "system"
+    reason_for_change: str | None = None
+    version_index: int = 1
+
+
+class ReceiptOcrResult(BaseModel):
+    """Domain model representing structured OCR extraction results from a receipt."""
+
+    model_config = ConfigDict(from_attributes=True, extra="allow")
+
+    merchant_name: str
+    expense_date: str
+    gross_amount: float
+    tax_deduction: float = 0.0
+    net_amount: float
+    category: str = "MILEAGE"
+    confidence_score: float = 0.95
+    detected_keywords: list[str] = Field(default_factory=list)
+    raw_text: str = ""
+
+
+class ParticipantWalletModel(BaseModel):
+    """Domain model representing a clinical trial subject's financial wallet."""
+
+    model_config = ConfigDict(from_attributes=True, extra="allow")
+
+    id: str
+    subject_id: str
+    study_id: str
+    site_id: str
+    current_balance: float = 0.0
+    lifetime_stipends: float = 0.0
+    lifetime_reimbursements: float = 0.0
+    lifetime_disbursements: float = 0.0
+    currency: str = "USD"
+    status: str = "ACTIVE"
+    virtual_card_token: str | None = None
+    virtual_card_mask: str | None = None
+    virtual_card_expiry: str | None = None
+    ach_routing_number: str | None = None
+    ach_account_mask: str | None = None
+    ach_account_holder: str | None = None
+    created_at: Any | None = None
+    created_by: str = "system"
+    updated_at: Any | None = None
+    reason_for_change: str | None = None
+    version_index: int = 1
+
+
+class ParticipantStipendRuleModel(BaseModel):
+    """Domain model defining protocol-linked visit stipend compensation rules."""
+
+    model_config = ConfigDict(from_attributes=True, extra="allow")
+
+    id: str
+    study_id: str
+    visit_code: str
+    visit_name: str
+    procedure_code: str | None = None
+    amount: float = 0.0
+    currency: str = "USD"
+    requires_verification: bool = True
+    taxable: bool = False
+    is_active: bool = True
+    created_at: Any | None = None
+    created_by: str = "system"
+    updated_at: Any | None = None
+    reason_for_change: str | None = None
+    version_index: int = 1
+
+
+class ParticipantExpenseClaimModel(BaseModel):
+    """Domain model for mobile travel reimbursement expense claims."""
+
+    model_config = ConfigDict(from_attributes=True, extra="allow")
+
+    id: str
+    wallet_id: str
+    subject_id: str
+    study_id: str
+    site_id: str
+    expense_date: str
+    category: str = "MILEAGE"
+    merchant_name: str
+    gross_amount: float = 0.0
+    tax_deduction: float = 0.0
+    net_amount: float = 0.0
+    currency: str = "USD"
+    receipt_image_name: str | None = None
+    receipt_image_base64: str | None = None
+    receipt_ocr_data: dict[str, Any] | None = None
+    status: str = "PENDING_REVIEW"
+    reviewed_by: str | None = None
+    reviewed_at: Any | None = None
+    review_notes: str | None = None
+    created_at: Any | None = None
+    created_by: str = "system"
+    updated_at: Any | None = None
+    reason_for_change: str | None = None
+    version_index: int = 1
+
+
+class ParticipantDisbursementModel(BaseModel):
+    """Domain model for digital virtual card and direct ACH payouts."""
+
+    model_config = ConfigDict(from_attributes=True, extra="allow")
+
+    id: str
+    wallet_id: str
+    subject_id: str
+    study_id: str
+    disbursement_type: str = "VIRTUAL_CARD"
+    amount: float = 0.0
+    currency: str = "USD"
+    status: str = "DISPATCHED"
+    reference_number: str
+    destination_mask: str
+    dispatched_at: Any | None = None
+    settled_at: Any | None = None
+    error_message: str | None = None
+    created_at: Any | None = None
+    created_by: str = "system"
+    reason_for_change: str | None = None
+    version_index: int = 1
+
+
+class ParticipantTransactionModel(BaseModel):
+    """Domain model for immutable wallet ledger transactions."""
+
+    model_config = ConfigDict(from_attributes=True, extra="allow")
+
+    id: str
+    wallet_id: str
+    subject_id: str
+    study_id: str
+    transaction_type: str
+    amount: float = 0.0
+    balance_after: float = 0.0
+    reference_id: str
+    description: str
+    created_at: Any | None = None
+    created_by: str = "system"
+    reason_for_change: str | None = None
+    version_index: int = 1
+
+
+class LaySummaryModel(BaseModel):
+    """Domain model for EU CTR 536/2014 plain language trial summary results."""
+
+    model_config = ConfigDict(from_attributes=True, extra="allow")
+
+    id: str
+    study_id: str
+    protocol_id: str | None = None
+    title: str
+    trial_phase: str = "Phase III"
+    therapeutic_area: str
+    sponsor_name: str
+    summary_text: str
+    plain_language_sections: dict[str, Any] | None = None
+    irb_approval_number: str
+    irb_approval_date: str
+    language: str = "en"
+    status: str = "PUBLISHED"
+    published_at: Any | None = None
+    created_at: Any | None = None
+    created_by: str = "system"
+    updated_at: Any | None = None
+    reason_for_change: str | None = None
+    version_index: int = 1
+
+
+class LaySummaryReceiptModel(BaseModel):
+    """Domain model for patient plain-language trial result confirmation receipts."""
+
+    model_config = ConfigDict(from_attributes=True, extra="allow")
+
+    id: str
+    summary_id: str
+    subject_id: str
+    study_id: str
+    comprehension_score: int = 5
+    comprehension_feedback: str | None = None
+    confirmation_statement: str
+    receipt_hash: str
+    signer_identity: str
+    confirmed_at: Any | None = None
     created_at: Any | None = None
     created_by: str = "system"
     reason_for_change: str | None = None

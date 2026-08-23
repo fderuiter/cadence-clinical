@@ -152,6 +152,42 @@ const routes = [
     },
   },
   {
+    path: "/devices",
+    name: "devices",
+    component: () => import("../views/DeviceInvestigationView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: [
+        "site_investigator",
+        "crc",
+        "data_manager",
+        "sponsor_admin",
+        "cra",
+        "monitor",
+        "sponsor_designer",
+        "auditor",
+      ],
+    },
+  },
+  {
+    path: "/device-investigation",
+    name: "device-investigation",
+    component: () => import("../views/DeviceInvestigationView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: [
+        "site_investigator",
+        "crc",
+        "data_manager",
+        "sponsor_admin",
+        "cra",
+        "monitor",
+        "sponsor_designer",
+        "auditor",
+      ],
+    },
+  },
+  {
     path: "/adjudication",
     name: "adjudication",
     component: () => import("../views/CecAdjudicationView.vue"),
@@ -442,7 +478,24 @@ const routes = [
       requiresAuth: true,
     },
   },
+  {
+    path: "/participant-wallet",
+    name: "participant-wallet",
+    component: () => import("../views/ParticipantWalletView.vue"),
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: "/lay-summaries",
+    name: "lay-summaries",
+    component: () => import("../views/LaySummaryPortal.vue"),
+    meta: {
+      requiresAuth: false,
+    },
+  },
 ];
+
 
 
 export const router = createRouter({

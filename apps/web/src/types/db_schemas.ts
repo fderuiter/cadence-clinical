@@ -1120,6 +1120,61 @@ export interface DataLock {
   is_deleted: boolean;
 }
 
+export interface DeviceDeficiencyReport {
+  study_id: string;
+  site_id: string;
+  subject_id?: string | null;
+  device_inventory_id?: string | null;
+  udi_di: string;
+  lot_number: string;
+  serial_number?: string | null;
+  device_name: string;
+  deficiency_type: string;
+  deficiency_description: string;
+  incident_date: string;
+  awareness_date: string;
+  could_lead_to_sade: boolean;
+  patient_involved: boolean;
+  health_impact: string;
+  action_taken_device: string;
+  device_returned_to_sponsor: boolean;
+  return_tracking_number?: string | null;
+  root_cause_analysis?: string | null;
+  sponsor_evaluation?: string | null;
+  quarantine_triggered: boolean;
+  quarantine_scope: string;
+  safety_case_id?: string | null;
+  safety_classification?: string | null;
+  investigation_status: string;
+  esignature_token?: string | null;
+  signed_by?: string | null;
+  signed_at?: string | null;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
+export interface DeviceQuarantineRecord {
+  study_id: string;
+  site_id: string;
+  deficiency_id?: string | null;
+  device_inventory_id?: string | null;
+  lot_number: string;
+  serial_number?: string | null;
+  scope: string;
+  status: string;
+  reason: string;
+  quarantined_at: string;
+  quarantined_by: string;
+  released_at?: string | null;
+  released_by?: string | null;
+  release_justification?: string | null;
+  release_esignature_token?: string | null;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
 export interface DictionaryImportJob {
   dictionary_type: "MEDDRA" | "WHODRUG" | "LOINC" | "SNOMED";
   dictionary_version: string;
@@ -1259,6 +1314,35 @@ export interface FormSubmission {
   is_active: boolean;
   is_readonly: boolean;
   cloned_from_id?: string | null;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
+export interface InvestigationalDeviceInventory {
+  study_id: string;
+  site_id: string;
+  device_identifier: string;
+  brand_name: string;
+  device_model?: string | null;
+  device_type: string;
+  device_classification: string;
+  udi_di: string;
+  udi_pi?: string | null;
+  udi_carrier_format: string;
+  lot_number: string;
+  serial_number?: string | null;
+  expiration_date?: string | null;
+  manufacturing_date?: string | null;
+  software_version?: string | null;
+  status: string;
+  is_dispensation_blocked: boolean;
+  allocated_subject_id?: string | null;
+  dispensed_at?: string | null;
+  dispensed_by?: string | null;
+  quarantined_at?: string | null;
+  quarantined_by?: string | null;
+  quarantine_reason?: string | null;
   id: string;
   version: number;
   is_deleted: boolean;

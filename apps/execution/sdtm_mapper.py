@@ -13,7 +13,7 @@ from datetime import date, datetime
 from typing import Any
 
 # Import shared SDTM models and terminology normalizers
-from apps.execution.domain.sdtm.models import AE, CM, DM, LB, VS
+from apps.execution.domain.sdtm.models import AE, CM, DD, DM, DO, LB, VS
 from apps.execution.domain.sdtm.terminology import (
     normalize_race,
     normalize_seriousness,
@@ -1072,6 +1072,151 @@ def map_cm(
     return cm_records
 
 
+def map_dd(
+    deficiencies: list[Any],
+    created_by: str = "system",
+    reason_for_change: str | None = None,
+    **kwargs,
+) -> list[DD]:
+    """Maps device deficiency reports to standard CDISC SDTM DD domain models.
+
+    Requirements: PRD-DEV-004, ISO 14155:2020, EU MDR 2017/745
+    """
+    if reason_for_change is None:
+        reason_for_change = "Automated Device Deficiency to SDTM DD Mapping"
+
+    dd_records: list[DD] = []
+    # Group deficiencies by subject or study
+    grouped: dict[str, list[Any]] = {}
+    for d in deficiencies:
+        study_id = _get_val(d, "study_id") or "STUDY-001"
+        site_id = _get_val(d, "site_id") or "SITE-001"
+        subj_id = _get_val(d, "subject_id") or "UNASSIGNED"
+        usubjid = f"{study_id}-{site_id}-{subj_id}"
+        grouped.setdefault(usubjid, []).append(d)
+
+    for usubjid, items in grouped.items():
+        for seq, item in enumerate(items, start=1):
+            study_id = _get_val(item, "study_id") or "STUDY-001"
+            defic_type = _get_val(item, "deficiency_type") or "MALFUNCTION"
+            testcd_map = {
+                "MALFUNCTION": "MALFUNC",
+                "USABILITY_ERROR": "USEERR",
+                "INADEQUATE_LABELING": "LABELING",
+                "DESIGN_DEFECT": "DESDEF",
+                "PACKAGING_BREACH": "PKGBRCH",
+                "SOFTWARE_FAULT": "SWFAULT",
+            }
+            testcd = testcd_map.get(str(defic_type).upper(), "MALFUNC")
+            test_name = str(defic_type).replace("_", " ").title()
+
+            inc_dt = to_dtc(_get_val(item, "incident_date"))
+            desc = _get_val(item, "deficiency_description") or "Device Deficiency"
+
+            rec = DD(
+                STUDYID=study_id,
+                DOMAIN="DD",
+                USUBJID=usubjid,
+                DDSEQ=seq,
+                DDTESTCD=testcd,
+                DDTEST=test_name,
+                DDCAT="DEVICE DEFICIENCY",
+                DDSCAT=_get_val(item, "health_impact"),
+                DDORRES=desc,
+                DDSTRESC=desc,
+                DDDET=_get_val(item, "root_cause_analysis"),
+                DDDEVTYP=_get_val(item, "device_name"),
+                DDDEVID=_get_val(item, "udi_di"),
+                DDSPID=_get_val(item, "id"),
+                DDAT=_get_val(item, "action_taken_device"),
+                DDCAUS=_get_val(item, "safety_classification"),
+                DDLOT=_get_val(item, "lot_number"),
+                DDSER=_get_val(item, "serial_number"),
+                DDSTDTC=inc_dt,
+                created_by=created_by,
+                reason_for_change=reason_for_change,
+                **kwargs,
+            )
+            dd_records.append(rec)
+
+    return dd_records
+
+
+def map_do(
+    devices: list[Any],
+    created_by: str = "system",
+    reason_for_change: str | None = None,
+    **kwargs,
+) -> list[DO]:
+    """Maps investigational device inventory and tracking operations to standard CDISC SDTM DO domain models.
+
+    Requirements: PRD-DEV-004, ISO 14155:2020
+    """
+    if reason_for_change is None:
+        reason_for_change = "Automated Device Tracking to SDTM DO Mapping"
+
+    do_records: list[DO] = []
+    # Group devices by subject or site
+    grouped: dict[str, list[Any]] = {}
+    for d in devices:
+        study_id = _get_val(d, "study_id") or "STUDY-001"
+        site_id = _get_val(d, "site_id") or "SITE-001"
+        subj_id = _get_val(d, "allocated_subject_id") or "INVENTORY"
+        usubjid = f"{study_id}-{site_id}-{subj_id}"
+        grouped.setdefault(usubjid, []).append(d)
+
+    for usubjid, items in grouped.items():
+        for seq, item in enumerate(items, start=1):
+            study_id = _get_val(item, "study_id") or "STUDY-001"
+            status = _get_val(item, "status") or "AVAILABLE"
+            testcd_map = {
+                "AVAILABLE": "INTAKE",
+                "ASSIGNED": "ASSIGN",
+                "DISPENSED": "DISP",
+                "IMPLANTED": "IMPLANT",
+                "QUARANTINED": "QUAR",
+                "RETURNED": "RETN",
+                "DEFICIENT": "DEFIC",
+                "DESTROYED": "DEST",
+            }
+            testcd = testcd_map.get(str(status).upper(), "TRACK")
+            test_name = f"Device {str(status).replace('_', ' ').title()}"
+
+            exp_dtc = to_dtc(_get_val(item, "expiration_date"))
+            mfg_dtc = to_dtc(_get_val(item, "manufacturing_date"))
+            disp_dtc = to_dtc(
+                _get_val(item, "dispensed_at") or _get_val(item, "quarantined_at")
+            )
+
+            rec = DO(
+                STUDYID=study_id,
+                DOMAIN="DO",
+                USUBJID=usubjid,
+                DOSEQ=seq,
+                DODEVID=_get_val(item, "device_identifier")
+                or _get_val(item, "id")
+                or "DEV-001",
+                DOTESTCD=testcd,
+                DOTEST=test_name,
+                DOCAT="DEVICE TRACKING",
+                DOSCAT=_get_val(item, "device_type"),
+                DOSTATUS=status,
+                DODI=_get_val(item, "udi_di"),
+                DOPI=_get_val(item, "udi_pi"),
+                DOLOT=_get_val(item, "lot_number"),
+                DOSER=_get_val(item, "serial_number"),
+                DOEXPDTC=exp_dtc,
+                DOMFRDTC=mfg_dtc,
+                DODTC=disp_dtc,
+                created_by=created_by,
+                reason_for_change=reason_for_change,
+                **kwargs,
+            )
+            do_records.append(rec)
+
+    return do_records
+
+
 def map_to_sdtm(
     domain: str,
     subjects: list[Any],
@@ -1107,5 +1252,19 @@ def map_to_sdtm(
     if domain_upper == "CM":
         return map_cm(
             subjects, visits, observations, created_by, reason_for_change, **kwargs
+        )
+    if domain_upper == "DD":
+        return map_dd(
+            observations,
+            created_by=created_by,
+            reason_for_change=reason_for_change,
+            **kwargs,
+        )
+    if domain_upper == "DO":
+        return map_do(
+            observations,
+            created_by=created_by,
+            reason_for_change=reason_for_change,
+            **kwargs,
         )
     raise ValueError(f"SDTM mapping domain '{domain}' is not supported.")

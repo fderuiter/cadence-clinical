@@ -7,11 +7,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3567
-- **Passed:** 3537 🟢
-- **Failed/Errors:** 0 🔴
+- **Total Automated Test Cases Run:** 3593
+- **Passed:** 3562 🟢
+- **Failed/Errors:** 1 🔴
 - **Skipped:** 30 ⚪
-- **Overall Operational Pass Rate:** 99.16%
+- **Overall Operational Pass Rate:** 99.14%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -1423,6 +1423,19 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_gender_normalization[woman-F]` | `apps.execution.tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_safe_demographics_failures_fail_safely` | `apps.execution.tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_safe_demographics_valid_decryption` | `apps.execution.tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_dispense_blocked_on_expired_device` | `apps.execution.tests.test_device_investigation_udi_quarantine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_dispense_blocked_on_quarantined_device` | `apps.execution.tests.test_device_investigation_udi_quarantine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_dispense_device_successful` | `apps.execution.tests.test_device_investigation_udi_quarantine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gtin_modulo_10_checksum` | `apps.execution.tests.test_device_investigation_udi_quarantine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_hibcc_modulo_43_checksum` | `apps.execution.tests.test_device_investigation_udi_quarantine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_manual_quarantine_and_part11_release` | `apps.execution.tests.test_device_investigation_udi_quarantine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_udi_gs1_128_parentheses` | `apps.execution.tests.test_device_investigation_udi_quarantine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_udi_hibcc` | `apps.execution.tests.test_device_investigation_udi_quarantine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_udi_raw_fallback` | `apps.execution.tests.test_device_investigation_udi_quarantine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_register_device_inventory_single_and_batch` | `apps.execution.tests.test_device_investigation_udi_quarantine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_report_deficiency_site_lot_quarantine` | `apps.execution.tests.test_device_investigation_udi_quarantine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_report_deficiency_triggers_serial_quarantine_and_sade` | `apps.execution.tests.test_device_investigation_udi_quarantine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rest_api_device_endpoints` | `apps.execution.tests.test_device_investigation_udi_quarantine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_authored_cross_form_rule_lifecycle` | `apps.execution.tests.test_edit_checks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_authored_longitudinal_predecessor_handling` | `apps.execution.tests.test_edit_checks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_critical_notification_dispatch_and_suppression` | `apps.execution.tests.test_edit_checks` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2324,6 +2337,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_ssn_national_id_detector` | `apps.interop.tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_urls_detector` | `apps.interop.tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_zip_geographic_detector` | `apps.interop.tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_generate_export_package_endpoint` | `apps.interop.tests.test_device_sdtm_regulatory_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_generate_mir_report_endpoint` | `apps.interop.tests.test_device_sdtm_regulatory_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_generate_sdtm_dd_endpoint` | `apps.interop.tests.test_device_sdtm_regulatory_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_generate_sdtm_do_endpoint` | `apps.interop.tests.test_device_sdtm_regulatory_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_assignment_compliance_states_and_recalculations` | `apps.interop.tests.test_ecoa_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_instrument_retrieval_and_assignment_boundaries` | `apps.interop.tests.test_ecoa_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notifications_lifecycle_reminders_and_acknowledgments` | `apps.interop.tests.test_ecoa_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2538,6 +2555,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_clinical_staff_role_values` | `apps.org.tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_organization_type_values` | `apps.org.tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trial_duty_values` | `apps.org.tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_automated_digital_disbursements` | `apps.payments.tests.test_patient_wallet_lay_summary_portal` | ADR-2199, PRD-PAT-001, PRD-PAT-002, PRD-SYS-127 | 🟢 PASSED | < 1s |
+| `test_eu_ctr_lay_summary_portal_and_confirmation_receipt` | `apps.payments.tests.test_patient_wallet_lay_summary_portal` | ADR-2199, PRD-PAT-003, PRD-SYS-127 | 🟢 PASSED | < 1s |
+| `test_participant_wallet_provisioning_and_payout_methods` | `apps.payments.tests.test_patient_wallet_lay_summary_portal` | ADR-2199, PRD-PAT-001, PRD-SYS-127 | 🟢 PASSED | < 1s |
+| `test_receipt_ocr_and_travel_expense_approval_workflow` | `apps.payments.tests.test_patient_wallet_lay_summary_portal` | ADR-2199, PRD-PAT-002, PRD-SYS-127 | 🟢 PASSED | < 1s |
+| `test_soa_stipend_rule_and_visit_verification_trigger` | `apps.payments.tests.test_patient_wallet_lay_summary_portal` | ADR-2199, PRD-PAT-001, PRD-SYS-127 | 🟢 PASSED | < 1s |
 | `test_batch_event_ingestion_and_queries` | `apps.payments.tests.test_payments_endpoints` | ADR-2199, PRD-PAY-002, PRD-PAY-003 | 🟢 PASSED | < 1s |
 | `test_health_check_endpoint` | `apps.payments.tests.test_payments_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compilation_with_no_payables_fails_gracefully` | `apps.payments.tests.test_payments_self_billing_invoicing` | ADR-2199, PRD-PAY-004, PRD-PAY-006 | 🟢 PASSED | < 1s |
@@ -2641,6 +2663,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_mic_calculation_and_envelope_generation` | `apps.safety.tests.test_as2_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_parse_tampered_mdn_receipt_mismatch` | `apps.safety.tests.test_as2_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_parse_valid_mdn_receipt` | `apps.safety.tests.test_as2_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_adjudicate_device_safety_investigation` | `apps.safety.tests.test_device_safety_investigation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_generate_device_vigilance_mir_report` | `apps.safety.tests.test_device_safety_investigation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_list_and_get_device_safety_investigations` | `apps.safety.tests.test_device_safety_investigation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_open_device_safety_investigation_endpoint` | `apps.safety.tests.test_device_safety_investigation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_e2b_xml_happy_path` | `apps.safety.tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_e2b_xml_invalid_raises_value_error` | `apps.safety.tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_icsr_version_and_reason_for_change_rendering` | `apps.safety.tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3801,7 +3827,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_feature_matrix_validation_ignoring_helper_and_excluded_services` | `tests.validation.test_feature_matrix_gating` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_feature_matrix_validation_missing_service` | `tests.validation.test_feature_matrix_gating` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_feature_matrix_validation_success` | `tests.validation.test_feature_matrix_gating` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_committed_typescript_schema_is_up_to_date` | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_committed_typescript_schema_is_up_to_date` | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_formatting_and_whitespace_immunity` | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_pending_delta_schema_drift` | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_simulated_field_name_rename_drift` | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3848,28 +3874,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 887ed5f57766a851af3207a07ed0fb8982b6e5d78f6be3d56da88b6d7127090c
+- **Cryptographic Hash (SHA-256):** 8326b0f0eae2f5c3362717704039ee409e6de5f814861eb6f41d9ced8b97bb86
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIULLOjvlYEdFVVEAPuqy8OUuhV53UwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUSPvudBl3Hk/WHkC5Zk64pyhtYGEwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MjIwNDIyNFoXDTI3MDgyMzIwNDIyNFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MjIxMzgyNFoXDTI3MDgyMzIxMzgyNFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwezp
-/6HYPoG8BybOEzvnXFUR+8XCEE2SMs2dvpiulPyN/ZKjiVHhyR9191nCNqw3bVVM
-67Ko+5p2I18+YEURCD57w7Md04ksgo4asOWAn7eAZlxz6L8Xu+EJd97ZQvgwoY9S
-gVlauscK4Fo+kmj7Q1yspboOBLIMIBbzsmvBYOB0VbvfSeaq8Tb1IR2VGBKDgGwX
-lpAoQtEXPkErWStvVYT+T/qyVPdFOk75YkKTRbQhFngbmnCYiwZ1d7VJYzfHRSdX
-e9k6kISvQObeOXuX0SuaH1acVQXDWNNPLrxitx2kzhm+bjh1+rkj+GnhsX8qptKB
-CdCr+LCvP9gHGq3oZQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBnDcc8tVXz9Wt9
-XcIWPJHSivefqZ7tPmQtaK3Gn7PCtVxMroq7xxkeA9wOzKmSQzXS8x6eOyhy3NjZ
-vuF7ZwgGl4NSDGQar27xX0chI5af9kBIE1Ygmjd98dl3KWMRIczAff1pTF8hIxBH
-t75pZ64hTF+kOsPr3CC+G4oM8GFM0eXA8bgZ3JR4e6bl1pKhwpmezLZdqu1bE2pL
-hwCqIH9nHq5yOTVAZumvJMw/rWAxVhtgDoL1U9roD8C4G2wAGRXNsm5cFGA1qbL6
-7KvcGMR2924YahRbA5S8DYmE3GfRZd5BXlTkVquvwXJhyfzslSw3/i2eu80yBHeT
-yti0INk0
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwOZ/
+zkDTuDTXaWgNdrTY1KsGHfyCxBO/59FhjEew+4TEvn0SSZBMKslwd7PvbhUjOlWQ
+mShm24xRdbznDfow1ETRCAv3r0QKNTcknzEO0nuAKOn3xRxnh9SC0q9g+WbXPIO5
+LpeYOsysSsoeeUSFq+eHPI+KQVkyL2/QiS0KPNGkzda2bKp0s6qqzY7PHVa5xIkh
+9eCUKKPSkX46T6W5n7cTPCRaBWaCnHNWcGjloHHTrHboDzYJbjpKnJI/PnTJPGq1
+o70KjhKAv9zFFjQ9kTZdiR5yY6Jj+H6azHAfFUzmsa2IiZI2GFf2Q/UROz+osvR9
+uFdSVRjEj4iccQN7lwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQCC4TmYbA+pjB+t
+cUWCO0fHFA2WeJqYE/WMRDLEeO579E3aoa0N7Z6ng+hxyHzjw8bZlsQRWazRXs3k
+YinkYVkp0l/SqJ1bzJfw+y6ySg6SsX11e2gQWaVzvv4If2pJzU9g6kBzQb4qgXpr
+HyRzpy68XTt1L35HSKxEh83GwCc3HHdbNFqq38BeFy3J5sSRannZORoNE2Isj/Mt
+qReedTWAv4YE/teuc/Z9dLtViHVALPR0yuhUS+CUhgG6aCqluqehE8oumU9VL7QK
+FoXGt4BSK3q7RJ4kM1DL2L5KqYYtmVYibtIWtqfd52NYJzBToWnJ4b6uF84xx/Id
+Igxt9SAB
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-OVbvlI5BnyX+6DiKYuQ2I+krWGaRITTs8tx0rlKmHAHfrf5RRyKcZ7CPQsxW7dkDWUTEBUUEE0Q1boPyq18NIiyEYzuf5LUk10YEdaHMI2N7L89uGDbNsjA2rJVNqco0ku7N/tV/dHrOgmwVDIQf8rIfhKnSUwPamXEVggHNEb1v/FrtFMzAcXzO/L3tWUQqYd+5tOS89izfccjKSRSaIUIbAIYDM/AZByobcIW5ODyPx8ZnEChNXrV/4QG0rDrFZOpiUxHZRrE2vIF/BnWUegH71G6ptt8IgRPSsSgjc8XyMoUOX2yAh/jCok0m1EC7phkrD4b4DIGivNE1Ekekhw==
+bOA+wnsz+thZFmupa6CsZ45A+8oijCtaF6EmYWnp0ystrF9mlpeBv1gnYay9gkpK9w3pjV1XjaUaVjjr/hhCWgVvvv9IMZ3mGas30EoRPnCsrr2/Oh+A4cSGKSu1ijvWvFvoKRw6cBuxuY5P8Wd87S1D5UlBSdn4DOJpOHJXvPO6ymVtMLghSqUH0r3zE8gbp9IFJu19j1/Eirz4JdttIVbMepsNxiZvD/Jftii0LntclngebXhGIGiRQVlhJPRxPzXMHw49iT6v3JPJlKkkAAxMUCjzlGYMy8mRyfYIZWmf1aDMEMBrscqUAbXccXnVIFyVGf5g9j3xmUSChSI9DQ==
 -----END SIGNATURE-----

@@ -1760,6 +1760,1189 @@
         }
       }
     },
+    "/api/v1/payments/participant/wallets": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Get Or Create Participant Wallet",
+        "description": "Provisions or retrieves a participant financial wallet.",
+        "operationId": "get_or_create_participant_wallet_api_v1_payments_participant_wallets_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParticipantWalletCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipantWalletResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "List Participant Wallets",
+        "description": "Lists participant financial wallets filtered by study and/or site.",
+        "operationId": "list_participant_wallets_api_v1_payments_participant_wallets_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ParticipantWalletResponse"
+                  },
+                  "title": "Response List Participant Wallets Api V1 Payments Participant Wallets Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{wallet_id}": {
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Get Participant Wallet By Id",
+        "description": "Retrieves participant wallet details and current balance.",
+        "operationId": "get_participant_wallet_by_id_api_v1_payments_participant_wallets__wallet_id__get",
+        "parameters": [
+          {
+            "name": "wallet_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Wallet Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipantWalletResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/subject/{study_id}/{subject_id}": {
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Get Participant Wallet By Subject",
+        "description": "Retrieves participant wallet by study ID and subject ID.",
+        "operationId": "get_participant_wallet_by_subject_api_v1_payments_participant_wallets_subject__study_id___subject_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipantWalletResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{wallet_id}/payout-methods": {
+      "put": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Update Participant Wallet Payout Methods",
+        "description": "Updates payout credentials (virtual card / direct ACH) for a participant wallet.",
+        "operationId": "update_participant_wallet_payout_methods_api_v1_payments_participant_wallets__wallet_id__payout_methods_put",
+        "parameters": [
+          {
+            "name": "wallet_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Wallet Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParticipantWalletPayoutMethodsUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipantWalletResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{wallet_id}/disburse": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Disburse Participant Funds",
+        "description": "Dispatches digital funds payout (Virtual Card / Direct ACH) with 21 CFR Part 11 ledger recording.",
+        "operationId": "disburse_participant_funds_api_v1_payments_participant_wallets__wallet_id__disburse_post",
+        "parameters": [
+          {
+            "name": "wallet_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Wallet Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisbursementRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisbursementResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{wallet_id}/transactions": {
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "List Wallet Transactions",
+        "description": "Retrieves immutable financial transaction history for a participant wallet.",
+        "operationId": "list_wallet_transactions_api_v1_payments_participant_wallets__wallet_id__transactions_get",
+        "parameters": [
+          {
+            "name": "wallet_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Wallet Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ParticipantTransactionResponse"
+                  },
+                  "title": "Response List Wallet Transactions Api V1 Payments Participant Wallets  Wallet Id  Transactions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/disbursements": {
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "List Participant Disbursements",
+        "description": "Lists all digital disbursements dispatched across participant wallets.",
+        "operationId": "list_participant_disbursements_api_v1_payments_participant_disbursements_get",
+        "parameters": [
+          {
+            "name": "wallet_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wallet Id"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DisbursementResponse"
+                  },
+                  "title": "Response List Participant Disbursements Api V1 Payments Participant Disbursements Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/stipend-rules": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Create Participant Stipend Rule",
+        "description": "Configures participant visit compensation rules linked to the Schedule of Activities.",
+        "operationId": "create_participant_stipend_rule_api_v1_payments_participant_stipend_rules_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParticipantStipendRuleCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipantStipendRuleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "List Participant Stipend Rules",
+        "description": "Lists SoA protocol stipend compensation rules for a study.",
+        "operationId": "list_participant_stipend_rules_api_v1_payments_participant_stipend_rules_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "is_active_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Is Active Only"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ParticipantStipendRuleResponse"
+                  },
+                  "title": "Response List Participant Stipend Rules Api V1 Payments Participant Stipend Rules Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/events/visit-verified": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Ingest Visit Verified Event",
+        "description": "Receives verified clinic visit completion from EDC and credits stipend to participant wallet.",
+        "operationId": "ingest_visit_verified_event_api_v1_payments_participant_events_visit_verified_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VisitVerificationEventDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Ingest Visit Verified Event Api V1 Payments Participant Events Visit Verified Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/expenses/ocr-extract": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Extract Receipt Ocr",
+        "description": "Performs OCR metadata extraction on a travel/meal expense receipt.",
+        "operationId": "extract_receipt_ocr_api_v1_payments_participant_expenses_ocr_extract_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiptOcrExtractRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptOcrExtractResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/expenses": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Submit Participant Expense Claim",
+        "description": "Submits a mobile travel/meal expense reimbursement claim for coordinator review.",
+        "operationId": "submit_participant_expense_claim_api_v1_payments_participant_expenses_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpenseClaimSubmitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseClaimResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "List Participant Expense Claims",
+        "description": "Lists submitted expense claims filtered by study, site, subject, or review status.",
+        "operationId": "list_participant_expense_claims_api_v1_payments_participant_expenses_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExpenseClaimResponse"
+                  },
+                  "title": "Response List Participant Expense Claims Api V1 Payments Participant Expenses Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/expenses/{claim_id}/review": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Review Participant Expense Claim",
+        "description": "Processes 1-click coordinator review and approval/rejection of a travel expense claim.",
+        "operationId": "review_participant_expense_claim_api_v1_payments_participant_expenses__claim_id__review_post",
+        "parameters": [
+          {
+            "name": "claim_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Claim Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpenseClaimReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseClaimResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/lay-summaries": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Create Lay Summary",
+        "description": "Drafts or creates an EU CTR Regulation No 536/2014 Article 37 Plain Language Lay Summary.",
+        "operationId": "create_lay_summary_api_v1_payments_lay_summaries_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LaySummaryCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LaySummaryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "List Lay Summaries",
+        "description": "Lists published and drafted plain-language trial summaries.",
+        "operationId": "list_lay_summaries_api_v1_payments_lay_summaries_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Language"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LaySummaryResponse"
+                  },
+                  "title": "Response List Lay Summaries Api V1 Payments Lay Summaries Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/lay-summaries/{summary_id}": {
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Get Lay Summary",
+        "description": "Retrieves details of a plain-language trial summary.",
+        "operationId": "get_lay_summary_api_v1_payments_lay_summaries__summary_id__get",
+        "parameters": [
+          {
+            "name": "summary_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Summary Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LaySummaryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/lay-summaries/{summary_id}/publish": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Publish Lay Summary",
+        "description": "Formally publishes an IRB-approved lay summary for participant access.",
+        "operationId": "publish_lay_summary_api_v1_payments_lay_summaries__summary_id__publish_post",
+        "parameters": [
+          {
+            "name": "summary_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Summary Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LaySummaryPublishRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LaySummaryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/lay-summaries/{summary_id}/confirm-receipt": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Confirm Lay Summary Receipt",
+        "description": "Records participant confirmation of lay summary receipt with comprehension score and SHA-256 seal.",
+        "operationId": "confirm_lay_summary_receipt_api_v1_payments_lay_summaries__summary_id__confirm_receipt_post",
+        "parameters": [
+          {
+            "name": "summary_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Summary Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LaySummaryReceiptConfirmRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LaySummaryReceiptResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/lay-summaries/{summary_id}/receipts": {
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "List Lay Summary Receipts",
+        "description": "Lists confirmation receipts for a lay summary for regulatory compliance audits.",
+        "operationId": "list_lay_summary_receipts_api_v1_payments_lay_summaries__summary_id__receipts_get",
+        "parameters": [
+          {
+            "name": "summary_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Summary Id"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LaySummaryReceiptResponse"
+                  },
+                  "title": "Response List Lay Summary Receipts Api V1 Payments Lay Summaries  Summary Id  Receipts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -2115,6 +3298,151 @@
         "title": "CraSdvVerificationEventDto",
         "description": "Clinical event emitted when a CRA verifies/signs off Source Data Verification (SDV)."
       },
+      "DisbursementRequest": {
+        "properties": {
+          "disbursement_type": {
+            "type": "string",
+            "title": "Disbursement Type",
+            "description": "Payout method (VIRTUAL_CARD or DIRECT_ACH)",
+            "default": "VIRTUAL_CARD"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount",
+            "description": "Amount to disburse (defaults to full available balance)"
+          },
+          "destination_mask": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Destination Mask",
+            "description": "Custom masked card / bank account display descriptor"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "DisbursementRequest",
+        "description": "Request payload to dispatch digital payout from wallet to Virtual Card or ACH."
+      },
+      "DisbursementResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "wallet_id": {
+            "type": "string",
+            "title": "Wallet Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "disbursement_type": {
+            "type": "string",
+            "title": "Disbursement Type"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "reference_number": {
+            "type": "string",
+            "title": "Reference Number"
+          },
+          "destination_mask": {
+            "type": "string",
+            "title": "Destination Mask"
+          },
+          "dispatched_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Dispatched At"
+          },
+          "settled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settled At"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "wallet_id",
+          "subject_id",
+          "study_id",
+          "disbursement_type",
+          "amount",
+          "currency",
+          "status",
+          "reference_number",
+          "destination_mask",
+          "dispatched_at",
+          "settled_at",
+          "error_message",
+          "created_at",
+          "created_by",
+          "version_index"
+        ],
+        "title": "DisbursementResponse",
+        "description": "Response payload for digital disbursement dispatch."
+      },
       "EcrfSubmissionEventDto": {
         "properties": {
           "study_id": {
@@ -2461,6 +3789,349 @@
         ],
         "title": "ErpWebhookResponse",
         "description": "Response acknowledging ERP webhook processing and status transition."
+      },
+      "ExpenseClaimResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "wallet_id": {
+            "type": "string",
+            "title": "Wallet Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "expense_date": {
+            "type": "string",
+            "title": "Expense Date"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "merchant_name": {
+            "type": "string",
+            "title": "Merchant Name"
+          },
+          "gross_amount": {
+            "type": "number",
+            "title": "Gross Amount"
+          },
+          "tax_deduction": {
+            "type": "number",
+            "title": "Tax Deduction"
+          },
+          "net_amount": {
+            "type": "number",
+            "title": "Net Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "receipt_image_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Image Name"
+          },
+          "receipt_ocr_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Ocr Data"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "review_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Notes"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "wallet_id",
+          "subject_id",
+          "study_id",
+          "site_id",
+          "expense_date",
+          "category",
+          "merchant_name",
+          "gross_amount",
+          "tax_deduction",
+          "net_amount",
+          "currency",
+          "receipt_image_name",
+          "receipt_ocr_data",
+          "status",
+          "reviewed_by",
+          "reviewed_at",
+          "review_notes",
+          "created_at",
+          "created_by",
+          "version_index"
+        ],
+        "title": "ExpenseClaimResponse",
+        "description": "Response payload for submitted expense claim."
+      },
+      "ExpenseClaimReviewRequest": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Review outcome (APPROVED or REJECTED)"
+          },
+          "review_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Notes",
+            "description": "Coordinator review comments"
+          },
+          "adjusted_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjusted Amount",
+            "description": "Optional adjusted gross amount"
+          },
+          "adjusted_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjusted Category",
+            "description": "Optional corrected category"
+          },
+          "adjusted_merchant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjusted Merchant",
+            "description": "Optional corrected merchant name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "ExpenseClaimReviewRequest",
+        "description": "Request payload for coordinator 1-click review/approval of expense claim."
+      },
+      "ExpenseClaimSubmitRequest": {
+        "properties": {
+          "wallet_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wallet Id",
+            "description": "Participant wallet ID (optional if subject_id supplied)"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject unique identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "expense_date": {
+            "type": "string",
+            "title": "Expense Date",
+            "description": "Expense date (YYYY-MM-DD)"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "Expense category (MILEAGE, PARKING, MEAL, LODGING, TRANSIT, OTHER)",
+            "default": "MILEAGE"
+          },
+          "merchant_name": {
+            "type": "string",
+            "title": "Merchant Name",
+            "description": "Merchant or vendor name"
+          },
+          "gross_amount": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Gross Amount",
+            "description": "Gross receipt expense amount"
+          },
+          "tax_deduction": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Tax Deduction",
+            "description": "Calculated tax deduction / withholding",
+            "default": 0.0
+          },
+          "net_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Net Amount",
+            "description": "Net reimbursement amount (calculated if omitted)"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "description": "Currency ISO code",
+            "default": "USD"
+          },
+          "receipt_image_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Image Name",
+            "description": "Original receipt filename"
+          },
+          "receipt_image_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Image Base64",
+            "description": "Base64 encoded receipt image or preview"
+          },
+          "receipt_ocr_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Ocr Data",
+            "description": "Raw/extracted OCR metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "study_id",
+          "site_id",
+          "expense_date",
+          "merchant_name",
+          "gross_amount"
+        ],
+        "title": "ExpenseClaimSubmitRequest",
+        "description": "Request payload for participant submitting a travel/meal expense reimbursement claim."
       },
       "FeeScheduleCreate": {
         "properties": {
@@ -3080,6 +4751,376 @@
         "title": "InvoiceLineItemResponse",
         "description": "Response model for an itemized procedure line item on an invoice."
       },
+      "LaySummaryCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study Protocol ID"
+          },
+          "protocol_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Id",
+            "description": "Protocol Code"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Lay Summary title"
+          },
+          "trial_phase": {
+            "type": "string",
+            "title": "Trial Phase",
+            "description": "Clinical trial phase",
+            "default": "Phase III"
+          },
+          "therapeutic_area": {
+            "type": "string",
+            "title": "Therapeutic Area",
+            "description": "Therapeutic indication"
+          },
+          "sponsor_name": {
+            "type": "string",
+            "title": "Sponsor Name",
+            "description": "Sponsor organization"
+          },
+          "summary_text": {
+            "type": "string",
+            "title": "Summary Text",
+            "description": "Plain-language narrative overview"
+          },
+          "plain_language_sections": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plain Language Sections",
+            "description": "Structured patient sections (objective, treatments, results, side_effects)"
+          },
+          "irb_approval_number": {
+            "type": "string",
+            "title": "Irb Approval Number",
+            "description": "IRB/Ethics Committee approval number"
+          },
+          "irb_approval_date": {
+            "type": "string",
+            "title": "Irb Approval Date",
+            "description": "IRB approval date (YYYY-MM-DD)"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "description": "Language code (en, es, de, fr)",
+            "default": "en"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Publication status (DRAFT, IRB_APPROVED, PUBLISHED)",
+            "default": "PUBLISHED"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "title",
+          "therapeutic_area",
+          "sponsor_name",
+          "summary_text",
+          "irb_approval_number",
+          "irb_approval_date"
+        ],
+        "title": "LaySummaryCreate",
+        "description": "Request payload to draft/create an EU CTR 536/2014 Plain Language Lay Summary."
+      },
+      "LaySummaryPublishRequest": {
+        "properties": {
+          "irb_approval_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Irb Approval Number",
+            "description": "Confirmed IRB approval identifier"
+          },
+          "irb_approval_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Irb Approval Date",
+            "description": "Confirmed IRB approval date"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "LaySummaryPublishRequest",
+        "description": "Request payload to approve and publish a plain language lay summary."
+      },
+      "LaySummaryReceiptConfirmRequest": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Participant subject ID"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "comprehension_score": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Comprehension Score",
+            "description": "Comprehension rating (1=Very Difficult to 5=Very Clear)",
+            "default": 5
+          },
+          "comprehension_feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comprehension Feedback",
+            "description": "Participant feedback or comments on the summary"
+          },
+          "confirmation_statement": {
+            "type": "string",
+            "title": "Confirmation Statement",
+            "description": "Formal acknowledgment statement",
+            "default": "I confirm I have received and reviewed the plain language summary of trial results."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "study_id"
+        ],
+        "title": "LaySummaryReceiptConfirmRequest",
+        "description": "Request payload for participant acknowledging receipt and comprehension of lay summary."
+      },
+      "LaySummaryReceiptResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "summary_id": {
+            "type": "string",
+            "title": "Summary Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "comprehension_score": {
+            "type": "integer",
+            "title": "Comprehension Score"
+          },
+          "comprehension_feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comprehension Feedback"
+          },
+          "confirmation_statement": {
+            "type": "string",
+            "title": "Confirmation Statement"
+          },
+          "receipt_hash": {
+            "type": "string",
+            "title": "Receipt Hash"
+          },
+          "signer_identity": {
+            "type": "string",
+            "title": "Signer Identity"
+          },
+          "confirmed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Confirmed At"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "CONFIRMED"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "summary_id",
+          "subject_id",
+          "study_id",
+          "comprehension_score",
+          "comprehension_feedback",
+          "confirmation_statement",
+          "receipt_hash",
+          "signer_identity",
+          "confirmed_at"
+        ],
+        "title": "LaySummaryReceiptResponse",
+        "description": "Cryptographically sealed confirmation receipt certificate for Lay Summary."
+      },
+      "LaySummaryResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "protocol_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "trial_phase": {
+            "type": "string",
+            "title": "Trial Phase"
+          },
+          "therapeutic_area": {
+            "type": "string",
+            "title": "Therapeutic Area"
+          },
+          "sponsor_name": {
+            "type": "string",
+            "title": "Sponsor Name"
+          },
+          "summary_text": {
+            "type": "string",
+            "title": "Summary Text"
+          },
+          "plain_language_sections": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plain Language Sections"
+          },
+          "irb_approval_number": {
+            "type": "string",
+            "title": "Irb Approval Number"
+          },
+          "irb_approval_date": {
+            "type": "string",
+            "title": "Irb Approval Date"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "receipts_count": {
+            "type": "integer",
+            "title": "Receipts Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "protocol_id",
+          "title",
+          "trial_phase",
+          "therapeutic_area",
+          "sponsor_name",
+          "summary_text",
+          "plain_language_sections",
+          "irb_approval_number",
+          "irb_approval_date",
+          "language",
+          "status",
+          "published_at",
+          "created_at",
+          "created_by",
+          "version_index"
+        ],
+        "title": "LaySummaryResponse",
+        "description": "Response payload for EU CTR Plain Language Lay Summary."
+      },
       "MilestoneCompletionEventDto": {
         "properties": {
           "study_id": {
@@ -3138,6 +5179,571 @@
         ],
         "title": "MilestoneCompletionEventDto",
         "description": "Clinical event emitted when a study/site milestone is verified."
+      },
+      "ParticipantStipendRuleCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study Protocol ID"
+          },
+          "visit_code": {
+            "type": "string",
+            "title": "Visit Code",
+            "description": "Schedule of Activities visit code"
+          },
+          "visit_name": {
+            "type": "string",
+            "title": "Visit Name",
+            "description": "Descriptive visit name"
+          },
+          "procedure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procedure Code",
+            "description": "Optional procedure identifier"
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Amount",
+            "description": "Stipend compensation amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "description": "Currency ISO code",
+            "default": "USD"
+          },
+          "requires_verification": {
+            "type": "boolean",
+            "title": "Requires Verification",
+            "description": "Whether clinic visit completion must be verified in EDC",
+            "default": true
+          },
+          "taxable": {
+            "type": "boolean",
+            "title": "Taxable",
+            "description": "Whether stipend is taxable",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "visit_code",
+          "visit_name",
+          "amount"
+        ],
+        "title": "ParticipantStipendRuleCreate",
+        "description": "Request payload to configure SoA protocol visit stipend compensation."
+      },
+      "ParticipantStipendRuleResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "visit_code": {
+            "type": "string",
+            "title": "Visit Code"
+          },
+          "visit_name": {
+            "type": "string",
+            "title": "Visit Name"
+          },
+          "procedure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procedure Code"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "requires_verification": {
+            "type": "boolean",
+            "title": "Requires Verification"
+          },
+          "taxable": {
+            "type": "boolean",
+            "title": "Taxable"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "visit_code",
+          "visit_name",
+          "procedure_code",
+          "amount",
+          "currency",
+          "requires_verification",
+          "taxable",
+          "is_active",
+          "created_at",
+          "created_by",
+          "version_index"
+        ],
+        "title": "ParticipantStipendRuleResponse",
+        "description": "Response payload for configured visit stipend rule."
+      },
+      "ParticipantTransactionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "wallet_id": {
+            "type": "string",
+            "title": "Wallet Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "transaction_type": {
+            "type": "string",
+            "title": "Transaction Type"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "balance_after": {
+            "type": "number",
+            "title": "Balance After"
+          },
+          "reference_id": {
+            "type": "string",
+            "title": "Reference Id"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "wallet_id",
+          "subject_id",
+          "study_id",
+          "transaction_type",
+          "amount",
+          "balance_after",
+          "reference_id",
+          "description",
+          "created_at",
+          "created_by",
+          "version_index"
+        ],
+        "title": "ParticipantTransactionResponse",
+        "description": "Response payload for ledger transaction record in participant wallet."
+      },
+      "ParticipantWalletCreate": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject unique identifier / MRN"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study Protocol ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "description": "Currency ISO code",
+            "default": "USD"
+          },
+          "virtual_card_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Virtual Card Token",
+            "description": "Virtual card token"
+          },
+          "virtual_card_mask": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Virtual Card Mask",
+            "description": "Masked virtual card display number"
+          },
+          "virtual_card_expiry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Virtual Card Expiry",
+            "description": "Virtual card expiry MM/YY"
+          },
+          "ach_routing_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ach Routing Number",
+            "description": "Bank routing transit number"
+          },
+          "ach_account_mask": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ach Account Mask",
+            "description": "Masked bank account number"
+          },
+          "ach_account_holder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ach Account Holder",
+            "description": "Account holder name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "study_id",
+          "site_id"
+        ],
+        "title": "ParticipantWalletCreate",
+        "description": "Request payload to initialize or provision a participant financial wallet."
+      },
+      "ParticipantWalletPayoutMethodsUpdate": {
+        "properties": {
+          "virtual_card_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Virtual Card Token"
+          },
+          "virtual_card_mask": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Virtual Card Mask"
+          },
+          "virtual_card_expiry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Virtual Card Expiry"
+          },
+          "ach_routing_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ach Routing Number"
+          },
+          "ach_account_mask": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ach Account Mask"
+          },
+          "ach_account_holder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ach Account Holder"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ParticipantWalletPayoutMethodsUpdate",
+        "description": "Request payload to update payout preference credentials on a participant wallet."
+      },
+      "ParticipantWalletResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "current_balance": {
+            "type": "number",
+            "title": "Current Balance"
+          },
+          "lifetime_stipends": {
+            "type": "number",
+            "title": "Lifetime Stipends"
+          },
+          "lifetime_reimbursements": {
+            "type": "number",
+            "title": "Lifetime Reimbursements"
+          },
+          "lifetime_disbursements": {
+            "type": "number",
+            "title": "Lifetime Disbursements"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "virtual_card_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Virtual Card Token"
+          },
+          "virtual_card_mask": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Virtual Card Mask"
+          },
+          "virtual_card_expiry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Virtual Card Expiry"
+          },
+          "ach_routing_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ach Routing Number"
+          },
+          "ach_account_mask": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ach Account Mask"
+          },
+          "ach_account_holder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ach Account Holder"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "pending_claims_count": {
+            "type": "integer",
+            "title": "Pending Claims Count",
+            "default": 0
+          },
+          "total_claims_count": {
+            "type": "integer",
+            "title": "Total Claims Count",
+            "default": 0
+          },
+          "disbursements_count": {
+            "type": "integer",
+            "title": "Disbursements Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "subject_id",
+          "study_id",
+          "site_id",
+          "current_balance",
+          "lifetime_stipends",
+          "lifetime_reimbursements",
+          "lifetime_disbursements",
+          "currency",
+          "status",
+          "virtual_card_token",
+          "virtual_card_mask",
+          "virtual_card_expiry",
+          "ach_routing_number",
+          "ach_account_mask",
+          "ach_account_holder",
+          "created_at",
+          "created_by",
+          "updated_at",
+          "version_index"
+        ],
+        "title": "ParticipantWalletResponse",
+        "description": "Response payload for subject wallet details and balance summary."
       },
       "PayableAllocationResponse": {
         "properties": {
@@ -3646,6 +6252,119 @@
         ],
         "title": "PaymentReconciliationResponse",
         "description": "Summary response for completed payment reconciliation."
+      },
+      "ReceiptOcrExtractRequest": {
+        "properties": {
+          "image_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Base64",
+            "description": "Base64 encoded receipt image"
+          },
+          "raw_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Text",
+            "description": "Raw OCR text fallback"
+          },
+          "category_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Hint",
+            "description": "Optional category hint"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename",
+            "description": "Uploaded file name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ReceiptOcrExtractRequest",
+        "description": "Request payload to run OCR expense extraction on a receipt."
+      },
+      "ReceiptOcrExtractResponse": {
+        "properties": {
+          "merchant_name": {
+            "type": "string",
+            "title": "Merchant Name"
+          },
+          "expense_date": {
+            "type": "string",
+            "title": "Expense Date"
+          },
+          "gross_amount": {
+            "type": "number",
+            "title": "Gross Amount"
+          },
+          "tax_deduction": {
+            "type": "number",
+            "title": "Tax Deduction"
+          },
+          "net_amount": {
+            "type": "number",
+            "title": "Net Amount"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "confidence_score": {
+            "type": "number",
+            "title": "Confidence Score"
+          },
+          "detected_keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Detected Keywords"
+          },
+          "raw_text": {
+            "type": "string",
+            "title": "Raw Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "merchant_name",
+          "expense_date",
+          "gross_amount",
+          "tax_deduction",
+          "net_amount",
+          "category",
+          "confidence_score",
+          "detected_keywords",
+          "raw_text"
+        ],
+        "title": "ReceiptOcrExtractResponse",
+        "description": "Extracted receipt OCR structured metadata."
       },
       "RemittanceAdviceDispatchRequest": {
         "properties": {
@@ -4424,6 +7143,64 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VisitVerificationEventDto": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study Protocol ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject identifier"
+          },
+          "visit_code": {
+            "type": "string",
+            "title": "Visit Code",
+            "description": "Completed visit code"
+          },
+          "event_id": {
+            "type": "string",
+            "title": "Event Id",
+            "description": "Unique EDC trigger event identifier"
+          },
+          "verified_by": {
+            "type": "string",
+            "title": "Verified By",
+            "description": "User identity confirming visit",
+            "default": "crc_coordinator"
+          },
+          "verification_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Timestamp",
+            "description": "ISO timestamp of visit completion"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_id",
+          "visit_code",
+          "event_id"
+        ],
+        "title": "VisitVerificationEventDto",
+        "description": "Inbound EDC visit verification trigger event to credit participant stipend."
       }
     }
   }

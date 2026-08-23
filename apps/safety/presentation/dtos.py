@@ -63,6 +63,10 @@ __all__ = [
     "BenchmarkReferenceDataset",
     "DSURLineListingItem",
     "DSURSummaryTabulationRow",
+    "DeviceSafetyInvestigationAdjudicateDTO",
+    "DeviceSafetyInvestigationCreateDTO",
+    "DeviceSafetyInvestigationResponseDTO",
+    "DeviceVigilanceReportResponseDTO",
     "DisproportionalityContingency",
     "DisproportionalityMetricResult",
     "ExposureStratificationCategory",
@@ -387,3 +391,93 @@ class RegulatoryAckProcessResponseDTO(BaseModel):
     errors: list[str] = []
     warnings: list[str] = []
     received_at: str
+
+
+class DeviceSafetyInvestigationCreateDTO(BaseModel):
+    """Request schema for initiating an Adverse Device Effect investigation."""
+
+    case_number: str | None = None
+    study_id: str
+    site_id: str
+    subject_id: str | None = None
+    deficiency_id: str
+    device_name: str = "Investigational Medical Device"
+    device_udi_di: str
+    lot_number: str
+    serial_number: str | None = None
+    classification: str = "ADE"
+    causality: str = "POSSIBLE"
+    is_usade: bool = False
+    investigation_notes: str | None = None
+    reason_for_change: str = "Open device safety investigation"
+
+
+class DeviceSafetyInvestigationAdjudicateDTO(BaseModel):
+    """Request schema for Safety Physician formal adjudication with Part 11 e-signature."""
+
+    classification: str
+    causality: str
+    is_usade: bool = False
+    investigation_notes: str | None = None
+    root_cause_summary: str | None = None
+    capa_required: bool = False
+    capa_reference: str | None = None
+    fsca_required: bool = False
+    signature_token: str
+    reason_for_change: str = "Safety physician adjudication of adverse device effect"
+
+
+class DeviceSafetyInvestigationResponseDTO(BaseModel):
+    """Response schema for Adverse Device Effect safety investigation case."""
+
+    id: str
+    case_number: str
+    study_id: str
+    site_id: str
+    subject_id: str | None = None
+    deficiency_id: str
+    device_name: str
+    device_udi_di: str
+    lot_number: str
+    serial_number: str | None = None
+    classification: str
+    causality: str
+    is_usade: bool
+    vigilance_reporting_required: bool
+    vigilance_deadline_days: int
+    vigilance_due_date: str
+    days_remaining: int
+    is_overdue: bool
+    notified_body_notified: bool
+    competent_authority_notified: bool
+    status: str
+    investigation_notes: str | None = None
+    root_cause_summary: str | None = None
+    capa_required: bool
+    capa_reference: str | None = None
+    fsca_required: bool
+    safety_physician_user_id: str | None = None
+    adjudicated_at: str | None = None
+    esignature_manifest_id: str | None = None
+    created_at: str
+    created_by: str
+    reason_for_change: str
+    version_index: int
+
+
+class DeviceVigilanceReportResponseDTO(BaseModel):
+    """Response schema for compiled EU MDR / IVDR Manufacturer Incident Report."""
+
+    case_number: str
+    report_type: str = "EU_MDR_MIR_V7_2"
+    reporting_authority: str = "EUDAMED / National Competent Authority"
+    device_name: str
+    udi_di: str
+    lot_number: str
+    serial_number: str | None = None
+    classification: str
+    incident_summary: str
+    vigilance_deadline_days: int
+    vigilance_due_date: str
+    payload_json: dict[str, Any]
+    payload_xml: str

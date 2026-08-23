@@ -911,7 +911,92 @@
             </div>
           </div>
         </section>
+
+        <!-- View 6: My Financial Wallet -->
+        <section
+          id="view-wallet"
+          class="portal-view"
+          :class="{ active: state.currentView === 'view-wallet' }"
+          role="tabpanel"
+          aria-labelledby="tab-btn-wallet"
+          tabindex="0"
+        >
+          <div class="view-header">
+            <h2>Participant Financial Wallet &amp; Stipends</h2>
+            <p>
+              Track your protocol visit stipends, upload travel expense receipts, and manage your virtual debit card payouts.
+            </p>
+          </div>
+
+          <div class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff;">
+            <div style="font-size: 14px; font-weight: 600; opacity: 0.9;">Available Wallet Balance</div>
+            <div style="font-size: 32px; font-weight: 800; margin: 4px 0 12px 0;">$325.00 USD</div>
+            <div style="display: flex; gap: 16px; font-size: 13px; opacity: 0.95;">
+              <div>Lifetime Stipends: <strong>$250.00</strong></div>
+              <div>Lifetime Travel: <strong>$75.00</strong></div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom: 20px;">
+            <h3 style="margin-top: 0;">💳 Digital Payout Method</h3>
+            <p style="font-size: 14px; color: var(--text-muted);">
+              Virtual Card: <strong>**** **** **** 4821</strong> (EXP: 12/29)
+            </p>
+            <button type="button" class="btn btn-primary" style="width: 100%;">
+              🚀 Disburse Available Balance ($325.00)
+            </button>
+          </div>
+
+          <div class="card">
+            <h3 style="margin-top: 0;">📷 Travel Expense Reimbursement Upload</h3>
+            <p style="font-size: 14px; color: var(--text-muted);">
+              Upload receipt photos for clinical trial travel, mileage, parking, and meals.
+            </p>
+            <div style="border: 2px dashed var(--border-color); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; background: var(--bg-muted);">
+              <span style="font-size: 24px;">📷</span>
+              <p style="margin: 6px 0 0 0; font-size: 14px; font-weight: 600;">Tap to Capture or Upload Receipt Image</p>
+              <small style="color: var(--text-muted);">OCR extraction will automatically detect merchant, date, and amount</small>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 7: Trial Results Lay Summaries -->
+        <section
+          id="view-lay-summaries"
+          class="portal-view"
+          :class="{ active: state.currentView === 'view-lay-summaries' }"
+          role="tabpanel"
+          aria-labelledby="tab-btn-lay-summaries"
+          tabindex="0"
+        >
+          <div class="view-header">
+            <h2>Plain-Language Clinical Trial Results</h2>
+            <p>
+              EU CTR Regulation No 536/2014 Article 37 summary of trial findings, clinical benefits, and safety profiles.
+            </p>
+          </div>
+
+          <div class="card" style="margin-bottom: 20px;">
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+              <span class="badge badge-gxp">IRB Approved</span>
+              <span class="badge badge-regulatory">Phase III Results</span>
+            </div>
+            <h3 style="margin-top: 0;">Plain Language Summary: CAD-2026 Trial Findings</h3>
+            <p style="font-size: 14px; color: var(--text-muted); line-height: 1.5;">
+              This study evaluated whether CAD-2026 improved clinical outcomes in adult patients.
+              Participants receiving CAD-2026 showed a 42% relative improvement in disease control with manageable side effects.
+            </p>
+            <div style="margin-top: 16px; padding: 12px; background: var(--bg-muted); border-radius: 6px;">
+              <h4 style="margin: 0 0 6px 0; font-size: 14px;">Participant Acknowledgment &amp; Comprehension</h4>
+              <p style="font-size: 13px; margin: 0 0 10px 0;">Rating: ★★★★★ (5/5 Stars)</p>
+              <button type="button" class="btn btn-secondary" style="font-size: 13px;">
+                🔏 View Cryptographically Sealed Confirmation Receipt (SHA-256)
+              </button>
+            </div>
+          </div>
+        </section>
       </main>
+
     </div>
 
     <!-- Electronic Signature and Reason Modal -->
@@ -1512,7 +1597,10 @@ const tabs = [
   },
   { id: "inbox", label: "My Inbox", icon: "✉️", viewId: "view-inbox" },
   { id: "consent", label: "My Consent", icon: "✍️", viewId: "view-consent" },
+  { id: "wallet", label: "My Wallet", icon: "💳", viewId: "view-wallet" },
+  { id: "lay-summaries", label: "Trial Results", icon: "📜", viewId: "view-lay-summaries" },
 ];
+
 
 const tabRefs = {};
 

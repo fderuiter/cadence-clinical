@@ -150,3 +150,107 @@ class IPaymentsRepository(RepositoryPort):
         entity_id: str | None = None,
         user_id: str | None = None,
     ) -> list[Any]: ...
+
+    # Participant Financial Wallet
+    @abstractmethod
+    async def get_wallet_by_id(self, wallet_id: str) -> Any | None: ...
+
+    @abstractmethod
+    async def get_wallet_by_subject(
+        self, study_id: str, subject_id: str
+    ) -> Any | None: ...
+
+    @abstractmethod
+    async def save_wallet(self, wallet: Any) -> Any: ...
+
+    @abstractmethod
+    async def list_wallets(
+        self, study_id: str | None = None, site_id: str | None = None
+    ) -> list[Any]: ...
+
+    # SoA Protocol Stipend Rules
+    @abstractmethod
+    async def save_stipend_rule(self, rule: Any) -> Any: ...
+
+    @abstractmethod
+    async def get_stipend_rule_by_visit(
+        self, study_id: str, visit_code: str
+    ) -> Any | None: ...
+
+    @abstractmethod
+    async def list_stipend_rules(
+        self, study_id: str | None = None, is_active_only: bool = True
+    ) -> list[Any]: ...
+
+    # Mobile Travel Expenses & Receipts
+    @abstractmethod
+    async def save_expense_claim(self, claim: Any) -> Any: ...
+
+    @abstractmethod
+    async def get_expense_claim_by_id(self, claim_id: str) -> Any | None: ...
+
+    @abstractmethod
+    async def list_expense_claims(
+        self,
+        study_id: str | None = None,
+        site_id: str | None = None,
+        subject_id: str | None = None,
+        status: str | None = None,
+    ) -> list[Any]: ...
+
+    # Digital Disbursements
+    @abstractmethod
+    async def save_disbursement(self, disbursement: Any) -> Any: ...
+
+    @abstractmethod
+    async def get_disbursement_by_id(self, disbursement_id: str) -> Any | None: ...
+
+    @abstractmethod
+    async def list_disbursements(
+        self,
+        wallet_id: str | None = None,
+        study_id: str | None = None,
+        subject_id: str | None = None,
+    ) -> list[Any]: ...
+
+    # Wallet Ledger Transactions
+    @abstractmethod
+    async def save_transaction(self, transaction: Any) -> Any: ...
+
+    @abstractmethod
+    async def get_transaction_by_reference(self, reference_id: str) -> Any | None: ...
+
+    @abstractmethod
+    async def list_transactions(
+        self,
+        wallet_id: str | None = None,
+        subject_id: str | None = None,
+        study_id: str | None = None,
+    ) -> list[Any]: ...
+
+    # EU CTR 536/2014 Plain Language Lay Summaries
+    @abstractmethod
+    async def save_lay_summary(self, summary: Any) -> Any: ...
+
+    @abstractmethod
+    async def get_lay_summary_by_id(self, summary_id: str) -> Any | None: ...
+
+    @abstractmethod
+    async def list_lay_summaries(
+        self,
+        study_id: str | None = None,
+        language: str | None = None,
+        status: str | None = None,
+    ) -> list[Any]: ...
+
+    # Confirmation Receipts
+    @abstractmethod
+    async def save_lay_summary_receipt(self, receipt: Any) -> Any: ...
+
+    @abstractmethod
+    async def list_lay_summary_receipts(
+        self,
+        summary_id: str | None = None,
+        study_id: str | None = None,
+        subject_id: str | None = None,
+    ) -> list[Any]: ...

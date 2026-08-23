@@ -697,3 +697,439 @@ class ErpSyncLogResponse(BaseModel):
     created_at: datetime
     created_by: str
     version_index: int
+
+
+# ==========================================
+# 11. Participant Financial Wallet DTOs
+# ==========================================
+
+
+class ParticipantWalletCreate(BaseModel):
+    """Request payload to initialize or provision a participant financial wallet."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    subject_id: str = Field(..., description="Subject unique identifier / MRN")
+    study_id: str = Field(..., description="Study Protocol ID")
+    site_id: str = Field(..., description="Site ID")
+    currency: str = Field(default="USD", description="Currency ISO code")
+    virtual_card_token: str | None = Field(
+        default=None, description="Virtual card token"
+    )
+    virtual_card_mask: str | None = Field(
+        default=None, description="Masked virtual card display number"
+    )
+    virtual_card_expiry: str | None = Field(
+        default=None, description="Virtual card expiry MM/YY"
+    )
+    ach_routing_number: str | None = Field(
+        default=None, description="Bank routing transit number"
+    )
+    ach_account_mask: str | None = Field(
+        default=None, description="Masked bank account number"
+    )
+    ach_account_holder: str | None = Field(
+        default=None, description="Account holder name"
+    )
+
+
+class ParticipantWalletPayoutMethodsUpdate(BaseModel):
+    """Request payload to update payout preference credentials on a participant wallet."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    virtual_card_token: str | None = Field(default=None)
+    virtual_card_mask: str | None = Field(default=None)
+    virtual_card_expiry: str | None = Field(default=None)
+    ach_routing_number: str | None = Field(default=None)
+    ach_account_mask: str | None = Field(default=None)
+    ach_account_holder: str | None = Field(default=None)
+
+
+class ParticipantWalletResponse(BaseModel):
+    """Response payload for subject wallet details and balance summary."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    subject_id: str
+    study_id: str
+    site_id: str
+    current_balance: float
+    lifetime_stipends: float
+    lifetime_reimbursements: float
+    lifetime_disbursements: float
+    currency: str
+    status: str
+    virtual_card_token: str | None
+    virtual_card_mask: str | None
+    virtual_card_expiry: str | None
+    ach_routing_number: str | None
+    ach_account_mask: str | None
+    ach_account_holder: str | None
+    created_at: datetime
+    created_by: str
+    updated_at: datetime
+    version_index: int
+    pending_claims_count: int = 0
+    total_claims_count: int = 0
+    disbursements_count: int = 0
+
+
+# ==========================================
+# 12. SoA Protocol Stipend Rules DTOs
+# ==========================================
+
+
+class ParticipantStipendRuleCreate(BaseModel):
+    """Request payload to configure SoA protocol visit stipend compensation."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    study_id: str = Field(..., description="Study Protocol ID")
+    visit_code: str = Field(..., description="Schedule of Activities visit code")
+    visit_name: str = Field(..., description="Descriptive visit name")
+    procedure_code: str | None = Field(
+        default=None, description="Optional procedure identifier"
+    )
+    amount: float = Field(..., ge=0.0, description="Stipend compensation amount")
+    currency: str = Field(default="USD", description="Currency ISO code")
+    requires_verification: bool = Field(
+        default=True,
+        description="Whether clinic visit completion must be verified in EDC",
+    )
+    taxable: bool = Field(default=False, description="Whether stipend is taxable")
+
+
+class ParticipantStipendRuleResponse(BaseModel):
+    """Response payload for configured visit stipend rule."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    study_id: str
+    visit_code: str
+    visit_name: str
+    procedure_code: str | None
+    amount: float
+    currency: str
+    requires_verification: bool
+    taxable: bool
+    is_active: bool
+    created_at: datetime
+    created_by: str
+    version_index: int
+
+
+class VisitVerificationEventDto(BaseModel):
+    """Inbound EDC visit verification trigger event to credit participant stipend."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    study_id: str = Field(..., description="Study Protocol ID")
+    site_id: str = Field(..., description="Site ID")
+    subject_id: str = Field(..., description="Subject identifier")
+    visit_code: str = Field(..., description="Completed visit code")
+    event_id: str = Field(..., description="Unique EDC trigger event identifier")
+    verified_by: str = Field(
+        default="crc_coordinator", description="User identity confirming visit"
+    )
+    verification_timestamp: str | None = Field(
+        default=None, description="ISO timestamp of visit completion"
+    )
+
+
+# ==========================================
+# 13. Mobile Travel Expense & Receipt OCR DTOs
+# ==========================================
+
+
+class ReceiptOcrExtractRequest(BaseModel):
+    """Request payload to run OCR expense extraction on a receipt."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    image_base64: str | None = Field(
+        default=None, description="Base64 encoded receipt image"
+    )
+    raw_text: str | None = Field(default=None, description="Raw OCR text fallback")
+    category_hint: str | None = Field(
+        default=None, description="Optional category hint"
+    )
+    filename: str | None = Field(default=None, description="Uploaded file name")
+
+
+class ReceiptOcrExtractResponse(BaseModel):
+    """Extracted receipt OCR structured metadata."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    merchant_name: str
+    expense_date: str
+    gross_amount: float
+    tax_deduction: float
+    net_amount: float
+    category: str
+    confidence_score: float
+    detected_keywords: list[str]
+    raw_text: str
+
+
+class ExpenseClaimSubmitRequest(BaseModel):
+    """Request payload for participant submitting a travel/meal expense reimbursement claim."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    wallet_id: str | None = Field(
+        default=None,
+        description="Participant wallet ID (optional if subject_id supplied)",
+    )
+    subject_id: str = Field(..., description="Subject unique identifier")
+    study_id: str = Field(..., description="Study ID")
+    site_id: str = Field(..., description="Site ID")
+    expense_date: str = Field(..., description="Expense date (YYYY-MM-DD)")
+    category: str = Field(
+        default="MILEAGE",
+        description="Expense category (MILEAGE, PARKING, MEAL, LODGING, TRANSIT, OTHER)",
+    )
+    merchant_name: str = Field(..., description="Merchant or vendor name")
+    gross_amount: float = Field(..., gt=0.0, description="Gross receipt expense amount")
+    tax_deduction: float = Field(
+        default=0.0, ge=0.0, description="Calculated tax deduction / withholding"
+    )
+    net_amount: float | None = Field(
+        default=None, description="Net reimbursement amount (calculated if omitted)"
+    )
+    currency: str = Field(default="USD", description="Currency ISO code")
+    receipt_image_name: str | None = Field(
+        default=None, description="Original receipt filename"
+    )
+    receipt_image_base64: str | None = Field(
+        default=None, description="Base64 encoded receipt image or preview"
+    )
+    receipt_ocr_data: dict[str, Any] | None = Field(
+        default=None, description="Raw/extracted OCR metadata"
+    )
+
+
+class ExpenseClaimReviewRequest(BaseModel):
+    """Request payload for coordinator 1-click review/approval of expense claim."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    status: str = Field(..., description="Review outcome (APPROVED or REJECTED)")
+    review_notes: str | None = Field(
+        default=None, description="Coordinator review comments"
+    )
+    adjusted_amount: float | None = Field(
+        default=None, description="Optional adjusted gross amount"
+    )
+    adjusted_category: str | None = Field(
+        default=None, description="Optional corrected category"
+    )
+    adjusted_merchant: str | None = Field(
+        default=None, description="Optional corrected merchant name"
+    )
+
+
+class ExpenseClaimResponse(BaseModel):
+    """Response payload for submitted expense claim."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    wallet_id: str
+    subject_id: str
+    study_id: str
+    site_id: str
+    expense_date: str
+    category: str
+    merchant_name: str
+    gross_amount: float
+    tax_deduction: float
+    net_amount: float
+    currency: str
+    receipt_image_name: str | None
+    receipt_ocr_data: dict[str, Any] | None
+    status: str
+    reviewed_by: str | None
+    reviewed_at: datetime | None
+    review_notes: str | None
+    created_at: datetime
+    created_by: str
+    version_index: int
+
+
+# ==========================================
+# 14. Digital Disbursement & Transaction DTOs
+# ==========================================
+
+
+class DisbursementRequest(BaseModel):
+    """Request payload to dispatch digital payout from wallet to Virtual Card or ACH."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    disbursement_type: str = Field(
+        default="VIRTUAL_CARD", description="Payout method (VIRTUAL_CARD or DIRECT_ACH)"
+    )
+    amount: float | None = Field(
+        default=None,
+        gt=0.0,
+        description="Amount to disburse (defaults to full available balance)",
+    )
+    destination_mask: str | None = Field(
+        default=None, description="Custom masked card / bank account display descriptor"
+    )
+
+
+class DisbursementResponse(BaseModel):
+    """Response payload for digital disbursement dispatch."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    wallet_id: str
+    subject_id: str
+    study_id: str
+    disbursement_type: str
+    amount: float
+    currency: str
+    status: str
+    reference_number: str
+    destination_mask: str
+    dispatched_at: datetime
+    settled_at: datetime | None
+    error_message: str | None
+    created_at: datetime
+    created_by: str
+    version_index: int
+
+
+class ParticipantTransactionResponse(BaseModel):
+    """Response payload for ledger transaction record in participant wallet."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    wallet_id: str
+    subject_id: str
+    study_id: str
+    transaction_type: str
+    amount: float
+    balance_after: float
+    reference_id: str
+    description: str
+    created_at: datetime
+    created_by: str
+    version_index: int
+
+
+# ==========================================
+# 15. Plain Language Lay Summary Portal DTOs
+# ==========================================
+
+
+class LaySummaryCreate(BaseModel):
+    """Request payload to draft/create an EU CTR 536/2014 Plain Language Lay Summary."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    study_id: str = Field(..., description="Study Protocol ID")
+    protocol_id: str | None = Field(default=None, description="Protocol Code")
+    title: str = Field(..., description="Lay Summary title")
+    trial_phase: str = Field(default="Phase III", description="Clinical trial phase")
+    therapeutic_area: str = Field(..., description="Therapeutic indication")
+    sponsor_name: str = Field(..., description="Sponsor organization")
+    summary_text: str = Field(..., description="Plain-language narrative overview")
+    plain_language_sections: dict[str, Any] | None = Field(
+        default=None,
+        description="Structured patient sections (objective, treatments, results, side_effects)",
+    )
+    irb_approval_number: str = Field(
+        ..., description="IRB/Ethics Committee approval number"
+    )
+    irb_approval_date: str = Field(..., description="IRB approval date (YYYY-MM-DD)")
+    language: str = Field(default="en", description="Language code (en, es, de, fr)")
+    status: str = Field(
+        default="PUBLISHED",
+        description="Publication status (DRAFT, IRB_APPROVED, PUBLISHED)",
+    )
+
+
+class LaySummaryPublishRequest(BaseModel):
+    """Request payload to approve and publish a plain language lay summary."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    irb_approval_number: str | None = Field(
+        default=None, description="Confirmed IRB approval identifier"
+    )
+    irb_approval_date: str | None = Field(
+        default=None, description="Confirmed IRB approval date"
+    )
+
+
+class LaySummaryResponse(BaseModel):
+    """Response payload for EU CTR Plain Language Lay Summary."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    study_id: str
+    protocol_id: str | None
+    title: str
+    trial_phase: str
+    therapeutic_area: str
+    sponsor_name: str
+    summary_text: str
+    plain_language_sections: dict[str, Any] | None
+    irb_approval_number: str
+    irb_approval_date: str
+    language: str
+    status: str
+    published_at: datetime | None
+    created_at: datetime
+    created_by: str
+    version_index: int
+    receipts_count: int = 0
+
+
+class LaySummaryReceiptConfirmRequest(BaseModel):
+    """Request payload for participant acknowledging receipt and comprehension of lay summary."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    subject_id: str = Field(..., description="Participant subject ID")
+    study_id: str = Field(..., description="Study ID")
+    comprehension_score: int = Field(
+        default=5,
+        ge=1,
+        le=5,
+        description="Comprehension rating (1=Very Difficult to 5=Very Clear)",
+    )
+    comprehension_feedback: str | None = Field(
+        default=None, description="Participant feedback or comments on the summary"
+    )
+    confirmation_statement: str = Field(
+        default="I confirm I have received and reviewed the plain language summary of trial results.",
+        description="Formal acknowledgment statement",
+    )
+
+
+class LaySummaryReceiptResponse(BaseModel):
+    """Cryptographically sealed confirmation receipt certificate for Lay Summary."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    summary_id: str
+    subject_id: str
+    study_id: str
+    comprehension_score: int
+    comprehension_feedback: str | None
+    confirmation_statement: str
+    receipt_hash: str
+    signer_identity: str
+    confirmed_at: datetime
+    status: str = "CONFIRMED"

@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-23: Medical Device and IVD Investigation Suite with UDI and Malfunction Quarantine](2026-08-23-medical-device-and-ivd-investigation-suite-with-udi-and-malfunction-quarantine.md)
 - [2026-08-22: Hermetic Containerized Statistical Computing Environment and Role-Gated Unblinded Data Vault](2026-08-22-hermetic-containerized-statistical-computing-environment-and-role-gated-unblinded-data-vault.md)
 - [2026-08-22: Reactive Cross-App Clinical Event Spine and Transactional Outbox](2026-08-22-reactive-cross-app-clinical-event-spine-and-transactional-outbox.md)
 - [2026-08-22: Sovereign All-in-One eClinical Suite Expansion](2026-08-22-sovereign-all-in-one-eclinical-suite-expansion.md)
@@ -183,6 +184,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+- [2026-08-23: Participant Financial Wallet and EU CTR Lay Summary Portal](2026-08-23-participant-financial-wallet-and-eu-ctr-lay-summary-portal.md)
 - [2026-08-23: GxP Telehealth Video Consultation Direct to Patient Logistics and Tiered Pediatric Assent](2026-08-23-gxp-telehealth-video-consultation-direct-to-patient-logistics-and-tiered-pediatric-assent.md)
 - [2026-08-23: Cell & Gene Therapy Vein-to-Vein Chain of Custody and Identity](2026-08-23-cell-and-gene-therapy-vein-to-vein-chain-of-custody-and-identity.md)
 - [2026-08-23: Multi-Echelon RTSM Supply Hierarchy and Predictive Resupply](2026-08-23-multi-echelon-rtsm-supply-hierarchy-and-predictive-resupply.md)

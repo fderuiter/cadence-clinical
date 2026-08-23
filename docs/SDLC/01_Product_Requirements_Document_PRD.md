@@ -209,6 +209,10 @@ The safety microservice (`apps/safety`) must deploy an automated regulatory narr
 
 The platform must generate deterministic, SHA-256 Merkle root canonical digests sealing point-in-time clinical trial datasets corresponding to periodic reporting windows (e.g. Development International Birth Date DIBD anniversaries). Dataset snapshots must guarantee 100% bitwise reproducibility and provide cryptographic verification endpoints to detect post-lock data mutation or tampering. Periodic regulatory safety reports compiled from snapshots must enforce 21 CFR Part 11 role-gated electronic signature workflows by the Qualified Person for Pharmacovigilance (QPPV) or authorized Safety Physician before regulatory submission export.
 
+#### PRD-SYS-126: Medical Device & In-Vitro Diagnostic (IVD) Investigation Suite
+
+The platform must provide a unified Medical Device & In-Vitro Diagnostic (IVD) Clinical Investigation module compliant with ISO 14155:2020, EU MDR 2017/745, EU IVDR 2017/746, and FDA 21 CFR Part 812. The architecture must integrate serialized UDI inventory accountability in RTSM (`apps/execution`), structured eCRF capture of device deficiencies, malfunctions, usability errors, and labeling inadequacies, automated Adverse Device Effect (ADE / SADE / USADE) safety investigation gating in `apps/safety`, immediate programmatic RTSM device and lot quarantine with dispensation blocking, and regulatory incident export compilation (EU MDR/IVDR Manufacturer Incident Reports and CDISC SDTM DD/DO domains) in `apps/interop`.
+
 ---
 
 ## 4. Study Design & Clinical Metadata Repository (MDR)
@@ -1350,6 +1354,10 @@ To provide specialized regulatory and operational support for medical device and
 - Logging a device deficiency or malfunction must automatically:
   1. Trigger an Adverse Device Effect (ADE / SADE / USADE) safety investigation in `apps/safety`.
   2. Immediately quarantine the affected device serial number (and optionally the site's entire device lot) in RTSM, preventing further patient allocation.
+
+#### PRD-DEV-004: Regulatory Incident Reports & CDISC SDTM DD/DO Dataset Exports
+- The system must compile Manufacturer Incident Report (MIR v7.2 XML/JSON) forms compliant with EU MDR (2017/745 Articles 87-92), EU IVDR (2017/746 Articles 82-87), and ISO 14155:2020 Annex B.
+- The system must export standardized CDISC SDTM DD (Device Deficiencies) and DO (Device Tracking and Operations) domain datasets with 21 CFR Part 11 compliant audit metadata.
 
 ---
 

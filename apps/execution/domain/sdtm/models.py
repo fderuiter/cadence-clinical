@@ -477,6 +477,156 @@ class CE(AuditableModel):
         return self
 
 
+class DD(AuditableModel):
+    """
+    Device Deficiencies (DD) SDTM Domain model representing device malfunctions,
+    usability issues, and inadequate labeling per ISO 14155:2020 and EU MDR 2017/745.
+    """
+
+    STUDYID: str = Field(..., description="Study Identifier (Required)")
+    DOMAIN: str = Field("DD", description="Domain Abbreviation (Required)")
+    USUBJID: str = Field(..., description="Unique Subject Identifier (Required)")
+    DDSEQ: int = Field(..., description="Sequence Number (Required)")
+    DDTESTCD: str = Field(
+        ..., description="Device Deficiency Short Name / Test Code (Required)"
+    )
+    DDTEST: str = Field(..., description="Device Deficiency Test Name (Required)")
+    DDCAT: str = Field(
+        "DEVICE DEFICIENCY", description="Category for Device Deficiency (Expected)"
+    )
+    DDSCAT: str | None = Field(
+        None, description="Subcategory for Device Deficiency (Permissible)"
+    )
+    DDORRES: str = Field(
+        ..., description="Result or Finding in Original Units / Text (Required)"
+    )
+    DDSTRESC: str = Field(
+        ..., description="Standardized Character Result / Finding (Required)"
+    )
+    DDDET: str | None = Field(
+        None, description="Detailed Deficiency Description (Permissible)"
+    )
+    DDDEVTYP: str | None = Field(None, description="Device Type / Model (Permissible)")
+    DDDEVID: str | None = Field(None, description="Device Identifier / UDI (Expected)")
+    DDSPID: str | None = Field(
+        None, description="Sponsor-Defined Identifier (Permissible)"
+    )
+    DDAT: str | None = Field(None, description="Action Taken with Device (Expected)")
+    DDCAUS: str | None = Field(
+        None, description="Potential Cause / Root Cause (Permissible)"
+    )
+    DDLOT: str | None = Field(None, description="Lot / Batch Number (Permissible)")
+    DDSER: str | None = Field(None, description="Serial Number (Permissible)")
+    DDSTDTC: str | None = Field(
+        None, description="Start Date/Time of Deficiency (Expected)"
+    )
+    DDENDTC: str | None = Field(
+        None, description="End Date/Time of Deficiency (Permissible)"
+    )
+    EPOCH: str | None = Field(None, description="Epoch (Permissible)")
+
+    @field_validator("STUDYID", "DOMAIN", "USUBJID", "DDTESTCD", "DDTEST")
+    @classmethod
+    def validate_non_empty_strings(cls, v: str) -> str:
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError("Field cannot be empty or consist only of whitespace.")
+        return v
+
+    @field_validator("DDSEQ")
+    @classmethod
+    def validate_sequence(cls, v: int) -> int:
+        if v < 1:
+            raise ValueError("DDSEQ must be greater than or equal to 1")
+        return v
+
+    @field_validator("DDSTDTC", "DDENDTC")
+    @classmethod
+    def validate_dates(cls, v: str | None) -> str | None:
+        return validate_dtc_format(v)
+
+    @model_validator(mode="after")
+    def validate_dd_dates(self) -> DD:
+        if self.DDSTDTC and self.DDENDTC:
+            s_clean = re.sub(r"[^\d]", "", self.DDSTDTC)
+            e_clean = re.sub(r"[^\d]", "", self.DDENDTC)
+            min_len = min(len(s_clean), len(e_clean))
+            if min_len > 0:
+                if e_clean[:min_len] < s_clean[:min_len]:
+                    raise ValueError(
+                        f"DDENDTC ({self.DDENDTC}) cannot be earlier than DDSTDTC ({self.DDSTDTC})"
+                    )
+        return self
+
+
+class DO(AuditableModel):
+    """
+    Device Tracking and Operations (DO) SDTM Domain model representing
+    serialized UDI inventory events, dispensation, and quarantine tracking.
+    """
+
+    STUDYID: str = Field(..., description="Study Identifier (Required)")
+    DOMAIN: str = Field("DO", description="Domain Abbreviation (Required)")
+    USUBJID: str = Field(..., description="Unique Subject Identifier (Required)")
+    DOSEQ: int = Field(..., description="Sequence Number (Required)")
+    DODEVID: str = Field(..., description="Device Identifier / Tracking ID (Required)")
+    DOTESTCD: str = Field(
+        ..., description="Device Tracking Short Name / Test Code (Required)"
+    )
+    DOTEST: str = Field(..., description="Device Tracking Test Name (Required)")
+    DOCAT: str = Field(
+        "DEVICE TRACKING", description="Category for Device Tracking (Expected)"
+    )
+    DOSCAT: str | None = Field(
+        None, description="Subcategory for Device Tracking (Permissible)"
+    )
+    DOSTATUS: str | None = Field(
+        None, description="Device Status at Operation (Expected)"
+    )
+    DODI: str | None = Field(
+        None, description="Device Identifier (UDI-DI / GTIN) (Expected)"
+    )
+    DOPI: str | None = Field(
+        None, description="Production Identifier (UDI-PI) (Permissible)"
+    )
+    DOLOT: str | None = Field(None, description="Lot / Batch Number (Permissible)")
+    DOSER: str | None = Field(None, description="Serial Number (Permissible)")
+    DOEXPDTC: str | None = Field(
+        None, description="Device Expiration Date (Permissible)"
+    )
+    DOMFRDTC: str | None = Field(
+        None, description="Device Manufacturing Date (Permissible)"
+    )
+    DODTC: str | None = Field(
+        None, description="Date/Time of Tracking Event (Expected)"
+    )
+    DOSTDTC: str | None = Field(
+        None, description="Start Date/Time of Operation (Permissible)"
+    )
+    DOENDTC: str | None = Field(
+        None, description="End Date/Time of Operation (Permissible)"
+    )
+    EPOCH: str | None = Field(None, description="Epoch (Permissible)")
+
+    @field_validator("STUDYID", "DOMAIN", "USUBJID", "DODEVID", "DOTESTCD", "DOTEST")
+    @classmethod
+    def validate_non_empty_strings(cls, v: str) -> str:
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError("Field cannot be empty or consist only of whitespace.")
+        return v
+
+    @field_validator("DOSEQ")
+    @classmethod
+    def validate_sequence(cls, v: int) -> int:
+        if v < 1:
+            raise ValueError("DOSEQ must be greater than or equal to 1")
+        return v
+
+    @field_validator("DOEXPDTC", "DOMFRDTC", "DODTC", "DOSTDTC", "DOENDTC")
+    @classmethod
+    def validate_dates(cls, v: str | None) -> str | None:
+        return validate_dtc_format(v)
+
+
 # Expose descriptive names as aliases
 Demographics = DM
 AdverseEvent = AE
@@ -484,4 +634,6 @@ VitalSign = VS
 Laboratory = LB
 ConcomitantMedication = CM
 ClinicalEvent = CE
+DeviceDeficiencies = DD
+DeviceTrackingOperations = DO
 SUPPQUALRecord = SUPPQUAL

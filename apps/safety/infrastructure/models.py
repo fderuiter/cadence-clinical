@@ -613,6 +613,88 @@ class PeriodicSafetyReportRecord(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
+class DeviceSafetyInvestigation(Base):
+    """
+    Represents an Adverse Device Effect (ADE / SADE / USADE) safety investigation
+    with vigilance reporting countdown tracking, ISO 14155 / EU MDR / IVDR alignment,
+    and 21 CFR Part 11 Safety Physician electronic signature adjudication.
+
+    Requirements: PRD-SYS-126, PRD-DEV-003, PRD-DEV-004, ISO 14155:2020, ADR-2209
+    """
+
+    __tablename__ = "device_safety_investigations"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    case_number: Mapped[str] = mapped_column(
+        String(255), nullable=False, unique=True, index=True
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    subject_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    deficiency_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    device_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    device_udi_di: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    lot_number: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    serial_number: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+
+    # Classification & Causality
+    classification: Mapped[str] = mapped_column(
+        String(50), default="ADE", nullable=False, index=True
+    )  # ADE, SADE, USADE, DEVICE_DEFICIENCY_INCIDENT
+    causality: Mapped[str] = mapped_column(
+        String(50), default="POSSIBLE", nullable=False
+    )
+    is_usade: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # Regulatory Vigilance & Deadlines
+    vigilance_reporting_required: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False
+    )
+    vigilance_deadline_days: Mapped[int] = mapped_column(
+        Integer, default=15, nullable=False
+    )
+    vigilance_due_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    notified_body_notified: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    competent_authority_notified: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+
+    # Lifecycle & Corrective Actions
+    status: Mapped[str] = mapped_column(
+        String(50), default="OPEN", nullable=False, index=True
+    )
+    investigation_notes: Mapped[str | None] = mapped_column(String(4000), nullable=True)
+    root_cause_summary: Mapped[str | None] = mapped_column(String(4000), nullable=True)
+    capa_required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    capa_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    fsca_required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # 21 CFR Part 11 Electronic Signature Gating
+    safety_physician_user_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    adjudicated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    esignature_manifest_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+
+    # Part 11 Audit fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
 @event.listens_for(Session, "before_flush")
 def prevent_audit_log_modification(session: Session, flush_context, instances) -> None:
     for obj in session.dirty:

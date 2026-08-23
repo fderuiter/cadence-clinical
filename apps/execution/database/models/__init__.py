@@ -112,6 +112,10 @@ _submodule_mappings = {
     "CecDossierRecord": "cec",
     "CecCharterRecord": "cec",
     "CecMeetingRecord": "cec",
+    # device
+    "InvestigationalDeviceInventory": "device",
+    "DeviceDeficiencyReport": "device",
+    "DeviceQuarantineRecord": "device",
 }
 
 

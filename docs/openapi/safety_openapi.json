@@ -2253,6 +2253,272 @@
           }
         }
       }
+    },
+    "/api/v1/safety/device-investigations": {
+      "post": {
+        "summary": "Open Device Safety Investigation Endpoint",
+        "description": "Opens a new Adverse Device Effect (ADE / SADE / USADE) safety investigation case.\n\nCalculates vigilance reporting deadlines according to ISO 14155 and EU MDR / IVDR.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, ISO 14155:2020, ADR-2209",
+        "operationId": "open_device_safety_investigation_endpoint_api_v1_safety_device_investigations_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceSafetyInvestigationCreateDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceSafetyInvestigationResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Device Safety Investigations Endpoint",
+        "description": "Lists device safety investigation cases matching query parameters.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, ADR-2209",
+        "operationId": "list_device_safety_investigations_endpoint_api_v1_safety_device_investigations_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "classification",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Classification"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceSafetyInvestigationResponseDTO"
+                  },
+                  "title": "Response List Device Safety Investigations Endpoint Api V1 Safety Device Investigations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/device-investigations/{investigation_id}": {
+      "get": {
+        "summary": "Get Device Safety Investigation Endpoint",
+        "description": "Retrieves a single device safety investigation case by ID.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, ADR-2209",
+        "operationId": "get_device_safety_investigation_endpoint_api_v1_safety_device_investigations__investigation_id__get",
+        "parameters": [
+          {
+            "name": "investigation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Investigation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceSafetyInvestigationResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/device-investigations/{investigation_id}/adjudicate": {
+      "put": {
+        "summary": "Adjudicate Device Safety Investigation Endpoint",
+        "description": "Formally adjudicates Adverse Device Effect causality and SADE determination with Part 11 e-signature.\n\nRequirements: PRD-SYS-126, PRD-DEV-003, 21 CFR Part 11, ISO 14155:2020, ADR-2209",
+        "operationId": "adjudicate_device_safety_investigation_endpoint_api_v1_safety_device_investigations__investigation_id__adjudicate_put",
+        "parameters": [
+          {
+            "name": "investigation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Investigation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceSafetyInvestigationAdjudicateDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceSafetyInvestigationResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/device-investigations/{investigation_id}/regulatory-report": {
+      "post": {
+        "summary": "Generate Device Vigilance Report Endpoint",
+        "description": "Generates an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2 JSON/XML).\n\nRequirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, ADR-2209",
+        "operationId": "generate_device_vigilance_report_endpoint_api_v1_safety_device_investigations__investigation_id__regulatory_report_post",
+        "parameters": [
+          {
+            "name": "investigation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Investigation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceVigilanceReportResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3308,6 +3574,489 @@
         ],
         "title": "DSURSummaryTabulationRow",
         "description": "Interval summary tabulation row aggregated by SOC and PT with RSI comparison."
+      },
+      "DeviceSafetyInvestigationAdjudicateDTO": {
+        "properties": {
+          "classification": {
+            "type": "string",
+            "title": "Classification"
+          },
+          "causality": {
+            "type": "string",
+            "title": "Causality"
+          },
+          "is_usade": {
+            "type": "boolean",
+            "title": "Is Usade",
+            "default": false
+          },
+          "investigation_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Notes"
+          },
+          "root_cause_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Root Cause Summary"
+          },
+          "capa_required": {
+            "type": "boolean",
+            "title": "Capa Required",
+            "default": false
+          },
+          "capa_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capa Reference"
+          },
+          "fsca_required": {
+            "type": "boolean",
+            "title": "Fsca Required",
+            "default": false
+          },
+          "signature_token": {
+            "type": "string",
+            "title": "Signature Token"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "default": "Safety physician adjudication of adverse device effect"
+          }
+        },
+        "type": "object",
+        "required": [
+          "classification",
+          "causality",
+          "signature_token"
+        ],
+        "title": "DeviceSafetyInvestigationAdjudicateDTO",
+        "description": "Request schema for Safety Physician formal adjudication with Part 11 e-signature."
+      },
+      "DeviceSafetyInvestigationCreateDTO": {
+        "properties": {
+          "case_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Number"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Id"
+          },
+          "deficiency_id": {
+            "type": "string",
+            "title": "Deficiency Id"
+          },
+          "device_name": {
+            "type": "string",
+            "title": "Device Name",
+            "default": "Investigational Medical Device"
+          },
+          "device_udi_di": {
+            "type": "string",
+            "title": "Device Udi Di"
+          },
+          "lot_number": {
+            "type": "string",
+            "title": "Lot Number"
+          },
+          "serial_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serial Number"
+          },
+          "classification": {
+            "type": "string",
+            "title": "Classification",
+            "default": "ADE"
+          },
+          "causality": {
+            "type": "string",
+            "title": "Causality",
+            "default": "POSSIBLE"
+          },
+          "is_usade": {
+            "type": "boolean",
+            "title": "Is Usade",
+            "default": false
+          },
+          "investigation_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Notes"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "default": "Open device safety investigation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "deficiency_id",
+          "device_udi_di",
+          "lot_number"
+        ],
+        "title": "DeviceSafetyInvestigationCreateDTO",
+        "description": "Request schema for initiating an Adverse Device Effect investigation."
+      },
+      "DeviceSafetyInvestigationResponseDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "case_number": {
+            "type": "string",
+            "title": "Case Number"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Id"
+          },
+          "deficiency_id": {
+            "type": "string",
+            "title": "Deficiency Id"
+          },
+          "device_name": {
+            "type": "string",
+            "title": "Device Name"
+          },
+          "device_udi_di": {
+            "type": "string",
+            "title": "Device Udi Di"
+          },
+          "lot_number": {
+            "type": "string",
+            "title": "Lot Number"
+          },
+          "serial_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serial Number"
+          },
+          "classification": {
+            "type": "string",
+            "title": "Classification"
+          },
+          "causality": {
+            "type": "string",
+            "title": "Causality"
+          },
+          "is_usade": {
+            "type": "boolean",
+            "title": "Is Usade"
+          },
+          "vigilance_reporting_required": {
+            "type": "boolean",
+            "title": "Vigilance Reporting Required"
+          },
+          "vigilance_deadline_days": {
+            "type": "integer",
+            "title": "Vigilance Deadline Days"
+          },
+          "vigilance_due_date": {
+            "type": "string",
+            "title": "Vigilance Due Date"
+          },
+          "days_remaining": {
+            "type": "integer",
+            "title": "Days Remaining"
+          },
+          "is_overdue": {
+            "type": "boolean",
+            "title": "Is Overdue"
+          },
+          "notified_body_notified": {
+            "type": "boolean",
+            "title": "Notified Body Notified"
+          },
+          "competent_authority_notified": {
+            "type": "boolean",
+            "title": "Competent Authority Notified"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "investigation_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investigation Notes"
+          },
+          "root_cause_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Root Cause Summary"
+          },
+          "capa_required": {
+            "type": "boolean",
+            "title": "Capa Required"
+          },
+          "capa_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capa Reference"
+          },
+          "fsca_required": {
+            "type": "boolean",
+            "title": "Fsca Required"
+          },
+          "safety_physician_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Safety Physician User Id"
+          },
+          "adjudicated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjudicated At"
+          },
+          "esignature_manifest_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Esignature Manifest Id"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_number",
+          "study_id",
+          "site_id",
+          "deficiency_id",
+          "device_name",
+          "device_udi_di",
+          "lot_number",
+          "classification",
+          "causality",
+          "is_usade",
+          "vigilance_reporting_required",
+          "vigilance_deadline_days",
+          "vigilance_due_date",
+          "days_remaining",
+          "is_overdue",
+          "notified_body_notified",
+          "competent_authority_notified",
+          "status",
+          "capa_required",
+          "fsca_required",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "DeviceSafetyInvestigationResponseDTO",
+        "description": "Response schema for Adverse Device Effect safety investigation case."
+      },
+      "DeviceVigilanceReportResponseDTO": {
+        "properties": {
+          "case_number": {
+            "type": "string",
+            "title": "Case Number"
+          },
+          "report_type": {
+            "type": "string",
+            "title": "Report Type",
+            "default": "EU_MDR_MIR_V7_2"
+          },
+          "reporting_authority": {
+            "type": "string",
+            "title": "Reporting Authority",
+            "default": "EUDAMED / National Competent Authority"
+          },
+          "device_name": {
+            "type": "string",
+            "title": "Device Name"
+          },
+          "udi_di": {
+            "type": "string",
+            "title": "Udi Di"
+          },
+          "lot_number": {
+            "type": "string",
+            "title": "Lot Number"
+          },
+          "serial_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serial Number"
+          },
+          "classification": {
+            "type": "string",
+            "title": "Classification"
+          },
+          "incident_summary": {
+            "type": "string",
+            "title": "Incident Summary"
+          },
+          "vigilance_deadline_days": {
+            "type": "integer",
+            "title": "Vigilance Deadline Days"
+          },
+          "vigilance_due_date": {
+            "type": "string",
+            "title": "Vigilance Due Date"
+          },
+          "payload_json": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload Json"
+          },
+          "payload_xml": {
+            "type": "string",
+            "title": "Payload Xml"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_number",
+          "device_name",
+          "udi_di",
+          "lot_number",
+          "classification",
+          "incident_summary",
+          "vigilance_deadline_days",
+          "vigilance_due_date",
+          "payload_json",
+          "payload_xml"
+        ],
+        "title": "DeviceVigilanceReportResponseDTO",
+        "description": "Response schema for compiled EU MDR / IVDR Manufacturer Incident Report."
       },
       "DisproportionalityMetricResult": {
         "properties": {

@@ -87,6 +87,7 @@ from apps.execution.routers.anomalies import router as anomalies_router
 from apps.execution.routers.anonymization import router as anonymization_router
 from apps.execution.routers.auditor import router as auditor_router
 from apps.execution.routers.cec import router as cec_router
+from apps.execution.routers.devices import router as devices_router
 from apps.execution.routers.dictionaries import router as dictionaries_router
 from apps.execution.routers.doa import router as doa_router
 from apps.execution.routers.documents import router as documents_router
@@ -358,6 +359,7 @@ app.include_router(queries_router)
 app.include_router(dictionaries_router)
 app.include_router(exports_router)
 app.include_router(labs_router)
+app.include_router(devices_router)
 
 
 @app.exception_handler(RequestValidationError)

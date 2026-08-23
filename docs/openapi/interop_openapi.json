@@ -4507,6 +4507,174 @@
           }
         }
       }
+    },
+    "/api/v1/interop/devices/sdtm/dd": {
+      "post": {
+        "tags": [
+          "Device Interop & Regulatory Exports"
+        ],
+        "summary": "Generate Sdtm Dd Endpoint",
+        "description": "Compiles CDISC SDTM DD (Device Deficiencies) dataset from reported device malfunctions.\n\nRequirements: PRD-DEV-004, ISO 14155:2020, ADR-2209",
+        "operationId": "generate_sdtm_dd_endpoint_api_v1_interop_devices_sdtm_dd_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SDTMDDGenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SDTMDDResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/devices/sdtm/do": {
+      "post": {
+        "tags": [
+          "Device Interop & Regulatory Exports"
+        ],
+        "summary": "Generate Sdtm Do Endpoint",
+        "description": "Compiles CDISC SDTM DO (Device Tracking and Operations) dataset from serialized inventory.\n\nRequirements: PRD-DEV-004, ISO 14155:2020, ADR-2209",
+        "operationId": "generate_sdtm_do_endpoint_api_v1_interop_devices_sdtm_do_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SDTMDOGenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SDTMDOResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/devices/mir-report": {
+      "post": {
+        "tags": [
+          "Device Interop & Regulatory Exports"
+        ],
+        "summary": "Generate Mdr Incident Report Endpoint",
+        "description": "Compiles an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2).\n\nRequirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, ADR-2209",
+        "operationId": "generate_mdr_incident_report_endpoint_api_v1_interop_devices_mir_report_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MDRIncidentReportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MDRIncidentReportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/devices/export-package": {
+      "post": {
+        "tags": [
+          "Device Interop & Regulatory Exports"
+        ],
+        "summary": "Generate Export Package Endpoint",
+        "description": "Compiles a complete regulatory investigation package (SDTM DD, DO, and MIR forms).\n\nRequirements: PRD-SYS-126, PRD-DEV-004, ADR-2209",
+        "operationId": "generate_export_package_endpoint_api_v1_interop_devices_export_package_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceInvestigationExportPackageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceInvestigationExportPackageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6846,6 +7014,99 @@
         ],
         "title": "DeliveryConfirmRequest",
         "description": "Delivery confirmation with recipient electronic signature."
+      },
+      "DeviceInvestigationExportPackageRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id"
+          },
+          "devices": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Devices"
+          },
+          "deficiencies": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Deficiencies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "DeviceInvestigationExportPackageRequest",
+        "description": "Request payload for compiling full regulatory device investigation export package."
+      },
+      "DeviceInvestigationExportPackageResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "sdtm_dd_count": {
+            "type": "integer",
+            "title": "Sdtm Dd Count"
+          },
+          "sdtm_do_count": {
+            "type": "integer",
+            "title": "Sdtm Do Count"
+          },
+          "sdtm_dd_dataset": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Sdtm Dd Dataset"
+          },
+          "sdtm_do_dataset": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Sdtm Do Dataset"
+          },
+          "incident_reports": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Incident Reports"
+          },
+          "audit_manifest": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Audit Manifest"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "generated_at",
+          "sdtm_dd_count",
+          "sdtm_do_count",
+          "sdtm_dd_dataset",
+          "sdtm_do_dataset",
+          "incident_reports",
+          "audit_manifest"
+        ],
+        "title": "DeviceInvestigationExportPackageResponse",
+        "description": "Response payload containing SDTM DD, DO, and EU MDR/IVDR incident reports."
       },
       "DeviceListResponse": {
         "properties": {
@@ -10389,6 +10650,175 @@
         "title": "LockValidationStatus",
         "description": "Integrity and qualification status of a package lockfile."
       },
+      "MDRIncidentReportRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Site Id"
+          },
+          "deficiency_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Deficiency Id"
+          },
+          "brand_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Brand Name"
+          },
+          "udi_di": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Udi Di"
+          },
+          "lot_number": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Lot Number"
+          },
+          "serial_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serial Number"
+          },
+          "incident_date": {
+            "type": "string",
+            "title": "Incident Date"
+          },
+          "awareness_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Awareness Date"
+          },
+          "deficiency_type": {
+            "type": "string",
+            "title": "Deficiency Type",
+            "default": "MALFUNCTION"
+          },
+          "deficiency_description": {
+            "type": "string",
+            "minLength": 5,
+            "title": "Deficiency Description"
+          },
+          "safety_classification": {
+            "type": "string",
+            "title": "Safety Classification",
+            "default": "SADE"
+          },
+          "causality": {
+            "type": "string",
+            "title": "Causality",
+            "default": "POSSIBLE"
+          },
+          "patient_involved": {
+            "type": "boolean",
+            "title": "Patient Involved",
+            "default": false
+          },
+          "health_impact": {
+            "type": "string",
+            "title": "Health Impact",
+            "default": "NONE"
+          },
+          "root_cause_analysis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Root Cause Analysis"
+          },
+          "action_taken": {
+            "type": "string",
+            "title": "Action Taken",
+            "default": "QUARANTINED_AT_SITE"
+          },
+          "capa_required": {
+            "type": "boolean",
+            "title": "Capa Required",
+            "default": false
+          },
+          "fsca_required": {
+            "type": "boolean",
+            "title": "Fsca Required",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "deficiency_id",
+          "brand_name",
+          "udi_di",
+          "lot_number",
+          "incident_date",
+          "deficiency_description"
+        ],
+        "title": "MDRIncidentReportRequest",
+        "description": "Request payload for compiling an EU MDR / IVDR Manufacturer Incident Report (MIR v7.2)."
+      },
+      "MDRIncidentReportResponse": {
+        "properties": {
+          "report_reference_number": {
+            "type": "string",
+            "title": "Report Reference Number"
+          },
+          "mir_version": {
+            "type": "string",
+            "title": "Mir Version",
+            "default": "7.2"
+          },
+          "regulatory_framework": {
+            "type": "string",
+            "title": "Regulatory Framework",
+            "default": "EU_MDR_2017_745"
+          },
+          "reporting_date": {
+            "type": "string",
+            "title": "Reporting Date"
+          },
+          "payload_json": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload Json"
+          },
+          "payload_xml": {
+            "type": "string",
+            "title": "Payload Xml"
+          }
+        },
+        "type": "object",
+        "required": [
+          "report_reference_number",
+          "reporting_date",
+          "payload_json",
+          "payload_xml"
+        ],
+        "title": "MDRIncidentReportResponse",
+        "description": "Response payload containing MIR v7.2 JSON and XML documents."
+      },
       "MappingTierStatisticsDTO": {
         "properties": {
           "total_extracted": {
@@ -11984,6 +12414,118 @@
         ],
         "title": "RunSDTMPipelineRequest",
         "description": "Request payload to execute SDTM mapping pipeline."
+      },
+      "SDTMDDGenerateRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id"
+          },
+          "deficiencies": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Deficiencies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "SDTMDDGenerateRequest",
+        "description": "Request payload for compiling SDTM DD (Device Deficiencies) dataset."
+      },
+      "SDTMDDResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain",
+            "default": "DD"
+          },
+          "record_count": {
+            "type": "integer",
+            "title": "Record Count"
+          },
+          "records": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Records"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "record_count",
+          "records"
+        ],
+        "title": "SDTMDDResponse",
+        "description": "Response payload containing compiled SDTM DD records."
+      },
+      "SDTMDOGenerateRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id"
+          },
+          "devices": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Devices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "SDTMDOGenerateRequest",
+        "description": "Request payload for compiling SDTM DO (Device Tracking and Operations) dataset."
+      },
+      "SDTMDOResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain",
+            "default": "DO"
+          },
+          "record_count": {
+            "type": "integer",
+            "title": "Record Count"
+          },
+          "records": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Records"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "record_count",
+          "records"
+        ],
+        "title": "SDTMDOResponse",
+        "description": "Response payload containing compiled SDTM DO records."
       },
       "SDTMPipelineResponse": {
         "properties": {

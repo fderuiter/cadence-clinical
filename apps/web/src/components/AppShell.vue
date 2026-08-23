@@ -367,6 +367,37 @@
                 </router-link>
               </li>
               <li
+                v-if="
+                  canAccess([
+                    'site_investigator',
+                    'crc',
+                    'data_manager',
+                    'sponsor_admin',
+                    'cra',
+                    'monitor',
+                    'sponsor_designer',
+                    'auditor',
+                  ])
+                "
+                id="tab-btn-devices"
+                class="nav-item"
+                :class="{ active: $route.name === 'devices' || $route.name === 'device-investigation' }"
+              >
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/devices"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
+                    <span class="nav-icon">🩺</span>
+                    <span class="nav-label">Device &amp; IVD Suite</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
                 id="tab-btn-sensors"
                 class="nav-item"
                 :class="{ active: $route.name === 'sensors' }"
@@ -477,6 +508,45 @@
                 </router-link>
               </li>
               <li
+                id="tab-btn-participant-wallet"
+                class="nav-item"
+                :class="{ active: $route.name === 'participant-wallet' }"
+              >
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/participant-wallet"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
+                    <span class="nav-icon">💳</span>
+                    <span class="nav-label">Participant Financial Wallet</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
+                id="tab-btn-lay-summaries"
+                class="nav-item"
+                :class="{ active: $route.name === 'lay-summaries' }"
+              >
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/lay-summaries"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
+                    <span class="nav-icon">📜</span>
+                    <span class="nav-label">EU CTR Lay Summaries</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
+
                 v-if="
                   canAccess([
                     'cra',

@@ -696,3 +696,359 @@ class ErpSyncLogModel(Base):
         back_populates="erp_logs",
         lazy="selectin",
     )
+
+
+class ParticipantWalletModel(Base):
+    """Database table managing subject financial balances, payout methods, and lifetime earnings."""
+
+    __tablename__ = "payments_participant_wallets"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+
+    current_balance: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    lifetime_stipends: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    lifetime_reimbursements: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    lifetime_disbursements: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(50), default="ACTIVE", nullable=False, index=True
+    )
+
+    # Virtual Debit Card Details
+    virtual_card_token: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    virtual_card_mask: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    virtual_card_expiry: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    # Direct ACH Bank Details
+    ach_routing_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    ach_account_mask: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    ach_account_holder: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # 21 CFR Part 11 GxP Audit Columns
+    created_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(
+        String(255), default="system", nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), onupdate=func.now(), nullable=False
+    )
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Relationships
+    expense_claims: Mapped[list[ParticipantExpenseClaimModel]] = relationship(
+        "ParticipantExpenseClaimModel",
+        back_populates="wallet",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    disbursements: Mapped[list[ParticipantDisbursementModel]] = relationship(
+        "ParticipantDisbursementModel",
+        back_populates="wallet",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    transactions: Mapped[list[ParticipantTransactionModel]] = relationship(
+        "ParticipantTransactionModel",
+        back_populates="wallet",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+
+class ParticipantStipendRuleModel(Base):
+    """Database table defining SoA-linked compensation amounts per protocol visit."""
+
+    __tablename__ = "payments_participant_stipend_rules"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    visit_code: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    visit_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    procedure_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
+    requires_verification: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False
+    )
+    taxable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # 21 CFR Part 11 GxP Audit Columns
+    created_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(
+        String(255), default="system", nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), onupdate=func.now(), nullable=False
+    )
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class ParticipantExpenseClaimModel(Base):
+    """Database table recording mobile travel expense submissions, receipt OCR data, and coordinator approvals."""
+
+    __tablename__ = "payments_participant_expense_claims"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    wallet_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("payments_participant_wallets.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    expense_date: Mapped[str] = mapped_column(String(50), nullable=False)
+    category: Mapped[str] = mapped_column(
+        String(50), default="MILEAGE", nullable=False, index=True
+    )
+    merchant_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    gross_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    tax_deduction: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    net_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
+
+    receipt_image_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    receipt_image_base64: Mapped[str | None] = mapped_column(String, nullable=True)
+    receipt_ocr_data: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+
+    status: Mapped[str] = mapped_column(
+        String(50), default="PENDING_REVIEW", nullable=False, index=True
+    )
+    reviewed_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    review_notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+    # 21 CFR Part 11 GxP Audit Columns
+    created_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(
+        String(255), default="system", nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), onupdate=func.now(), nullable=False
+    )
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Relationship
+    wallet: Mapped[ParticipantWalletModel] = relationship(
+        "ParticipantWalletModel",
+        back_populates="expense_claims",
+        lazy="selectin",
+    )
+
+
+class ParticipantDisbursementModel(Base):
+    """Database table recording digital disbursement transactions (Virtual Card / ACH)."""
+
+    __tablename__ = "payments_participant_disbursements"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    wallet_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("payments_participant_wallets.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    disbursement_type: Mapped[str] = mapped_column(
+        String(50), default="VIRTUAL_CARD", nullable=False
+    )
+    amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(50), default="DISPATCHED", nullable=False, index=True
+    )
+    reference_number: Mapped[str] = mapped_column(
+        String(100), unique=True, nullable=False, index=True
+    )
+    destination_mask: Mapped[str] = mapped_column(String(100), nullable=False)
+    dispatched_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), nullable=False
+    )
+    settled_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+    # 21 CFR Part 11 GxP Audit Columns
+    created_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(
+        String(255), default="system", nullable=False
+    )
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Relationship
+    wallet: Mapped[ParticipantWalletModel] = relationship(
+        "ParticipantWalletModel",
+        back_populates="disbursements",
+        lazy="selectin",
+    )
+
+
+class ParticipantTransactionModel(Base):
+    """Database table representing immutable financial transactions in the participant wallet ledger."""
+
+    __tablename__ = "payments_participant_transactions"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    wallet_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("payments_participant_wallets.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    transaction_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, index=True
+    )
+    amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    balance_after: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    reference_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    description: Mapped[str] = mapped_column(String(500), nullable=False)
+
+    # 21 CFR Part 11 GxP Audit Columns
+    created_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), nullable=False, index=True
+    )
+    created_by: Mapped[str] = mapped_column(
+        String(255), default="system", nullable=False
+    )
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Relationship
+    wallet: Mapped[ParticipantWalletModel] = relationship(
+        "ParticipantWalletModel",
+        back_populates="transactions",
+        lazy="selectin",
+    )
+
+
+class LaySummaryModel(Base):
+    """Database table storing IRB/Ethics Committee approved plain-language trial summaries per EU CTR 536/2014."""
+
+    __tablename__ = "payments_lay_summaries"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    protocol_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    trial_phase: Mapped[str] = mapped_column(
+        String(50), default="Phase III", nullable=False
+    )
+    therapeutic_area: Mapped[str] = mapped_column(String(100), nullable=False)
+    sponsor_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    summary_text: Mapped[str] = mapped_column(String, nullable=False)
+    plain_language_sections: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, nullable=True
+    )
+
+    irb_approval_number: Mapped[str] = mapped_column(String(100), nullable=False)
+    irb_approval_date: Mapped[str] = mapped_column(String(50), nullable=False)
+    language: Mapped[str] = mapped_column(
+        String(10), default="en", nullable=False, index=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(50), default="PUBLISHED", nullable=False, index=True
+    )
+    published_at: Mapped[datetime | None] = mapped_column(
+        UTCDateTime, default=func.now(), nullable=True
+    )
+
+    # 21 CFR Part 11 GxP Audit Columns
+    created_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(
+        String(255), default="system", nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), onupdate=func.now(), nullable=False
+    )
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Relationships
+    receipts: Mapped[list[LaySummaryReceiptModel]] = relationship(
+        "LaySummaryReceiptModel",
+        back_populates="lay_summary",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+
+class LaySummaryReceiptModel(Base):
+    """Database table recording patient confirmation receipts and comprehension assessments."""
+
+    __tablename__ = "payments_lay_summary_receipts"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    summary_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("payments_lay_summaries.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    comprehension_score: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
+    comprehension_feedback: Mapped[str | None] = mapped_column(
+        String(2000), nullable=True
+    )
+    confirmation_statement: Mapped[str] = mapped_column(String(1000), nullable=False)
+    receipt_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    signer_identity: Mapped[str] = mapped_column(String(255), nullable=False)
+    confirmed_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), nullable=False, index=True
+    )
+
+    # 21 CFR Part 11 GxP Audit Columns
+    created_at: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(
+        String(255), default="system", nullable=False
+    )
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Relationship
+    lay_summary: Mapped[LaySummaryModel] = relationship(
+        "LaySummaryModel",
+        back_populates="receipts",
+        lazy="selectin",
+    )

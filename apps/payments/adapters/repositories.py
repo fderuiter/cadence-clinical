@@ -21,6 +21,13 @@ from apps.payments.infrastructure.models import (
     FeeScheduleModel,
     HoldbackReserveModel,
     InvoiceLineItemModel,
+    LaySummaryModel,
+    LaySummaryReceiptModel,
+    ParticipantDisbursementModel,
+    ParticipantExpenseClaimModel,
+    ParticipantStipendRuleModel,
+    ParticipantTransactionModel,
+    ParticipantWalletModel,
     PayableAllocationModel,
     PayableModel,
     PaymentAuditLogModel,
@@ -489,6 +496,296 @@ class SQLAlchemyPaymentsRepository(IPaymentsRepository):
         if user_id:
             stmt = stmt.where(PaymentAuditLogModel.user_id == user_id)
         stmt = stmt.order_by(desc(PaymentAuditLogModel.created_at))
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    # ==========================================
+    # Participant Financial Wallet Methods
+    # ==========================================
+
+    async def get_wallet_by_id(self, wallet_id: str) -> ParticipantWalletModel | None:
+        stmt = (
+            select(ParticipantWalletModel)
+            .where(ParticipantWalletModel.id == wallet_id)
+            .options(
+                selectinload(ParticipantWalletModel.expense_claims),
+                selectinload(ParticipantWalletModel.disbursements),
+                selectinload(ParticipantWalletModel.transactions),
+            )
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
+    async def get_wallet_by_subject(
+        self, study_id: str, subject_id: str
+    ) -> ParticipantWalletModel | None:
+        stmt = (
+            select(ParticipantWalletModel)
+            .where(
+                ParticipantWalletModel.study_id == study_id,
+                ParticipantWalletModel.subject_id == subject_id,
+            )
+            .options(
+                selectinload(ParticipantWalletModel.expense_claims),
+                selectinload(ParticipantWalletModel.disbursements),
+                selectinload(ParticipantWalletModel.transactions),
+            )
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
+    async def save_wallet(
+        self, wallet: ParticipantWalletModel
+    ) -> ParticipantWalletModel:
+        if not wallet.id:
+            wallet.id = str(uuid.uuid4())
+        self.session.add(wallet)
+        await self.session.commit()
+        await self.session.refresh(wallet)
+        return wallet
+
+    async def list_wallets(
+        self, study_id: str | None = None, site_id: str | None = None
+    ) -> list[ParticipantWalletModel]:
+        stmt = select(ParticipantWalletModel).options(
+            selectinload(ParticipantWalletModel.expense_claims),
+            selectinload(ParticipantWalletModel.disbursements),
+            selectinload(ParticipantWalletModel.transactions),
+        )
+        if study_id:
+            stmt = stmt.where(ParticipantWalletModel.study_id == study_id)
+        if site_id:
+            stmt = stmt.where(ParticipantWalletModel.site_id == site_id)
+        stmt = stmt.order_by(desc(ParticipantWalletModel.created_at))
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    # ==========================================
+    # SoA Protocol Stipend Rules
+    # ==========================================
+
+    async def save_stipend_rule(
+        self, rule: ParticipantStipendRuleModel
+    ) -> ParticipantStipendRuleModel:
+        if not rule.id:
+            rule.id = str(uuid.uuid4())
+        self.session.add(rule)
+        await self.session.commit()
+        await self.session.refresh(rule)
+        return rule
+
+    async def get_stipend_rule_by_visit(
+        self, study_id: str, visit_code: str
+    ) -> ParticipantStipendRuleModel | None:
+        stmt = select(ParticipantStipendRuleModel).where(
+            ParticipantStipendRuleModel.study_id == study_id,
+            ParticipantStipendRuleModel.visit_code == visit_code,
+            ParticipantStipendRuleModel.is_active.is_(True),
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
+    async def list_stipend_rules(
+        self, study_id: str | None = None, is_active_only: bool = True
+    ) -> list[ParticipantStipendRuleModel]:
+        stmt = select(ParticipantStipendRuleModel)
+        if study_id:
+            stmt = stmt.where(ParticipantStipendRuleModel.study_id == study_id)
+        if is_active_only:
+            stmt = stmt.where(ParticipantStipendRuleModel.is_active.is_(True))
+        stmt = stmt.order_by(ParticipantStipendRuleModel.visit_code)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    # ==========================================
+    # Mobile Travel Expenses & Receipts
+    # ==========================================
+
+    async def save_expense_claim(
+        self, claim: ParticipantExpenseClaimModel
+    ) -> ParticipantExpenseClaimModel:
+        if not claim.id:
+            claim.id = str(uuid.uuid4())
+        self.session.add(claim)
+        await self.session.commit()
+        await self.session.refresh(claim)
+        return claim
+
+    async def get_expense_claim_by_id(
+        self, claim_id: str
+    ) -> ParticipantExpenseClaimModel | None:
+        stmt = select(ParticipantExpenseClaimModel).where(
+            ParticipantExpenseClaimModel.id == claim_id
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
+    async def list_expense_claims(
+        self,
+        study_id: str | None = None,
+        site_id: str | None = None,
+        subject_id: str | None = None,
+        status: str | None = None,
+    ) -> list[ParticipantExpenseClaimModel]:
+        stmt = select(ParticipantExpenseClaimModel)
+        if study_id:
+            stmt = stmt.where(ParticipantExpenseClaimModel.study_id == study_id)
+        if site_id:
+            stmt = stmt.where(ParticipantExpenseClaimModel.site_id == site_id)
+        if subject_id:
+            stmt = stmt.where(ParticipantExpenseClaimModel.subject_id == subject_id)
+        if status:
+            stmt = stmt.where(ParticipantExpenseClaimModel.status == status)
+        stmt = stmt.order_by(desc(ParticipantExpenseClaimModel.created_at))
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    # ==========================================
+    # Digital Disbursements
+    # ==========================================
+
+    async def save_disbursement(
+        self, disbursement: ParticipantDisbursementModel
+    ) -> ParticipantDisbursementModel:
+        if not disbursement.id:
+            disbursement.id = str(uuid.uuid4())
+        self.session.add(disbursement)
+        await self.session.commit()
+        await self.session.refresh(disbursement)
+        return disbursement
+
+    async def get_disbursement_by_id(
+        self, disbursement_id: str
+    ) -> ParticipantDisbursementModel | None:
+        stmt = select(ParticipantDisbursementModel).where(
+            ParticipantDisbursementModel.id == disbursement_id
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
+    async def list_disbursements(
+        self,
+        wallet_id: str | None = None,
+        study_id: str | None = None,
+        subject_id: str | None = None,
+    ) -> list[ParticipantDisbursementModel]:
+        stmt = select(ParticipantDisbursementModel)
+        if wallet_id:
+            stmt = stmt.where(ParticipantDisbursementModel.wallet_id == wallet_id)
+        if study_id:
+            stmt = stmt.where(ParticipantDisbursementModel.study_id == study_id)
+        if subject_id:
+            stmt = stmt.where(ParticipantDisbursementModel.subject_id == subject_id)
+        stmt = stmt.order_by(desc(ParticipantDisbursementModel.dispatched_at))
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    # ==========================================
+    # Wallet Ledger Transactions
+    # ==========================================
+
+    async def save_transaction(
+        self, transaction: ParticipantTransactionModel
+    ) -> ParticipantTransactionModel:
+        if not transaction.id:
+            transaction.id = str(uuid.uuid4())
+        self.session.add(transaction)
+        await self.session.commit()
+        await self.session.refresh(transaction)
+        return transaction
+
+    async def get_transaction_by_reference(
+        self, reference_id: str
+    ) -> ParticipantTransactionModel | None:
+        stmt = select(ParticipantTransactionModel).where(
+            ParticipantTransactionModel.reference_id == reference_id
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
+    async def list_transactions(
+        self,
+        wallet_id: str | None = None,
+        subject_id: str | None = None,
+        study_id: str | None = None,
+    ) -> list[ParticipantTransactionModel]:
+        stmt = select(ParticipantTransactionModel)
+        if wallet_id:
+            stmt = stmt.where(ParticipantTransactionModel.wallet_id == wallet_id)
+        if subject_id:
+            stmt = stmt.where(ParticipantTransactionModel.subject_id == subject_id)
+        if study_id:
+            stmt = stmt.where(ParticipantTransactionModel.study_id == study_id)
+        stmt = stmt.order_by(desc(ParticipantTransactionModel.created_at))
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    # ==========================================
+    # EU CTR 536/2014 Plain Language Lay Summaries
+    # ==========================================
+
+    async def save_lay_summary(self, summary: LaySummaryModel) -> LaySummaryModel:
+        if not summary.id:
+            summary.id = str(uuid.uuid4())
+        self.session.add(summary)
+        await self.session.commit()
+        await self.session.refresh(summary)
+        return summary
+
+    async def get_lay_summary_by_id(self, summary_id: str) -> LaySummaryModel | None:
+        stmt = (
+            select(LaySummaryModel)
+            .where(LaySummaryModel.id == summary_id)
+            .options(selectinload(LaySummaryModel.receipts))
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
+    async def list_lay_summaries(
+        self,
+        study_id: str | None = None,
+        language: str | None = None,
+        status: str | None = None,
+    ) -> list[LaySummaryModel]:
+        stmt = select(LaySummaryModel).options(selectinload(LaySummaryModel.receipts))
+        if study_id:
+            stmt = stmt.where(LaySummaryModel.study_id == study_id)
+        if language:
+            stmt = stmt.where(LaySummaryModel.language == language)
+        if status:
+            stmt = stmt.where(LaySummaryModel.status == status)
+        stmt = stmt.order_by(desc(LaySummaryModel.created_at))
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    # ==========================================
+    # Lay Summary Confirmation Receipts
+    # ==========================================
+
+    async def save_lay_summary_receipt(
+        self, receipt: LaySummaryReceiptModel
+    ) -> LaySummaryReceiptModel:
+        if not receipt.id:
+            receipt.id = str(uuid.uuid4())
+        self.session.add(receipt)
+        await self.session.commit()
+        await self.session.refresh(receipt)
+        return receipt
+
+    async def list_lay_summary_receipts(
+        self,
+        summary_id: str | None = None,
+        study_id: str | None = None,
+        subject_id: str | None = None,
+    ) -> list[LaySummaryReceiptModel]:
+        stmt = select(LaySummaryReceiptModel)
+        if summary_id:
+            stmt = stmt.where(LaySummaryReceiptModel.summary_id == summary_id)
+        if study_id:
+            stmt = stmt.where(LaySummaryReceiptModel.study_id == study_id)
+        if subject_id:
+            stmt = stmt.where(LaySummaryReceiptModel.subject_id == subject_id)
+        stmt = stmt.order_by(desc(LaySummaryReceiptModel.confirmed_at))
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
