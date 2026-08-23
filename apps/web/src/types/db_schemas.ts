@@ -468,6 +468,21 @@ export interface CtmsClinicalQuery {
   version_index: number;
 }
 
+export interface CtmsCountryPrerequisiteRule {
+  id: string;
+  study_id: string;
+  country_code: string;
+  facet: string;
+  criterion_code: string;
+  criterion_name: string;
+  is_mandatory: boolean;
+  description?: string | null;
+  created_at: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index: number;
+}
+
 export interface CtmsCountryRegulatoryMilestone {
   id: string;
   study_id: string;
@@ -922,14 +937,28 @@ export interface CtmsSiteGreenlightGate {
   id: string;
   study_id: string;
   site_id: string;
+  country_code: string;
   overall_status: string;
+  facet_regulatory_irb: boolean;
+  facet_cta_budget: boolean;
+  facet_eisf_baseline: boolean;
+  facet_doa_log: boolean;
+  facet_staff_training: boolean;
+  facet_ip_release: boolean;
   contract_approved: boolean;
   irb_approved: boolean;
   form_1572_approved: boolean;
   doa_signed_off: boolean;
   ip_ready: boolean;
+  greenlight_token?: string | null;
   greenlight_certified_by?: string | null;
   greenlight_certified_at?: string | null;
+  is_overridden: boolean;
+  override_sponsor_user_id?: string | null;
+  override_medical_user_id?: string | null;
+  override_justification?: string | null;
+  override_authorized_at?: string | null;
+  evaluation_details?: Record<string, any> | null;
   rejection_reason?: string | null;
   created_at: string;
   created_by: string;
@@ -1207,6 +1236,7 @@ export interface LabReferenceRange {
   unit?: string | null;
   normalized_unit?: string | null;
   sex?: string | null;
+  ethnicity?: string | null;
   age_low?: number | null;
   age_high?: number | null;
   range_low?: number | null;
@@ -1216,7 +1246,7 @@ export interface LabReferenceRange {
   created_at?: string | null;
   created_by?: string | null;
   reason_for_change?: string | null;
-  version_index?: number | null;
+  version_index: number;
   id: string;
   version: number;
   is_deleted: boolean;
@@ -1265,6 +1295,28 @@ export interface LabUnitConversion {
   created_by?: string | null;
   reason_for_change?: string | null;
   version_index?: number | null;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
+export interface LocalLabCertification {
+  study_id: string;
+  site_id: string;
+  lab_name: string;
+  lab_identifier?: string | null;
+  certification_number: string;
+  accreditation_body: string;
+  effective_date: string;
+  expiration_date: string;
+  status: string;
+  director_name?: string | null;
+  is_accredited: boolean;
+  notes?: string | null;
+  created_at?: string | null;
+  created_by?: string | null;
+  reason_for_change?: string | null;
+  version_index: number;
   id: string;
   version: number;
   is_deleted: boolean;
@@ -1523,6 +1575,39 @@ export interface SiteStaffMember {
   reason_for_change: string;
   version_index: number;
   is_active: boolean;
+  is_deleted: boolean;
+}
+
+export interface StagedAdverseEventReview {
+  study_id: string;
+  site_id?: string | null;
+  subject_id: string;
+  visit_id?: string | null;
+  observation_id?: string | null;
+  form_submission_id?: string | null;
+  query_id?: string | null;
+  test_code: string;
+  test_name: string;
+  lab_value: number;
+  unit: string;
+  ctcae_grade: number;
+  grading_scale: string;
+  toxicity_term: string;
+  clinical_description: string;
+  is_hys_law_warning: boolean;
+  is_delta_check_alert: boolean;
+  delta_percentage?: number | null;
+  review_status: string;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  investigator_notes?: string | null;
+  electronic_signature_manifest?: Record<string, any> | null;
+  created_at?: string | null;
+  created_by?: string | null;
+  reason_for_change?: string | null;
+  version_index: number;
+  id: string;
+  version: number;
   is_deleted: boolean;
 }
 
