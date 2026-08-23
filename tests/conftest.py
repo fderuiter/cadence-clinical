@@ -37,6 +37,7 @@ SERVICE_DB_PREFIXES = [
     "cadence_safety",
     "cadence_org",
     "cadence_eisf",
+    "cadence_imaging",
 ]
 
 
