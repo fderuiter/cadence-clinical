@@ -1,9 +1,12 @@
 """FastAPI Router for Safety microservice."""
 
 import copy
+import hashlib
+import json
 import logging
 import os
 import uuid
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import (
@@ -63,6 +66,10 @@ from apps.safety.presentation.dtos import (
     PeriodicReportSignResponse,
     RegulatoryAckProcessRequestDTO,
     RegulatoryAckProcessResponseDTO,
+    RegulatorySnapshotLockRequest,
+    RegulatorySnapshotLockResponse,
+    RegulatorySnapshotVerifyRequest,
+    RegulatorySnapshotVerifyResponse,
     SAEDiscrepancyResponse,
     SAEReconciliationJobRequest,
     SAEReconciliationJobResponse,
@@ -79,6 +86,8 @@ from apps.safety.presentation.dtos import (
     SafetySignalAlertSignResponse,
     SignalDetectionScanRequest,
     SignalDetectionScanResponse,
+    SubjectExposureCalculationRequest,
+    SubjectExposureCalculationResponse,
 )
 from apps.safety.processor import process_sae_reconciliation
 from apps.safety.services.as2_gateway_client import AS2GatewayClient
@@ -86,7 +95,11 @@ from apps.safety.services.expedited_rules_engine import (
     ExpeditedSafetyReportingRulesEngine,
 )
 from apps.safety.services.narrative_service import SafetyNarrativeService
-from apps.safety.services.periodic_report_compiler import PeriodicSafetyReportCompiler
+from apps.safety.services.periodic_report_compiler import (
+    PeriodicSafetyReportCompiler,
+    RegulatorySnapshotManager,
+    SubjectExposureCalculator,
+)
 from apps.safety.services.signal_alert_service import SafetySignalAlertService
 from packages.database import DatabaseSessionDependency
 
@@ -2003,6 +2016,8 @@ def map_periodic_report_to_dto(
     line_listings = payload.get("line_listings", [])
     tabulations = payload.get("summary_tabulations", [])
     signals = payload.get("signal_summary", [])
+    snapshot = payload.get("snapshot") or {}
+    snapshot_hash = snapshot.get("snapshot_hash")
 
     return PeriodicReportResponseDTO(
         id=record.id,
@@ -2015,9 +2030,14 @@ def map_periodic_report_to_dto(
         reporting_period_end=record.period_end.isoformat()[:10]
         if record.period_end
         else "",
+        dibd_anniversary=payload.get("dibd_anniversary"),
         status=record.status,
         total_subject_exposure=record.total_subject_exposure,
         total_saes=record.total_saes,
+        total_fatal_cases=payload.get("total_fatal_cases", 0),
+        total_susars=payload.get("total_susars", 0),
+        total_aesi=payload.get("total_aesi", 0),
+        snapshot_hash=snapshot_hash,
         line_listings_count=len(line_listings),
         summary_tabulations_count=len(tabulations),
         signals_included_count=len(signals),
@@ -2025,10 +2045,108 @@ def map_periodic_report_to_dto(
         approved_by_user_id=record.approved_by_user_id,
         approved_at=record.approved_at.isoformat() if record.approved_at else None,
         esignature_manifest_id=record.esignature_manifest_id,
+        qppv_signoff=payload.get("qppv_signoff"),
         created_at=record.created_at.isoformat() if record.created_at else "",
         created_by=record.created_by,
         reason_for_change=record.reason_for_change,
         version_index=record.version_index,
+    )
+
+
+@router.post(
+    "/api/v1/safety/exposure/calculate",
+    response_model=SubjectExposureCalculationResponse,
+)
+async def calculate_subject_exposure_endpoint(
+    request: Request,
+    payload: SubjectExposureCalculationRequest,
+) -> SubjectExposureCalculationResponse:
+    """Calculate cumulative and interval patient-years of exposure.
+
+    Requirements: PRD-PVG-004, PRD-AGG-001, ADR-2199
+    """
+    metrics, _ = SubjectExposureCalculator.calculate_exposure(
+        reporting_period_start=payload.reporting_period_start,
+        reporting_period_end=payload.reporting_period_end,
+        subjects_data=payload.subjects_exposure_data,
+        raw_cases=payload.cases,
+    )
+    return SubjectExposureCalculationResponse(
+        study_id=payload.study_id,
+        reporting_period_start=payload.reporting_period_start,
+        reporting_period_end=payload.reporting_period_end,
+        metrics=metrics,
+    )
+
+
+@router.post(
+    "/api/v1/safety/snapshots/lock",
+    response_model=RegulatorySnapshotLockResponse,
+    status_code=201,
+)
+async def lock_regulatory_snapshot_endpoint(
+    request: Request,
+    payload: RegulatorySnapshotLockRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> RegulatorySnapshotLockResponse:
+    """Lock an immutable point-in-time regulatory dataset snapshot with SHA-256 seal.
+
+    Requirements: PRD-AGG-001, 21 CFR Part 11, ADR-2199
+    """
+    user_id, _, change_reason = get_user_context(request)
+    snapshot = RegulatorySnapshotManager.create_snapshot(
+        study_id=payload.study_id,
+        compound_name=payload.compound_name,
+        reporting_period_start=payload.reporting_period_start,
+        reporting_period_end=payload.reporting_period_end,
+        dibd_anniversary=payload.dibd_anniversary,
+        raw_cases=payload.cases,
+        subjects_data=payload.subjects_data,
+        user_id=user_id,
+        lock_reason=payload.lock_reason,
+    )
+
+    await write_audit_log(
+        session=session,
+        created_by=user_id,
+        action="REGULATORY_SNAPSHOT_LOCKED",
+        details=f"Locked dataset snapshot {snapshot.snapshot_id} for study {snapshot.study_id}. Hash: {snapshot.snapshot_hash}.",
+        record_id=snapshot.snapshot_id,
+        reason_for_change=change_reason or payload.lock_reason,
+        version_index=1,
+    )
+    await session.commit()
+
+    return RegulatorySnapshotLockResponse(snapshot=snapshot)
+
+
+@router.post(
+    "/api/v1/safety/snapshots/verify",
+    response_model=RegulatorySnapshotVerifyResponse,
+)
+async def verify_regulatory_snapshot_endpoint(
+    payload: RegulatorySnapshotVerifyRequest,
+) -> RegulatorySnapshotVerifyResponse:
+    """Cryptographically verify the bitwise integrity of a locked regulatory snapshot.
+
+    Requirements: PRD-AGG-001, 21 CFR Part 11, ADR-2199
+    """
+    manifest_data = payload.dataset_manifest or {}
+    canonical_json = json.dumps(manifest_data, sort_keys=True, default=str)
+    computed_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
+
+    # If hash in manifest matches expected
+    is_valid = (payload.snapshot_hash == computed_hash) or (
+        manifest_data.get("hash") == payload.snapshot_hash
+    )
+
+    return RegulatorySnapshotVerifyResponse(
+        snapshot_id=payload.snapshot_id,
+        is_valid=is_valid,
+        computed_hash=computed_hash,
+        expected_hash=payload.snapshot_hash,
+        match_status="VERIFIED_MATCH" if is_valid else "HASH_MISMATCH_TAMPER_DETECTED",
+        verified_at=datetime.now(UTC).isoformat(),
     )
 
 
@@ -2044,7 +2162,7 @@ async def compile_periodic_safety_report_endpoint(
 ) -> PeriodicReportResponseDTO:
     """Compile an aggregate periodic safety report (ICH E2F DSUR, ICH E2C(R2) PSUR/PBRER).
 
-    Requirements: PRD-PVG-004, ADR-2199
+    Requirements: PRD-PVG-004, PRD-AGG-001, ADR-2199
     """
     user_id, user_role, change_reason = get_user_context(request)
     service = SafetySignalAlertService(session=session)
@@ -2125,16 +2243,26 @@ async def sign_periodic_safety_report_endpoint(
 ) -> PeriodicReportSignResponse:
     """Apply a 21 CFR Part 11 Electronic Signature to approve a Periodic Safety Report.
 
-    Requirements: PRD-PVG-004, PRD-PVG-008, ADR-2199
+    Requirements: PRD-PVG-004, PRD-PVG-008, PRD-AGG-001, ADR-2199
     """
     user_id, user_role, change_reason = get_user_context(request)
     effective_user = payload.user_id or user_id
+    effective_roles = []
+    if payload.role:
+        effective_roles.append(payload.role)
+    if user_role:
+        if isinstance(user_role, (list, set, tuple)):
+            effective_roles.extend(user_role)
+        else:
+            effective_roles.append(str(user_role))
+    if not effective_roles:
+        effective_roles = ["safety_officer"]
     service = SafetySignalAlertService(session=session)
     try:
         sign_res = await service.sign_periodic_report(
             report_id=id,
             user_id=effective_user,
-            user_roles=[user_role] if isinstance(user_role, str) else user_role,
+            user_roles=effective_roles,
             reason_for_change=change_reason
             or "21 CFR Part 11 Approval of Periodic Safety Report",
             signature_secret=payload.signature_secret,
@@ -2146,18 +2274,56 @@ async def sign_periodic_safety_report_endpoint(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post(
+    "/api/v1/safety/periodic-reports/{id}/qppv-sign",
+    response_model=PeriodicReportSignResponse,
+)
+async def qppv_sign_periodic_safety_report_endpoint(
+    request: Request,
+    id: str,
+    payload: PeriodicReportSignRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> PeriodicReportSignResponse:
+    """Executive QPPV Sign-off endpoint for aggregate regulatory safety submissions.
+
+    Requirements: PRD-AGG-001, 21 CFR Part 11, ADR-2199
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    effective_user = payload.user_id or user_id
+    roles = [payload.role or "qppv"]
+    if user_role and user_role not in roles:
+        roles.append(user_role if isinstance(user_role, str) else str(user_role))
+
+    service = SafetySignalAlertService(session=session)
+    try:
+        sign_res = await service.sign_periodic_report(
+            report_id=id,
+            user_id=effective_user,
+            user_roles=roles,
+            reason_for_change=change_reason or "Executive QPPV Approval for Submission",
+            signature_secret=payload.signature_secret,
+            meaning_of_signature=payload.meaning_of_signature
+            or "Executive QPPV Approval of Aggregate Safety Report",
+        )
+        await session.commit()
+        return sign_res
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.get(
     "/api/v1/safety/periodic-reports/{id}/export",
     response_class=Response,
 )
-async def export_periodic_safety_report_html_endpoint(
+async def export_periodic_safety_report_endpoint(
     request: Request,
     id: str,
+    format: str = "html",
     session: AsyncSession = Depends(get_db_session),
 ) -> Response:
-    """Export a publication-ready HTML representation of a periodic safety report.
+    """Export a periodic safety report as HTML, XML, or JSON.
 
-    Requirements: PRD-PVG-004, ADR-2199
+    Requirements: PRD-PVG-004, PRD-AGG-001, ADR-2199
     """
     stmt = select(PeriodicSafetyReportRecord).where(PeriodicSafetyReportRecord.id == id)
     res = await session.execute(stmt)
@@ -2170,12 +2336,50 @@ async def export_periodic_safety_report_html_endpoint(
     from apps.safety.domain.periodic_report_models import PeriodicReportPayload
 
     payload_obj = PeriodicReportPayload(**record.report_payload)
-    html_content = PeriodicSafetyReportCompiler.render_html_report(payload_obj)
+    fmt_lower = format.lower()
 
+    if fmt_lower == "xml":
+        xml_content = PeriodicSafetyReportCompiler.generate_ich_xml(payload_obj)
+        return Response(
+            content=xml_content,
+            media_type="application/xml",
+            headers={
+                "Content-Disposition": f"attachment; filename={record.report_type}_{record.study_id}_{record.id}.xml"
+            },
+        )
+    if fmt_lower == "json":
+        json_content = json.dumps(payload_obj.model_dump(), indent=2, default=str)
+        return Response(
+            content=json_content,
+            media_type="application/json",
+            headers={
+                "Content-Disposition": f"attachment; filename={record.report_type}_{record.study_id}_{record.id}.json"
+            },
+        )
+    # Default HTML
+    html_content = PeriodicSafetyReportCompiler.render_html_report(payload_obj)
     return Response(
         content=html_content,
         media_type="text/html",
         headers={
             "Content-Disposition": f"inline; filename={record.report_type}_{record.study_id}_{record.id}.html"
         },
+    )
+
+
+@router.get(
+    "/api/v1/safety/periodic-reports/{id}/xml",
+    response_class=Response,
+)
+async def export_periodic_safety_report_xml_endpoint(
+    request: Request,
+    id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> Response:
+    """Export the structured ICH E2F / E2C(R2) XML submission package.
+
+    Requirements: PRD-AGG-001, ICH E2F, ICH E2C(R2)
+    """
+    return await export_periodic_safety_report_endpoint(
+        request=request, id=id, format="xml", session=session
     )

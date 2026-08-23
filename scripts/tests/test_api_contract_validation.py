@@ -988,6 +988,7 @@ def is_whitelisted(method: str, path: str) -> bool:
         "/api/v1/studies/{study_id}/versions/{version_id}/procedures/reorder",
         "/api/v1/studies/{study_id}/versions/{version_id}/assignments",
         "/api/v1/execution/signatures",
+        "/api/v1/execution/cec",
     ]
     for w in wildcards:
         if p_norm.startswith(w):
@@ -1013,6 +1014,7 @@ def is_whitelisted(method: str, path: str) -> bool:
         "/execution/locks",
         "/execution/labs",
         "/execution/coding",
+        "/execution/cec",
         "/execution/biostat",
         "/execution/exports",
         "/synopsis/export",

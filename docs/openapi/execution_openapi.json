@@ -965,6 +965,634 @@
         }
       }
     },
+    "/api/v1/execution/cec/dossiers": {
+      "post": {
+        "tags": [
+          "CEC Adjudication"
+        ],
+        "summary": "Create And Package Dossier",
+        "description": "Compiles and packages a de-identified clinical event dossier for 2+1 blinded adjudication.\n\n@req:PRD-CEC-001, @req:PRD-SYS-124, @req:ADR-2199",
+        "operationId": "create_and_package_dossier_api_v1_execution_cec_dossiers_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DossierPackageCreateDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Create And Package Dossier Api V1 Execution Cec Dossiers Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CEC Adjudication"
+        ],
+        "summary": "List Dossiers",
+        "description": "Lists clinical event dossiers with filtering options.\n\n@req:PRD-CEC-002",
+        "operationId": "list_dossiers_api_v1_execution_cec_dossiers_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by study ID",
+              "title": "Study Id"
+            },
+            "description": "Filter by study ID"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by workflow status",
+              "title": "Status"
+            },
+            "description": "Filter by workflow status"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by candidate event category",
+              "title": "Category"
+            },
+            "description": "Filter by candidate event category"
+          },
+          {
+            "name": "reader_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by assigned reader",
+              "title": "Reader Id"
+            },
+            "description": "Filter by assigned reader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CecDossierSummaryItem"
+                  },
+                  "title": "Response List Dossiers Api V1 Execution Cec Dossiers Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/cec/dossiers/{dossier_id}": {
+      "get": {
+        "tags": [
+          "CEC Adjudication"
+        ],
+        "summary": "Get Dossier Blinded View",
+        "description": "Retrieves a role-blinded projection of a dossier, enforcing reader isolation.\n\n@req:PRD-CEC-001, @req:PRD-CEC-002, @req:ADR-2199",
+        "operationId": "get_dossier_blinded_view_api_v1_execution_cec_dossiers__dossier_id__get",
+        "parameters": [
+          {
+            "name": "dossier_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dossier Id"
+            }
+          },
+          {
+            "name": "x-reader-role",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Reader Role override for testing/simulation",
+              "title": "X-Reader-Role"
+            },
+            "description": "Reader Role override for testing/simulation"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DossierBlindedView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/cec/dossiers/{dossier_id}/full": {
+      "get": {
+        "tags": [
+          "CEC Adjudication"
+        ],
+        "summary": "Get Dossier Full",
+        "description": "Retrieves unblinded full dossier details for Committee Chair, Data Manager, or Auditor.\n\n@req:PRD-CEC-002, @req:PRD-SYS-001",
+        "operationId": "get_dossier_full_api_v1_execution_cec_dossiers__dossier_id__full_get",
+        "parameters": [
+          {
+            "name": "dossier_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dossier Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DossierDetailResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/cec/dossiers/{dossier_id}/assessments": {
+      "post": {
+        "tags": [
+          "CEC Adjudication"
+        ],
+        "summary": "Submit Reader Assessment",
+        "description": "Submits an expert reader assessment for Reader 1 or Reader 2 and auto-evaluates consensus.\n\n@req:PRD-CEC-002, @req:ADR-2199",
+        "operationId": "submit_reader_assessment_api_v1_execution_cec_dossiers__dossier_id__assessments_post",
+        "parameters": [
+          {
+            "name": "dossier_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dossier Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReaderAssessmentSubmitDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Submit Reader Assessment Api V1 Execution Cec Dossiers  Dossier Id  Assessments Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/cec/dossiers/{dossier_id}/chair-adjudicate": {
+      "post": {
+        "tags": [
+          "CEC Adjudication"
+        ],
+        "summary": "Adjudicate Chair Tie Breaker",
+        "description": "Executes Adjudication Committee Chair tie-breaker ruling with 21 CFR Part 11 electronic signature.\n\n@req:PRD-CEC-002, @req:PRD-SYS-124, @req:ADR-2199",
+        "operationId": "adjudicate_chair_tie_breaker_api_v1_execution_cec_dossiers__dossier_id__chair_adjudicate_post",
+        "parameters": [
+          {
+            "name": "dossier_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dossier Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChairAdjudicateDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Adjudicate Chair Tie Breaker Api V1 Execution Cec Dossiers  Dossier Id  Chair Adjudicate Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/cec/dossiers/{dossier_id}/writeback": {
+      "post": {
+        "tags": [
+          "CEC Adjudication"
+        ],
+        "summary": "Trigger Edc Writeback",
+        "description": "Manually or automatically triggers bi-directional EDC casebook writeback for an adjudicated event.\n\n@req:PRD-CEC-003",
+        "operationId": "trigger_edc_writeback_api_v1_execution_cec_dossiers__dossier_id__writeback_post",
+        "parameters": [
+          {
+            "name": "dossier_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dossier Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EdcCasebookWritebackResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/cec/charters/{study_id}": {
+      "get": {
+        "tags": [
+          "CEC Adjudication"
+        ],
+        "summary": "Get Study Charter",
+        "description": "Retrieves active CEC charter governance configuration.\n\n@req:PRD-SYS-124",
+        "operationId": "get_study_charter_api_v1_execution_cec_charters__study_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CecCharterConfig"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/cec/charters": {
+      "post": {
+        "tags": [
+          "CEC Adjudication"
+        ],
+        "summary": "Create Or Update Charter",
+        "description": "Configures or updates committee charter voting rules, quorum, and diagnostic criteria forms.\n\n@req:PRD-SYS-124",
+        "operationId": "create_or_update_charter_api_v1_execution_cec_charters_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CharterCreateDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CecCharterConfig"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/cec/meetings": {
+      "post": {
+        "tags": [
+          "CEC Adjudication"
+        ],
+        "summary": "Record Meeting Quorum",
+        "description": "Records committee meeting attendance, evaluates quorum compliance, and captures minutes.\n\n@req:PRD-SYS-124",
+        "operationId": "record_meeting_quorum_api_v1_execution_cec_meetings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingQuorumRecordDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Record Meeting Quorum Api V1 Execution Cec Meetings Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/cec/meetings/{study_id}": {
+      "get": {
+        "tags": [
+          "CEC Adjudication"
+        ],
+        "summary": "List Study Meetings",
+        "description": "Lists all recorded committee meetings and quorum statuses for a study.\n\n@req:PRD-SYS-124",
+        "operationId": "list_study_meetings_api_v1_execution_cec_meetings__study_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response List Study Meetings Api V1 Execution Cec Meetings  Study Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/cec/sdtm-ce/compile": {
+      "post": {
+        "tags": [
+          "CEC Adjudication"
+        ],
+        "summary": "Compile Sdtm Ce Dataset",
+        "description": "Compiles all finalized adjudicated events for a study directly into CDISC SDTM CE dataset.\n\n@req:PRD-CEC-003, @req:PRD-SYS-001",
+        "operationId": "compile_sdtm_ce_dataset_api_v1_execution_cec_sdtm_ce_compile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SdtmCeCompileRequestDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SdtmCeCompilationResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/safety/dispatch": {
       "post": {
         "tags": [
@@ -10098,6 +10726,25 @@
         "title": "AdjudicationActionEnum",
         "description": "Permitted adjudication actions."
       },
+      "AdjudicationClassification": {
+        "type": "string",
+        "enum": [
+          "CONFIRMED_MI",
+          "CONFIRMED_ISCHEMIC_STROKE",
+          "CONFIRMED_HEMORRHAGIC_STROKE",
+          "CONFIRMED_CV_DEATH",
+          "CONFIRMED_NON_CV_DEATH",
+          "CONFIRMED_HEART_FAILURE_HOSPITALIZATION",
+          "CONFIRMED_STENT_THROMBOSIS",
+          "CONFIRMED_VTE",
+          "CONFIRMED_DISEASE_PROGRESSION",
+          "NOT_AN_ENDPOINT",
+          "INDETERMINATE",
+          "INSUFFICIENT_DATA"
+        ],
+        "title": "AdjudicationClassification",
+        "description": "Standardized adjudicated event classification determinations."
+      },
       "AdjudicationRequest": {
         "properties": {
           "action": {
@@ -10170,6 +10817,22 @@
         ],
         "title": "AdjudicationResponse",
         "description": "Outcome of Data Manager candidate query adjudication."
+      },
+      "AdjudicationWorkflowStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING_PRIMARY_REVIEWS",
+          "READER_1_COMPLETED",
+          "READER_2_COMPLETED",
+          "CONSENSUS_REACHED",
+          "DISCORDANCE_DETECTED",
+          "ESCALATED_TO_CHAIR",
+          "FINALIZED_CONCORDANT",
+          "FINALIZED_BY_CHAIR",
+          "FINALIZED_BY_COMMITTEE"
+        ],
+        "title": "AdjudicationWorkflowStatus",
+        "description": "Lifecycle state machine for 2+1 blinded reader review."
       },
       "AnomalyCandidateItem": {
         "properties": {
@@ -10849,6 +11512,18 @@
         "title": "BatchSignatureResponse",
         "description": "Response payload following successful batch eSignature execution.\n\nRequirements: PRD-SYS-001"
       },
+      "BindingDeterminationSource": {
+        "type": "string",
+        "enum": [
+          "CONCORDANT_CONSENSUS",
+          "CHAIR_UPHELD_READER_1",
+          "CHAIR_UPHELD_READER_2",
+          "CHAIR_CUSTOM_DETERMINATION",
+          "COMMITTEE_QUORUM_VOTE"
+        ],
+        "title": "BindingDeterminationSource",
+        "description": "Source of the binding adjudication determination."
+      },
       "Body_import_dictionary_api_v1_dictionaries_import_post": {
         "properties": {
           "dictionary_type": {
@@ -11385,6 +12060,45 @@
         ],
         "title": "BulkSubjectReconsentRequest",
         "description": "Request payload to register batch subject re-consent for an amended version."
+      },
+      "BundledEcrfForm": {
+        "properties": {
+          "form_id": {
+            "type": "string",
+            "title": "Form Id",
+            "description": "Originating eCRF form submission ID"
+          },
+          "form_name": {
+            "type": "string",
+            "title": "Form Name",
+            "description": "Form name (e.g. Adverse Events, Concomitant Medications, Vitals)"
+          },
+          "visit_name": {
+            "type": "string",
+            "title": "Visit Name",
+            "description": "Study encounter / visit label"
+          },
+          "submission_timestamp": {
+            "type": "string",
+            "title": "Submission Timestamp",
+            "description": "Shifted timestamp of form entry"
+          },
+          "form_data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Form Data",
+            "description": "Scrubbed eCRF field values"
+          }
+        },
+        "type": "object",
+        "required": [
+          "form_id",
+          "form_name",
+          "visit_name",
+          "submission_timestamp"
+        ],
+        "title": "BundledEcrfForm",
+        "description": "Pertinent eCRF form submission included in the event dossier."
       },
       "CGTApheresisCreateRequest": {
         "properties": {
@@ -13003,6 +13717,185 @@
         "title": "CGTVialReturnReconciliationResponse",
         "description": "Response schema for vial return reconciliation."
       },
+      "CecCharterConfig": {
+        "properties": {
+          "charter_id": {
+            "type": "string",
+            "title": "Charter Id",
+            "description": "Unique charter ID"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "committee_name": {
+            "type": "string",
+            "title": "Committee Name",
+            "description": "Name of Adjudication Committee"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "Charter version string",
+            "default": "1.0"
+          },
+          "voting_rule": {
+            "$ref": "#/components/schemas/VotingRule",
+            "description": "Committee voting rule",
+            "default": "CHAIR_TIE_BREAKER"
+          },
+          "minimum_quorum_percentage": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Minimum Quorum Percentage",
+            "description": "Minimum % quorum required",
+            "default": 66.67
+          },
+          "minimum_members_count": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Minimum Members Count",
+            "description": "Minimum member count for quorum",
+            "default": 3
+          },
+          "eligible_members": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Eligible Members",
+            "description": "Eligible members: [{member_id, member_name, role, specialty}]"
+          },
+          "endpoint_definitions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Endpoint Definitions",
+            "description": "List of endpoints governed by this charter"
+          },
+          "diagnostic_criteria_templates": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Diagnostic Criteria Templates",
+            "description": "Standard criteria checklists per endpoint"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "default": "system"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "charter_id",
+          "study_id",
+          "committee_name"
+        ],
+        "title": "CecCharterConfig",
+        "description": "Charter governance parameters defining voting rules, quorum, and criteria templates."
+      },
+      "CecDossierSummaryItem": {
+        "properties": {
+          "dossier_id": {
+            "type": "string",
+            "title": "Dossier Id"
+          },
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "masked_subject_id": {
+            "type": "string",
+            "title": "Masked Subject Id"
+          },
+          "candidate_event_type": {
+            "$ref": "#/components/schemas/EndpointCategory"
+          },
+          "reported_term": {
+            "type": "string",
+            "title": "Reported Term"
+          },
+          "reported_onset_date": {
+            "type": "string",
+            "title": "Reported Onset Date"
+          },
+          "workflow_status": {
+            "$ref": "#/components/schemas/AdjudicationWorkflowStatus"
+          },
+          "is_discordant": {
+            "type": "boolean",
+            "title": "Is Discordant"
+          },
+          "final_consensus_classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdjudicationClassification"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reader_1_status": {
+            "type": "string",
+            "title": "Reader 1 Status"
+          },
+          "reader_2_status": {
+            "type": "string",
+            "title": "Reader 2 Status"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dossier_id",
+          "event_id",
+          "study_id",
+          "masked_subject_id",
+          "candidate_event_type",
+          "reported_term",
+          "reported_onset_date",
+          "workflow_status",
+          "is_discordant",
+          "reader_1_status",
+          "reader_2_status",
+          "created_at"
+        ],
+        "title": "CecDossierSummaryItem",
+        "description": "Summary item for CEC console list views."
+      },
       "CertificationStatusEnum": {
         "type": "string",
         "enum": [
@@ -13013,6 +13906,243 @@
         ],
         "title": "CertificationStatusEnum",
         "description": "Accreditation and certification lifecycle status of a local laboratory."
+      },
+      "ChairAdjudicateDTO": {
+        "properties": {
+          "final_classification": {
+            "$ref": "#/components/schemas/AdjudicationClassification",
+            "description": "Definitive classification"
+          },
+          "final_subtype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Subtype",
+            "description": "Definitive subtype"
+          },
+          "final_adjudicated_onset_date": {
+            "type": "string",
+            "title": "Final Adjudicated Onset Date",
+            "description": "Definitive onset date (ISO 8601)"
+          },
+          "binding_reader": {
+            "$ref": "#/components/schemas/BindingDeterminationSource",
+            "description": "Binding determination source",
+            "default": "CHAIR_CUSTOM_DETERMINATION"
+          },
+          "criteria_confirmed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Criteria Confirmed",
+            "description": "Criteria confirmed"
+          },
+          "adjudication_rationale": {
+            "type": "string",
+            "title": "Adjudication Rationale",
+            "description": "Formal adjudication rationale"
+          },
+          "signature_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Token",
+            "description": "Step-up HMAC signature token"
+          },
+          "signer_name": {
+            "type": "string",
+            "title": "Signer Name",
+            "description": "Printed signer name",
+            "default": "Dr. Adjudication Chair"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password",
+            "description": "Re-authentication password",
+            "default": "SignOffPassword123!"
+          },
+          "signature_meaning": {
+            "type": "string",
+            "title": "Signature Meaning",
+            "description": "21 CFR Part 11 legal signature manifestation",
+            "default": "I confirm this clinical endpoint adjudication determination is final, complete, and accurate per charter guidelines"
+          }
+        },
+        "type": "object",
+        "required": [
+          "final_classification",
+          "final_adjudicated_onset_date",
+          "adjudication_rationale"
+        ],
+        "title": "ChairAdjudicateDTO",
+        "description": "Payload for Adjudication Committee Chair tie-breaker ruling with e-signature."
+      },
+      "ChairAdjudicationDetermination": {
+        "properties": {
+          "determination_id": {
+            "type": "string",
+            "title": "Determination Id",
+            "description": "Unique determination ID"
+          },
+          "dossier_id": {
+            "type": "string",
+            "title": "Dossier Id",
+            "description": "Target dossier ID"
+          },
+          "chair_id": {
+            "type": "string",
+            "title": "Chair Id",
+            "description": "Chair user ID"
+          },
+          "chair_name": {
+            "type": "string",
+            "title": "Chair Name",
+            "description": "Chair full name"
+          },
+          "final_classification": {
+            "$ref": "#/components/schemas/AdjudicationClassification",
+            "description": "Definitive classification"
+          },
+          "final_subtype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Subtype",
+            "description": "Definitive event subtype"
+          },
+          "final_adjudicated_onset_date": {
+            "type": "string",
+            "title": "Final Adjudicated Onset Date",
+            "description": "Definitive event onset date (ISO 8601)"
+          },
+          "binding_reader": {
+            "$ref": "#/components/schemas/BindingDeterminationSource",
+            "description": "Source of binding decision",
+            "default": "CHAIR_CUSTOM_DETERMINATION"
+          },
+          "criteria_confirmed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Criteria Confirmed",
+            "description": "Diagnostic criteria confirmed"
+          },
+          "adjudication_rationale": {
+            "type": "string",
+            "title": "Adjudication Rationale",
+            "description": "Formal chair tie-breaker rationale"
+          },
+          "electronic_signature": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Electronic Signature",
+            "description": "21 CFR Part 11 electronic signature payload"
+          },
+          "finalized_at": {
+            "type": "string",
+            "title": "Finalized At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "determination_id",
+          "dossier_id",
+          "chair_id",
+          "chair_name",
+          "final_classification",
+          "final_adjudicated_onset_date",
+          "adjudication_rationale",
+          "electronic_signature"
+        ],
+        "title": "ChairAdjudicationDetermination",
+        "description": "Final tie-breaker determination issued by the Adjudication Committee Chair."
+      },
+      "CharterCreateDTO": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target study ID"
+          },
+          "committee_name": {
+            "type": "string",
+            "title": "Committee Name",
+            "description": "Committee name"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "default": "1.0"
+          },
+          "voting_rule": {
+            "$ref": "#/components/schemas/VotingRule",
+            "default": "CHAIR_TIE_BREAKER"
+          },
+          "minimum_quorum_percentage": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Minimum Quorum Percentage",
+            "default": 66.67
+          },
+          "minimum_members_count": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Minimum Members Count",
+            "default": 3
+          },
+          "eligible_members": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Eligible Members"
+          },
+          "endpoint_definitions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Endpoint Definitions"
+          },
+          "diagnostic_criteria_templates": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Diagnostic Criteria Templates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "committee_name"
+        ],
+        "title": "CharterCreateDTO",
+        "description": "Payload to configure or update a committee charter."
       },
       "ClinicalQueryResponse": {
         "properties": {
@@ -15306,6 +16436,71 @@
         "title": "Demographics",
         "description": "Pydantic schema representing demographic details."
       },
+      "DiagnosticAttachment": {
+        "properties": {
+          "attachment_id": {
+            "type": "string",
+            "title": "Attachment Id",
+            "description": "Unique attachment ID"
+          },
+          "document_type": {
+            "type": "string",
+            "title": "Document Type",
+            "description": "Type of diagnostic doc (e.g. Echocardiogram, Angiography, CT/MRI Brain)"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Descriptive title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "description": "Clinical narrative summary"
+          },
+          "key_findings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Key Findings",
+            "description": "Key bullet points / measurements"
+          },
+          "file_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Url",
+            "description": "Secure presigned blob storage URI"
+          },
+          "content_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Hash",
+            "description": "SHA-256 integrity hash of document blob"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attachment_id",
+          "document_type",
+          "title",
+          "summary"
+        ],
+        "title": "DiagnosticAttachment",
+        "description": "De-identified medical imaging or clinical diagnostic attachment."
+      },
       "DictTypeEnum": {
         "type": "string",
         "enum": [
@@ -15592,6 +16787,713 @@
         "title": "DoseLevelEvaluationSummary",
         "description": "Summary of subjects and DLTs evaluated at a specific dose level."
       },
+      "DossierBlindedView": {
+        "properties": {
+          "dossier_id": {
+            "type": "string",
+            "title": "Dossier Id"
+          },
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "masked_site_id": {
+            "type": "string",
+            "title": "Masked Site Id"
+          },
+          "masked_subject_id": {
+            "type": "string",
+            "title": "Masked Subject Id"
+          },
+          "candidate_event_type": {
+            "$ref": "#/components/schemas/EndpointCategory"
+          },
+          "reported_term": {
+            "type": "string",
+            "title": "Reported Term"
+          },
+          "verbatim_description": {
+            "type": "string",
+            "title": "Verbatim Description"
+          },
+          "reported_onset_date": {
+            "type": "string",
+            "title": "Reported Onset Date"
+          },
+          "medical_narrative": {
+            "type": "string",
+            "title": "Medical Narrative"
+          },
+          "is_deidentified": {
+            "type": "boolean",
+            "title": "Is Deidentified"
+          },
+          "bundled_forms": {
+            "items": {
+              "$ref": "#/components/schemas/BundledEcrfForm"
+            },
+            "type": "array",
+            "title": "Bundled Forms"
+          },
+          "lab_panels": {
+            "items": {
+              "$ref": "#/components/schemas/LabPanelItem"
+            },
+            "type": "array",
+            "title": "Lab Panels"
+          },
+          "ecg_records": {
+            "items": {
+              "$ref": "#/components/schemas/ECGRecord"
+            },
+            "type": "array",
+            "title": "Ecg Records"
+          },
+          "diagnostic_attachments": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticAttachment"
+            },
+            "type": "array",
+            "title": "Diagnostic Attachments"
+          },
+          "reader_role": {
+            "$ref": "#/components/schemas/ReaderRole"
+          },
+          "workflow_status": {
+            "$ref": "#/components/schemas/AdjudicationWorkflowStatus"
+          },
+          "my_assessment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReaderAssessment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "peer_assessment_completed": {
+            "type": "boolean",
+            "title": "Peer Assessment Completed",
+            "default": false
+          },
+          "peer_assessment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReaderAssessment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "chair_determination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChairAdjudicationDetermination"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_discordant": {
+            "type": "boolean",
+            "title": "Is Discordant",
+            "default": false
+          },
+          "discordance_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Discordance Reasons"
+          },
+          "final_consensus_classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdjudicationClassification"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "final_adjudicated_onset_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Adjudicated Onset Date"
+          },
+          "dossier_digest": {
+            "type": "string",
+            "title": "Dossier Digest",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "dossier_id",
+          "event_id",
+          "study_id",
+          "masked_site_id",
+          "masked_subject_id",
+          "candidate_event_type",
+          "reported_term",
+          "verbatim_description",
+          "reported_onset_date",
+          "medical_narrative",
+          "is_deidentified",
+          "bundled_forms",
+          "lab_panels",
+          "ecg_records",
+          "diagnostic_attachments",
+          "reader_role",
+          "workflow_status"
+        ],
+        "title": "DossierBlindedView",
+        "description": "Blinded view of a patient event dossier presented to a specific reader role."
+      },
+      "DossierDetailResponseDTO": {
+        "properties": {
+          "dossier_id": {
+            "type": "string",
+            "title": "Dossier Id"
+          },
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "masked_site_id": {
+            "type": "string",
+            "title": "Masked Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "masked_subject_id": {
+            "type": "string",
+            "title": "Masked Subject Id"
+          },
+          "candidate_event_type": {
+            "type": "string",
+            "title": "Candidate Event Type"
+          },
+          "reported_term": {
+            "type": "string",
+            "title": "Reported Term"
+          },
+          "verbatim_description": {
+            "type": "string",
+            "title": "Verbatim Description"
+          },
+          "reported_onset_date": {
+            "type": "string",
+            "title": "Reported Onset Date"
+          },
+          "medical_narrative": {
+            "type": "string",
+            "title": "Medical Narrative"
+          },
+          "is_deidentified": {
+            "type": "boolean",
+            "title": "Is Deidentified"
+          },
+          "bundled_forms": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Bundled Forms"
+          },
+          "lab_panels": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Lab Panels"
+          },
+          "ecg_records": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Ecg Records"
+          },
+          "diagnostic_attachments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Diagnostic Attachments"
+          },
+          "redaction_summary": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Redaction Summary"
+          },
+          "reader_1_id": {
+            "type": "string",
+            "title": "Reader 1 Id"
+          },
+          "reader_1_name": {
+            "type": "string",
+            "title": "Reader 1 Name"
+          },
+          "reader_1_status": {
+            "type": "string",
+            "title": "Reader 1 Status"
+          },
+          "reader_1_assessment": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reader 1 Assessment"
+          },
+          "reader_2_id": {
+            "type": "string",
+            "title": "Reader 2 Id"
+          },
+          "reader_2_name": {
+            "type": "string",
+            "title": "Reader 2 Name"
+          },
+          "reader_2_status": {
+            "type": "string",
+            "title": "Reader 2 Status"
+          },
+          "reader_2_assessment": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reader 2 Assessment"
+          },
+          "chair_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chair Id"
+          },
+          "chair_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chair Name"
+          },
+          "chair_determination": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chair Determination"
+          },
+          "workflow_status": {
+            "type": "string",
+            "title": "Workflow Status"
+          },
+          "is_discordant": {
+            "type": "boolean",
+            "title": "Is Discordant"
+          },
+          "discordance_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Discordance Reasons"
+          },
+          "final_consensus_classification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Consensus Classification"
+          },
+          "final_consensus_subtype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Consensus Subtype"
+          },
+          "final_adjudicated_onset_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Adjudicated Onset Date"
+          },
+          "binding_determination_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Binding Determination Source"
+          },
+          "adjudication_rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjudication Rationale"
+          },
+          "electronic_signature": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Electronic Signature"
+          },
+          "edc_writeback_status": {
+            "type": "string",
+            "title": "Edc Writeback Status"
+          },
+          "dossier_digest": {
+            "type": "string",
+            "title": "Dossier Digest"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dossier_id",
+          "event_id",
+          "study_id",
+          "site_id",
+          "masked_site_id",
+          "subject_id",
+          "masked_subject_id",
+          "candidate_event_type",
+          "reported_term",
+          "verbatim_description",
+          "reported_onset_date",
+          "medical_narrative",
+          "is_deidentified",
+          "bundled_forms",
+          "lab_panels",
+          "ecg_records",
+          "diagnostic_attachments",
+          "redaction_summary",
+          "reader_1_id",
+          "reader_1_name",
+          "reader_1_status",
+          "reader_1_assessment",
+          "reader_2_id",
+          "reader_2_name",
+          "reader_2_status",
+          "reader_2_assessment",
+          "chair_id",
+          "chair_name",
+          "chair_determination",
+          "workflow_status",
+          "is_discordant",
+          "discordance_reasons",
+          "final_consensus_classification",
+          "final_consensus_subtype",
+          "final_adjudicated_onset_date",
+          "binding_determination_source",
+          "adjudication_rationale",
+          "electronic_signature",
+          "edc_writeback_status",
+          "dossier_digest",
+          "created_at",
+          "version_index"
+        ],
+        "title": "DossierDetailResponseDTO",
+        "description": "Complete dossier representation returned to authorized callers."
+      },
+      "DossierPackageCreateDTO": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target protocol study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Investigational site ID"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject UUID"
+          },
+          "event_id": {
+            "type": "string",
+            "title": "Event Id",
+            "description": "Adverse event or clinical observation ID"
+          },
+          "candidate_event_type": {
+            "$ref": "#/components/schemas/EndpointCategory",
+            "description": "Endpoint category (e.g. MACE, STROKE, MI)"
+          },
+          "reported_term": {
+            "type": "string",
+            "title": "Reported Term",
+            "description": "Reported event term"
+          },
+          "verbatim_description": {
+            "type": "string",
+            "title": "Verbatim Description",
+            "description": "Verbatim investigator clinical description",
+            "default": ""
+          },
+          "reported_onset_date": {
+            "type": "string",
+            "title": "Reported Onset Date",
+            "description": "Reported onset date (ISO 8601 / DTC)"
+          },
+          "medical_narrative": {
+            "type": "string",
+            "title": "Medical Narrative",
+            "description": "Detailed clinical narrative",
+            "default": ""
+          },
+          "bundled_forms": {
+            "items": {
+              "$ref": "#/components/schemas/BundledEcrfForm"
+            },
+            "type": "array",
+            "title": "Bundled Forms"
+          },
+          "lab_panels": {
+            "items": {
+              "$ref": "#/components/schemas/LabPanelItem"
+            },
+            "type": "array",
+            "title": "Lab Panels"
+          },
+          "ecg_records": {
+            "items": {
+              "$ref": "#/components/schemas/ECGRecord"
+            },
+            "type": "array",
+            "title": "Ecg Records"
+          },
+          "diagnostic_attachments": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticAttachment"
+            },
+            "type": "array",
+            "title": "Diagnostic Attachments"
+          },
+          "reader_1_id": {
+            "type": "string",
+            "title": "Reader 1 Id",
+            "default": "reader_01"
+          },
+          "reader_1_name": {
+            "type": "string",
+            "title": "Reader 1 Name",
+            "default": "Dr. Primary Reader 1"
+          },
+          "reader_2_id": {
+            "type": "string",
+            "title": "Reader 2 Id",
+            "default": "reader_02"
+          },
+          "reader_2_name": {
+            "type": "string",
+            "title": "Reader 2 Name",
+            "default": "Dr. Primary Reader 2"
+          },
+          "chair_id": {
+            "type": "string",
+            "title": "Chair Id",
+            "default": "chair_adjudicator"
+          },
+          "chair_name": {
+            "type": "string",
+            "title": "Chair Name",
+            "default": "Dr. Adjudication Committee Chair"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_id",
+          "event_id",
+          "candidate_event_type",
+          "reported_term",
+          "reported_onset_date"
+        ],
+        "title": "DossierPackageCreateDTO",
+        "description": "Payload to compile and package a new candidate clinical event dossier."
+      },
+      "ECGRecord": {
+        "properties": {
+          "ecg_id": {
+            "type": "string",
+            "title": "Ecg Id",
+            "description": "Unique ECG record identifier"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "Shifted timestamp of ECG acquisition"
+          },
+          "rhythm": {
+            "type": "string",
+            "title": "Rhythm",
+            "description": "Cardiac rhythm classification",
+            "default": "Normal sinus rhythm"
+          },
+          "st_elevation_leads": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "St Elevation Leads",
+            "description": "Leads exhibiting diagnostic ST elevation (e.g. V1-V4)"
+          },
+          "st_depression_leads": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "St Depression Leads",
+            "description": "Leads exhibiting ST depression"
+          },
+          "t_wave_inversion_leads": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "T Wave Inversion Leads",
+            "description": "Leads exhibiting T wave inversion"
+          },
+          "q_wave_leads": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Q Wave Leads",
+            "description": "Leads exhibiting pathological Q waves"
+          },
+          "lbbb_present": {
+            "type": "boolean",
+            "title": "Lbbb Present",
+            "description": "New or presumed new Left Bundle Branch Block",
+            "default": false
+          },
+          "qtcf_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qtcf Ms",
+            "description": "Fridericia-corrected QT interval in milliseconds"
+          },
+          "interpretation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interpretation",
+            "description": "Summary cardiologist interpretation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ecg_id",
+          "timestamp"
+        ],
+        "title": "ECGRecord",
+        "description": "12-Lead Electrocardiogram diagnostic findings."
+      },
       "EISFDocumentRecord": {
         "properties": {
           "document_id": {
@@ -15739,6 +17641,99 @@
           "is_complete"
         ],
         "title": "ETMFCompletenessWebhookPayload"
+      },
+      "EdcCasebookWritebackResult": {
+        "properties": {
+          "dossier_id": {
+            "type": "string",
+            "title": "Dossier Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "observation_ids_updated": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Observation Ids Updated"
+          },
+          "adjudication_status": {
+            "type": "string",
+            "title": "Adjudication Status",
+            "default": "CONFIRMED"
+          },
+          "adjudicated_term": {
+            "type": "string",
+            "title": "Adjudicated Term"
+          },
+          "adjudication_date": {
+            "type": "string",
+            "title": "Adjudication Date"
+          },
+          "signature_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Id"
+          },
+          "is_locked": {
+            "type": "boolean",
+            "title": "Is Locked",
+            "default": true
+          },
+          "written_at": {
+            "type": "string",
+            "title": "Written At"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "SUCCESS"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dossier_id",
+          "subject_id",
+          "study_id",
+          "event_id",
+          "adjudicated_term",
+          "adjudication_date"
+        ],
+        "title": "EdcCasebookWritebackResult",
+        "description": "Result of bi-directional synchronization back to EDC casebook."
+      },
+      "EndpointCategory": {
+        "type": "string",
+        "enum": [
+          "MACE",
+          "MYOCARDIAL_INFARCTION",
+          "STROKE",
+          "CARDIOVASCULAR_MORTALITY",
+          "ALL_CAUSE_MORTALITY",
+          "HEART_FAILURE_HOSPITALIZATION",
+          "STENT_THROMBOSIS",
+          "VENOUS_THROMBOEMBOLISM",
+          "DISEASE_PROGRESSION",
+          "OTHER"
+        ],
+        "title": "EndpointCategory",
+        "description": "Critical clinical endpoint categories subject to blinded adjudication."
       },
       "ExcursionEvaluationResponse": {
         "properties": {
@@ -16789,6 +18784,106 @@
         ],
         "title": "LabBatchIngestResult",
         "description": "Summary of batch ingestion processing."
+      },
+      "LabPanelItem": {
+        "properties": {
+          "test_name": {
+            "type": "string",
+            "title": "Test Name",
+            "description": "Laboratory analyte name (e.g. Troponin I, CK-MB)"
+          },
+          "loinc_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loinc Code",
+            "description": "Standard LOINC code"
+          },
+          "result_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Result Value",
+            "description": "Observed numeric or character result"
+          },
+          "result_unit": {
+            "type": "string",
+            "title": "Result Unit",
+            "description": "Unit of measurement (e.g. ng/mL, U/L)"
+          },
+          "reference_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Low",
+            "description": "Lower limit of normal"
+          },
+          "reference_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference High",
+            "description": "Upper limit of normal / 99th percentile URL"
+          },
+          "is_out_of_range": {
+            "type": "boolean",
+            "title": "Is Out Of Range",
+            "description": "Flag indicating value exceeds reference limits",
+            "default": false
+          },
+          "toxicity_grade": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Toxicity Grade",
+            "description": "Computed CTCAE / DAIDS toxicity grade (0-4)"
+          },
+          "sample_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Timestamp",
+            "description": "Relative shifted ISO timestamp of specimen collection"
+          }
+        },
+        "type": "object",
+        "required": [
+          "test_name",
+          "result_value",
+          "result_unit"
+        ],
+        "title": "LabPanelItem",
+        "description": "De-identified laboratory analyte finding pertinent to endpoint review."
       },
       "LabRangeRecalculateRequest": {
         "properties": {
@@ -18533,6 +20628,83 @@
           "PT"
         ],
         "title": "MedDRATargetLevelEnum"
+      },
+      "MeetingQuorumRecordDTO": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "charter_id": {
+            "type": "string",
+            "title": "Charter Id",
+            "description": "Charter ID"
+          },
+          "meeting_date": {
+            "type": "string",
+            "title": "Meeting Date",
+            "description": "Meeting date (ISO 8601)"
+          },
+          "attendees": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Attendees",
+            "description": "Attendees: [{member_id, member_name, role}]"
+          },
+          "total_eligible_members": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Total Eligible Members"
+          },
+          "dossiers_reviewed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dossiers Reviewed"
+          },
+          "voting_results": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Voting Results"
+          },
+          "meeting_minutes": {
+            "type": "string",
+            "title": "Meeting Minutes",
+            "default": ""
+          },
+          "chair_signature": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chair Signature"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "charter_id",
+          "meeting_date",
+          "attendees",
+          "total_eligible_members"
+        ],
+        "title": "MeetingQuorumRecordDTO",
+        "description": "Payload to record committee meeting quorum and minutes."
       },
       "MigrationRuleCreate": {
         "properties": {
@@ -21106,6 +23278,190 @@
         "title": "ReLabelingTaskVerifyRequest",
         "description": "Payload for dual QA verification of a completed re-labeling task."
       },
+      "ReaderAssessment": {
+        "properties": {
+          "assessment_id": {
+            "type": "string",
+            "title": "Assessment Id",
+            "description": "Unique assessment ID"
+          },
+          "dossier_id": {
+            "type": "string",
+            "title": "Dossier Id",
+            "description": "Target dossier ID"
+          },
+          "reader_id": {
+            "type": "string",
+            "title": "Reader Id",
+            "description": "Adjudicator user identifier"
+          },
+          "reader_name": {
+            "type": "string",
+            "title": "Reader Name",
+            "description": "Adjudicator full name / credentials"
+          },
+          "reader_role": {
+            "$ref": "#/components/schemas/ReaderRole",
+            "description": "Assigned role: READER_1 or READER_2"
+          },
+          "classification": {
+            "$ref": "#/components/schemas/AdjudicationClassification",
+            "description": "Determined classification"
+          },
+          "subtype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtype",
+            "description": "Specific event subtype (e.g. Type 1 MI, Ischemic Stroke)"
+          },
+          "adjudicated_onset_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjudicated Onset Date",
+            "description": "Adjudicated date/time of event onset in ISO 8601"
+          },
+          "criteria_met": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Criteria Met",
+            "description": "Diagnostic criteria items satisfied"
+          },
+          "confidence_score": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Confidence Score",
+            "description": "Confidence level (1=Low, 5=Definitive)",
+            "default": 5
+          },
+          "clinical_rationale": {
+            "type": "string",
+            "title": "Clinical Rationale",
+            "description": "Detailed clinical rationale",
+            "default": ""
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At",
+            "description": "UTC submission timestamp"
+          },
+          "assessment_digest": {
+            "type": "string",
+            "title": "Assessment Digest",
+            "description": "SHA-256 hash of reader assessment payload",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "assessment_id",
+          "dossier_id",
+          "reader_id",
+          "reader_name",
+          "reader_role",
+          "classification"
+        ],
+        "title": "ReaderAssessment",
+        "description": "Blinded expert reader assessment and diagnostic criteria evaluation."
+      },
+      "ReaderAssessmentSubmitDTO": {
+        "properties": {
+          "reader_role": {
+            "$ref": "#/components/schemas/ReaderRole",
+            "description": "Reader role: READER_1 or READER_2"
+          },
+          "classification": {
+            "$ref": "#/components/schemas/AdjudicationClassification",
+            "description": "Event classification"
+          },
+          "subtype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtype",
+            "description": "Specific event subtype (e.g. Type 1 MI, Ischemic Stroke)"
+          },
+          "adjudicated_onset_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjudicated Onset Date",
+            "description": "Adjudicated onset date (ISO 8601)"
+          },
+          "criteria_met": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Criteria Met",
+            "description": "Diagnostic criteria satisfied"
+          },
+          "confidence_score": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Confidence Score",
+            "description": "Confidence score 1 to 5",
+            "default": 5
+          },
+          "clinical_rationale": {
+            "type": "string",
+            "title": "Clinical Rationale",
+            "description": "Clinical rationale narrative",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "reader_role",
+          "classification"
+        ],
+        "title": "ReaderAssessmentSubmitDTO",
+        "description": "Payload for Reader 1 or Reader 2 independent blinded assessment submission."
+      },
+      "ReaderRole": {
+        "type": "string",
+        "enum": [
+          "READER_1",
+          "READER_2",
+          "CHAIR",
+          "COMMITTEE_MEMBER",
+          "COORDINATOR"
+        ],
+        "title": "ReaderRole",
+        "description": "Roles within the CEC charter hierarchy."
+      },
       "RedactPDFRequest": {
         "properties": {
           "pdf_base64": {
@@ -21486,6 +23842,65 @@
           "COMBINED"
         ],
         "title": "SamplingModelEnum"
+      },
+      "SdtmCeCompilationResult": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "ce_records": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Ce Records"
+          },
+          "suppce_records": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Suppce Records"
+          },
+          "record_count": {
+            "type": "integer",
+            "title": "Record Count",
+            "default": 0
+          },
+          "compiled_at": {
+            "type": "string",
+            "title": "Compiled At"
+          },
+          "dataset_digest": {
+            "type": "string",
+            "title": "Dataset Digest",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "SdtmCeCompilationResult",
+        "description": "Compiled CDISC SDTM CE and SUPPCE domain dataset."
+      },
+      "SdtmCeCompileRequestDTO": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "SdtmCeCompileRequestDTO",
+        "description": "Request payload to compile SDTM CE dataset for a study."
       },
       "SignRequest": {
         "properties": {
@@ -24911,6 +27326,17 @@
         ],
         "title": "VisitResponse",
         "description": "Pydantic schema returning visit details."
+      },
+      "VotingRule": {
+        "type": "string",
+        "enum": [
+          "UNANIMOUS",
+          "MAJORITY_2_OF_3",
+          "CHAIR_TIE_BREAKER",
+          "SUPERMAJORITY"
+        ],
+        "title": "VotingRule",
+        "description": "Committee charter decision and voting rules."
       },
       "WHODrugATCContext": {
         "properties": {

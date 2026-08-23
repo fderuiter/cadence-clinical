@@ -106,7 +106,7 @@ The pipeline automates clinical workflows through three major translation stages
 2. **Delivery & Compilation**: Upon study publication, the USDM metadata is fetched by the Execution engine's transformation pipeline which compiles clinical concepts into CDISC ODM XML files and interactive OpenRosa/Enketo-compliant XForm structures.
 3. **Runtime Execution**: Ingested layouts automatically configure electronic Case Report Forms (eCRFs) in PostgreSQL, defining the data entry rules, real-time edit-checks, and subject compliance matrices. Any structural anomalies or offline-sync reconciliation failures automatically trigger clinical queries to prevent silent data loss.
 
-For further architectural specifications, cryptographic boundaries, and compliance traceability, refer to [ARCHITECTURE.md](../ARCHITECTURE.md).
+For further architectural specifications, cryptographic boundaries, and compliance traceability, refer to [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 
@@ -245,8 +245,8 @@ The repository implements strict continuous integration pipelines governed by `.
 
 Detailed structural specifications, compliance designs, and operational instructions are archived directly in the source tree:
 
-- **[ARCHITECTURE.md](../ARCHITECTURE.md)**: Details the full service-by-service designs, signature parameters, and data flows.
-- **[AGENTS.md](../AGENTS.md)**: Defines the AI developer rules of engagement, code guidelines, and sandbox assumptions.
+- **[ARCHITECTURE.md](ARCHITECTURE.md)**: Details the full service-by-service designs, signature parameters, and data flows.
+- **[AGENTS.md](AGENTS.md)**: Defines the AI developer rules of engagement, code guidelines, and sandbox assumptions.
 - **[SRS (Software Requirements Specification)](SRS.md)**: The authoritative compliance document linking 21 CFR Part 11 and GxP requirements to implementation rules.
 - **[Feature Matrix](FEATURE_MATRIX.md)**: Lists active, in-progress, and planned clinical features mapped against sub-systems.
 - **[Local Development Guide](LOCAL_DEV_ENVIRONMENT.md)**: The reference book for keycloak setups, database schemas, and integration ports.

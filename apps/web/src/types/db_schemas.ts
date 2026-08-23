@@ -64,6 +64,95 @@ export interface BiostatExport {
   is_deleted: boolean;
 }
 
+export interface CecCharter {
+  study_id: string;
+  committee_name: string;
+  version: string;
+  voting_rule: string;
+  minimum_quorum_percentage: number;
+  minimum_members_count: number;
+  eligible_members?: Record<string, any> | null;
+  endpoint_definitions?: Record<string, any> | null;
+  diagnostic_criteria_templates?: Record<string, any> | null;
+  is_active: boolean;
+  created_at?: string | null;
+  created_by?: string | null;
+  reason_for_change?: string | null;
+  version_index: number;
+  id: string;
+  is_deleted: boolean;
+}
+
+export interface CecDossier {
+  study_id: string;
+  site_id: string;
+  subject_id: string;
+  masked_site_id: string;
+  masked_subject_id: string;
+  event_id: string;
+  candidate_event_type: string;
+  reported_term: string;
+  verbatim_description?: string | null;
+  reported_onset_date?: string | null;
+  medical_narrative?: string | null;
+  reader_1_id: string;
+  reader_1_name: string;
+  reader_1_status: string;
+  reader_1_assessment?: Record<string, any> | null;
+  reader_2_id: string;
+  reader_2_name: string;
+  reader_2_status: string;
+  reader_2_assessment?: Record<string, any> | null;
+  chair_id?: string | null;
+  chair_name?: string | null;
+  chair_determination?: Record<string, any> | null;
+  workflow_status: string;
+  is_discordant: boolean;
+  discordance_reasons?: Record<string, any> | null;
+  final_consensus_classification?: string | null;
+  final_consensus_subtype?: string | null;
+  final_adjudicated_onset_date?: string | null;
+  binding_determination_source?: string | null;
+  adjudication_rationale?: string | null;
+  dossier_payload?: Record<string, any> | null;
+  electronic_signature?: Record<string, any> | null;
+  edc_writeback_status: string;
+  edc_writeback_payload?: Record<string, any> | null;
+  sdtm_ce_record?: Record<string, any> | null;
+  sdtm_suppce_records?: Record<string, any> | null;
+  dossier_digest?: string | null;
+  created_at?: string | null;
+  created_by?: string | null;
+  reason_for_change?: string | null;
+  version_index: number;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
+export interface CecMeeting {
+  study_id: string;
+  charter_id: string;
+  meeting_date: string;
+  attendees?: Record<string, any> | null;
+  total_eligible_members: number;
+  quorum_percentage: number;
+  quorum_met: boolean;
+  dossiers_reviewed?: Record<string, any> | null;
+  voting_results?: Record<string, any> | null;
+  meeting_minutes?: string | null;
+  minutes_digest?: string | null;
+  signed_by_chair: boolean;
+  chair_signature?: Record<string, any> | null;
+  created_at?: string | null;
+  created_by?: string | null;
+  reason_for_change?: string | null;
+  version_index: number;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
 export interface CgtBedsideVerification {
   study_id: string;
   site_id: string;

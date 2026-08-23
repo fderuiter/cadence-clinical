@@ -524,6 +524,25 @@
                 </router-link>
               </li>
               <li
+                id="tab-btn-safety"
+                class="nav-item"
+                :class="{ active: $route.name === 'safety' }"
+              >
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/safety"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
+                    <span class="nav-icon">🛡️</span>
+                    <span class="nav-label">Safety &amp; DSUR Compiler</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
                 id="tab-btn-quality"
                 class="nav-item"
                 :class="{ active: $route.name === 'quality' }"

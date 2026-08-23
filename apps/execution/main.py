@@ -86,6 +86,7 @@ from apps.execution.routers.amendments import router as amendments_router
 from apps.execution.routers.anomalies import router as anomalies_router
 from apps.execution.routers.anonymization import router as anonymization_router
 from apps.execution.routers.auditor import router as auditor_router
+from apps.execution.routers.cec import router as cec_router
 from apps.execution.routers.dictionaries import router as dictionaries_router
 from apps.execution.routers.doa import router as doa_router
 from apps.execution.routers.documents import router as documents_router
@@ -342,6 +343,7 @@ app.include_router(signatures_router)
 app.include_router(amendments_router)
 app.include_router(anomalies_router)
 app.include_router(auditor_router)
+app.include_router(cec_router)
 app.include_router(safety_router)
 app.include_router(eisf_router)
 app.include_router(anonymization_router)

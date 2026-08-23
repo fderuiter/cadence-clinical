@@ -6234,6 +6234,432 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/cec/dossiers:
+    post:
+      tags:
+      - CEC Adjudication
+      summary: Create And Package Dossier
+      description: 'Compiles and packages a de-identified clinical event dossier for 2+1 blinded adjudication.
+
+
+        @req:PRD-CEC-001, @req:PRD-SYS-124, @req:ADR-2199'
+      operationId: create_and_package_dossier_api_v1_execution_cec_dossiers_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DossierPackageCreateDTO'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Create And Package Dossier Api V1 Execution Cec Dossiers Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - CEC Adjudication
+      summary: List Dossiers
+      description: 'Lists clinical event dossiers with filtering options.
+
+
+        @req:PRD-CEC-002'
+      operationId: list_dossiers_api_v1_execution_cec_dossiers_get
+      parameters:
+      - name: study_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by study ID
+          title: Study Id
+        description: Filter by study ID
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by workflow status
+          title: Status
+        description: Filter by workflow status
+      - name: category
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by candidate event category
+          title: Category
+        description: Filter by candidate event category
+      - name: reader_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by assigned reader
+          title: Reader Id
+        description: Filter by assigned reader
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CecDossierSummaryItem'
+                title: Response List Dossiers Api V1 Execution Cec Dossiers Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/cec/dossiers/{dossier_id}:
+    get:
+      tags:
+      - CEC Adjudication
+      summary: Get Dossier Blinded View
+      description: 'Retrieves a role-blinded projection of a dossier, enforcing reader isolation.
+
+
+        @req:PRD-CEC-001, @req:PRD-CEC-002, @req:ADR-2199'
+      operationId: get_dossier_blinded_view_api_v1_execution_cec_dossiers__dossier_id__get
+      parameters:
+      - name: dossier_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dossier Id
+      - name: x-reader-role
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Reader Role override for testing/simulation
+          title: X-Reader-Role
+        description: Reader Role override for testing/simulation
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DossierBlindedView'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/cec/dossiers/{dossier_id}/full:
+    get:
+      tags:
+      - CEC Adjudication
+      summary: Get Dossier Full
+      description: 'Retrieves unblinded full dossier details for Committee Chair, Data Manager, or Auditor.
+
+
+        @req:PRD-CEC-002, @req:PRD-SYS-001'
+      operationId: get_dossier_full_api_v1_execution_cec_dossiers__dossier_id__full_get
+      parameters:
+      - name: dossier_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dossier Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DossierDetailResponseDTO'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/cec/dossiers/{dossier_id}/assessments:
+    post:
+      tags:
+      - CEC Adjudication
+      summary: Submit Reader Assessment
+      description: 'Submits an expert reader assessment for Reader 1 or Reader 2 and auto-evaluates consensus.
+
+
+        @req:PRD-CEC-002, @req:ADR-2199'
+      operationId: submit_reader_assessment_api_v1_execution_cec_dossiers__dossier_id__assessments_post
+      parameters:
+      - name: dossier_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dossier Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReaderAssessmentSubmitDTO'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Submit Reader Assessment Api V1 Execution Cec Dossiers  Dossier Id  Assessments Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/cec/dossiers/{dossier_id}/chair-adjudicate:
+    post:
+      tags:
+      - CEC Adjudication
+      summary: Adjudicate Chair Tie Breaker
+      description: 'Executes Adjudication Committee Chair tie-breaker ruling with 21 CFR Part 11 electronic signature.
+
+
+        @req:PRD-CEC-002, @req:PRD-SYS-124, @req:ADR-2199'
+      operationId: adjudicate_chair_tie_breaker_api_v1_execution_cec_dossiers__dossier_id__chair_adjudicate_post
+      parameters:
+      - name: dossier_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dossier Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChairAdjudicateDTO'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Adjudicate Chair Tie Breaker Api V1 Execution Cec Dossiers  Dossier Id  Chair Adjudicate Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/cec/dossiers/{dossier_id}/writeback:
+    post:
+      tags:
+      - CEC Adjudication
+      summary: Trigger Edc Writeback
+      description: 'Manually or automatically triggers bi-directional EDC casebook writeback for an adjudicated event.
+
+
+        @req:PRD-CEC-003'
+      operationId: trigger_edc_writeback_api_v1_execution_cec_dossiers__dossier_id__writeback_post
+      parameters:
+      - name: dossier_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dossier Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdcCasebookWritebackResult'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/cec/charters/{study_id}:
+    get:
+      tags:
+      - CEC Adjudication
+      summary: Get Study Charter
+      description: 'Retrieves active CEC charter governance configuration.
+
+
+        @req:PRD-SYS-124'
+      operationId: get_study_charter_api_v1_execution_cec_charters__study_id__get
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CecCharterConfig'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/cec/charters:
+    post:
+      tags:
+      - CEC Adjudication
+      summary: Create Or Update Charter
+      description: 'Configures or updates committee charter voting rules, quorum, and diagnostic criteria forms.
+
+
+        @req:PRD-SYS-124'
+      operationId: create_or_update_charter_api_v1_execution_cec_charters_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CharterCreateDTO'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CecCharterConfig'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/cec/meetings:
+    post:
+      tags:
+      - CEC Adjudication
+      summary: Record Meeting Quorum
+      description: 'Records committee meeting attendance, evaluates quorum compliance, and captures minutes.
+
+
+        @req:PRD-SYS-124'
+      operationId: record_meeting_quorum_api_v1_execution_cec_meetings_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MeetingQuorumRecordDTO'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Record Meeting Quorum Api V1 Execution Cec Meetings Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/cec/meetings/{study_id}:
+    get:
+      tags:
+      - CEC Adjudication
+      summary: List Study Meetings
+      description: 'Lists all recorded committee meetings and quorum statuses for a study.
+
+
+        @req:PRD-SYS-124'
+      operationId: list_study_meetings_api_v1_execution_cec_meetings__study_id__get
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+                title: Response List Study Meetings Api V1 Execution Cec Meetings  Study Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/cec/sdtm-ce/compile:
+    post:
+      tags:
+      - CEC Adjudication
+      summary: Compile Sdtm Ce Dataset
+      description: 'Compiles all finalized adjudicated events for a study directly into CDISC SDTM CE dataset.
+
+
+        @req:PRD-CEC-003, @req:PRD-SYS-001'
+      operationId: compile_sdtm_ce_dataset_api_v1_execution_cec_sdtm_ce_compile_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SdtmCeCompileRequestDTO'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SdtmCeCompilationResult'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/execution/safety/dispatch:
     post:
       tags:
@@ -9590,9 +10016,9 @@ paths:
   /api/v1/execution/labs/ingest:
     post:
       tags:
-      - Laboratory Ingestion
+      - Laboratory Governance & Ingestion
       summary: Ingest Lab Batch Endpoint
-      description: "Ingest central or local laboratory batch data (CSV, HL7 v2.x, or FHIR JSON).\n\nSupports JSON payloads containing CSV/HL7 strings or FHIR Observation objects/bundles,\nas well as multipart/form-data file uploads.\n\nArgs:\n    request: FastAPI HTTP request instance.\n    background_tasks: BackgroundTasks context for dispatching critical alerts.\n    payload_body: Optional parsed JSON body.\n    roles: Verified principal roles ensuring write permissions.\n\nReturns:\n    LabBatchIngestResult: Summary of batch processing statistics and auto-queries."
+      description: Ingest central or local laboratory batch data (CSV, HL7 v2.x, FHIR JSON, CDISC LAB, or Local Manual).
       operationId: ingest_lab_batch_endpoint_api_v1_execution_labs_ingest_post
       responses:
         '200':
@@ -9604,7 +10030,7 @@ paths:
   /api/v1/execution/labs/batch-status:
     get:
       tags:
-      - Laboratory Ingestion
+      - Laboratory Governance & Ingestion
       summary: Get Batch Status Endpoint
       description: Retrieve status and metrics for previous lab batch ingestion jobs.
       operationId: get_batch_status_endpoint_api_v1_execution_labs_batch_status_get
@@ -9650,7 +10076,7 @@ paths:
   /api/v1/execution/labs/batch-status/{batch_id}:
     get:
       tags:
-      - Laboratory Ingestion
+      - Laboratory Governance & Ingestion
       summary: Get Batch Status By Id Endpoint
       description: Query execution status and statistics of a specific laboratory batch by ID.
       operationId: get_batch_status_by_id_endpoint_api_v1_execution_labs_batch_status__batch_id__get
@@ -9668,6 +10094,298 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LabBatchIngestResult'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/labs/certifications:
+    post:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Create Local Lab Certification
+      description: Register a local laboratory certification and accreditation.
+      operationId: create_local_lab_certification_api_v1_execution_labs_certifications_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocalLabCertificationCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocalLabCertificationResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: List Local Lab Certifications
+      description: List local laboratory certifications with optional filters.
+      operationId: list_local_lab_certifications_api_v1_execution_labs_certifications_get
+      parameters:
+      - name: study_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by study ID
+          title: Study Id
+        description: Filter by study ID
+      - name: site_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by site ID
+          title: Site Id
+        description: Filter by site ID
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by certification status
+          title: Status
+        description: Filter by certification status
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LocalLabCertificationResponse'
+                title: Response List Local Lab Certifications Api V1 Execution Labs Certifications Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/labs/certifications/{cert_id}:
+    put:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Update Local Lab Certification
+      description: Update an existing local laboratory certification.
+      operationId: update_local_lab_certification_api_v1_execution_labs_certifications__cert_id__put
+      parameters:
+      - name: cert_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Cert Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocalLabCertificationUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocalLabCertificationResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/labs/certifications/verify:
+    post:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Verify Local Lab Certification Endpoint
+      description: Verify if a site has active, unexpired local lab certification for an observation date.
+      operationId: verify_local_lab_certification_endpoint_api_v1_execution_labs_certifications_verify_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocalLabCertificationVerifyRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocalLabCertificationVerifyResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/labs/toxicity/review-queue:
+    get:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: List Staged Ae Review Queue
+      description: Retrieve laboratory Grade 3/4 toxicity triggers staged for Investigator review.
+      operationId: list_staged_ae_review_queue_api_v1_execution_labs_toxicity_review_queue_get
+      parameters:
+      - name: study_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by study ID
+          title: Study Id
+        description: Filter by study ID
+      - name: site_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by site ID
+          title: Site Id
+        description: Filter by site ID
+      - name: review_status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: 'Filter by status (default: STAGED_FOR_INVESTIGATOR_REVIEW, ALL for any)'
+          default: STAGED_FOR_INVESTIGATOR_REVIEW
+          title: Review Status
+        description: 'Filter by status (default: STAGED_FOR_INVESTIGATOR_REVIEW, ALL for any)'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StagedAdverseEventReviewResponse'
+                title: Response List Staged Ae Review Queue Api V1 Execution Labs Toxicity Review Queue Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/labs/toxicity/review/{review_id}/action:
+    post:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Action Staged Ae Review
+      description: Perform Investigator workflow action on a staged Grade 3/4 AE (Confirm, Dismiss, Escalate).
+      operationId: action_staged_ae_review_api_v1_execution_labs_toxicity_review__review_id__action_post
+      parameters:
+      - name: review_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Review Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StagedAdverseEventActionRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StagedAdverseEventActionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/labs/toxicity/evaluate:
+    post:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Evaluate Toxicity Realtime
+      description: Evaluate and simulate CTCAE v5.0 / DAIDS v2.1 toxicity grading in real time.
+      operationId: evaluate_toxicity_realtime_api_v1_execution_labs_toxicity_evaluate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabToxicityEvaluateRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabToxicityEvaluateResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/labs/loinc-catalog:
+    get:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Get Loinc Catalog Endpoint
+      description: Retrieve standardized LOINC catalog mappings.
+      operationId: get_loinc_catalog_endpoint_api_v1_execution_labs_loinc_catalog_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoincCatalogResponse'
+  /api/v1/execution/labs/convert-unit:
+    post:
+      tags:
+      - Laboratory Governance & Ingestion
+      summary: Convert Unit Endpoint
+      description: Convert laboratory measurement between conventional and SI units.
+      operationId: convert_unit_endpoint_api_v1_execution_labs_convert_unit_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoincConvertRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoincConvertResponse'
         '422':
           description: Validation Error
           content:
@@ -16936,6 +17654,23 @@ components:
       - REJECT
       title: AdjudicationActionEnum
       description: Permitted adjudication actions.
+    AdjudicationClassification:
+      type: string
+      enum:
+      - CONFIRMED_MI
+      - CONFIRMED_ISCHEMIC_STROKE
+      - CONFIRMED_HEMORRHAGIC_STROKE
+      - CONFIRMED_CV_DEATH
+      - CONFIRMED_NON_CV_DEATH
+      - CONFIRMED_HEART_FAILURE_HOSPITALIZATION
+      - CONFIRMED_STENT_THROMBOSIS
+      - CONFIRMED_VTE
+      - CONFIRMED_DISEASE_PROGRESSION
+      - NOT_AN_ENDPOINT
+      - INDETERMINATE
+      - INSUFFICIENT_DATA
+      title: AdjudicationClassification
+      description: Standardized adjudicated event classification determinations.
     AdjudicationRequest:
       properties:
         action:
@@ -16989,6 +17724,20 @@ components:
       - adjudicated_at
       title: AdjudicationResponse
       description: Outcome of Data Manager candidate query adjudication.
+    AdjudicationWorkflowStatus:
+      type: string
+      enum:
+      - PENDING_PRIMARY_REVIEWS
+      - READER_1_COMPLETED
+      - READER_2_COMPLETED
+      - CONSENSUS_REACHED
+      - DISCORDANCE_DETECTED
+      - ESCALATED_TO_CHAIR
+      - FINALIZED_CONCORDANT
+      - FINALIZED_BY_CHAIR
+      - FINALIZED_BY_COMMITTEE
+      title: AdjudicationWorkflowStatus
+      description: Lifecycle state machine for 2+1 blinded reader review.
     AnomalyCandidateItem:
       properties:
         query_id:
@@ -17431,6 +18180,16 @@ components:
 
 
         Requirements: PRD-SYS-001'
+    BindingDeterminationSource:
+      type: string
+      enum:
+      - CONCORDANT_CONSENSUS
+      - CHAIR_UPHELD_READER_1
+      - CHAIR_UPHELD_READER_2
+      - CHAIR_CUSTOM_DETERMINATION
+      - COMMITTEE_QUORUM_VOTE
+      title: BindingDeterminationSource
+      description: Source of the binding adjudication determination.
     Body_import_dictionary_api_v1_dictionaries_import_post:
       properties:
         dictionary_type:
@@ -17824,6 +18583,37 @@ components:
       - protocol_version
       title: BulkSubjectReconsentRequest
       description: Request payload to register batch subject re-consent for an amended version.
+    BundledEcrfForm:
+      properties:
+        form_id:
+          type: string
+          title: Form Id
+          description: Originating eCRF form submission ID
+        form_name:
+          type: string
+          title: Form Name
+          description: Form name (e.g. Adverse Events, Concomitant Medications, Vitals)
+        visit_name:
+          type: string
+          title: Visit Name
+          description: Study encounter / visit label
+        submission_timestamp:
+          type: string
+          title: Submission Timestamp
+          description: Shifted timestamp of form entry
+        form_data:
+          additionalProperties: true
+          type: object
+          title: Form Data
+          description: Scrubbed eCRF field values
+      type: object
+      required:
+      - form_id
+      - form_name
+      - visit_name
+      - submission_timestamp
+      title: BundledEcrfForm
+      description: Pertinent eCRF form submission included in the event dossier.
     CGTApheresisCreateRequest:
       properties:
         study_id:
@@ -18864,6 +19654,326 @@ components:
       - logged_at
       title: CGTVialReturnReconciliationResponse
       description: Response schema for vial return reconciliation.
+    CecCharterConfig:
+      properties:
+        charter_id:
+          type: string
+          title: Charter Id
+          description: Unique charter ID
+        study_id:
+          type: string
+          title: Study Id
+          description: Study ID
+        committee_name:
+          type: string
+          title: Committee Name
+          description: Name of Adjudication Committee
+        version:
+          type: string
+          title: Version
+          description: Charter version string
+          default: '1.0'
+        voting_rule:
+          $ref: '#/components/schemas/VotingRule'
+          description: Committee voting rule
+          default: CHAIR_TIE_BREAKER
+        minimum_quorum_percentage:
+          type: number
+          maximum: 100.0
+          minimum: 0.0
+          title: Minimum Quorum Percentage
+          description: Minimum % quorum required
+          default: 66.67
+        minimum_members_count:
+          type: integer
+          minimum: 1.0
+          title: Minimum Members Count
+          description: Minimum member count for quorum
+          default: 3
+        eligible_members:
+          items:
+            additionalProperties:
+              type: string
+            type: object
+          type: array
+          title: Eligible Members
+          description: 'Eligible members: [{member_id, member_name, role, specialty}]'
+        endpoint_definitions:
+          items:
+            type: string
+          type: array
+          title: Endpoint Definitions
+          description: List of endpoints governed by this charter
+        diagnostic_criteria_templates:
+          additionalProperties:
+            items:
+              type: string
+            type: array
+          type: object
+          title: Diagnostic Criteria Templates
+          description: Standard criteria checklists per endpoint
+        is_active:
+          type: boolean
+          title: Is Active
+          default: true
+        created_at:
+          type: string
+          title: Created At
+        created_by:
+          type: string
+          title: Created By
+          default: system
+        version_index:
+          type: integer
+          title: Version Index
+          default: 1
+      type: object
+      required:
+      - charter_id
+      - study_id
+      - committee_name
+      title: CecCharterConfig
+      description: Charter governance parameters defining voting rules, quorum, and criteria templates.
+    CecDossierSummaryItem:
+      properties:
+        dossier_id:
+          type: string
+          title: Dossier Id
+        event_id:
+          type: string
+          title: Event Id
+        study_id:
+          type: string
+          title: Study Id
+        masked_subject_id:
+          type: string
+          title: Masked Subject Id
+        candidate_event_type:
+          $ref: '#/components/schemas/EndpointCategory'
+        reported_term:
+          type: string
+          title: Reported Term
+        reported_onset_date:
+          type: string
+          title: Reported Onset Date
+        workflow_status:
+          $ref: '#/components/schemas/AdjudicationWorkflowStatus'
+        is_discordant:
+          type: boolean
+          title: Is Discordant
+        final_consensus_classification:
+          anyOf:
+          - $ref: '#/components/schemas/AdjudicationClassification'
+          - type: 'null'
+        reader_1_status:
+          type: string
+          title: Reader 1 Status
+        reader_2_status:
+          type: string
+          title: Reader 2 Status
+        created_at:
+          type: string
+          title: Created At
+      type: object
+      required:
+      - dossier_id
+      - event_id
+      - study_id
+      - masked_subject_id
+      - candidate_event_type
+      - reported_term
+      - reported_onset_date
+      - workflow_status
+      - is_discordant
+      - reader_1_status
+      - reader_2_status
+      - created_at
+      title: CecDossierSummaryItem
+      description: Summary item for CEC console list views.
+    CertificationStatusEnum:
+      type: string
+      enum:
+      - ACTIVE
+      - EXPIRED
+      - SUSPENDED
+      - PENDING_RENEWAL
+      title: CertificationStatusEnum
+      description: Accreditation and certification lifecycle status of a local laboratory.
+    ChairAdjudicateDTO:
+      properties:
+        final_classification:
+          $ref: '#/components/schemas/AdjudicationClassification'
+          description: Definitive classification
+        final_subtype:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Final Subtype
+          description: Definitive subtype
+        final_adjudicated_onset_date:
+          type: string
+          title: Final Adjudicated Onset Date
+          description: Definitive onset date (ISO 8601)
+        binding_reader:
+          $ref: '#/components/schemas/BindingDeterminationSource'
+          description: Binding determination source
+          default: CHAIR_CUSTOM_DETERMINATION
+        criteria_confirmed:
+          items:
+            type: string
+          type: array
+          title: Criteria Confirmed
+          description: Criteria confirmed
+        adjudication_rationale:
+          type: string
+          title: Adjudication Rationale
+          description: Formal adjudication rationale
+        signature_token:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Signature Token
+          description: Step-up HMAC signature token
+        signer_name:
+          type: string
+          title: Signer Name
+          description: Printed signer name
+          default: Dr. Adjudication Chair
+        password:
+          type: string
+          title: Password
+          description: Re-authentication password
+          default: SignOffPassword123!
+        signature_meaning:
+          type: string
+          title: Signature Meaning
+          description: 21 CFR Part 11 legal signature manifestation
+          default: I confirm this clinical endpoint adjudication determination is final, complete, and accurate per charter guidelines
+      type: object
+      required:
+      - final_classification
+      - final_adjudicated_onset_date
+      - adjudication_rationale
+      title: ChairAdjudicateDTO
+      description: Payload for Adjudication Committee Chair tie-breaker ruling with e-signature.
+    ChairAdjudicationDetermination:
+      properties:
+        determination_id:
+          type: string
+          title: Determination Id
+          description: Unique determination ID
+        dossier_id:
+          type: string
+          title: Dossier Id
+          description: Target dossier ID
+        chair_id:
+          type: string
+          title: Chair Id
+          description: Chair user ID
+        chair_name:
+          type: string
+          title: Chair Name
+          description: Chair full name
+        final_classification:
+          $ref: '#/components/schemas/AdjudicationClassification'
+          description: Definitive classification
+        final_subtype:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Final Subtype
+          description: Definitive event subtype
+        final_adjudicated_onset_date:
+          type: string
+          title: Final Adjudicated Onset Date
+          description: Definitive event onset date (ISO 8601)
+        binding_reader:
+          $ref: '#/components/schemas/BindingDeterminationSource'
+          description: Source of binding decision
+          default: CHAIR_CUSTOM_DETERMINATION
+        criteria_confirmed:
+          items:
+            type: string
+          type: array
+          title: Criteria Confirmed
+          description: Diagnostic criteria confirmed
+        adjudication_rationale:
+          type: string
+          title: Adjudication Rationale
+          description: Formal chair tie-breaker rationale
+        electronic_signature:
+          additionalProperties: true
+          type: object
+          title: Electronic Signature
+          description: 21 CFR Part 11 electronic signature payload
+        finalized_at:
+          type: string
+          title: Finalized At
+      type: object
+      required:
+      - determination_id
+      - dossier_id
+      - chair_id
+      - chair_name
+      - final_classification
+      - final_adjudicated_onset_date
+      - adjudication_rationale
+      - electronic_signature
+      title: ChairAdjudicationDetermination
+      description: Final tie-breaker determination issued by the Adjudication Committee Chair.
+    CharterCreateDTO:
+      properties:
+        study_id:
+          type: string
+          title: Study Id
+          description: Target study ID
+        committee_name:
+          type: string
+          title: Committee Name
+          description: Committee name
+        version:
+          type: string
+          title: Version
+          default: '1.0'
+        voting_rule:
+          $ref: '#/components/schemas/VotingRule'
+          default: CHAIR_TIE_BREAKER
+        minimum_quorum_percentage:
+          type: number
+          maximum: 100.0
+          minimum: 0.0
+          title: Minimum Quorum Percentage
+          default: 66.67
+        minimum_members_count:
+          type: integer
+          minimum: 1.0
+          title: Minimum Members Count
+          default: 3
+        eligible_members:
+          items:
+            additionalProperties:
+              type: string
+            type: object
+          type: array
+          title: Eligible Members
+        endpoint_definitions:
+          items:
+            type: string
+          type: array
+          title: Endpoint Definitions
+        diagnostic_criteria_templates:
+          additionalProperties:
+            items:
+              type: string
+            type: array
+          type: object
+          title: Diagnostic Criteria Templates
+      type: object
+      required:
+      - study_id
+      - committee_name
+      title: CharterCreateDTO
+      description: Payload to configure or update a committee charter.
     ClinicalQueryResponse:
       properties:
         id:
@@ -20298,6 +21408,50 @@ components:
       type: object
       title: Demographics
       description: Pydantic schema representing demographic details.
+    DiagnosticAttachment:
+      properties:
+        attachment_id:
+          type: string
+          title: Attachment Id
+          description: Unique attachment ID
+        document_type:
+          type: string
+          title: Document Type
+          description: Type of diagnostic doc (e.g. Echocardiogram, Angiography, CT/MRI Brain)
+        title:
+          type: string
+          title: Title
+          description: Descriptive title
+        summary:
+          type: string
+          title: Summary
+          description: Clinical narrative summary
+        key_findings:
+          items:
+            type: string
+          type: array
+          title: Key Findings
+          description: Key bullet points / measurements
+        file_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: File Url
+          description: Secure presigned blob storage URI
+        content_hash:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Content Hash
+          description: SHA-256 integrity hash of document blob
+      type: object
+      required:
+      - attachment_id
+      - document_type
+      - title
+      - summary
+      title: DiagnosticAttachment
+      description: De-identified medical imaging or clinical diagnostic attachment.
     DictTypeEnum:
       type: string
       enum:
@@ -20518,6 +21672,495 @@ components:
       - observed_dlt_rate
       title: DoseLevelEvaluationSummary
       description: Summary of subjects and DLTs evaluated at a specific dose level.
+    DossierBlindedView:
+      properties:
+        dossier_id:
+          type: string
+          title: Dossier Id
+        event_id:
+          type: string
+          title: Event Id
+        study_id:
+          type: string
+          title: Study Id
+        masked_site_id:
+          type: string
+          title: Masked Site Id
+        masked_subject_id:
+          type: string
+          title: Masked Subject Id
+        candidate_event_type:
+          $ref: '#/components/schemas/EndpointCategory'
+        reported_term:
+          type: string
+          title: Reported Term
+        verbatim_description:
+          type: string
+          title: Verbatim Description
+        reported_onset_date:
+          type: string
+          title: Reported Onset Date
+        medical_narrative:
+          type: string
+          title: Medical Narrative
+        is_deidentified:
+          type: boolean
+          title: Is Deidentified
+        bundled_forms:
+          items:
+            $ref: '#/components/schemas/BundledEcrfForm'
+          type: array
+          title: Bundled Forms
+        lab_panels:
+          items:
+            $ref: '#/components/schemas/LabPanelItem'
+          type: array
+          title: Lab Panels
+        ecg_records:
+          items:
+            $ref: '#/components/schemas/ECGRecord'
+          type: array
+          title: Ecg Records
+        diagnostic_attachments:
+          items:
+            $ref: '#/components/schemas/DiagnosticAttachment'
+          type: array
+          title: Diagnostic Attachments
+        reader_role:
+          $ref: '#/components/schemas/ReaderRole'
+        workflow_status:
+          $ref: '#/components/schemas/AdjudicationWorkflowStatus'
+        my_assessment:
+          anyOf:
+          - $ref: '#/components/schemas/ReaderAssessment'
+          - type: 'null'
+        peer_assessment_completed:
+          type: boolean
+          title: Peer Assessment Completed
+          default: false
+        peer_assessment:
+          anyOf:
+          - $ref: '#/components/schemas/ReaderAssessment'
+          - type: 'null'
+        chair_determination:
+          anyOf:
+          - $ref: '#/components/schemas/ChairAdjudicationDetermination'
+          - type: 'null'
+        is_discordant:
+          type: boolean
+          title: Is Discordant
+          default: false
+        discordance_reasons:
+          items:
+            type: string
+          type: array
+          title: Discordance Reasons
+        final_consensus_classification:
+          anyOf:
+          - $ref: '#/components/schemas/AdjudicationClassification'
+          - type: 'null'
+        final_adjudicated_onset_date:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Final Adjudicated Onset Date
+        dossier_digest:
+          type: string
+          title: Dossier Digest
+          default: ''
+      type: object
+      required:
+      - dossier_id
+      - event_id
+      - study_id
+      - masked_site_id
+      - masked_subject_id
+      - candidate_event_type
+      - reported_term
+      - verbatim_description
+      - reported_onset_date
+      - medical_narrative
+      - is_deidentified
+      - bundled_forms
+      - lab_panels
+      - ecg_records
+      - diagnostic_attachments
+      - reader_role
+      - workflow_status
+      title: DossierBlindedView
+      description: Blinded view of a patient event dossier presented to a specific reader role.
+    DossierDetailResponseDTO:
+      properties:
+        dossier_id:
+          type: string
+          title: Dossier Id
+        event_id:
+          type: string
+          title: Event Id
+        study_id:
+          type: string
+          title: Study Id
+        site_id:
+          type: string
+          title: Site Id
+        masked_site_id:
+          type: string
+          title: Masked Site Id
+        subject_id:
+          type: string
+          title: Subject Id
+        masked_subject_id:
+          type: string
+          title: Masked Subject Id
+        candidate_event_type:
+          type: string
+          title: Candidate Event Type
+        reported_term:
+          type: string
+          title: Reported Term
+        verbatim_description:
+          type: string
+          title: Verbatim Description
+        reported_onset_date:
+          type: string
+          title: Reported Onset Date
+        medical_narrative:
+          type: string
+          title: Medical Narrative
+        is_deidentified:
+          type: boolean
+          title: Is Deidentified
+        bundled_forms:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Bundled Forms
+        lab_panels:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Lab Panels
+        ecg_records:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Ecg Records
+        diagnostic_attachments:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Diagnostic Attachments
+        redaction_summary:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Redaction Summary
+        reader_1_id:
+          type: string
+          title: Reader 1 Id
+        reader_1_name:
+          type: string
+          title: Reader 1 Name
+        reader_1_status:
+          type: string
+          title: Reader 1 Status
+        reader_1_assessment:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Reader 1 Assessment
+        reader_2_id:
+          type: string
+          title: Reader 2 Id
+        reader_2_name:
+          type: string
+          title: Reader 2 Name
+        reader_2_status:
+          type: string
+          title: Reader 2 Status
+        reader_2_assessment:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Reader 2 Assessment
+        chair_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Chair Id
+        chair_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Chair Name
+        chair_determination:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Chair Determination
+        workflow_status:
+          type: string
+          title: Workflow Status
+        is_discordant:
+          type: boolean
+          title: Is Discordant
+        discordance_reasons:
+          items:
+            type: string
+          type: array
+          title: Discordance Reasons
+        final_consensus_classification:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Final Consensus Classification
+        final_consensus_subtype:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Final Consensus Subtype
+        final_adjudicated_onset_date:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Final Adjudicated Onset Date
+        binding_determination_source:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Binding Determination Source
+        adjudication_rationale:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Adjudication Rationale
+        electronic_signature:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Electronic Signature
+        edc_writeback_status:
+          type: string
+          title: Edc Writeback Status
+        dossier_digest:
+          type: string
+          title: Dossier Digest
+        created_at:
+          type: string
+          title: Created At
+        version_index:
+          type: integer
+          title: Version Index
+      type: object
+      required:
+      - dossier_id
+      - event_id
+      - study_id
+      - site_id
+      - masked_site_id
+      - subject_id
+      - masked_subject_id
+      - candidate_event_type
+      - reported_term
+      - verbatim_description
+      - reported_onset_date
+      - medical_narrative
+      - is_deidentified
+      - bundled_forms
+      - lab_panels
+      - ecg_records
+      - diagnostic_attachments
+      - redaction_summary
+      - reader_1_id
+      - reader_1_name
+      - reader_1_status
+      - reader_1_assessment
+      - reader_2_id
+      - reader_2_name
+      - reader_2_status
+      - reader_2_assessment
+      - chair_id
+      - chair_name
+      - chair_determination
+      - workflow_status
+      - is_discordant
+      - discordance_reasons
+      - final_consensus_classification
+      - final_consensus_subtype
+      - final_adjudicated_onset_date
+      - binding_determination_source
+      - adjudication_rationale
+      - electronic_signature
+      - edc_writeback_status
+      - dossier_digest
+      - created_at
+      - version_index
+      title: DossierDetailResponseDTO
+      description: Complete dossier representation returned to authorized callers.
+    DossierPackageCreateDTO:
+      properties:
+        study_id:
+          type: string
+          title: Study Id
+          description: Target protocol study ID
+        site_id:
+          type: string
+          title: Site Id
+          description: Investigational site ID
+        subject_id:
+          type: string
+          title: Subject Id
+          description: Subject UUID
+        event_id:
+          type: string
+          title: Event Id
+          description: Adverse event or clinical observation ID
+        candidate_event_type:
+          $ref: '#/components/schemas/EndpointCategory'
+          description: Endpoint category (e.g. MACE, STROKE, MI)
+        reported_term:
+          type: string
+          title: Reported Term
+          description: Reported event term
+        verbatim_description:
+          type: string
+          title: Verbatim Description
+          description: Verbatim investigator clinical description
+          default: ''
+        reported_onset_date:
+          type: string
+          title: Reported Onset Date
+          description: Reported onset date (ISO 8601 / DTC)
+        medical_narrative:
+          type: string
+          title: Medical Narrative
+          description: Detailed clinical narrative
+          default: ''
+        bundled_forms:
+          items:
+            $ref: '#/components/schemas/BundledEcrfForm'
+          type: array
+          title: Bundled Forms
+        lab_panels:
+          items:
+            $ref: '#/components/schemas/LabPanelItem'
+          type: array
+          title: Lab Panels
+        ecg_records:
+          items:
+            $ref: '#/components/schemas/ECGRecord'
+          type: array
+          title: Ecg Records
+        diagnostic_attachments:
+          items:
+            $ref: '#/components/schemas/DiagnosticAttachment'
+          type: array
+          title: Diagnostic Attachments
+        reader_1_id:
+          type: string
+          title: Reader 1 Id
+          default: reader_01
+        reader_1_name:
+          type: string
+          title: Reader 1 Name
+          default: Dr. Primary Reader 1
+        reader_2_id:
+          type: string
+          title: Reader 2 Id
+          default: reader_02
+        reader_2_name:
+          type: string
+          title: Reader 2 Name
+          default: Dr. Primary Reader 2
+        chair_id:
+          type: string
+          title: Chair Id
+          default: chair_adjudicator
+        chair_name:
+          type: string
+          title: Chair Name
+          default: Dr. Adjudication Committee Chair
+      type: object
+      required:
+      - study_id
+      - site_id
+      - subject_id
+      - event_id
+      - candidate_event_type
+      - reported_term
+      - reported_onset_date
+      title: DossierPackageCreateDTO
+      description: Payload to compile and package a new candidate clinical event dossier.
+    ECGRecord:
+      properties:
+        ecg_id:
+          type: string
+          title: Ecg Id
+          description: Unique ECG record identifier
+        timestamp:
+          type: string
+          title: Timestamp
+          description: Shifted timestamp of ECG acquisition
+        rhythm:
+          type: string
+          title: Rhythm
+          description: Cardiac rhythm classification
+          default: Normal sinus rhythm
+        st_elevation_leads:
+          items:
+            type: string
+          type: array
+          title: St Elevation Leads
+          description: Leads exhibiting diagnostic ST elevation (e.g. V1-V4)
+        st_depression_leads:
+          items:
+            type: string
+          type: array
+          title: St Depression Leads
+          description: Leads exhibiting ST depression
+        t_wave_inversion_leads:
+          items:
+            type: string
+          type: array
+          title: T Wave Inversion Leads
+          description: Leads exhibiting T wave inversion
+        q_wave_leads:
+          items:
+            type: string
+          type: array
+          title: Q Wave Leads
+          description: Leads exhibiting pathological Q waves
+        lbbb_present:
+          type: boolean
+          title: Lbbb Present
+          description: New or presumed new Left Bundle Branch Block
+          default: false
+        qtcf_ms:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Qtcf Ms
+          description: Fridericia-corrected QT interval in milliseconds
+        interpretation:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Interpretation
+          description: Summary cardiologist interpretation
+      type: object
+      required:
+      - ecg_id
+      - timestamp
+      title: ECGRecord
+      description: 12-Lead Electrocardiogram diagnostic findings.
     EISFDocumentRecord:
       properties:
         document_id:
@@ -20635,6 +22278,76 @@ components:
       - milestone
       - is_complete
       title: ETMFCompletenessWebhookPayload
+    EdcCasebookWritebackResult:
+      properties:
+        dossier_id:
+          type: string
+          title: Dossier Id
+        subject_id:
+          type: string
+          title: Subject Id
+        study_id:
+          type: string
+          title: Study Id
+        event_id:
+          type: string
+          title: Event Id
+        observation_ids_updated:
+          items:
+            type: string
+          type: array
+          title: Observation Ids Updated
+        adjudication_status:
+          type: string
+          title: Adjudication Status
+          default: CONFIRMED
+        adjudicated_term:
+          type: string
+          title: Adjudicated Term
+        adjudication_date:
+          type: string
+          title: Adjudication Date
+        signature_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Signature Id
+        is_locked:
+          type: boolean
+          title: Is Locked
+          default: true
+        written_at:
+          type: string
+          title: Written At
+        status:
+          type: string
+          title: Status
+          default: SUCCESS
+      type: object
+      required:
+      - dossier_id
+      - subject_id
+      - study_id
+      - event_id
+      - adjudicated_term
+      - adjudication_date
+      title: EdcCasebookWritebackResult
+      description: Result of bi-directional synchronization back to EDC casebook.
+    EndpointCategory:
+      type: string
+      enum:
+      - MACE
+      - MYOCARDIAL_INFARCTION
+      - STROKE
+      - CARDIOVASCULAR_MORTALITY
+      - ALL_CAUSE_MORTALITY
+      - HEART_FAILURE_HOSPITALIZATION
+      - STENT_THROMBOSIS
+      - VENOUS_THROMBOEMBOLISM
+      - DISEASE_PROGRESSION
+      - OTHER
+      title: EndpointCategory
+      description: Critical clinical endpoint categories subject to blinded adjudication.
     ExcursionEvaluationResponse:
       properties:
         id:
@@ -20962,6 +22675,13 @@ components:
 
 
         Requirements: PRD-SYS-001'
+    GradingScaleEnum:
+      type: string
+      enum:
+      - CTCAE_V5
+      - DAIDS_V2_1
+      title: GradingScaleEnum
+      description: Toxicity grading system standard.
     IPKitCreateRequest:
       properties:
         study_id:
@@ -21262,6 +22982,19 @@ components:
           type: integer
           title: Queries Raised
           default: 0
+        staged_aes_count:
+          type: integer
+          title: Staged Aes Count
+          default: 0
+        uncalibrated_safeguards:
+          type: integer
+          title: Uncalibrated Safeguards
+          default: 0
+        toxicity_grades:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Toxicity Grades
         errors:
           items:
             additionalProperties: true
@@ -21279,6 +23012,64 @@ components:
       - status
       title: LabBatchIngestResult
       description: Summary of batch ingestion processing.
+    LabPanelItem:
+      properties:
+        test_name:
+          type: string
+          title: Test Name
+          description: Laboratory analyte name (e.g. Troponin I, CK-MB)
+        loinc_code:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Loinc Code
+          description: Standard LOINC code
+        result_value:
+          anyOf:
+          - type: number
+          - type: string
+          title: Result Value
+          description: Observed numeric or character result
+        result_unit:
+          type: string
+          title: Result Unit
+          description: Unit of measurement (e.g. ng/mL, U/L)
+        reference_low:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Reference Low
+          description: Lower limit of normal
+        reference_high:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Reference High
+          description: Upper limit of normal / 99th percentile URL
+        is_out_of_range:
+          type: boolean
+          title: Is Out Of Range
+          description: Flag indicating value exceeds reference limits
+          default: false
+        toxicity_grade:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Toxicity Grade
+          description: Computed CTCAE / DAIDS toxicity grade (0-4)
+        sample_timestamp:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sample Timestamp
+          description: Relative shifted ISO timestamp of specimen collection
+      type: object
+      required:
+      - test_name
+      - result_value
+      - result_unit
+      title: LabPanelItem
+      description: De-identified laboratory analyte finding pertinent to endpoint review.
     LabRangeRecalculateRequest:
       properties:
         study_id:
@@ -21540,6 +23331,468 @@ components:
       type: object
       title: LabReferenceRangeUpdate
       description: Pydantic schema for updating a reference range.
+    LabToxicityEvaluateRequest:
+      properties:
+        test_code:
+          type: string
+          title: Test Code
+          description: Standardized laboratory test code (e.g. 'ALT', 'CREAT', 'ANC')
+        test_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Test Name
+          description: Optional descriptive test name
+        value:
+          type: number
+          title: Value
+          description: Observed numeric test measurement
+        unit:
+          type: string
+          title: Unit
+          description: Reporting unit of measurement
+        ref_low:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Ref Low
+          description: Lower limit of demographic normal range (LLN)
+        ref_high:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Ref High
+          description: Upper limit of demographic normal range (ULN)
+        baseline_value:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Baseline Value
+          description: Optional subject baseline value for acute delta calculation
+        previous_value:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Previous Value
+          description: Optional previous observation value
+        grading_scale:
+          $ref: '#/components/schemas/GradingScaleEnum'
+          description: 'Target grading scale: ''CTCAE_V5'' or ''DAIDS_V2_1'''
+          default: CTCAE_V5
+        alt_value:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Alt Value
+          description: Co-analyte ALT value for Hy's Law evaluation
+        ast_value:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Ast Value
+          description: Co-analyte AST value for Hy's Law evaluation
+        bili_value:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Bili Value
+          description: Co-analyte Total Bilirubin value for Hy's Law evaluation
+        alkp_value:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Alkp Value
+          description: Co-analyte Alkaline Phosphatase value for Hy's Law evaluation
+      type: object
+      required:
+      - test_code
+      - value
+      - unit
+      title: LabToxicityEvaluateRequest
+      description: Request payload to simulate/evaluate laboratory toxicity grading in real time.
+    LabToxicityEvaluateResponse:
+      properties:
+        test_code:
+          type: string
+          title: Test Code
+          description: Analyzed laboratory test code
+        test_name:
+          type: string
+          title: Test Name
+          description: Descriptive test name
+        observed_value:
+          type: number
+          title: Observed Value
+          description: Evaluated measurement value
+        unit:
+          type: string
+          title: Unit
+          description: Unit of measurement
+        ctcae_grade:
+          type: integer
+          title: Ctcae Grade
+          description: Computed severity grade integer (0 to 4)
+        grading_scale:
+          type: string
+          title: Grading Scale
+          description: Grading scale applied
+        toxicity_description:
+          type: string
+          title: Toxicity Description
+          description: Detailed clinical severity criterion description
+        is_critical_ae_trigger:
+          type: boolean
+          title: Is Critical Ae Trigger
+          description: True if Grade >= 3 triggering automated AE drafting
+        is_hys_law_warning:
+          type: boolean
+          title: Is Hys Law Warning
+          description: True if Hy's Law criteria for severe DILI are met
+        is_delta_check_alert:
+          type: boolean
+          title: Is Delta Check Alert
+          description: True if acute delta threshold exceeded
+        delta_percentage:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Delta Percentage
+          description: Calculated percentage deviation from baseline
+      type: object
+      required:
+      - test_code
+      - test_name
+      - observed_value
+      - unit
+      - ctcae_grade
+      - grading_scale
+      - toxicity_description
+      - is_critical_ae_trigger
+      - is_hys_law_warning
+      - is_delta_check_alert
+      title: LabToxicityEvaluateResponse
+      description: Response payload with computed CTCAE / DAIDS toxicity grade and alert flags.
+    LocalLabCertificationCreate:
+      properties:
+        study_id:
+          type: string
+          title: Study Id
+          description: Unique protocol study identifier
+        site_id:
+          type: string
+          title: Site Id
+          description: Investigator site identifier
+        lab_name:
+          type: string
+          title: Lab Name
+          description: Laboratory facility name
+        lab_identifier:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Lab Identifier
+          description: Optional facility identifier
+        certification_number:
+          type: string
+          title: Certification Number
+          description: CLIA, CAP, or ISO certification number
+        accreditation_body:
+          type: string
+          title: Accreditation Body
+          description: Accrediting agency (e.g. CLIA, CAP, ISO 15189)
+        effective_date:
+          type: string
+          format: date-time
+          title: Effective Date
+          description: Certification effective begin date
+        expiration_date:
+          type: string
+          format: date-time
+          title: Expiration Date
+          description: Certification expiration end date
+        director_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Director Name
+          description: Name of laboratory director
+        is_accredited:
+          type: boolean
+          title: Is Accredited
+          description: Accreditation status flag
+          default: true
+        notes:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Notes
+          description: Operational notes
+        reason_for_change:
+          type: string
+          title: Reason For Change
+          description: Mandatory GxP 21 CFR Part 11 justification reason
+      type: object
+      required:
+      - study_id
+      - site_id
+      - lab_name
+      - certification_number
+      - accreditation_body
+      - effective_date
+      - expiration_date
+      - reason_for_change
+      title: LocalLabCertificationCreate
+      description: 'Payload to register a new local laboratory accreditation or certification.
+
+
+        Requirements: PRD-LAB-001'
+    LocalLabCertificationResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+          description: Unique database identifier
+        study_id:
+          type: string
+          title: Study Id
+          description: Unique protocol study identifier
+        site_id:
+          type: string
+          title: Site Id
+          description: Investigator site identifier
+        lab_name:
+          type: string
+          title: Lab Name
+          description: Laboratory facility name
+        lab_identifier:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Lab Identifier
+          description: Optional facility identifier
+        certification_number:
+          type: string
+          title: Certification Number
+          description: Certification number
+        accreditation_body:
+          type: string
+          title: Accreditation Body
+          description: Accreditation body
+        effective_date:
+          type: string
+          format: date-time
+          title: Effective Date
+          description: Effective begin date
+        expiration_date:
+          type: string
+          format: date-time
+          title: Expiration Date
+          description: Expiration end date
+        status:
+          $ref: '#/components/schemas/CertificationStatusEnum'
+          description: Status
+        director_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Director Name
+          description: Laboratory director name
+        is_accredited:
+          type: boolean
+          title: Is Accredited
+          description: Accredited status
+        notes:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Notes
+          description: Notes
+        version:
+          type: integer
+          title: Version
+          description: Version index
+        is_deleted:
+          type: boolean
+          title: Is Deleted
+          description: Soft deletion flag
+      type: object
+      required:
+      - id
+      - study_id
+      - site_id
+      - lab_name
+      - certification_number
+      - accreditation_body
+      - effective_date
+      - expiration_date
+      - status
+      - is_accredited
+      - version
+      - is_deleted
+      title: LocalLabCertificationResponse
+      description: 'Response representing a local laboratory certification.
+
+
+        Requirements: PRD-LAB-001'
+    LocalLabCertificationUpdate:
+      properties:
+        lab_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Lab Name
+          description: Updated facility name
+        lab_identifier:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Lab Identifier
+          description: Updated facility identifier
+        certification_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Certification Number
+          description: Updated certification number
+        accreditation_body:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Accreditation Body
+          description: Updated accrediting agency
+        effective_date:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Effective Date
+          description: Updated effective date
+        expiration_date:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Expiration Date
+          description: Updated expiration date
+        status:
+          anyOf:
+          - $ref: '#/components/schemas/CertificationStatusEnum'
+          - type: 'null'
+          description: Updated operational status
+        director_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Director Name
+          description: Updated laboratory director
+        is_accredited:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Is Accredited
+          description: Updated accreditation flag
+        notes:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Notes
+          description: Updated operational notes
+        reason_for_change:
+          type: string
+          title: Reason For Change
+          description: Mandatory GxP 21 CFR Part 11 justification reason
+      type: object
+      required:
+      - reason_for_change
+      title: LocalLabCertificationUpdate
+      description: 'Payload to update an existing local laboratory certification.
+
+
+        Requirements: PRD-LAB-001'
+    LocalLabCertificationVerifyRequest:
+      properties:
+        study_id:
+          type: string
+          title: Study Id
+          description: Unique protocol study identifier
+        site_id:
+          type: string
+          title: Site Id
+          description: Target site identifier
+        observation_date:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Observation Date
+          description: Observation collection date (defaults to current time)
+      type: object
+      required:
+      - study_id
+      - site_id
+      title: LocalLabCertificationVerifyRequest
+      description: Request to verify local laboratory certification validity.
+    LocalLabCertificationVerifyResponse:
+      properties:
+        is_valid:
+          type: boolean
+          title: Is Valid
+          description: True if site has active, unexpired certification
+        status:
+          type: string
+          title: Status
+          description: Certification status code
+        site_id:
+          type: string
+          title: Site Id
+          description: Site identifier
+        study_id:
+          type: string
+          title: Study Id
+          description: Study identifier
+        certification_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Certification Number
+          description: Certification number if found
+        accreditation_body:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Accreditation Body
+          description: Accreditation body if found
+        expiration_date:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Expiration Date
+          description: Expiration date if found
+        days_until_expiration:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Days Until Expiration
+          description: Days remaining until expiration
+        uncalibrated_safeguard_triggered:
+          type: boolean
+          title: Uncalibrated Safeguard Triggered
+          description: True if safeguard fired due to expired or missing certification
+          default: false
+        message:
+          type: string
+          title: Message
+          description: Human-readable status summary
+      type: object
+      required:
+      - is_valid
+      - status
+      - site_id
+      - study_id
+      - message
+      title: LocalLabCertificationVerifyResponse
+      description: Response from local lab certification verification.
     LocalLedgerBlock:
       properties:
         index:
@@ -21669,6 +23922,135 @@ components:
       - entity_id
       title: LoggerIngestionRequest
       description: Payload to upload and ingest a raw temperature logger file.
+    LoincCatalogResponse:
+      properties:
+        total_count:
+          type: integer
+          title: Total Count
+          description: Total mapped LOINC test codes
+        items:
+          items:
+            $ref: '#/components/schemas/LoincMappingItem'
+          type: array
+          title: Items
+          description: List of mapped LOINC analyte items
+      type: object
+      required:
+      - total_count
+      - items
+      title: LoincCatalogResponse
+      description: Response payload containing standardized LOINC mappings.
+    LoincConvertRequest:
+      properties:
+        test_code:
+          type: string
+          title: Test Code
+          description: Laboratory analyte code
+        from_unit:
+          type: string
+          title: From Unit
+          description: Source unit
+        to_unit:
+          type: string
+          title: To Unit
+          description: Target unit
+        value:
+          type: number
+          title: Value
+          description: Numeric value to convert
+      type: object
+      required:
+      - test_code
+      - from_unit
+      - to_unit
+      - value
+      title: LoincConvertRequest
+      description: Request to convert laboratory value between conventional and SI units.
+    LoincConvertResponse:
+      properties:
+        test_code:
+          type: string
+          title: Test Code
+          description: Analyte test code
+        from_unit:
+          type: string
+          title: From Unit
+          description: Original source unit
+        to_unit:
+          type: string
+          title: To Unit
+          description: Target converted unit
+        original_value:
+          type: number
+          title: Original Value
+          description: Original input value
+        converted_value:
+          type: number
+          title: Converted Value
+          description: Computed converted value
+        factor:
+          type: number
+          title: Factor
+          description: Multiplicative conversion factor
+        offset:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Offset
+          description: Additive offset if applicable
+        loinc_code:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Loinc Code
+          description: Associated LOINC code if resolved
+      type: object
+      required:
+      - test_code
+      - from_unit
+      - to_unit
+      - original_value
+      - converted_value
+      - factor
+      title: LoincConvertResponse
+      description: Response from mathematical laboratory unit conversion.
+    LoincMappingItem:
+      properties:
+        test_code:
+          type: string
+          title: Test Code
+          description: Standardized internal analyte code
+        test_name:
+          type: string
+          title: Test Name
+          description: Analyte name
+        loinc_code:
+          type: string
+          title: Loinc Code
+          description: Standard LOINC code
+        standard_unit:
+          type: string
+          title: Standard Unit
+          description: Standardized SI/UCUM unit
+        category:
+          type: string
+          title: Category
+          description: Clinical laboratory domain category
+        molecular_weight:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Molecular Weight
+          description: Molecular weight (g/mol) for molar/mass conversions
+      type: object
+      required:
+      - test_code
+      - test_name
+      - loinc_code
+      - standard_unit
+      - category
+      title: LoincMappingItem
+      description: LOINC dictionary mapping metadata item.
     LotExpiryExtensionRequest:
       properties:
         study_id:
@@ -21841,6 +24223,62 @@ components:
       - LLT
       - PT
       title: MedDRATargetLevelEnum
+    MeetingQuorumRecordDTO:
+      properties:
+        study_id:
+          type: string
+          title: Study Id
+          description: Study ID
+        charter_id:
+          type: string
+          title: Charter Id
+          description: Charter ID
+        meeting_date:
+          type: string
+          title: Meeting Date
+          description: Meeting date (ISO 8601)
+        attendees:
+          items:
+            additionalProperties:
+              type: string
+            type: object
+          type: array
+          title: Attendees
+          description: 'Attendees: [{member_id, member_name, role}]'
+        total_eligible_members:
+          type: integer
+          minimum: 1.0
+          title: Total Eligible Members
+        dossiers_reviewed:
+          items:
+            type: string
+          type: array
+          title: Dossiers Reviewed
+        voting_results:
+          additionalProperties:
+            additionalProperties: true
+            type: object
+          type: object
+          title: Voting Results
+        meeting_minutes:
+          type: string
+          title: Meeting Minutes
+          default: ''
+        chair_signature:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Chair Signature
+      type: object
+      required:
+      - study_id
+      - charter_id
+      - meeting_date
+      - attendees
+      - total_eligible_members
+      title: MeetingQuorumRecordDTO
+      description: Payload to record committee meeting quorum and minutes.
     MigrationRuleCreate:
       properties:
         study_id:
@@ -23449,6 +25887,135 @@ components:
       type: object
       title: ReLabelingTaskVerifyRequest
       description: Payload for dual QA verification of a completed re-labeling task.
+    ReaderAssessment:
+      properties:
+        assessment_id:
+          type: string
+          title: Assessment Id
+          description: Unique assessment ID
+        dossier_id:
+          type: string
+          title: Dossier Id
+          description: Target dossier ID
+        reader_id:
+          type: string
+          title: Reader Id
+          description: Adjudicator user identifier
+        reader_name:
+          type: string
+          title: Reader Name
+          description: Adjudicator full name / credentials
+        reader_role:
+          $ref: '#/components/schemas/ReaderRole'
+          description: 'Assigned role: READER_1 or READER_2'
+        classification:
+          $ref: '#/components/schemas/AdjudicationClassification'
+          description: Determined classification
+        subtype:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subtype
+          description: Specific event subtype (e.g. Type 1 MI, Ischemic Stroke)
+        adjudicated_onset_date:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Adjudicated Onset Date
+          description: Adjudicated date/time of event onset in ISO 8601
+        criteria_met:
+          items:
+            type: string
+          type: array
+          title: Criteria Met
+          description: Diagnostic criteria items satisfied
+        confidence_score:
+          type: integer
+          maximum: 5.0
+          minimum: 1.0
+          title: Confidence Score
+          description: Confidence level (1=Low, 5=Definitive)
+          default: 5
+        clinical_rationale:
+          type: string
+          title: Clinical Rationale
+          description: Detailed clinical rationale
+          default: ''
+        submitted_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Submitted At
+          description: UTC submission timestamp
+        assessment_digest:
+          type: string
+          title: Assessment Digest
+          description: SHA-256 hash of reader assessment payload
+          default: ''
+      type: object
+      required:
+      - assessment_id
+      - dossier_id
+      - reader_id
+      - reader_name
+      - reader_role
+      - classification
+      title: ReaderAssessment
+      description: Blinded expert reader assessment and diagnostic criteria evaluation.
+    ReaderAssessmentSubmitDTO:
+      properties:
+        reader_role:
+          $ref: '#/components/schemas/ReaderRole'
+          description: 'Reader role: READER_1 or READER_2'
+        classification:
+          $ref: '#/components/schemas/AdjudicationClassification'
+          description: Event classification
+        subtype:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subtype
+          description: Specific event subtype (e.g. Type 1 MI, Ischemic Stroke)
+        adjudicated_onset_date:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Adjudicated Onset Date
+          description: Adjudicated onset date (ISO 8601)
+        criteria_met:
+          items:
+            type: string
+          type: array
+          title: Criteria Met
+          description: Diagnostic criteria satisfied
+        confidence_score:
+          type: integer
+          maximum: 5.0
+          minimum: 1.0
+          title: Confidence Score
+          description: Confidence score 1 to 5
+          default: 5
+        clinical_rationale:
+          type: string
+          title: Clinical Rationale
+          description: Clinical rationale narrative
+          default: ''
+      type: object
+      required:
+      - reader_role
+      - classification
+      title: ReaderAssessmentSubmitDTO
+      description: Payload for Reader 1 or Reader 2 independent blinded assessment submission.
+    ReaderRole:
+      type: string
+      enum:
+      - READER_1
+      - READER_2
+      - CHAIR
+      - COMMITTEE_MEMBER
+      - COORDINATOR
+      title: ReaderRole
+      description: Roles within the CEC charter hierarchy.
     RedactPDFRequest:
       properties:
         pdf_base64:
@@ -23730,6 +26297,50 @@ components:
       - FIELD_BASED
       - COMBINED
       title: SamplingModelEnum
+    SdtmCeCompilationResult:
+      properties:
+        study_id:
+          type: string
+          title: Study Id
+        ce_records:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Ce Records
+        suppce_records:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Suppce Records
+        record_count:
+          type: integer
+          title: Record Count
+          default: 0
+        compiled_at:
+          type: string
+          title: Compiled At
+        dataset_digest:
+          type: string
+          title: Dataset Digest
+          default: ''
+      type: object
+      required:
+      - study_id
+      title: SdtmCeCompilationResult
+      description: Compiled CDISC SDTM CE and SUPPCE domain dataset.
+    SdtmCeCompileRequestDTO:
+      properties:
+        study_id:
+          type: string
+          title: Study Id
+          description: Study ID
+      type: object
+      required:
+      - study_id
+      title: SdtmCeCompileRequestDTO
+      description: Request payload to compile SDTM CE dataset for a study.
     SignRequest:
       properties:
         data:
@@ -23936,6 +26547,226 @@ components:
       - activation_energy_over_r
       title: StabilityBudgetResponse
       description: Response schema for a drug stability budget.
+    StagedAdverseEventActionRequest:
+      properties:
+        action:
+          type: string
+          title: Action
+          description: 'Action to take: ''CONFIRM'' (promote to formal AE), ''DISMISS'' (not clinically significant), or ''ESCALATE_SAE'''
+        investigator_notes:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Investigator Notes
+          description: Clinical commentary and rationale
+        electronic_signature_password:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Electronic Signature Password
+          description: 21 CFR Part 11 authentication credential
+        reason_for_change:
+          type: string
+          title: Reason For Change
+          description: Mandatory GxP 21 CFR Part 11 justification reason
+      type: object
+      required:
+      - action
+      - reason_for_change
+      title: StagedAdverseEventActionRequest
+      description: Payload to perform an Investigator action on a staged Grade 3/4 AE.
+    StagedAdverseEventActionResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+          description: Review ID
+        review_status:
+          type: string
+          title: Review Status
+          description: Updated review status
+        action_taken:
+          type: string
+          title: Action Taken
+          description: Action that was executed
+        form_submission_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Form Submission Id
+          description: FormSubmission ID if confirmed
+        query_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Query Id
+          description: ClinicalQuery ID updated
+        message:
+          type: string
+          title: Message
+          description: Result message
+        timestamp:
+          type: string
+          format: date-time
+          title: Timestamp
+          description: Action timestamp
+      type: object
+      required:
+      - id
+      - review_status
+      - action_taken
+      - message
+      - timestamp
+      title: StagedAdverseEventActionResponse
+      description: Response from executing an Investigator action on a staged AE.
+    StagedAdverseEventReviewResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+          description: Unique review record ID
+        study_id:
+          type: string
+          title: Study Id
+          description: Trial study identifier
+        site_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Site Id
+          description: Investigator site identifier
+        subject_id:
+          type: string
+          title: Subject Id
+          description: Subject identifier
+        visit_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Visit Id
+          description: Visit identifier
+        observation_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Observation Id
+          description: Linked ClinicalObservation ID
+        form_submission_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Form Submission Id
+          description: Drafted AE FormSubmission ID
+        query_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Query Id
+          description: Linked discrepancy ClinicalQuery ID
+        test_code:
+          type: string
+          title: Test Code
+          description: Laboratory test code
+        test_name:
+          type: string
+          title: Test Name
+          description: Descriptive test name
+        lab_value:
+          type: number
+          title: Lab Value
+          description: Observed lab measurement value
+        unit:
+          type: string
+          title: Unit
+          description: Unit of measurement
+        ctcae_grade:
+          type: integer
+          title: Ctcae Grade
+          description: Toxicity grade (3 or 4)
+        grading_scale:
+          type: string
+          title: Grading Scale
+          description: Grading scale standard
+        toxicity_term:
+          type: string
+          title: Toxicity Term
+          description: Standard adverse event term
+        clinical_description:
+          type: string
+          title: Clinical Description
+          description: Clinical severity description
+        is_hys_law_warning:
+          type: boolean
+          title: Is Hys Law Warning
+          description: Potential Hy's Law DILI alert
+        is_delta_check_alert:
+          type: boolean
+          title: Is Delta Check Alert
+          description: Acute delta check alert
+        delta_percentage:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Delta Percentage
+          description: Delta change percentage from baseline
+        review_status:
+          type: string
+          title: Review Status
+          description: Current review status
+        reviewed_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reviewed By
+          description: User ID of reviewing Investigator
+        reviewed_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Reviewed At
+          description: Review timestamp
+        investigator_notes:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Investigator Notes
+          description: Investigator clinical notes
+        version:
+          type: integer
+          title: Version
+          description: Version index
+        is_deleted:
+          type: boolean
+          title: Is Deleted
+          description: Soft deletion flag
+        created_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Created At
+          description: Creation timestamp
+      type: object
+      required:
+      - id
+      - study_id
+      - subject_id
+      - test_code
+      - test_name
+      - lab_value
+      - unit
+      - ctcae_grade
+      - grading_scale
+      - toxicity_term
+      - clinical_description
+      - is_hys_law_warning
+      - is_delta_check_alert
+      - review_status
+      - version
+      - is_deleted
+      title: StagedAdverseEventReviewResponse
+      description: Response payload for a staged Grade 3/4 AE laboratory toxicity review item.
     StudyEvent:
       properties:
         study_id:
@@ -25661,6 +28492,15 @@ components:
       - study_id
       title: VisitResponse
       description: Pydantic schema returning visit details.
+    VotingRule:
+      type: string
+      enum:
+      - UNANIMOUS
+      - MAJORITY_2_OF_3
+      - CHAIR_TIE_BREAKER
+      - SUPERMAJORITY
+      title: VotingRule
+      description: Committee charter decision and voting rules.
     WHODrugATCContext:
       properties:
         atc_code:

@@ -205,6 +205,10 @@ The platform must encapsulate all artificial intelligence model routing, rate-li
 
 The safety microservice (`apps/safety`) must deploy an automated regulatory narrative drafting pipeline that compiles chronological de-identified clinical event streams from `apps/execution` (Demographics, Medical History, Study Drug Administration, Concomitant Medications, Adverse Events, Diagnostic Laboratory Results, Hospitalizations, and Dechallenge/Rechallenge) into FDA MedWatch 3500A and CIOMS-I compliant Serious Adverse Event (SAE) narrative summaries. Narratives must be generated using Frontier Reasoning models (`ModelTier.TIER_3_FRONTIER`) adhering strictly to ICH E2B(R3) section structure, contain grounded claim cross-references linking narrative sentences directly to underlying eCRF clinical records, and enforce mandatory 21 CFR Part 11 cryptographic electronic signature gating by a qualified Safety Physician or Medical Monitor before entering `APPROVED` status or exporting to ICH E2B(R3) ICSR XML format.
 
+#### PRD-SYS-125: Immutable Point-in-Time Regulatory Dataset Snapshots & Executive Electronic Signatures
+
+The platform must generate deterministic, SHA-256 Merkle root canonical digests sealing point-in-time clinical trial datasets corresponding to periodic reporting windows (e.g. Development International Birth Date DIBD anniversaries). Dataset snapshots must guarantee 100% bitwise reproducibility and provide cryptographic verification endpoints to detect post-lock data mutation or tampering. Periodic regulatory safety reports compiled from snapshots must enforce 21 CFR Part 11 role-gated electronic signature workflows by the Qualified Person for Pharmacovigilance (QPPV) or authorized Safety Physician before regulatory submission export.
+
 ---
 
 ## 4. Study Design & Clinical Metadata Repository (MDR)

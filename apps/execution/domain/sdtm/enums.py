@@ -19,6 +19,7 @@ class SDTMDomain(StrEnum):
     LB = "LB"
     CM = "CM"
     MH = "MH"
+    CE = "CE"
 
 
 class Sex(StrEnum):

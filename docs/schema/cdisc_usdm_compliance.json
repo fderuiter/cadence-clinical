@@ -3362,6 +3362,1405 @@
               ]
             },
             {
+              "id": "bc_execution_cec_charters",
+              "name": "cec_charters",
+              "label": "Execution / EDC - CecCharterRecord",
+              "conceptCode": "SCHEMA_EXECUTION_CEC_CHARTERS",
+              "displayName": "cec_charters (execution)",
+              "definition": "Committee charter configuration, voting rules, and diagnostic criteria templates.",
+              "cdashDomain": "execution",
+              "cdashVariable": "CEC_CHARTERS",
+              "dataType": "Relational Table",
+              "properties": [
+                {
+                  "id": "prop_execution_cec_charters_study_id",
+                  "name": "study_id",
+                  "label": "study_id (VARCHAR(255))",
+                  "cdashVariable": "STUDY_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_charters_committee_name",
+                  "name": "committee_name",
+                  "label": "committee_name (VARCHAR(255))",
+                  "cdashVariable": "COMMITTEE_NAME",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_charters_version",
+                  "name": "version",
+                  "label": "version (VARCHAR(50))",
+                  "cdashVariable": "VERSION",
+                  "dataType": "VARCHAR(50)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_charters_voting_rule",
+                  "name": "voting_rule",
+                  "label": "voting_rule (VARCHAR(50))",
+                  "cdashVariable": "VOTING_RULE",
+                  "dataType": "VARCHAR(50)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_charters_minimum_quorum_percentage",
+                  "name": "minimum_quorum_percentage",
+                  "label": "minimum_quorum_percentage (FLOAT)",
+                  "cdashVariable": "MINIMUM_QUORUM_PERCENTAGE",
+                  "dataType": "FLOAT",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_charters_minimum_members_count",
+                  "name": "minimum_members_count",
+                  "label": "minimum_members_count (INTEGER)",
+                  "cdashVariable": "MINIMUM_MEMBERS_COUNT",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_charters_eligible_members",
+                  "name": "eligible_members",
+                  "label": "eligible_members (JSON)",
+                  "cdashVariable": "ELIGIBLE_MEMBERS",
+                  "dataType": "JSON",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_charters_endpoint_definitions",
+                  "name": "endpoint_definitions",
+                  "label": "endpoint_definitions (JSON)",
+                  "cdashVariable": "ENDPOINT_DEFINITIONS",
+                  "dataType": "JSON",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_charters_diagnostic_criteria_templates",
+                  "name": "diagnostic_criteria_templates",
+                  "label": "diagnostic_criteria_templates (JSON)",
+                  "cdashVariable": "DIAGNOSTIC_CRITERIA_TEMPLATES",
+                  "dataType": "JSON",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_charters_is_active",
+                  "name": "is_active",
+                  "label": "is_active (BOOLEAN)",
+                  "cdashVariable": "IS_ACTIVE",
+                  "dataType": "BOOLEAN",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_charters_created_at",
+                  "name": "created_at",
+                  "label": "created_at (DATETIME)",
+                  "cdashVariable": "CREATED_AT",
+                  "dataType": "DATETIME",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_charters_created_by",
+                  "name": "created_by",
+                  "label": "created_by (VARCHAR(255))",
+                  "cdashVariable": "CREATED_BY",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_charters_reason_for_change",
+                  "name": "reason_for_change",
+                  "label": "reason_for_change (VARCHAR(1000))",
+                  "cdashVariable": "REASON_FOR_CHANGE",
+                  "dataType": "VARCHAR(1000)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_charters_version_index",
+                  "name": "version_index",
+                  "label": "version_index (INTEGER)",
+                  "cdashVariable": "VERSION_INDEX",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_charters_id",
+                  "name": "id",
+                  "label": "id (VARCHAR(36))",
+                  "cdashVariable": "ID",
+                  "dataType": "VARCHAR(36)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": true,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_charters_is_deleted",
+                  "name": "is_deleted",
+                  "label": "is_deleted (BOOLEAN)",
+                  "cdashVariable": "IS_DELETED",
+                  "dataType": "BOOLEAN",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                }
+              ]
+            },
+            {
+              "id": "bc_execution_cec_dossiers",
+              "name": "cec_dossiers",
+              "label": "Execution / EDC - CecDossierRecord",
+              "conceptCode": "SCHEMA_EXECUTION_CEC_DOSSIERS",
+              "displayName": "cec_dossiers (execution)",
+              "definition": "Represents a packaged de-identified clinical event dossier and its 2+1 review lifecycle.",
+              "cdashDomain": "execution",
+              "cdashVariable": "CEC_DOSSIERS",
+              "dataType": "Relational Table",
+              "properties": [
+                {
+                  "id": "prop_execution_cec_dossiers_study_id",
+                  "name": "study_id",
+                  "label": "study_id (VARCHAR(255))",
+                  "cdashVariable": "STUDY_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_site_id",
+                  "name": "site_id",
+                  "label": "site_id (VARCHAR(255))",
+                  "cdashVariable": "SITE_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_subject_id",
+                  "name": "subject_id",
+                  "label": "subject_id (VARCHAR(255))",
+                  "cdashVariable": "SUBJECT_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_masked_site_id",
+                  "name": "masked_site_id",
+                  "label": "masked_site_id (VARCHAR(255))",
+                  "cdashVariable": "MASKED_SITE_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_masked_subject_id",
+                  "name": "masked_subject_id",
+                  "label": "masked_subject_id (VARCHAR(255))",
+                  "cdashVariable": "MASKED_SUBJECT_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_event_id",
+                  "name": "event_id",
+                  "label": "event_id (VARCHAR(255))",
+                  "cdashVariable": "EVENT_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_candidate_event_type",
+                  "name": "candidate_event_type",
+                  "label": "candidate_event_type (VARCHAR(100))",
+                  "cdashVariable": "CANDIDATE_EVENT_TYPE",
+                  "dataType": "VARCHAR(100)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_reported_term",
+                  "name": "reported_term",
+                  "label": "reported_term (VARCHAR(255))",
+                  "cdashVariable": "REPORTED_TERM",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_verbatim_description",
+                  "name": "verbatim_description",
+                  "label": "verbatim_description (TEXT)",
+                  "cdashVariable": "VERBATIM_DESCRIPTION",
+                  "dataType": "TEXT",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_reported_onset_date",
+                  "name": "reported_onset_date",
+                  "label": "reported_onset_date (VARCHAR(50))",
+                  "cdashVariable": "REPORTED_ONSET_DATE",
+                  "dataType": "VARCHAR(50)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_medical_narrative",
+                  "name": "medical_narrative",
+                  "label": "medical_narrative (TEXT)",
+                  "cdashVariable": "MEDICAL_NARRATIVE",
+                  "dataType": "TEXT",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_reader_1_id",
+                  "name": "reader_1_id",
+                  "label": "reader_1_id (VARCHAR(255))",
+                  "cdashVariable": "READER_1_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_reader_1_name",
+                  "name": "reader_1_name",
+                  "label": "reader_1_name (VARCHAR(255))",
+                  "cdashVariable": "READER_1_NAME",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_reader_1_status",
+                  "name": "reader_1_status",
+                  "label": "reader_1_status (VARCHAR(50))",
+                  "cdashVariable": "READER_1_STATUS",
+                  "dataType": "VARCHAR(50)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_reader_1_assessment",
+                  "name": "reader_1_assessment",
+                  "label": "reader_1_assessment (JSON)",
+                  "cdashVariable": "READER_1_ASSESSMENT",
+                  "dataType": "JSON",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_reader_2_id",
+                  "name": "reader_2_id",
+                  "label": "reader_2_id (VARCHAR(255))",
+                  "cdashVariable": "READER_2_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_reader_2_name",
+                  "name": "reader_2_name",
+                  "label": "reader_2_name (VARCHAR(255))",
+                  "cdashVariable": "READER_2_NAME",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_reader_2_status",
+                  "name": "reader_2_status",
+                  "label": "reader_2_status (VARCHAR(50))",
+                  "cdashVariable": "READER_2_STATUS",
+                  "dataType": "VARCHAR(50)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_reader_2_assessment",
+                  "name": "reader_2_assessment",
+                  "label": "reader_2_assessment (JSON)",
+                  "cdashVariable": "READER_2_ASSESSMENT",
+                  "dataType": "JSON",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_chair_id",
+                  "name": "chair_id",
+                  "label": "chair_id (VARCHAR(255))",
+                  "cdashVariable": "CHAIR_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_chair_name",
+                  "name": "chair_name",
+                  "label": "chair_name (VARCHAR(255))",
+                  "cdashVariable": "CHAIR_NAME",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_chair_determination",
+                  "name": "chair_determination",
+                  "label": "chair_determination (JSON)",
+                  "cdashVariable": "CHAIR_DETERMINATION",
+                  "dataType": "JSON",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_workflow_status",
+                  "name": "workflow_status",
+                  "label": "workflow_status (VARCHAR(50))",
+                  "cdashVariable": "WORKFLOW_STATUS",
+                  "dataType": "VARCHAR(50)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_is_discordant",
+                  "name": "is_discordant",
+                  "label": "is_discordant (BOOLEAN)",
+                  "cdashVariable": "IS_DISCORDANT",
+                  "dataType": "BOOLEAN",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_discordance_reasons",
+                  "name": "discordance_reasons",
+                  "label": "discordance_reasons (JSON)",
+                  "cdashVariable": "DISCORDANCE_REASONS",
+                  "dataType": "JSON",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_final_consensus_classification",
+                  "name": "final_consensus_classification",
+                  "label": "final_consensus_classification (VARCHAR(100))",
+                  "cdashVariable": "FINAL_CONSENSUS_CLASSIFICATION",
+                  "dataType": "VARCHAR(100)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_final_consensus_subtype",
+                  "name": "final_consensus_subtype",
+                  "label": "final_consensus_subtype (VARCHAR(255))",
+                  "cdashVariable": "FINAL_CONSENSUS_SUBTYPE",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_final_adjudicated_onset_date",
+                  "name": "final_adjudicated_onset_date",
+                  "label": "final_adjudicated_onset_date (VARCHAR(50))",
+                  "cdashVariable": "FINAL_ADJUDICATED_ONSET_DATE",
+                  "dataType": "VARCHAR(50)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_binding_determination_source",
+                  "name": "binding_determination_source",
+                  "label": "binding_determination_source (VARCHAR(100))",
+                  "cdashVariable": "BINDING_DETERMINATION_SOURCE",
+                  "dataType": "VARCHAR(100)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_adjudication_rationale",
+                  "name": "adjudication_rationale",
+                  "label": "adjudication_rationale (TEXT)",
+                  "cdashVariable": "ADJUDICATION_RATIONALE",
+                  "dataType": "TEXT",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_dossier_payload",
+                  "name": "dossier_payload",
+                  "label": "dossier_payload (JSON)",
+                  "cdashVariable": "DOSSIER_PAYLOAD",
+                  "dataType": "JSON",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_electronic_signature",
+                  "name": "electronic_signature",
+                  "label": "electronic_signature (JSON)",
+                  "cdashVariable": "ELECTRONIC_SIGNATURE",
+                  "dataType": "JSON",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_edc_writeback_status",
+                  "name": "edc_writeback_status",
+                  "label": "edc_writeback_status (VARCHAR(50))",
+                  "cdashVariable": "EDC_WRITEBACK_STATUS",
+                  "dataType": "VARCHAR(50)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_edc_writeback_payload",
+                  "name": "edc_writeback_payload",
+                  "label": "edc_writeback_payload (JSON)",
+                  "cdashVariable": "EDC_WRITEBACK_PAYLOAD",
+                  "dataType": "JSON",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_sdtm_ce_record",
+                  "name": "sdtm_ce_record",
+                  "label": "sdtm_ce_record (JSON)",
+                  "cdashVariable": "SDTM_CE_RECORD",
+                  "dataType": "JSON",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_sdtm_suppce_records",
+                  "name": "sdtm_suppce_records",
+                  "label": "sdtm_suppce_records (JSON)",
+                  "cdashVariable": "SDTM_SUPPCE_RECORDS",
+                  "dataType": "JSON",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_dossier_digest",
+                  "name": "dossier_digest",
+                  "label": "dossier_digest (VARCHAR(64))",
+                  "cdashVariable": "DOSSIER_DIGEST",
+                  "dataType": "VARCHAR(64)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_created_at",
+                  "name": "created_at",
+                  "label": "created_at (DATETIME)",
+                  "cdashVariable": "CREATED_AT",
+                  "dataType": "DATETIME",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_created_by",
+                  "name": "created_by",
+                  "label": "created_by (VARCHAR(255))",
+                  "cdashVariable": "CREATED_BY",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_reason_for_change",
+                  "name": "reason_for_change",
+                  "label": "reason_for_change (VARCHAR(1000))",
+                  "cdashVariable": "REASON_FOR_CHANGE",
+                  "dataType": "VARCHAR(1000)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_version_index",
+                  "name": "version_index",
+                  "label": "version_index (INTEGER)",
+                  "cdashVariable": "VERSION_INDEX",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_id",
+                  "name": "id",
+                  "label": "id (VARCHAR(36))",
+                  "cdashVariable": "ID",
+                  "dataType": "VARCHAR(36)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": true,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_version",
+                  "name": "version",
+                  "label": "version (INTEGER)",
+                  "cdashVariable": "VERSION",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_dossiers_is_deleted",
+                  "name": "is_deleted",
+                  "label": "is_deleted (BOOLEAN)",
+                  "cdashVariable": "IS_DELETED",
+                  "dataType": "BOOLEAN",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                }
+              ]
+            },
+            {
+              "id": "bc_execution_cec_meetings",
+              "name": "cec_meetings",
+              "label": "Execution / EDC - CecMeetingRecord",
+              "conceptCode": "SCHEMA_EXECUTION_CEC_MEETINGS",
+              "displayName": "cec_meetings (execution)",
+              "definition": "Committee meeting quorum tracking and minutes sign-off ledger.",
+              "cdashDomain": "execution",
+              "cdashVariable": "CEC_MEETINGS",
+              "dataType": "Relational Table",
+              "properties": [
+                {
+                  "id": "prop_execution_cec_meetings_study_id",
+                  "name": "study_id",
+                  "label": "study_id (VARCHAR(255))",
+                  "cdashVariable": "STUDY_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_charter_id",
+                  "name": "charter_id",
+                  "label": "charter_id (VARCHAR(255))",
+                  "cdashVariable": "CHARTER_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_meeting_date",
+                  "name": "meeting_date",
+                  "label": "meeting_date (VARCHAR(50))",
+                  "cdashVariable": "MEETING_DATE",
+                  "dataType": "VARCHAR(50)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_attendees",
+                  "name": "attendees",
+                  "label": "attendees (JSON)",
+                  "cdashVariable": "ATTENDEES",
+                  "dataType": "JSON",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_total_eligible_members",
+                  "name": "total_eligible_members",
+                  "label": "total_eligible_members (INTEGER)",
+                  "cdashVariable": "TOTAL_ELIGIBLE_MEMBERS",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_quorum_percentage",
+                  "name": "quorum_percentage",
+                  "label": "quorum_percentage (FLOAT)",
+                  "cdashVariable": "QUORUM_PERCENTAGE",
+                  "dataType": "FLOAT",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_quorum_met",
+                  "name": "quorum_met",
+                  "label": "quorum_met (BOOLEAN)",
+                  "cdashVariable": "QUORUM_MET",
+                  "dataType": "BOOLEAN",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_dossiers_reviewed",
+                  "name": "dossiers_reviewed",
+                  "label": "dossiers_reviewed (JSON)",
+                  "cdashVariable": "DOSSIERS_REVIEWED",
+                  "dataType": "JSON",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_voting_results",
+                  "name": "voting_results",
+                  "label": "voting_results (JSON)",
+                  "cdashVariable": "VOTING_RESULTS",
+                  "dataType": "JSON",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_meeting_minutes",
+                  "name": "meeting_minutes",
+                  "label": "meeting_minutes (TEXT)",
+                  "cdashVariable": "MEETING_MINUTES",
+                  "dataType": "TEXT",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_minutes_digest",
+                  "name": "minutes_digest",
+                  "label": "minutes_digest (VARCHAR(64))",
+                  "cdashVariable": "MINUTES_DIGEST",
+                  "dataType": "VARCHAR(64)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_signed_by_chair",
+                  "name": "signed_by_chair",
+                  "label": "signed_by_chair (BOOLEAN)",
+                  "cdashVariable": "SIGNED_BY_CHAIR",
+                  "dataType": "BOOLEAN",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_chair_signature",
+                  "name": "chair_signature",
+                  "label": "chair_signature (JSON)",
+                  "cdashVariable": "CHAIR_SIGNATURE",
+                  "dataType": "JSON",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_created_at",
+                  "name": "created_at",
+                  "label": "created_at (DATETIME)",
+                  "cdashVariable": "CREATED_AT",
+                  "dataType": "DATETIME",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_created_by",
+                  "name": "created_by",
+                  "label": "created_by (VARCHAR(255))",
+                  "cdashVariable": "CREATED_BY",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_reason_for_change",
+                  "name": "reason_for_change",
+                  "label": "reason_for_change (VARCHAR(1000))",
+                  "cdashVariable": "REASON_FOR_CHANGE",
+                  "dataType": "VARCHAR(1000)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_version_index",
+                  "name": "version_index",
+                  "label": "version_index (INTEGER)",
+                  "cdashVariable": "VERSION_INDEX",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_id",
+                  "name": "id",
+                  "label": "id (VARCHAR(36))",
+                  "cdashVariable": "ID",
+                  "dataType": "VARCHAR(36)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": true,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_version",
+                  "name": "version",
+                  "label": "version (INTEGER)",
+                  "cdashVariable": "VERSION",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_cec_meetings_is_deleted",
+                  "name": "is_deleted",
+                  "label": "is_deleted (BOOLEAN)",
+                  "cdashVariable": "IS_DELETED",
+                  "dataType": "BOOLEAN",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                }
+              ]
+            },
+            {
               "id": "bc_execution_change_approval_signatures",
               "name": "change_approval_signatures",
               "label": "Execution / EDC - ChangeApprovalSignature",
@@ -54100,6 +55499,1405 @@
           ]
         },
         {
+          "id": "bc_execution_cec_charters",
+          "name": "cec_charters",
+          "label": "Execution / EDC - CecCharterRecord",
+          "conceptCode": "SCHEMA_EXECUTION_CEC_CHARTERS",
+          "displayName": "cec_charters (execution)",
+          "definition": "Committee charter configuration, voting rules, and diagnostic criteria templates.",
+          "cdashDomain": "execution",
+          "cdashVariable": "CEC_CHARTERS",
+          "dataType": "Relational Table",
+          "properties": [
+            {
+              "id": "prop_execution_cec_charters_study_id",
+              "name": "study_id",
+              "label": "study_id (VARCHAR(255))",
+              "cdashVariable": "STUDY_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_charters_committee_name",
+              "name": "committee_name",
+              "label": "committee_name (VARCHAR(255))",
+              "cdashVariable": "COMMITTEE_NAME",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_charters_version",
+              "name": "version",
+              "label": "version (VARCHAR(50))",
+              "cdashVariable": "VERSION",
+              "dataType": "VARCHAR(50)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_charters_voting_rule",
+              "name": "voting_rule",
+              "label": "voting_rule (VARCHAR(50))",
+              "cdashVariable": "VOTING_RULE",
+              "dataType": "VARCHAR(50)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_charters_minimum_quorum_percentage",
+              "name": "minimum_quorum_percentage",
+              "label": "minimum_quorum_percentage (FLOAT)",
+              "cdashVariable": "MINIMUM_QUORUM_PERCENTAGE",
+              "dataType": "FLOAT",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_charters_minimum_members_count",
+              "name": "minimum_members_count",
+              "label": "minimum_members_count (INTEGER)",
+              "cdashVariable": "MINIMUM_MEMBERS_COUNT",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_charters_eligible_members",
+              "name": "eligible_members",
+              "label": "eligible_members (JSON)",
+              "cdashVariable": "ELIGIBLE_MEMBERS",
+              "dataType": "JSON",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_charters_endpoint_definitions",
+              "name": "endpoint_definitions",
+              "label": "endpoint_definitions (JSON)",
+              "cdashVariable": "ENDPOINT_DEFINITIONS",
+              "dataType": "JSON",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_charters_diagnostic_criteria_templates",
+              "name": "diagnostic_criteria_templates",
+              "label": "diagnostic_criteria_templates (JSON)",
+              "cdashVariable": "DIAGNOSTIC_CRITERIA_TEMPLATES",
+              "dataType": "JSON",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_charters_is_active",
+              "name": "is_active",
+              "label": "is_active (BOOLEAN)",
+              "cdashVariable": "IS_ACTIVE",
+              "dataType": "BOOLEAN",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_charters_created_at",
+              "name": "created_at",
+              "label": "created_at (DATETIME)",
+              "cdashVariable": "CREATED_AT",
+              "dataType": "DATETIME",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_charters_created_by",
+              "name": "created_by",
+              "label": "created_by (VARCHAR(255))",
+              "cdashVariable": "CREATED_BY",
+              "dataType": "VARCHAR(255)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_charters_reason_for_change",
+              "name": "reason_for_change",
+              "label": "reason_for_change (VARCHAR(1000))",
+              "cdashVariable": "REASON_FOR_CHANGE",
+              "dataType": "VARCHAR(1000)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_charters_version_index",
+              "name": "version_index",
+              "label": "version_index (INTEGER)",
+              "cdashVariable": "VERSION_INDEX",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_charters_id",
+              "name": "id",
+              "label": "id (VARCHAR(36))",
+              "cdashVariable": "ID",
+              "dataType": "VARCHAR(36)",
+              "mandatory": true,
+              "config": {
+                "primary_key": true,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_charters_is_deleted",
+              "name": "is_deleted",
+              "label": "is_deleted (BOOLEAN)",
+              "cdashVariable": "IS_DELETED",
+              "dataType": "BOOLEAN",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "bc_execution_cec_dossiers",
+          "name": "cec_dossiers",
+          "label": "Execution / EDC - CecDossierRecord",
+          "conceptCode": "SCHEMA_EXECUTION_CEC_DOSSIERS",
+          "displayName": "cec_dossiers (execution)",
+          "definition": "Represents a packaged de-identified clinical event dossier and its 2+1 review lifecycle.",
+          "cdashDomain": "execution",
+          "cdashVariable": "CEC_DOSSIERS",
+          "dataType": "Relational Table",
+          "properties": [
+            {
+              "id": "prop_execution_cec_dossiers_study_id",
+              "name": "study_id",
+              "label": "study_id (VARCHAR(255))",
+              "cdashVariable": "STUDY_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_site_id",
+              "name": "site_id",
+              "label": "site_id (VARCHAR(255))",
+              "cdashVariable": "SITE_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_subject_id",
+              "name": "subject_id",
+              "label": "subject_id (VARCHAR(255))",
+              "cdashVariable": "SUBJECT_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_masked_site_id",
+              "name": "masked_site_id",
+              "label": "masked_site_id (VARCHAR(255))",
+              "cdashVariable": "MASKED_SITE_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_masked_subject_id",
+              "name": "masked_subject_id",
+              "label": "masked_subject_id (VARCHAR(255))",
+              "cdashVariable": "MASKED_SUBJECT_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_event_id",
+              "name": "event_id",
+              "label": "event_id (VARCHAR(255))",
+              "cdashVariable": "EVENT_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_candidate_event_type",
+              "name": "candidate_event_type",
+              "label": "candidate_event_type (VARCHAR(100))",
+              "cdashVariable": "CANDIDATE_EVENT_TYPE",
+              "dataType": "VARCHAR(100)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_reported_term",
+              "name": "reported_term",
+              "label": "reported_term (VARCHAR(255))",
+              "cdashVariable": "REPORTED_TERM",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_verbatim_description",
+              "name": "verbatim_description",
+              "label": "verbatim_description (TEXT)",
+              "cdashVariable": "VERBATIM_DESCRIPTION",
+              "dataType": "TEXT",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_reported_onset_date",
+              "name": "reported_onset_date",
+              "label": "reported_onset_date (VARCHAR(50))",
+              "cdashVariable": "REPORTED_ONSET_DATE",
+              "dataType": "VARCHAR(50)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_medical_narrative",
+              "name": "medical_narrative",
+              "label": "medical_narrative (TEXT)",
+              "cdashVariable": "MEDICAL_NARRATIVE",
+              "dataType": "TEXT",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_reader_1_id",
+              "name": "reader_1_id",
+              "label": "reader_1_id (VARCHAR(255))",
+              "cdashVariable": "READER_1_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_reader_1_name",
+              "name": "reader_1_name",
+              "label": "reader_1_name (VARCHAR(255))",
+              "cdashVariable": "READER_1_NAME",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_reader_1_status",
+              "name": "reader_1_status",
+              "label": "reader_1_status (VARCHAR(50))",
+              "cdashVariable": "READER_1_STATUS",
+              "dataType": "VARCHAR(50)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_reader_1_assessment",
+              "name": "reader_1_assessment",
+              "label": "reader_1_assessment (JSON)",
+              "cdashVariable": "READER_1_ASSESSMENT",
+              "dataType": "JSON",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_reader_2_id",
+              "name": "reader_2_id",
+              "label": "reader_2_id (VARCHAR(255))",
+              "cdashVariable": "READER_2_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_reader_2_name",
+              "name": "reader_2_name",
+              "label": "reader_2_name (VARCHAR(255))",
+              "cdashVariable": "READER_2_NAME",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_reader_2_status",
+              "name": "reader_2_status",
+              "label": "reader_2_status (VARCHAR(50))",
+              "cdashVariable": "READER_2_STATUS",
+              "dataType": "VARCHAR(50)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_reader_2_assessment",
+              "name": "reader_2_assessment",
+              "label": "reader_2_assessment (JSON)",
+              "cdashVariable": "READER_2_ASSESSMENT",
+              "dataType": "JSON",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_chair_id",
+              "name": "chair_id",
+              "label": "chair_id (VARCHAR(255))",
+              "cdashVariable": "CHAIR_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_chair_name",
+              "name": "chair_name",
+              "label": "chair_name (VARCHAR(255))",
+              "cdashVariable": "CHAIR_NAME",
+              "dataType": "VARCHAR(255)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_chair_determination",
+              "name": "chair_determination",
+              "label": "chair_determination (JSON)",
+              "cdashVariable": "CHAIR_DETERMINATION",
+              "dataType": "JSON",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_workflow_status",
+              "name": "workflow_status",
+              "label": "workflow_status (VARCHAR(50))",
+              "cdashVariable": "WORKFLOW_STATUS",
+              "dataType": "VARCHAR(50)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_is_discordant",
+              "name": "is_discordant",
+              "label": "is_discordant (BOOLEAN)",
+              "cdashVariable": "IS_DISCORDANT",
+              "dataType": "BOOLEAN",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_discordance_reasons",
+              "name": "discordance_reasons",
+              "label": "discordance_reasons (JSON)",
+              "cdashVariable": "DISCORDANCE_REASONS",
+              "dataType": "JSON",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_final_consensus_classification",
+              "name": "final_consensus_classification",
+              "label": "final_consensus_classification (VARCHAR(100))",
+              "cdashVariable": "FINAL_CONSENSUS_CLASSIFICATION",
+              "dataType": "VARCHAR(100)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_final_consensus_subtype",
+              "name": "final_consensus_subtype",
+              "label": "final_consensus_subtype (VARCHAR(255))",
+              "cdashVariable": "FINAL_CONSENSUS_SUBTYPE",
+              "dataType": "VARCHAR(255)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_final_adjudicated_onset_date",
+              "name": "final_adjudicated_onset_date",
+              "label": "final_adjudicated_onset_date (VARCHAR(50))",
+              "cdashVariable": "FINAL_ADJUDICATED_ONSET_DATE",
+              "dataType": "VARCHAR(50)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_binding_determination_source",
+              "name": "binding_determination_source",
+              "label": "binding_determination_source (VARCHAR(100))",
+              "cdashVariable": "BINDING_DETERMINATION_SOURCE",
+              "dataType": "VARCHAR(100)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_adjudication_rationale",
+              "name": "adjudication_rationale",
+              "label": "adjudication_rationale (TEXT)",
+              "cdashVariable": "ADJUDICATION_RATIONALE",
+              "dataType": "TEXT",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_dossier_payload",
+              "name": "dossier_payload",
+              "label": "dossier_payload (JSON)",
+              "cdashVariable": "DOSSIER_PAYLOAD",
+              "dataType": "JSON",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_electronic_signature",
+              "name": "electronic_signature",
+              "label": "electronic_signature (JSON)",
+              "cdashVariable": "ELECTRONIC_SIGNATURE",
+              "dataType": "JSON",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_edc_writeback_status",
+              "name": "edc_writeback_status",
+              "label": "edc_writeback_status (VARCHAR(50))",
+              "cdashVariable": "EDC_WRITEBACK_STATUS",
+              "dataType": "VARCHAR(50)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_edc_writeback_payload",
+              "name": "edc_writeback_payload",
+              "label": "edc_writeback_payload (JSON)",
+              "cdashVariable": "EDC_WRITEBACK_PAYLOAD",
+              "dataType": "JSON",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_sdtm_ce_record",
+              "name": "sdtm_ce_record",
+              "label": "sdtm_ce_record (JSON)",
+              "cdashVariable": "SDTM_CE_RECORD",
+              "dataType": "JSON",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_sdtm_suppce_records",
+              "name": "sdtm_suppce_records",
+              "label": "sdtm_suppce_records (JSON)",
+              "cdashVariable": "SDTM_SUPPCE_RECORDS",
+              "dataType": "JSON",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_dossier_digest",
+              "name": "dossier_digest",
+              "label": "dossier_digest (VARCHAR(64))",
+              "cdashVariable": "DOSSIER_DIGEST",
+              "dataType": "VARCHAR(64)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_created_at",
+              "name": "created_at",
+              "label": "created_at (DATETIME)",
+              "cdashVariable": "CREATED_AT",
+              "dataType": "DATETIME",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_created_by",
+              "name": "created_by",
+              "label": "created_by (VARCHAR(255))",
+              "cdashVariable": "CREATED_BY",
+              "dataType": "VARCHAR(255)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_reason_for_change",
+              "name": "reason_for_change",
+              "label": "reason_for_change (VARCHAR(1000))",
+              "cdashVariable": "REASON_FOR_CHANGE",
+              "dataType": "VARCHAR(1000)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_version_index",
+              "name": "version_index",
+              "label": "version_index (INTEGER)",
+              "cdashVariable": "VERSION_INDEX",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_id",
+              "name": "id",
+              "label": "id (VARCHAR(36))",
+              "cdashVariable": "ID",
+              "dataType": "VARCHAR(36)",
+              "mandatory": true,
+              "config": {
+                "primary_key": true,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_version",
+              "name": "version",
+              "label": "version (INTEGER)",
+              "cdashVariable": "VERSION",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_dossiers_is_deleted",
+              "name": "is_deleted",
+              "label": "is_deleted (BOOLEAN)",
+              "cdashVariable": "IS_DELETED",
+              "dataType": "BOOLEAN",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "bc_execution_cec_meetings",
+          "name": "cec_meetings",
+          "label": "Execution / EDC - CecMeetingRecord",
+          "conceptCode": "SCHEMA_EXECUTION_CEC_MEETINGS",
+          "displayName": "cec_meetings (execution)",
+          "definition": "Committee meeting quorum tracking and minutes sign-off ledger.",
+          "cdashDomain": "execution",
+          "cdashVariable": "CEC_MEETINGS",
+          "dataType": "Relational Table",
+          "properties": [
+            {
+              "id": "prop_execution_cec_meetings_study_id",
+              "name": "study_id",
+              "label": "study_id (VARCHAR(255))",
+              "cdashVariable": "STUDY_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_charter_id",
+              "name": "charter_id",
+              "label": "charter_id (VARCHAR(255))",
+              "cdashVariable": "CHARTER_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_meeting_date",
+              "name": "meeting_date",
+              "label": "meeting_date (VARCHAR(50))",
+              "cdashVariable": "MEETING_DATE",
+              "dataType": "VARCHAR(50)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_attendees",
+              "name": "attendees",
+              "label": "attendees (JSON)",
+              "cdashVariable": "ATTENDEES",
+              "dataType": "JSON",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_total_eligible_members",
+              "name": "total_eligible_members",
+              "label": "total_eligible_members (INTEGER)",
+              "cdashVariable": "TOTAL_ELIGIBLE_MEMBERS",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_quorum_percentage",
+              "name": "quorum_percentage",
+              "label": "quorum_percentage (FLOAT)",
+              "cdashVariable": "QUORUM_PERCENTAGE",
+              "dataType": "FLOAT",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_quorum_met",
+              "name": "quorum_met",
+              "label": "quorum_met (BOOLEAN)",
+              "cdashVariable": "QUORUM_MET",
+              "dataType": "BOOLEAN",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_dossiers_reviewed",
+              "name": "dossiers_reviewed",
+              "label": "dossiers_reviewed (JSON)",
+              "cdashVariable": "DOSSIERS_REVIEWED",
+              "dataType": "JSON",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_voting_results",
+              "name": "voting_results",
+              "label": "voting_results (JSON)",
+              "cdashVariable": "VOTING_RESULTS",
+              "dataType": "JSON",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_meeting_minutes",
+              "name": "meeting_minutes",
+              "label": "meeting_minutes (TEXT)",
+              "cdashVariable": "MEETING_MINUTES",
+              "dataType": "TEXT",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_minutes_digest",
+              "name": "minutes_digest",
+              "label": "minutes_digest (VARCHAR(64))",
+              "cdashVariable": "MINUTES_DIGEST",
+              "dataType": "VARCHAR(64)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_signed_by_chair",
+              "name": "signed_by_chair",
+              "label": "signed_by_chair (BOOLEAN)",
+              "cdashVariable": "SIGNED_BY_CHAIR",
+              "dataType": "BOOLEAN",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_chair_signature",
+              "name": "chair_signature",
+              "label": "chair_signature (JSON)",
+              "cdashVariable": "CHAIR_SIGNATURE",
+              "dataType": "JSON",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_created_at",
+              "name": "created_at",
+              "label": "created_at (DATETIME)",
+              "cdashVariable": "CREATED_AT",
+              "dataType": "DATETIME",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_created_by",
+              "name": "created_by",
+              "label": "created_by (VARCHAR(255))",
+              "cdashVariable": "CREATED_BY",
+              "dataType": "VARCHAR(255)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_reason_for_change",
+              "name": "reason_for_change",
+              "label": "reason_for_change (VARCHAR(1000))",
+              "cdashVariable": "REASON_FOR_CHANGE",
+              "dataType": "VARCHAR(1000)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_version_index",
+              "name": "version_index",
+              "label": "version_index (INTEGER)",
+              "cdashVariable": "VERSION_INDEX",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_id",
+              "name": "id",
+              "label": "id (VARCHAR(36))",
+              "cdashVariable": "ID",
+              "dataType": "VARCHAR(36)",
+              "mandatory": true,
+              "config": {
+                "primary_key": true,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_version",
+              "name": "version",
+              "label": "version (INTEGER)",
+              "cdashVariable": "VERSION",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_cec_meetings_is_deleted",
+              "name": "is_deleted",
+              "label": "is_deleted (BOOLEAN)",
+              "cdashVariable": "IS_DELETED",
+              "dataType": "BOOLEAN",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            }
+          ]
+        },
+        {
           "id": "bc_execution_change_approval_signatures",
           "name": "change_approval_signatures",
           "label": "Execution / EDC - ChangeApprovalSignature",
@@ -104809,6 +107607,1405 @@
         },
         {
           "id": "prop_execution_cgt_vial_return_reconciliations_is_deleted",
+          "name": "is_deleted",
+          "label": "is_deleted (BOOLEAN)",
+          "cdashVariable": "IS_DELETED",
+          "dataType": "BOOLEAN",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "bc_execution_cec_charters",
+      "name": "cec_charters",
+      "label": "Execution / EDC - CecCharterRecord",
+      "conceptCode": "SCHEMA_EXECUTION_CEC_CHARTERS",
+      "displayName": "cec_charters (execution)",
+      "definition": "Committee charter configuration, voting rules, and diagnostic criteria templates.",
+      "cdashDomain": "execution",
+      "cdashVariable": "CEC_CHARTERS",
+      "dataType": "Relational Table",
+      "properties": [
+        {
+          "id": "prop_execution_cec_charters_study_id",
+          "name": "study_id",
+          "label": "study_id (VARCHAR(255))",
+          "cdashVariable": "STUDY_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_charters_committee_name",
+          "name": "committee_name",
+          "label": "committee_name (VARCHAR(255))",
+          "cdashVariable": "COMMITTEE_NAME",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_charters_version",
+          "name": "version",
+          "label": "version (VARCHAR(50))",
+          "cdashVariable": "VERSION",
+          "dataType": "VARCHAR(50)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_charters_voting_rule",
+          "name": "voting_rule",
+          "label": "voting_rule (VARCHAR(50))",
+          "cdashVariable": "VOTING_RULE",
+          "dataType": "VARCHAR(50)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_charters_minimum_quorum_percentage",
+          "name": "minimum_quorum_percentage",
+          "label": "minimum_quorum_percentage (FLOAT)",
+          "cdashVariable": "MINIMUM_QUORUM_PERCENTAGE",
+          "dataType": "FLOAT",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_charters_minimum_members_count",
+          "name": "minimum_members_count",
+          "label": "minimum_members_count (INTEGER)",
+          "cdashVariable": "MINIMUM_MEMBERS_COUNT",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_charters_eligible_members",
+          "name": "eligible_members",
+          "label": "eligible_members (JSON)",
+          "cdashVariable": "ELIGIBLE_MEMBERS",
+          "dataType": "JSON",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_charters_endpoint_definitions",
+          "name": "endpoint_definitions",
+          "label": "endpoint_definitions (JSON)",
+          "cdashVariable": "ENDPOINT_DEFINITIONS",
+          "dataType": "JSON",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_charters_diagnostic_criteria_templates",
+          "name": "diagnostic_criteria_templates",
+          "label": "diagnostic_criteria_templates (JSON)",
+          "cdashVariable": "DIAGNOSTIC_CRITERIA_TEMPLATES",
+          "dataType": "JSON",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_charters_is_active",
+          "name": "is_active",
+          "label": "is_active (BOOLEAN)",
+          "cdashVariable": "IS_ACTIVE",
+          "dataType": "BOOLEAN",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_charters_created_at",
+          "name": "created_at",
+          "label": "created_at (DATETIME)",
+          "cdashVariable": "CREATED_AT",
+          "dataType": "DATETIME",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_charters_created_by",
+          "name": "created_by",
+          "label": "created_by (VARCHAR(255))",
+          "cdashVariable": "CREATED_BY",
+          "dataType": "VARCHAR(255)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_charters_reason_for_change",
+          "name": "reason_for_change",
+          "label": "reason_for_change (VARCHAR(1000))",
+          "cdashVariable": "REASON_FOR_CHANGE",
+          "dataType": "VARCHAR(1000)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_charters_version_index",
+          "name": "version_index",
+          "label": "version_index (INTEGER)",
+          "cdashVariable": "VERSION_INDEX",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_charters_id",
+          "name": "id",
+          "label": "id (VARCHAR(36))",
+          "cdashVariable": "ID",
+          "dataType": "VARCHAR(36)",
+          "mandatory": true,
+          "config": {
+            "primary_key": true,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_charters_is_deleted",
+          "name": "is_deleted",
+          "label": "is_deleted (BOOLEAN)",
+          "cdashVariable": "IS_DELETED",
+          "dataType": "BOOLEAN",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "bc_execution_cec_dossiers",
+      "name": "cec_dossiers",
+      "label": "Execution / EDC - CecDossierRecord",
+      "conceptCode": "SCHEMA_EXECUTION_CEC_DOSSIERS",
+      "displayName": "cec_dossiers (execution)",
+      "definition": "Represents a packaged de-identified clinical event dossier and its 2+1 review lifecycle.",
+      "cdashDomain": "execution",
+      "cdashVariable": "CEC_DOSSIERS",
+      "dataType": "Relational Table",
+      "properties": [
+        {
+          "id": "prop_execution_cec_dossiers_study_id",
+          "name": "study_id",
+          "label": "study_id (VARCHAR(255))",
+          "cdashVariable": "STUDY_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_site_id",
+          "name": "site_id",
+          "label": "site_id (VARCHAR(255))",
+          "cdashVariable": "SITE_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_subject_id",
+          "name": "subject_id",
+          "label": "subject_id (VARCHAR(255))",
+          "cdashVariable": "SUBJECT_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_masked_site_id",
+          "name": "masked_site_id",
+          "label": "masked_site_id (VARCHAR(255))",
+          "cdashVariable": "MASKED_SITE_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_masked_subject_id",
+          "name": "masked_subject_id",
+          "label": "masked_subject_id (VARCHAR(255))",
+          "cdashVariable": "MASKED_SUBJECT_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_event_id",
+          "name": "event_id",
+          "label": "event_id (VARCHAR(255))",
+          "cdashVariable": "EVENT_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_candidate_event_type",
+          "name": "candidate_event_type",
+          "label": "candidate_event_type (VARCHAR(100))",
+          "cdashVariable": "CANDIDATE_EVENT_TYPE",
+          "dataType": "VARCHAR(100)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_reported_term",
+          "name": "reported_term",
+          "label": "reported_term (VARCHAR(255))",
+          "cdashVariable": "REPORTED_TERM",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_verbatim_description",
+          "name": "verbatim_description",
+          "label": "verbatim_description (TEXT)",
+          "cdashVariable": "VERBATIM_DESCRIPTION",
+          "dataType": "TEXT",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_reported_onset_date",
+          "name": "reported_onset_date",
+          "label": "reported_onset_date (VARCHAR(50))",
+          "cdashVariable": "REPORTED_ONSET_DATE",
+          "dataType": "VARCHAR(50)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_medical_narrative",
+          "name": "medical_narrative",
+          "label": "medical_narrative (TEXT)",
+          "cdashVariable": "MEDICAL_NARRATIVE",
+          "dataType": "TEXT",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_reader_1_id",
+          "name": "reader_1_id",
+          "label": "reader_1_id (VARCHAR(255))",
+          "cdashVariable": "READER_1_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_reader_1_name",
+          "name": "reader_1_name",
+          "label": "reader_1_name (VARCHAR(255))",
+          "cdashVariable": "READER_1_NAME",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_reader_1_status",
+          "name": "reader_1_status",
+          "label": "reader_1_status (VARCHAR(50))",
+          "cdashVariable": "READER_1_STATUS",
+          "dataType": "VARCHAR(50)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_reader_1_assessment",
+          "name": "reader_1_assessment",
+          "label": "reader_1_assessment (JSON)",
+          "cdashVariable": "READER_1_ASSESSMENT",
+          "dataType": "JSON",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_reader_2_id",
+          "name": "reader_2_id",
+          "label": "reader_2_id (VARCHAR(255))",
+          "cdashVariable": "READER_2_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_reader_2_name",
+          "name": "reader_2_name",
+          "label": "reader_2_name (VARCHAR(255))",
+          "cdashVariable": "READER_2_NAME",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_reader_2_status",
+          "name": "reader_2_status",
+          "label": "reader_2_status (VARCHAR(50))",
+          "cdashVariable": "READER_2_STATUS",
+          "dataType": "VARCHAR(50)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_reader_2_assessment",
+          "name": "reader_2_assessment",
+          "label": "reader_2_assessment (JSON)",
+          "cdashVariable": "READER_2_ASSESSMENT",
+          "dataType": "JSON",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_chair_id",
+          "name": "chair_id",
+          "label": "chair_id (VARCHAR(255))",
+          "cdashVariable": "CHAIR_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_chair_name",
+          "name": "chair_name",
+          "label": "chair_name (VARCHAR(255))",
+          "cdashVariable": "CHAIR_NAME",
+          "dataType": "VARCHAR(255)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_chair_determination",
+          "name": "chair_determination",
+          "label": "chair_determination (JSON)",
+          "cdashVariable": "CHAIR_DETERMINATION",
+          "dataType": "JSON",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_workflow_status",
+          "name": "workflow_status",
+          "label": "workflow_status (VARCHAR(50))",
+          "cdashVariable": "WORKFLOW_STATUS",
+          "dataType": "VARCHAR(50)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_is_discordant",
+          "name": "is_discordant",
+          "label": "is_discordant (BOOLEAN)",
+          "cdashVariable": "IS_DISCORDANT",
+          "dataType": "BOOLEAN",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_discordance_reasons",
+          "name": "discordance_reasons",
+          "label": "discordance_reasons (JSON)",
+          "cdashVariable": "DISCORDANCE_REASONS",
+          "dataType": "JSON",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_final_consensus_classification",
+          "name": "final_consensus_classification",
+          "label": "final_consensus_classification (VARCHAR(100))",
+          "cdashVariable": "FINAL_CONSENSUS_CLASSIFICATION",
+          "dataType": "VARCHAR(100)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_final_consensus_subtype",
+          "name": "final_consensus_subtype",
+          "label": "final_consensus_subtype (VARCHAR(255))",
+          "cdashVariable": "FINAL_CONSENSUS_SUBTYPE",
+          "dataType": "VARCHAR(255)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_final_adjudicated_onset_date",
+          "name": "final_adjudicated_onset_date",
+          "label": "final_adjudicated_onset_date (VARCHAR(50))",
+          "cdashVariable": "FINAL_ADJUDICATED_ONSET_DATE",
+          "dataType": "VARCHAR(50)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_binding_determination_source",
+          "name": "binding_determination_source",
+          "label": "binding_determination_source (VARCHAR(100))",
+          "cdashVariable": "BINDING_DETERMINATION_SOURCE",
+          "dataType": "VARCHAR(100)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_adjudication_rationale",
+          "name": "adjudication_rationale",
+          "label": "adjudication_rationale (TEXT)",
+          "cdashVariable": "ADJUDICATION_RATIONALE",
+          "dataType": "TEXT",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_dossier_payload",
+          "name": "dossier_payload",
+          "label": "dossier_payload (JSON)",
+          "cdashVariable": "DOSSIER_PAYLOAD",
+          "dataType": "JSON",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_electronic_signature",
+          "name": "electronic_signature",
+          "label": "electronic_signature (JSON)",
+          "cdashVariable": "ELECTRONIC_SIGNATURE",
+          "dataType": "JSON",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_edc_writeback_status",
+          "name": "edc_writeback_status",
+          "label": "edc_writeback_status (VARCHAR(50))",
+          "cdashVariable": "EDC_WRITEBACK_STATUS",
+          "dataType": "VARCHAR(50)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_edc_writeback_payload",
+          "name": "edc_writeback_payload",
+          "label": "edc_writeback_payload (JSON)",
+          "cdashVariable": "EDC_WRITEBACK_PAYLOAD",
+          "dataType": "JSON",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_sdtm_ce_record",
+          "name": "sdtm_ce_record",
+          "label": "sdtm_ce_record (JSON)",
+          "cdashVariable": "SDTM_CE_RECORD",
+          "dataType": "JSON",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_sdtm_suppce_records",
+          "name": "sdtm_suppce_records",
+          "label": "sdtm_suppce_records (JSON)",
+          "cdashVariable": "SDTM_SUPPCE_RECORDS",
+          "dataType": "JSON",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_dossier_digest",
+          "name": "dossier_digest",
+          "label": "dossier_digest (VARCHAR(64))",
+          "cdashVariable": "DOSSIER_DIGEST",
+          "dataType": "VARCHAR(64)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_created_at",
+          "name": "created_at",
+          "label": "created_at (DATETIME)",
+          "cdashVariable": "CREATED_AT",
+          "dataType": "DATETIME",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_created_by",
+          "name": "created_by",
+          "label": "created_by (VARCHAR(255))",
+          "cdashVariable": "CREATED_BY",
+          "dataType": "VARCHAR(255)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_reason_for_change",
+          "name": "reason_for_change",
+          "label": "reason_for_change (VARCHAR(1000))",
+          "cdashVariable": "REASON_FOR_CHANGE",
+          "dataType": "VARCHAR(1000)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_version_index",
+          "name": "version_index",
+          "label": "version_index (INTEGER)",
+          "cdashVariable": "VERSION_INDEX",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_id",
+          "name": "id",
+          "label": "id (VARCHAR(36))",
+          "cdashVariable": "ID",
+          "dataType": "VARCHAR(36)",
+          "mandatory": true,
+          "config": {
+            "primary_key": true,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_version",
+          "name": "version",
+          "label": "version (INTEGER)",
+          "cdashVariable": "VERSION",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_dossiers_is_deleted",
+          "name": "is_deleted",
+          "label": "is_deleted (BOOLEAN)",
+          "cdashVariable": "IS_DELETED",
+          "dataType": "BOOLEAN",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "bc_execution_cec_meetings",
+      "name": "cec_meetings",
+      "label": "Execution / EDC - CecMeetingRecord",
+      "conceptCode": "SCHEMA_EXECUTION_CEC_MEETINGS",
+      "displayName": "cec_meetings (execution)",
+      "definition": "Committee meeting quorum tracking and minutes sign-off ledger.",
+      "cdashDomain": "execution",
+      "cdashVariable": "CEC_MEETINGS",
+      "dataType": "Relational Table",
+      "properties": [
+        {
+          "id": "prop_execution_cec_meetings_study_id",
+          "name": "study_id",
+          "label": "study_id (VARCHAR(255))",
+          "cdashVariable": "STUDY_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_charter_id",
+          "name": "charter_id",
+          "label": "charter_id (VARCHAR(255))",
+          "cdashVariable": "CHARTER_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_meeting_date",
+          "name": "meeting_date",
+          "label": "meeting_date (VARCHAR(50))",
+          "cdashVariable": "MEETING_DATE",
+          "dataType": "VARCHAR(50)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_attendees",
+          "name": "attendees",
+          "label": "attendees (JSON)",
+          "cdashVariable": "ATTENDEES",
+          "dataType": "JSON",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_total_eligible_members",
+          "name": "total_eligible_members",
+          "label": "total_eligible_members (INTEGER)",
+          "cdashVariable": "TOTAL_ELIGIBLE_MEMBERS",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_quorum_percentage",
+          "name": "quorum_percentage",
+          "label": "quorum_percentage (FLOAT)",
+          "cdashVariable": "QUORUM_PERCENTAGE",
+          "dataType": "FLOAT",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_quorum_met",
+          "name": "quorum_met",
+          "label": "quorum_met (BOOLEAN)",
+          "cdashVariable": "QUORUM_MET",
+          "dataType": "BOOLEAN",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_dossiers_reviewed",
+          "name": "dossiers_reviewed",
+          "label": "dossiers_reviewed (JSON)",
+          "cdashVariable": "DOSSIERS_REVIEWED",
+          "dataType": "JSON",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_voting_results",
+          "name": "voting_results",
+          "label": "voting_results (JSON)",
+          "cdashVariable": "VOTING_RESULTS",
+          "dataType": "JSON",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_meeting_minutes",
+          "name": "meeting_minutes",
+          "label": "meeting_minutes (TEXT)",
+          "cdashVariable": "MEETING_MINUTES",
+          "dataType": "TEXT",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_minutes_digest",
+          "name": "minutes_digest",
+          "label": "minutes_digest (VARCHAR(64))",
+          "cdashVariable": "MINUTES_DIGEST",
+          "dataType": "VARCHAR(64)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_signed_by_chair",
+          "name": "signed_by_chair",
+          "label": "signed_by_chair (BOOLEAN)",
+          "cdashVariable": "SIGNED_BY_CHAIR",
+          "dataType": "BOOLEAN",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_chair_signature",
+          "name": "chair_signature",
+          "label": "chair_signature (JSON)",
+          "cdashVariable": "CHAIR_SIGNATURE",
+          "dataType": "JSON",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_created_at",
+          "name": "created_at",
+          "label": "created_at (DATETIME)",
+          "cdashVariable": "CREATED_AT",
+          "dataType": "DATETIME",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_created_by",
+          "name": "created_by",
+          "label": "created_by (VARCHAR(255))",
+          "cdashVariable": "CREATED_BY",
+          "dataType": "VARCHAR(255)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_reason_for_change",
+          "name": "reason_for_change",
+          "label": "reason_for_change (VARCHAR(1000))",
+          "cdashVariable": "REASON_FOR_CHANGE",
+          "dataType": "VARCHAR(1000)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_version_index",
+          "name": "version_index",
+          "label": "version_index (INTEGER)",
+          "cdashVariable": "VERSION_INDEX",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_id",
+          "name": "id",
+          "label": "id (VARCHAR(36))",
+          "cdashVariable": "ID",
+          "dataType": "VARCHAR(36)",
+          "mandatory": true,
+          "config": {
+            "primary_key": true,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_version",
+          "name": "version",
+          "label": "version (INTEGER)",
+          "cdashVariable": "VERSION",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_cec_meetings_is_deleted",
           "name": "is_deleted",
           "label": "is_deleted (BOOLEAN)",
           "cdashVariable": "IS_DELETED",

@@ -3,6 +3,7 @@ from apps.execution.presentation.routers.anonymization import (
     router as anonymization_router,
 )
 from apps.execution.presentation.routers.auditor import router as auditor_router
+from apps.execution.presentation.routers.cec import router as cec_router
 from apps.execution.presentation.routers.doa import router as doa_router
 from apps.execution.presentation.routers.documents import router as documents_router
 from apps.execution.presentation.routers.eisf import router as eisf_router
@@ -18,6 +19,7 @@ __all__ = [
     "amendments_router",
     "anonymization_router",
     "auditor_router",
+    "cec_router",
     "doa_router",
     "documents_router",
     "eisf_router",

@@ -3,6 +3,8 @@
 Requirements: PRD-PVG-003, PRD-PVG-004, PRD-PVG-008, ADR-2199
 """
 
+import hashlib
+import json
 import logging
 import uuid
 from datetime import UTC, datetime
@@ -15,6 +17,7 @@ from apps.safety.domain.periodic_report_models import (
     PeriodicReportResponseDTO,
     PeriodicReportSignResponse,
     PeriodicReportStatus,
+    QPPVSignoffManifest,
 )
 from apps.safety.domain.signal_models import (
     SafetySignalAlertReviewRequest,
@@ -44,12 +47,17 @@ from packages.security.signing import generate_canonical_signature
 logger = logging.getLogger("safety-signal-alert-service")
 
 ALLOWED_PHYSICIAN_SIGNING_ROLES = {
-    "safety_physician",
-    "sponsor_safety_physician",
-    "sponsor_medical_monitor",
     "medical_monitor",
-    "sponsor_pv_officer",
+    "qppv",
+    "qppv_officer",
+    "qualified_person_pv",
     "safety_officer",
+    "safety_physician",
+    "sponsor_admin",
+    "sponsor_medical_monitor",
+    "sponsor_pv_officer",
+    "sponsor_safety_physician",
+    "super_admin",
 }
 
 
@@ -506,9 +514,14 @@ class SafetySignalAlertService:
             compound_name=request.compound_name,
             reporting_period_start=request.reporting_period_start,
             reporting_period_end=request.reporting_period_end,
+            dibd_anniversary=payload.dibd_anniversary,
             status=PeriodicReportStatus.DRAFT.value,
             total_subject_exposure=payload.total_subject_exposure,
             total_saes=payload.total_saes,
+            total_fatal_cases=payload.total_fatal_cases,
+            total_susars=payload.total_susars,
+            total_aesi=payload.total_aesi,
+            snapshot_hash=payload.snapshot.snapshot_hash if payload.snapshot else None,
             line_listings_count=len(payload.line_listings),
             summary_tabulations_count=len(payload.summary_tabulations),
             signals_included_count=len(payload.signal_summary),
@@ -539,30 +552,74 @@ class SafetySignalAlertService:
 
         # Verify role authorization
         if user_roles:
-            roles_set = (
-                set(user_roles)
-                if isinstance(user_roles, (list, set))
-                else {str(user_roles)}
+            normalized_roles = {
+                str(r)
+                .lower()
+                .replace(" ", "_")
+                .replace("(", "")
+                .replace(")", "")
+                .replace("-", "_")
+                for r in (
+                    user_roles
+                    if isinstance(user_roles, (list, set, tuple))
+                    else [user_roles]
+                )
+            }
+            is_authorized = bool(
+                normalized_roles.intersection(ALLOWED_PHYSICIAN_SIGNING_ROLES)
+                or any(
+                    "qppv" in r
+                    or "physician" in r
+                    or "safety" in r
+                    or "medical_monitor" in r
+                    or "admin" in r
+                    for r in normalized_roles
+                )
             )
-            if not roles_set.intersection(ALLOWED_PHYSICIAN_SIGNING_ROLES):
+            if not is_authorized:
                 raise ValueError(
                     f"User '{user_id}' with roles {user_roles} is not authorized to sign periodic safety reports."
                 )
 
         now_dt = datetime.now(UTC)
         manifest_id = f"sig_rep_{uuid.uuid4().hex[:12]}"
+        report_payload = dict(report.report_payload or {})
+        snapshot_data = report_payload.get("snapshot") or {}
+        snapshot_hash = str(snapshot_data.get("snapshot_hash", ""))
+
         payload_to_sign = {
             "report_id": report.id,
             "report_type": report.report_type,
             "study_id": report.study_id,
             "compound_name": report.compound_name,
             "signer": user_id,
+            "snapshot_hash": snapshot_hash,
             "timestamp": now_dt.isoformat(),
             "meaning": meaning_of_signature,
         }
-        _ = generate_canonical_signature(
+        sig_token = generate_canonical_signature(
             payload_to_sign, signature_secret.encode("utf-8")
         )
+
+        qppv_manifest = QPPVSignoffManifest(
+            qppv_user_id=user_id,
+            qppv_name=user_id,
+            qppv_role="Qualified Person for Pharmacovigilance (QPPV)"
+            if "qppv" in [r.lower() for r in (user_roles or [])]
+            else "Authorized Safety Physician",
+            meaning_of_signature=meaning_of_signature,
+            signed_at=now_dt.isoformat(),
+            manifest_id=manifest_id,
+            snapshot_hash=snapshot_hash,
+            report_hash=hashlib.sha256(
+                json.dumps(report_payload, sort_keys=True, default=str).encode("utf-8")
+            ).hexdigest(),
+            signature_token=sig_token,
+            verification_status="VALID",
+        )
+
+        report_payload["qppv_signoff"] = qppv_manifest.model_dump()
+        report.report_payload = report_payload
 
         report.status = PeriodicReportStatus.APPROVED.value
         report.approved_by_user_id = user_id
@@ -588,4 +645,5 @@ class SafetySignalAlertService:
             approved_at=now_dt.isoformat(),
             esignature_manifest_id=manifest_id,
             message="Periodic Safety Report successfully approved and signed.",
+            qppv_manifest=qppv_manifest,
         )

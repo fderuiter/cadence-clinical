@@ -407,10 +407,81 @@ class SUPPQUAL(AuditableModel):
         return v
 
 
+class CE(AuditableModel):
+    """
+    Clinical Events (CE) SDTM Domain model representing adjudicated endpoint events.
+    """
+
+    STUDYID: str = Field(..., description="Study Identifier (Required)")
+    DOMAIN: str = Field("CE", description="Domain Abbreviation (Required)")
+    USUBJID: str = Field(..., description="Unique Subject Identifier (Required)")
+    CESEQ: int = Field(..., description="Sequence Number (Required)")
+    CETERM: str = Field(
+        ..., description="Reported Term for the Clinical Event (Required)"
+    )
+    CEDECOD: str | None = Field(
+        None, description="Standardized / Adjudicated Term (Expected)"
+    )
+    CECAT: str | None = Field(
+        None, description="Category for Clinical Event (Expected)"
+    )
+    CESCAT: str | None = Field(
+        None, description="Subcategory for Clinical Event (Permissible)"
+    )
+    CEPRESP: str | None = Field(
+        "Y", description="Pre-Specified Event Flag (Permissible)"
+    )
+    CEOCCUR: str | None = Field("Y", description="Clinical Event Occurrence (Expected)")
+    CESEV: str | None = Field(None, description="Severity/Intensity (Permissible)")
+    CESER: str | None = Field(None, description="Serious Event Flag (Permissible)")
+    CEREL: str | None = Field(
+        None, description="Causality / Relationship to Treatment (Permissible)"
+    )
+    CEOUT: str | None = Field(None, description="Outcome of Event (Permissible)")
+    CESTDTC: str | None = Field(None, description="Start Date/Time of Event (Expected)")
+    CEENDTC: str | None = Field(
+        None, description="End Date/Time of Event (Permissible)"
+    )
+    EPOCH: str | None = Field(None, description="Epoch (Permissible)")
+
+    @field_validator("STUDYID", "DOMAIN", "USUBJID", "CETERM")
+    @classmethod
+    def validate_non_empty_strings(cls, v: str) -> str:
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError("Field cannot be empty or consist only of whitespace.")
+        return v
+
+    @field_validator("CESEQ")
+    @classmethod
+    def validate_sequence(cls, v: int) -> int:
+        if v < 1:
+            raise ValueError("CESEQ must be greater than or equal to 1")
+        return v
+
+    @field_validator("CESTDTC", "CEENDTC")
+    @classmethod
+    def validate_dates(cls, v: str | None) -> str | None:
+        return validate_dtc_format(v)
+
+    @model_validator(mode="after")
+    def validate_ce_dates(self) -> CE:
+        if self.CESTDTC and self.CEENDTC:
+            s_clean = re.sub(r"[^\d]", "", self.CESTDTC)
+            e_clean = re.sub(r"[^\d]", "", self.CEENDTC)
+            min_len = min(len(s_clean), len(e_clean))
+            if min_len > 0:
+                if e_clean[:min_len] < s_clean[:min_len]:
+                    raise ValueError(
+                        f"CEENDTC ({self.CEENDTC}) cannot be earlier than CESTDTC ({self.CESTDTC})"
+                    )
+        return self
+
+
 # Expose descriptive names as aliases
 Demographics = DM
 AdverseEvent = AE
 VitalSign = VS
 Laboratory = LB
 ConcomitantMedication = CM
+ClinicalEvent = CE
 SUPPQUALRecord = SUPPQUAL

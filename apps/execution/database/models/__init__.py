@@ -108,6 +108,10 @@ _submodule_mappings = {
     "DataLock": "lock",
     "ScopeTypeEnum": "lock",
     "LockTypeEnum": "lock",
+    # cec
+    "CecDossierRecord": "cec",
+    "CecCharterRecord": "cec",
+    "CecMeetingRecord": "cec",
 }
 
 

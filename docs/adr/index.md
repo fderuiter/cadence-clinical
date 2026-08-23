@@ -388,3 +388,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Unified Database Schema Introspection and Automated Type Synchronization Gating](2026-08-17-unified-database-introspection-and-type-gating.md)
 - [2026-09-12: ADR-2026-09-12: In-Process Clinical De-Identification and Gateway USDM Validation Router](2026-09-12-in-process-clinical-deid-and-gateway-usdm-router.md)
 - [2026-09-12: ADR-2026-09-12: MSW Mock Gateway Simulator and Browser HMAC Verification Engine](2026-09-12-msw-mock-gateway-and-browser-hmac-verification.md)
+- [2026-08-23: Automated Aggregate Safety Compiler (DSUR / PSUR / PBRER) and Exposure Calculator](2026-08-23-automated-aggregate-safety-compiler-and-exposure-calculator.md)
+- [2026-08-23: Clinical Endpoint Adjudication Committee (CEC) Dossier & 2+1 Blinded Review Suite](2026-08-23-clinical-endpoint-adjudication-committee-cec-dossier-and-2plus1-blinded-review-suite.md)

@@ -282,8 +282,8 @@ def step_run_tests(dry_run: bool, full: bool = False) -> None:
                         [
                             sys.executable,
                             "scripts/merge_junit.py",
-                            JUNIT_REPORT,
-                            *report_fragments,
+                            str(REPO_ROOT / JUNIT_REPORT),
+                            *[str(REPO_ROOT / p) for p in report_fragments],
                         ]
                     )
                 return
@@ -392,12 +392,12 @@ def step_run_tests(dry_run: bool, full: bool = False) -> None:
             [
                 sys.executable,
                 "scripts/merge_junit.py",
-                JUNIT_REPORT,
-                "report_main.xml",
-                "report_sequential.xml",
-                "report_notif.xml",
-                "report_integration.xml",
-                "report_qualification.xml",
+                str(REPO_ROOT / JUNIT_REPORT),
+                str(REPO_ROOT / "report_main.xml"),
+                str(REPO_ROOT / "report_sequential.xml"),
+                str(REPO_ROOT / "report_notif.xml"),
+                str(REPO_ROOT / "report_integration.xml"),
+                str(REPO_ROOT / "report_qualification.xml"),
             ]
         )
     except subprocess.CalledProcessError:
