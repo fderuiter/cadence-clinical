@@ -65,18 +65,49 @@ class EssentialDocumentEntity(BaseModel):
     version_index: int = 1
 
 
+class CountryPrerequisiteRuleEntity(BaseModel):
+    id: str | None = None
+    study_id: str
+    country_code: str
+    facet: str
+    criterion_code: str
+    criterion_name: str
+    is_mandatory: bool = True
+    description: str | None = None
+    created_at: str | None = None
+    created_by: str
+    reason_for_change: str
+    version_index: int = 1
+
+
 class SiteGreenlightGateEntity(BaseModel):
     id: str | None = None
     study_id: str
     site_id: str
-    overall_status: str = "PENDING"  # PENDING, APPROVED, REJECTED
+    country_code: str = "US"
+    overall_status: str = (
+        "PENDING"  # PENDING, APPROVED, OVERRIDDEN, REJECTED, BLOCKED, EXPIRED
+    )
+    facet_regulatory_irb: bool = False
+    facet_cta_budget: bool = False
+    facet_eisf_baseline: bool = False
+    facet_doa_log: bool = False
+    facet_staff_training: bool = False
+    facet_ip_release: bool = False
     contract_approved: bool = False
     irb_approved: bool = False
     form_1572_approved: bool = False
     doa_signed_off: bool = False
     ip_ready: bool = False
+    greenlight_token: str | None = None
     greenlight_certified_by: str | None = None
     greenlight_certified_at: str | None = None
+    is_overridden: bool = False
+    override_sponsor_user_id: str | None = None
+    override_medical_user_id: str | None = None
+    override_justification: str | None = None
+    override_authorized_at: str | None = None
+    evaluation_details: dict[str, Any] | None = None
     rejection_reason: str | None = None
     created_at: str | None = None
     created_by: str

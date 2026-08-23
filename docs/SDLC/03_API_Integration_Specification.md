@@ -5511,6 +5511,69 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/designer/startup-matrix/presets:
+    get:
+      tags:
+      - StartupPrerequisiteMatrix
+      summary: Get Startup Presets Endpoint
+      description: Retrieves standard statutory startup criteria presets across international jurisdictions.
+      operationId: get_startup_presets_endpoint_api_v1_designer_startup_matrix_presets_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  items:
+                    additionalProperties: true
+                    type: object
+                  type: array
+                type: object
+                title: Response Get Startup Presets Endpoint Api V1 Designer Startup Matrix Presets Get
+  /api/v1/designer/startup-matrix/jurisdictions:
+    get:
+      tags:
+      - StartupPrerequisiteMatrix
+      summary: Get Supported Jurisdictions Endpoint
+      description: Lists supported international jurisdictions with regulatory and ethics governance frameworks.
+      operationId: get_supported_jurisdictions_endpoint_api_v1_designer_startup_matrix_jurisdictions_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/JurisdictionInfo'
+                type: array
+                title: Response Get Supported Jurisdictions Endpoint Api V1 Designer Startup Matrix Jurisdictions Get
+  /api/v1/designer/startup-matrix/generate-template:
+    post:
+      tags:
+      - StartupPrerequisiteMatrix
+      summary: Generate Startup Template Endpoint
+      description: Generates country-specific startup prerequisite criteria matrix for study protocol design.
+      operationId: generate_startup_template_endpoint_api_v1_designer_startup_matrix_generate_template_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateStartupTemplateRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateStartupTemplateResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /health:
     get:
       summary: Health Check
@@ -13927,6 +13990,44 @@ components:
       - createdAt
       - text
       title: FormReviewCommentResponse
+    GenerateStartupTemplateRequest:
+      properties:
+        study_id:
+          type: string
+          title: Study Id
+          description: Study Identifier
+        country_codes:
+          items:
+            type: string
+          type: array
+          title: Country Codes
+          description: List of target country codes (e.g. ['US', 'EU', 'JP', 'GB'])
+      type: object
+      required:
+      - study_id
+      - country_codes
+      title: GenerateStartupTemplateRequest
+    GenerateStartupTemplateResponse:
+      properties:
+        study_id:
+          type: string
+          title: Study Id
+        generated_rules:
+          items:
+            $ref: '#/components/schemas/PrerequisiteCriterionTemplate'
+          type: array
+          title: Generated Rules
+        summary_by_country:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Summary By Country
+      type: object
+      required:
+      - study_id
+      - generated_rules
+      - summary_by_country
+      title: GenerateStartupTemplateResponse
     HTTPValidationError:
       properties:
         detail:
@@ -14010,6 +14111,31 @@ components:
       - is_mapped
       title: ItemMappingStatus
       description: "Represents the mapping status of an individual activity item.\n\nAttributes:\n    item_id: The public string identifier of the activity item.\n    internal_id: The internal graph database ID of the activity item.\n    is_mapped: Boolean indicating whether this item has a corresponding ODM/CRF node mapped to it."
+    JurisdictionInfo:
+      properties:
+        code:
+          type: string
+          title: Code
+        name:
+          type: string
+          title: Name
+        regulatory_framework:
+          type: string
+          title: Regulatory Framework
+        ethics_framework:
+          type: string
+          title: Ethics Framework
+        mandatory_criteria_count:
+          type: integer
+          title: Mandatory Criteria Count
+      type: object
+      required:
+      - code
+      - name
+      - regulatory_framework
+      - ethics_framework
+      - mandatory_criteria_count
+      title: JurisdictionInfo
     LibraryInstanceResponse:
       properties:
         id:
@@ -14351,6 +14477,36 @@ components:
       - assignee_role
       title: OperationalTicketBlueprint
       description: Structured actionable ticket blueprint ready for dispatch to apps/tickets.
+    PrerequisiteCriterionTemplate:
+      properties:
+        country_code:
+          type: string
+          title: Country Code
+        facet:
+          type: string
+          title: Facet
+        criterion_code:
+          type: string
+          title: Criterion Code
+        criterion_name:
+          type: string
+          title: Criterion Name
+        is_mandatory:
+          type: boolean
+          title: Is Mandatory
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+      type: object
+      required:
+      - country_code
+      - facet
+      - criterion_code
+      - criterion_name
+      - is_mandatory
+      title: PrerequisiteCriterionTemplate
     ProblemDetails:
       properties:
         type:

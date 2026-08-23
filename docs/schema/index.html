@@ -17303,6 +17303,113 @@
           ]
         },
         {
+          "id": "ctms_ctms_country_prerequisite_rules",
+          "table_name": "ctms_country_prerequisite_rules",
+          "class_name": "CountryPrerequisiteRule",
+          "description": "Governs country-aware startup prerequisite criteria for site activation.",
+          "service": "ctms",
+          "gxp": true,
+          "immutable": false,
+          "columns": [
+            {
+              "name": "id",
+              "type": "VARCHAR(36)",
+              "primary_key": true,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "study_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "country_code",
+              "type": "VARCHAR(10)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "facet",
+              "type": "VARCHAR(50)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "criterion_code",
+              "type": "VARCHAR(100)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "criterion_name",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "is_mandatory",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "description",
+              "type": "VARCHAR(1000)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "created_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "created_by",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "reason_for_change",
+              "type": "VARCHAR(1000)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "version_index",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            }
+          ]
+        },
+        {
           "id": "ctms_ctms_country_regulatory_milestones",
           "table_name": "ctms_country_regulatory_milestones",
           "class_name": "CountryRegulatoryMilestone",
@@ -18766,6 +18873,121 @@
             {
               "name": "version_index",
               "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            }
+          ]
+        },
+        {
+          "id": "ctms_ctms_outbox",
+          "table_name": "ctms_outbox",
+          "class_name": "IntegrationOutbox",
+          "description": "Concrete integration outbox table for the CTMS service.",
+          "service": "ctms",
+          "gxp": true,
+          "immutable": false,
+          "columns": [
+            {
+              "name": "id",
+              "type": "VARCHAR(36)",
+              "primary_key": true,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "event_type",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "payload",
+              "type": "JSON",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR(50)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "attempts",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "last_error",
+              "type": "VARCHAR",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "next_retry_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "completed_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "retry_eligible",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "correlation_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "created_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "created_by",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "reason_for_change",
+              "type": "VARCHAR(1000)",
               "primary_key": false,
               "nullable": false,
               "foreign_keys": [],
@@ -20419,8 +20641,64 @@
               "gxp_highlight": false
             },
             {
+              "name": "country_code",
+              "type": "VARCHAR(10)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
               "name": "overall_status",
               "type": "VARCHAR(50)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "facet_regulatory_irb",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "facet_cta_budget",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "facet_eisf_baseline",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "facet_doa_log",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "facet_staff_training",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "facet_ip_release",
+              "type": "BOOLEAN",
               "primary_key": false,
               "nullable": false,
               "foreign_keys": [],
@@ -20467,6 +20745,14 @@
               "gxp_highlight": false
             },
             {
+              "name": "greenlight_token",
+              "type": "VARCHAR(2000)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
               "name": "greenlight_certified_by",
               "type": "VARCHAR(255)",
               "primary_key": false,
@@ -20477,6 +20763,54 @@
             {
               "name": "greenlight_certified_at",
               "type": "DATETIME",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "is_overridden",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "override_sponsor_user_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "override_medical_user_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "override_justification",
+              "type": "VARCHAR(2000)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "override_authorized_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "evaluation_details",
+              "type": "JSON",
               "primary_key": false,
               "nullable": true,
               "foreign_keys": [],

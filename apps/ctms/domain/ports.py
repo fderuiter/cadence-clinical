@@ -3,6 +3,7 @@ from typing import Any
 
 from apps.ctms.domain.models import (
     BudgetAdjustmentEntity,
+    CountryPrerequisiteRuleEntity,
     CountryRegulatoryMilestoneEntity,
     CTMSAuditLogEntity,
     CTMSDelegationEntity,
@@ -97,6 +98,29 @@ class ISiteStartupRepository(RepositoryPort[Any]):
     async def get_greenlight_gate(
         self, site_id: str
     ) -> SiteGreenlightGateEntity | None:
+        pass
+
+    @abstractmethod
+    async def save_country_prerequisite_rule(
+        self, rule: CountryPrerequisiteRuleEntity
+    ) -> CountryPrerequisiteRuleEntity:
+        pass
+
+    @abstractmethod
+    async def list_country_prerequisite_rules(
+        self, study_id: str, country_code: str | None = None
+    ) -> list[CountryPrerequisiteRuleEntity]:
+        pass
+
+    @abstractmethod
+    async def save_outbox_event(
+        self,
+        event_type: str,
+        payload: dict[str, Any],
+        correlation_id: str,
+        created_by: str,
+        reason_for_change: str,
+    ) -> None:
         pass
 
 

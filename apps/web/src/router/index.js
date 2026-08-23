@@ -161,6 +161,15 @@ const routes = [
     },
   },
   {
+    path: "/ssu",
+    name: "ssu",
+    component: () => import("../views/CtmsView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: ["cra", "monitor", "sponsor_admin", "site_investigator", "crc"],
+    },
+  },
+  {
     path: "/audit",
     name: "audit",
     component: () => import("../views/AuditView.vue"),

@@ -1,5 +1,5 @@
 // Auto-generated from OpenAPI schema definition
-// Generated on: 2026-08-23T04:12:55.984Z
+// Generated on: 2026-08-23T18:31:07.623Z
 
 export interface ActivityAssignmentRequest {
   visit_id: string;
@@ -621,6 +621,17 @@ export interface FormReviewCommentResponse {
   text: string;
 }
 
+export interface GenerateStartupTemplateRequest {
+  study_id: string;
+  country_codes: string[];
+}
+
+export interface GenerateStartupTemplateResponse {
+  study_id: string;
+  generated_rules: PrerequisiteCriterionTemplate[];
+  summary_by_country: Record<string, any>;
+}
+
 export interface HTTPValidationError {
   detail?: ValidationError[];
 }
@@ -646,6 +657,14 @@ export interface ItemMappingStatus {
   item_id: string | null;
   internal_id: number | null;
   is_mapped: boolean;
+}
+
+export interface JurisdictionInfo {
+  code: string;
+  name: string;
+  regulatory_framework: string;
+  ethics_framework: string;
+  mandatory_criteria_count: number;
 }
 
 export interface LibraryInstanceResponse {
@@ -732,6 +751,15 @@ export interface OperationalTicketBlueprint {
   action_plan?: string[];
   due_date_offset_days?: number | null;
   context_payload?: Record<string, any>;
+}
+
+export interface PrerequisiteCriterionTemplate {
+  country_code: string;
+  facet: string;
+  criterion_code: string;
+  criterion_name: string;
+  is_mandatory: boolean;
+  description?: string | null;
 }
 
 export interface ProblemDetails {
@@ -934,7 +962,7 @@ export interface SemanticDiffResponse {
   migration_directives?: MigrationDirective[];
 }
 
-export type SigningReason = "AUTHOR" | "REVIEW" | "APPROVAL" | "SPONSOR_APPROVAL" | "INVESTIGATOR_SIGNATURE" | "TECHNICAL_QC" | "CLINICAL_QC" | "DATA_LOCK" | "SYSTEM_SEAL" | "PROTOCOL_APPROVAL" | "REGULATORY_FORM_SIGNATURE" | "TRAINING_ACKNOWLEDGEMENT" | "SITE_VISIT_SIGN_OFF";
+export type SigningReason = "AUTHOR" | "REVIEW" | "APPROVAL" | "SPONSOR_APPROVAL" | "INVESTIGATOR_SIGNATURE" | "TECHNICAL_QC" | "CLINICAL_QC" | "DATA_LOCK" | "SYSTEM_SEAL" | "PROTOCOL_APPROVAL" | "REGULATORY_FORM_SIGNATURE" | "TRAINING_ACKNOWLEDGEMENT" | "SITE_VISIT_SIGN_OFF" | "ADJUDICATION_SIGN_OFF" | "ENDPOINT_ADJUDICATION";
 
 export interface SoACellView {
   activity_id: string;

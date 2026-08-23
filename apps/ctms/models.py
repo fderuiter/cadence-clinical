@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlmodel import Field, SQLModel
 
+from packages.database import IntegrationOutboxMixin
+
 
 class Base(DeclarativeBase):
     pass
@@ -613,6 +615,31 @@ class EssentialDocument(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
+class CountryPrerequisiteRule(Base):
+    """Governs country-aware startup prerequisite criteria for site activation."""
+
+    __tablename__ = "ctms_country_prerequisite_rules"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    country_code: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
+    facet: Mapped[str] = mapped_column(String(50), nullable=False)
+    criterion_code: Mapped[str] = mapped_column(String(100), nullable=False)
+    criterion_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_mandatory: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    description: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
 class SiteGreenlightGate(Base):
     """Manages site greenlight gatekeeper validation for study startup."""
 
@@ -625,9 +652,30 @@ class SiteGreenlightGate(Base):
     site_id: Mapped[str] = mapped_column(
         String(255), nullable=False, unique=True, index=True
     )
+    country_code: Mapped[str] = mapped_column(String(10), default="US", nullable=False)
     overall_status: Mapped[str] = mapped_column(
         String(50), default="PENDING", nullable=False
     )
+
+    # 6 Operational Facets
+    facet_regulatory_irb: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    facet_cta_budget: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    facet_eisf_baseline: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    facet_doa_log: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    facet_staff_training: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    facet_ip_release: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+
+    # Legacy Compatibility Flags
     contract_approved: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
@@ -637,11 +685,34 @@ class SiteGreenlightGate(Base):
     )
     doa_signed_off: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     ip_ready: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # Cryptographic Gating Token
+    greenlight_token: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     greenlight_certified_by: Mapped[str | None] = mapped_column(
         String(255), nullable=True
     )
     greenlight_certified_at: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True
+    )
+
+    # Executive Dual-Signature GxP Override
+    is_overridden: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    override_sponsor_user_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    override_medical_user_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    override_justification: Mapped[str | None] = mapped_column(
+        String(2000), nullable=True
+    )
+    override_authorized_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
+
+    # Detailed Evaluation Snapshot
+    evaluation_details: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, nullable=True
     )
     rejection_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 
@@ -1176,6 +1247,12 @@ class ETMFSyncRecord(Base):
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+class IntegrationOutbox(Base, IntegrationOutboxMixin):
+    """Concrete integration outbox table for the CTMS service."""
+
+    __tablename__ = "ctms_outbox"
 
 
 async def write_audit_log(

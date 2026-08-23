@@ -286,6 +286,25 @@ export interface paths {
      */
     get: operations["Ctms_export_site_doa_pdf_api_v1_ctms_doa_sites__site_id__export_pdf_get"];
   };
+  "/ctms/api/v1/ctms/startup/rules/presets": {
+    /**
+     * Get Jurisdiction Rule Presets 
+     * @description Returns statutory startup prerequisite rule presets for US, EU, JP, UK, and Global jurisdictions.
+     */
+    get: operations["Ctms_get_jurisdiction_rule_presets_api_v1_ctms_startup_rules_presets_get"];
+  };
+  "/ctms/api/v1/ctms/startup/rules": {
+    /**
+     * List Country Prerequisite Rules 
+     * @description Retrieves country-specific prerequisite rules matrix for a study.
+     */
+    get: operations["Ctms_list_country_prerequisite_rules_api_v1_ctms_startup_rules_get"];
+    /**
+     * Create Or Update Country Prerequisite Rule 
+     * @description Configures a country-specific prerequisite criterion for site activation.
+     */
+    post: operations["Ctms_create_or_update_country_prerequisite_rule_api_v1_ctms_startup_rules_post"];
+  };
   "/ctms/api/v1/ctms/startup/milestones": {
     /** List Country Milestones */
     get: operations["Ctms_list_country_milestones_api_v1_ctms_startup_milestones_get"];
@@ -301,14 +320,36 @@ export interface paths {
   "/ctms/api/v1/ctms/startup/documents/{document_id}/review": {
     /** Review Essential Document */
     put: operations["Ctms_review_essential_document_api_v1_ctms_startup_documents__document_id__review_put"];
+    /** Review Essential Document */
+    post: operations["Ctms_review_essential_document_api_v1_ctms_startup_documents__document_id__review_post"];
   };
   "/ctms/api/v1/ctms/startup/sites/{site_id}/greenlight": {
-    /** Evaluate Site Greenlight */
+    /**
+     * Evaluate Site Greenlight 
+     * @description Evaluates real-time site activation readiness across the 6 key operational facets.
+     */
     get: operations["Ctms_evaluate_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_get"];
   };
   "/ctms/api/v1/ctms/startup/sites/{site_id}/greenlight/certify": {
-    /** Certify Site Greenlight */
+    /**
+     * Certify Site Greenlight 
+     * @description Formally certifies greenlight activation, issuing an HMAC-SHA256 token and un-gating trial execution.
+     */
     post: operations["Ctms_certify_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_certify_post"];
+  };
+  "/ctms/api/v1/ctms/startup/sites/{site_id}/greenlight/override": {
+    /**
+     * Override Site Greenlight 
+     * @description Executes dual-signature executive sponsor GxP override with mandatory Part 11 justification logging.
+     */
+    post: operations["Ctms_override_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_override_post"];
+  };
+  "/ctms/api/v1/ctms/startup/sites/{site_id}/greenlight/verify-token": {
+    /**
+     * Verify Site Greenlight Token Endpoint 
+     * @description Verifies cryptographic validity and binding of a Site Greenlight Activation Token.
+     */
+    post: operations["Ctms_verify_site_greenlight_token_endpoint_api_v1_ctms_startup_sites__site_id__greenlight_verify_token_post"];
   };
   "/ctms/api/v1/ctms/deviations": {
     /** List Protocol Deviations */
@@ -1378,6 +1419,27 @@ export interface paths {
      */
     get: operations["Designer_get_library_instance_diff_endpoint_api_v1_studies__study_id__library_instances__instance_id__diff_get"];
   };
+  "/designer/api/v1/designer/startup-matrix/presets": {
+    /**
+     * Get Startup Presets Endpoint 
+     * @description Retrieves standard statutory startup criteria presets across international jurisdictions.
+     */
+    get: operations["Designer_get_startup_presets_endpoint_api_v1_designer_startup_matrix_presets_get"];
+  };
+  "/designer/api/v1/designer/startup-matrix/jurisdictions": {
+    /**
+     * Get Supported Jurisdictions Endpoint 
+     * @description Lists supported international jurisdictions with regulatory and ethics governance frameworks.
+     */
+    get: operations["Designer_get_supported_jurisdictions_endpoint_api_v1_designer_startup_matrix_jurisdictions_get"];
+  };
+  "/designer/api/v1/designer/startup-matrix/generate-template": {
+    /**
+     * Generate Startup Template Endpoint 
+     * @description Generates country-specific startup prerequisite criteria matrix for study protocol design.
+     */
+    post: operations["Designer_generate_startup_template_endpoint_api_v1_designer_startup_matrix_generate_template_post"];
+  };
   "/designer/health": {
     /**
      * Health Check 
@@ -2071,6 +2133,15 @@ export interface paths {
      */
     post: operations["Execution_register_bulk_subject_reconsent_api_v1_execution_amendments_bulk_reconsent_post"];
   };
+  "/execution/api/v1/execution/amendments/verify-training-gate": {
+    /**
+     * Verify Training Gate Endpoint 
+     * @description Programmatically verify training qualification for EDC write and signature permissions.
+     * 
+     * Requirements: PRD-TRN-002
+     */
+    post: operations["Execution_verify_training_gate_endpoint_api_v1_execution_amendments_verify_training_gate_post"];
+  };
   "/execution/api/v1/execution/anomalies/evaluate": {
     /**
      * Evaluate Anomalies 
@@ -2504,6 +2575,151 @@ export interface paths {
      * @description Dual QA verification of completed re-labeling task with barcode verification hash.
      */
     post: operations["Execution_verify_relabeling_task_endpoint_api_v1_execution_rtsm_relabeling_tasks__task_id__verify_post"];
+  };
+  "/execution/api/v1/execution/rtsm/cgt/apheresis": {
+    /**
+     * Initialize Apheresis Endpoint 
+     * @description Initializes Vein-to-Vein tracking upon initial apheresis cellular harvest.
+     */
+    post: operations["Execution_initialize_apheresis_endpoint_api_v1_execution_rtsm_cgt_apheresis_post"];
+  };
+  "/execution/api/v1/execution/rtsm/cgt/milestone": {
+    /**
+     * Record Cgt Milestone Endpoint 
+     * @description Records a cryogenic transit milestone with GPS coordinates and temperature logging.
+     */
+    post: operations["Execution_record_cgt_milestone_endpoint_api_v1_execution_rtsm_cgt_milestone_post"];
+  };
+  "/execution/api/v1/execution/rtsm/cgt/manufacturing-bind": {
+    /**
+     * Bind Manufacturing Batch Endpoint 
+     * @description Binds manufacturing batch record to original subject identity and regenerates barcode.
+     */
+    post: operations["Execution_bind_manufacturing_batch_endpoint_api_v1_execution_rtsm_cgt_manufacturing_bind_post"];
+  };
+  "/execution/api/v1/execution/rtsm/cgt/bedside-verify": {
+    /**
+     * Bedside Dual Verification Endpoint 
+     * @description Executes mandatory two-person electronic bedside verification, unlocking the drug infusion eCRF.
+     */
+    post: operations["Execution_bedside_dual_verification_endpoint_api_v1_execution_rtsm_cgt_bedside_verify_post"];
+  };
+  "/execution/api/v1/execution/rtsm/cgt/infuse": {
+    /**
+     * Execute Infusion Endpoint 
+     * @description Records cellular drug infusion administration, gated by the bedside verification unlock token.
+     */
+    post: operations["Execution_execute_infusion_endpoint_api_v1_execution_rtsm_cgt_infuse_post"];
+  };
+  "/execution/api/v1/execution/rtsm/cgt/returns": {
+    /**
+     * Log Vial Return Endpoint 
+     * @description Logs returned kit/vial accountability and calculates patient adherence compliance.
+     */
+    post: operations["Execution_log_vial_return_endpoint_api_v1_execution_rtsm_cgt_returns_post"];
+  };
+  "/execution/api/v1/execution/rtsm/cgt/destruction-certificate": {
+    /**
+     * Generate Destruction Certificate Endpoint 
+     * @description Generates a formal Certificate of Destruction with dual witness electronic signatures.
+     */
+    post: operations["Execution_generate_destruction_certificate_endpoint_api_v1_execution_rtsm_cgt_destruction_certificate_post"];
+  };
+  "/execution/api/v1/execution/rtsm/cgt/verify-barcode": {
+    /**
+     * Verify Cgt Barcode Endpoint 
+     * @description Verifies cryptographic authenticity and entity bindings for a scanned barcode.
+     */
+    post: operations["Execution_verify_cgt_barcode_endpoint_api_v1_execution_rtsm_cgt_verify_barcode_post"];
+  };
+  "/execution/api/v1/execution/rtsm/cgt/chain-of-custody/{study_id}/{subject_id}": {
+    /**
+     * Get Subject Cgt Traceability Endpoint 
+     * @description Retrieves full Vein-to-Vein traceability ledger for a subject.
+     */
+    get: operations["Execution_get_subject_cgt_traceability_endpoint_api_v1_execution_rtsm_cgt_chain_of_custody__study_id___subject_id__get"];
+  };
+  "/execution/api/v1/execution/rtsm/cgt/certificates/{study_id}": {
+    /**
+     * List Destruction Certificates Endpoint 
+     * @description Lists all Certificates of Destruction for a study.
+     */
+    get: operations["Execution_list_destruction_certificates_endpoint_api_v1_execution_rtsm_cgt_certificates__study_id__get"];
+  };
+  "/execution/api/v1/execution/rtsm/cgt/reconciliations/{study_id}": {
+    /**
+     * List Vial Reconciliations Endpoint 
+     * @description Lists all product return and accountability reconciliation records for a study.
+     */
+    get: operations["Execution_list_vial_reconciliations_endpoint_api_v1_execution_rtsm_cgt_reconciliations__study_id__get"];
+  };
+  "/execution/api/v1/execution/rtsm/adaptive/config": {
+    /**
+     * Get Adaptive Config Endpoint 
+     * @description Retrieves current adaptive dose-escalation trial configuration, active cohort state, and history.
+     */
+    get: operations["Execution_get_adaptive_config_endpoint_api_v1_execution_rtsm_adaptive_config_get"];
+    /**
+     * Create Or Update Adaptive Config Endpoint 
+     * @description Registers or updates adaptive oncology dose-escalation or RAR trial design parameters.
+     */
+    post: operations["Execution_create_or_update_adaptive_config_endpoint_api_v1_execution_rtsm_adaptive_config_post"];
+  };
+  "/execution/api/v1/execution/rtsm/adaptive/cohorts/evaluate": {
+    /**
+     * Evaluate Adaptive Cohort Endpoint 
+     * @description Evaluates safety cohort DLTs and computes real-time recommendation flags (BOIN, CRM, 3+3).
+     */
+    post: operations["Execution_evaluate_adaptive_cohort_endpoint_api_v1_execution_rtsm_adaptive_cohorts_evaluate_post"];
+  };
+  "/execution/api/v1/execution/rtsm/adaptive/cohorts/transition": {
+    /**
+     * Transition Adaptive Cohort Endpoint 
+     * @description Advances or overrides a dose escalation cohort with 21 CFR Part 11 audit logging.
+     */
+    post: operations["Execution_transition_adaptive_cohort_endpoint_api_v1_execution_rtsm_adaptive_cohorts_transition_post"];
+  };
+  "/execution/api/v1/execution/rtsm/adaptive/cohorts/history": {
+    /**
+     * Get Adaptive Cohorts History Endpoint 
+     * @description Returns the immutable 21 CFR Part 11 audited transition log history for a study.
+     */
+    get: operations["Execution_get_adaptive_cohorts_history_endpoint_api_v1_execution_rtsm_adaptive_cohorts_history_get"];
+  };
+  "/execution/api/v1/execution/rtsm/adaptive/rar/evaluate": {
+    /**
+     * Evaluate Rar Endpoint 
+     * @description Calculates dynamic Response-Adaptive Randomization allocation weights across active arms.
+     */
+    post: operations["Execution_evaluate_rar_endpoint_api_v1_execution_rtsm_adaptive_rar_evaluate_post"];
+  };
+  "/execution/api/v1/execution/rtsm/adaptive/rar/arms": {
+    /**
+     * Expand Or Terminate Rar Arm Endpoint 
+     * @description Seamlessly adds or terminates a treatment arm in RAR with zero study downtime.
+     */
+    post: operations["Execution_expand_or_terminate_rar_arm_endpoint_api_v1_execution_rtsm_adaptive_rar_arms_post"];
+  };
+  "/execution/api/v1/execution/rtsm/adaptive/rar/state": {
+    /**
+     * Get Rar State Endpoint 
+     * @description Retrieves current Response-Adaptive Randomization arm allocation weights and posterior states.
+     */
+    get: operations["Execution_get_rar_state_endpoint_api_v1_execution_rtsm_adaptive_rar_state_get"];
+  };
+  "/execution/api/v1/execution/rtsm/adaptive/boin/calculate-boundaries": {
+    /**
+     * Calculate Boin Boundaries Endpoint 
+     * @description Calculates theoretical BOIN escalation and de-escalation toxicity boundaries (lambda_e, lambda_d).
+     */
+    post: operations["Execution_calculate_boin_boundaries_endpoint_api_v1_execution_rtsm_adaptive_boin_calculate_boundaries_post"];
+  };
+  "/execution/api/v1/execution/rtsm/adaptive/crm/posterior": {
+    /**
+     * Calculate Crm Posterior Endpoint 
+     * @description Calculates Bayesian posterior probabilities and recommended next dose under Continual Reassessment Method.
+     */
+    post: operations["Execution_calculate_crm_posterior_endpoint_api_v1_execution_rtsm_adaptive_crm_posterior_post"];
   };
   "/execution/api/v1/execution/subjects/{subject_id}/unblind": {
     /**
@@ -4061,6 +4277,287 @@ export interface paths {
      */
     post: operations["Interop_replay_quarantined_submission_api_v1_interop_epro_quarantine__id__replay_post"];
   };
+  "/interop/api/v1/interop/lakehouse/ingest": {
+    /**
+     * Ingest heterogeneous clinical stream data 
+     * @description Ingest and normalize heterogeneous trial streams (EDC, ePRO, Labs, Wearables, FHIR, Imaging).
+     */
+    post: operations["Interop_ingest_stream_data_api_v1_interop_lakehouse_ingest_post"];
+  };
+  "/interop/api/v1/interop/lakehouse/snapshots": {
+    /**
+     * List version-pinned snapshots for a study 
+     * @description Retrieve all sealed, version-pinned snapshots for the specified study.
+     */
+    get: operations["Interop_list_snapshots_api_v1_interop_lakehouse_snapshots_get"];
+    /**
+     * Create an immutable, version-pinned clinical data snapshot 
+     * @description Pool lakehouse observations into an immutable, version-pinned snapshot sealed with SHA-256.
+     */
+    post: operations["Interop_create_snapshot_api_v1_interop_lakehouse_snapshots_post"];
+  };
+  "/interop/api/v1/interop/lakehouse/snapshots/{snapshot_id}": {
+    /**
+     * Retrieve snapshot metadata and seal info 
+     * @description Fetch metadata and cryptographic digest for a specific snapshot.
+     */
+    get: operations["Interop_get_snapshot_details_api_v1_interop_lakehouse_snapshots__snapshot_id__get"];
+  };
+  "/interop/api/v1/interop/lakehouse/snapshots/{snapshot_id}/query": {
+    /**
+     * Query pooled records inside a version-pinned snapshot 
+     * @description Query observations pooled inside a snapshot, enforcing role-based unblinded masking.
+     */
+    post: operations["Interop_query_snapshot_data_api_v1_interop_lakehouse_snapshots__snapshot_id__query_post"];
+  };
+  "/interop/api/v1/interop/lakehouse/snapshots/{snapshot_id}/data": {
+    /**
+     * Fetch snapshot pool data records via GET 
+     * @description Convenience endpoint to retrieve observations in a snapshot pool.
+     */
+    get: operations["Interop_get_snapshot_data_api_v1_interop_lakehouse_snapshots__snapshot_id__data_get"];
+  };
+  "/interop/api/v1/interop/lakehouse/snapshots/{snapshot_id}/verify": {
+    /**
+     * Verify cryptographic SHA-256 integrity of sealed snapshot 
+     * @description Recompute and verify the SHA-256 seal against all pooled records in the snapshot.
+     */
+    post: operations["Interop_verify_snapshot_api_v1_interop_lakehouse_snapshots__snapshot_id__verify_post"];
+  };
+  "/interop/api/v1/interop/lakehouse/snapshots/{snapshot_id}/audit-trail": {
+    /**
+     * Retrieve 21 CFR Part 11 audit log for a snapshot 
+     * @description Retrieve all chronological 21 CFR Part 11 audit trail entries for a snapshot.
+     */
+    get: operations["Interop_get_snapshot_audit_trail_api_v1_interop_lakehouse_snapshots__snapshot_id__audit_trail_get"];
+  };
+  "/interop/api/v1/interop/lakehouse/metrics/{study_id}": {
+    /**
+     * Retrieve real-time Lakehouse stream and snapshot metrics 
+     * @description Aggregate real-time data stream, subject, site, and snapshot metrics for a study.
+     */
+    get: operations["Interop_get_metrics_api_v1_interop_lakehouse_metrics__study_id__get"];
+  };
+  "/interop/api/v1/interop/cdr/pipeline/execute": {
+    /**
+     * Execute end-to-end continuous CDISC SDTM/ADaM pipeline and compiler 
+     * @description Execute automated continuous transformation mapping raw clinical observations to 10 SDTM domains, 4 ADaM datasets, Dataset-JSON, and Define-XML.
+     */
+    post: operations["Interop_execute_continuous_pipeline_api_v1_interop_cdr_pipeline_execute_post"];
+  };
+  "/interop/api/v1/interop/cdr/pipeline/results/{execution_id}": {
+    /**
+     * Retrieve execution manifest for a pipeline run 
+     * @description Retrieve details and metadata summary for a completed pipeline run.
+     */
+    get: operations["Interop_get_pipeline_execution_result_api_v1_interop_cdr_pipeline_results__execution_id__get"];
+  };
+  "/interop/api/v1/interop/cdr/pipeline/sdtm": {
+    /**
+     * Execute CDISC SDTM 10-domain transformation engine 
+     * @description Transform canonical observations into 10 standard CDISC SDTM domains.
+     */
+    post: operations["Interop_execute_sdtm_pipeline_api_v1_interop_cdr_pipeline_sdtm_post"];
+  };
+  "/interop/api/v1/interop/cdr/pipeline/adam": {
+    /**
+     * Execute CDISC ADaM 4-dataset derivation engine 
+     * @description Execute statistical derivation rules generating ADSL, ADAE, ADTTE, BDS datasets.
+     */
+    post: operations["Interop_execute_adam_pipeline_api_v1_interop_cdr_pipeline_adam_post"];
+  };
+  "/interop/api/v1/interop/cdr/export/dataset-json": {
+    /**
+     * Export clinical datasets in official CDISC Dataset-JSON 1.1 / 2.0 
+     * @description Serialize and export SDTM and ADaM datasets in CDISC Dataset-JSON 1.1 / 2.0 format.
+     */
+    post: operations["Interop_export_dataset_json_api_v1_interop_cdr_export_dataset_json_post"];
+  };
+  "/interop/api/v1/interop/cdr/export/define-xml": {
+    /**
+     * Auto-compile and export CDISC Define-XML v2.1 metadata specification 
+     * @description Auto-compile CDISC Define-XML v2.1 metadata document encapsulating dataset definitions, VLM, WhereClauses, and Origins.
+     */
+    post: operations["Interop_export_define_xml_api_v1_interop_cdr_export_define_xml_post"];
+  };
+  "/interop/api/v1/interop/cdr/validate/dataset-json": {
+    /**
+     * Validate a Dataset-JSON 1.1 / 2.0 payload 
+     * @description Perform strict structural and schema conformance validation for CDISC Dataset-JSON.
+     */
+    post: operations["Interop_validate_dataset_json_endpoint_api_v1_interop_cdr_validate_dataset_json_post"];
+  };
+  "/interop/api/v1/interop/cdr/validate/define-xml": {
+    /**
+     * Validate a CDISC Define-XML v2.1 document 
+     * @description Validate CDISC Define-XML v2.1 document syntax, ODM root, and element presence.
+     */
+    post: operations["Interop_validate_define_xml_endpoint_api_v1_interop_cdr_validate_define_xml_post"];
+  };
+  "/interop/api/v1/interop/cdr/metadata/catalog": {
+    /**
+     * Retrieve CDISC domain and variable metadata catalog 
+     * @description Retrieve catalog of supported SDTM domains, ADaM datasets, variable definitions, and VLM.
+     */
+    get: operations["Interop_get_metadata_catalog_api_v1_interop_cdr_metadata_catalog_get"];
+  };
+  "/interop/api/v1/interop/sce/programs": {
+    /**
+     * List statistical programs for a study 
+     * @description List all version-controlled statistical programs for a study.
+     */
+    get: operations["Interop_list_programs_api_v1_interop_sce_programs_get"];
+    /**
+     * Create or register a statistical analysis program 
+     * @description Register a version-controlled R or Python statistical program with package lockfile.
+     */
+    post: operations["Interop_create_program_api_v1_interop_sce_programs_post"];
+  };
+  "/interop/api/v1/interop/sce/programs/{program_id}": {
+    /**
+     * Retrieve statistical program by ID 
+     * @description Retrieve statistical program definition.
+     */
+    get: operations["Interop_get_program_api_v1_interop_sce_programs__program_id__get"];
+  };
+  "/interop/api/v1/interop/sce/validate-lockfile": {
+    /**
+     * Validate package lockfile integrity and GxP qualification 
+     * @description Parse and verify package lockfile (uv.lock / renv.lock) integrity and qualification.
+     */
+    post: operations["Interop_validate_lockfile_api_v1_interop_sce_validate_lockfile_post"];
+  };
+  "/interop/api/v1/interop/sce/lock-tokens": {
+    /**
+     * List active database lock authorization tokens 
+     * @description List active authorization tokens for unblinded analysis.
+     */
+    get: operations["Interop_list_lock_tokens_api_v1_interop_sce_lock_tokens_get"];
+    /**
+     * Issue database lock authorization token for unblinded analysis 
+     * @description Issue a cryptographically signed database lock token granting unblinded statistical analysis access.
+     */
+    post: operations["Interop_issue_lock_token_api_v1_interop_sce_lock_tokens_post"];
+  };
+  "/interop/api/v1/interop/sce/lock-tokens/{token_id}/revoke": {
+    /**
+     * Revoke an active database lock authorization token 
+     * @description Revoke an active database lock token.
+     */
+    post: operations["Interop_revoke_lock_token_api_v1_interop_sce_lock_tokens__token_id__revoke_post"];
+  };
+  "/interop/api/v1/interop/sce/execute": {
+    /**
+     * Execute statistical program in isolated containerized sandbox 
+     * @description Execute validated R or Python script against version-pinned data snapshot with signed run manifest.
+     */
+    post: operations["Interop_execute_program_api_v1_interop_sce_execute_post"];
+  };
+  "/interop/api/v1/interop/sce/runs": {
+    /**
+     * List historical execution runs for a study 
+     * @description List all historical analytical execution runs.
+     */
+    get: operations["Interop_list_execution_runs_api_v1_interop_sce_runs_get"];
+  };
+  "/interop/api/v1/interop/sce/runs/{run_id}": {
+    /**
+     * Retrieve execution run manifest and details 
+     * @description Retrieve details and signed manifest of an execution run.
+     */
+    get: operations["Interop_get_execution_run_api_v1_interop_sce_runs__run_id__get"];
+  };
+  "/interop/api/v1/interop/sce/runs/{run_id}/verify": {
+    /**
+     * Cryptographically verify execution run manifest seal 
+     * @description Assert bit-for-bit SHA-256 seal integrity and 21 CFR Part 11 electronic signature.
+     */
+    post: operations["Interop_verify_run_manifest_api_v1_interop_sce_runs__run_id__verify_post"];
+  };
+  "/interop/api/v1/interop/sce/runs/{run_id}/artifacts/{artifact_id}": {
+    /**
+     * Retrieve generated artifact details and preview 
+     * @description Retrieve output artifact metadata and content preview.
+     */
+    get: operations["Interop_get_run_artifact_api_v1_interop_sce_runs__run_id__artifacts__artifact_id__get"];
+  };
+  "/interop/api/v1/interop/sensors/devices": {
+    /**
+     * List registered medical IoT devices 
+     * @description List registered medical IoT sensor devices for a clinical study.
+     * 
+     * @req:PRD-DCT-002
+     * @req:ADR-2199
+     */
+    get: operations["Interop_list_devices_api_v1_interop_sensors_devices_get"];
+    /**
+     * Register & map approved medical IoT sensor device 
+     * @description Register and map an approved medical IoT sensor device (CGM, Actigraphy, Spirometry, BP).
+     * 
+     * @req:PRD-DCT-002
+     * @req:ADR-2199
+     */
+    post: operations["Interop_register_device_api_v1_interop_sensors_devices_post"];
+  };
+  "/interop/api/v1/interop/sensors/ingest": {
+    /**
+     * Ingest continuous biometric IoT sensor telemetry 
+     * @description Ingest continuous time-series telemetry streams from approved medical IoT devices.
+     * 
+     * Applies:
+     * 1. Automated HMAC-SHA256 pseudonymization & device MAC/UDI mapping
+     * 2. Clock drift correction between device RTC and gateway UTC
+     * 3. Normalization into Open mHealth (OMH) & HL7 FHIR Observation schemas
+     * 4. Aggregate daily summary endpoints calculation (Time-in-Range TIR, mean glucose, steps, FEV1)
+     * 5. Automated safety threshold alert evaluation
+     * 6. Automated feeding into the Clinical Data Repository (CDR) Lakehouse
+     * 
+     * @req:PRD-DCT-002
+     * @req:PRD-DCT-001
+     * @req:ADR-2199
+     */
+    post: operations["Interop_ingest_telemetry_stream_api_v1_interop_sensors_ingest_post"];
+  };
+  "/interop/api/v1/interop/sensors/daily-summaries": {
+    /**
+     * Query calculated daily summary endpoints 
+     * @description Retrieve aggregate daily summary endpoints (TIR, glucose, steps, cadence, RHR, FEV1).
+     * 
+     * @req:PRD-DCT-002
+     * @req:ADR-2199
+     */
+    get: operations["Interop_list_daily_summaries_api_v1_interop_sensors_daily_summaries_get"];
+  };
+  "/interop/api/v1/interop/sensors/safety-alerts": {
+    /**
+     * Query automated safety threshold alerts 
+     * @description Retrieve triggered biometric safety threshold alerts for clinical investigation.
+     * 
+     * @req:PRD-DCT-002
+     * @req:ADR-2199
+     */
+    get: operations["Interop_list_safety_alerts_api_v1_interop_sensors_safety_alerts_get"];
+  };
+  "/interop/api/v1/interop/sensors/safety-alerts/{alert_id}/acknowledge": {
+    /**
+     * Acknowledge safety alert with electronic signature 
+     * @description Acknowledge a safety threshold alert with 21 CFR Part 11 electronic sign-off and clinical notes.
+     * 
+     * @req:PRD-DCT-002
+     * @req:ADR-2199
+     */
+    post: operations["Interop_acknowledge_safety_alert_api_v1_interop_sensors_safety_alerts__alert_id__acknowledge_post"];
+  };
+  "/interop/api/v1/interop/sensors/metrics/{study_id}": {
+    /**
+     * Get connected IoT sensor dashboard metrics 
+     * @description Retrieve real-time IoT sensor telemetry metrics across a clinical study.
+     * 
+     * @req:PRD-DCT-002
+     * @req:ADR-2199
+     */
+    get: operations["Interop_get_sensor_dashboard_metrics_api_v1_interop_sensors_metrics__study_id__get"];
+  };
   "/knowledge/api/v1/knowledge/categories": {
     /**
      * List Categories 
@@ -4314,6 +4811,100 @@ export interface paths {
      * @description Retrieves full chunk text and metadata for interactive UI document preview.
      */
     get: operations["Knowledge_get_protocol_chunk_api_v1_knowledge_protocols_chunks__chunk_id__get"];
+  };
+  "/knowledge/api/v1/training/curricula/generate-amendment": {
+    /**
+     * Generate Amendment Curriculum Endpoint 
+     * @description Generate a delta-training curriculum upon protocol amendment publication.
+     * 
+     * Requirements: PRD-TRN-001
+     */
+    post: operations["Knowledge_generate_amendment_curriculum_endpoint_api_v1_training_curricula_generate_amendment_post"];
+  };
+  "/knowledge/api/v1/training/curricula": {
+    /**
+     * List Curricula Endpoint 
+     * @description List active training curricula.
+     */
+    get: operations["Knowledge_list_curricula_endpoint_api_v1_training_curricula_get"];
+  };
+  "/knowledge/api/v1/training/curricula/{curriculum_id}": {
+    /**
+     * Get Curriculum Endpoint 
+     * @description Retrieve details for a single training curriculum.
+     */
+    get: operations["Knowledge_get_curriculum_endpoint_api_v1_training_curricula__curriculum_id__get"];
+  };
+  "/knowledge/api/v1/training/curricula/{curriculum_id}/assign": {
+    /**
+     * Assign Curriculum Endpoint 
+     * @description Assign a training curriculum to a site user.
+     */
+    post: operations["Knowledge_assign_curriculum_endpoint_api_v1_training_curricula__curriculum_id__assign_post"];
+  };
+  "/knowledge/api/v1/training/assignments": {
+    /**
+     * List Assignments Endpoint 
+     * @description List training assignments for a user or site.
+     */
+    get: operations["Knowledge_list_assignments_endpoint_api_v1_training_assignments_get"];
+  };
+  "/knowledge/api/v1/training/assignments/{assignment_id}": {
+    /**
+     * Get Assignment Detail Endpoint 
+     * @description Retrieve full details of an assignment including curriculum modules.
+     */
+    get: operations["Knowledge_get_assignment_detail_endpoint_api_v1_training_assignments__assignment_id__get"];
+  };
+  "/knowledge/api/v1/training/assignments/{assignment_id}/progress": {
+    /**
+     * Record Progress Endpoint 
+     * @description Record reading duration and time-on-page tracking.
+     */
+    post: operations["Knowledge_record_progress_endpoint_api_v1_training_assignments__assignment_id__progress_post"];
+  };
+  "/knowledge/api/v1/training/assignments/{assignment_id}/submit-quiz": {
+    /**
+     * Submit Quiz Endpoint 
+     * @description Submit comprehension quiz answers and evaluate score (>= 80% passing).
+     * 
+     * Requirements: PRD-TRN-003
+     */
+    post: operations["Knowledge_submit_quiz_endpoint_api_v1_training_assignments__assignment_id__submit_quiz_post"];
+  };
+  "/knowledge/api/v1/training/assignments/{assignment_id}/sign-off": {
+    /**
+     * Sign Off Training Endpoint 
+     * @description Capture 21 CFR Part 11 electronic signature, generate sealed PDF certificate, and push to eTMF & eISF.
+     * 
+     * Requirements: PRD-TRN-003, PRD-TRN-004
+     */
+    post: operations["Knowledge_sign_off_training_endpoint_api_v1_training_assignments__assignment_id__sign_off_post"];
+  };
+  "/knowledge/api/v1/training/assignments/{assignment_id}/certificate": {
+    /**
+     * Get Certificate Endpoint 
+     * @description Retrieve completion certificate for an assignment.
+     */
+    get: operations["Knowledge_get_certificate_endpoint_api_v1_training_assignments__assignment_id__certificate_get"];
+  };
+  "/knowledge/api/v1/training/gating-status": {
+    /**
+     * Get Gating Status Endpoint 
+     * @description Check whether a user is qualified for EDC write permissions on a protocol version.
+     * 
+     * Requirements: PRD-TRN-002
+     */
+    get: operations["Knowledge_get_gating_status_endpoint_api_v1_training_gating_status_get"];
+  };
+  "/knowledge/api/v1/training/verify-gate": {
+    /**
+     * Verify Gate Endpoint 
+     * @description Programmatically verify qualification gate for EDC write operations.
+     * 
+     * Requirements: PRD-TRN-002
+     */
+    post: operations["Knowledge_verify_gate_endpoint_api_v1_training_verify_gate_post"];
   };
   "/knowledge/health": {
     /**
@@ -4744,6 +5335,26 @@ export interface paths {
     /** Record Effectiveness Check */
     post: operations["Quality_record_effectiveness_check_api_v1_quality_capas__id__effectiveness_post"];
   };
+  "/quality/api/v1/quality/rbqm/ract/factors": {
+    /** List Ract Risk Factors */
+    get: operations["Quality_list_ract_risk_factors_api_v1_quality_rbqm_ract_factors_get"];
+    /** Create Ract Risk Factor */
+    post: operations["Quality_create_ract_risk_factor_api_v1_quality_rbqm_ract_factors_post"];
+  };
+  "/quality/api/v1/quality/rbqm/ract/factors/{factor_id}": {
+    /** Update Ract Risk Factor */
+    put: operations["Quality_update_ract_risk_factor_api_v1_quality_rbqm_ract_factors__factor_id__put"];
+    /** Delete Ract Risk Factor */
+    delete: operations["Quality_delete_ract_risk_factor_api_v1_quality_rbqm_ract_factors__factor_id__delete"];
+  };
+  "/quality/api/v1/quality/rbqm/ract/seed-default": {
+    /** Seed Default Transcelerate Ract */
+    post: operations["Quality_seed_default_transcelerate_ract_api_v1_quality_rbqm_ract_seed_default_post"];
+  };
+  "/quality/api/v1/quality/rbqm/ract/summary": {
+    /** Get Ract Matrix Summary */
+    get: operations["Quality_get_ract_matrix_summary_api_v1_quality_rbqm_ract_summary_get"];
+  };
   "/quality/api/v1/quality/rbqm/ctq": {
     /** List Ctq Factors */
     get: operations["Quality_list_ctq_factors_api_v1_quality_rbqm_ctq_get"];
@@ -4786,6 +5397,18 @@ export interface paths {
     /** List Qtl Breaches */
     get: operations["Quality_list_qtl_breaches_api_v1_quality_rbqm_qtls_breaches_get"];
   };
+  "/quality/api/v1/quality/rbqm/csm/dossiers/compile": {
+    /** Compile Csm Dossier */
+    post: operations["Quality_compile_csm_dossier_api_v1_quality_rbqm_csm_dossiers_compile_post"];
+  };
+  "/quality/api/v1/quality/rbqm/csm/dossiers": {
+    /** List Csm Dossiers */
+    get: operations["Quality_list_csm_dossiers_api_v1_quality_rbqm_csm_dossiers_get"];
+  };
+  "/quality/api/v1/quality/rbqm/csm/dossiers/{dossier_id}": {
+    /** Get Csm Dossier */
+    get: operations["Quality_get_csm_dossier_api_v1_quality_rbqm_csm_dossiers__dossier_id__get"];
+  };
   "/quality/api/v1/quality/forensics/analyze": {
     /**
      * Execute Forensics Analysis 
@@ -4827,6 +5450,69 @@ export interface paths {
      * @description Generates synthetic multi-site clinical datasets for testing and calibration.
      */
     post: operations["Quality_simulate_forensics_dataset_api_v1_quality_forensics_simulate_post"];
+  };
+  "/quality/api/v1/quality/sentinels/duplicate-patients/scan": {
+    /**
+     * Execute Duplicate Patient Scan 
+     * @description Executes cross-site similarity matching across baseline clinical feature vectors.
+     */
+    post: operations["Quality_execute_duplicate_patient_scan_api_v1_quality_sentinels_duplicate_patients_scan_post"];
+  };
+  "/quality/api/v1/quality/sentinels/temporal-anomalies/scan": {
+    /**
+     * Execute Temporal Anomaly Scan 
+     * @description Detects off-hours entry clusters, rapid burst submissions, and identical procedure intervals.
+     */
+    post: operations["Quality_execute_temporal_anomaly_scan_api_v1_quality_sentinels_temporal_anomalies_scan_post"];
+  };
+  "/quality/api/v1/quality/sentinels/image-phash/scan": {
+    /**
+     * Execute Image Phash Scan 
+     * @description Computes DCT-based perceptual image hashes to detect reused and transformed radiological scans.
+     */
+    post: operations["Quality_execute_image_phash_scan_api_v1_quality_sentinels_image_phash_scan_post"];
+  };
+  "/quality/api/v1/quality/sentinels/data-integrity/comprehensive-scan": {
+    /**
+     * Execute Comprehensive Data Integrity Scan 
+     * @description Executes a unified comprehensive data integrity scan across duplicate records, timing, and images.
+     */
+    post: operations["Quality_execute_comprehensive_data_integrity_scan_api_v1_quality_sentinels_data_integrity_comprehensive_scan_post"];
+  };
+  "/quality/api/v1/quality/sentinels/runs": {
+    /**
+     * List Data Integrity Runs 
+     * @description Lists historical data integrity sentinel runs.
+     */
+    get: operations["Quality_list_data_integrity_runs_api_v1_quality_sentinels_runs_get"];
+  };
+  "/quality/api/v1/quality/sentinels/runs/{run_id}": {
+    /**
+     * Get Data Integrity Run 
+     * @description Retrieves full details and findings for a specific data integrity sentinel run.
+     */
+    get: operations["Quality_get_data_integrity_run_api_v1_quality_sentinels_runs__run_id__get"];
+  };
+  "/quality/api/v1/quality/sentinels/runs/{run_id}/findings": {
+    /**
+     * Get Data Integrity Run Findings 
+     * @description Retrieves all anomaly findings detected within a sentinel run.
+     */
+    get: operations["Quality_get_data_integrity_run_findings_api_v1_quality_sentinels_runs__run_id__findings_get"];
+  };
+  "/quality/api/v1/quality/sentinels/findings/{finding_id}/dispatch-investigation": {
+    /**
+     * Dispatch Manual Investigation 
+     * @description Dispatches a formal 21 CFR Part 11 investigation deviation for a flagged finding.
+     */
+    post: operations["Quality_dispatch_manual_investigation_api_v1_quality_sentinels_findings__finding_id__dispatch_investigation_post"];
+  };
+  "/quality/api/v1/quality/sentinels/simulate": {
+    /**
+     * Simulate Sentinel Dataset 
+     * @description Generates synthetic multi-site clinical datasets with injected fraud anomalies.
+     */
+    post: operations["Quality_simulate_sentinel_dataset_api_v1_quality_sentinels_simulate_post"];
   };
   "/quality/api/v1/quality/audits": {
     /** List Audits */
@@ -6697,6 +7383,53 @@ export interface components {
       /** Version Index */
       version_index: number;
     };
+    /** CountryPrerequisiteRuleCreate */
+    Ctms_CountryPrerequisiteRuleCreate: {
+      /** Study Id */
+      study_id: string;
+      /** Country Code */
+      country_code: string;
+      /** Facet */
+      facet: string;
+      /** Criterion Code */
+      criterion_code: string;
+      /** Criterion Name */
+      criterion_name: string;
+      /**
+       * Is Mandatory 
+       * @default true
+       */
+      is_mandatory?: boolean;
+      /** Description */
+      description?: string | null;
+    };
+    /** CountryPrerequisiteRuleResponse */
+    Ctms_CountryPrerequisiteRuleResponse: {
+      /** Id */
+      id: string;
+      /** Study Id */
+      study_id: string;
+      /** Country Code */
+      country_code: string;
+      /** Facet */
+      facet: string;
+      /** Criterion Code */
+      criterion_code: string;
+      /** Criterion Name */
+      criterion_name: string;
+      /** Is Mandatory */
+      is_mandatory: boolean;
+      /** Description */
+      description: string | null;
+      /** Created At */
+      created_at: string | null;
+      /** Created By */
+      created_by: string;
+      /** Reason For Change */
+      reason_for_change: string;
+      /** Version Index */
+      version_index: number;
+    };
     /** CurrencyConvertRequest */
     Ctms_CurrencyConvertRequest: {
       /**
@@ -7210,6 +7943,26 @@ export interface components {
       reason_for_change: string;
       /** Version Index */
       version_index: number;
+    };
+    /** GreenlightTokenVerifyRequest */
+    Ctms_GreenlightTokenVerifyRequest: {
+      /** Token */
+      token: string;
+      /** Site Id */
+      site_id?: string | null;
+      /** Study Id */
+      study_id?: string | null;
+    };
+    /** GreenlightTokenVerifyResponse */
+    Ctms_GreenlightTokenVerifyResponse: {
+      /** Is Valid */
+      is_valid: boolean;
+      /** Payload */
+      payload?: {
+        [key: string]: unknown;
+      } | null;
+      /** Error */
+      error?: string | null;
     };
     /** HTTPValidationError */
     Ctms_HTTPValidationError: {
@@ -8284,32 +9037,121 @@ export interface components {
       study_id: string;
       /** Site Id */
       site_id: string;
+      /**
+       * Country Code 
+       * @default US
+       */
+      country_code?: string;
       /** Overall Status */
       overall_status: string;
-      /** Contract Approved */
-      contract_approved: boolean;
-      /** Irb Approved */
-      irb_approved: boolean;
-      /** Form 1572 Approved */
-      form_1572_approved: boolean;
-      /** Doa Signed Off */
-      doa_signed_off: boolean;
-      /** Ip Ready */
-      ip_ready: boolean;
+      /**
+       * Facet Regulatory Irb 
+       * @default false
+       */
+      facet_regulatory_irb?: boolean;
+      /**
+       * Facet Cta Budget 
+       * @default false
+       */
+      facet_cta_budget?: boolean;
+      /**
+       * Facet Eisf Baseline 
+       * @default false
+       */
+      facet_eisf_baseline?: boolean;
+      /**
+       * Facet Doa Log 
+       * @default false
+       */
+      facet_doa_log?: boolean;
+      /**
+       * Facet Staff Training 
+       * @default false
+       */
+      facet_staff_training?: boolean;
+      /**
+       * Facet Ip Release 
+       * @default false
+       */
+      facet_ip_release?: boolean;
+      /**
+       * Contract Approved 
+       * @default false
+       */
+      contract_approved?: boolean;
+      /**
+       * Irb Approved 
+       * @default false
+       */
+      irb_approved?: boolean;
+      /**
+       * Form 1572 Approved 
+       * @default false
+       */
+      form_1572_approved?: boolean;
+      /**
+       * Doa Signed Off 
+       * @default false
+       */
+      doa_signed_off?: boolean;
+      /**
+       * Ip Ready 
+       * @default false
+       */
+      ip_ready?: boolean;
+      /** Greenlight Token */
+      greenlight_token?: string | null;
       /** Greenlight Certified By */
-      greenlight_certified_by: string | null;
+      greenlight_certified_by?: string | null;
       /** Greenlight Certified At */
-      greenlight_certified_at: string | null;
+      greenlight_certified_at?: string | null;
+      /**
+       * Is Overridden 
+       * @default false
+       */
+      is_overridden?: boolean;
+      /** Override Sponsor User Id */
+      override_sponsor_user_id?: string | null;
+      /** Override Medical User Id */
+      override_medical_user_id?: string | null;
+      /** Override Justification */
+      override_justification?: string | null;
+      /** Override Authorized At */
+      override_authorized_at?: string | null;
+      /** Evaluation Details */
+      evaluation_details?: {
+        [key: string]: unknown;
+      } | null;
       /** Rejection Reason */
-      rejection_reason: string | null;
+      rejection_reason?: string | null;
       /** Created At */
-      created_at: string | null;
+      created_at?: string | null;
       /** Created By */
       created_by: string;
       /** Reason For Change */
       reason_for_change: string;
       /** Version Index */
       version_index: number;
+    };
+    /** SiteGreenlightOverrideRequest */
+    Ctms_SiteGreenlightOverrideRequest: {
+      /** Study Id */
+      study_id: string;
+      /** Sponsor User Id */
+      sponsor_user_id: string;
+      /** Medical User Id */
+      medical_user_id: string;
+      /** Sponsor Signature */
+      sponsor_signature: string;
+      /** Medical Signature */
+      medical_signature: string;
+      /** Justification */
+      justification: string;
+      /**
+       * Country Code 
+       * @default US
+       */
+      country_code?: string;
     };
     /** SiteMilestoneCreate */
     Ctms_SiteMilestoneCreate: {
@@ -10486,6 +11328,30 @@ export interface components {
       /** Text */
       text: string;
     };
+    /** GenerateStartupTemplateRequest */
+    Designer_GenerateStartupTemplateRequest: {
+      /**
+       * Study Id 
+       * @description Study Identifier
+       */
+      study_id: string;
+      /**
+       * Country Codes 
+       * @description List of target country codes (e.g. ['US', 'EU', 'JP', 'GB'])
+       */
+      country_codes: (string)[];
+    };
+    /** GenerateStartupTemplateResponse */
+    Designer_GenerateStartupTemplateResponse: {
+      /** Study Id */
+      study_id: string;
+      /** Generated Rules */
+      generated_rules: (components["schemas"]["Designer_PrerequisiteCriterionTemplate"])[];
+      /** Summary By Country */
+      summary_by_country: {
+        [key: string]: number | undefined;
+      };
+    };
     /** HTTPValidationError */
     Designer_HTTPValidationError: {
       /** Detail */
@@ -10538,6 +11404,19 @@ export interface components {
       internal_id: number | null;
       /** Is Mapped */
       is_mapped: boolean;
+    };
+    /** JurisdictionInfo */
+    Designer_JurisdictionInfo: {
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+      /** Regulatory Framework */
+      regulatory_framework: string;
+      /** Ethics Framework */
+      ethics_framework: string;
+      /** Mandatory Criteria Count */
+      mandatory_criteria_count: number;
     };
     /** LibraryInstanceResponse */
     Designer_LibraryInstanceResponse: {
@@ -10797,6 +11676,21 @@ export interface components {
       context_payload?: {
         [key: string]: unknown;
       };
+    };
+    /** PrerequisiteCriterionTemplate */
+    Designer_PrerequisiteCriterionTemplate: {
+      /** Country Code */
+      country_code: string;
+      /** Facet */
+      facet: string;
+      /** Criterion Code */
+      criterion_code: string;
+      /** Criterion Name */
+      criterion_name: string;
+      /** Is Mandatory */
+      is_mandatory: boolean;
+      /** Description */
+      description?: string | null;
     };
     /** ProblemDetails */
     Designer_ProblemDetails: {
@@ -16379,6 +17273,37 @@ export interface components {
       completeness_percentage: number;
     };
     /**
+     * AdaptiveTrialConfigDTO 
+     * @description Comprehensive DTO for adaptive trial configuration.
+     */
+    Execution_AdaptiveTrialConfigDTO: {
+      /** Study Id */
+      study_id: string;
+      /**
+       * Design Type 
+       * @description Design type: 'THREE_PLUS_THREE', 'BOIN', 'CRM', 'RAR'
+       */
+      design_type: string;
+      /** Dose Levels */
+      dose_levels?: (components["schemas"]["Execution_DoseLevelDef"])[];
+      boin_config?: components["schemas"]["Execution_BoinConfig"] | null;
+      crm_config?: components["schemas"]["Execution_CrmConfig"] | null;
+      three_plus_three_config?: components["schemas"]["Execution_ThreePlusThreeConfig"] | null;
+      rar_config?: components["schemas"]["Execution_RarConfig"] | null;
+      /**
+       * Cohort Size 
+       * @default 3
+       */
+      cohort_size?: number;
+      /** Max Sample Size */
+      max_sample_size?: number | null;
+      /**
+       * Is Active 
+       * @default true
+       */
+      is_active?: boolean;
+    };
+    /**
      * AddDOAAssignmentRequest 
      * @description Request payload to add site personnel task delegation record.
      * 
@@ -16777,6 +17702,93 @@ export interface components {
       reason_for_change: string;
     };
     /**
+     * BoinBoundariesCalculationRequest 
+     * @description Direct calculation request for theoretical BOIN boundaries.
+     */
+    Execution_BoinBoundariesCalculationRequest: {
+      /**
+       * Target Toxicity Rate 
+       * @default 0.25
+       */
+      target_toxicity_rate?: number;
+      /**
+       * Factor E 
+       * @default 0.6
+       */
+      factor_e?: number;
+      /**
+       * Factor D 
+       * @default 1.4
+       */
+      factor_d?: number;
+    };
+    /**
+     * BoinBoundariesCalculationResponse 
+     * @description Response containing exact theoretical BOIN boundaries.
+     */
+    Execution_BoinBoundariesCalculationResponse: {
+      /** Target Toxicity Rate */
+      target_toxicity_rate: number;
+      /** Phi 1 */
+      phi_1: number;
+      /** Phi 2 */
+      phi_2: number;
+      /** Lambda E */
+      lambda_e: number;
+      /** Lambda D */
+      lambda_d: number;
+      /** Description */
+      description: string;
+    };
+    /**
+     * BoinConfig 
+     * @description Configuration parameters for Bayesian Optimal Interval (BOIN) design.
+     */
+    Execution_BoinConfig: {
+      /**
+       * Target Toxicity Rate 
+       * @description Target Dose-Limiting Toxicity (DLT) rate phi (e.g. 0.25 or 0.30). 
+       * @default 0.25
+       */
+      target_toxicity_rate?: number;
+      /**
+       * Factor E 
+       * @description Escalation boundary factor c_e such that phi_1 = c_e * phi (default 0.6). 
+       * @default 0.6
+       */
+      factor_e?: number;
+      /**
+       * Factor D 
+       * @description De-escalation boundary factor c_d such that phi_2 = c_d * phi (default 1.4). 
+       * @default 1.4
+       */
+      factor_d?: number;
+      /**
+       * Safety Cutoff 
+       * @description Bayesian overdose stopping probability cutoff P(p_j > phi | data) > cutoff. 
+       * @default 0.95
+       */
+      safety_cutoff?: number;
+      /**
+       * Prior Alpha 
+       * @description Beta prior shape parameter alpha (default 1.0). 
+       * @default 1
+       */
+      prior_alpha?: number;
+      /**
+       * Prior Beta 
+       * @description Beta prior shape parameter beta (default 1.0). 
+       * @default 1
+       */
+      prior_beta?: number;
+      /**
+       * Min Subjects For Elimination 
+       * @description Minimum evaluated subjects at a dose level before overdose elimination can trigger. 
+       * @default 3
+       */
+      min_subjects_for_elimination?: number;
+    };
+    /**
      * BulkQueryGenerationRequest 
      * @description Request payload to execute bulk clinical query generation.
      * 
@@ -17003,6 +18015,607 @@ export interface components {
       reason_for_change?: string;
     };
     /**
+     * CGTApheresisCreateRequest 
+     * @description Payload to register initial apheresis collection and start Vein-to-Vein tracking.
+     */
+    Execution_CGTApheresisCreateRequest: {
+      /** Study Id */
+      study_id: string;
+      /** Site Id */
+      site_id: string;
+      /** Subject Id */
+      subject_id: string;
+      /** Collector Id */
+      collector_id: string;
+      /** Collector Name */
+      collector_name: string;
+      /**
+       * Collector Role 
+       * @default Apheresis Nurse
+       */
+      collector_role?: string;
+      /**
+       * Initial Temp Celsius 
+       * @default -196
+       */
+      initial_temp_celsius?: number;
+      /** Din */
+      din?: string | null;
+      /** Dry Shipper Id */
+      dry_shipper_id?: string | null;
+      /** Seal Id */
+      seal_id?: string | null;
+      /** Notes */
+      notes?: string | null;
+    };
+    /**
+     * CGTBarcodeVerifyRequest 
+     * @description Payload to verify cryptographic barcode authenticity.
+     */
+    Execution_CGTBarcodeVerifyRequest: {
+      /** Barcode Payload */
+      barcode_payload: string;
+      /** Expected Subject Id */
+      expected_subject_id?: string | null;
+      /** Expected Din */
+      expected_din?: string | null;
+      /** Expected Batch Id */
+      expected_batch_id?: string | null;
+    };
+    /**
+     * CGTBarcodeVerifyResponse 
+     * @description Response schema for barcode verification.
+     */
+    Execution_CGTBarcodeVerifyResponse: {
+      /** Is Valid */
+      is_valid: boolean;
+      /** Failure Reason */
+      failure_reason?: string | null;
+      /** Barcode Id */
+      barcode_id?: string | null;
+      /** Study Id */
+      study_id?: string | null;
+      /** Site Id */
+      site_id?: string | null;
+      /** Subject Id */
+      subject_id?: string | null;
+      /** Din */
+      din?: string | null;
+      /** Batch Id */
+      batch_id?: string | null;
+      /** Crypto Hash */
+      crypto_hash?: string | null;
+    };
+    /**
+     * CGTBedsideVerificationRequest 
+     * @description Payload for mandatory bedside two-person electronic verification gating infusion eCRF.
+     */
+    Execution_CGTBedsideVerificationRequest: {
+      /** Coc Id */
+      coc_id: string;
+      /** Scanned Wristband Subject Id */
+      scanned_wristband_subject_id: string;
+      /** Scanned Bag Barcode */
+      scanned_bag_barcode: string;
+      /** Primary Verifier Id */
+      primary_verifier_id: string;
+      /** Primary Verifier Name */
+      primary_verifier_name: string;
+      /** Primary Verifier Role */
+      primary_verifier_role: string;
+      /** Primary Signature Token */
+      primary_signature_token: string;
+      /** Secondary Verifier Id */
+      secondary_verifier_id: string;
+      /** Secondary Verifier Name */
+      secondary_verifier_name: string;
+      /** Secondary Verifier Role */
+      secondary_verifier_role: string;
+      /** Secondary Signature Token */
+      secondary_signature_token: string;
+      /** Notes */
+      notes?: string | null;
+    };
+    /**
+     * CGTBedsideVerificationResponse 
+     * @description Response schema for bedside two-person verification.
+     */
+    Execution_CGTBedsideVerificationResponse: {
+      /** Id */
+      id: string;
+      /** Study Id */
+      study_id: string;
+      /** Site Id */
+      site_id: string;
+      /** Chain Of Custody Id */
+      chain_of_custody_id: string;
+      /** Subject Id */
+      subject_id: string;
+      /** Din */
+      din: string;
+      /** Batch Id */
+      batch_id: string;
+      /** Wristband Matched */
+      wristband_matched: boolean;
+      /** Bag Matched */
+      bag_matched: boolean;
+      /** Temperature Chain Verified */
+      temperature_chain_verified: boolean;
+      /** Primary Verifier Id */
+      primary_verifier_id: string;
+      /** Primary Verifier Name */
+      primary_verifier_name: string;
+      /** Primary Verifier Role */
+      primary_verifier_role: string;
+      /**
+       * Primary Signed At 
+       * Format: date-time
+       */
+      primary_signed_at: string;
+      /** Secondary Verifier Id */
+      secondary_verifier_id: string;
+      /** Secondary Verifier Name */
+      secondary_verifier_name: string;
+      /** Secondary Verifier Role */
+      secondary_verifier_role: string;
+      /**
+       * Secondary Signed At 
+       * Format: date-time
+       */
+      secondary_signed_at: string;
+      /** Status */
+      status: string;
+      /** Unlock Token */
+      unlock_token: string;
+      /** Verification Notes */
+      verification_notes?: string | null;
+    };
+    /**
+     * CGTChainOfCustodyResponse 
+     * @description Response schema for Vein-to-Vein Chain of Custody & Identity record.
+     */
+    Execution_CGTChainOfCustodyResponse: {
+      /** Id */
+      id: string;
+      /** Study Id */
+      study_id: string;
+      /** Subject Id */
+      subject_id: string;
+      /** Din */
+      din: string;
+      /** Batch Id */
+      batch_id?: string | null;
+      /** Current Stage */
+      current_stage: string;
+      /** Status */
+      status: string;
+      /** Tamper Evident Barcode */
+      tamper_evident_barcode?: string | null;
+      /** Barcode Signature */
+      barcode_signature?: string | null;
+      /** Collection Site Id */
+      collection_site_id?: string | null;
+      /** Collection Timestamp */
+      collection_timestamp?: string | null;
+      /** Manufacturing Facility Id */
+      manufacturing_facility_id?: string | null;
+      /**
+       * Cryo Temp Excursion Count 
+       * @default 0
+       */
+      cryo_temp_excursion_count?: number;
+      /** Lowest Temp Celsius */
+      lowest_temp_celsius?: number | null;
+      /** Highest Temp Celsius */
+      highest_temp_celsius?: number | null;
+      /**
+       * Infusion Unlocked 
+       * @default false
+       */
+      infusion_unlocked?: boolean;
+      /** Infused At */
+      infused_at?: string | null;
+      /** Reconciled At */
+      reconciled_at?: string | null;
+    };
+    /**
+     * CGTDestructionCertificateCreateRequest 
+     * @description Payload to generate formal Certificate of Destruction with dual witness e-signatures.
+     */
+    Execution_CGTDestructionCertificateCreateRequest: {
+      /** Study Id */
+      study_id: string;
+      /** Site Id */
+      site_id: string;
+      /** Lot Number */
+      lot_number: string;
+      /** Kit Numbers */
+      kit_numbers: (string)[];
+      /** Vial Identifiers */
+      vial_identifiers: (string)[];
+      /** Destruction Reason */
+      destruction_reason: string;
+      /**
+       * Destruction Method 
+       * @default HIGH_TEMPERATURE_INCINERATION
+       */
+      destruction_method?: string;
+      /** Destruction Facility */
+      destruction_facility: string;
+      /** Witness 1 Id */
+      witness_1_id: string;
+      /** Witness 1 Name */
+      witness_1_name: string;
+      /** Witness 1 Role */
+      witness_1_role: string;
+      /** Witness 1 Signature Token */
+      witness_1_signature_token: string;
+      /** Witness 2 Id */
+      witness_2_id: string;
+      /** Witness 2 Name */
+      witness_2_name: string;
+      /** Witness 2 Role */
+      witness_2_role: string;
+      /** Witness 2 Signature Token */
+      witness_2_signature_token: string;
+      /**
+       * Quantity Destroyed 
+       * @default 1
+       */
+      quantity_destroyed?: number;
+      /** Residual Volume Ml */
+      residual_volume_ml?: number | null;
+      /** Subject Id */
+      subject_id?: string | null;
+      /** Din */
+      din?: string | null;
+      /** Coc Id */
+      coc_id?: string | null;
+      /** Notes */
+      notes?: string | null;
+    };
+    /**
+     * CGTDestructionCertificateResponse 
+     * @description Response schema for formal Certificate of Destruction.
+     */
+    Execution_CGTDestructionCertificateResponse: {
+      /** Id */
+      id: string;
+      /** Study Id */
+      study_id: string;
+      /** Site Id */
+      site_id: string;
+      /** Certificate Number */
+      certificate_number: string;
+      /** Chain Of Custody Id */
+      chain_of_custody_id?: string | null;
+      /** Subject Id */
+      subject_id?: string | null;
+      /** Din */
+      din?: string | null;
+      /** Lot Number */
+      lot_number: string;
+      /** Kit Numbers */
+      kit_numbers: (string)[];
+      /** Vial Identifiers */
+      vial_identifiers: (string)[];
+      /** Quantity Destroyed */
+      quantity_destroyed: number;
+      /** Unit Of Measure */
+      unit_of_measure: string;
+      /** Residual Volume Ml */
+      residual_volume_ml?: number | null;
+      /** Destruction Reason */
+      destruction_reason: string;
+      /** Destruction Method */
+      destruction_method: string;
+      /** Destruction Facility */
+      destruction_facility: string;
+      /**
+       * Destruction Timestamp 
+       * Format: date-time
+       */
+      destruction_timestamp: string;
+      /** Witness 1 Id */
+      witness_1_id: string;
+      /** Witness 1 Name */
+      witness_1_name: string;
+      /** Witness 1 Role */
+      witness_1_role: string;
+      /**
+       * Witness 1 Signed At 
+       * Format: date-time
+       */
+      witness_1_signed_at: string;
+      /** Witness 2 Id */
+      witness_2_id: string;
+      /** Witness 2 Name */
+      witness_2_name: string;
+      /** Witness 2 Role */
+      witness_2_role: string;
+      /**
+       * Witness 2 Signed At 
+       * Format: date-time
+       */
+      witness_2_signed_at: string;
+      /** Cryptographic Seal */
+      cryptographic_seal: string;
+      /** Status */
+      status: string;
+      /** Reconciliation Notes */
+      reconciliation_notes?: string | null;
+    };
+    /**
+     * CGTFullTraceabilityResponse 
+     * @description Comprehensive response schema for end-to-end Vein-to-Vein tracking.
+     */
+    Execution_CGTFullTraceabilityResponse: {
+      chain_of_custody: components["schemas"]["Execution_CGTChainOfCustodyResponse"];
+      /** Milestones */
+      milestones: (components["schemas"]["Execution_CGTMilestoneResponse"])[];
+      bedside_verification?: components["schemas"]["Execution_CGTBedsideVerificationResponse"] | null;
+      destruction_certificate?: components["schemas"]["Execution_CGTDestructionCertificateResponse"] | null;
+    };
+    /**
+     * CGTInfusionExecuteRequest 
+     * @description Payload to execute infusion administration with unlock token verification.
+     */
+    Execution_CGTInfusionExecuteRequest: {
+      /** Coc Id */
+      coc_id: string;
+      /** Unlock Token */
+      unlock_token: string;
+      /** Administrator Id */
+      administrator_id: string;
+      /** Administrator Name */
+      administrator_name: string;
+      /**
+       * Administrator Role 
+       * @default Infusion Nurse
+       */
+      administrator_role?: string;
+      /**
+       * Volume Infused Ml 
+       * @default 50
+       */
+      volume_infused_ml?: number;
+      /**
+       * Vital Signs Pre Temp Celsius 
+       * @default 36.8
+       */
+      vital_signs_pre_temp_celsius?: number;
+      /**
+       * Vital Signs Post Temp Celsius 
+       * @default 37.1
+       */
+      vital_signs_post_temp_celsius?: number;
+      /** Notes */
+      notes?: string | null;
+    };
+    /**
+     * CGTManufacturingBindRequest 
+     * @description Payload to bind a cell engineering manufacturing batch record to original subject identity.
+     */
+    Execution_CGTManufacturingBindRequest: {
+      /** Coc Id */
+      coc_id: string;
+      /** Batch Id */
+      batch_id: string;
+      /** Manufacturing Facility Id */
+      manufacturing_facility_id: string;
+      /** Operator Id */
+      operator_id: string;
+      /** Operator Name */
+      operator_name: string;
+      /**
+       * Operator Role 
+       * @default Cell Manufacturing Specialist
+       */
+      operator_role?: string;
+      /**
+       * Temperature Celsius 
+       * @default -196
+       */
+      temperature_celsius?: number;
+      /** Notes */
+      notes?: string | null;
+    };
+    /**
+     * CGTMilestoneCreateRequest 
+     * @description Payload to record a cryogenic transit milestone with GPS and temperature.
+     */
+    Execution_CGTMilestoneCreateRequest: {
+      /** Coc Id */
+      coc_id: string;
+      /** Stage */
+      stage: string;
+      /** Location Name */
+      location_name: string;
+      /** Temperature Celsius */
+      temperature_celsius: number;
+      /** Custodian Id */
+      custodian_id: string;
+      /** Custodian Name */
+      custodian_name: string;
+      /** Custodian Role */
+      custodian_role: string;
+      /** Facility Id */
+      facility_id?: string | null;
+      /** Latitude */
+      latitude?: number | null;
+      /** Longitude */
+      longitude?: number | null;
+      /** Carrier */
+      carrier?: string | null;
+      /** Tracking Number */
+      tracking_number?: string | null;
+      /**
+       * Seal Intact 
+       * @default true
+       */
+      seal_intact?: boolean;
+      /** Seal Id */
+      seal_id?: string | null;
+      /** Dry Shipper Id */
+      dry_shipper_id?: string | null;
+      /** Signature Token */
+      signature_token?: string | null;
+      /** Notes */
+      notes?: string | null;
+    };
+    /**
+     * CGTMilestoneResponse 
+     * @description Response schema for a cryogenic transit milestone.
+     */
+    Execution_CGTMilestoneResponse: {
+      /** Id */
+      id: string;
+      /** Study Id */
+      study_id: string;
+      /** Chain Of Custody Id */
+      chain_of_custody_id: string;
+      /** Stage */
+      stage: string;
+      /** Milestone Type */
+      milestone_type: string;
+      /**
+       * Timestamp 
+       * Format: date-time
+       */
+      timestamp: string;
+      /** Location Name */
+      location_name: string;
+      /** Facility Id */
+      facility_id?: string | null;
+      /** Latitude */
+      latitude?: number | null;
+      /** Longitude */
+      longitude?: number | null;
+      /** Temperature Celsius */
+      temperature_celsius: number;
+      /** Temperature Status */
+      temperature_status: string;
+      /** Custodian Id */
+      custodian_id: string;
+      /** Custodian Name */
+      custodian_name: string;
+      /** Custodian Role */
+      custodian_role: string;
+      /** Carrier */
+      carrier?: string | null;
+      /** Tracking Number */
+      tracking_number?: string | null;
+      /** Seal Intact */
+      seal_intact: boolean;
+      /** Seal Id */
+      seal_id?: string | null;
+      /** Dry Shipper Id */
+      dry_shipper_id?: string | null;
+      /** Electronic Signature */
+      electronic_signature?: {
+        [key: string]: unknown;
+      } | null;
+      /** Notes */
+      notes?: string | null;
+    };
+    /**
+     * CGTVialReturnReconciliationRequest 
+     * @description Payload to log returned kit/vial accountability and compute adherence percentage.
+     */
+    Execution_CGTVialReturnReconciliationRequest: {
+      /** Study Id */
+      study_id: string;
+      /** Site Id */
+      site_id: string;
+      /** Subject Id */
+      subject_id: string;
+      /** Kit Number */
+      kit_number: string;
+      /** Vial Identifier */
+      vial_identifier: string;
+      /** Lot Number */
+      lot_number: string;
+      /**
+       * Expected Quantity 
+       * @default 1
+       */
+      expected_quantity?: number;
+      /**
+       * Returned Quantity 
+       * @default 1
+       */
+      returned_quantity?: number;
+      /**
+       * Intact Vials 
+       * @default 0
+       */
+      intact_vials?: number;
+      /**
+       * Used Vials 
+       * @default 1
+       */
+      used_vials?: number;
+      /**
+       * Residual Volume Ml 
+       * @default 0
+       */
+      residual_volume_ml?: number;
+      /** Din */
+      din?: string | null;
+      /** Logged By */
+      logged_by: string;
+      /**
+       * Disposition 
+       * @default RECONCILED_FOR_DESTRUCTION
+       */
+      disposition?: string;
+    };
+    /**
+     * CGTVialReturnReconciliationResponse 
+     * @description Response schema for vial return reconciliation.
+     */
+    Execution_CGTVialReturnReconciliationResponse: {
+      /** Id */
+      id: string;
+      /** Study Id */
+      study_id: string;
+      /** Site Id */
+      site_id: string;
+      /** Subject Id */
+      subject_id: string;
+      /** Kit Number */
+      kit_number: string;
+      /** Vial Identifier */
+      vial_identifier: string;
+      /** Lot Number */
+      lot_number: string;
+      /** Din */
+      din?: string | null;
+      /** Expected Quantity */
+      expected_quantity: number;
+      /** Returned Quantity */
+      returned_quantity: number;
+      /** Intact Vials */
+      intact_vials: number;
+      /** Used Vials */
+      used_vials: number;
+      /** Residual Volume Ml */
+      residual_volume_ml: number;
+      /** Adherence Percentage */
+      adherence_percentage: number;
+      /** Disposition */
+      disposition: string;
+      /** Logged By */
+      logged_by: string;
+      /**
+       * Logged At 
+       * Format: date-time
+       */
+      logged_at: string;
+      /** Certificate Id */
+      certificate_id?: string | null;
+    };
+    /**
      * ClinicalQueryResponse 
      * @description Pydantic schema returning query details and full audit history.
      */
@@ -17132,6 +18745,141 @@ export interface components {
       /** Is Deleted */
       is_deleted: boolean;
     };
+    /**
+     * CohortEvaluationInput 
+     * @description Input payload to evaluate an active cohort and compute adaptive dose recommendations.
+     */
+    Execution_CohortEvaluationInput: {
+      /** Study Id */
+      study_id: string;
+      /** Cohort Number */
+      cohort_number: number;
+      /** Dose Level Index */
+      dose_level_index: number;
+      /** Subjects Evaluated */
+      subjects_evaluated: number;
+      /** Dlts Observed */
+      dlts_observed: number;
+      /** Subject Ids */
+      subject_ids?: (string)[];
+      /** Dlt Subject Ids */
+      dlt_subject_ids?: (string)[];
+    };
+    /**
+     * CohortEvaluationResult 
+     * @description Output recommendation and Bayesian metrics from a cohort evaluation.
+     */
+    Execution_CohortEvaluationResult: {
+      /** Study Id */
+      study_id: string;
+      /** Cohort Number */
+      cohort_number: number;
+      /** Evaluated Dose Level Index */
+      evaluated_dose_level_index: number;
+      /** Evaluated Dose Name */
+      evaluated_dose_name: string;
+      /** Subjects In Cohort */
+      subjects_in_cohort: number;
+      /** Dlts In Cohort */
+      dlts_in_cohort: number;
+      /** Recommendation Action */
+      recommendation_action: string;
+      /** Recommended Dose Level Index */
+      recommended_dose_level_index?: number | null;
+      /** Recommended Dose Name */
+      recommended_dose_name?: string | null;
+      /** Lambda E */
+      lambda_e?: number | null;
+      /** Lambda D */
+      lambda_d?: number | null;
+      /** Target Toxicity Rate */
+      target_toxicity_rate?: number | null;
+      /** Overdose Probability */
+      overdose_probability?: number | null;
+      /**
+       * Is Safety Stop Triggered 
+       * @default false
+       */
+      is_safety_stop_triggered?: boolean;
+      /**
+       * Is Mtd Declared 
+       * @default false
+       */
+      is_mtd_declared?: boolean;
+      /** Mtd Dose Level Index */
+      mtd_dose_level_index?: number | null;
+      /** Mtd Dose Name */
+      mtd_dose_name?: string | null;
+      /** Dose Summaries */
+      dose_summaries?: (components["schemas"]["Execution_DoseLevelEvaluationSummary"])[];
+      /** Rationale */
+      rationale: string;
+    };
+    /**
+     * CohortRecommendationAction 
+     * @description Automated and committee-reviewed cohort actions. 
+     * @enum {string}
+     */
+    Execution_CohortRecommendationAction: "ESCALATE" | "DE_ESCALATE" | "STAY" | "EXPAND_COHORT" | "STOP_SAFETY" | "STOP_SUCCESS" | "MTD_FOUND";
+    /**
+     * CohortTransitionLogResponse 
+     * @description 21 CFR Part 11 audited transition log record.
+     */
+    Execution_CohortTransitionLogResponse: {
+      /** Id */
+      id: string;
+      /** Study Id */
+      study_id: string;
+      /** Cohort Number */
+      cohort_number: number;
+      /** From Dose Level */
+      from_dose_level: number;
+      /** To Dose Level */
+      to_dose_level: number;
+      /** Action Taken */
+      action_taken: string;
+      /** Algorithm Recommendation */
+      algorithm_recommendation: string;
+      /** Override Occurred */
+      override_occurred: boolean;
+      /** Override Reason */
+      override_reason?: string | null;
+      /** Evaluated Dlt Rate */
+      evaluated_dlt_rate?: number | null;
+      /** Posterior Toxicity Estimates */
+      posterior_toxicity_estimates?: {
+        [key: string]: unknown;
+      } | null;
+      /** Authorized By */
+      authorized_by: string;
+      /**
+       * Transitioned At 
+       * Format: date-time
+       */
+      transitioned_at: string;
+      /** Signature Token */
+      signature_token?: string | null;
+      /** Cryptographic Checksum */
+      cryptographic_checksum?: string | null;
+    };
+    /**
+     * CohortTransitionRequest 
+     * @description Payload to confirm or override an automated cohort recommendation.
+     */
+    Execution_CohortTransitionRequest: {
+      /** Study Id */
+      study_id: string;
+      /** Cohort Number */
+      cohort_number: number;
+      /** Decision Action */
+      decision_action: string;
+      /** Target Dose Level Index */
+      target_dose_level_index: number;
+      /** Override Reason */
+      override_reason?: string | null;
+      /** Electronic Signature */
+      electronic_signature?: string | null;
+    };
     /** ComplianceStatusResponse */
     Execution_ComplianceStatusResponse: {
       /** Study Id */
@@ -17162,6 +18910,98 @@ export interface components {
       is_met: boolean;
       /** Is Indeterminate */
       is_indeterminate: boolean;
+    };
+    /**
+     * CrmConfig 
+     * @description Configuration parameters for Continual Reassessment Method (CRM / mCRM).
+     */
+    Execution_CrmConfig: {
+      /**
+       * Target Toxicity Rate 
+       * @description Target DLT rate phi. 
+       * @default 0.25
+       */
+      target_toxicity_rate?: number;
+      /**
+       * Skeleton Probs 
+       * @description Prior toxicity probability skeleton for each dose level (strictly increasing).
+       */
+      skeleton_probs: (number)[];
+      /**
+       * Model Type 
+       * @description Dose-toxicity link model (e.g. 'EMPIRIC_POWER' where p_j(theta) = p_{0,j}^{exp(theta)}). 
+       * @default EMPIRIC_POWER
+       */
+      model_type?: string;
+      /**
+       * Prior Std 
+       * @description Prior standard deviation for model parameter theta ~ Normal(0, sigma^2). 
+       * @default 1.34
+       */
+      prior_std?: number;
+      /**
+       * Safety Cutoff 
+       * @description Safety stopping threshold on dose 1 toxicity P(p_1 > phi | D) > cutoff. 
+       * @default 0.9
+       */
+      safety_cutoff?: number;
+      /**
+       * Allow Dose Skipping 
+       * @description If False (modified CRM), forbids jumping over untried doses upon escalation. 
+       * @default false
+       */
+      allow_dose_skipping?: boolean;
+    };
+    /**
+     * CrmPosteriorCalculationRequest 
+     * @description Direct calculation request for CRM posterior curve.
+     */
+    Execution_CrmPosteriorCalculationRequest: {
+      /** Skeleton Probs */
+      skeleton_probs: (number)[];
+      /**
+       * Target Toxicity Rate 
+       * @default 0.25
+       */
+      target_toxicity_rate?: number;
+      /**
+       * Prior Std 
+       * @default 1.34
+       */
+      prior_std?: number;
+      /**
+       * Dose Evaluations 
+       * @description List of dicts per dose level: [{'dose_index': 1, 'enrolled': 3, 'dlts': 0}, ...]
+       */
+      dose_evaluations: ({
+          [key: string]: number | undefined;
+        })[];
+      /**
+       * Current Dose Index 
+       * @default 1
+       */
+      current_dose_index?: number;
+    };
+    /**
+     * CrmPosteriorCalculationResponse 
+     * @description Response containing calculated CRM posterior probabilities and recommended next dose.
+     */
+    Execution_CrmPosteriorCalculationResponse: {
+      /** Target Toxicity Rate */
+      target_toxicity_rate: number;
+      /** Current Dose Index */
+      current_dose_index: number;
+      /** Recommended Dose Index */
+      recommended_dose_index: number;
+      recommendation_action: components["schemas"]["Execution_CohortRecommendationAction"];
+      /** Posterior Mean Probabilities */
+      posterior_mean_probabilities: (number)[];
+      /** Overdose Probability Dose 1 */
+      overdose_probability_dose_1: number;
+      /** Is Safety Stop Triggered */
+      is_safety_stop_triggered: boolean;
+      /** Rationale */
+      rationale: string;
     };
     /**
      * CrossDomainAnomaly 
@@ -17886,6 +19726,54 @@ export interface components {
       version_index: string;
       /** Sha256 Hash */
       sha256_hash: string;
+    };
+    /**
+     * DoseLevelDef 
+     * @description Definition of a discrete dose level.
+     */
+    Execution_DoseLevelDef: {
+      /**
+       * Index 
+       * @description 1-based dose level sequence index.
+       */
+      index: number;
+      /**
+       * Name 
+       * @description Dose identifier / label, e.g. '10 mg/kg'.
+       */
+      name: string;
+      /**
+       * Dose Value 
+       * @description Numerical dose amount (e.g. 10.0).
+       */
+      dose_value: number;
+    };
+    /**
+     * DoseLevelEvaluationSummary 
+     * @description Summary of subjects and DLTs evaluated at a specific dose level.
+     */
+    Execution_DoseLevelEvaluationSummary: {
+      /** Dose Level Index */
+      dose_level_index: number;
+      /** Dose Name */
+      dose_name: string;
+      /** Dose Value */
+      dose_value: number;
+      /** Total Enrolled */
+      total_enrolled: number;
+      /** Total Dlts */
+      total_dlts: number;
+      /** Observed Dlt Rate */
+      observed_dlt_rate: number;
+      /** Posterior Dlt Rate */
+      posterior_dlt_rate?: number | null;
+      /**
+       * Is Eliminated For Safety 
+       * @default false
+       */
+      is_eliminated_for_safety?: boolean;
+      /** Overdose Probability */
+      overdose_probability?: number | null;
     };
     /**
      * EISFDocumentRecord 
@@ -18833,6 +20721,8 @@ export interface components {
       subject_id: string;
       /** Study Id */
       study_id?: string | null;
+      /** Site Id */
+      site_id?: string | null;
       /** Visit Id */
       visit_id?: string | null;
       /** Domain */
@@ -19534,6 +21424,95 @@ export interface components {
       /** Action Required */
       action_required?: string | null;
     };
+    /**
+     * RARArmEvaluationDTO 
+     * @description State and metrics for an individual arm under Response-Adaptive Randomization.
+     */
+    Execution_RARArmEvaluationDTO: {
+      /** Arm Id */
+      arm_id: string;
+      /** Arm Name */
+      arm_name: string;
+      /** Is Control */
+      is_control: boolean;
+      /** Status */
+      status: string;
+      /** Enrolled Count */
+      enrolled_count: number;
+      /** Response Count */
+      response_count: number;
+      /** Posterior Alpha */
+      posterior_alpha: number;
+      /** Posterior Beta */
+      posterior_beta: number;
+      /** Posterior Mean */
+      posterior_mean: number;
+      /** Allocation Probability */
+      allocation_probability: number;
+      /** Superiority Vs Control Prob */
+      superiority_vs_control_prob?: number | null;
+    };
+    /**
+     * RAREvaluationResult 
+     * @description Overall RAR probability adjustment output.
+     */
+    Execution_RAREvaluationResult: {
+      /** Study Id */
+      study_id: string;
+      /** Total Enrolled */
+      total_enrolled: number;
+      /** Arms */
+      arms: (components["schemas"]["Execution_RARArmEvaluationDTO"])[];
+      /** Allocation Probabilities */
+      allocation_probabilities: {
+        [key: string]: number | undefined;
+      };
+      /** Dropped Arms */
+      dropped_arms?: (string)[];
+      /** Graduated Arms */
+      graduated_arms?: (string)[];
+      /** Rationale */
+      rationale: string;
+      /**
+       * Updated At 
+       * Format: date-time
+       */
+      updated_at: string;
+    };
+    /**
+     * RARExpandOrTerminateArmRequest 
+     * @description Request to seamlessly add or terminate a treatment arm with zero study downtime.
+     */
+    Execution_RARExpandOrTerminateArmRequest: {
+      /** Study Id */
+      study_id: string;
+      /** Arm Id */
+      arm_id: string;
+      /** Arm Name */
+      arm_name: string;
+      /**
+       * Is Control 
+       * @default false
+       */
+      is_control?: boolean;
+      /**
+       * Action 
+       * @description 'ADD_ARM', 'DROP_FUTILITY', 'GRADUATE_SUCCESS', 'TERMINATE'
+       */
+      action: string;
+      /**
+       * Prior Alpha 
+       * @default 1
+       */
+      prior_alpha?: number;
+      /**
+       * Prior Beta 
+       * @default 1
+       */
+      prior_beta?: number;
+      /** Reason */
+      reason: string;
+    };
     /** RaiseQueryRequest */
     Execution_RaiseQueryRequest: {
       /** Query Text */
@@ -19557,6 +21536,58 @@ export interface components {
       assignment_id: string;
       /** Explanation */
       explanation?: string | null;
+    };
+    /**
+     * RarConfig 
+     * @description Configuration parameters for Response-Adaptive Randomization (RAR).
+     */
+    Execution_RarConfig: {
+      /**
+       * Burn In Sample Per Arm 
+       * @description Initial fixed allocation sample size per arm before adaptive re-weighting activates. 
+       * @default 5
+       */
+      burn_in_sample_per_arm?: number;
+      /**
+       * Power Tuning Param 
+       * @description Tuning exponent c for allocation probability weighting w_k ~ (q_k / n_k)^c. 
+       * @default 0.5
+       */
+      power_tuning_param?: number;
+      /**
+       * Min Allocation Prob 
+       * @description Floor boundary on active arm allocation probability to prevent arm starvation. 
+       * @default 0.05
+       */
+      min_allocation_prob?: number;
+      /**
+       * Max Allocation Prob 
+       * @description Ceiling boundary on active arm allocation probability. 
+       * @default 0.85
+       */
+      max_allocation_prob?: number;
+      /**
+       * Futility Threshold 
+       * @description Posterior probability threshold P(theta_k > theta_ctrl) < threshold to drop arm for futility. 
+       * @default 0.05
+       */
+      futility_threshold?: number;
+      /**
+       * Efficacy Threshold 
+       * @description Posterior probability threshold P(theta_k > theta_ctrl) > threshold to graduate arm for efficacy. 
+       * @default 0.99
+       */
+      efficacy_threshold?: number;
+      /**
+       * Prior Alpha 
+       * @default 1
+       */
+      prior_alpha?: number;
+      /**
+       * Prior Beta 
+       * @default 1
+       */
+      prior_beta?: number;
     };
     /**
      * ReLabelingTaskCompleteRequest 
@@ -20576,6 +22607,32 @@ export interface components {
       status: string;
     };
     /**
+     * ThreePlusThreeConfig 
+     * @description Configuration parameters for classic 3+3 rule-based design.
+     */
+    Execution_ThreePlusThreeConfig: {
+      /**
+       * Initial Cohort Size 
+       * @default 3
+       */
+      initial_cohort_size?: number;
+      /**
+       * Expansion Cohort Size 
+       * @default 3
+       */
+      expansion_cohort_size?: number;
+      /**
+       * Max Dlt Escalate 
+       * @default 0
+       */
+      max_dlt_escalate?: number;
+      /**
+       * Max Dlt Expand 
+       * @default 1
+       */
+      max_dlt_expand?: number;
+    };
+    /**
      * TransferOrderApprovalRequest 
      * @description Approval or rejection justification payload.
      */
@@ -20906,6 +22963,37 @@ export interface components {
        * @default
        */
       failure_reason?: string;
+    };
+    /**
+     * VerifyTrainingGatingRequest 
+     * @description Payload to verify user qualification for EDC write permissions.
+     */
+    Execution_VerifyTrainingGatingRequest: {
+      /**
+       * Study Id 
+       * @description Clinical study ID
+       */
+      study_id: string;
+      /**
+       * Protocol Version 
+       * @description Active protocol version tag
+       */
+      protocol_version: string;
+      /**
+       * User Id 
+       * @description User ID to evaluate
+       */
+      user_id: string;
+      /**
+       * Site Id 
+       * @description Optional clinical site ID
+       */
+      site_id?: string | null;
+      /**
+       * User Role 
+       * @description Optional user clinical role
+       */
+      user_role?: string | null;
     };
     /**
      * VisitCreate 
@@ -22874,6 +24962,63 @@ export interface components {
       /** Context */
       ctx?: Record<string, never>;
     };
+    /**
+     * ADaMPipelineResponse 
+     * @description Response containing derived ADaM dataset records.
+     */
+    Interop_ADaMPipelineResponse: {
+      /** Study Id */
+      study_id: string;
+      /** Snapshot Id */
+      snapshot_id: string | null;
+      /** Dataset Counts */
+      dataset_counts: {
+        [key: string]: number | undefined;
+      };
+      /** Total Records */
+      total_records: number;
+      /** Datasets */
+      datasets: {
+        [key: string]: ({
+            [key: string]: unknown;
+          })[] | undefined;
+      };
+    };
+    /**
+     * AcknowledgeAlertRequest 
+     * @description Request payload to acknowledge a safety threshold alert.
+     */
+    Interop_AcknowledgeAlertRequest: {
+      /**
+       * Notes 
+       * @description Clinical evaluation and justification notes
+       */
+      notes: string;
+      /**
+       * Audit Signature 
+       * @description 21 CFR Part 11 electronic signature token
+       */
+      audit_signature?: string | null;
+    };
+    /**
+     * AcknowledgeAlertResponse 
+     * @description Response returned upon acknowledging a safety alert.
+     */
+    Interop_AcknowledgeAlertResponse: {
+      /**
+       * Success 
+       * @default true
+       */
+      success?: boolean;
+      /** @description Updated safety alert with acknowledgment details */
+      alert: components["schemas"]["Interop_SensorSafetyAlert"];
+      /**
+       * Message 
+       * @description Status message 
+       * @default Safety alert acknowledged successfully
+       */
+      message?: string;
+    };
     /** AcknowledgeNotificationRequest */
     Interop_AcknowledgeNotificationRequest: {
       /**
@@ -22882,6 +25027,63 @@ export interface components {
        */
       reason_for_change: string;
     };
+    /**
+     * ActigraphyDailySummary 
+     * @description Standard actigraphy and activity tracking daily endpoints.
+     */
+    Interop_ActigraphyDailySummary: {
+      /**
+       * Total Steps 
+       * @description Total daily step count
+       */
+      total_steps: number;
+      /**
+       * Mean Cadence Spm 
+       * @description Average active cadence in steps/minute
+       */
+      mean_cadence_spm: number;
+      /**
+       * Peak Cadence Spm 
+       * @description Peak 1-minute cadence in steps/minute
+       */
+      peak_cadence_spm: number;
+      /**
+       * Active Minutes 
+       * @description Total moderate-to-vigorous active minutes
+       */
+      active_minutes: number;
+      /**
+       * Sedentary Minutes 
+       * @description Total sedentary minutes
+       */
+      sedentary_minutes: number;
+      /**
+       * Sleep Duration Minutes 
+       * @description Total sleep duration in minutes
+       */
+      sleep_duration_minutes: number;
+      /**
+       * Sleep Efficiency Percent 
+       * @description Sleep efficiency percentage (time asleep / time in bed)
+       */
+      sleep_efficiency_percent: number;
+      /**
+       * Resting Heart Rate Bpm 
+       * @description Resting heart rate in beats per minute
+       */
+      resting_heart_rate_bpm: number;
+      /**
+       * Readings Count 
+       * @description Total telemetry epochs analyzed
+       */
+      readings_count: number;
+    };
+    /**
+     * AlertSeverity 
+     * @description Clinical alert severity classification. 
+     * @enum {string}
+     */
+    Interop_AlertSeverity: "INFO" | "WARNING" | "CRITICAL" | "LIFE_THREATENING";
     /** AssignmentComplianceDetailDTO */
     Interop_AssignmentComplianceDetailDTO: {
       /** Assignment Id */
@@ -22903,6 +25105,42 @@ export interface components {
       submitted_at?: string | null;
     };
     /**
+     * BloodPressureDailySummary 
+     * @description Standard blood pressure daily summary endpoints.
+     */
+    Interop_BloodPressureDailySummary: {
+      /**
+       * Mean Systolic Mmhg 
+       * @description Mean Systolic Blood Pressure in mmHg
+       */
+      mean_systolic_mmhg: number;
+      /**
+       * Mean Diastolic Mmhg 
+       * @description Mean Diastolic Blood Pressure in mmHg
+       */
+      mean_diastolic_mmhg: number;
+      /**
+       * Mean Arterial Pressure Mmhg 
+       * @description Mean Arterial Pressure in mmHg: MAP = (2*DBP + SBP)/3
+       */
+      mean_arterial_pressure_mmhg: number;
+      /**
+       * Morning Systolic Mmhg 
+       * @description Morning mean systolic BP
+       */
+      morning_systolic_mmhg?: number | null;
+      /**
+       * Evening Systolic Mmhg 
+       * @description Evening mean systolic BP
+       */
+      evening_systolic_mmhg?: number | null;
+      /**
+       * Readings Count 
+       * @description Total blood pressure cuff readings
+       */
+      readings_count: number;
+    };
+    /**
      * BulkSyncPayload 
      * @description A bulk list of ePRO submissions for offline queue reconciliation.
      */
@@ -22912,6 +25150,362 @@ export interface components {
        * @description A list of queued ePRO submissions
        */
       submissions: (components["schemas"]["Interop_EPROSubmissionPayload"])[];
+    };
+    /**
+     * CGMDailySummary 
+     * @description Standard clinical Continuous Glucose Monitoring daily endpoints.
+     */
+    Interop_CGMDailySummary: {
+      /**
+       * Tir Percentage 
+       * @description Time-in-Range percentage (70-180 mg/dL / 3.9-10.0 mmol/L)
+       */
+      tir_percentage: number;
+      /**
+       * Tbr Level1 Percentage 
+       * @description Time-Below-Range Level 1 (54-69 mg/dL / 3.0-3.8 mmol/L)
+       */
+      tbr_level1_percentage: number;
+      /**
+       * Tbr Level2 Percentage 
+       * @description Time-Below-Range Level 2 / Severe Hypoglycemia (<54 mg/dL / <3.0 mmol/L)
+       */
+      tbr_level2_percentage: number;
+      /**
+       * Tar Level1 Percentage 
+       * @description Time-Above-Range Level 1 (181-250 mg/dL / 10.1-13.9 mmol/L)
+       */
+      tar_level1_percentage: number;
+      /**
+       * Tar Level2 Percentage 
+       * @description Time-Above-Range Level 2 / Severe Hyperglycemia (>250 mg/dL / >13.9 mmol/L)
+       */
+      tar_level2_percentage: number;
+      /**
+       * Mean Glucose Mg Dl 
+       * @description Mean daily glucose in mg/dL
+       */
+      mean_glucose_mg_dl: number;
+      /**
+       * Glucose Sd 
+       * @description Standard deviation of glucose in mg/dL
+       */
+      glucose_sd: number;
+      /**
+       * Glucose Cv Percent 
+       * @description Glucose Coefficient of Variation (CV% = SD/mean * 100)
+       */
+      glucose_cv_percent: number;
+      /**
+       * Glucose Management Indicator 
+       * @description Estimated HbA1c proxy: GMI = 3.31 + (0.02392 * mean_glucose)
+       */
+      glucose_management_indicator: number;
+      /**
+       * Readings Count 
+       * @description Total CGM readings analyzed
+       */
+      readings_count: number;
+      /**
+       * Active Wear Percentage 
+       * @description Sensor active wear compliance percentage
+       */
+      active_wear_percentage: number;
+    };
+    /**
+     * CalibrationState 
+     * @description Medical device calibration status. 
+     * @enum {string}
+     */
+    Interop_CalibrationState: "CALIBRATED" | "PENDING_CALIBRATION" | "EXPIRED" | "FACTORY_CALIBRATED";
+    /**
+     * CanonicalClinicalRecord 
+     * @description Harmonized, canonical observation record stored in the Lakehouse repository.
+     */
+    Interop_CanonicalClinicalRecord: {
+      /**
+       * Record Id 
+       * @description Unique canonical record UUID
+       */
+      record_id?: string;
+      /**
+       * Study Id 
+       * @description Study identifier
+       */
+      study_id: string;
+      /**
+       * Site Id 
+       * @description Site identifier
+       */
+      site_id?: string | null;
+      /**
+       * Subject Id 
+       * @description Subject identifier
+       */
+      subject_id: string;
+      /** @description Originating data stream type */
+      stream_type: components["schemas"]["Interop_DataStreamType"];
+      /**
+       * Domain 
+       * @description Normalized CDISC domain (e.g. DM, AE, VS, LB, QS, TR)
+       */
+      domain: string;
+      /**
+       * Item Code 
+       * @description Canonical item code or test identifier
+       */
+      item_code: string;
+      /**
+       * Item Name 
+       * @description Human-readable item name
+       */
+      item_name: string;
+      /**
+       * Observation Datetime 
+       * Format: date-time 
+       * @description Effective timestamp of observation
+       */
+      observation_datetime: string;
+      /**
+       * Numeric Value 
+       * @description Quantitative value if applicable
+       */
+      numeric_value?: number | null;
+      /**
+       * Text Value 
+       * @description Categorical or textual finding
+       */
+      text_value?: string | null;
+      /**
+       * Unit 
+       * @description Normalized standard unit
+       */
+      unit?: string | null;
+      /**
+       * Reference Low 
+       * @description Reference range lower bound
+       */
+      reference_low?: number | null;
+      /**
+       * Reference High 
+       * @description Reference range upper bound
+       */
+      reference_high?: number | null;
+      /**
+       * Abnormal Flag 
+       * @description Abnormality flag
+       */
+      abnormal_flag?: string | null;
+      /**
+       * Is Unblinded 
+       * @description Flag indicating if record contains unblinded data 
+       * @default false
+       */
+      is_unblinded?: boolean;
+      /**
+       * Raw Payload 
+       * @description Original raw stream payload
+       */
+      raw_payload?: {
+        [key: string]: unknown;
+      };
+      /**
+       * Normalized Attributes 
+       * @description Harmonized contextual attributes
+       */
+      normalized_attributes?: {
+        [key: string]: unknown;
+      };
+      /**
+       * Data Hash 
+       * @description SHA-256 digest of normalized record fields
+       */
+      data_hash: string;
+      /**
+       * Created At 
+       * Format: date-time 
+       * @description Lakehouse ingestion timestamp
+       */
+      created_at?: string;
+    };
+    /**
+     * CentralLabIngestItem 
+     * @description Raw ingestion payload for Central Diagnostic Laboratory feeds (HL7 / CSV).
+     */
+    Interop_CentralLabIngestItem: {
+      /**
+       * Subject Id 
+       * @description Subject identifier
+       */
+      subject_id: string;
+      /**
+       * Site Id 
+       * @description Clinical site identifier
+       */
+      site_id?: string | null;
+      /**
+       * Specimen Id 
+       * @description Lab specimen barcode or identifier
+       */
+      specimen_id: string;
+      /**
+       * Test Code 
+       * @description Standard LOINC or lab-specific test code
+       */
+      test_code: string;
+      /**
+       * Test Name 
+       * @description Descriptive laboratory test name (e.g. Hemoglobin, ALT)
+       */
+      test_name: string;
+      /**
+       * Numeric Value 
+       * @description Quantitative test result
+       */
+      numeric_value?: number | null;
+      /**
+       * String Value 
+       * @description Qualitative test result or text finding
+       */
+      string_value?: string | null;
+      /**
+       * Unit 
+       * @description Unit of measurement (e.g. g/dL, U/L)
+       */
+      unit?: string | null;
+      /**
+       * Reference Low 
+       * @description Normal lower reference range bound
+       */
+      reference_low?: number | null;
+      /**
+       * Reference High 
+       * @description Normal upper reference range bound
+       */
+      reference_high?: number | null;
+      /**
+       * Abnormal Flag 
+       * @description Diagnostic flag (e.g. NORMAL, HIGH, LOW, CRITICAL)
+       */
+      abnormal_flag?: string | null;
+      /**
+       * Collection Timestamp 
+       * Format: date-time 
+       * @description Specimen collection timestamp
+       */
+      collection_timestamp: string;
+      /**
+       * Accession Number 
+       * @description Laboratory accession number
+       */
+      accession_number?: string | null;
+      /**
+       * Is Unblinded 
+       * @description Whether this lab test unblinds treatment arm 
+       * @default false
+       */
+      is_unblinded?: boolean;
+      /**
+       * Metadata 
+       * @description Lab instrument and method metadata
+       */
+      metadata?: {
+        [key: string]: unknown;
+      };
+    };
+    /**
+     * ClinicalSnapshot 
+     * @description Immutable, version-pinned snapshot pool tied to a database lock milestone.
+     */
+    Interop_ClinicalSnapshot: {
+      /**
+       * Snapshot Id 
+       * @description Snapshot identifier
+       */
+      snapshot_id?: string;
+      /**
+       * Study Id 
+       * @description Clinical study identifier
+       */
+      study_id: string;
+      /**
+       * Version Tag 
+       * @description Version tag (e.g. v1.0.0-INTERIM-1)
+       */
+      version_tag: string;
+      /** @description Associated database lock milestone */
+      milestone: components["schemas"]["Interop_LockMilestoneType"];
+      /**
+       * Lock Id 
+       * @description Reference to relational DataLock record
+       */
+      lock_id?: string | null;
+      /**
+       * Record Count 
+       * @description Total records pooled in this snapshot 
+       * @default 0
+       */
+      record_count?: number;
+      /**
+       * Stream Counts 
+       * @description Breakdown of record counts by stream type
+       */
+      stream_counts?: {
+        [key: string]: number | undefined;
+      };
+      /**
+       * Domain Counts 
+       * @description Breakdown of record counts by CDISC domain
+       */
+      domain_counts?: {
+        [key: string]: number | undefined;
+      };
+      /**
+       * Sha256 Digest 
+       * @description Cryptographic SHA-256 digest sealing this snapshot pool
+       */
+      sha256_digest: string;
+      /**
+       * Created At 
+       * Format: date-time 
+       * @description Snapshot creation timestamp
+       */
+      created_at?: string;
+      /**
+       * Created By 
+       * @description User ID or service creating snapshot
+       */
+      created_by: string;
+      /**
+       * Reason For Snapshot 
+       * @description GxP rationale / justification for snapshot creation
+       */
+      reason_for_snapshot: string;
+      /**
+       * Is Locked 
+       * @description Immutability flag (sealed snapshots cannot be modified) 
+       * @default true
+       */
+      is_locked?: boolean;
+      /**
+       * Blinded Record Count 
+       * @description Count of blinded records in pool 
+       * @default 0
+       */
+      blinded_record_count?: number;
+      /**
+       * Unblinded Record Count 
+       * @description Count of unblinded records in pool 
+       * @default 0
+       */
+      unblinded_record_count?: number;
+      /**
+       * Snapshot Manifest 
+       * @description Cryptographic manifest metadata
+       */
+      snapshot_manifest?: {
+        [key: string]: unknown;
+      };
     };
     /**
      * ConceptMapListResponse 
@@ -22957,6 +25551,97 @@ export interface components {
      * @enum {string}
      */
     Interop_ConflictStrategy: "CLIENT_WINS" | "SERVER_WINS" | "MERGE";
+    /**
+     * CreateProgramRequest 
+     * @description Request payload to create or register a statistical analysis program.
+     */
+    Interop_CreateProgramRequest: {
+      /**
+       * Study Id 
+       * @description Associated clinical study ID
+       */
+      study_id: string;
+      /**
+       * Name 
+       * @description Program script filename (e.g. t_14_1_demog.py)
+       */
+      name: string;
+      /**
+       * Title 
+       * @description Human-readable program title
+       */
+      title: string;
+      /**
+       * Description 
+       * @description Detailed statistical methodology description 
+       * @default
+       */
+      description?: string;
+      /** @description Runtime language: PYTHON or R */
+      language: components["schemas"]["Interop_ExecutionLanguage"];
+      /**
+       * Version 
+       * @description Semantic version string 
+       * @default 1.0.0
+       */
+      version?: string;
+      /**
+       * Source Code 
+       * @description Script source code
+       */
+      source_code: string;
+      /**
+       * Lockfile Content 
+       * @description Raw text of uv.lock or renv.lock
+       */
+      lockfile_content?: string | null;
+      /**
+       * @description Lockfile format 
+       * @default UV_LOCK
+       */
+      lock_type?: components["schemas"]["Interop_PackageLockType"];
+      /**
+       * Target Domain 
+       * @description Target CDISC output domain (e.g. ADSL, TLF-14.1)
+       */
+      target_domain?: string | null;
+      /**
+       * Reason For Change 
+       * @description 21 CFR Part 11 change rationale 
+       * @default Initial program authoring
+       */
+      reason_for_change?: string;
+    };
+    /**
+     * CreateSnapshotRequest 
+     * @description Request payload to pool lakehouse records into an immutable version-pinned snapshot.
+     */
+    Interop_CreateSnapshotRequest: {
+      /**
+       * Study Id 
+       * @description Clinical study identifier (e.g. STUDY-901)
+       */
+      study_id: string;
+      /**
+       * Version Tag 
+       * @description Unique version tag (e.g. v1.0.0-INTERIM-1)
+       */
+      version_tag: string;
+      /** @description Target database lock milestone */
+      milestone: components["schemas"]["Interop_LockMilestoneType"];
+      /**
+       * Lock Id 
+       * @description Optional associated DataLock ID
+       */
+      lock_id?: string | null;
+      /**
+       * Reason For Snapshot 
+       * @description Formal GxP justification for snapshot creation
+       */
+      reason_for_snapshot: string;
+      /** @description Optional stream, domain, subject, and time cutoff filtering criteria */
+      filter_criteria?: components["schemas"]["Interop_SnapshotFilterCriteria"] | null;
+    };
     /** CriterionExplanation */
     Interop_CriterionExplanation: {
       /**
@@ -22984,6 +25669,805 @@ export interface components {
        * @description Indicates if evaluation was indeterminate.
        */
       is_indeterminate: boolean;
+    };
+    /**
+     * DailySummariesResponse 
+     * @description Response containing calculated daily summary endpoints.
+     */
+    Interop_DailySummariesResponse: {
+      /**
+       * Study Id 
+       * @description Study ID
+       */
+      study_id: string;
+      /**
+       * Total Count 
+       * @description Total daily summaries
+       */
+      total_count: number;
+      /**
+       * Summaries 
+       * @description List of daily summary endpoints
+       */
+      summaries?: (components["schemas"]["Interop_DailySummaryEndpoints"])[];
+    };
+    /**
+     * DailySummaryEndpoints 
+     * @description Aggregated daily biometric endpoints for a study subject and device.
+     */
+    Interop_DailySummaryEndpoints: {
+      /**
+       * Summary Id 
+       * @description Daily summary UUID
+       */
+      summary_id?: string;
+      /**
+       * Study Id 
+       * @description Study ID
+       */
+      study_id: string;
+      /**
+       * Site Id 
+       * @description Site ID
+       */
+      site_id?: string | null;
+      /**
+       * Subject Id 
+       * @description Pseudonymized subject ID
+       */
+      subject_id: string;
+      /**
+       * Summary Date 
+       * Format: date-time 
+       * @description Date of aggregate summary
+       */
+      summary_date: string;
+      /** @description Device category */
+      device_type: components["schemas"]["Interop_SensorDeviceType"];
+      /**
+       * Device Token 
+       * @description Device token
+       */
+      device_token: string;
+      /** @description CGM summary if device_type=CGM */
+      cgm?: components["schemas"]["Interop_CGMDailySummary"] | null;
+      /** @description Actigraphy summary if device_type=ACTIGRAPHY */
+      actigraphy?: components["schemas"]["Interop_ActigraphyDailySummary"] | null;
+      /** @description Spirometry summary if device_type=SPIROMETRY */
+      spirometry?: components["schemas"]["Interop_SpirometryDailySummary"] | null;
+      /** @description Blood pressure summary if device_type=BLOOD_PRESSURE */
+      blood_pressure?: components["schemas"]["Interop_BloodPressureDailySummary"] | null;
+      /**
+       * Lakehouse Record Id 
+       * @description Reference to generated Lakehouse canonical record
+       */
+      lakehouse_record_id?: string | null;
+      /**
+       * Data Hash 
+       * @description SHA-256 integrity seal
+       */
+      data_hash: string;
+      /**
+       * Created At 
+       * Format: date-time 
+       * @description Creation timestamp
+       */
+      created_at?: string;
+    };
+    /**
+     * DataStreamType 
+     * @description Supported heterogeneous clinical data stream types. 
+     * @enum {string}
+     */
+    Interop_DataStreamType: "EDC_ECRF" | "EPRO_ECOA" | "CENTRAL_LAB" | "LOCAL_LAB" | "IOT_WEARABLE" | "EHR_FHIR" | "MEDICAL_IMAGING";
+    /**
+     * DatabaseLockAuthToken 
+     * @description Formal database lock authorization token gating unblinded statistical analysis.
+     */
+    Interop_DatabaseLockAuthToken: {
+      /**
+       * Token Id 
+       * @description Unique authorization token ID (e.g. DBLOCK-AUTH-...)
+       */
+      token_id: string;
+      /**
+       * Study Id 
+       * @description Target study identifier
+       */
+      study_id: string;
+      /**
+       * Lock Id 
+       * @description Associated database lock reference
+       */
+      lock_id: string;
+      /**
+       * Milestone 
+       * @description Milestone tier (e.g. INTERIM_ANALYSIS_1, DATABASE_LOCK)
+       */
+      milestone: string;
+      /**
+       * Issued To 
+       * @description Authorized statistician or committee lead user ID
+       */
+      issued_to: string;
+      /**
+       * Authorized Roles 
+       * @description Permitted unblinded roles
+       */
+      authorized_roles: (string)[];
+      /**
+       * Issued At 
+       * Format: date-time 
+       * @description Issuance timestamp
+       */
+      issued_at: string;
+      /**
+       * Expires At 
+       * Format: date-time 
+       * @description Token expiration timestamp
+       */
+      expires_at: string;
+      /**
+       * Signature Hash 
+       * @description Cryptographic HMAC signature of token claims
+       */
+      signature_hash: string;
+      /**
+       * Is Revoked 
+       * @description Whether token has been explicitly revoked 
+       * @default false
+       */
+      is_revoked?: boolean;
+      /**
+       * Reason 
+       * @description Regulatory justification for unblinded analysis access
+       */
+      reason: string;
+    };
+    /**
+     * DatasetJSONClinicalData 
+     * @description ClinicalData container in Dataset-JSON document.
+     */
+    Interop_DatasetJSONClinicalData: {
+      /**
+       * Studyoid 
+       * @description Study OID
+       */
+      studyOID: string;
+      /**
+       * Metadataversionoid 
+       * @description Metadata Version OID
+       */
+      metaDataVersionOID: string;
+      /**
+       * Metadataref 
+       * @description Reference to Define-XML
+       */
+      metaDataRef?: string | null;
+      /**
+       * Itemgroupdata 
+       * @description Dictionary of ItemGroup datasets keyed by ItemGroupOID
+       */
+      itemGroupData: {
+        [key: string]: components["schemas"]["Interop_DatasetJSONItemGroup"] | undefined;
+      };
+      [key: string]: unknown;
+    };
+    /**
+     * DatasetJSONDocument 
+     * @description Root CDISC Dataset-JSON 1.1 / 2.0 document envelope.
+     */
+    Interop_DatasetJSONDocument: {
+      /**
+       * Datasetjsoncreationdatetime 
+       * @description Document Creation Timestamp ISO 8601
+       */
+      datasetJSONCreationDateTime?: string;
+      /**
+       * Datasetjsonversion 
+       * @description Specification version (1.0.0, 1.1.0, 2.0.0) 
+       * @default 1.1.0
+       */
+      datasetJSONVersion?: string;
+      /**
+       * Fileoid 
+       * @description Unique File OID
+       */
+      fileOID: string;
+      /**
+       * Dblastmodifieddatetime 
+       * @description Database Last Modified Timestamp
+       */
+      dbLastModifiedDateTime?: string | null;
+      /**
+       * Originator 
+       * @description Dataset Originator 
+       * @default Cadence Clinical CDR Engine
+       */
+      originator?: string;
+      /**
+       * Sourcesystem 
+       * @description Source System 
+       * @default Cadence Clinical
+       */
+      sourceSystem?: string;
+      /**
+       * Sourcesystemversion 
+       * @description Source System Version 
+       * @default 2.1.0
+       */
+      sourceSystemVersion?: string;
+      /** @description Clinical Data Container */
+      clinicalData: components["schemas"]["Interop_DatasetJSONClinicalData"];
+      [key: string]: unknown;
+    };
+    /**
+     * DatasetJSONItem 
+     * @description Metadata for an individual variable in CDISC Dataset-JSON 1.1/2.0.
+     */
+    Interop_DatasetJSONItem: {
+      /**
+       * Oid 
+       * @description Item OID
+       */
+      OID?: string | null;
+      /**
+       * Name 
+       * @description Variable Name (e.g. USUBJID)
+       */
+      name: string;
+      /**
+       * Label 
+       * @description Variable Label
+       */
+      label: string;
+      /**
+       * Type 
+       * @description Data Type (string, integer, float, double, decimal, boolean, date, datetime)
+       */
+      type: string;
+      /**
+       * Length 
+       * @description Max Length
+       */
+      length?: number | null;
+      /**
+       * Displayformat 
+       * @description Display Format
+       */
+      displayFormat?: string | null;
+      /**
+       * Keysequence 
+       * @description Key Sequence Number
+       */
+      keySequence?: number | null;
+      /**
+       * Mandatory 
+       * @description Mandatory Flag
+       */
+      mandatory?: boolean | string | null;
+      [key: string]: unknown;
+    };
+    /**
+     * DatasetJSONItemGroup 
+     * @description ItemGroup container in Dataset-JSON clinicalData/referenceData.
+     */
+    Interop_DatasetJSONItemGroup: {
+      /**
+       * Itemgroupoid 
+       * @description ItemGroup OID identifier (e.g. IG.DM)
+       */
+      itemGroupOID: string;
+      /**
+       * Name 
+       * @description Dataset Name (e.g. DM)
+       */
+      name: string;
+      /**
+       * Label 
+       * @description Dataset Label
+       */
+      label: string;
+      /**
+       * Records 
+       * @description Record Count
+       */
+      records: number;
+      /**
+       * Items 
+       * @description List of variable metadata
+       */
+      items: (components["schemas"]["Interop_DatasetJSONItem"])[];
+      /**
+       * Itemdata 
+       * @description 2D Matrix of row records
+       */
+      itemData: ((unknown)[])[];
+      [key: string]: unknown;
+    };
+    /**
+     * DefineXMLValidationResult 
+     * @description Validation outcome for compiled CDISC Define-XML v2.1.
+     */
+    Interop_DefineXMLValidationResult: {
+      /**
+       * Is Valid 
+       * @description Whether XML conforms to Define-XML 2.1 schema
+       */
+      is_valid: boolean;
+      /**
+       * Errors 
+       * @description Validation errors
+       */
+      errors?: (string)[];
+      /**
+       * Warnings 
+       * @description Validation warnings
+       */
+      warnings?: (string)[];
+      /**
+       * Item Group Count 
+       * @description Number of ItemGroupDef elements 
+       * @default 0
+       */
+      item_group_count?: number;
+      /**
+       * Item Def Count 
+       * @description Number of ItemDef elements 
+       * @default 0
+       */
+      item_def_count?: number;
+      /**
+       * Value Level Metadata Count 
+       * @description Number of ValueListDef elements 
+       * @default 0
+       */
+      value_level_metadata_count?: number;
+      /**
+       * Where Clause Count 
+       * @description Number of WhereClauseDef elements 
+       * @default 0
+       */
+      where_clause_count?: number;
+      /**
+       * Codelist Count 
+       * @description Number of CodeList elements 
+       * @default 0
+       */
+      codelist_count?: number;
+      /**
+       * Method Count 
+       * @description Number of MethodDef derivation elements 
+       * @default 0
+       */
+      method_count?: number;
+    };
+    /**
+     * DeviceListResponse 
+     * @description List response of registered medical IoT devices.
+     */
+    Interop_DeviceListResponse: {
+      /**
+       * Study Id 
+       * @description Study protocol ID
+       */
+      study_id: string;
+      /**
+       * Total Count 
+       * @description Total registered devices
+       */
+      total_count: number;
+      /**
+       * Devices 
+       * @description Registered device entities
+       */
+      devices?: (components["schemas"]["Interop_DeviceRegistration"])[];
+    };
+    /**
+     * DeviceRegistration 
+     * @description Registered and mapped medical IoT sensor device.
+     */
+    Interop_DeviceRegistration: {
+      /**
+       * Device Id 
+       * @description Device entity UUID
+       */
+      device_id?: string;
+      /**
+       * Study Id 
+       * @description Study protocol ID
+       */
+      study_id: string;
+      /**
+       * Site Id 
+       * @description Site ID
+       */
+      site_id?: string | null;
+      /**
+       * Subject Id 
+       * @description Pseudonymized subject ID
+       */
+      subject_id: string;
+      /** @description Device category */
+      device_type: components["schemas"]["Interop_SensorDeviceType"];
+      /**
+       * Vendor 
+       * @description Device manufacturer
+       */
+      vendor: string;
+      /**
+       * Model Name 
+       * @description Device model
+       */
+      model_name: string;
+      /**
+       * Udi Di 
+       * @description UDI Device Identifier
+       */
+      udi_di: string;
+      /**
+       * Udi Pi Serial 
+       * @description UDI Production Serial
+       */
+      udi_pi_serial?: string | null;
+      /**
+       * Udi Pi Lot 
+       * @description UDI Production Lot
+       */
+      udi_pi_lot?: string | null;
+      /**
+       * Mac Address Masked 
+       * @description Cryptographically masked MAC address
+       */
+      mac_address_masked?: string | null;
+      /**
+       * Device Token 
+       * @description Deterministic GxP device identifier token
+       */
+      device_token: string;
+      /**
+       * Firmware Version 
+       * @description Firmware version
+       */
+      firmware_version?: string | null;
+      /** @description Calibration state */
+      calibration_status: components["schemas"]["Interop_CalibrationState"];
+      /**
+       * Calibration Date 
+       * @description Calibration date
+       */
+      calibration_date?: string | null;
+      /**
+       * Is Active 
+       * @description Active status 
+       * @default true
+       */
+      is_active?: boolean;
+      /**
+       * Created At 
+       * Format: date-time 
+       * @description Creation timestamp
+       */
+      created_at?: string;
+      /**
+       * Created By 
+       * @description Author user ID 
+       * @default system
+       */
+      created_by?: string;
+      /**
+       * Reason For Change 
+       * @description GxP reason
+       */
+      reason_for_change: string;
+      /**
+       * Version Index 
+       * @description Record version 
+       * @default 1
+       */
+      version_index?: number;
+    };
+    /**
+     * DeviceRegistrationRequest 
+     * @description Payload to register and map an approved medical IoT sensor device.
+     */
+    Interop_DeviceRegistrationRequest: {
+      /**
+       * Study Id 
+       * @description Study protocol ID
+       */
+      study_id: string;
+      /**
+       * Site Id 
+       * @description Site ID
+       */
+      site_id?: string | null;
+      /**
+       * Subject Id 
+       * @description Assigned subject ID
+       */
+      subject_id: string;
+      /** @description Device category */
+      device_type: components["schemas"]["Interop_SensorDeviceType"];
+      /**
+       * Vendor 
+       * @description Device manufacturer
+       */
+      vendor: string;
+      /**
+       * Model Name 
+       * @description Device model
+       */
+      model_name: string;
+      /**
+       * Device Udi 
+       * @description FDA Unique Device Identifier (UDI)
+       */
+      device_udi?: string | null;
+      /**
+       * Mac Address 
+       * @description Bluetooth MAC address
+       */
+      mac_address?: string | null;
+      /**
+       * Serial Number 
+       * @description Device serial number
+       */
+      serial_number?: string | null;
+      /**
+       * Firmware Version 
+       * @description Firmware version
+       */
+      firmware_version?: string | null;
+      /**
+       * @description Initial calibration state 
+       * @default CALIBRATED
+       */
+      calibration_status?: components["schemas"]["Interop_CalibrationState"];
+      /**
+       * Calibration Date 
+       * @description Date of last calibration
+       */
+      calibration_date?: string | null;
+      /**
+       * Reason For Change 
+       * @description GxP justification 
+       * @default Initial device registration and subject mapping
+       */
+      reason_for_change?: string;
+    };
+    /**
+     * DeviceRegistrationResponse 
+     * @description Response returned upon device registration.
+     */
+    Interop_DeviceRegistrationResponse: {
+      /**
+       * Success 
+       * @default true
+       */
+      success?: boolean;
+      /** @description Registered device details */
+      device: components["schemas"]["Interop_DeviceRegistration"];
+      /**
+       * Message 
+       * @description Status message 
+       * @default Device registered and mapped successfully
+       */
+      message?: string;
+    };
+    /**
+     * DomainCatalogResponse 
+     * @description Catalog of supported SDTM & ADaM domains, variables, and VLM definitions.
+     */
+    Interop_DomainCatalogResponse: {
+      /** Sdtm Domains */
+      sdtm_domains: (string)[];
+      /** Adam Datasets */
+      adam_datasets: (string)[];
+      /** Domain Metadata */
+      domain_metadata: {
+        [key: string]: unknown;
+      };
+      /** Vlm Catalog */
+      vlm_catalog: {
+        [key: string]: unknown;
+      };
+      /** Codelist Catalog */
+      codelist_catalog: (string)[];
+    };
+    /**
+     * EDCEcrfIngestItem 
+     * @description Raw ingestion payload for transactional EDC eCRFs.
+     */
+    Interop_EDCEcrfIngestItem: {
+      /**
+       * Subject Id 
+       * @description Unique subject/participant identifier
+       */
+      subject_id: string;
+      /**
+       * Visit Id 
+       * @description Visit identifier (e.g. VIS_01, SCREENING)
+       */
+      visit_id: string;
+      /**
+       * Form Oid 
+       * @description Form OID or form identifier (e.g. FORM_VS, FORM_AE)
+       */
+      form_oid: string;
+      /**
+       * Field Name 
+       * @description Item or field name (e.g. SYSBP, HR, AETERM)
+       */
+      field_name: string;
+      /**
+       * Value 
+       * @description Captured field value (numeric, string, boolean)
+       */
+      value: unknown;
+      /**
+       * Unit 
+       * @description Measurement unit (e.g. mmHg, bpm)
+       */
+      unit?: string | null;
+      /**
+       * Recorded At 
+       * Format: date-time 
+       * @description Timestamp of clinical observation or entry
+       */
+      recorded_at: string;
+      /**
+       * Status 
+       * @description Form entry status (e.g. DRAFT, COMPLETED, SIGNED) 
+       * @default COMPLETED
+       */
+      status?: string;
+      /**
+       * Investigator Id 
+       * @description Investigator or user identifier
+       */
+      investigator_id?: string | null;
+      /**
+       * Site Id 
+       * @description Clinical site identifier
+       */
+      site_id?: string | null;
+      /**
+       * Domain 
+       * @description Optional CDISC domain override (e.g. VS, AE, LB)
+       */
+      domain?: string | null;
+      /**
+       * Is Unblinded 
+       * @description Flag if field contains unblinded treatment/randomization data 
+       * @default false
+       */
+      is_unblinded?: boolean;
+      /**
+       * Metadata 
+       * @description Additional EDC provenance metadata
+       */
+      metadata?: {
+        [key: string]: unknown;
+      };
+    };
+    /**
+     * EHRFHIRIngestItem 
+     * @description Raw ingestion payload for Electronic Health Record (EHR) HL7 FHIR bundles.
+     */
+    Interop_EHRFHIRIngestItem: {
+      /**
+       * Subject Id 
+       * @description Clinical trial subject identifier
+       */
+      subject_id: string;
+      /**
+       * Resource Type 
+       * @description FHIR resource type (Observation, Condition, Encounter, MedicationRequest)
+       */
+      resource_type: string;
+      /**
+       * Fhir Id 
+       * @description FHIR resource ID
+       */
+      fhir_id: string;
+      /**
+       * Resource Payload 
+       * @description Complete FHIR JSON resource object
+       */
+      resource_payload: {
+        [key: string]: unknown;
+      };
+      /**
+       * Coding Code 
+       * @description Primary clinical coding (e.g. SNOMED-CT, LOINC, RxNorm, ICD-10)
+       */
+      coding_code?: string | null;
+      /**
+       * Coding Display 
+       * @description Coding human-readable display string
+       */
+      coding_display?: string | null;
+      /**
+       * Effective Datetime 
+       * Format: date-time 
+       * @description Clinical occurrence or effective timestamp
+       */
+      effective_datetime: string;
+      /**
+       * Site Id 
+       * @description Site identifier
+       */
+      site_id?: string | null;
+      /**
+       * Metadata 
+       * @description FHIR bundle header and source EHR metadata
+       */
+      metadata?: {
+        [key: string]: unknown;
+      };
+    };
+    /**
+     * EPROEcoaIngestItem 
+     * @description Raw ingestion payload for subject-facing ePRO / eCOA questionnaires.
+     */
+    Interop_EPROEcoaIngestItem: {
+      /**
+       * Subject Id 
+       * @description Unique subject identifier
+       */
+      subject_id: string;
+      /**
+       * Diary Id 
+       * @description Questionnaire / diary form identifier
+       */
+      diary_id: string;
+      /**
+       * Questionnaire Name 
+       * @description Name of instrument (e.g. PROMIS-29, SF-36, EQ-5D)
+       */
+      questionnaire_name: string;
+      /**
+       * Answers 
+       * @description Map of question IDs to participant responses
+       */
+      answers: {
+        [key: string]: unknown;
+      };
+      /**
+       * Total Score 
+       * @description Computed questionnaire total or index score
+       */
+      total_score?: number | null;
+      /**
+       * Device Timestamp 
+       * Format: date-time 
+       * @description Timestamp recorded by client device
+       */
+      device_timestamp: string;
+      /**
+       * Completed At 
+       * @description Timestamp questionnaire was submitted
+       */
+      completed_at?: string | null;
+      /**
+       * Compliance Flag 
+       * @description Whether completion was within the scheduled time window 
+       * @default true
+       */
+      compliance_flag?: boolean;
+      /**
+       * Site Id 
+       * @description Associated clinical site identifier
+       */
+      site_id?: string | null;
+      /**
+       * Metadata 
+       * @description Device and sensor sync metadata
+       */
+      metadata?: {
+        [key: string]: unknown;
+      };
     };
     /**
      * EPROSubmissionPayload 
@@ -23041,6 +26525,435 @@ export interface components {
        * @description Standard 21 CFR Part 11 compliant reason for the edit
        */
       change_reason: string;
+    };
+    /**
+     * ElectronicSignatureBlock 
+     * @description 21 CFR Part 11 compliant electronic signature block.
+     */
+    Interop_ElectronicSignatureBlock: {
+      /**
+       * Signer Id 
+       * @description Unique user ID of executing statistician
+       */
+      signer_id: string;
+      /**
+       * Signer Role 
+       * @description Regulatory role of statistician
+       */
+      signer_role: string;
+      /**
+       * Signed At 
+       * Format: date-time 
+       * @description Timestamp of electronic signature
+       */
+      signed_at?: string;
+      /**
+       * Signature Meaning 
+       * @description Regulatory intent of the signature 
+       * @default Electronic signature confirming authoring, validation, and execution of statistical run
+       */
+      signature_meaning?: string;
+      /**
+       * Hmac Signature 
+       * @description HMAC-SHA256 signature sealing the execution run
+       */
+      hmac_signature: string;
+    };
+    /**
+     * ExecuteProgramRequest 
+     * @description Request payload to launch an isolated, sandboxed statistical run.
+     */
+    Interop_ExecuteProgramRequest: {
+      /**
+       * Study Id 
+       * @description Clinical study ID
+       */
+      study_id: string;
+      /**
+       * Program Id 
+       * @description Statistical program ID to execute
+       */
+      program_id: string;
+      /**
+       * Snapshot Id 
+       * @description Version-pinned data snapshot ID
+       */
+      snapshot_id: string;
+      /**
+       * Is Unblinded 
+       * @description Request unblinded treatment arm access 
+       * @default false
+       */
+      is_unblinded?: boolean;
+      /**
+       * Database Lock Token Id 
+       * @description Required formal database lock authorization token if is_unblinded is True
+       */
+      database_lock_token_id?: string | null;
+      /** @description Optional resource bounds and sandbox settings */
+      sandbox_config?: components["schemas"]["Interop_ExecutionSandboxConfig"] | null;
+      /**
+       * Reason For Execution 
+       * @description GxP execution rationale 
+       * @default Statistical analysis execution run
+       */
+      reason_for_execution?: string;
+    };
+    /**
+     * ExecuteProgramResponse 
+     * @description Response containing executed run manifest and Part 11 electronic signature.
+     */
+    Interop_ExecuteProgramResponse: {
+      /** @description Signed execution run manifest */
+      manifest: components["schemas"]["Interop_ExecutionRunManifest"];
+    };
+    /**
+     * ExecutionLanguage 
+     * @description Supported statistical computing languages. 
+     * @enum {string}
+     */
+    Interop_ExecutionLanguage: "PYTHON" | "R";
+    /**
+     * ExecutionRunDetailResponse 
+     * @description Response containing detailed execution run manifest and output artifacts.
+     */
+    Interop_ExecutionRunDetailResponse: {
+      /** @description Execution run manifest details */
+      run: components["schemas"]["Interop_ExecutionRunManifest"];
+    };
+    /**
+     * ExecutionRunListResponse 
+     * @description Response listing historical execution runs for a study.
+     */
+    Interop_ExecutionRunListResponse: {
+      /**
+       * Study Id 
+       * @description Study ID
+       */
+      study_id: string;
+      /**
+       * Total 
+       * @description Total execution runs
+       */
+      total: number;
+      /**
+       * Runs 
+       * @description Historical runs
+       */
+      runs?: (components["schemas"]["Interop_ExecutionRunManifest"])[];
+    };
+    /**
+     * ExecutionRunManifest 
+     * @description Cryptographically signed, bit-for-bit reproducible execution run manifest (21 CFR Part 11).
+     */
+    Interop_ExecutionRunManifest: {
+      /**
+       * Manifest Id 
+       * @description Unique manifest identifier
+       */
+      manifest_id?: string;
+      /**
+       * Run Id 
+       * @description Associated execution run identifier
+       */
+      run_id: string;
+      /**
+       * Study Id 
+       * @description Clinical study identifier
+       */
+      study_id: string;
+      /**
+       * Program Id 
+       * @description Executed statistical program ID
+       */
+      program_id: string;
+      /**
+       * Program Name 
+       * @description Program filename
+       */
+      program_name: string;
+      /**
+       * Program Version 
+       * @description Executed program version
+       */
+      program_version: string;
+      /**
+       * Snapshot Id 
+       * @description Version-pinned clinical data snapshot ID
+       */
+      snapshot_id: string;
+      /**
+       * Snapshot Version Tag 
+       * @description Data snapshot version tag
+       */
+      snapshot_version_tag: string;
+      /**
+       * Snapshot Digest 
+       * @description SHA-256 seal of input pooled dataset snapshot
+       */
+      snapshot_digest: string;
+      /** @description Execution runtime language */
+      language: components["schemas"]["Interop_ExecutionLanguage"];
+      /**
+       * Script Code Digest 
+       * @description SHA-256 digest of executed source code
+       */
+      script_code_digest: string;
+      /**
+       * Lockfile Digest 
+       * @description SHA-256 digest of verified package lockfile
+       */
+      lockfile_digest: string;
+      /**
+       * Container Image Digest 
+       * @description Base container image digest
+       */
+      container_image_digest: string;
+      /**
+       * Execution Start 
+       * Format: date-time 
+       * @description Execution start timestamp
+       */
+      execution_start: string;
+      /**
+       * Execution End 
+       * Format: date-time 
+       * @description Execution completion timestamp
+       */
+      execution_end: string;
+      /**
+       * Duration Ms 
+       * @description Total execution duration in milliseconds
+       */
+      duration_ms: number;
+      /**
+       * Exit Code 
+       * @description Process exit code (0 = success)
+       */
+      exit_code: number;
+      /** @description Final execution outcome status */
+      status: components["schemas"]["Interop_ExecutionStatus"];
+      /**
+       * Stdout Capture 
+       * @description Standard output captured from execution sandbox 
+       * @default
+       */
+      stdout_capture?: string;
+      /**
+       * Stderr Capture 
+       * @description Standard error captured from execution sandbox 
+       * @default
+       */
+      stderr_capture?: string;
+      /**
+       * Output Artifacts 
+       * @description List of generated output artifacts with SHA-256 digests
+       */
+      output_artifacts?: (components["schemas"]["Interop_OutputArtifact"])[];
+      /**
+       * Output Artifacts Digest 
+       * @description Combined Merkle/SHA-256 digest of all generated output artifacts
+       */
+      output_artifacts_digest: string;
+      /**
+       * Is Unblinded Run 
+       * @description Whether unblinded treatment arms were accessed during analysis 
+       * @default false
+       */
+      is_unblinded_run?: boolean;
+      /**
+       * Database Lock Token Id 
+       * @description Database lock authorization token if unblinded analysis executed
+       */
+      database_lock_token_id?: string | null;
+      /**
+       * Executed By 
+       * @description Executing biostatistician user ID
+       */
+      executed_by: string;
+      /**
+       * Executed By Role 
+       * @description Regulatory role of executing user
+       */
+      executed_by_role: string;
+      /** @description 21 CFR Part 11 electronic signature block */
+      signature_block: components["schemas"]["Interop_ElectronicSignatureBlock"];
+      /**
+       * Manifest Sha256 Seal 
+       * @description Root SHA-256 seal of this complete execution run manifest
+       */
+      manifest_sha256_seal: string;
+    };
+    /**
+     * ExecutionSandboxConfig 
+     * @description Resource bounds and security controls for containerized statistical execution.
+     */
+    Interop_ExecutionSandboxConfig: {
+      /**
+       * Max Memory Mb 
+       * @description Maximum RAM allocated to sandbox (MB) 
+       * @default 2048
+       */
+      max_memory_mb?: number;
+      /**
+       * Timeout Seconds 
+       * @description Execution timeout limit in seconds 
+       * @default 300
+       */
+      timeout_seconds?: number;
+      /**
+       * Network Isolated 
+       * @description Enforces zero outbound network egress 
+       * @default true
+       */
+      network_isolated?: boolean;
+      /**
+       * Filesystem Readonly Root 
+       * @description Read-only root filesystem with ephemeral workspace 
+       * @default true
+       */
+      filesystem_readonly_root?: boolean;
+      /**
+       * Max Output Bytes 
+       * @description Maximum stdout/stderr capture buffer size (10 MB) 
+       * @default 10485760
+       */
+      max_output_bytes?: number;
+      /**
+       * Docker Image Digest 
+       * @description Immutable container base image digest 
+       * @default sha256:cadence-sce-r4.4-py3.14-validated-base-2026
+       */
+      docker_image_digest?: string;
+      /**
+       * Python Version 
+       * @description Pinned Python runtime version 
+       * @default 3.14.0
+       */
+      python_version?: string;
+      /**
+       * R Version 
+       * @description Pinned R runtime version 
+       * @default 4.4.2
+       */
+      r_version?: string;
+      /**
+       * Environment Variables 
+       * @description Safe runtime environment variables
+       */
+      environment_variables?: {
+        [key: string]: string | undefined;
+      };
+    };
+    /**
+     * ExecutionStatus 
+     * @description Lifecycle status of a statistical computing run. 
+     * @enum {string}
+     */
+    Interop_ExecutionStatus: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "TIMEOUT" | "REJECTED";
+    /**
+     * ExportDatasetJSONRequest 
+     * @description Request payload for exporting datasets in CDISC Dataset-JSON 1.1 / 2.0.
+     */
+    Interop_ExportDatasetJSONRequest: {
+      /**
+       * Study Id 
+       * @description Study Identifier
+       */
+      study_id: string;
+      /**
+       * Snapshot Id 
+       * @description Optional snapshot ID
+       */
+      snapshot_id?: string | null;
+      /**
+       * Datasets 
+       * @description List of domains/datasets to include (e.g. ['DM', 'AE', 'ADSL', 'ADAE'])
+       */
+      datasets?: (string)[] | null;
+      /**
+       * Dataset Json Version 
+       * @description Dataset-JSON specification version ('1.0.0', '1.1.0', '2.0.0') 
+       * @default 1.1.0
+       */
+      dataset_json_version?: string;
+      /**
+       * Reason For Change 
+       * @default Dataset-JSON biostatistical export
+       */
+      reason_for_change?: string;
+    };
+    /**
+     * ExportDefineXMLRequest 
+     * @description Request payload for compiling and exporting CDISC Define-XML v2.1.
+     */
+    Interop_ExportDefineXMLRequest: {
+      /**
+       * Study Id 
+       * @description Study Identifier
+       */
+      study_id: string;
+      /**
+       * Study Name 
+       * @description Study Name
+       */
+      study_name?: string | null;
+      /**
+       * Protocol Name 
+       * @description Protocol Name
+       */
+      protocol_name?: string | null;
+      /**
+       * Metadata Version Oid 
+       * @description Metadata Version OID 
+       * @default MDV.CDISC.001
+       */
+      metadata_version_oid?: string;
+      /**
+       * Standard Name 
+       * @description Standard Name 
+       * @default SDTM-IG
+       */
+      standard_name?: string;
+      /**
+       * Standard Version 
+       * @description Standard Version 
+       * @default 3.4
+       */
+      standard_version?: string;
+      /**
+       * Domains 
+       * @description SDTM domains to document
+       */
+      domains?: (string)[];
+      /**
+       * Adam Datasets 
+       * @description ADaM datasets to document
+       */
+      adam_datasets?: (string)[];
+      /**
+       * Include Vlm 
+       * @description Include Value Level Metadata 
+       * @default true
+       */
+      include_vlm?: boolean;
+      /**
+       * Include Where Clauses 
+       * @description Include WhereClauses 
+       * @default true
+       */
+      include_where_clauses?: boolean;
+      /**
+       * Include Origins 
+       * @description Include Origin annotations 
+       * @default true
+       */
+      include_origins?: boolean;
+      /**
+       * Reason For Change 
+       * @default Define-XML v2.1 compilation export
+       */
+      reason_for_change?: string;
     };
     /**
      * FHIRPreScreenRequest 
@@ -23193,6 +27106,97 @@ export interface components {
       /** Detail */
       detail?: (components["schemas"]["Interop_ValidationError"])[];
     };
+    /**
+     * IOTWearableIngestItem 
+     * @description Raw ingestion payload for connected sensors and wearable IoT streams.
+     */
+    Interop_IOTWearableIngestItem: {
+      /**
+       * Subject Id 
+       * @description Subject identifier
+       */
+      subject_id: string;
+      /**
+       * Device Id 
+       * @description Unique medical device serial or UUID
+       */
+      device_id: string;
+      /**
+       * Device Type 
+       * @description Device model / type (e.g. CGM, ACTIGRAPHY, SPIROMETER, ECG)
+       */
+      device_type: string;
+      /**
+       * Observation Type 
+       * @description Continuous observation stream category
+       */
+      observation_type: string;
+      /**
+       * Telemetry Readings 
+       * @description Batched time-series sensor readings
+       */
+      telemetry_readings: (components["schemas"]["Interop_IoTTelemetryReading"])[];
+      /**
+       * Duration Seconds 
+       * @description Aggregate recording duration
+       */
+      duration_seconds?: number | null;
+      /**
+       * Sample Rate Hz 
+       * @description Device sampling rate in Hz
+       */
+      sample_rate_hz?: number | null;
+      /**
+       * Calibration Status 
+       * @description Device calibration state 
+       * @default CALIBRATED
+       */
+      calibration_status?: string;
+      /**
+       * Site Id 
+       * @description Site identifier
+       */
+      site_id?: string | null;
+      /**
+       * Metadata 
+       * @description Sensor firmware and battery status metadata
+       */
+      metadata?: {
+        [key: string]: unknown;
+      };
+    };
+    /**
+     * IngestResponse 
+     * @description Response returned after ingesting heterogeneous stream records.
+     */
+    Interop_IngestResponse: {
+      /**
+       * Study Id 
+       * @description Study identifier
+       */
+      study_id: string;
+      /**
+       * Stream Type 
+       * @description Ingested stream type
+       */
+      stream_type: string;
+      /**
+       * Records Ingested 
+       * @description Number of canonical records created and persisted
+       */
+      records_ingested: number;
+      /**
+       * Unblinded Records 
+       * @description Number of unblinded records identified 
+       * @default 0
+       */
+      unblinded_records?: number;
+      /**
+       * Record Ids 
+       * @description List of generated canonical record UUIDs
+       */
+      record_ids?: (string)[];
+    };
     /** InstrumentCreateDTO */
     Interop_InstrumentCreateDTO: {
       /**
@@ -23270,6 +27274,270 @@ export interface components {
       version_index: number;
     };
     /**
+     * IoTTelemetryReading 
+     * @description Single time-series point from a connected sensor or wearable device.
+     */
+    Interop_IoTTelemetryReading: {
+      /**
+       * Timestamp 
+       * Format: date-time 
+       * @description Observation timestamp
+       */
+      timestamp: string;
+      /**
+       * Metric Name 
+       * @description Metric name (e.g. glucose, step_count, heart_rate, fev1)
+       */
+      metric_name: string;
+      /**
+       * Value 
+       * @description Numeric telemetry value
+       */
+      value: number;
+      /**
+       * Unit 
+       * @description Metric unit (e.g. mg/dL, steps, bpm, L)
+       */
+      unit?: string | null;
+      /**
+       * Flag 
+       * @description Telemetry quality flag (e.g. VALID, ARTIFACT, EXCURSION)
+       */
+      flag?: string | null;
+    };
+    /**
+     * IssueLockTokenRequest 
+     * @description Request payload to issue a formal database lock authorization token for unblinded analysis.
+     */
+    Interop_IssueLockTokenRequest: {
+      /**
+       * Study Id 
+       * @description Clinical study ID
+       */
+      study_id: string;
+      /**
+       * Lock Id 
+       * @description Database lock reference ID
+       */
+      lock_id: string;
+      /**
+       * Milestone 
+       * @description Lock milestone tier (e.g. DATABASE_LOCK)
+       */
+      milestone: string;
+      /**
+       * Issued To 
+       * @description Authorized user ID
+       */
+      issued_to: string;
+      /**
+       * Reason 
+       * @description Regulatory justification for unblinded access
+       */
+      reason: string;
+      /**
+       * Expires In Hours 
+       * @description Validity duration in hours (default 24h) 
+       * @default 24
+       */
+      expires_in_hours?: number;
+      /**
+       * Authorized Roles 
+       * @description Optional list of permitted unblinded roles
+       */
+      authorized_roles?: (string)[] | null;
+    };
+    /**
+     * LakehouseMetrics 
+     * @description Aggregated real-time metrics for a study in the Lakehouse repository.
+     */
+    Interop_LakehouseMetrics: {
+      /**
+       * Study Id 
+       * @description Study identifier
+       */
+      study_id: string;
+      /**
+       * Total Records 
+       * @description Total canonical clinical records ingested 
+       * @default 0
+       */
+      total_records?: number;
+      /**
+       * Total Snapshots 
+       * @description Total sealed snapshots created 
+       * @default 0
+       */
+      total_snapshots?: number;
+      /**
+       * Stream Breakdown 
+       * @description Record counts per stream type
+       */
+      stream_breakdown?: {
+        [key: string]: number | undefined;
+      };
+      /**
+       * Domain Breakdown 
+       * @description Record counts per CDISC domain
+       */
+      domain_breakdown?: {
+        [key: string]: number | undefined;
+      };
+      /**
+       * Subject Count 
+       * @description Distinct subject count 
+       * @default 0
+       */
+      subject_count?: number;
+      /**
+       * Site Count 
+       * @description Distinct site count 
+       * @default 0
+       */
+      site_count?: number;
+      /**
+       * Blinded Record Count 
+       * @description Total blinded records 
+       * @default 0
+       */
+      blinded_record_count?: number;
+      /**
+       * Unblinded Record Count 
+       * @description Total unblinded records 
+       * @default 0
+       */
+      unblinded_record_count?: number;
+      /**
+       * Latest Snapshot Digest 
+       * @description SHA-256 digest of latest sealed snapshot
+       */
+      latest_snapshot_digest?: string | null;
+      /**
+       * Last Ingested At 
+       * @description Timestamp of most recent ingestion
+       */
+      last_ingested_at?: string | null;
+    };
+    /**
+     * LakehouseMetricsResponse 
+     * @description Response containing aggregated lakehouse metrics.
+     */
+    Interop_LakehouseMetricsResponse: {
+      /** @description Real-time lakehouse repository metrics */
+      metrics: components["schemas"]["Interop_LakehouseMetrics"];
+    };
+    /**
+     * LocalLabIngestItem 
+     * @description Raw ingestion payload for site local laboratory feeds.
+     */
+    Interop_LocalLabIngestItem: {
+      /**
+       * Subject Id 
+       * @description Subject identifier
+       */
+      subject_id: string;
+      /**
+       * Site Id 
+       * @description Local site identifier
+       */
+      site_id: string;
+      /**
+       * Test Code 
+       * @description Local laboratory test code
+       */
+      test_code: string;
+      /**
+       * Test Name 
+       * @description Local lab test name
+       */
+      test_name: string;
+      /**
+       * Value 
+       * @description Test result value (numeric or text)
+       */
+      value: number | string;
+      /**
+       * Unit 
+       * @description Result unit
+       */
+      unit?: string | null;
+      /**
+       * Reference Low 
+       * @description Site reference range lower bound
+       */
+      reference_low?: number | null;
+      /**
+       * Reference High 
+       * @description Site reference range upper bound
+       */
+      reference_high?: number | null;
+      /**
+       * Abnormal Flag 
+       * @description Abnormal indicator (NORMAL, HIGH, LOW)
+       */
+      abnormal_flag?: string | null;
+      /**
+       * Collection Timestamp 
+       * Format: date-time 
+       * @description Sample collection timestamp
+       */
+      collection_timestamp: string;
+      /**
+       * Is Unblinded 
+       * @description Flag for unblinded specialized tests 
+       * @default false
+       */
+      is_unblinded?: boolean;
+      /**
+       * Metadata 
+       * @description Site lab technician and kit metadata
+       */
+      metadata?: {
+        [key: string]: unknown;
+      };
+    };
+    /**
+     * LockMilestoneType 
+     * @description Clinical database lock and interim analysis milestones. 
+     * @enum {string}
+     */
+    Interop_LockMilestoneType: "INTERIM_ANALYSIS_1" | "INTERIM_ANALYSIS_2" | "DATABASE_LOCK" | "SAFETY_REVIEW" | "REGULATORY_SUBMISSION" | "PROTOCOL_FREEZE" | "ADJUDICATION_MILESTONE" | "CUSTOM";
+    /**
+     * LockTokenListResponse 
+     * @description Response listing active authorization tokens for a study.
+     */
+    Interop_LockTokenListResponse: {
+      /**
+       * Study Id 
+       * @description Study ID
+       */
+      study_id: string;
+      /**
+       * Total 
+       * @description Total active tokens
+       */
+      total: number;
+      /**
+       * Tokens 
+       * @description Active tokens
+       */
+      tokens?: (components["schemas"]["Interop_DatabaseLockAuthToken"])[];
+    };
+    /**
+     * LockTokenResponse 
+     * @description Response containing database lock authorization token.
+     */
+    Interop_LockTokenResponse: {
+      /** @description Signed authorization token */
+      token: components["schemas"]["Interop_DatabaseLockAuthToken"];
+    };
+    /**
+     * LockValidationStatus 
+     * @description Integrity and qualification status of a package lockfile. 
+     * @enum {string}
+     */
+    Interop_LockValidationStatus: "VALID" | "TAMPERED" | "INVALID_SYNTAX" | "UNQUALIFIED_PACKAGE" | "UNVERIFIED";
+    /**
      * MappingTierStatisticsDTO 
      * @description Aggregated metrics across mapping tiers.
      */
@@ -23311,6 +27579,178 @@ export interface components {
       execution_latency_ms?: number;
     };
     /**
+     * MedicalImagingIngestItem 
+     * @description Raw ingestion payload for Blinded Medical Imaging and IRC adjudication results.
+     */
+    Interop_MedicalImagingIngestItem: {
+      /**
+       * Subject Id 
+       * @description Subject identifier
+       */
+      subject_id: string;
+      /**
+       * Site Id 
+       * @description Site identifier
+       */
+      site_id?: string | null;
+      /**
+       * Study Instance Uid 
+       * @description DICOM Study Instance UID
+       */
+      study_instance_uid: string;
+      /**
+       * Series Instance Uid 
+       * @description DICOM Series Instance UID
+       */
+      series_instance_uid?: string | null;
+      /**
+       * Modality 
+       * @description Imaging modality (CT, MR, PET, PT, DX)
+       */
+      modality: string;
+      /**
+       * Timepoint 
+       * @description Assessment timepoint (e.g. BASELINE, WEEK_6, WEEK_12)
+       */
+      timepoint: string;
+      /**
+       * Lesions 
+       * @description Assessed target and non-target lesions
+       */
+      lesions?: (components["schemas"]["Interop_MedicalImagingLesion"])[];
+      /**
+       * Overall Response 
+       * @description RECIST 1.1 overall response (CR, PR, SD, PD, NE)
+       */
+      overall_response?: string | null;
+      /**
+       * Sum Of Diameters Mm 
+       * @description Sum of longest diameters for target lesions in mm
+       */
+      sum_of_diameters_mm?: number | null;
+      /**
+       * Reader Id 
+       * @description Blinded independent central review (BICR) reader identifier
+       */
+      reader_id: string;
+      /**
+       * Adjudication Tier 
+       * @description Adjudication tier: PRIMARY_READER_1, PRIMARY_READER_2, TIE_BREAKER 
+       * @default PRIMARY_READER_1
+       */
+      adjudication_tier?: string;
+      /**
+       * Scan Datetime 
+       * Format: date-time 
+       * @description DICOM acquisition timestamp
+       */
+      scan_datetime: string;
+      /**
+       * Is Unblinded 
+       * @description Whether this adjudication unblinds arm 
+       * @default false
+       */
+      is_unblinded?: boolean;
+      /**
+       * Metadata 
+       * @description Imaging charter and PACS archive metadata
+       */
+      metadata?: {
+        [key: string]: unknown;
+      };
+    };
+    /**
+     * MedicalImagingLesion 
+     * @description RECIST 1.1 or imaging lesion evaluation.
+     */
+    Interop_MedicalImagingLesion: {
+      /**
+       * Lesion Id 
+       * @description Target/non-target lesion identifier (e.g. T1, NT1)
+       */
+      lesion_id: string;
+      /**
+       * Lesion Type 
+       * @description Lesion category: TARGET, NON_TARGET, NEW_LESION 
+       * @default TARGET
+       */
+      lesion_type?: string;
+      /**
+       * Site Location 
+       * @description Anatomical site location (e.g. Liver, Right Lung, Lymph Node)
+       */
+      site_location: string;
+      /**
+       * Longest Diameter Mm 
+       * @description Longest diameter measurement in mm
+       */
+      longest_diameter_mm?: number | null;
+      /**
+       * Short Axis Mm 
+       * @description Short axis measurement in mm for lymph nodes
+       */
+      short_axis_mm?: number | null;
+      /**
+       * Response Category 
+       * @description Lesion status: PRESENT, ABSENT, NOT_EVALUATED
+       */
+      response_category?: string | null;
+    };
+    /**
+     * MultiStreamIngestPayload 
+     * @description Unified payload container for ingesting one or more heterogeneous streams.
+     */
+    Interop_MultiStreamIngestPayload: {
+      /**
+       * Study Id 
+       * @description Clinical trial protocol ID (e.g. STUDY-901)
+       */
+      study_id: string;
+      /** @description Stream type being ingested */
+      stream_type: components["schemas"]["Interop_DataStreamType"];
+      /**
+       * Edc Items 
+       * @description EDC eCRF items when stream_type=EDC_ECRF
+       */
+      edc_items?: (components["schemas"]["Interop_EDCEcrfIngestItem"])[] | null;
+      /**
+       * Epro Items 
+       * @description ePRO items when stream_type=EPRO_ECOA
+       */
+      epro_items?: (components["schemas"]["Interop_EPROEcoaIngestItem"])[] | null;
+      /**
+       * Central Lab Items 
+       * @description Central lab items when stream_type=CENTRAL_LAB
+       */
+      central_lab_items?: (components["schemas"]["Interop_CentralLabIngestItem"])[] | null;
+      /**
+       * Local Lab Items 
+       * @description Local lab items when stream_type=LOCAL_LAB
+       */
+      local_lab_items?: (components["schemas"]["Interop_LocalLabIngestItem"])[] | null;
+      /**
+       * Wearable Items 
+       * @description IoT wearable items when stream_type=IOT_WEARABLE
+       */
+      wearable_items?: (components["schemas"]["Interop_IOTWearableIngestItem"])[] | null;
+      /**
+       * Fhir Items 
+       * @description FHIR items when stream_type=EHR_FHIR
+       */
+      fhir_items?: (components["schemas"]["Interop_EHRFHIRIngestItem"])[] | null;
+      /**
+       * Imaging Items 
+       * @description Imaging items when stream_type=MEDICAL_IMAGING
+       */
+      imaging_items?: (components["schemas"]["Interop_MedicalImagingIngestItem"])[] | null;
+      /**
+       * Reason For Ingest 
+       * @description GxP justification for ingestion 
+       * @default Routine stream ingestion into CDR Lakehouse
+       */
+      reason_for_ingest?: string;
+    };
+    /**
      * OfflineSyncMarkers 
      * @description Offline queue reconciliation and conflict resolution parameters.
      */
@@ -23342,6 +27782,254 @@ export interface components {
       timestamps?: ({
         [key: string]: string | undefined;
       }) | null;
+    };
+    /**
+     * OutputArtifact 
+     * @description Individual statistical output artifact generated by an analytical run.
+     */
+    Interop_OutputArtifact: {
+      /**
+       * Artifact Id 
+       * @description Unique artifact identifier
+       */
+      artifact_id?: string;
+      /**
+       * Name 
+       * @description Artifact filename (e.g. t_14_1_demographics.csv)
+       */
+      name: string;
+      /** @description Categorized artifact type */
+      artifact_type: components["schemas"]["Interop_OutputArtifactType"];
+      /**
+       * File Path 
+       * @description Relative artifact path in run directory
+       */
+      file_path: string;
+      /**
+       * Mime Type 
+       * @description MIME content type
+       */
+      mime_type: string;
+      /**
+       * Size Bytes 
+       * @description File size in bytes
+       */
+      size_bytes: number;
+      /**
+       * Sha256 Digest 
+       * @description SHA-256 hash of artifact content
+       */
+      sha256_digest: string;
+      /**
+       * Content Preview 
+       * @description Text or base64 preview snippet
+       */
+      content_preview?: string | null;
+    };
+    /**
+     * OutputArtifactType 
+     * @description Standard statistical output artifact types. 
+     * @enum {string}
+     */
+    Interop_OutputArtifactType: "TABLE" | "LISTING" | "FIGURE" | "DATASET" | "LOG" | "MANIFEST";
+    /**
+     * PackageEntry 
+     * @description Individual qualified package dependency entry.
+     */
+    Interop_PackageEntry: {
+      /**
+       * Name 
+       * @description Package name (e.g. pandas, rtables)
+       */
+      name: string;
+      /**
+       * Version 
+       * @description Pinned package version string
+       */
+      version: string;
+      /**
+       * Checksum 
+       * @description Cryptographic package digest (SHA-256)
+       */
+      checksum?: string | null;
+      /**
+       * Repository 
+       * @description Source repository (e.g. PyPI, CRAN, Posit)
+       */
+      repository?: string | null;
+      /**
+       * Is Qualified 
+       * @description Whether package is qualified in the GxP platform whitelist 
+       * @default true
+       */
+      is_qualified?: boolean;
+    };
+    /**
+     * PackageLockType 
+     * @description Supported package dependency lockfile formats. 
+     * @enum {string}
+     */
+    Interop_PackageLockType: "UV_LOCK" | "RENV_LOCK" | "REQUIREMENTS_TXT";
+    /**
+     * PackageLockValidationResult 
+     * @description Result of lockfile parsing and cryptographic integrity assertion.
+     */
+    Interop_PackageLockValidationResult: {
+      /** @description Detected lockfile type */
+      lock_type: components["schemas"]["Interop_PackageLockType"];
+      /** @description Validation outcome */
+      status: components["schemas"]["Interop_LockValidationStatus"];
+      /**
+       * Lock Digest 
+       * @description Canonical SHA-256 hash of normalized lockfile content
+       */
+      lock_digest: string;
+      /**
+       * Package Count 
+       * @description Total number of pinned packages parsed
+       */
+      package_count: number;
+      /**
+       * Packages 
+       * @description Parsed package definitions
+       */
+      packages?: (components["schemas"]["Interop_PackageEntry"])[];
+      /**
+       * Is Qualified 
+       * @description Whether all packages meet platform qualification rules
+       */
+      is_qualified: boolean;
+      /**
+       * Unqualified Packages 
+       * @description List of unapproved packages if any
+       */
+      unqualified_packages?: (string)[];
+      /**
+       * Details 
+       * @description Human-readable validation summary or error message
+       */
+      details: string;
+    };
+    /**
+     * PipelineExecutionResult 
+     * @description Comprehensive execution manifest for a CDISC SDTM/ADaM & Dataset-JSON/Define-XML run.
+     */
+    Interop_PipelineExecutionResult: {
+      /**
+       * Execution Id 
+       * @description Unique Pipeline Execution Identifier
+       */
+      execution_id: string;
+      /**
+       * Study Id 
+       * @description Study Identifier
+       */
+      study_id: string;
+      /**
+       * Snapshot Id 
+       * @description Linked Snapshot ID if snapshot-pinned
+       */
+      snapshot_id?: string | null;
+      /** @description Execution Status */
+      status: components["schemas"]["Interop_PipelineExecutionStatus"];
+      /**
+       * Started At 
+       * Format: date-time 
+       * @description Execution Start Timestamp
+       */
+      started_at: string;
+      /**
+       * Completed At 
+       * @description Execution Completion Timestamp
+       */
+      completed_at?: string | null;
+      /**
+       * Sdtm Counts 
+       * @description Record counts per SDTM domain
+       */
+      sdtm_counts?: {
+        [key: string]: number | undefined;
+      };
+      /**
+       * Adam Counts 
+       * @description Record counts per ADaM dataset
+       */
+      adam_counts?: {
+        [key: string]: number | undefined;
+      };
+      /**
+       * Total Sdtm Records 
+       * @description Total SDTM records generated 
+       * @default 0
+       */
+      total_sdtm_records?: number;
+      /**
+       * Total Adam Records 
+       * @description Total ADaM records derived 
+       * @default 0
+       */
+      total_adam_records?: number;
+      /**
+       * Dataset Json Manifest 
+       * @description Dataset-JSON metadata manifest
+       */
+      dataset_json_manifest?: {
+        [key: string]: unknown;
+      };
+      /**
+       * Define Xml Summary 
+       * @description Define-XML 2.1 compilation summary
+       */
+      define_xml_summary?: {
+        [key: string]: unknown;
+      };
+      /**
+       * Validation Summary 
+       * @description Conformance validation results
+       */
+      validation_summary?: {
+        [key: string]: unknown;
+      };
+      /**
+       * Errors 
+       * @description Execution errors if failed
+       */
+      errors?: (string)[];
+    };
+    /**
+     * PipelineExecutionStatus 
+     * @description Execution status for the continuous CDR transformation pipeline. 
+     * @enum {string}
+     */
+    Interop_PipelineExecutionStatus: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
+    /**
+     * ProgramListResponse 
+     * @description Response containing list of statistical programs for a study.
+     */
+    Interop_ProgramListResponse: {
+      /**
+       * Study Id 
+       * @description Target study ID
+       */
+      study_id: string;
+      /**
+       * Total 
+       * @description Total programs registered
+       */
+      total: number;
+      /**
+       * Programs 
+       * @description List of programs
+       */
+      programs?: (components["schemas"]["Interop_StatisticalProgram"])[];
+    };
+    /**
+     * ProgramResponse 
+     * @description Response containing statistical program definition.
+     */
+    Interop_ProgramResponse: {
+      /** @description Statistical program details */
+      program: components["schemas"]["Interop_StatisticalProgram"];
     };
     /** QuarantinedSubmissionResponse */
     Interop_QuarantinedSubmissionResponse: {
@@ -23387,6 +28075,45 @@ export interface components {
        */
       updated_at: string;
     };
+    /**
+     * RawSensorReading 
+     * @description Single high-frequency biometric measurement data point.
+     */
+    Interop_RawSensorReading: {
+      /**
+       * Timestamp 
+       * Format: date-time 
+       * @description Raw device observation timestamp (pre-drift correction)
+       */
+      timestamp: string;
+      /**
+       * Metric Name 
+       * @description Metric name (e.g. glucose, step_count, heart_rate, fev1, fvc, systolic_bp, diastolic_bp)
+       */
+      metric_name: string;
+      /**
+       * Value 
+       * @description Numeric measurement value
+       */
+      value: number;
+      /**
+       * Unit 
+       * @description Standard measurement unit (e.g. mg/dL, mmol/L, steps, bpm, L, mmHg)
+       */
+      unit: string;
+      /**
+       * Flag 
+       * @description Raw sensor quality or status flag (e.g. VALID, NOISE, CAL_ERROR)
+       */
+      flag?: string | null;
+      /**
+       * Extra Attributes 
+       * @description Additional device-specific telemetry tags
+       */
+      extra_attributes?: {
+        [key: string]: unknown;
+      };
+    };
     /** ReplayQuarantinedSubmissionRequest */
     Interop_ReplayQuarantinedSubmissionRequest: {
       /**
@@ -23399,6 +28126,134 @@ export interface components {
        * @description Standard 21 CFR Part 11 compliant reason for the replay
        */
       change_reason: string;
+    };
+    /**
+     * RunADaMPipelineRequest 
+     * @description Request payload to execute ADaM derivation pipeline.
+     */
+    Interop_RunADaMPipelineRequest: {
+      /**
+       * Study Id 
+       * @description Study Identifier
+       */
+      study_id: string;
+      /**
+       * Snapshot Id 
+       * @description Optional snapshot ID
+       */
+      snapshot_id?: string | null;
+      /**
+       * Datasets 
+       * @description Optional list of specific ADaM datasets (ADSL, ADAE, ADTTE, BDS)
+       */
+      datasets?: (string)[] | null;
+      /**
+       * Reason For Change 
+       * @default ADaM dataset derivation execution
+       */
+      reason_for_change?: string;
+    };
+    /**
+     * RunContinuousPipelineRequest 
+     * @description Request payload to trigger end-to-end continuous CDISC SDTM/ADaM and Dataset-JSON/Define-XML pipeline.
+     */
+    Interop_RunContinuousPipelineRequest: {
+      /**
+       * Study Id 
+       * @description Unique Study Identifier (e.g. STUDY-001)
+       */
+      study_id: string;
+      /**
+       * Snapshot Id 
+       * @description Optional version-pinned snapshot ID to execute over
+       */
+      snapshot_id?: string | null;
+      /**
+       * Dataset Json Version 
+       * @description Target Dataset-JSON version ('1.0.0', '1.1.0', '2.0.0') 
+       * @default 1.1.0
+       */
+      dataset_json_version?: string;
+      /**
+       * Reason For Change 
+       * @description 21 CFR Part 11 required reason for change 
+       * @default Automated CDISC SDTM/ADaM pipeline continuous derivation run
+       */
+      reason_for_change?: string;
+    };
+    /**
+     * RunSDTMPipelineRequest 
+     * @description Request payload to execute SDTM mapping pipeline.
+     */
+    Interop_RunSDTMPipelineRequest: {
+      /**
+       * Study Id 
+       * @description Study Identifier
+       */
+      study_id: string;
+      /**
+       * Snapshot Id 
+       * @description Optional snapshot ID
+       */
+      snapshot_id?: string | null;
+      /**
+       * Domains 
+       * @description Optional list of specific SDTM domains (DM, AE, CM, VS, LB, EX, DS, TU, TR, RS)
+       */
+      domains?: (string)[] | null;
+      /**
+       * Reason For Change 
+       * @default SDTM domain mapping execution
+       */
+      reason_for_change?: string;
+    };
+    /**
+     * SDTMPipelineResponse 
+     * @description Response containing mapped SDTM domain records.
+     */
+    Interop_SDTMPipelineResponse: {
+      /** Study Id */
+      study_id: string;
+      /** Snapshot Id */
+      snapshot_id: string | null;
+      /** Domain Counts */
+      domain_counts: {
+        [key: string]: number | undefined;
+      };
+      /** Total Records */
+      total_records: number;
+      /** Domains */
+      domains: {
+        [key: string]: ({
+            [key: string]: unknown;
+          })[] | undefined;
+      };
+    };
+    /**
+     * SafetyAlertsResponse 
+     * @description Response containing automated safety threshold alerts.
+     */
+    Interop_SafetyAlertsResponse: {
+      /**
+       * Study Id 
+       * @description Study ID
+       */
+      study_id: string;
+      /**
+       * Total Count 
+       * @description Total alerts count
+       */
+      total_count: number;
+      /**
+       * Unacknowledged Count 
+       * @description Pending unacknowledged count
+       */
+      unacknowledged_count: number;
+      /**
+       * Alerts 
+       * @description Safety threshold alert entities
+       */
+      alerts?: (components["schemas"]["Interop_SensorSafetyAlert"])[];
     };
     /**
      * SemanticMappedItemDTO 
@@ -23445,6 +28300,701 @@ export interface components {
        * @default MAPPED
        */
       status?: string;
+    };
+    /**
+     * SensorAlertType 
+     * @description Automated safety threshold alert types. 
+     * @enum {string}
+     */
+    Interop_SensorAlertType: "SEVERE_HYPOGLYCEMIA" | "HYPOGLYCEMIA" | "SEVERE_HYPERGLYCEMIA" | "HYPERGLYCEMIA" | "EXTREME_TACHYCARDIA" | "TACHYCARDIA" | "SEVERE_BRADYCARDIA" | "BRADYCARDIA" | "HYPERTENSIVE_CRISIS" | "STAGE2_HYPERTENSION" | "SEVERE_HYPOTENSION" | "ACUTE_BRONCHOCONSTRICTION" | "DEVICE_CLOCK_DRIFT_EXCESSIVE" | "BATTERY_CRITICAL";
+    /**
+     * SensorDashboardMetrics 
+     * @description Aggregate real-time metrics for connected IoT sensors across a clinical study.
+     */
+    Interop_SensorDashboardMetrics: {
+      /**
+       * Study Id 
+       * @description Study ID
+       */
+      study_id: string;
+      /**
+       * Total Streams Ingested 
+       * @description Total stream batches ingested 
+       * @default 0
+       */
+      total_streams_ingested?: number;
+      /**
+       * Total Readings Ingested 
+       * @description Total individual readings 
+       * @default 0
+       */
+      total_readings_ingested?: number;
+      /**
+       * Active Devices Count 
+       * @description Registered active devices count 
+       * @default 0
+       */
+      active_devices_count?: number;
+      /**
+       * Device Breakdown 
+       * @description Active devices count per device type
+       */
+      device_breakdown?: {
+        [key: string]: number | undefined;
+      };
+      /**
+       * Total Safety Alerts 
+       * @description Total alerts triggered 
+       * @default 0
+       */
+      total_safety_alerts?: number;
+      /**
+       * Unacknowledged Alerts 
+       * @description Pending unacknowledged alerts 
+       * @default 0
+       */
+      unacknowledged_alerts?: number;
+      /**
+       * Mean Time In Range Percent 
+       * @description Study-wide mean CGM Time-in-Range percentage
+       */
+      mean_time_in_range_percent?: number | null;
+      /**
+       * Mean Daily Steps 
+       * @description Study-wide mean daily step count
+       */
+      mean_daily_steps?: number | null;
+      /**
+       * Mean Resting Hr Bpm 
+       * @description Study-wide mean resting heart rate
+       */
+      mean_resting_hr_bpm?: number | null;
+      /**
+       * Mean Fev1 Liters 
+       * @description Study-wide mean FEV1 in Liters
+       */
+      mean_fev1_liters?: number | null;
+      /**
+       * Last Telemetry Received At 
+       * @description Most recent telemetry ingestion timestamp
+       */
+      last_telemetry_received_at?: string | null;
+    };
+    /**
+     * SensorDeviceType 
+     * @description Supported medical IoT sensor device categories. 
+     * @enum {string}
+     */
+    Interop_SensorDeviceType: "CGM" | "ACTIGRAPHY" | "SPIROMETRY" | "BLOOD_PRESSURE" | "PULSE_OXIMETER" | "ECG";
+    /**
+     * SensorIngestResponse 
+     * @description Response returned upon continuous sensor telemetry ingestion.
+     */
+    Interop_SensorIngestResponse: {
+      /**
+       * Success 
+       * @default true
+       */
+      success?: boolean;
+      /** @description Telemetry ingestion processing result */
+      result: components["schemas"]["Interop_SensorIngestResult"];
+      /**
+       * Message 
+       * @description Status message 
+       * @default Biometric sensor telemetry ingested and normalized successfully
+       */
+      message?: string;
+    };
+    /**
+     * SensorIngestResult 
+     * @description Result of continuous IoT sensor telemetry ingestion.
+     */
+    Interop_SensorIngestResult: {
+      /**
+       * Stream Id 
+       * @description Ingestion stream UUID
+       */
+      stream_id?: string;
+      /**
+       * Study Id 
+       * @description Study protocol ID
+       */
+      study_id: string;
+      /**
+       * Subject Id Pseudonymized 
+       * @description Pseudonymized subject ID
+       */
+      subject_id_pseudonymized: string;
+      /**
+       * Device Token 
+       * @description GxP device identifier token
+       */
+      device_token: string;
+      /** @description Device category */
+      device_type: components["schemas"]["Interop_SensorDeviceType"];
+      /**
+       * Readings Ingested 
+       * @description Total readings processed
+       */
+      readings_ingested: number;
+      /**
+       * Clock Drift Offset Ms 
+       * @description Computed clock drift between device RTC and server (ms)
+       */
+      clock_drift_offset_ms: number;
+      /**
+       * Drift Corrected 
+       * @description Whether timestamps were drift-adjusted
+       */
+      drift_corrected: boolean;
+      /**
+       * Omh Data Points Count 
+       * @description Generated OMH standard packets count
+       */
+      omh_data_points_count: number;
+      /**
+       * Fhir Observations Count 
+       * @description Generated FHIR Observations count
+       */
+      fhir_observations_count: number;
+      /**
+       * Safety Alerts Triggered 
+       * @description Automated safety threshold alerts triggered
+       */
+      safety_alerts_triggered?: (components["schemas"]["Interop_SensorSafetyAlert"])[];
+      /** @description Calculated aggregate daily summary endpoints */
+      daily_summary?: components["schemas"]["Interop_DailySummaryEndpoints"] | null;
+      /**
+       * Lakehouse Record Ids 
+       * @description Canonical clinical record IDs fed to CDR Lakehouse
+       */
+      lakehouse_record_ids?: (string)[];
+      /**
+       * Data Hash 
+       * @description SHA-256 cryptographic stream seal
+       */
+      data_hash: string;
+      /**
+       * Ingested At 
+       * Format: date-time 
+       * @description Ingestion timestamp
+       */
+      ingested_at?: string;
+    };
+    /**
+     * SensorIngestStreamPayload 
+     * @description High-frequency continuous biometric telemetry ingestion stream payload.
+     */
+    Interop_SensorIngestStreamPayload: {
+      /**
+       * Study Id 
+       * @description Clinical trial protocol ID (e.g. STUDY-901)
+       */
+      study_id: string;
+      /**
+       * Site Id 
+       * @description Clinical site identifier
+       */
+      site_id?: string | null;
+      /**
+       * Subject Id 
+       * @description Participant identifier (raw or pseudonymized)
+       */
+      subject_id: string;
+      /** @description Medical IoT device category (CGM, ACTIGRAPHY, SPIROMETRY, BLOOD_PRESSURE) */
+      device_type: components["schemas"]["Interop_SensorDeviceType"];
+      /**
+       * Vendor 
+       * @description Device manufacturer/vendor (e.g. Dexcom, Abbott, ActiGraph, MIR, Omron)
+       */
+      vendor: string;
+      /**
+       * Model Name 
+       * @description Device model name (e.g. G7, FreeStyle Libre 3, wGT3X-BT, Spirobank Smart)
+       */
+      model_name: string;
+      /**
+       * Device Udi 
+       * @description FDA Unique Device Identifier (UDI) barcode/string
+       */
+      device_udi?: string | null;
+      /**
+       * Mac Address 
+       * @description Bluetooth Low Energy (BLE) MAC address (e.g. 00:1A:7D:DA:71:13)
+       */
+      mac_address?: string | null;
+      /**
+       * Serial Number 
+       * @description Device hardware serial number
+       */
+      serial_number?: string | null;
+      /**
+       * Firmware Version 
+       * @description Device firmware build version
+       */
+      firmware_version?: string | null;
+      /**
+       * Device Sync Timestamp 
+       * Format: date-time 
+       * @description Timestamp reported by device RTC at the synchronization moment
+       */
+      device_sync_timestamp: string;
+      /**
+       * Gateway Receive Timestamp 
+       * Format: date-time 
+       * @description Authoritative UTC timestamp when gateway received the payload
+       */
+      gateway_receive_timestamp: string;
+      /**
+       * Readings 
+       * @description Batch of high-frequency sensor readings
+       */
+      readings: (components["schemas"]["Interop_RawSensorReading"])[];
+      /**
+       * Feed To Lakehouse 
+       * @description Whether to automatically feed normalized records to CDR Lakehouse 
+       * @default true
+       */
+      feed_to_lakehouse?: boolean;
+      /**
+       * Reason For Change 
+       * @description GxP audit trail justification 
+       * @default Continuous IoT biometric sensor stream ingestion
+       */
+      reason_for_change?: string;
+    };
+    /**
+     * SensorMetricsResponse 
+     * @description Response containing real-time IoT sensor telemetry metrics.
+     */
+    Interop_SensorMetricsResponse: {
+      /** @description Aggregated study-wide sensor metrics */
+      metrics: components["schemas"]["Interop_SensorDashboardMetrics"];
+    };
+    /**
+     * SensorSafetyAlert 
+     * @description Automated biometric safety threshold alert.
+     */
+    Interop_SensorSafetyAlert: {
+      /**
+       * Alert Id 
+       * @description Unique alert identifier
+       */
+      alert_id?: string;
+      /**
+       * Study Id 
+       * @description Study ID
+       */
+      study_id: string;
+      /**
+       * Site Id 
+       * @description Site ID
+       */
+      site_id?: string | null;
+      /**
+       * Subject Id 
+       * @description Pseudonymized subject ID
+       */
+      subject_id: string;
+      /** @description Device category */
+      device_type: components["schemas"]["Interop_SensorDeviceType"];
+      /**
+       * Device Token 
+       * @description Device token
+       */
+      device_token: string;
+      /** @description Alert classification */
+      alert_type: components["schemas"]["Interop_SensorAlertType"];
+      /** @description Alert severity level */
+      severity: components["schemas"]["Interop_AlertSeverity"];
+      /**
+       * Parameter Name 
+       * @description Breached parameter (e.g. glucose, heart_rate, fev1, systolic_bp)
+       */
+      parameter_name: string;
+      /**
+       * Observed Value 
+       * @description Actual observed measurement
+       */
+      observed_value: number;
+      /**
+       * Threshold Value 
+       * @description Clinical safety limit breached
+       */
+      threshold_value: number;
+      /**
+       * Unit 
+       * @description Measurement unit
+       */
+      unit: string;
+      /**
+       * Triggered At 
+       * Format: date-time 
+       * @description Timestamp of breach (drift-corrected UTC)
+       */
+      triggered_at: string;
+      /**
+       * Is Acknowledged 
+       * @description Investigator acknowledgment flag 
+       * @default false
+       */
+      is_acknowledged?: boolean;
+      /**
+       * Acknowledged By 
+       * @description User ID of acknowledging clinician
+       */
+      acknowledged_by?: string | null;
+      /**
+       * Acknowledged At 
+       * @description Timestamp of acknowledgment
+       */
+      acknowledged_at?: string | null;
+      /**
+       * Acknowledgment Notes 
+       * @description Clinical justification notes
+       */
+      acknowledgment_notes?: string | null;
+      /**
+       * Audit Signature 
+       * @description Cryptographic Part 11 signature seal
+       */
+      audit_signature?: string | null;
+      /**
+       * Notified Roles 
+       * @description Clinical roles alerted
+       */
+      notified_roles?: (string)[];
+    };
+    /**
+     * SnapshotAuditTrailResponse 
+     * @description Response containing 21 CFR Part 11 immutable audit trail entries for a snapshot.
+     */
+    Interop_SnapshotAuditTrailResponse: {
+      /**
+       * Snapshot Id 
+       * @description Snapshot identifier
+       */
+      snapshot_id: string;
+      /**
+       * Audit Entries 
+       * @description Audit trail entries
+       */
+      audit_entries?: ({
+          [key: string]: unknown;
+        })[];
+      /**
+       * Total Entries 
+       * @description Total audit records 
+       * @default 0
+       */
+      total_entries?: number;
+    };
+    /**
+     * SnapshotDataQueryRequest 
+     * @description Request payload for querying observations inside a version-pinned snapshot pool.
+     */
+    Interop_SnapshotDataQueryRequest: {
+      /** @description Optional slice and filter criteria */
+      filter_criteria?: components["schemas"]["Interop_SnapshotFilterCriteria"] | null;
+      /**
+       * Request Unblinded 
+       * @description Whether caller requests unblinded access (requires role) 
+       * @default false
+       */
+      request_unblinded?: boolean;
+    };
+    /**
+     * SnapshotDataQueryResponse 
+     * @description Response containing pooled canonical observations from a snapshot.
+     */
+    Interop_SnapshotDataQueryResponse: {
+      /**
+       * Snapshot Id 
+       * @description Snapshot identifier
+       */
+      snapshot_id: string;
+      /**
+       * Sha256 Digest 
+       * @description Cryptographic SHA-256 seal of snapshot pool
+       */
+      sha256_digest: string;
+      /**
+       * Total Records 
+       * @description Count of records returned 
+       * @default 0
+       */
+      total_records?: number;
+      /**
+       * Is Masked 
+       * @description True if any unblinded records were masked for blinded role 
+       * @default false
+       */
+      is_masked?: boolean;
+      /**
+       * Masked Count 
+       * @description Count of unblinded records masked 
+       * @default 0
+       */
+      masked_count?: number;
+      /**
+       * Records 
+       * @description Harmonized clinical records
+       */
+      records?: (components["schemas"]["Interop_CanonicalClinicalRecord"])[];
+    };
+    /**
+     * SnapshotFilterCriteria 
+     * @description Filter criteria used when generating or querying a version-pinned snapshot.
+     */
+    Interop_SnapshotFilterCriteria: {
+      /**
+       * Subject Ids 
+       * @description Optional filter by subject IDs
+       */
+      subject_ids?: (string)[] | null;
+      /**
+       * Site Ids 
+       * @description Optional filter by site IDs
+       */
+      site_ids?: (string)[] | null;
+      /**
+       * Stream Types 
+       * @description Filter by stream types
+       */
+      stream_types?: (components["schemas"]["Interop_DataStreamType"])[] | null;
+      /**
+       * Domains 
+       * @description Filter by CDISC domains
+       */
+      domains?: (string)[] | null;
+      /**
+       * Cutoff Datetime 
+       * @description Upper bound timestamp cutoff for snapshot pooling
+       */
+      cutoff_datetime?: string | null;
+      /**
+       * Include Unblinded 
+       * @description Whether to request unblinded records (requires unblinded role) 
+       * @default false
+       */
+      include_unblinded?: boolean;
+    };
+    /**
+     * SnapshotListResponse 
+     * @description Response containing list of snapshots for a study.
+     */
+    Interop_SnapshotListResponse: {
+      /**
+       * Study Id 
+       * @description Study identifier
+       */
+      study_id: string;
+      /**
+       * Snapshots 
+       * @description List of version-pinned snapshots
+       */
+      snapshots?: (components["schemas"]["Interop_ClinicalSnapshot"])[];
+      /**
+       * Total 
+       * @description Total snapshots found 
+       * @default 0
+       */
+      total?: number;
+    };
+    /**
+     * SnapshotResponse 
+     * @description Response containing created or retrieved snapshot details.
+     */
+    Interop_SnapshotResponse: {
+      /** @description Snapshot metadata and cryptographic seal */
+      snapshot: components["schemas"]["Interop_ClinicalSnapshot"];
+      /**
+       * Message 
+       * @description Status message 
+       * @default Snapshot created and sealed successfully
+       */
+      message?: string;
+    };
+    /**
+     * SnapshotVerificationResult 
+     * @description Result of cryptographic SHA-256 integrity verification against a sealed snapshot.
+     */
+    Interop_SnapshotVerificationResult: {
+      /**
+       * Snapshot Id 
+       * @description Verified snapshot identifier
+       */
+      snapshot_id: string;
+      /**
+       * Version Tag 
+       * @description Snapshot version tag
+       */
+      version_tag: string;
+      /**
+       * Stored Digest 
+       * @description SHA-256 digest recorded at snapshot sealing
+       */
+      stored_digest: string;
+      /**
+       * Computed Digest 
+       * @description SHA-256 digest dynamically recomputed over pool
+       */
+      computed_digest: string;
+      /**
+       * Is Valid 
+       * @description Whether digests match bit-for-bit (True = untampered)
+       */
+      is_valid: boolean;
+      /**
+       * Record Count 
+       * @description Total verified record count
+       */
+      record_count: number;
+      /**
+       * Verified At 
+       * Format: date-time 
+       * @description Verification timestamp
+       */
+      verified_at?: string;
+      /**
+       * Verified By 
+       * @description User ID performing verification
+       */
+      verified_by: string;
+      /**
+       * Verification Message 
+       * @description Detailed integrity verification message
+       */
+      verification_message: string;
+    };
+    /**
+     * SpirometryDailySummary 
+     * @description Standard digital spirometry daily summary endpoints.
+     */
+    Interop_SpirometryDailySummary: {
+      /**
+       * Best Fev1 Liters 
+       * @description Highest Forced Expiratory Volume in 1 second (Liters)
+       */
+      best_fev1_liters: number;
+      /**
+       * Best Fvc Liters 
+       * @description Highest Forced Vital Capacity (Liters)
+       */
+      best_fvc_liters: number;
+      /**
+       * Fev1 Fvc Ratio 
+       * @description FEV1 / FVC ratio (Tiffeneau-Pinelli index)
+       */
+      fev1_fvc_ratio: number;
+      /**
+       * Fev1 Percent Predicted 
+       * @description FEV1 percent of predicted reference baseline (%)
+       */
+      fev1_percent_predicted: number;
+      /**
+       * Peak Expiratory Flow L Min 
+       * @description Peak Expiratory Flow in Liters per minute
+       */
+      peak_expiratory_flow_l_min: number;
+      /**
+       * Maneuver Count 
+       * @description Total acceptable spirometry maneuvers
+       */
+      maneuver_count: number;
+      /**
+       * Session Quality Grade 
+       * @description ATS/ERS session quality grade (A, B, C, D, F) 
+       * @default A
+       */
+      session_quality_grade?: string;
+    };
+    /**
+     * StatisticalProgram 
+     * @description Version-controlled, validated statistical program definition.
+     */
+    Interop_StatisticalProgram: {
+      /**
+       * Program Id 
+       * @description Unique program identifier
+       */
+      program_id?: string;
+      /**
+       * Study Id 
+       * @description Associated clinical study identifier
+       */
+      study_id: string;
+      /**
+       * Name 
+       * @description Program script filename (e.g. t_14_1_demog.py)
+       */
+      name: string;
+      /**
+       * Title 
+       * @description Descriptive program title
+       */
+      title: string;
+      /**
+       * Description 
+       * @description Detailed explanation of statistical analysis 
+       * @default
+       */
+      description?: string;
+      /** @description Runtime language (PYTHON or R) */
+      language: components["schemas"]["Interop_ExecutionLanguage"];
+      /**
+       * Version 
+       * @description Semantic version string 
+       * @default 1.0.0
+       */
+      version?: string;
+      /**
+       * Source Code 
+       * @description Validated script source code
+       */
+      source_code: string;
+      /**
+       * Code Hash 
+       * @description SHA-256 hash of the script source code
+       */
+      code_hash: string;
+      /**
+       * Lockfile Content 
+       * @description Raw package lockfile text (uv.lock / renv.lock)
+       */
+      lockfile_content?: string | null;
+      /**
+       * @description Lockfile format 
+       * @default UV_LOCK
+       */
+      lock_type?: components["schemas"]["Interop_PackageLockType"];
+      /**
+       * Lock Digest 
+       * @description SHA-256 hash of normalized package lockfile
+       */
+      lock_digest: string;
+      /**
+       * Target Domain 
+       * @description Target CDISC output domain (e.g. ADSL, TLF-14.1)
+       */
+      target_domain?: string | null;
+      /**
+       * Created By 
+       * @description Authoring biostatistician user ID
+       */
+      created_by: string;
+      /**
+       * Created At 
+       * Format: date-time 
+       * @description Creation timestamp
+       */
+      created_at?: string;
+      /**
+       * Reason For Change 
+       * @description GxP change rationale (21 CFR Part 11) 
+       * @default Initial program authoring
+       */
+      reason_for_change?: string;
     };
     /** SubjectAssignmentCreateDTO */
     Interop_SubjectAssignmentCreateDTO: {
@@ -23573,6 +29123,85 @@ export interface components {
       /** Version Index */
       version_index: number;
     };
+    /**
+     * ValidateDatasetJSONRequest 
+     * @description Request payload for validating Dataset-JSON.
+     */
+    Interop_ValidateDatasetJSONRequest: {
+      /**
+       * Payload 
+       * @description Dataset-JSON document or dictionary
+       */
+      payload: {
+        [key: string]: unknown;
+      } | string;
+      [key: string]: unknown;
+    };
+    /**
+     * ValidateDatasetJSONResponse 
+     * @description Validation response for Dataset-JSON.
+     */
+    Interop_ValidateDatasetJSONResponse: {
+      /** Is Valid */
+      is_valid: boolean;
+      /** Errors */
+      errors?: (string)[];
+      /** Warnings */
+      warnings?: (string)[];
+      /**
+       * Dataset Count 
+       * @default 0
+       */
+      dataset_count?: number;
+      /**
+       * Record Count 
+       * @default 0
+       */
+      record_count?: number;
+    };
+    /**
+     * ValidateDefineXMLRequest 
+     * @description Request payload for validating Define-XML 2.1.
+     */
+    Interop_ValidateDefineXMLRequest: {
+      /**
+       * Xml Content 
+       * @description Define-XML document string
+       */
+      xml_content: string;
+    };
+    /**
+     * ValidateLockfileRequest 
+     * @description Request payload to validate package lockfile integrity and GxP qualification.
+     */
+    Interop_ValidateLockfileRequest: {
+      /** @description Format: UV_LOCK, RENV_LOCK, or REQUIREMENTS_TXT */
+      lock_type: components["schemas"]["Interop_PackageLockType"];
+      /**
+       * Content 
+       * @description Raw text content of lockfile
+       */
+      content: string;
+      /**
+       * Expected Digest 
+       * @description Optional SHA-256 digest to assert immutability
+       */
+      expected_digest?: string | null;
+      /**
+       * Strict Qualification 
+       * @description Enforce strict package whitelist validation 
+       * @default false
+       */
+      strict_qualification?: boolean;
+    };
+    /**
+     * ValidateLockfileResponse 
+     * @description Response containing lockfile parsing and cryptographic verification results.
+     */
+    Interop_ValidateLockfileResponse: {
+      /** @description Verification result */
+      result: components["schemas"]["Interop_PackageLockValidationResult"];
+    };
     /** ValidationError */
     Interop_ValidationError: {
       /** Location */
@@ -23585,6 +29214,27 @@ export interface components {
       input?: unknown;
       /** Context */
       ctx?: Record<string, never>;
+    };
+    /**
+     * VerifyManifestResponse 
+     * @description Response containing cryptographic manifest seal verification results.
+     */
+    Interop_VerifyManifestResponse: {
+      /**
+       * Result 
+       * @description Verification summary and cryptographic checks
+       */
+      result: {
+        [key: string]: unknown;
+      };
+    };
+    /**
+     * VerifySnapshotResponse 
+     * @description Response for cryptographic SHA-256 integrity verification.
+     */
+    Interop_VerifySnapshotResponse: {
+      /** @description Integrity verification result */
+      result: components["schemas"]["Interop_SnapshotVerificationResult"];
     };
     /**
      * ArticleApproveRequest 
@@ -23814,6 +29464,44 @@ export interface components {
       reason_for_change: string;
     };
     /**
+     * AssignCurriculumRequest 
+     * @description Payload to assign a curriculum to a site user.
+     */
+    Knowledge_AssignCurriculumRequest: {
+      /**
+       * Study Id 
+       * @description Clinical study ID
+       */
+      study_id: string;
+      /**
+       * Site Id 
+       * @description Clinical site ID
+       */
+      site_id: string;
+      /**
+       * User Id 
+       * @description Participant user ID
+       */
+      user_id: string;
+      /**
+       * User Name 
+       * @description Participant legal printed name
+       */
+      user_name: string;
+      /**
+       * User Role 
+       * @description Participant clinical role 
+       * @default Principal Investigator
+       */
+      user_role?: string;
+      /**
+       * Reason For Change 
+       * @description GxP reason for change 
+       * @default Assign mandatory training curriculum
+       */
+      reason_for_change?: string;
+    };
+    /**
      * AuditChainVerificationResponse 
      * @description Response schema for cryptographic audit ledger chain verification.
      */
@@ -23943,6 +29631,55 @@ export interface components {
       version_index: number;
     };
     /**
+     * CertificateResponse 
+     * @description Response payload for a verified training completion certificate.
+     */
+    Knowledge_CertificateResponse: {
+      /** Id */
+      id: string;
+      /** Assignment Id */
+      assignment_id: string;
+      /** Curriculum Id */
+      curriculum_id: string;
+      /** Study Id */
+      study_id: string;
+      /** Site Id */
+      site_id: string;
+      /** User Id */
+      user_id: string;
+      /** User Name */
+      user_name: string;
+      /** User Role */
+      user_role: string;
+      /** Protocol Version */
+      protocol_version: string;
+      /** Score Achieved */
+      score_achieved: number;
+      /** Time Spent Seconds */
+      time_spent_seconds: number;
+      /** Signature Manifestation */
+      signature_manifestation: {
+        [key: string]: unknown;
+      };
+      /** Sha256 Seal */
+      sha256_seal: string;
+      /** Pdf Base64 */
+      pdf_base64?: string | null;
+      /** Etmf Doc Id */
+      etmf_doc_id?: string | null;
+      /** Eisf Doc Id */
+      eisf_doc_id?: string | null;
+      /** Routed To Etmf */
+      routed_to_etmf: boolean;
+      /** Routed To Eisf */
+      routed_to_eisf: boolean;
+      /**
+       * Created At 
+       * Format: date-time
+       */
+      created_at: string;
+    };
+    /**
      * ContextualHelpMappingCreate 
      * @description Request body for creating a contextual help mapping.
      */
@@ -24036,6 +29773,54 @@ export interface components {
       related_articles?: (components["schemas"]["Knowledge_ArticleResponse"])[];
       article?: components["schemas"]["Knowledge_ArticleResponse"] | null;
       version?: components["schemas"]["Knowledge_ArticleVersionResponse"] | null;
+    };
+    /**
+     * GenerateAmendmentCurriculumRequest 
+     * @description Payload to generate a delta-training curriculum from protocol amendment snapshots.
+     */
+    Knowledge_GenerateAmendmentCurriculumRequest: {
+      /**
+       * Study Id 
+       * @description Unique clinical study identifier
+       */
+      study_id: string;
+      /**
+       * Protocol Version 
+       * @description Amended protocol version string (e.g. '2.0')
+       */
+      protocol_version: string;
+      /**
+       * Baseline Snapshot 
+       * @description Baseline USDM protocol snapshot
+       */
+      baseline_snapshot: {
+        [key: string]: unknown;
+      };
+      /**
+       * Amended Snapshot 
+       * @description Amended USDM protocol snapshot
+       */
+      amended_snapshot: {
+        [key: string]: unknown;
+      };
+      /**
+       * Target Roles 
+       * @description Optional target roles list
+       */
+      target_roles?: (string)[] | null;
+      /**
+       * Site Assignments 
+       * @description Optional list of site personnel dictionaries to auto-assign
+       */
+      site_assignments?: (({
+          [key: string]: string | undefined;
+        })[]) | null;
+      /**
+       * Reason For Change 
+       * @description 21 CFR Part 11 justification 
+       * @default Generate delta-training curriculum for protocol amendment
+       */
+      reason_for_change?: string;
     };
     /** HTTPValidationError */
     Knowledge_HTTPValidationError: {
@@ -24179,6 +29964,271 @@ export interface components {
       /** Citation Marker */
       citation_marker: string;
     };
+    /**
+     * QualificationGateResult 
+     * @description Result of an EDC write-permission qualification check.
+     */
+    Knowledge_QualificationGateResult: {
+      /**
+       * Is Qualified 
+       * @description True if all mandatory protocol training is verified
+       */
+      is_qualified: boolean;
+      /**
+       * User Id 
+       * @description Evaluated user ID
+       */
+      user_id: string;
+      /**
+       * Study Id 
+       * @description Evaluated clinical study ID
+       */
+      study_id: string;
+      /**
+       * Protocol Version 
+       * @description Active protocol version tag
+       */
+      protocol_version: string;
+      /**
+       * Site Id 
+       * @description Optional clinical site ID
+       */
+      site_id?: string | null;
+      /**
+       * Blocked Reason 
+       * @description Explanation when write access is gated/blocked
+       */
+      blocked_reason?: string | null;
+      /**
+       * Pending Curricula 
+       * @description List of incomplete mandatory training curricula
+       */
+      pending_curricula?: ({
+          [key: string]: unknown;
+        })[];
+    };
+    /**
+     * QuizEvaluationResponse 
+     * @description Result of evaluating a comprehension quiz submission.
+     */
+    Knowledge_QuizEvaluationResponse: {
+      /** Score Percentage */
+      score_percentage: number;
+      /** Passed */
+      passed: boolean;
+      /** Passing Threshold */
+      passing_threshold: number;
+      /** Total Questions */
+      total_questions: number;
+      /** Correct Count */
+      correct_count: number;
+      /** Feedback */
+      feedback?: ({
+          [key: string]: unknown;
+        })[];
+    };
+    /**
+     * RecordProgressRequest 
+     * @description Payload to record time-on-page reading progress.
+     */
+    Knowledge_RecordProgressRequest: {
+      /**
+       * Time Spent Delta Seconds 
+       * @description Seconds spent in active training
+       */
+      time_spent_delta_seconds: number;
+      /**
+       * Reason For Change 
+       * @description GxP reason for change 
+       * @default Record training time-on-page progress
+       */
+      reason_for_change?: string;
+    };
+    /**
+     * SignTrainingRequest 
+     * @description Payload for 21 CFR Part 11 digital sign-off of completed training.
+     */
+    Knowledge_SignTrainingRequest: {
+      /**
+       * Signer Name 
+       * @description Legal printed name of signer
+       */
+      signer_name: string;
+      /**
+       * Signer Role 
+       * @description Clinical role (e.g. Principal Investigator, CRC)
+       */
+      signer_role: string;
+      /**
+       * Meaning 
+       * @description 21 CFR Part 11 signature intent statement 
+       * @default I certify that I have reviewed, understood, and agree to execute clinical procedures in accordance with this approved protocol curriculum.
+       */
+      meaning?: string;
+      /**
+       * Reason For Change 
+       * @description GxP reason for change 
+       * @default 21 CFR Part 11 digital sign-off on training completion
+       */
+      reason_for_change?: string;
+    };
+    /**
+     * SubmitQuizRequest 
+     * @description Payload for submitting comprehension quiz answers.
+     */
+    Knowledge_SubmitQuizRequest: {
+      /**
+       * Answers 
+       * @description Dictionary mapping question ID to selected 0-indexed option
+       */
+      answers: {
+        [key: string]: number | undefined;
+      };
+      /**
+       * Reason For Change 
+       * @description GxP reason for change 
+       * @default Submit comprehension quiz for qualification
+       */
+      reason_for_change?: string;
+    };
+    /**
+     * TrainingAssignmentDetailResponse 
+     * @description Detailed assignment payload including the parent curriculum and modules.
+     */
+    Knowledge_TrainingAssignmentDetailResponse: {
+      /** Id */
+      id: string;
+      /** Curriculum Id */
+      curriculum_id: string;
+      /** Study Id */
+      study_id: string;
+      /** Site Id */
+      site_id: string;
+      /** User Id */
+      user_id: string;
+      /** User Name */
+      user_name: string;
+      /** User Role */
+      user_role: string;
+      /** Status */
+      status: string;
+      /** Time Spent Seconds */
+      time_spent_seconds: number;
+      /** Quiz Score */
+      quiz_score?: number | null;
+      /** Attempts Count */
+      attempts_count: number;
+      /** Completed At */
+      completed_at?: string | null;
+      /** Certificate Id */
+      certificate_id?: string | null;
+      /**
+       * Created At 
+       * Format: date-time
+       */
+      created_at: string;
+      curriculum?: components["schemas"]["Knowledge_TrainingCurriculumResponse"] | null;
+    };
+    /**
+     * TrainingAssignmentResponse 
+     * @description Response payload for a user's training assignment.
+     */
+    Knowledge_TrainingAssignmentResponse: {
+      /** Id */
+      id: string;
+      /** Curriculum Id */
+      curriculum_id: string;
+      /** Study Id */
+      study_id: string;
+      /** Site Id */
+      site_id: string;
+      /** User Id */
+      user_id: string;
+      /** User Name */
+      user_name: string;
+      /** User Role */
+      user_role: string;
+      /** Status */
+      status: string;
+      /** Time Spent Seconds */
+      time_spent_seconds: number;
+      /** Quiz Score */
+      quiz_score?: number | null;
+      /** Attempts Count */
+      attempts_count: number;
+      /** Completed At */
+      completed_at?: string | null;
+      /** Certificate Id */
+      certificate_id?: string | null;
+      /**
+       * Created At 
+       * Format: date-time
+       */
+      created_at: string;
+    };
+    /**
+     * TrainingCurriculumResponse 
+     * @description Response payload for a training curriculum.
+     */
+    Knowledge_TrainingCurriculumResponse: {
+      /** Id */
+      id: string;
+      /** Study Id */
+      study_id: string;
+      /** Protocol Version */
+      protocol_version: string;
+      /** Title */
+      title: string;
+      /** Description */
+      description: string;
+      /** Target Roles */
+      target_roles: (string)[];
+      /** Is Mandatory */
+      is_mandatory: boolean;
+      /** Passing Score */
+      passing_score: number;
+      /** Min Reading Time Seconds */
+      min_reading_time_seconds: number;
+      /** Is Active */
+      is_active: boolean;
+      /** Modules */
+      modules?: (components["schemas"]["Knowledge_TrainingModuleSummary"])[];
+      /**
+       * Created At 
+       * Format: date-time
+       */
+      created_at: string;
+      /** Created By */
+      created_by: string;
+    };
+    /**
+     * TrainingModuleSummary 
+     * @description DTO summarizing a training module.
+     */
+    Knowledge_TrainingModuleSummary: {
+      /** Id */
+      id: string;
+      /** Curriculum Id */
+      curriculum_id: string;
+      /** Title */
+      title: string;
+      /** Module Type */
+      module_type: string;
+      /** Content Text */
+      content_text: string;
+      /** Video Url */
+      video_url?: string | null;
+      /** Document Reference */
+      document_reference?: string | null;
+      /** Order Index */
+      order_index: number;
+      /** Min Reading Time Seconds */
+      min_reading_time_seconds: number;
+      /** Quiz Questions */
+      quiz_questions?: ({
+          [key: string]: unknown;
+        })[];
+    };
     /** ValidationError */
     Knowledge_ValidationError: {
       /** Location */
@@ -24191,6 +30241,37 @@ export interface components {
       input?: unknown;
       /** Context */
       ctx?: Record<string, never>;
+    };
+    /**
+     * VerifyGateRequest 
+     * @description Request payload to verify EDC write-gating status.
+     */
+    Knowledge_VerifyGateRequest: {
+      /**
+       * User Id 
+       * @description User ID to verify
+       */
+      user_id: string;
+      /**
+       * Study Id 
+       * @description Clinical study identifier
+       */
+      study_id: string;
+      /**
+       * Protocol Version 
+       * @description Active protocol version tag
+       */
+      protocol_version: string;
+      /**
+       * Site Id 
+       * @description Optional clinical site ID
+       */
+      site_id?: string | null;
+      /**
+       * User Role 
+       * @description Optional user clinical role
+       */
+      user_role?: string | null;
     };
     /** HTTPValidationError */
     Notifications_HTTPValidationError: {
@@ -26115,6 +32196,49 @@ export interface components {
        */
       scope_summary: string;
     };
+    /** AuditEventPayload */
+    Quality_AuditEventPayload: {
+      /**
+       * Entry Id 
+       * @description Audit event identifier
+       */
+      entry_id: string;
+      /**
+       * Subject Id 
+       * @description Subject identifier
+       */
+      subject_id: string;
+      /**
+       * Site Id 
+       * @description Site identifier
+       */
+      site_id: string;
+      /**
+       * User Id 
+       * @description User identifier
+       */
+      user_id: string;
+      /**
+       * Timestamp 
+       * @description ISO datetime timestamp of event
+       */
+      timestamp: string;
+      /**
+       * Assessment Type 
+       * @description Assessment or form type
+       */
+      assessment_type: string;
+      /**
+       * Procedure Pair 
+       * @description Procedure pair identifier for elapsed interval evaluation
+       */
+      procedure_pair?: string | null;
+      /**
+       * Elapsed Time Seconds 
+       * @description Inter-procedure elapsed interval in seconds
+       */
+      elapsed_time_seconds?: number | null;
+    };
     /** AuditFindingCreate */
     Quality_AuditFindingCreate: {
       /**
@@ -26621,6 +32745,84 @@ export interface components {
        */
       version_index?: number | null;
     };
+    /** CSMDossierResponse */
+    Quality_CSMDossierResponse: {
+      /** Id */
+      id: string;
+      /** Study Id */
+      study_id: string;
+      /** Dossier Name */
+      dossier_name: string;
+      /** Generated At */
+      generated_at: string;
+      /** Generated By */
+      generated_by: string;
+      /** Status */
+      status: string;
+      /** Ract Summary */
+      ract_summary: {
+        [key: string]: unknown;
+      };
+      /** Kri Surveillance Summary */
+      kri_surveillance_summary: {
+        [key: string]: unknown;
+      };
+      /** Site Risk Rankings */
+      site_risk_rankings: ({
+          [key: string]: unknown;
+        })[];
+      /** Anomaly Forensics Summary */
+      anomaly_forensics_summary: {
+        [key: string]: unknown;
+      };
+      /** Electronic Signature */
+      electronic_signature: {
+        [key: string]: unknown;
+      };
+      /** Audit Trail Snapshot */
+      audit_trail_snapshot: ({
+          [key: string]: unknown;
+        })[];
+      /** Merkle Seal */
+      merkle_seal?: string | null;
+      /** Created At */
+      created_at: string;
+      /** Created By */
+      created_by: string;
+      /** Version Index */
+      version_index: number;
+      /** Reason For Change */
+      reason_for_change: string;
+    };
+    /** CompileCSMDossierRequest */
+    Quality_CompileCSMDossierRequest: {
+      /**
+       * Study Id 
+       * @description Clinical study ID
+       */
+      study_id: string;
+      /**
+       * Dossier Name 
+       * @description Custom name for the compiled inspection dossier
+       */
+      dossier_name?: string | null;
+      /**
+       * Signer Name 
+       * @description Full legal name of the reviewing signer
+       */
+      signer_name: string;
+      /**
+       * Signer Role 
+       * @description Role of the signer (e.g. Lead Central Monitor / QA Lead)
+       */
+      signer_role: string;
+      /**
+       * Signature Meaning 
+       * @description 21 CFR Part 11 controlled signing statement 
+       * @default I approve this Centralized Monitoring Inspection Dossier in accordance with 21 CFR Part 11 and ICH E6(R3).
+       */
+      signature_meaning?: string;
+    };
     /** CtQFactorCreate */
     Quality_CtQFactorCreate: {
       /**
@@ -26679,6 +32881,207 @@ export interface components {
       version_index: number;
       /** Reason For Change */
       reason_for_change: string;
+    };
+    /** DataIntegrityComprehensiveScanRequest */
+    Quality_DataIntegrityComprehensiveScanRequest: {
+      /**
+       * Study Id 
+       * @description Study ID
+       */
+      study_id: string;
+      /**
+       * Subjects 
+       * @description Baseline clinical subject vectors
+       */
+      subjects?: (components["schemas"]["Quality_SubjectClinicalVectorPayload"])[] | null;
+      /**
+       * Audit Events 
+       * @description Data entry audit events
+       */
+      audit_events?: (components["schemas"]["Quality_AuditEventPayload"])[] | null;
+      /**
+       * Image Attachments 
+       * @description Medical image attachments
+       */
+      image_attachments?: (components["schemas"]["Quality_ImageAttachmentPayload"])[] | null;
+      /**
+       * Auto Dispatch Investigation 
+       * @description Automatically dispatch Part 11 investigation deviation for critical findings 
+       * @default true
+       */
+      auto_dispatch_investigation?: boolean;
+    };
+    /** DataIntegrityFindingResponse */
+    Quality_DataIntegrityFindingResponse: {
+      /** Id */
+      id: string;
+      /** Run Id */
+      run_id: string;
+      /** Study Id */
+      study_id: string;
+      sentinel_type: components["schemas"]["Quality_DataIntegritySentinelType"];
+      severity: components["schemas"]["Quality_DeviationSeverity"];
+      anomaly_flag: components["schemas"]["Quality_ForensicsAnomalyFlag"];
+      /** Primary Subject Id */
+      primary_subject_id: string;
+      /** Primary Site Id */
+      primary_site_id: string;
+      /** Matched Subject Id */
+      matched_subject_id?: string | null;
+      /** Matched Site Id */
+      matched_site_id?: string | null;
+      /** Confidence Score */
+      confidence_score: number;
+      /** Similarity Score */
+      similarity_score: number;
+      /** Hamming Distance */
+      hamming_distance?: number | null;
+      transformation_type?: components["schemas"]["Quality_ImageTransformationType"] | null;
+      /** Evidence Summary */
+      evidence_summary: string;
+      /** Forensic Metadata */
+      forensic_metadata: {
+        [key: string]: unknown;
+      };
+      /** Investigation Deviation Id */
+      investigation_deviation_id?: string | null;
+      /** Kri Evaluation Id */
+      kri_evaluation_id?: string | null;
+      status: components["schemas"]["Quality_DataIntegrityFindingStatus"];
+      /** Created At */
+      created_at: string;
+      /** Created By */
+      created_by: string;
+      /** Version Index */
+      version_index: number;
+      /** Reason For Change */
+      reason_for_change: string;
+    };
+    /**
+     * DataIntegrityFindingStatus 
+     * @enum {string}
+     */
+    Quality_DataIntegrityFindingStatus: "CONFIRMED" | "DISMISSED" | "INVESTIGATING" | "OPEN";
+    /** DataIntegrityInvestigationDispatchRequest */
+    Quality_DataIntegrityInvestigationDispatchRequest: {
+      /**
+       * Finding Id 
+       * @description Data integrity finding ID to dispatch investigation for
+       */
+      finding_id: string;
+      /**
+       * Rationale 
+       * @description Reason for change / investigation rationale 
+       * @default Manual investigation ticket dispatch from Data Integrity Sentinel Console
+       */
+      rationale?: string;
+    };
+    /** DataIntegritySentinelRunResponse */
+    Quality_DataIntegritySentinelRunResponse: {
+      /** Id */
+      id: string;
+      /** Study Id */
+      study_id: string;
+      /** Run Name */
+      run_name: string;
+      /** Scan Timestamp */
+      scan_timestamp: string;
+      /** Sentinel Types */
+      sentinel_types: (string)[];
+      /** Total Subjects Scanned */
+      total_subjects_scanned: number;
+      /** Total Images Scanned */
+      total_images_scanned: number;
+      /** Total Events Scanned */
+      total_events_scanned: number;
+      /** Anomalies Detected Count */
+      anomalies_detected_count: number;
+      risk_tier: components["schemas"]["Quality_RiskTier"];
+      /** Status */
+      status: string;
+      /** Summary Findings */
+      summary_findings: {
+        [key: string]: unknown;
+      };
+      /** Findings */
+      findings: (components["schemas"]["Quality_DataIntegrityFindingResponse"])[];
+      /** Created At */
+      created_at: string;
+      /** Created By */
+      created_by: string;
+      /** Version Index */
+      version_index: number;
+      /** Reason For Change */
+      reason_for_change: string;
+    };
+    /**
+     * DataIntegritySentinelType 
+     * @enum {string}
+     */
+    Quality_DataIntegritySentinelType: "COMPREHENSIVE_INTEGRITY_SCAN" | "DUPLICATE_PATIENT_RECORD" | "PERCEPTUAL_IMAGE_HASH" | "TEMPORAL_BEHAVIORAL_ANOMALY";
+    /** DataIntegritySimulationRequest */
+    Quality_DataIntegritySimulationRequest: {
+      /**
+       * Study Id 
+       * @description Study ID for simulation 
+       * @default STUDY-ONC-2026
+       */
+      study_id?: string;
+      /**
+       * Num Subjects Per Site 
+       * @description Subjects per benchmark site 
+       * @default 15
+       */
+      num_subjects_per_site?: number;
+      /**
+       * Include Duplicate Patient 
+       * @description Inject cross-site duplicate subject vector 
+       * @default true
+       */
+      include_duplicate_patient?: boolean;
+      /**
+       * Include Temporal Burst 
+       * @description Inject Sunday off-hours rapid burst cluster 
+       * @default true
+       */
+      include_temporal_burst?: boolean;
+      /**
+       * Include Identical Intervals 
+       * @description Inject identical procedure elapsed intervals 
+       * @default true
+       */
+      include_identical_intervals?: boolean;
+      /**
+       * Include Image Duplication 
+       * @description Inject rotated 90 deg duplicate image scan 
+       * @default true
+       */
+      include_image_duplication?: boolean;
+    };
+    /** DataIntegritySimulationResponse */
+    Quality_DataIntegritySimulationResponse: {
+      /** Study Id */
+      study_id: string;
+      /** Subjects Count */
+      subjects_count: number;
+      /** Audit Events Count */
+      audit_events_count: number;
+      /** Image Attachments Count */
+      image_attachments_count: number;
+      /** Simulated Scenarios */
+      simulated_scenarios: (string)[];
+      /** Sample Subjects */
+      sample_subjects: ({
+          [key: string]: unknown;
+        })[];
+      /** Sample Audit Events */
+      sample_audit_events: ({
+          [key: string]: unknown;
+        })[];
+      /** Sample Image Attachments */
+      sample_image_attachments: ({
+          [key: string]: unknown;
+        })[];
     };
     /** DeviationCreate */
     Quality_DeviationCreate: {
@@ -26884,11 +33287,48 @@ export interface components {
      * @enum {string}
      */
     Quality_DeviationType: "CONCOMITANT_MED" | "ELIGIBILITY" | "GCP_COMPLIANCE" | "INFORMED_CONSENT" | "INVESTIGATIONAL_PRODUCT" | "IP_MANAGEMENT" | "LAB_SPECIMEN" | "OTHER" | "PROTOCOL_PROCEDURE" | "SAFETY_REPORTING" | "VISIT_WINDOW";
+    /** DuplicatePatientScanRequest */
+    Quality_DuplicatePatientScanRequest: {
+      /**
+       * Study Id 
+       * @description Study ID
+       */
+      study_id: string;
+      /**
+       * Subjects 
+       * @description List of baseline subject clinical vector payloads
+       */
+      subjects?: (components["schemas"]["Quality_SubjectClinicalVectorPayload"])[] | null;
+      /**
+       * Raw Subjects 
+       * @description Optional raw dictionary format for subject vectors
+       */
+      raw_subjects?: ({
+          [key: string]: unknown;
+        })[] | null;
+      /**
+       * Similarity Threshold 
+       * @description Minimum composite similarity threshold to flag duplicate 
+       * @default 0.82
+       */
+      similarity_threshold?: number;
+      /**
+       * Auto Dispatch Investigation 
+       * @description Automatically dispatch Part 11 investigation deviation if critical match 
+       * @default true
+       */
+      auto_dispatch_investigation?: boolean;
+    };
     /**
      * EffectivenessOutcome 
      * @enum {string}
      */
     Quality_EffectivenessOutcome: "EFFECTIVE" | "INEFFECTIVE" | "PARTIALLY_EFFECTIVE" | "PENDING";
+    /**
+     * ForensicsAnomalyFlag 
+     * @enum {string}
+     */
+    Quality_ForensicsAnomalyFlag: "ANOMALOUS_VARIANCE_SHRINKAGE" | "BENFORD_NON_CONFORMANCE" | "CROSS_SITE_CLONING_SUSPICION" | "DATA_FABRICATION_SUSPICION" | "DUPLICATE_PATIENT_RECORD" | "IDENTICAL_PROCEDURE_INTERVALS" | "MULTIVARIATE_MAHALANOBIS_OUTLIER" | "OFF_HOURS_BURST_ANOMALY" | "PERCEPTUAL_IMAGE_HASH_MATCH" | "RAPID_BURST_SUBMISSION" | "SUSPICIOUS_TIMESTAMP_CLUSTER" | "TERMINAL_DIGIT_ROUNDING_BIAS";
     /** ForensicsSimulationRequest */
     Quality_ForensicsSimulationRequest: {
       /**
@@ -26958,6 +33398,93 @@ export interface components {
       /** Detail */
       detail?: (components["schemas"]["Quality_ValidationError"])[];
     };
+    /** ImageAttachmentPayload */
+    Quality_ImageAttachmentPayload: {
+      /**
+       * Image Id 
+       * @description Image attachment identifier
+       */
+      image_id: string;
+      /**
+       * Subject Id 
+       * @description Subject identifier
+       */
+      subject_id: string;
+      /**
+       * Site Id 
+       * @description Site identifier
+       */
+      site_id: string;
+      /**
+       * Study Id 
+       * @description Study identifier
+       */
+      study_id: string;
+      /**
+       * Visit Name 
+       * @description Visit / milestone name 
+       * @default Screening
+       */
+      visit_name?: string;
+      /**
+       * Modality 
+       * @description Imaging modality (e.g. CHEST_CT, XRAY, MRI, DERM) 
+       * @default RADIOLOGY
+       */
+      modality?: string;
+      /**
+       * Pixel Matrix 
+       * @description 2D grayscale pixel array (e.g. 32x32)
+       */
+      pixel_matrix?: ((number)[])[] | null;
+      /**
+       * Base64 Data 
+       * @description Optional base64 encoded image string
+       */
+      base64_data?: string | null;
+      /**
+       * Phash 
+       * @description Precomputed 16-hex pHash string
+       */
+      phash?: string | null;
+    };
+    /** ImageHashScanRequest */
+    Quality_ImageHashScanRequest: {
+      /**
+       * Study Id 
+       * @description Study ID
+       */
+      study_id: string;
+      /**
+       * Image Attachments 
+       * @description List of medical image attachments
+       */
+      image_attachments?: (components["schemas"]["Quality_ImageAttachmentPayload"])[] | null;
+      /**
+       * Raw Images 
+       * @description Optional raw dictionary format for image attachments
+       */
+      raw_images?: ({
+          [key: string]: unknown;
+        })[] | null;
+      /**
+       * Hamming Threshold 
+       * @description Maximum Hamming distance threshold to classify duplicate (<=10) 
+       * @default 10
+       */
+      hamming_threshold?: number;
+      /**
+       * Auto Dispatch Investigation 
+       * @description Automatically dispatch Part 11 investigation deviation if duplicate found 
+       * @default true
+       */
+      auto_dispatch_investigation?: boolean;
+    };
+    /**
+     * ImageTransformationType 
+     * @enum {string}
+     */
+    Quality_ImageTransformationType: "BRIGHTNESS_ADJUSTED" | "CROPPED_OR_RESCALED" | "EXACT" | "FLIPPED_HORIZONTAL" | "FLIPPED_VERTICAL" | "ROTATED_180" | "ROTATED_270" | "ROTATED_90";
     /** KRIBatchEvaluationRequest */
     Quality_KRIBatchEvaluationRequest: {
       /**
@@ -27229,6 +33756,177 @@ export interface components {
       /** Reason For Change */
       reason_for_change: string;
     };
+    /**
+     * RACTCategory 
+     * @enum {string}
+     */
+    Quality_RACTCategory: "SAFETY" | "CONSENT" | "STUDY_CONDUCT" | "DATA_INTEGRITY" | "IP_MANAGEMENT" | "TECHNOLOGY";
+    /** RACTCategorySummary */
+    Quality_RACTCategorySummary: {
+      /** Category */
+      category: string;
+      /** Total Factors */
+      total_factors: number;
+      /** High Count */
+      high_count: number;
+      /** Medium Count */
+      medium_count: number;
+      /** Low Count */
+      low_count: number;
+      /** Average Score */
+      average_score: number;
+      /** Linked Kri Count */
+      linked_kri_count: number;
+    };
+    /** RACTMatrixSummaryResponse */
+    Quality_RACTMatrixSummaryResponse: {
+      /** Study Id */
+      study_id: string;
+      /** Total Risk Factors */
+      total_risk_factors: number;
+      /** High Risk Count */
+      high_risk_count: number;
+      /** Medium Risk Count */
+      medium_risk_count: number;
+      /** Low Risk Count */
+      low_risk_count: number;
+      /** Overall Average Score */
+      overall_average_score: number;
+      /** Linked Kri Coverage Percentage */
+      linked_kri_coverage_percentage: number;
+      /** Category Summaries */
+      category_summaries: (components["schemas"]["Quality_RACTCategorySummary"])[];
+      /** Risk Factors */
+      risk_factors: (components["schemas"]["Quality_RACTRiskFactorResponse"])[];
+    };
+    /** RACTRiskFactorCreate */
+    Quality_RACTRiskFactorCreate: {
+      /**
+       * Study Id 
+       * @description Study ID
+       */
+      study_id: string;
+      /** @description Protocol risk category: SAFETY, CONSENT, STUDY_CONDUCT, DATA_INTEGRITY, IP_MANAGEMENT, TECHNOLOGY */
+      category: components["schemas"]["Quality_RACTCategory"];
+      /**
+       * Risk Topic 
+       * @description Concise risk factor title / topic (e.g. Complex Dosing)
+       */
+      risk_topic: string;
+      /**
+       * Risk Description 
+       * @description Detailed description of the potential risk
+       */
+      risk_description: string;
+      /**
+       * Probability Score 
+       * @description Likelihood score: 1=Low, 2=Medium, 3=High
+       */
+      probability_score: number;
+      /**
+       * Impact Score 
+       * @description Impact severity score: 1=Low, 2=Medium, 3=High
+       */
+      impact_score: number;
+      /**
+       * Detectability Score 
+       * @description Detectability score: 1=High (Easy), 2=Medium, 3=Low (Hard)
+       */
+      detectability_score: number;
+      /**
+       * Mitigation Strategy 
+       * @description Operational risk mitigation and control plan
+       */
+      mitigation_strategy: string;
+      /**
+       * Linked Kri Code 
+       * @description Optional code of linked automated Key Risk Indicator
+       */
+      linked_kri_code?: string | null;
+    };
+    /** RACTRiskFactorResponse */
+    Quality_RACTRiskFactorResponse: {
+      /** Id */
+      id: string;
+      /** Study Id */
+      study_id: string;
+      /** Category */
+      category: string;
+      /** Risk Topic */
+      risk_topic: string;
+      /** Risk Description */
+      risk_description: string;
+      /** Probability Score */
+      probability_score: number;
+      /** Impact Score */
+      impact_score: number;
+      /** Detectability Score */
+      detectability_score: number;
+      /** Total Risk Score */
+      total_risk_score: number;
+      /** Risk Tier */
+      risk_tier: string;
+      /** Mitigation Strategy */
+      mitigation_strategy: string;
+      /** Linked Kri Code */
+      linked_kri_code?: string | null;
+      /**
+       * Is Active 
+       * @default true
+       */
+      is_active?: boolean;
+      /** Created At */
+      created_at: string;
+      /** Created By */
+      created_by: string;
+      /** Version Index */
+      version_index: number;
+      /** Reason For Change */
+      reason_for_change: string;
+    };
+    /** RACTRiskFactorUpdate */
+    Quality_RACTRiskFactorUpdate: {
+      /**
+       * Risk Topic 
+       * @description Updated risk topic
+       */
+      risk_topic?: string | null;
+      /**
+       * Risk Description 
+       * @description Updated risk description
+       */
+      risk_description?: string | null;
+      /**
+       * Probability Score 
+       * @description Updated probability score
+       */
+      probability_score?: number | null;
+      /**
+       * Impact Score 
+       * @description Updated impact score
+       */
+      impact_score?: number | null;
+      /**
+       * Detectability Score 
+       * @description Updated detectability score
+       */
+      detectability_score?: number | null;
+      /**
+       * Mitigation Strategy 
+       * @description Updated mitigation strategy
+       */
+      mitigation_strategy?: string | null;
+      /**
+       * Linked Kri Code 
+       * @description Updated linked KRI code
+       */
+      linked_kri_code?: string | null;
+      /**
+       * Is Active 
+       * @description Active status flag
+       */
+      is_active?: boolean | null;
+    };
     /** RCACreateOrUpdate */
     Quality_RCACreateOrUpdate: {
       /**
@@ -27492,6 +34190,16 @@ export interface components {
       composite_risk_score: number;
       /** Risk Rank */
       risk_rank: number;
+      /**
+       * Percentile Rank 
+       * @default 0
+       */
+      percentile_rank?: number;
+      /**
+       * Risk Tier 
+       * @default LOW
+       */
+      risk_tier?: string;
       /** High Risk Kri Count */
       high_risk_kri_count: number;
       /** Active Deviations Count */
@@ -27579,6 +34287,95 @@ export interface components {
       version_index: number;
       /** Reason For Change */
       reason_for_change: string;
+    };
+    /** SubjectClinicalVectorPayload */
+    Quality_SubjectClinicalVectorPayload: {
+      /**
+       * Subject Id 
+       * @description Subject unique identifier
+       */
+      subject_id: string;
+      /**
+       * Site Id 
+       * @description Clinical site ID
+       */
+      site_id: string;
+      /**
+       * Study Id 
+       * @description Study ID
+       */
+      study_id: string;
+      /**
+       * Demographics 
+       * @description Demographics: age, sex, race, ethnicity, height_cm, weight_kg, bmi, blood_type
+       */
+      demographics?: {
+        [key: string]: unknown;
+      };
+      /**
+       * Vital Signs 
+       * @description Baseline vital signs: systolic_bp, diastolic_bp, heart_rate, respiratory_rate, temp
+       */
+      vital_signs?: {
+        [key: string]: number | undefined;
+      };
+      /**
+       * Ecg Intervals 
+       * @description 12-Lead ECG intervals: pr_interval_ms, qrs_duration_ms, qt_interval_ms, qtc_ms, rr_interval_ms
+       */
+      ecg_intervals?: {
+        [key: string]: number | undefined;
+      };
+      /**
+       * Lab Panel 
+       * @description Baseline laboratory panel: creatinine, alt, ast, fasting_glucose, hemoglobin, etc.
+       */
+      lab_panel?: {
+        [key: string]: number | undefined;
+      };
+      /**
+       * Medical History 
+       * @description Baseline medical history ICD-10 codes or disease strings
+       */
+      medical_history?: (string)[];
+    };
+    /** TemporalAnomalyScanRequest */
+    Quality_TemporalAnomalyScanRequest: {
+      /**
+       * Study Id 
+       * @description Study ID
+       */
+      study_id: string;
+      /**
+       * Audit Events 
+       * @description List of data entry audit events
+       */
+      audit_events?: (components["schemas"]["Quality_AuditEventPayload"])[] | null;
+      /**
+       * Raw Events 
+       * @description Optional raw dictionary format of audit events
+       */
+      raw_events?: ({
+          [key: string]: unknown;
+        })[] | null;
+      /**
+       * Work Hour Start 
+       * @description Clinic opening hour (0-23) 
+       * @default 7
+       */
+      work_hour_start?: number;
+      /**
+       * Work Hour End 
+       * @description Clinic closing hour (0-23) 
+       * @default 19
+       */
+      work_hour_end?: number;
+      /**
+       * Auto Dispatch Investigation 
+       * @description Automatically dispatch Part 11 investigation deviation if critical anomaly 
+       * @default true
+       */
+      auto_dispatch_investigation?: boolean;
     };
     /** TerminalDigitDistributionResponse */
     Quality_TerminalDigitDistributionResponse: {
@@ -31356,6 +38153,75 @@ export interface operations {
       };
     };
   };
+  /**
+   * Get Jurisdiction Rule Presets 
+   * @description Returns statutory startup prerequisite rule presets for US, EU, JP, UK, and Global jurisdictions.
+   */
+  Ctms_get_jurisdiction_rule_presets_api_v1_ctms_startup_rules_presets_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: ({
+                [key: string]: unknown;
+              })[] | undefined;
+          };
+        };
+      };
+    };
+  };
+  /**
+   * List Country Prerequisite Rules 
+   * @description Retrieves country-specific prerequisite rules matrix for a study.
+   */
+  Ctms_list_country_prerequisite_rules_api_v1_ctms_startup_rules_get: {
+    parameters: {
+      query: {
+        study_id: string;
+        country_code?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": (components["schemas"]["Ctms_CountryPrerequisiteRuleResponse"])[];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Ctms_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Create Or Update Country Prerequisite Rule 
+   * @description Configures a country-specific prerequisite criterion for site activation.
+   */
+  Ctms_create_or_update_country_prerequisite_rule_api_v1_ctms_startup_rules_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Ctms_CountryPrerequisiteRuleCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Ctms_CountryPrerequisiteRuleResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Ctms_HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** List Country Milestones */
   Ctms_list_country_milestones_api_v1_ctms_startup_milestones_get: {
     parameters: {
@@ -31473,11 +38339,43 @@ export interface operations {
       };
     };
   };
-  /** Evaluate Site Greenlight */
+  /** Review Essential Document */
+  Ctms_review_essential_document_api_v1_ctms_startup_documents__document_id__review_post: {
+    parameters: {
+      path: {
+        document_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Ctms_EssentialDocumentReview"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Ctms_EssentialDocumentResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Ctms_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Evaluate Site Greenlight 
+   * @description Evaluates real-time site activation readiness across the 6 key operational facets.
+   */
   Ctms_evaluate_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_get: {
     parameters: {
       query: {
         study_id: string;
+        /** @description ISO-2 Country code or jurisdiction (e.g. US, EU, JP, GB) */
+        country_code?: string;
       };
       path: {
         site_id: string;
@@ -31498,11 +38396,16 @@ export interface operations {
       };
     };
   };
-  /** Certify Site Greenlight */
+  /**
+   * Certify Site Greenlight 
+   * @description Formally certifies greenlight activation, issuing an HMAC-SHA256 token and un-gating trial execution.
+   */
   Ctms_certify_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_certify_post: {
     parameters: {
       query: {
         study_id: string;
+        /** @description ISO-2 Country code or jurisdiction */
+        country_code?: string;
       };
       path: {
         site_id: string;
@@ -31513,6 +38416,66 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Ctms_SiteGreenlightGateResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Ctms_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Override Site Greenlight 
+   * @description Executes dual-signature executive sponsor GxP override with mandatory Part 11 justification logging.
+   */
+  Ctms_override_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_override_post: {
+    parameters: {
+      path: {
+        site_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Ctms_SiteGreenlightOverrideRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Ctms_SiteGreenlightGateResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Ctms_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Verify Site Greenlight Token Endpoint 
+   * @description Verifies cryptographic validity and binding of a Site Greenlight Activation Token.
+   */
+  Ctms_verify_site_greenlight_token_endpoint_api_v1_ctms_startup_sites__site_id__greenlight_verify_token_post: {
+    parameters: {
+      path: {
+        site_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Ctms_GreenlightTokenVerifyRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Ctms_GreenlightTokenVerifyResponse"];
         };
       };
       /** @description Validation Error */
@@ -36885,6 +43848,63 @@ export interface operations {
     };
   };
   /**
+   * Get Startup Presets Endpoint 
+   * @description Retrieves standard statutory startup criteria presets across international jurisdictions.
+   */
+  Designer_get_startup_presets_endpoint_api_v1_designer_startup_matrix_presets_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: ({
+                [key: string]: unknown;
+              })[] | undefined;
+          };
+        };
+      };
+    };
+  };
+  /**
+   * Get Supported Jurisdictions Endpoint 
+   * @description Lists supported international jurisdictions with regulatory and ethics governance frameworks.
+   */
+  Designer_get_supported_jurisdictions_endpoint_api_v1_designer_startup_matrix_jurisdictions_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": (components["schemas"]["Designer_JurisdictionInfo"])[];
+        };
+      };
+    };
+  };
+  /**
+   * Generate Startup Template Endpoint 
+   * @description Generates country-specific startup prerequisite criteria matrix for study protocol design.
+   */
+  Designer_generate_startup_template_endpoint_api_v1_designer_startup_matrix_generate_template_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Designer_GenerateStartupTemplateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Designer_GenerateStartupTemplateResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Designer_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
    * Health Check 
    * @description Service health check endpoint.
    * 
@@ -40010,6 +47030,35 @@ export interface operations {
     };
   };
   /**
+   * Verify Training Gate Endpoint 
+   * @description Programmatically verify training qualification for EDC write and signature permissions.
+   * 
+   * Requirements: PRD-TRN-002
+   */
+  Execution_verify_training_gate_endpoint_api_v1_execution_amendments_verify_training_gate_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_VerifyTrainingGatingRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
    * Evaluate Anomalies 
    * @description Evaluates cross-domain clinical data for a subject and stages detected candidate queries.
    */
@@ -41621,6 +48670,542 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Execution_ReLabelingTaskResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Initialize Apheresis Endpoint 
+   * @description Initializes Vein-to-Vein tracking upon initial apheresis cellular harvest.
+   */
+  Execution_initialize_apheresis_endpoint_api_v1_execution_rtsm_cgt_apheresis_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CGTApheresisCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Execution_CGTChainOfCustodyResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Record Cgt Milestone Endpoint 
+   * @description Records a cryogenic transit milestone with GPS coordinates and temperature logging.
+   */
+  Execution_record_cgt_milestone_endpoint_api_v1_execution_rtsm_cgt_milestone_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CGTMilestoneCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Execution_CGTMilestoneResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Bind Manufacturing Batch Endpoint 
+   * @description Binds manufacturing batch record to original subject identity and regenerates barcode.
+   */
+  Execution_bind_manufacturing_batch_endpoint_api_v1_execution_rtsm_cgt_manufacturing_bind_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CGTManufacturingBindRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Execution_CGTChainOfCustodyResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Bedside Dual Verification Endpoint 
+   * @description Executes mandatory two-person electronic bedside verification, unlocking the drug infusion eCRF.
+   */
+  Execution_bedside_dual_verification_endpoint_api_v1_execution_rtsm_cgt_bedside_verify_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CGTBedsideVerificationRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Execution_CGTBedsideVerificationResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Execute Infusion Endpoint 
+   * @description Records cellular drug infusion administration, gated by the bedside verification unlock token.
+   */
+  Execution_execute_infusion_endpoint_api_v1_execution_rtsm_cgt_infuse_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CGTInfusionExecuteRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Execution_CGTChainOfCustodyResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Log Vial Return Endpoint 
+   * @description Logs returned kit/vial accountability and calculates patient adherence compliance.
+   */
+  Execution_log_vial_return_endpoint_api_v1_execution_rtsm_cgt_returns_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CGTVialReturnReconciliationRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Execution_CGTVialReturnReconciliationResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Generate Destruction Certificate Endpoint 
+   * @description Generates a formal Certificate of Destruction with dual witness electronic signatures.
+   */
+  Execution_generate_destruction_certificate_endpoint_api_v1_execution_rtsm_cgt_destruction_certificate_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CGTDestructionCertificateCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Execution_CGTDestructionCertificateResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Verify Cgt Barcode Endpoint 
+   * @description Verifies cryptographic authenticity and entity bindings for a scanned barcode.
+   */
+  Execution_verify_cgt_barcode_endpoint_api_v1_execution_rtsm_cgt_verify_barcode_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CGTBarcodeVerifyRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Execution_CGTBarcodeVerifyResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Subject Cgt Traceability Endpoint 
+   * @description Retrieves full Vein-to-Vein traceability ledger for a subject.
+   */
+  Execution_get_subject_cgt_traceability_endpoint_api_v1_execution_rtsm_cgt_chain_of_custody__study_id___subject_id__get: {
+    parameters: {
+      path: {
+        study_id: string;
+        subject_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Execution_CGTFullTraceabilityResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Destruction Certificates Endpoint 
+   * @description Lists all Certificates of Destruction for a study.
+   */
+  Execution_list_destruction_certificates_endpoint_api_v1_execution_rtsm_cgt_certificates__study_id__get: {
+    parameters: {
+      path: {
+        study_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": (components["schemas"]["Execution_CGTDestructionCertificateResponse"])[];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Vial Reconciliations Endpoint 
+   * @description Lists all product return and accountability reconciliation records for a study.
+   */
+  Execution_list_vial_reconciliations_endpoint_api_v1_execution_rtsm_cgt_reconciliations__study_id__get: {
+    parameters: {
+      path: {
+        study_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": (components["schemas"]["Execution_CGTVialReturnReconciliationResponse"])[];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Adaptive Config Endpoint 
+   * @description Retrieves current adaptive dose-escalation trial configuration, active cohort state, and history.
+   */
+  Execution_get_adaptive_config_endpoint_api_v1_execution_rtsm_adaptive_config_get: {
+    parameters: {
+      query: {
+        /** @description Clinical study identifier */
+        study_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Create Or Update Adaptive Config Endpoint 
+   * @description Registers or updates adaptive oncology dose-escalation or RAR trial design parameters.
+   */
+  Execution_create_or_update_adaptive_config_endpoint_api_v1_execution_rtsm_adaptive_config_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_AdaptiveTrialConfigDTO"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Evaluate Adaptive Cohort Endpoint 
+   * @description Evaluates safety cohort DLTs and computes real-time recommendation flags (BOIN, CRM, 3+3).
+   */
+  Execution_evaluate_adaptive_cohort_endpoint_api_v1_execution_rtsm_adaptive_cohorts_evaluate_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CohortEvaluationInput"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Execution_CohortEvaluationResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Transition Adaptive Cohort Endpoint 
+   * @description Advances or overrides a dose escalation cohort with 21 CFR Part 11 audit logging.
+   */
+  Execution_transition_adaptive_cohort_endpoint_api_v1_execution_rtsm_adaptive_cohorts_transition_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CohortTransitionRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Execution_CohortTransitionLogResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Adaptive Cohorts History Endpoint 
+   * @description Returns the immutable 21 CFR Part 11 audited transition log history for a study.
+   */
+  Execution_get_adaptive_cohorts_history_endpoint_api_v1_execution_rtsm_adaptive_cohorts_history_get: {
+    parameters: {
+      query: {
+        /** @description Clinical study identifier */
+        study_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": (components["schemas"]["Execution_CohortTransitionLogResponse"])[];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Evaluate Rar Endpoint 
+   * @description Calculates dynamic Response-Adaptive Randomization allocation weights across active arms.
+   */
+  Execution_evaluate_rar_endpoint_api_v1_execution_rtsm_adaptive_rar_evaluate_post: {
+    parameters: {
+      query: {
+        /** @description Clinical study identifier */
+        study_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Execution_RAREvaluationResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Expand Or Terminate Rar Arm Endpoint 
+   * @description Seamlessly adds or terminates a treatment arm in RAR with zero study downtime.
+   */
+  Execution_expand_or_terminate_rar_arm_endpoint_api_v1_execution_rtsm_adaptive_rar_arms_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_RARExpandOrTerminateArmRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Execution_RAREvaluationResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Rar State Endpoint 
+   * @description Retrieves current Response-Adaptive Randomization arm allocation weights and posterior states.
+   */
+  Execution_get_rar_state_endpoint_api_v1_execution_rtsm_adaptive_rar_state_get: {
+    parameters: {
+      query: {
+        /** @description Clinical study identifier */
+        study_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Calculate Boin Boundaries Endpoint 
+   * @description Calculates theoretical BOIN escalation and de-escalation toxicity boundaries (lambda_e, lambda_d).
+   */
+  Execution_calculate_boin_boundaries_endpoint_api_v1_execution_rtsm_adaptive_boin_calculate_boundaries_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_BoinBoundariesCalculationRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Execution_BoinBoundariesCalculationResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Execution_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Calculate Crm Posterior Endpoint 
+   * @description Calculates Bayesian posterior probabilities and recommended next dose under Continual Reassessment Method.
+   */
+  Execution_calculate_crm_posterior_endpoint_api_v1_execution_rtsm_adaptive_crm_posterior_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CrmPosteriorCalculationRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Execution_CrmPosteriorCalculationResponse"];
         };
       };
       /** @description Validation Error */
@@ -47176,6 +54761,1012 @@ export interface operations {
     };
   };
   /**
+   * Ingest heterogeneous clinical stream data 
+   * @description Ingest and normalize heterogeneous trial streams (EDC, ePRO, Labs, Wearables, FHIR, Imaging).
+   */
+  Interop_ingest_stream_data_api_v1_interop_lakehouse_ingest_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_MultiStreamIngestPayload"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Interop_IngestResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List version-pinned snapshots for a study 
+   * @description Retrieve all sealed, version-pinned snapshots for the specified study.
+   */
+  Interop_list_snapshots_api_v1_interop_lakehouse_snapshots_get: {
+    parameters: {
+      query: {
+        /** @description Study identifier */
+        study_id: string;
+        /** @description Optional milestone filter */
+        milestone?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_SnapshotListResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Create an immutable, version-pinned clinical data snapshot 
+   * @description Pool lakehouse observations into an immutable, version-pinned snapshot sealed with SHA-256.
+   */
+  Interop_create_snapshot_api_v1_interop_lakehouse_snapshots_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_CreateSnapshotRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Interop_SnapshotResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retrieve snapshot metadata and seal info 
+   * @description Fetch metadata and cryptographic digest for a specific snapshot.
+   */
+  Interop_get_snapshot_details_api_v1_interop_lakehouse_snapshots__snapshot_id__get: {
+    parameters: {
+      path: {
+        snapshot_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_SnapshotResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Query pooled records inside a version-pinned snapshot 
+   * @description Query observations pooled inside a snapshot, enforcing role-based unblinded masking.
+   */
+  Interop_query_snapshot_data_api_v1_interop_lakehouse_snapshots__snapshot_id__query_post: {
+    parameters: {
+      path: {
+        snapshot_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_SnapshotDataQueryRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_SnapshotDataQueryResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Fetch snapshot pool data records via GET 
+   * @description Convenience endpoint to retrieve observations in a snapshot pool.
+   */
+  Interop_get_snapshot_data_api_v1_interop_lakehouse_snapshots__snapshot_id__data_get: {
+    parameters: {
+      query?: {
+        /** @description Optional subject filter */
+        subject_id?: string | null;
+        /** @description Optional domain filter */
+        domain?: string | null;
+        /** @description Optional stream filter */
+        stream_type?: components["schemas"]["Interop_DataStreamType"] | null;
+      };
+      path: {
+        snapshot_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_SnapshotDataQueryResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Verify cryptographic SHA-256 integrity of sealed snapshot 
+   * @description Recompute and verify the SHA-256 seal against all pooled records in the snapshot.
+   */
+  Interop_verify_snapshot_api_v1_interop_lakehouse_snapshots__snapshot_id__verify_post: {
+    parameters: {
+      path: {
+        snapshot_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_VerifySnapshotResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retrieve 21 CFR Part 11 audit log for a snapshot 
+   * @description Retrieve all chronological 21 CFR Part 11 audit trail entries for a snapshot.
+   */
+  Interop_get_snapshot_audit_trail_api_v1_interop_lakehouse_snapshots__snapshot_id__audit_trail_get: {
+    parameters: {
+      path: {
+        snapshot_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_SnapshotAuditTrailResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retrieve real-time Lakehouse stream and snapshot metrics 
+   * @description Aggregate real-time data stream, subject, site, and snapshot metrics for a study.
+   */
+  Interop_get_metrics_api_v1_interop_lakehouse_metrics__study_id__get: {
+    parameters: {
+      path: {
+        study_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_LakehouseMetricsResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Execute end-to-end continuous CDISC SDTM/ADaM pipeline and compiler 
+   * @description Execute automated continuous transformation mapping raw clinical observations to 10 SDTM domains, 4 ADaM datasets, Dataset-JSON, and Define-XML.
+   */
+  Interop_execute_continuous_pipeline_api_v1_interop_cdr_pipeline_execute_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_RunContinuousPipelineRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_PipelineExecutionResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retrieve execution manifest for a pipeline run 
+   * @description Retrieve details and metadata summary for a completed pipeline run.
+   */
+  Interop_get_pipeline_execution_result_api_v1_interop_cdr_pipeline_results__execution_id__get: {
+    parameters: {
+      path: {
+        execution_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_PipelineExecutionResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Execute CDISC SDTM 10-domain transformation engine 
+   * @description Transform canonical observations into 10 standard CDISC SDTM domains.
+   */
+  Interop_execute_sdtm_pipeline_api_v1_interop_cdr_pipeline_sdtm_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_RunSDTMPipelineRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_SDTMPipelineResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Execute CDISC ADaM 4-dataset derivation engine 
+   * @description Execute statistical derivation rules generating ADSL, ADAE, ADTTE, BDS datasets.
+   */
+  Interop_execute_adam_pipeline_api_v1_interop_cdr_pipeline_adam_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_RunADaMPipelineRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_ADaMPipelineResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Export clinical datasets in official CDISC Dataset-JSON 1.1 / 2.0 
+   * @description Serialize and export SDTM and ADaM datasets in CDISC Dataset-JSON 1.1 / 2.0 format.
+   */
+  Interop_export_dataset_json_api_v1_interop_cdr_export_dataset_json_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_ExportDatasetJSONRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_DatasetJSONDocument"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Auto-compile and export CDISC Define-XML v2.1 metadata specification 
+   * @description Auto-compile CDISC Define-XML v2.1 metadata document encapsulating dataset definitions, VLM, WhereClauses, and Origins.
+   */
+  Interop_export_define_xml_api_v1_interop_cdr_export_define_xml_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_ExportDefineXMLRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Validate a Dataset-JSON 1.1 / 2.0 payload 
+   * @description Perform strict structural and schema conformance validation for CDISC Dataset-JSON.
+   */
+  Interop_validate_dataset_json_endpoint_api_v1_interop_cdr_validate_dataset_json_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_ValidateDatasetJSONRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_ValidateDatasetJSONResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Validate a CDISC Define-XML v2.1 document 
+   * @description Validate CDISC Define-XML v2.1 document syntax, ODM root, and element presence.
+   */
+  Interop_validate_define_xml_endpoint_api_v1_interop_cdr_validate_define_xml_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_ValidateDefineXMLRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_DefineXMLValidationResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retrieve CDISC domain and variable metadata catalog 
+   * @description Retrieve catalog of supported SDTM domains, ADaM datasets, variable definitions, and VLM.
+   */
+  Interop_get_metadata_catalog_api_v1_interop_cdr_metadata_catalog_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_DomainCatalogResponse"];
+        };
+      };
+    };
+  };
+  /**
+   * List statistical programs for a study 
+   * @description List all version-controlled statistical programs for a study.
+   */
+  Interop_list_programs_api_v1_interop_sce_programs_get: {
+    parameters: {
+      query: {
+        /** @description Clinical study ID */
+        study_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_ProgramListResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Create or register a statistical analysis program 
+   * @description Register a version-controlled R or Python statistical program with package lockfile.
+   */
+  Interop_create_program_api_v1_interop_sce_programs_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_CreateProgramRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Interop_ProgramResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retrieve statistical program by ID 
+   * @description Retrieve statistical program definition.
+   */
+  Interop_get_program_api_v1_interop_sce_programs__program_id__get: {
+    parameters: {
+      path: {
+        program_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_ProgramResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Validate package lockfile integrity and GxP qualification 
+   * @description Parse and verify package lockfile (uv.lock / renv.lock) integrity and qualification.
+   */
+  Interop_validate_lockfile_api_v1_interop_sce_validate_lockfile_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_ValidateLockfileRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_ValidateLockfileResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List active database lock authorization tokens 
+   * @description List active authorization tokens for unblinded analysis.
+   */
+  Interop_list_lock_tokens_api_v1_interop_sce_lock_tokens_get: {
+    parameters: {
+      query: {
+        /** @description Clinical study ID */
+        study_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_LockTokenListResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Issue database lock authorization token for unblinded analysis 
+   * @description Issue a cryptographically signed database lock token granting unblinded statistical analysis access.
+   */
+  Interop_issue_lock_token_api_v1_interop_sce_lock_tokens_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_IssueLockTokenRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Interop_LockTokenResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Revoke an active database lock authorization token 
+   * @description Revoke an active database lock token.
+   */
+  Interop_revoke_lock_token_api_v1_interop_sce_lock_tokens__token_id__revoke_post: {
+    parameters: {
+      query?: {
+        /** @description Revocation reason */
+        reason?: string;
+      };
+      path: {
+        token_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Execute statistical program in isolated containerized sandbox 
+   * @description Execute validated R or Python script against version-pinned data snapshot with signed run manifest.
+   */
+  Interop_execute_program_api_v1_interop_sce_execute_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_ExecuteProgramRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_ExecuteProgramResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List historical execution runs for a study 
+   * @description List all historical analytical execution runs.
+   */
+  Interop_list_execution_runs_api_v1_interop_sce_runs_get: {
+    parameters: {
+      query: {
+        /** @description Clinical study ID */
+        study_id: string;
+        /** @description Optional program ID filter */
+        program_id?: string | null;
+        /** @description Optional snapshot ID filter */
+        snapshot_id?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_ExecutionRunListResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retrieve execution run manifest and details 
+   * @description Retrieve details and signed manifest of an execution run.
+   */
+  Interop_get_execution_run_api_v1_interop_sce_runs__run_id__get: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_ExecutionRunDetailResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Cryptographically verify execution run manifest seal 
+   * @description Assert bit-for-bit SHA-256 seal integrity and 21 CFR Part 11 electronic signature.
+   */
+  Interop_verify_run_manifest_api_v1_interop_sce_runs__run_id__verify_post: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_VerifyManifestResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retrieve generated artifact details and preview 
+   * @description Retrieve output artifact metadata and content preview.
+   */
+  Interop_get_run_artifact_api_v1_interop_sce_runs__run_id__artifacts__artifact_id__get: {
+    parameters: {
+      path: {
+        run_id: string;
+        artifact_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List registered medical IoT devices 
+   * @description List registered medical IoT sensor devices for a clinical study.
+   * 
+   * @req:PRD-DCT-002
+   * @req:ADR-2199
+   */
+  Interop_list_devices_api_v1_interop_sensors_devices_get: {
+    parameters: {
+      query: {
+        /** @description Study protocol ID */
+        study_id: string;
+        /** @description Optional site ID filter */
+        site_id?: string | null;
+        /** @description Optional subject ID filter */
+        subject_id?: string | null;
+        /** @description Optional device type filter */
+        device_type?: components["schemas"]["Interop_SensorDeviceType"] | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_DeviceListResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Register & map approved medical IoT sensor device 
+   * @description Register and map an approved medical IoT sensor device (CGM, Actigraphy, Spirometry, BP).
+   * 
+   * @req:PRD-DCT-002
+   * @req:ADR-2199
+   */
+  Interop_register_device_api_v1_interop_sensors_devices_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_DeviceRegistrationRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Interop_DeviceRegistrationResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Ingest continuous biometric IoT sensor telemetry 
+   * @description Ingest continuous time-series telemetry streams from approved medical IoT devices.
+   * 
+   * Applies:
+   * 1. Automated HMAC-SHA256 pseudonymization & device MAC/UDI mapping
+   * 2. Clock drift correction between device RTC and gateway UTC
+   * 3. Normalization into Open mHealth (OMH) & HL7 FHIR Observation schemas
+   * 4. Aggregate daily summary endpoints calculation (Time-in-Range TIR, mean glucose, steps, FEV1)
+   * 5. Automated safety threshold alert evaluation
+   * 6. Automated feeding into the Clinical Data Repository (CDR) Lakehouse
+   * 
+   * @req:PRD-DCT-002
+   * @req:PRD-DCT-001
+   * @req:ADR-2199
+   */
+  Interop_ingest_telemetry_stream_api_v1_interop_sensors_ingest_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_SensorIngestStreamPayload"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Interop_SensorIngestResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Query calculated daily summary endpoints 
+   * @description Retrieve aggregate daily summary endpoints (TIR, glucose, steps, cadence, RHR, FEV1).
+   * 
+   * @req:PRD-DCT-002
+   * @req:ADR-2199
+   */
+  Interop_list_daily_summaries_api_v1_interop_sensors_daily_summaries_get: {
+    parameters: {
+      query: {
+        /** @description Study ID */
+        study_id: string;
+        /** @description Optional pseudonymized subject ID */
+        subject_id?: string | null;
+        /** @description Device type filter */
+        device_type?: components["schemas"]["Interop_SensorDeviceType"] | null;
+        /** @description Start date filter */
+        start_date?: string | null;
+        /** @description End date filter */
+        end_date?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_DailySummariesResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Query automated safety threshold alerts 
+   * @description Retrieve triggered biometric safety threshold alerts for clinical investigation.
+   * 
+   * @req:PRD-DCT-002
+   * @req:ADR-2199
+   */
+  Interop_list_safety_alerts_api_v1_interop_sensors_safety_alerts_get: {
+    parameters: {
+      query: {
+        /** @description Study protocol ID */
+        study_id: string;
+        /** @description Optional pseudonymized subject filter */
+        subject_id?: string | null;
+        /** @description Severity filter (CRITICAL, WARNING) */
+        severity?: string | null;
+        /** @description Alert type filter */
+        alert_type?: string | null;
+        /** @description Acknowledgment filter */
+        is_acknowledged?: boolean | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_SafetyAlertsResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Acknowledge safety alert with electronic signature 
+   * @description Acknowledge a safety threshold alert with 21 CFR Part 11 electronic sign-off and clinical notes.
+   * 
+   * @req:PRD-DCT-002
+   * @req:ADR-2199
+   */
+  Interop_acknowledge_safety_alert_api_v1_interop_sensors_safety_alerts__alert_id__acknowledge_post: {
+    parameters: {
+      path: {
+        alert_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_AcknowledgeAlertRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_AcknowledgeAlertResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get connected IoT sensor dashboard metrics 
+   * @description Retrieve real-time IoT sensor telemetry metrics across a clinical study.
+   * 
+   * @req:PRD-DCT-002
+   * @req:ADR-2199
+   */
+  Interop_get_sensor_dashboard_metrics_api_v1_interop_sensors_metrics__study_id__get: {
+    parameters: {
+      path: {
+        study_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_SensorMetricsResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
    * List Categories 
    * @description Lists active knowledge categories, filtered by caller's persona visibility.
    */
@@ -48101,6 +56692,351 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Knowledge_ProtocolSearchResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Generate Amendment Curriculum Endpoint 
+   * @description Generate a delta-training curriculum upon protocol amendment publication.
+   * 
+   * Requirements: PRD-TRN-001
+   */
+  Knowledge_generate_amendment_curriculum_endpoint_api_v1_training_curricula_generate_amendment_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Knowledge_GenerateAmendmentCurriculumRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_TrainingCurriculumResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Curricula Endpoint 
+   * @description List active training curricula.
+   */
+  Knowledge_list_curricula_endpoint_api_v1_training_curricula_get: {
+    parameters: {
+      query?: {
+        /** @description Study scope filter */
+        study_id?: string | null;
+        /** @description Protocol version filter */
+        protocol_version?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": (components["schemas"]["Knowledge_TrainingCurriculumResponse"])[];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Curriculum Endpoint 
+   * @description Retrieve details for a single training curriculum.
+   */
+  Knowledge_get_curriculum_endpoint_api_v1_training_curricula__curriculum_id__get: {
+    parameters: {
+      path: {
+        curriculum_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_TrainingCurriculumResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Assign Curriculum Endpoint 
+   * @description Assign a training curriculum to a site user.
+   */
+  Knowledge_assign_curriculum_endpoint_api_v1_training_curricula__curriculum_id__assign_post: {
+    parameters: {
+      path: {
+        curriculum_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Knowledge_AssignCurriculumRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_TrainingAssignmentResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Assignments Endpoint 
+   * @description List training assignments for a user or site.
+   */
+  Knowledge_list_assignments_endpoint_api_v1_training_assignments_get: {
+    parameters: {
+      query?: {
+        study_id?: string | null;
+        site_id?: string | null;
+        user_id?: string | null;
+        status?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": (components["schemas"]["Knowledge_TrainingAssignmentResponse"])[];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Assignment Detail Endpoint 
+   * @description Retrieve full details of an assignment including curriculum modules.
+   */
+  Knowledge_get_assignment_detail_endpoint_api_v1_training_assignments__assignment_id__get: {
+    parameters: {
+      path: {
+        assignment_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_TrainingAssignmentDetailResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Record Progress Endpoint 
+   * @description Record reading duration and time-on-page tracking.
+   */
+  Knowledge_record_progress_endpoint_api_v1_training_assignments__assignment_id__progress_post: {
+    parameters: {
+      path: {
+        assignment_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Knowledge_RecordProgressRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_TrainingAssignmentResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Submit Quiz Endpoint 
+   * @description Submit comprehension quiz answers and evaluate score (>= 80% passing).
+   * 
+   * Requirements: PRD-TRN-003
+   */
+  Knowledge_submit_quiz_endpoint_api_v1_training_assignments__assignment_id__submit_quiz_post: {
+    parameters: {
+      path: {
+        assignment_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Knowledge_SubmitQuizRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_QuizEvaluationResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Sign Off Training Endpoint 
+   * @description Capture 21 CFR Part 11 electronic signature, generate sealed PDF certificate, and push to eTMF & eISF.
+   * 
+   * Requirements: PRD-TRN-003, PRD-TRN-004
+   */
+  Knowledge_sign_off_training_endpoint_api_v1_training_assignments__assignment_id__sign_off_post: {
+    parameters: {
+      path: {
+        assignment_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Knowledge_SignTrainingRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_CertificateResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Certificate Endpoint 
+   * @description Retrieve completion certificate for an assignment.
+   */
+  Knowledge_get_certificate_endpoint_api_v1_training_assignments__assignment_id__certificate_get: {
+    parameters: {
+      path: {
+        assignment_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_CertificateResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Gating Status Endpoint 
+   * @description Check whether a user is qualified for EDC write permissions on a protocol version.
+   * 
+   * Requirements: PRD-TRN-002
+   */
+  Knowledge_get_gating_status_endpoint_api_v1_training_gating_status_get: {
+    parameters: {
+      query: {
+        /** @description User identifier */
+        user_id: string;
+        /** @description Study identifier */
+        study_id: string;
+        /** @description Active protocol version */
+        protocol_version: string;
+        /** @description Optional site identifier */
+        site_id?: string | null;
+        /** @description Optional clinical role */
+        user_role?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_QualificationGateResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Verify Gate Endpoint 
+   * @description Programmatically verify qualification gate for EDC write operations.
+   * 
+   * Requirements: PRD-TRN-002
+   */
+  Knowledge_verify_gate_endpoint_api_v1_training_verify_gate_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Knowledge_VerifyGateRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Knowledge_QualificationGateResult"];
         };
       };
       /** @description Validation Error */
@@ -50294,6 +59230,148 @@ export interface operations {
       };
     };
   };
+  /** List Ract Risk Factors */
+  Quality_list_ract_risk_factors_api_v1_quality_rbqm_ract_factors_get: {
+    parameters: {
+      query: {
+        /** @description Study ID */
+        study_id: string;
+        /** @description Optional RACT Category filter */
+        category?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": (components["schemas"]["Quality_RACTRiskFactorResponse"])[];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Quality_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Create Ract Risk Factor */
+  Quality_create_ract_risk_factor_api_v1_quality_rbqm_ract_factors_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Quality_RACTRiskFactorCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Quality_RACTRiskFactorResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Quality_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Update Ract Risk Factor */
+  Quality_update_ract_risk_factor_api_v1_quality_rbqm_ract_factors__factor_id__put: {
+    parameters: {
+      path: {
+        factor_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Quality_RACTRiskFactorUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Quality_RACTRiskFactorResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Quality_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Delete Ract Risk Factor */
+  Quality_delete_ract_risk_factor_api_v1_quality_rbqm_ract_factors__factor_id__delete: {
+    parameters: {
+      path: {
+        factor_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Quality_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Seed Default Transcelerate Ract */
+  Quality_seed_default_transcelerate_ract_api_v1_quality_rbqm_ract_seed_default_post: {
+    parameters: {
+      query: {
+        /** @description Study ID */
+        study_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": (components["schemas"]["Quality_RACTRiskFactorResponse"])[];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Quality_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Ract Matrix Summary */
+  Quality_get_ract_matrix_summary_api_v1_quality_rbqm_ract_summary_get: {
+    parameters: {
+      query: {
+        /** @description Study ID */
+        study_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Quality_RACTMatrixSummaryResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Quality_HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** List Ctq Factors */
   Quality_list_ctq_factors_api_v1_quality_rbqm_ctq_get: {
     parameters: {
@@ -50560,6 +59638,73 @@ export interface operations {
       };
     };
   };
+  /** Compile Csm Dossier */
+  Quality_compile_csm_dossier_api_v1_quality_rbqm_csm_dossiers_compile_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Quality_CompileCSMDossierRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Quality_CSMDossierResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Quality_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Csm Dossiers */
+  Quality_list_csm_dossiers_api_v1_quality_rbqm_csm_dossiers_get: {
+    parameters: {
+      query: {
+        /** @description Study ID */
+        study_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": (components["schemas"]["Quality_CSMDossierResponse"])[];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Quality_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Csm Dossier */
+  Quality_get_csm_dossier_api_v1_quality_rbqm_csm_dossiers__dossier_id__get: {
+    parameters: {
+      path: {
+        dossier_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Quality_CSMDossierResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Quality_HTTPValidationError"];
+        };
+      };
+    };
+  };
   /**
    * Execute Forensics Analysis 
    * @description Executes automated multi-site statistical forensics surveillance.
@@ -50701,6 +59846,237 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Quality_ForensicsSimulationResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Quality_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Execute Duplicate Patient Scan 
+   * @description Executes cross-site similarity matching across baseline clinical feature vectors.
+   */
+  Quality_execute_duplicate_patient_scan_api_v1_quality_sentinels_duplicate_patients_scan_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Quality_DuplicatePatientScanRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Quality_DataIntegritySentinelRunResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Quality_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Execute Temporal Anomaly Scan 
+   * @description Detects off-hours entry clusters, rapid burst submissions, and identical procedure intervals.
+   */
+  Quality_execute_temporal_anomaly_scan_api_v1_quality_sentinels_temporal_anomalies_scan_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Quality_TemporalAnomalyScanRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Quality_DataIntegritySentinelRunResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Quality_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Execute Image Phash Scan 
+   * @description Computes DCT-based perceptual image hashes to detect reused and transformed radiological scans.
+   */
+  Quality_execute_image_phash_scan_api_v1_quality_sentinels_image_phash_scan_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Quality_ImageHashScanRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Quality_DataIntegritySentinelRunResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Quality_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Execute Comprehensive Data Integrity Scan 
+   * @description Executes a unified comprehensive data integrity scan across duplicate records, timing, and images.
+   */
+  Quality_execute_comprehensive_data_integrity_scan_api_v1_quality_sentinels_data_integrity_comprehensive_scan_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Quality_DataIntegrityComprehensiveScanRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        content: {
+          "application/json": components["schemas"]["Quality_DataIntegritySentinelRunResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Quality_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * List Data Integrity Runs 
+   * @description Lists historical data integrity sentinel runs.
+   */
+  Quality_list_data_integrity_runs_api_v1_quality_sentinels_runs_get: {
+    parameters: {
+      query?: {
+        /** @description Optional study ID filter */
+        study_id?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": (components["schemas"]["Quality_DataIntegritySentinelRunResponse"])[];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Quality_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Data Integrity Run 
+   * @description Retrieves full details and findings for a specific data integrity sentinel run.
+   */
+  Quality_get_data_integrity_run_api_v1_quality_sentinels_runs__run_id__get: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Quality_DataIntegritySentinelRunResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Quality_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Get Data Integrity Run Findings 
+   * @description Retrieves all anomaly findings detected within a sentinel run.
+   */
+  Quality_get_data_integrity_run_findings_api_v1_quality_sentinels_runs__run_id__findings_get: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": (components["schemas"]["Quality_DataIntegrityFindingResponse"])[];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Quality_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Dispatch Manual Investigation 
+   * @description Dispatches a formal 21 CFR Part 11 investigation deviation for a flagged finding.
+   */
+  Quality_dispatch_manual_investigation_api_v1_quality_sentinels_findings__finding_id__dispatch_investigation_post: {
+    parameters: {
+      path: {
+        finding_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Quality_DataIntegrityInvestigationDispatchRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Quality_DataIntegrityFindingResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Quality_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Simulate Sentinel Dataset 
+   * @description Generates synthetic multi-site clinical datasets with injected fraud anomalies.
+   */
+  Quality_simulate_sentinel_dataset_api_v1_quality_sentinels_simulate_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Quality_DataIntegritySimulationRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Quality_DataIntegritySimulationResponse"];
         };
       };
       /** @description Validation Error */

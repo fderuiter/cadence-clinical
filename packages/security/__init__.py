@@ -110,7 +110,9 @@ from packages.security.signing import (
     capture_certificate_identifiers,
     compute_sha256_hash,
     generate_canonical_signature,
+    generate_greenlight_token,
     verify_canonical_signature,
+    verify_greenlight_token,
 )
 from packages.security.trial_roles import (
     ClinicalStaffRole,
@@ -215,4 +217,6 @@ __all__ = [
     "InMemoryNotificationDispatcher",
     "get_notification_dispatcher",
     "publish_notification",
+    "generate_greenlight_token",
+    "verify_greenlight_token",
 ]

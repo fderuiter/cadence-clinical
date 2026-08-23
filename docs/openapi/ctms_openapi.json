@@ -221,6 +221,139 @@
         }
       }
     },
+    "/api/v1/ctms/startup/rules/presets": {
+      "get": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Get Jurisdiction Rule Presets",
+        "description": "Returns statutory startup prerequisite rule presets for US, EU, JP, UK, and Global jurisdictions.",
+        "operationId": "get_jurisdiction_rule_presets_api_v1_ctms_startup_rules_presets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "items": {
+                      "additionalProperties": true,
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "type": "object",
+                  "title": "Response Get Jurisdiction Rule Presets Api V1 Ctms Startup Rules Presets Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/startup/rules": {
+      "post": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Create Or Update Country Prerequisite Rule",
+        "description": "Configures a country-specific prerequisite criterion for site activation.",
+        "operationId": "create_or_update_country_prerequisite_rule_api_v1_ctms_startup_rules_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CountryPrerequisiteRuleCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CountryPrerequisiteRuleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "List Country Prerequisite Rules",
+        "description": "Retrieves country-specific prerequisite rules matrix for a study.",
+        "operationId": "list_country_prerequisite_rules_api_v1_ctms_startup_rules_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "country_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Country Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CountryPrerequisiteRuleResponse"
+                  },
+                  "title": "Response List Country Prerequisite Rules Api V1 Ctms Startup Rules Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/ctms/startup/milestones": {
       "post": {
         "tags": [
@@ -424,6 +557,56 @@
       }
     },
     "/api/v1/ctms/startup/documents/{document_id}/review": {
+      "post": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Review Essential Document",
+        "operationId": "review_essential_document_api_v1_ctms_startup_documents__document_id__review_post",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EssentialDocumentReview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EssentialDocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "put": {
         "tags": [
           "CTMS Site Startup"
@@ -481,6 +664,7 @@
           "CTMS Site Startup"
         ],
         "summary": "Evaluate Site Greenlight",
+        "description": "Evaluates real-time site activation readiness across the 6 key operational facets.",
         "operationId": "evaluate_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_get",
         "parameters": [
           {
@@ -500,6 +684,18 @@
               "type": "string",
               "title": "Study Id"
             }
+          },
+          {
+            "name": "country_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "ISO-2 Country code or jurisdiction (e.g. US, EU, JP, GB)",
+              "default": "US",
+              "title": "Country Code"
+            },
+            "description": "ISO-2 Country code or jurisdiction (e.g. US, EU, JP, GB)"
           }
         ],
         "responses": {
@@ -532,6 +728,7 @@
           "CTMS Site Startup"
         ],
         "summary": "Certify Site Greenlight",
+        "description": "Formally certifies greenlight activation, issuing an HMAC-SHA256 token and un-gating trial execution.",
         "operationId": "certify_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_certify_post",
         "parameters": [
           {
@@ -551,6 +748,18 @@
               "type": "string",
               "title": "Study Id"
             }
+          },
+          {
+            "name": "country_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "ISO-2 Country code or jurisdiction",
+              "default": "US",
+              "title": "Country Code"
+            },
+            "description": "ISO-2 Country code or jurisdiction"
           }
         ],
         "responses": {
@@ -560,6 +769,112 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SiteGreenlightGateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/startup/sites/{site_id}/greenlight/override": {
+      "post": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Override Site Greenlight",
+        "description": "Executes dual-signature executive sponsor GxP override with mandatory Part 11 justification logging.",
+        "operationId": "override_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_override_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SiteGreenlightOverrideRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteGreenlightGateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/startup/sites/{site_id}/greenlight/verify-token": {
+      "post": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Verify Site Greenlight Token Endpoint",
+        "description": "Verifies cryptographic validity and binding of a Site Greenlight Activation Token.",
+        "operationId": "verify_site_greenlight_token_endpoint_api_v1_ctms_startup_sites__site_id__greenlight_verify_token_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GreenlightTokenVerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GreenlightTokenVerifyResponse"
                 }
               }
             }
@@ -5401,6 +5716,137 @@
         ],
         "title": "CountryMilestoneResponse"
       },
+      "CountryPrerequisiteRuleCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code"
+          },
+          "facet": {
+            "type": "string",
+            "title": "Facet"
+          },
+          "criterion_code": {
+            "type": "string",
+            "title": "Criterion Code"
+          },
+          "criterion_name": {
+            "type": "string",
+            "title": "Criterion Name"
+          },
+          "is_mandatory": {
+            "type": "boolean",
+            "title": "Is Mandatory",
+            "default": true
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "country_code",
+          "facet",
+          "criterion_code",
+          "criterion_name"
+        ],
+        "title": "CountryPrerequisiteRuleCreate"
+      },
+      "CountryPrerequisiteRuleResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code"
+          },
+          "facet": {
+            "type": "string",
+            "title": "Facet"
+          },
+          "criterion_code": {
+            "type": "string",
+            "title": "Criterion Code"
+          },
+          "criterion_name": {
+            "type": "string",
+            "title": "Criterion Name"
+          },
+          "is_mandatory": {
+            "type": "boolean",
+            "title": "Is Mandatory"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "country_code",
+          "facet",
+          "criterion_code",
+          "criterion_name",
+          "is_mandatory",
+          "description",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "CountryPrerequisiteRuleResponse"
+      },
       "CurrencyConvertRequest": {
         "properties": {
           "amount": {
@@ -6483,6 +6929,77 @@
           "version_index"
         ],
         "title": "GeneratedLetterResponse"
+      },
+      "GreenlightTokenVerifyRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "GreenlightTokenVerifyRequest"
+      },
+      "GreenlightTokenVerifyResponse": {
+        "properties": {
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_valid"
+        ],
+        "title": "GreenlightTokenVerifyResponse"
       },
       "HTTPValidationError": {
         "properties": {
@@ -8740,29 +9257,80 @@
             "type": "string",
             "title": "Site Id"
           },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code",
+            "default": "US"
+          },
           "overall_status": {
             "type": "string",
             "title": "Overall Status"
           },
+          "facet_regulatory_irb": {
+            "type": "boolean",
+            "title": "Facet Regulatory Irb",
+            "default": false
+          },
+          "facet_cta_budget": {
+            "type": "boolean",
+            "title": "Facet Cta Budget",
+            "default": false
+          },
+          "facet_eisf_baseline": {
+            "type": "boolean",
+            "title": "Facet Eisf Baseline",
+            "default": false
+          },
+          "facet_doa_log": {
+            "type": "boolean",
+            "title": "Facet Doa Log",
+            "default": false
+          },
+          "facet_staff_training": {
+            "type": "boolean",
+            "title": "Facet Staff Training",
+            "default": false
+          },
+          "facet_ip_release": {
+            "type": "boolean",
+            "title": "Facet Ip Release",
+            "default": false
+          },
           "contract_approved": {
             "type": "boolean",
-            "title": "Contract Approved"
+            "title": "Contract Approved",
+            "default": false
           },
           "irb_approved": {
             "type": "boolean",
-            "title": "Irb Approved"
+            "title": "Irb Approved",
+            "default": false
           },
           "form_1572_approved": {
             "type": "boolean",
-            "title": "Form 1572 Approved"
+            "title": "Form 1572 Approved",
+            "default": false
           },
           "doa_signed_off": {
             "type": "boolean",
-            "title": "Doa Signed Off"
+            "title": "Doa Signed Off",
+            "default": false
           },
           "ip_ready": {
             "type": "boolean",
-            "title": "Ip Ready"
+            "title": "Ip Ready",
+            "default": false
+          },
+          "greenlight_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Greenlight Token"
           },
           "greenlight_certified_by": {
             "anyOf": [
@@ -8785,6 +9353,67 @@
               }
             ],
             "title": "Greenlight Certified At"
+          },
+          "is_overridden": {
+            "type": "boolean",
+            "title": "Is Overridden",
+            "default": false
+          },
+          "override_sponsor_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Sponsor User Id"
+          },
+          "override_medical_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Medical User Id"
+          },
+          "override_justification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Justification"
+          },
+          "override_authorized_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Authorized At"
+          },
+          "evaluation_details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluation Details"
           },
           "rejection_reason": {
             "anyOf": [
@@ -8827,20 +9456,54 @@
           "study_id",
           "site_id",
           "overall_status",
-          "contract_approved",
-          "irb_approved",
-          "form_1572_approved",
-          "doa_signed_off",
-          "ip_ready",
-          "greenlight_certified_by",
-          "greenlight_certified_at",
-          "rejection_reason",
-          "created_at",
           "created_by",
           "reason_for_change",
           "version_index"
         ],
         "title": "SiteGreenlightGateResponse"
+      },
+      "SiteGreenlightOverrideRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "sponsor_user_id": {
+            "type": "string",
+            "title": "Sponsor User Id"
+          },
+          "medical_user_id": {
+            "type": "string",
+            "title": "Medical User Id"
+          },
+          "sponsor_signature": {
+            "type": "string",
+            "title": "Sponsor Signature"
+          },
+          "medical_signature": {
+            "type": "string",
+            "title": "Medical Signature"
+          },
+          "justification": {
+            "type": "string",
+            "title": "Justification"
+          },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code",
+            "default": "US"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "sponsor_user_id",
+          "medical_user_id",
+          "sponsor_signature",
+          "medical_signature",
+          "justification"
+        ],
+        "title": "SiteGreenlightOverrideRequest"
       },
       "SiteMilestoneCreate": {
         "properties": {

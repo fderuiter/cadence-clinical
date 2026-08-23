@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.ctms.adapters.database import db_manager
 from apps.ctms.adapters.models import (
     BudgetAdjustment,
+    CountryPrerequisiteRule,
     CountryRegulatoryMilestone,
     CurrencyExchangeRate,
     DeviationActionItem,
@@ -16,6 +17,7 @@ from apps.ctms.adapters.models import (
     ETMFSyncRecord,
     FinancialInvoice,
     GrantContractAmendment,
+    IntegrationOutbox,
     InvestigatorGrant,
     IPDestructionCertificate,
     IPKitRecord,
@@ -29,6 +31,7 @@ from apps.ctms.adapters.models import (
 )
 from apps.ctms.domain.models import (
     BudgetAdjustmentEntity,
+    CountryPrerequisiteRuleEntity,
     CountryRegulatoryMilestoneEntity,
     CurrencyExchangeRateEntity,
     DeviationActionItemEntity,
@@ -226,18 +229,36 @@ class SQLAlchemySiteStartupRepository(ISiteStartupRepository):
         res = await self.session.execute(stmt)
         model = res.scalars().first()
         if model:
+            model.country_code = gate.country_code
             model.overall_status = gate.overall_status
+            model.facet_regulatory_irb = gate.facet_regulatory_irb
+            model.facet_cta_budget = gate.facet_cta_budget
+            model.facet_eisf_baseline = gate.facet_eisf_baseline
+            model.facet_doa_log = gate.facet_doa_log
+            model.facet_staff_training = gate.facet_staff_training
+            model.facet_ip_release = gate.facet_ip_release
             model.contract_approved = gate.contract_approved
             model.irb_approved = gate.irb_approved
             model.form_1572_approved = gate.form_1572_approved
             model.doa_signed_off = gate.doa_signed_off
             model.ip_ready = gate.ip_ready
+            model.greenlight_token = gate.greenlight_token
             model.greenlight_certified_by = gate.greenlight_certified_by
             model.greenlight_certified_at = (
                 datetime.fromisoformat(gate.greenlight_certified_at)
                 if gate.greenlight_certified_at
                 else None
             )
+            model.is_overridden = gate.is_overridden
+            model.override_sponsor_user_id = gate.override_sponsor_user_id
+            model.override_medical_user_id = gate.override_medical_user_id
+            model.override_justification = gate.override_justification
+            model.override_authorized_at = (
+                datetime.fromisoformat(gate.override_authorized_at)
+                if gate.override_authorized_at
+                else None
+            )
+            model.evaluation_details = gate.evaluation_details
             model.rejection_reason = gate.rejection_reason
             model.reason_for_change = gate.reason_for_change
             model.version_index = gate.version_index
@@ -248,18 +269,36 @@ class SQLAlchemySiteStartupRepository(ISiteStartupRepository):
         model = SiteGreenlightGate(
             study_id=gate.study_id,
             site_id=gate.site_id,
+            country_code=gate.country_code,
             overall_status=gate.overall_status,
+            facet_regulatory_irb=gate.facet_regulatory_irb,
+            facet_cta_budget=gate.facet_cta_budget,
+            facet_eisf_baseline=gate.facet_eisf_baseline,
+            facet_doa_log=gate.facet_doa_log,
+            facet_staff_training=gate.facet_staff_training,
+            facet_ip_release=gate.facet_ip_release,
             contract_approved=gate.contract_approved,
             irb_approved=gate.irb_approved,
             form_1572_approved=gate.form_1572_approved,
             doa_signed_off=gate.doa_signed_off,
             ip_ready=gate.ip_ready,
+            greenlight_token=gate.greenlight_token,
             greenlight_certified_by=gate.greenlight_certified_by,
             greenlight_certified_at=(
                 datetime.fromisoformat(gate.greenlight_certified_at)
                 if gate.greenlight_certified_at
                 else None
             ),
+            is_overridden=gate.is_overridden,
+            override_sponsor_user_id=gate.override_sponsor_user_id,
+            override_medical_user_id=gate.override_medical_user_id,
+            override_justification=gate.override_justification,
+            override_authorized_at=(
+                datetime.fromisoformat(gate.override_authorized_at)
+                if gate.override_authorized_at
+                else None
+            ),
+            evaluation_details=gate.evaluation_details,
             rejection_reason=gate.rejection_reason,
             created_by=gate.created_by,
             reason_for_change=gate.reason_for_change,
@@ -279,6 +318,99 @@ class SQLAlchemySiteStartupRepository(ISiteStartupRepository):
         if not model:
             return None
         return self._to_greenlight_gate_entity(model)
+
+    @map_database_exceptions
+    async def save_country_prerequisite_rule(
+        self, rule: CountryPrerequisiteRuleEntity
+    ) -> CountryPrerequisiteRuleEntity:
+        if rule.id:
+            stmt = select(CountryPrerequisiteRule).where(
+                CountryPrerequisiteRule.id.is_(rule.id)
+            )
+            res = await self.session.execute(stmt)
+            model = res.scalars().first()
+            if model:
+                model.facet = rule.facet
+                model.criterion_code = rule.criterion_code
+                model.criterion_name = rule.criterion_name
+                model.is_mandatory = rule.is_mandatory
+                model.description = rule.description
+                model.reason_for_change = rule.reason_for_change
+                model.version_index = rule.version_index
+                self.session.add(model)
+                await self.session.flush()
+                return self._to_country_prerequisite_rule_entity(model)
+
+        model = CountryPrerequisiteRule(
+            study_id=rule.study_id,
+            country_code=rule.country_code.upper(),
+            facet=rule.facet,
+            criterion_code=rule.criterion_code,
+            criterion_name=rule.criterion_name,
+            is_mandatory=rule.is_mandatory,
+            description=rule.description,
+            created_by=rule.created_by,
+            reason_for_change=rule.reason_for_change,
+            version_index=rule.version_index,
+        )
+        self.session.add(model)
+        await self.session.flush()
+        return self._to_country_prerequisite_rule_entity(model)
+
+    @map_database_exceptions
+    async def list_country_prerequisite_rules(
+        self, study_id: str, country_code: str | None = None
+    ) -> list[CountryPrerequisiteRuleEntity]:
+        stmt = select(CountryPrerequisiteRule).where(
+            CountryPrerequisiteRule.study_id.is_(study_id)
+        )
+        if country_code:
+            stmt = stmt.where(
+                CountryPrerequisiteRule.country_code.in_(
+                    [country_code.upper(), "GLOBAL"]
+                )
+            )
+        res = await self.session.execute(stmt)
+        models = res.scalars().all()
+        return [self._to_country_prerequisite_rule_entity(m) for m in models]
+
+    @map_database_exceptions
+    async def save_outbox_event(
+        self,
+        event_type: str,
+        payload: dict[str, Any],
+        correlation_id: str,
+        created_by: str,
+        reason_for_change: str,
+    ) -> None:
+        outbox = IntegrationOutbox(
+            event_type=event_type,
+            payload=payload,
+            correlation_id=correlation_id,
+            status="PENDING",
+            created_by=created_by,
+            reason_for_change=reason_for_change,
+        )
+        self.session.add(outbox)
+        await self.session.flush()
+
+    def _to_country_prerequisite_rule_entity(
+        self, model: CountryPrerequisiteRule
+    ) -> CountryPrerequisiteRuleEntity:
+        return CountryPrerequisiteRuleEntity(
+            id=model.id,
+            study_id=model.study_id,
+            country_code=model.country_code,
+            facet=model.facet,
+            criterion_code=model.criterion_code,
+            criterion_name=model.criterion_name,
+            is_mandatory=model.is_mandatory,
+            description=model.description,
+            created_at=model.created_at.isoformat() if model.created_at else None,
+            created_by=model.created_by,
+            reason_for_change=model.reason_for_change,
+            version_index=model.version_index,
+        )
 
     def _to_country_milestone_entity(
         self, model: CountryRegulatoryMilestone
@@ -329,18 +461,36 @@ class SQLAlchemySiteStartupRepository(ISiteStartupRepository):
             id=model.id,
             study_id=model.study_id,
             site_id=model.site_id,
+            country_code=model.country_code,
             overall_status=model.overall_status,
+            facet_regulatory_irb=model.facet_regulatory_irb,
+            facet_cta_budget=model.facet_cta_budget,
+            facet_eisf_baseline=model.facet_eisf_baseline,
+            facet_doa_log=model.facet_doa_log,
+            facet_staff_training=model.facet_staff_training,
+            facet_ip_release=model.facet_ip_release,
             contract_approved=model.contract_approved,
             irb_approved=model.irb_approved,
             form_1572_approved=model.form_1572_approved,
             doa_signed_off=model.doa_signed_off,
             ip_ready=model.ip_ready,
+            greenlight_token=model.greenlight_token,
             greenlight_certified_by=model.greenlight_certified_by,
             greenlight_certified_at=(
                 model.greenlight_certified_at.isoformat()
                 if model.greenlight_certified_at
                 else None
             ),
+            is_overridden=model.is_overridden,
+            override_sponsor_user_id=model.override_sponsor_user_id,
+            override_medical_user_id=model.override_medical_user_id,
+            override_justification=model.override_justification,
+            override_authorized_at=(
+                model.override_authorized_at.isoformat()
+                if model.override_authorized_at
+                else None
+            ),
+            evaluation_details=model.evaluation_details,
             rejection_reason=model.rejection_reason,
             created_at=model.created_at.isoformat() if model.created_at else None,
             created_by=model.created_by,

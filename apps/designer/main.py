@@ -140,6 +140,9 @@ from apps.designer.presentation.routers.protocol_export import router as export_
 from apps.designer.presentation.routers.quality_sentinel import (
     router as sentinel_router,
 )
+from apps.designer.presentation.routers.startup_matrix import (
+    router as startup_matrix_router,
+)
 from apps.designer.presentation.routers.synopsis import router as synopsis_router
 from apps.designer.rendering import TemplateRenderingError
 from packages.security import assert_secure_secrets, validate_branding
@@ -194,6 +197,7 @@ app.include_router(comments_router)
 app.include_router(digitization_router)
 app.include_router(amendments_router)
 app.include_router(designer_router)
+app.include_router(startup_matrix_router)
 
 
 from fastapi.exception_handlers import http_exception_handler

@@ -401,23 +401,84 @@ class EssentialDocumentResponse(BaseModel):
     version_index: int
 
 
-class SiteGreenlightGateResponse(BaseModel):
-    id: str | None
+class CountryPrerequisiteRuleCreate(BaseModel):
     study_id: str
-    site_id: str
-    overall_status: str
-    contract_approved: bool
-    irb_approved: bool
-    form_1572_approved: bool
-    doa_signed_off: bool
-    ip_ready: bool
-    greenlight_certified_by: str | None
-    greenlight_certified_at: str | None
-    rejection_reason: str | None
+    country_code: str
+    facet: str
+    criterion_code: str
+    criterion_name: str
+    is_mandatory: bool = True
+    description: str | None = None
+
+
+class CountryPrerequisiteRuleResponse(BaseModel):
+    id: str
+    study_id: str
+    country_code: str
+    facet: str
+    criterion_code: str
+    criterion_name: str
+    is_mandatory: bool
+    description: str | None
     created_at: str | None
     created_by: str
     reason_for_change: str
     version_index: int
+
+
+class SiteGreenlightGateResponse(BaseModel):
+    id: str | None
+    study_id: str
+    site_id: str
+    country_code: str = "US"
+    overall_status: str
+    facet_regulatory_irb: bool = False
+    facet_cta_budget: bool = False
+    facet_eisf_baseline: bool = False
+    facet_doa_log: bool = False
+    facet_staff_training: bool = False
+    facet_ip_release: bool = False
+    contract_approved: bool = False
+    irb_approved: bool = False
+    form_1572_approved: bool = False
+    doa_signed_off: bool = False
+    ip_ready: bool = False
+    greenlight_token: str | None = None
+    greenlight_certified_by: str | None = None
+    greenlight_certified_at: str | None = None
+    is_overridden: bool = False
+    override_sponsor_user_id: str | None = None
+    override_medical_user_id: str | None = None
+    override_justification: str | None = None
+    override_authorized_at: str | None = None
+    evaluation_details: dict[str, Any] | None = None
+    rejection_reason: str | None = None
+    created_at: str | None = None
+    created_by: str
+    reason_for_change: str
+    version_index: int
+
+
+class SiteGreenlightOverrideRequest(BaseModel):
+    study_id: str
+    sponsor_user_id: str
+    medical_user_id: str
+    sponsor_signature: str
+    medical_signature: str
+    justification: str
+    country_code: str = "US"
+
+
+class GreenlightTokenVerifyRequest(BaseModel):
+    token: str
+    site_id: str | None = None
+    study_id: str | None = None
+
+
+class GreenlightTokenVerifyResponse(BaseModel):
+    is_valid: bool
+    payload: dict[str, Any] | None = None
+    error: str | None = None
 
 
 # 2. Protocol Deviations & Action Items

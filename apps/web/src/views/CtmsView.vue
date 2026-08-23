@@ -262,6 +262,28 @@
       >
         Financials &amp; Contracts
       </button>
+      <button
+        id="tab-startup"
+        class="tab-btn"
+        :class="{ active: activeTab === 'startup' }"
+        style="
+          padding: 8px 16px;
+          border: none;
+          background: none;
+          font-weight: 600;
+          cursor: pointer;
+          font-size: 16px;
+          border-bottom: 3px solid transparent;
+        "
+        :style="
+          activeTab === 'startup'
+            ? { borderBottomColor: '#0f4c81', color: '#0f4c81' }
+            : { color: '#64748b' }
+        "
+        @click="activeTab = 'startup'"
+      >
+        🚀 Study Startup &amp; Greenlight
+      </button>
     </div>
 
     <!-- Active Filter/Scope Info -->
@@ -2027,6 +2049,11 @@
         </div>
       </div>
     </div>
+
+    <!-- Startup & Greenlight Tab Content -->
+    <div v-if="activeTab === 'startup'" style="margin-top: 20px">
+      <SsuGreenlightConsole :study-id="studyId" :site-id="siteId" />
+    </div>
   </div>
 </template>
 
@@ -2036,6 +2063,7 @@ import { useRoute } from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import CraVerificationConsole from "../components/persona/CraVerificationConsole.vue";
+import SsuGreenlightConsole from "../components/clinical/SsuGreenlightConsole.vue";
 import apiClient from "../services/api";
 import { getBaseUrl } from "../api/apiClient";
 
@@ -2048,7 +2076,11 @@ const siteId = computed(() => store.activeSiteId || "SITE-001");
 const studyId = computed(() => store.activeStudyId || "STUDY-USDM-001");
 
 // Tabs selection
-const activeTab = ref("operations");
+const activeTab = ref(
+  route.path === "/ssu" || route.query.tab === "startup"
+    ? "startup"
+    : "operations"
+);
 
 // Core Operations state
 const milestones = ref([]);

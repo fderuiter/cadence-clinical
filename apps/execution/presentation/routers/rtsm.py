@@ -648,6 +648,16 @@ async def create_transfer_order_endpoint(
             detail="Forbidden: Access denied to study or destination node.",
         )
 
+    # Enforce country-aware greenlight site activation gate on destination site (PRD-SSU-003, ADR-2202)
+    from apps.execution.greenlight_gating import enforce_site_greenlight_gate
+
+    if payload.study_id and payload.destination_node_id:
+        await enforce_site_greenlight_gate(
+            study_id=payload.study_id,
+            site_id=payload.destination_node_id,
+            greenlight_token=request.headers.get("X-Site-Greenlight-Token"),
+        )
+
     try:
         order = await create_transfer_order_transaction(
             session=session,

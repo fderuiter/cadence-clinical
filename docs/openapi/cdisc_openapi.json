@@ -1274,6 +1274,139 @@
         }
       }
     },
+    "/ctms/api/v1/ctms/startup/rules/presets": {
+      "get": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Get Jurisdiction Rule Presets",
+        "description": "Returns statutory startup prerequisite rule presets for US, EU, JP, UK, and Global jurisdictions.",
+        "operationId": "Ctms_get_jurisdiction_rule_presets_api_v1_ctms_startup_rules_presets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "items": {
+                      "additionalProperties": true,
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "type": "object",
+                  "title": "Response Get Jurisdiction Rule Presets Api V1 Ctms Startup Rules Presets Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ctms/api/v1/ctms/startup/rules": {
+      "post": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Create Or Update Country Prerequisite Rule",
+        "description": "Configures a country-specific prerequisite criterion for site activation.",
+        "operationId": "Ctms_create_or_update_country_prerequisite_rule_api_v1_ctms_startup_rules_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_CountryPrerequisiteRuleCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_CountryPrerequisiteRuleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "List Country Prerequisite Rules",
+        "description": "Retrieves country-specific prerequisite rules matrix for a study.",
+        "operationId": "Ctms_list_country_prerequisite_rules_api_v1_ctms_startup_rules_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "country_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Country Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Ctms_CountryPrerequisiteRuleResponse"
+                  },
+                  "title": "Response List Country Prerequisite Rules Api V1 Ctms Startup Rules Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ctms/api/v1/ctms/startup/milestones": {
       "post": {
         "tags": [
@@ -1477,6 +1610,56 @@
       }
     },
     "/ctms/api/v1/ctms/startup/documents/{document_id}/review": {
+      "post": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Review Essential Document",
+        "operationId": "Ctms_review_essential_document_api_v1_ctms_startup_documents__document_id__review_post",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_EssentialDocumentReview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_EssentialDocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "put": {
         "tags": [
           "CTMS Site Startup"
@@ -1534,6 +1717,7 @@
           "CTMS Site Startup"
         ],
         "summary": "Evaluate Site Greenlight",
+        "description": "Evaluates real-time site activation readiness across the 6 key operational facets.",
         "operationId": "Ctms_evaluate_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_get",
         "parameters": [
           {
@@ -1553,6 +1737,18 @@
               "type": "string",
               "title": "Study Id"
             }
+          },
+          {
+            "name": "country_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "ISO-2 Country code or jurisdiction (e.g. US, EU, JP, GB)",
+              "default": "US",
+              "title": "Country Code"
+            },
+            "description": "ISO-2 Country code or jurisdiction (e.g. US, EU, JP, GB)"
           }
         ],
         "responses": {
@@ -1585,6 +1781,7 @@
           "CTMS Site Startup"
         ],
         "summary": "Certify Site Greenlight",
+        "description": "Formally certifies greenlight activation, issuing an HMAC-SHA256 token and un-gating trial execution.",
         "operationId": "Ctms_certify_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_certify_post",
         "parameters": [
           {
@@ -1604,6 +1801,18 @@
               "type": "string",
               "title": "Study Id"
             }
+          },
+          {
+            "name": "country_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "ISO-2 Country code or jurisdiction",
+              "default": "US",
+              "title": "Country Code"
+            },
+            "description": "ISO-2 Country code or jurisdiction"
           }
         ],
         "responses": {
@@ -1613,6 +1822,112 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Ctms_SiteGreenlightGateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ctms/api/v1/ctms/startup/sites/{site_id}/greenlight/override": {
+      "post": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Override Site Greenlight",
+        "description": "Executes dual-signature executive sponsor GxP override with mandatory Part 11 justification logging.",
+        "operationId": "Ctms_override_site_greenlight_api_v1_ctms_startup_sites__site_id__greenlight_override_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_SiteGreenlightOverrideRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_SiteGreenlightGateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ctms/api/v1/ctms/startup/sites/{site_id}/greenlight/verify-token": {
+      "post": {
+        "tags": [
+          "CTMS Site Startup"
+        ],
+        "summary": "Verify Site Greenlight Token Endpoint",
+        "description": "Verifies cryptographic validity and binding of a Site Greenlight Activation Token.",
+        "operationId": "Ctms_verify_site_greenlight_token_endpoint_api_v1_ctms_startup_sites__site_id__greenlight_verify_token_post",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_GreenlightTokenVerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_GreenlightTokenVerifyResponse"
                 }
               }
             }
@@ -12359,6 +12674,104 @@
                     "$ref": "#/components/schemas/Designer_DifferenceResult"
                   },
                   "title": "Response Get Library Instance Diff Endpoint Api V1 Studies  Study Id  Library Instances  Instance Id  Diff Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/designer/api/v1/designer/startup-matrix/presets": {
+      "get": {
+        "tags": [
+          "StartupPrerequisiteMatrix"
+        ],
+        "summary": "Get Startup Presets Endpoint",
+        "description": "Retrieves standard statutory startup criteria presets across international jurisdictions.",
+        "operationId": "Designer_get_startup_presets_endpoint_api_v1_designer_startup_matrix_presets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "items": {
+                      "additionalProperties": true,
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "type": "object",
+                  "title": "Response Get Startup Presets Endpoint Api V1 Designer Startup Matrix Presets Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/designer/api/v1/designer/startup-matrix/jurisdictions": {
+      "get": {
+        "tags": [
+          "StartupPrerequisiteMatrix"
+        ],
+        "summary": "Get Supported Jurisdictions Endpoint",
+        "description": "Lists supported international jurisdictions with regulatory and ethics governance frameworks.",
+        "operationId": "Designer_get_supported_jurisdictions_endpoint_api_v1_designer_startup_matrix_jurisdictions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Designer_JurisdictionInfo"
+                  },
+                  "type": "array",
+                  "title": "Response Get Supported Jurisdictions Endpoint Api V1 Designer Startup Matrix Jurisdictions Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/designer/api/v1/designer/startup-matrix/generate-template": {
+      "post": {
+        "tags": [
+          "StartupPrerequisiteMatrix"
+        ],
+        "summary": "Generate Startup Template Endpoint",
+        "description": "Generates country-specific startup prerequisite criteria matrix for study protocol design.",
+        "operationId": "Designer_generate_startup_template_endpoint_api_v1_designer_startup_matrix_generate_template_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Designer_GenerateStartupTemplateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_GenerateStartupTemplateResponse"
                 }
               }
             }
@@ -50361,6 +50774,137 @@
         ],
         "title": "CountryMilestoneResponse"
       },
+      "Ctms_CountryPrerequisiteRuleCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code"
+          },
+          "facet": {
+            "type": "string",
+            "title": "Facet"
+          },
+          "criterion_code": {
+            "type": "string",
+            "title": "Criterion Code"
+          },
+          "criterion_name": {
+            "type": "string",
+            "title": "Criterion Name"
+          },
+          "is_mandatory": {
+            "type": "boolean",
+            "title": "Is Mandatory",
+            "default": true
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "country_code",
+          "facet",
+          "criterion_code",
+          "criterion_name"
+        ],
+        "title": "CountryPrerequisiteRuleCreate"
+      },
+      "Ctms_CountryPrerequisiteRuleResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code"
+          },
+          "facet": {
+            "type": "string",
+            "title": "Facet"
+          },
+          "criterion_code": {
+            "type": "string",
+            "title": "Criterion Code"
+          },
+          "criterion_name": {
+            "type": "string",
+            "title": "Criterion Name"
+          },
+          "is_mandatory": {
+            "type": "boolean",
+            "title": "Is Mandatory"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "country_code",
+          "facet",
+          "criterion_code",
+          "criterion_name",
+          "is_mandatory",
+          "description",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "CountryPrerequisiteRuleResponse"
+      },
       "Ctms_CurrencyConvertRequest": {
         "properties": {
           "amount": {
@@ -51443,6 +51987,77 @@
           "version_index"
         ],
         "title": "GeneratedLetterResponse"
+      },
+      "Ctms_GreenlightTokenVerifyRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "GreenlightTokenVerifyRequest"
+      },
+      "Ctms_GreenlightTokenVerifyResponse": {
+        "properties": {
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_valid"
+        ],
+        "title": "GreenlightTokenVerifyResponse"
       },
       "Ctms_HTTPValidationError": {
         "properties": {
@@ -53700,29 +54315,80 @@
             "type": "string",
             "title": "Site Id"
           },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code",
+            "default": "US"
+          },
           "overall_status": {
             "type": "string",
             "title": "Overall Status"
           },
+          "facet_regulatory_irb": {
+            "type": "boolean",
+            "title": "Facet Regulatory Irb",
+            "default": false
+          },
+          "facet_cta_budget": {
+            "type": "boolean",
+            "title": "Facet Cta Budget",
+            "default": false
+          },
+          "facet_eisf_baseline": {
+            "type": "boolean",
+            "title": "Facet Eisf Baseline",
+            "default": false
+          },
+          "facet_doa_log": {
+            "type": "boolean",
+            "title": "Facet Doa Log",
+            "default": false
+          },
+          "facet_staff_training": {
+            "type": "boolean",
+            "title": "Facet Staff Training",
+            "default": false
+          },
+          "facet_ip_release": {
+            "type": "boolean",
+            "title": "Facet Ip Release",
+            "default": false
+          },
           "contract_approved": {
             "type": "boolean",
-            "title": "Contract Approved"
+            "title": "Contract Approved",
+            "default": false
           },
           "irb_approved": {
             "type": "boolean",
-            "title": "Irb Approved"
+            "title": "Irb Approved",
+            "default": false
           },
           "form_1572_approved": {
             "type": "boolean",
-            "title": "Form 1572 Approved"
+            "title": "Form 1572 Approved",
+            "default": false
           },
           "doa_signed_off": {
             "type": "boolean",
-            "title": "Doa Signed Off"
+            "title": "Doa Signed Off",
+            "default": false
           },
           "ip_ready": {
             "type": "boolean",
-            "title": "Ip Ready"
+            "title": "Ip Ready",
+            "default": false
+          },
+          "greenlight_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Greenlight Token"
           },
           "greenlight_certified_by": {
             "anyOf": [
@@ -53745,6 +54411,67 @@
               }
             ],
             "title": "Greenlight Certified At"
+          },
+          "is_overridden": {
+            "type": "boolean",
+            "title": "Is Overridden",
+            "default": false
+          },
+          "override_sponsor_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Sponsor User Id"
+          },
+          "override_medical_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Medical User Id"
+          },
+          "override_justification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Justification"
+          },
+          "override_authorized_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Authorized At"
+          },
+          "evaluation_details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluation Details"
           },
           "rejection_reason": {
             "anyOf": [
@@ -53787,20 +54514,54 @@
           "study_id",
           "site_id",
           "overall_status",
-          "contract_approved",
-          "irb_approved",
-          "form_1572_approved",
-          "doa_signed_off",
-          "ip_ready",
-          "greenlight_certified_by",
-          "greenlight_certified_at",
-          "rejection_reason",
-          "created_at",
           "created_by",
           "reason_for_change",
           "version_index"
         ],
         "title": "SiteGreenlightGateResponse"
+      },
+      "Ctms_SiteGreenlightOverrideRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "sponsor_user_id": {
+            "type": "string",
+            "title": "Sponsor User Id"
+          },
+          "medical_user_id": {
+            "type": "string",
+            "title": "Medical User Id"
+          },
+          "sponsor_signature": {
+            "type": "string",
+            "title": "Sponsor Signature"
+          },
+          "medical_signature": {
+            "type": "string",
+            "title": "Medical Signature"
+          },
+          "justification": {
+            "type": "string",
+            "title": "Justification"
+          },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code",
+            "default": "US"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "sponsor_user_id",
+          "medical_user_id",
+          "sponsor_signature",
+          "medical_signature",
+          "justification"
+        ],
+        "title": "SiteGreenlightOverrideRequest"
       },
       "Ctms_SiteMilestoneCreate": {
         "properties": {
@@ -57607,6 +58368,58 @@
         ],
         "title": "FormReviewCommentResponse"
       },
+      "Designer_GenerateStartupTemplateRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study Identifier"
+          },
+          "country_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Country Codes",
+            "description": "List of target country codes (e.g. ['US', 'EU', 'JP', 'GB'])"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "country_codes"
+        ],
+        "title": "GenerateStartupTemplateRequest"
+      },
+      "Designer_GenerateStartupTemplateResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "generated_rules": {
+            "items": {
+              "$ref": "#/components/schemas/Designer_PrerequisiteCriterionTemplate"
+            },
+            "type": "array",
+            "title": "Generated Rules"
+          },
+          "summary_by_country": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Summary By Country"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "generated_rules",
+          "summary_by_country"
+        ],
+        "title": "GenerateStartupTemplateResponse"
+      },
       "Designer_HTTPValidationError": {
         "properties": {
           "detail": {
@@ -57745,6 +58558,39 @@
         ],
         "title": "ItemMappingStatus",
         "description": "Represents the mapping status of an individual activity item.\n\nAttributes:\n    item_id: The public string identifier of the activity item.\n    internal_id: The internal graph database ID of the activity item.\n    is_mapped: Boolean indicating whether this item has a corresponding ODM/CRF node mapped to it."
+      },
+      "Designer_JurisdictionInfo": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "regulatory_framework": {
+            "type": "string",
+            "title": "Regulatory Framework"
+          },
+          "ethics_framework": {
+            "type": "string",
+            "title": "Ethics Framework"
+          },
+          "mandatory_criteria_count": {
+            "type": "integer",
+            "title": "Mandatory Criteria Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "regulatory_framework",
+          "ethics_framework",
+          "mandatory_criteria_count"
+        ],
+        "title": "JurisdictionInfo"
       },
       "Designer_LibraryInstanceResponse": {
         "properties": {
@@ -58207,6 +59053,50 @@
         ],
         "title": "OperationalTicketBlueprint",
         "description": "Structured actionable ticket blueprint ready for dispatch to apps/tickets."
+      },
+      "Designer_PrerequisiteCriterionTemplate": {
+        "properties": {
+          "country_code": {
+            "type": "string",
+            "title": "Country Code"
+          },
+          "facet": {
+            "type": "string",
+            "title": "Facet"
+          },
+          "criterion_code": {
+            "type": "string",
+            "title": "Criterion Code"
+          },
+          "criterion_name": {
+            "type": "string",
+            "title": "Criterion Name"
+          },
+          "is_mandatory": {
+            "type": "boolean",
+            "title": "Is Mandatory"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "country_code",
+          "facet",
+          "criterion_code",
+          "criterion_name",
+          "is_mandatory"
+        ],
+        "title": "PrerequisiteCriterionTemplate"
       },
       "Designer_ProblemDetails": {
         "properties": {

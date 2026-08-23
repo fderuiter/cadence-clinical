@@ -79,6 +79,7 @@ from apps.execution.exceptions import (
     InvalidCodingActionError,
     SubjectEligibilityError,
 )
+from apps.execution.greenlight_gating import enforce_site_greenlight_gate
 from apps.execution.lab_range_cache import get_active_lab_ranges, lab_range_cache
 from apps.execution.outliers import recalculate_cohort_outliers
 from apps.execution.routers.amendments import router as amendments_router
@@ -987,6 +988,13 @@ async def create_subject(
     roles: list[str] = Depends(verify_not_auditor),
 ) -> SubjectResponse:
     """Create a new clinical subject pseudonymously."""
+    # Enforce country-aware greenlight site activation gate (PRD-SSU-003, ADR-2202)
+    if payload.study_id and payload.site_id:
+        await enforce_site_greenlight_gate(
+            study_id=payload.study_id,
+            site_id=payload.site_id,
+        )
+
     encrypted_demo = None
     if payload.demographics is not None:
         encrypted_demo = encrypt_demographics(
@@ -1902,6 +1910,13 @@ async def create_observation(
             protocol_version=proto_tag,
             site_id=s_id,
         )
+
+        # Enforce country-aware greenlight site activation gate (PRD-SSU-003, ADR-2202)
+        if study_id and s_id:
+            await enforce_site_greenlight_gate(
+                study_id=study_id,
+                site_id=s_id,
+            )
 
         obs_date = payload.observation_date or datetime.now()
 
