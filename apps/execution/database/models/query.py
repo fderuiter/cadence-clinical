@@ -10,6 +10,7 @@ from .audit import AuditedModel
 class QueryStatus(enum.StrEnum):
     NONE = "NONE"
     CANDIDATE = "CANDIDATE"
+    DRAFT_AI = "DRAFT_AI"
     OPEN = "OPEN"
     ANSWERED = "ANSWERED"
     CLOSED = "CLOSED"
@@ -68,3 +69,6 @@ class ClinicalQuery(AuditedModel):
     field_id: Mapped[str] = mapped_column(String(255), nullable=True)
     query_type: Mapped[str] = mapped_column(String(255), nullable=True)
     action_required: Mapped[str] = mapped_column(String(255), nullable=True)
+
+
+QueryDraft = ClinicalQuery

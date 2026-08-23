@@ -24,6 +24,8 @@ from apps.execution.database.models import (
     ClinicalObservation,
     ClinicalQuery,
     ClinicalSubject,
+    QueryDraft,
+    QueryStatus,
 )
 from apps.execution.domain.anomaly import (
     AnomalySeverity,
@@ -34,6 +36,7 @@ from apps.execution.services.cross_domain_anomaly_service import (
     CrossDomainAnomalyService,
 )
 from apps.execution.workers.anomaly_worker import (
+    AIEvaluationWorker,
     poll_and_evaluate_anomalies,
     run_asynchronous_subject_anomaly_checks,
     start_anomaly_worker,
@@ -734,3 +737,245 @@ async def test_anomaly_worker_lifecycle_and_background_triggers() -> None:
     # 3. Test worker start and stop functions
     start_anomaly_worker(session_maker)
     stop_anomaly_worker()
+
+
+@pytest.mark.asyncio
+async def test_ai_evaluation_worker_class_methods() -> None:
+    """Validate AIEvaluationWorker object-oriented batch scanning and subject evaluation.
+
+    @req:PRD-QRY-008
+    """
+    session_maker = db_manager.get_session_maker()
+    async with session_maker() as session:
+        subj = ClinicalSubject(
+            subject_id="SUBJ-112",
+            study_id="STUDY-001",
+            site_id="SITE-01",
+            status="SCREENING",
+        )
+        session.add(subj)
+        vs_obs = ClinicalObservation(
+            subject_id="SUBJ-112",
+            study_id="STUDY-001",
+            domain="VS",
+            test_code="SYSBP",
+            test_name="Systolic Blood Pressure",
+            value=215.0,
+            observation_date=datetime.now(UTC),
+        )
+        session.add(vs_obs)
+        await session.commit()
+
+    worker = AIEvaluationWorker(session_maker=session_maker)
+    await worker.scan_submissions_batch(limit=10)
+
+    async with session_maker() as session:
+        stmt = select(QueryDraft).where(
+            QueryDraft.subject_id == "SUBJ-112",
+            QueryDraft.status == "CANDIDATE",
+        )
+        res = await session.execute(stmt)
+        drafts = res.scalars().all()
+        assert len(drafts) == 1
+        assert drafts[0].origin == "ANOMALY_DETECTOR"
+
+    # Evaluate specific subject
+    await worker.evaluate_subject(
+        subject_id="SUBJ-112",
+        study_id="STUDY-001",
+        user_id="data_manager_user",
+        change_reason="Triggered subject evaluation",
+    )
+
+    worker.start()
+    worker.stop()
+
+
+@pytest.mark.asyncio
+async def test_conmed_start_date_preceding_ae_onset() -> None:
+    """Validate detection when ConMed indicated for AE starts prior to AE onset date.
+
+    @req:PRD-QRY-008
+    """
+    session_maker = db_manager.get_session_maker()
+    async with session_maker() as session:
+        subj = ClinicalSubject(
+            subject_id="SUBJ-113",
+            study_id="STUDY-001",
+            site_id="SITE-01",
+            status="SCREENING",
+        )
+        session.add(subj)
+
+        ae_obs = ClinicalObservation(
+            subject_id="SUBJ-113",
+            study_id="STUDY-001",
+            domain="AE",
+            test_code="AETERM",
+            test_name="Adverse Event Term",
+            value_string="Bronchospasm",
+            additional_properties={
+                "AETERM": "Bronchospasm",
+                "AESTDTC": "2026-06-15T00:00:00Z",
+                "AESEV": "SEVERE",
+            },
+            observation_date=datetime(2026, 6, 15, tzinfo=UTC),
+        )
+        cm_obs = ClinicalObservation(
+            subject_id="SUBJ-113",
+            study_id="STUDY-001",
+            domain="CM",
+            test_code="CMTRT",
+            test_name="Concomitant Medication",
+            value_string="Albuterol Inhaler",
+            additional_properties={
+                "CMTRT": "Albuterol Inhaler",
+                "CMINDC": "Treatment for Severe Bronchospasm",
+                "CMSTDTC": "2026-05-10T00:00:00Z",
+            },
+            observation_date=datetime(2026, 5, 10, tzinfo=UTC),
+        )
+        session.add_all([ae_obs, cm_obs])
+        await session.commit()
+
+        service = CrossDomainAnomalyService(ai_client=None)
+        res = await service.evaluate_subject_cross_domain_anomalies(
+            session=session,
+            subject_id="SUBJ-113",
+            study_id="STUDY-001",
+            enable_ai=False,
+            auto_stage_queries=True,
+        )
+        await session.commit()
+
+        assert any(
+            a.anomaly_type == CrossDomainAnomalyType.TEMPORAL_SEQUENCE_MISMATCH
+            for a in res.anomalies
+        )
+        assert res.queries_staged_count >= 1
+
+
+@pytest.mark.asyncio
+async def test_ctcae_grade_3_4_lab_abnormality_without_ae() -> None:
+    """Validate detection of CTCAE Grade 3/4 laboratory abnormalities without documented AE.
+
+    @req:PRD-QRY-008
+    """
+    session_maker = db_manager.get_session_maker()
+    async with session_maker() as session:
+        subj = ClinicalSubject(
+            subject_id="SUBJ-114",
+            study_id="STUDY-001",
+            site_id="SITE-01",
+            status="SCREENING",
+        )
+        session.add(subj)
+
+        # Severe Thrombocytopenia (Platelets 35 x 10^9/L, Grade 3/4)
+        lb_obs = ClinicalObservation(
+            subject_id="SUBJ-114",
+            study_id="STUDY-001",
+            domain="LB",
+            test_code="PLT",
+            test_name="Platelet Count",
+            value=35.0,
+            unit="10^9/L",
+            lab_indicator="GRADE_3_LOW",
+            additional_properties={"CTCAE_GRADE": "3"},
+            observation_date=datetime.now(UTC),
+        )
+        session.add(lb_obs)
+        await session.commit()
+
+        service = CrossDomainAnomalyService(ai_client=None)
+        res = await service.evaluate_subject_cross_domain_anomalies(
+            session=session,
+            subject_id="SUBJ-114",
+            study_id="STUDY-001",
+            enable_ai=False,
+            auto_stage_queries=True,
+        )
+        await session.commit()
+
+        assert len(res.anomalies) == 1
+        anomaly = res.anomalies[0]
+        assert (
+            anomaly.anomaly_type
+            == CrossDomainAnomalyType.MARKED_LAB_ABNORMALITY_WITHOUT_AE
+        )
+        assert anomaly.severity == AnomalySeverity.HIGH
+        assert "Thrombocytopenia" in anomaly.message or "PLT" in anomaly.message
+
+
+@pytest.mark.asyncio
+async def test_vital_signs_inconsistent_with_baseline_medical_history() -> None:
+    """Validate detection of vital sign anomalies inconsistent with baseline medical history.
+
+    @req:PRD-QRY-008
+    """
+    session_maker = db_manager.get_session_maker()
+    async with session_maker() as session:
+        subj = ClinicalSubject(
+            subject_id="SUBJ-115",
+            study_id="STUDY-001",
+            site_id="SITE-01",
+            status="SCREENING",
+        )
+        session.add(subj)
+
+        # Baseline medical history has seasonal allergies, but NO hypertension
+        mh_obs = ClinicalObservation(
+            subject_id="SUBJ-115",
+            study_id="STUDY-001",
+            domain="MH",
+            test_code="MHTERM",
+            test_name="Medical History Term",
+            value_string="Seasonal Allergic Rhinitis",
+            additional_properties={"MHTERM": "Seasonal Allergic Rhinitis"},
+            observation_date=datetime.now(UTC),
+        )
+
+        # Severe systolic hypertension (165 mmHg) with no documented AE or hypertension in MH
+        vs_obs = ClinicalObservation(
+            subject_id="SUBJ-115",
+            study_id="STUDY-001",
+            domain="VS",
+            test_code="SYSBP",
+            test_name="Systolic Blood Pressure",
+            value=165.0,
+            unit="mmHg",
+            observation_date=datetime.now(UTC),
+        )
+        session.add_all([mh_obs, vs_obs])
+        await session.commit()
+
+        service = CrossDomainAnomalyService(ai_client=None)
+        res = await service.evaluate_subject_cross_domain_anomalies(
+            session=session,
+            subject_id="SUBJ-115",
+            study_id="STUDY-001",
+            enable_ai=False,
+            auto_stage_queries=True,
+        )
+        await session.commit()
+
+        assert any(
+            a.anomaly_type
+            in (
+                CrossDomainAnomalyType.VITALS_INCONSISTENT_WITH_HISTORY,
+                CrossDomainAnomalyType.CRITICAL_VITALS_WITHOUT_AE,
+            )
+            for a in res.anomalies
+        )
+        assert res.queries_staged_count >= 1
+
+
+@pytest.mark.asyncio
+async def test_query_draft_model_and_status() -> None:
+    """Validate QueryDraft alias and QueryStatus enum compatibility.
+
+    @req:PRD-QRY-008
+    """
+    assert QueryStatus.CANDIDATE == "CANDIDATE"
+    assert QueryStatus.DRAFT_AI == "DRAFT_AI"
+    assert QueryDraft is ClinicalQuery

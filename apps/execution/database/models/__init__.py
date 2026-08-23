@@ -24,6 +24,7 @@ _submodule_mappings = {
     "ClinicalObservation": "observation",
     # query
     "ClinicalQuery": "query",
+    "QueryDraft": "query",
     "QueryStatus": "query",
     # sdv
     "SDVSignOff": "sdv",

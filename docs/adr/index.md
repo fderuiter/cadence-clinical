@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-22: Sovereign All-in-One eClinical Suite Expansion](2026-08-22-sovereign-all-in-one-eclinical-suite-expansion.md)
 - [2026-08-21: Asynchronous Cross-Domain eCRF Anomaly Detection Worker](2026-08-21-asynchronous-cross-domain-ecrf-anomaly-detection-worker.md)
 - [2026-08-21: Asynchronous Protocol Digitization Stage DAG with USDM Compilation](2026-08-21-asynchronous-protocol-digitization-stage-dag-with-usdm-compilation.md)
 - [2026-08-21: Knowledge Hub Two-Tier Immutable Data Model](2026-08-21-knowledge-hub-two-tier-immutable-data-model.md)

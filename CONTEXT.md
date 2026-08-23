@@ -224,3 +224,56 @@ A structured, step-by-step human-in-the-loop CLI workflow that automates 256-bit
 
 An environment configuration strategy distinguishing between developer local fast-paths (zero-touch local storage, auto-generated HMAC keys) and production compliance paths (external S3 storage, real OIDC/SMTP secrets, and strict Part 11 entropy validation).
 
+### Automated Trigger-to-Payable Engine
+
+A financial lifecycle pattern where completed eCRF visits, forms, and CRA monitoring verification events automatically compute scheduled site reimbursements, split payees, and withholding reserves based on versioned investigator grant contracts.
+
+### Zero-Footprint Blinded DICOM Adjudication
+
+A clinical imaging workflow combining in-flight pixel and metadata PHI scrubbing, web-based image measurement tools (RECIST 1.1, Lugano), and dual-independent blinded reader evaluation with automated tie-breaker escalation to an Adjudication Committee Chair.
+
+### Deterministic Global Regulatory Reporting Engine
+
+A pharmacovigilance decision tree that evaluates Individual Case Safety Reports (ICSRs) against multi-country reporting criteria (FDA 7/15-day expedited, EMA EudraVigilance, PMDA, MHRA) with countdown deadline management.
+
+### AS2 Regulatory B2B Gateway
+
+A secure EDI communications adapter providing direct, encrypted Applicability Statement 2 transmission of ICH E2B(R3) safety XML packages to regulatory agencies with cryptographic Message Disposition Notification (MDN) verification.
+
+### Multi-Echelon Clinical Supply Optimization
+
+An RTSM inventory pattern tracking investigational product shipments across manufacturing, central depots, regional depots, and sites with predictive automated replenishment based on real-time enrollment velocity.
+
+### Mean Kinetic Temperature (MKT) Excursion Engine
+
+An automated cold chain evaluation algorithm that calculates MKT across temperature logger data streams, compares cumulative exposure against stability budgets, and quarantines impacted drug kits.
+
+### Vein-to-Vein Chain of Custody (COC/COI)
+
+A traceability standard for cell and gene therapies enforcing deterministic subject-to-lot identity binding across apheresis collection, cryogenic transport, cell engineering, and infusion.
+
+### Centralized Statistical Monitoring (CSM)
+
+An ICH E6(R3) data integrity surveillance model evaluating cross-site statistical distributions, digit preference, variance anomalies, and multivariate correlation clusters to detect data fabrication and systemic site errors.
+
+### TransCelerate RACT Matrix
+
+A formal Risk Assessment and Categorization Tool linking identified protocol operational risks directly to dynamic Key Risk Indicators (KRIs) and targeted monitoring thresholds.
+
+### Clinical Data Repository (CDR) Lakehouse
+
+A centralized, versioned clinical data pool aggregating multi-source streams (EDC, ePRO, central/local labs, connected sensors, EHR FHIR) with automated transformation into CDISC SDTM and ADaM models.
+
+### Validated Statistical Computing Environment (SCE)
+
+A 21 CFR Part 11 compliant analytical workspace providing containerized R and Python statistical execution environments with version-pinned dataset snapshots, package integrity locks, and immutable analysis audit trails.
+
+### Connected Study Training Compliance
+
+A continuous qualification engine that maps protocol amendments and operational SOP revisions into required training curricula for site investigators and CRAs, enforcing automated gating on EDC write permissions until training completion is digitally verified.
+
+### Decentralized Clinical Trial (DCT) Connected Sensor Stream
+
+An IoT ingestion pipeline parsing continuous biometric data (CGM, actigraphy, spirometry, blood pressure) via standard Open mHealth / FHIR formats with automated time-series outlier flags and compliance tracking.
+
+

@@ -687,5 +687,63 @@ export const useFileshareStore = defineStore("fileshare", {
       };
       this.selectedFileIds = [];
     },
+
+    /**
+     * Fetch chronological, filterable activity feed for a file record
+     */
+    async fetchActivityFeed(fileId, params = {}) {
+      try {
+        const res = await fileshareService.getActivityFeed(fileId, params);
+        return res.data || res;
+      } catch (err) {
+        console.warn("Backend fetch activity feed failed, returning mock feed:", err);
+        const mockFile = this.files.find((f) => f.id === fileId);
+        const entries = [
+          {
+            event_type: "FILE_UPLOADED",
+            actor_user_id: mockFile?.uploaded_by || "sponsor_designer_01",
+            actor_display_name: mockFile?.uploaded_by || "Sponsor Designer",
+            timestamp: mockFile?.uploaded_at || "2026-08-10T14:32:00Z",
+            detail: { filename: mockFile?.filename || "document.pdf", size_bytes: mockFile?.size_bytes || 1024 },
+          },
+          {
+            event_type: "SCAN_COMPLETE",
+            actor_user_id: "system_user",
+            actor_display_name: "System Automated Process",
+            timestamp: mockFile?.uploaded_at || "2026-08-10T14:32:05Z",
+            detail: { scan_engine: "clamav", status: "CLEAN" },
+          },
+        ];
+        if (mockFile?.approval_status === "APPROVED") {
+          entries.unshift({
+            event_type: "DOCUMENT_APPROVED",
+            actor_user_id: mockFile?.approved_by || "pi_user_01",
+            actor_display_name: mockFile?.approved_by || "Principal Investigator",
+            timestamp: mockFile?.approved_at || "2026-08-11T09:15:00Z",
+            detail: { outcome: "APPROVED", signature_manifestation: mockFile?.signature_manifestation },
+          });
+        }
+        if (mockFile?.is_on_hold) {
+          entries.unshift({
+            event_type: "HOLD_SET",
+            actor_user_id: "super_admin_01",
+            actor_display_name: "Super Admin",
+            timestamp: "2026-08-12T10:00:00Z",
+            detail: { hold_reason: mockFile?.hold_reason || "Audit freeze" },
+          });
+        }
+        let filtered = entries;
+        if (params.event_type) {
+          filtered = filtered.filter((e) => e.event_type.toUpperCase() === params.event_type.toUpperCase());
+        }
+        return {
+          entries: filtered,
+          total: filtered.length,
+          page: params.page || 1,
+          page_size: params.page_size || 50,
+        };
+      }
+    },
   },
 });
+

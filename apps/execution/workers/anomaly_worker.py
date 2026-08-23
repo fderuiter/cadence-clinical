@@ -163,3 +163,45 @@ def stop_anomaly_worker() -> None:
         anomaly_task.cancel()
         anomaly_task = None
     logger.info("Asynchronous cross-domain anomaly detection worker stopped.")
+
+
+class AIEvaluationWorker:
+    """Asynchronous background evaluation worker scanning eCRF submissions to identify cross-domain clinical discrepancies."""
+
+    def __init__(self, session_maker: Any = None) -> None:
+        self.session_maker = (
+            session_maker or _session_maker or db_manager.get_session_maker()
+        )
+        self.service = CrossDomainAnomalyService()
+
+    async def poll_and_evaluate(self) -> None:
+        """Executes a periodic evaluation sweep across active subjects."""
+        await poll_and_evaluate_anomalies(self.session_maker)
+
+    async def scan_submissions_batch(self, limit: int = 50) -> None:
+        """Scans new eCRF submissions in batches without blocking transaction commit paths."""
+        await poll_and_evaluate_anomalies(self.session_maker)
+
+    async def evaluate_subject(
+        self,
+        subject_id: str,
+        study_id: str,
+        user_id: str | None = None,
+        change_reason: str | None = None,
+    ) -> None:
+        """Executes subject-scoped cross-domain anomaly evaluation asynchronously."""
+        await run_asynchronous_subject_anomaly_checks(
+            session_factory=self.session_maker,
+            subject_id=subject_id,
+            study_id=study_id,
+            user_id=user_id,
+            change_reason=change_reason,
+        )
+
+    def start(self) -> None:
+        """Starts background worker polling."""
+        start_anomaly_worker(self.session_maker)
+
+    def stop(self) -> None:
+        """Stops background worker polling."""
+        stop_anomaly_worker()

@@ -10,13 +10,21 @@ import contextlib
 import logging
 import os
 import sys
+import uuid
+from datetime import UTC, datetime
 
 from apps.fileshare.adapters.conversion_adapter import get_conversion_adapter
 from apps.fileshare.adapters.database import db_manager
-from apps.fileshare.adapters.repositories import SqlAlchemyFileRecordRepository
-from apps.fileshare.domain.models import ConversionStatus, FileRecord
+from apps.fileshare.adapters.repositories import (
+    SqlAlchemyFileAuditLogRepository,
+    SqlAlchemyFileRecordRepository,
+)
+from apps.fileshare.domain.models import ConversionStatus, FileAuditLog, FileRecord
 from apps.fileshare.ports.conversion_port import ConversionPort
-from apps.fileshare.ports.repository_port import FileRecordRepositoryPort
+from apps.fileshare.ports.repository_port import (
+    FileAuditLogRepositoryPort,
+    FileRecordRepositoryPort,
+)
 from packages.security.notifications import (
     NotificationCategory,
     NotificationEvent,
@@ -34,9 +42,11 @@ class DocumentConversionWorker:
         self,
         file_repo: FileRecordRepositoryPort,
         conversion_port: ConversionPort,
+        file_audit_repo: FileAuditLogRepositoryPort | None = None,
     ) -> None:
         self.file_repo = file_repo
         self.conversion_port = conversion_port
+        self.file_audit_repo = file_audit_repo
 
     async def convert_file(self, file_id: str) -> FileRecord:
         """Converts a single Office document record to PDF and updates status."""
@@ -122,6 +132,19 @@ class DocumentConversionWorker:
                 reason_for_change="Completed document format conversion to PDF",
             )
             saved = await self.file_repo.save(ready_record)
+
+            if self.file_audit_repo:
+                audit = FileAuditLog(
+                    id=str(uuid.uuid4()),
+                    file_record_id=file_id,
+                    action="CONVERSION_COMPLETE",
+                    user_id="system_user",
+                    timestamp=datetime.now(UTC),
+                    reason_for_change="Completed document format conversion to PDF",
+                    detail={"pdf_rendition_key": pdf_key},
+                )
+                await self.file_audit_repo.save(audit)
+
             logger.info("Auto conversion complete for file %s -> %s", file_id, pdf_key)
             return saved
 
@@ -189,11 +212,11 @@ class DocumentConversionWorker:
 
             return saved
 
-    async def poll_and_process_pending(self) -> int:
-        """Polls for all file records currently in PENDING conversion status and processes them."""
+    async def poll_and_process_pending(self, limit: int = 10) -> int:
+        """Polls for pending Office document conversion records and processes them."""
         pending_records = await self.file_repo.list_pending_conversions()
         processed_count = 0
-        for record in pending_records:
+        for record in pending_records[:limit]:
             try:
                 await self.convert_file(record.id)
                 processed_count += 1
@@ -219,9 +242,12 @@ async def run_conversion_daemon(poll_interval: float = 3.0) -> None:
             session_maker = db_manager.get_session_maker()
             async with session_maker() as session:
                 file_repo = SqlAlchemyFileRecordRepository(session)
+                audit_repo = SqlAlchemyFileAuditLogRepository(session)
                 conversion_port = get_conversion_adapter()
                 worker = DocumentConversionWorker(
-                    file_repo=file_repo, conversion_port=conversion_port
+                    file_repo=file_repo,
+                    conversion_port=conversion_port,
+                    file_audit_repo=audit_repo,
                 )
                 await worker.poll_and_process_pending()
                 await session.commit()
@@ -258,9 +284,12 @@ async def enqueue_conversion_task(file_id: str) -> None:
         session_maker = db_manager.get_session_maker()
         async with session_maker() as session:
             file_repo = SqlAlchemyFileRecordRepository(session)
+            audit_repo = SqlAlchemyFileAuditLogRepository(session)
             conversion_port = get_conversion_adapter()
             worker = DocumentConversionWorker(
-                file_repo=file_repo, conversion_port=conversion_port
+                file_repo=file_repo,
+                conversion_port=conversion_port,
+                file_audit_repo=audit_repo,
             )
             await worker.convert_file(file_id)
             await session.commit()

@@ -3,7 +3,9 @@
 Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 """
 
-from sqlalchemy import select
+from datetime import datetime
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.fileshare.domain.models import (
@@ -420,6 +422,52 @@ class SqlAlchemyFileAuditLogRepository(FileAuditLogRepositoryPort):
         )
         res = await self.session.execute(stmt)
         return [m.to_domain() for m in res.scalars().all()]
+
+    async def get_activity_feed(
+        self,
+        file_record_id: str,
+        event_type: str | None = None,
+        from_date: datetime | None = None,
+        to_date: datetime | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> tuple[list[FileAuditLog], int]:
+        base_stmt = select(FileAuditLogModel).where(
+            FileAuditLogModel.file_record_id == file_record_id
+        )
+        count_stmt = select(func.count(FileAuditLogModel.id)).where(
+            FileAuditLogModel.file_record_id == file_record_id
+        )
+
+        if event_type and event_type.strip():
+            norm_event = event_type.strip().upper()
+            base_stmt = base_stmt.where(
+                func.upper(FileAuditLogModel.action) == norm_event
+            )
+            count_stmt = count_stmt.where(
+                func.upper(FileAuditLogModel.action) == norm_event
+            )
+
+        if from_date is not None:
+            base_stmt = base_stmt.where(FileAuditLogModel.timestamp >= from_date)
+            count_stmt = count_stmt.where(FileAuditLogModel.timestamp >= from_date)
+
+        if to_date is not None:
+            base_stmt = base_stmt.where(FileAuditLogModel.timestamp <= to_date)
+            count_stmt = count_stmt.where(FileAuditLogModel.timestamp <= to_date)
+
+        total_res = await self.session.execute(count_stmt)
+        total = total_res.scalar() or 0
+
+        offset = max(0, (page - 1) * page_size)
+        paginated_stmt = (
+            base_stmt.order_by(FileAuditLogModel.timestamp.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
+        res = await self.session.execute(paginated_stmt)
+        items = [m.to_domain() for m in res.scalars().all()]
+        return items, total
 
     async def save(self, entity: FileAuditLog) -> FileAuditLog:
         stmt = select(FileAuditLogModel).where(FileAuditLogModel.id == entity.id)

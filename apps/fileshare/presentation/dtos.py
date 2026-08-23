@@ -297,3 +297,26 @@ class FileAuditLogResponse(BaseModel):
     timestamp: datetime
     reason_for_change: str
     detail: dict[str, Any] | None = None
+
+
+class ActivityFeedEntryResponse(BaseModel):
+    """Response schema for a single per-document activity feed event."""
+
+    model_config = ConfigDict(strict=True)
+
+    event_type: str
+    actor_user_id: str
+    actor_display_name: str
+    timestamp: datetime
+    detail: dict[str, Any] | None = None
+
+
+class ActivityFeedResponse(BaseModel):
+    """Paginated response schema for per-document activity feed."""
+
+    model_config = ConfigDict(strict=True)
+
+    entries: list[ActivityFeedEntryResponse]
+    total: int
+    page: int
+    page_size: int

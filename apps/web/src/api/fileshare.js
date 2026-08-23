@@ -210,6 +210,25 @@ export const fileshareService = {
       changeReason: payload.reason_for_change || "Uploading document revision",
     });
   },
+
+  /**
+   * Retrieve chronological, filterable activity feed for a file record.
+   */
+  async getActivityFeed(fileId, params = {}) {
+    const query = new URLSearchParams();
+    if (params.event_type) query.append("event_type", params.event_type);
+    if (params.from_date) query.append("from_date", params.from_date);
+    if (params.to_date) query.append("to_date", params.to_date);
+    if (params.page !== undefined) query.append("page", String(params.page));
+    if (params.page_size !== undefined) query.append("page_size", String(params.page_size));
+
+    const qs = query.toString();
+    const path = qs
+      ? `/api/v1/fileshare/files/${fileId}/activity?${qs}`
+      : `/api/v1/fileshare/files/${fileId}/activity`;
+    return apiClient.get(path);
+  },
 };
+
 
 

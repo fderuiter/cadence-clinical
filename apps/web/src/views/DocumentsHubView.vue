@@ -331,6 +331,14 @@
                     🔗 Share
                   </button>
                   <button
+                    class="btn btn-sm btn-outline-info btn-activity-action"
+                    title="View Document Activity Feed"
+                    :aria-label="'Activity for ' + file.filename"
+                    @click="openActivityDrawerForFile(file)"
+                  >
+                    📋 Activity
+                  </button>
+                  <button
                     class="btn btn-sm btn-outline-danger btn-delete-action"
                     :disabled="file.is_on_hold"
                     :title="file.is_on_hold ? 'File is under retention hold.' : 'Delete document'"
@@ -404,6 +412,13 @@
       @grant-revoked="onGrantRevoked"
     />
 
+    <!-- Slide-in Activity Feed Drawer -->
+    <ActivityFeed
+      :is-open="isActivityDrawerOpen"
+      :file="activityFile"
+      @close="isActivityDrawerOpen = false"
+    />
+
     <!-- Protected Media Preview Modal -->
     <MediaPreviewModal
       v-if="previewingFile"
@@ -420,6 +435,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useFileshareStore } from "../stores/fileshare";
 import DocumentsFolderTree from "../components/fileshare/DocumentsFolderTree.vue";
 import ShareDrawer from "../components/fileshare/ShareDrawer.vue";
+import ActivityFeed from "../components/fileshare/ActivityFeed.vue";
 import MediaPreviewModal from "../components/fileshare/MediaPreviewModal.vue";
 
 const props = defineProps({
@@ -444,6 +460,13 @@ const itemsPerPage = 15;
 const previewingFile = ref(null);
 const isShareDrawerOpen = ref(false);
 const filesToShare = ref([]);
+const isActivityDrawerOpen = ref(false);
+const activityFile = ref(null);
+
+const openActivityDrawerForFile = (file) => {
+  activityFile.value = file;
+  isActivityDrawerOpen.value = true;
+};
 
 onMounted(() => {
   if (props.initialStudyId) {
@@ -968,7 +991,7 @@ async function handleDeleteFile(file) {
 
 .actions-th {
   text-align: right;
-  width: 250px;
+  width: 340px;
 }
 
 .actions-cell {
@@ -979,6 +1002,16 @@ async function handleDeleteFile(file) {
   display: flex;
   justify-content: flex-end;
   gap: 6px;
+}
+
+.btn-outline-info {
+  border: 1px solid #0284c7;
+  color: #0284c7;
+  background-color: transparent;
+}
+
+.btn-outline-info:hover:not(:disabled) {
+  background-color: #e0f2fe;
 }
 
 .btn-outline-danger {

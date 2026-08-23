@@ -270,6 +270,7 @@ class CrossDomainAnomalyService:
         for cm in cm_obs:
             add_props = cm.additional_properties or {}
             cm_end = _parse_date_safe(add_props.get("CMENDTC"))
+            cm_start = _parse_date_safe(add_props.get("CMSTDTC") or cm.observation_date)
 
             for ae in ae_obs:
                 ae_props = ae.additional_properties or {}
@@ -277,13 +278,14 @@ class CrossDomainAnomalyService:
                     ae_props.get("AESTDTC") or ae.observation_date
                 )
 
-                # If CM ended before AE onset date
-                if cm_end and ae_start and cm_end < ae_start:
-                    cm_trt = add_props.get("CMTRT") or cm.test_code
-                    ae_trt = ae_props.get("AETERM") or ae.test_code
-                    # If explicitly marked as treatment for this AE
-                    ind = str(add_props.get("CMINDC", "")).upper()
-                    if ae_trt.upper() in ind:
+                cm_trt = add_props.get("CMTRT") or cm.test_code
+                ae_trt = ae_props.get("AETERM") or ae.test_code
+                ind = str(add_props.get("CMINDC", "")).upper()
+                is_indicated_for_ae = bool(ae_trt and str(ae_trt).upper() in ind)
+
+                if is_indicated_for_ae:
+                    # Case A: CM ended before AE onset date
+                    if cm_end and ae_start and cm_end < ae_start:
                         anomalies.append(
                             CrossDomainAnomaly(
                                 anomaly_type=CrossDomainAnomalyType.TEMPORAL_SEQUENCE_MISMATCH,
@@ -304,6 +306,28 @@ class CrossDomainAnomalyService:
                                 observation_ids=[cm.id, ae.id],
                             )
                         )
+                    # Case B: CM started before AE onset date
+                    elif cm_start and ae_start and cm_start < ae_start:
+                        anomalies.append(
+                            CrossDomainAnomaly(
+                                anomaly_type=CrossDomainAnomalyType.TEMPORAL_SEQUENCE_MISMATCH,
+                                study_id=study_id,
+                                subject_id=subject_id,
+                                site_id=site_id,
+                                visit_id=cm.visit_id,
+                                primary_domain="CM",
+                                primary_test_code=cm.test_code,
+                                correlated_domain="AE",
+                                severity=AnomalySeverity.HIGH,
+                                message=f"Medication '{cm_trt}' start date precedes AE '{ae_trt}' onset date.",
+                                explanation=(
+                                    f"Concomitant medication '{cm_trt}' indicated for '{ae_trt}' started on {cm_start.date()}, "
+                                    f"which precedes the reported AE onset date {ae_start.date()}."
+                                ),
+                                confidence_score=1.0,
+                                observation_ids=[cm.id, ae.id],
+                            )
+                        )
 
         return anomalies
 
@@ -319,7 +343,7 @@ class CrossDomainAnomalyService:
         lb_obs = obs_by_domain.get("LB", [])
         ae_obs = obs_by_domain.get("AE", [])
 
-        # Rule 4: Marked lab abnormality with no reported Adverse Event
+        # Rule 4: Marked lab abnormality / Grade 3/4 abnormality with no reported Adverse Event
         ae_text_corpus = " ".join(
             [
                 str(ae.test_code or "")
@@ -336,18 +360,34 @@ class CrossDomainAnomalyService:
             lab_issue_name = ""
             test_code_up = (lb.test_code or "").upper()
             val = lb.value
+            add_props = lb.additional_properties or {}
 
-            # Check critical lab indicators
+            # Check critical / CTCAE Grade 3/4 lab indicators
             ind = (lb.lab_indicator or "").upper()
+            grade_val = str(
+                add_props.get("GRADE")
+                or add_props.get("CTCAE_GRADE")
+                or add_props.get("LBTOXGR")
+                or ""
+            ).strip()
+
             if ind in (
                 "CRITICAL_HIGH",
                 "CRITICAL_LOW",
                 "PANIC",
                 "HIGH_HIGH",
                 "LOW_LOW",
-            ):
+                "GRADE_3",
+                "GRADE_4",
+                "GRADE 3",
+                "GRADE 4",
+                "GRADE_3_HIGH",
+                "GRADE_3_LOW",
+                "GRADE_4_HIGH",
+                "GRADE_4_LOW",
+            ) or grade_val in ("3", "4", "GRADE 3", "GRADE 4", "GRADE_3", "GRADE_4"):
                 is_critical = True
-                lab_issue_name = f"Critical {lb.test_code} value ({val})"
+                lab_issue_name = f"Grade 3/4 or Critical {lb.test_code} abnormality ({val if val is not None else ind})"
 
             # Specific clinical biomarker threshold evaluations
             if val is not None:
@@ -368,6 +408,19 @@ class CrossDomainAnomalyService:
                 elif test_code_up in ("K", "POTASSIUM") and (val > 6.0 or val < 2.5):
                     is_critical = True
                     lab_issue_name = f"Marked Electrolyte Disturbance (K = {val} mEq/L)"
+                elif test_code_up in ("SODIUM", "NA") and (val < 125.0 or val > 155.0):
+                    is_critical = True
+                    lab_issue_name = f"Marked Sodium Disturbance (Na = {val} mEq/L)"
+                # Hematology Grade 3/4
+                elif test_code_up in ("PLT", "PLAT", "PLATELETS") and val < 50.0:
+                    is_critical = True
+                    lab_issue_name = f"Marked Thrombocytopenia (PLT = {val} 10^9/L)"
+                elif test_code_up in ("HGB", "HEMOGLOBIN") and val < 8.0:
+                    is_critical = True
+                    lab_issue_name = f"Marked Anemia (HGB = {val} g/dL)"
+                elif test_code_up in ("NEUT", "ANC") and val < 1.0:
+                    is_critical = True
+                    lab_issue_name = f"Marked Neutropenia (ANC = {val} 10^9/L)"
 
             if is_critical:
                 # Check if matching AE is reported
@@ -380,6 +433,12 @@ class CrossDomainAnomalyService:
                     "CREAT",
                     "POTASSIUM",
                     "ELECTROLYTE",
+                    "SODIUM",
+                    "THROMBOCYTOPENIA",
+                    "PLATELET",
+                    "ANEMIA",
+                    "HEMOGLOBIN",
+                    "NEUTROPENIA",
                     "LABORATORY",
                     "ABNORMAL",
                 ]
@@ -417,10 +476,11 @@ class CrossDomainAnomalyService:
         site_id: str | None,
         obs_by_domain: dict[str, list[ClinicalObservation]],
     ) -> list[CrossDomainAnomaly]:
-        """Evaluates Adverse Event <-> Vital Signs correlations."""
+        """Evaluates Adverse Event <-> Vital Signs <-> Medical History correlations."""
         anomalies: list[CrossDomainAnomaly] = []
         vs_obs = obs_by_domain.get("VS", [])
         ae_obs = obs_by_domain.get("AE", [])
+        mh_obs = obs_by_domain.get("MH", [])
 
         ae_text_corpus = " ".join(
             [
@@ -433,6 +493,17 @@ class CrossDomainAnomalyService:
             ]
         ).upper()
 
+        mh_text_corpus = " ".join(
+            [
+                str(mh.test_code or "")
+                + " "
+                + str(mh.value_string or "")
+                + " "
+                + str((mh.additional_properties or {}).get("MHTERM", ""))
+                for mh in mh_obs
+            ]
+        ).upper()
+
         for vs in vs_obs:
             code_up = (vs.test_code or "").upper()
             val = vs.value
@@ -440,30 +511,66 @@ class CrossDomainAnomalyService:
                 continue
 
             anomaly_msg = None
+            condition_keywords: list[str] = []
+            is_critical = False
+
             if code_up in ("SYSBP", "VSSBP") and val >= 180.0:
                 anomaly_msg = f"Hypertensive crisis (Systolic BP = {val} mmHg)"
+                condition_keywords = [
+                    "HYPERTENSION",
+                    "HIGH BLOOD PRESSURE",
+                    "HTN",
+                    "PRESSURE",
+                ]
+                is_critical = True
+            elif code_up in ("SYSBP", "VSSBP") and val >= 160.0:
+                anomaly_msg = f"Severe hypertension (Systolic BP = {val} mmHg)"
+                condition_keywords = [
+                    "HYPERTENSION",
+                    "HIGH BLOOD PRESSURE",
+                    "HTN",
+                    "PRESSURE",
+                ]
             elif code_up in ("DIABP", "VSDBP") and val >= 120.0:
                 anomaly_msg = f"Hypertensive crisis (Diastolic BP = {val} mmHg)"
+                condition_keywords = [
+                    "HYPERTENSION",
+                    "HIGH BLOOD PRESSURE",
+                    "HTN",
+                    "PRESSURE",
+                ]
+                is_critical = True
+            elif code_up in ("DIABP", "VSDBP") and val >= 100.0:
+                anomaly_msg = (
+                    f"Severe diastolic hypertension (Diastolic BP = {val} mmHg)"
+                )
+                condition_keywords = [
+                    "HYPERTENSION",
+                    "HIGH BLOOD PRESSURE",
+                    "HTN",
+                    "PRESSURE",
+                ]
             elif code_up in ("HR", "PULSE", "VSHR") and val >= 130.0:
                 anomaly_msg = f"Severe tachycardia (Heart Rate = {val} bpm)"
+                condition_keywords = ["TACHYCARDIA", "ARRHYTHMIA", "PALPITATION"]
+                is_critical = True
             elif code_up in ("HR", "PULSE", "VSHR") and val <= 40.0:
                 anomaly_msg = f"Severe bradycardia (Heart Rate = {val} bpm)"
+                condition_keywords = ["BRADYCARDIA", "HEART BLOCK", "SINUS NODE"]
+                is_critical = True
             elif code_up in ("TEMP", "VSTEMP") and val >= 39.5:
                 anomaly_msg = f"High-grade pyrexia (Temperature = {val} °C)"
+                condition_keywords = ["FEVER", "PYREXIA", "INFECTION"]
+                is_critical = True
 
             if anomaly_msg:
-                vital_terms = [
-                    "HYPERTENSION",
-                    "PRESSURE",
-                    "TACHYCARDIA",
-                    "BRADYCARDIA",
-                    "FEVER",
-                    "PYREXIA",
-                    "VITAL",
-                ]
-                has_ae = any(t in ae_text_corpus for t in vital_terms)
+                has_ae = any(t in ae_text_corpus for t in condition_keywords) or any(
+                    t in ae_text_corpus
+                    for t in ["VITAL", "PRESSURE", "FEVER", "CARDIAC"]
+                )
+                has_mh = any(t in mh_text_corpus for t in condition_keywords)
 
-                if not has_ae:
+                if is_critical and not has_ae:
                     anomalies.append(
                         CrossDomainAnomaly(
                             anomaly_type=CrossDomainAnomalyType.CRITICAL_VITALS_WITHOUT_AE,
@@ -479,6 +586,31 @@ class CrossDomainAnomalyService:
                             explanation=(
                                 f"Vital sign '{vs.test_code}' recorded at critical threshold ({val}), "
                                 "without an associated Adverse Event entered in the AE domain."
+                            ),
+                            confidence_score=1.0,
+                            observation_ids=[vs.id],
+                            form_id=vs.page_id,
+                        )
+                    )
+                elif not has_mh and not has_ae and condition_keywords:
+                    # Vital sign anomaly inconsistent with baseline medical history
+                    anomalies.append(
+                        CrossDomainAnomaly(
+                            anomaly_type=CrossDomainAnomalyType.VITALS_INCONSISTENT_WITH_HISTORY,
+                            study_id=study_id,
+                            subject_id=subject_id,
+                            site_id=site_id,
+                            visit_id=vs.visit_id,
+                            primary_domain="VS",
+                            primary_test_code=vs.test_code,
+                            correlated_domain="MH",
+                            severity=AnomalySeverity.HIGH
+                            if is_critical
+                            else AnomalySeverity.MEDIUM,
+                            message=f"Vital sign anomaly ({anomaly_msg}) inconsistent with baseline medical history.",
+                            explanation=(
+                                f"Vital sign '{vs.test_code}' indicates {anomaly_msg}, but subject baseline "
+                                "Medical History contains no prior record of this condition and no AE is logged."
                             ),
                             confidence_score=1.0,
                             observation_ids=[vs.id],

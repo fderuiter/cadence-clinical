@@ -222,7 +222,7 @@ async def test_approve_document_success(
             (
                 log_entry
                 for log_entry in audit_logs
-                if log_entry["action"] == "FILE_APPROVED"
+                if log_entry["action"] in ("FILE_APPROVED", "DOCUMENT_APPROVED")
             ),
             None,
         )

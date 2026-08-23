@@ -368,6 +368,18 @@ class FileShareService:
             response_content_disposition=disposition,
         )
 
+        await self.record_audit_log(
+            file_id=file_record.id,
+            action="VIEW_OPEN",
+            user_id=caller_user_id,
+            reason_for_change="View or download document request",
+            detail={
+                "is_watermarked": is_watermarked,
+                "is_rendition": is_rendition,
+                "filename": target_filename,
+            },
+        )
+
         return FileDownloadSession(
             file_id=file_record.id,
             filename=target_filename,
@@ -439,7 +451,22 @@ class FileShareService:
             created_by=grantor_user_id,
             reason_for_change=reason_for_change,
         )
-        return await self.grant_repo.save(grant)
+        saved = await self.grant_repo.save(grant)
+
+        await self.record_audit_log(
+            file_id=file_id,
+            action="GRANT_CREATED",
+            user_id=grantor_user_id,
+            reason_for_change=reason_for_change,
+            detail={
+                "grant_id": saved.id,
+                "granted_to_user_id": granted_to_user_id,
+                "scope": scope_enum.value,
+                "permission_level": perm_enum.value,
+                "expires_at": expires_at.isoformat() if expires_at else None,
+            },
+        )
+        return saved
 
     async def revoke_share_grant(
         self,
@@ -489,7 +516,21 @@ class FileShareService:
             created_by=grant.created_by,
             reason_for_change=reason_for_change,
         )
-        return await self.grant_repo.save(revoked_grant)
+        saved = await self.grant_repo.save(revoked_grant)
+
+        await self.record_audit_log(
+            file_id=file_id,
+            action="GRANT_REVOKED",
+            user_id=caller_user_id,
+            reason_for_change=reason_for_change,
+            detail={
+                "grant_id": grant.id,
+                "granted_to_user_id": grant.granted_to_user_id,
+                "scope": grant.scope.value,
+                "permission_level": grant.permission_level.value,
+            },
+        )
+        return saved
 
     async def create_guest_link(
         self,
@@ -535,7 +576,19 @@ class FileShareService:
         )
         saved = await self.guest_repo.save(guest_link)
 
+        await self.record_audit_log(
+            file_id=file_id,
+            action="GUEST_LINK_CREATED",
+            user_id=creator_user_id,
+            reason_for_change=reason_for_change,
+            detail={
+                "guest_link_id": saved.id,
+                "expires_at": expires_at.isoformat(),
+            },
+        )
+
         guest_url = f"/api/v1/fileshare/guest/{raw_secret_token}"
+
         return GuestLinkResult(
             id=saved.id,
             file_record_id=saved.file_record_id,
@@ -594,6 +647,20 @@ class FileShareService:
             reason_for_change="External guest link access",
         )
         await self.guest_repo.save(updated_guest_link)
+
+        actor_guest_id = (
+            f"guest_{hashlib.sha256(raw_secret_token.encode()).hexdigest()[:16]}"
+        )
+        await self.record_audit_log(
+            file_id=file_record.id,
+            action="GUEST_LINK_ACCESSED",
+            user_id=actor_guest_id,
+            reason_for_change="External guest link access",
+            detail={
+                "guest_link_id": updated_guest_link.id,
+                "access_count": updated_guest_link.access_count,
+            },
+        )
 
         disposition = f'attachment; filename="{file_record.filename}"'
         download_url = await self.storage_port.generate_presigned_get_url(
@@ -658,7 +725,18 @@ class FileShareService:
             created_at=guest_link.created_at,
             reason_for_change=reason_for_change,
         )
-        return await self.guest_repo.save(revoked_link)
+        saved = await self.guest_repo.save(revoked_link)
+
+        await self.record_audit_log(
+            file_id=file_id,
+            action="GUEST_LINK_REVOKED",
+            user_id=caller_user_id,
+            reason_for_change=reason_for_change,
+            detail={
+                "guest_link_id": guest_link.id,
+            },
+        )
+        return saved
 
     async def complete_upload(
         self,
@@ -767,6 +845,17 @@ class FileShareService:
             )
             saved = await self.file_repo.save(updated_record)
 
+            await self.record_audit_log(
+                file_id=file_id,
+                action="SCAN_COMPLETE",
+                user_id=caller_user_id,
+                reason_for_change=reason_for_change,
+                detail={
+                    "scan_engine": scan_result.engine,
+                    "status": "CLEAN",
+                },
+            )
+
             if is_video:
                 with contextlib.suppress(Exception):
                     await enqueue_transcode_task(file_id)
@@ -832,6 +921,17 @@ class FileShareService:
                 reason_for_change=f"Quarantined due to malware detection: {threat_name}",
             )
             saved = await self.file_repo.save(updated_record)
+
+            await self.record_audit_log(
+                file_id=file_id,
+                action="SCAN_QUARANTINED",
+                user_id=file_record.uploaded_by,
+                reason_for_change=f"Quarantined due to malware detection: {threat_name}",
+                detail={
+                    "scan_engine": scan_result.engine,
+                    "threat_name": threat_name,
+                },
+            )
 
             # Alert uploader
             with contextlib.suppress(Exception):
@@ -1094,8 +1194,22 @@ class FileShareService:
             reason_for_change=reason_for_change,
         )
         if self.audit_repo:
-            return await self.audit_repo.save(audit_event)
-        return audit_event
+            saved_event = await self.audit_repo.save(audit_event)
+        else:
+            saved_event = audit_event
+
+        await self.record_audit_log(
+            file_id=file_id,
+            action=event_enum.value,
+            user_id=actor_user_id,
+            reason_for_change=reason_for_change,
+            detail={
+                "session_id": session_id,
+                "source": source_enum.value,
+                "event": event_enum.value,
+            },
+        )
+        return saved_event
 
     async def set_hold(
         self,
@@ -1505,7 +1619,7 @@ class FileShareService:
 
         await self.record_audit_log(
             file_id=file_id,
-            action="FILE_APPROVED",
+            action="DOCUMENT_APPROVED",
             user_id=caller_user_id,
             reason_for_change=signing_reason,
             detail={
@@ -1594,7 +1708,7 @@ class FileShareService:
 
         await self.record_audit_log(
             file_id=file_id,
-            action="FILE_REJECTED",
+            action="DOCUMENT_REJECTED",
             user_id=caller_user_id,
             reason_for_change=reason_for_change,
             detail={
@@ -1766,7 +1880,7 @@ class FileShareService:
 
         await self.record_audit_log(
             file_id=file_id,
-            action="REVISION_UPLOADED",
+            action="VERSION_CREATED",
             user_id=caller_user_id,
             reason_for_change=reason_for_change,
             detail={
@@ -1828,3 +1942,85 @@ class FileShareService:
             checksum_sha256=checksum_sha256,
             required_headers=required_headers if required_headers else None,
         )
+
+    async def get_activity_feed(
+        self,
+        file_id: str,
+        caller_user_id: str,
+        caller_roles: list[str],
+        caller_site_id: str | None = None,
+        event_type: str | None = None,
+        from_date: datetime | None = None,
+        to_date: datetime | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """Retrieve paginated and filtered activity feed for a file with caller permission gating.
+
+        Requirements: PRD-SYS-001, PRD-DOC-001, 21 CFR Part 11, ICH E6 GCP
+        """
+        file_record = await self.file_repo.get_by_id(file_id, include_deleted=True)
+        if not file_record:
+            raise FileNotFoundError(f"File record '{file_id}' not found.")
+
+        normalized_roles = {r.strip().lower() for r in caller_roles if r}
+        is_admin = bool(normalized_roles.intersection(ADMIN_ROLES))
+        is_uploader = file_record.uploaded_by == caller_user_id
+
+        if not is_admin and not is_uploader:
+            grants = await self.grant_repo.list_by_file_id(file_id, active_only=True)
+            matching_grants = [
+                grant
+                for grant in grants
+                if (
+                    grant.scope == ShareScope.INDIVIDUAL
+                    and grant.granted_to_user_id == caller_user_id
+                )
+                or grant.scope == ShareScope.STUDY
+                or (
+                    grant.scope == ShareScope.SITE
+                    and caller_site_id
+                    and file_record.site_id == caller_site_id
+                )
+                or (
+                    grant.scope == ShareScope.ROLE
+                    and grant.granted_to_user_id
+                    and grant.granted_to_user_id.strip().lower() in normalized_roles
+                )
+            ]
+            if not matching_grants:
+                raise FileSharePermissionDeniedError(
+                    f"User '{caller_user_id}' does not have permission to view activity for file '{file_id}'."
+                )
+
+        if not self.file_audit_repo:
+            return [], 0
+
+        logs, total = await self.file_audit_repo.get_activity_feed(
+            file_record_id=file_id,
+            event_type=event_type,
+            from_date=from_date,
+            to_date=to_date,
+            page=page,
+            page_size=page_size,
+        )
+
+        entries = []
+        for log in logs:
+            display_name = log.user_id
+            if log.user_id.startswith("guest_"):
+                display_name = "External Guest Reviewer"
+            elif log.user_id in ("system_user", "system"):
+                display_name = "System Automated Process"
+
+            entries.append(
+                {
+                    "event_type": log.action,
+                    "actor_user_id": log.user_id,
+                    "actor_display_name": display_name,
+                    "timestamp": log.timestamp,
+                    "detail": log.detail,
+                }
+            )
+
+        return entries, total

@@ -4,6 +4,7 @@ Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002
 """
 
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from apps.fileshare.domain.models import (
     FileAuditLog,
@@ -105,4 +106,17 @@ class FileAuditLogRepositoryPort(RepositoryPort[FileAuditLog], ABC):
     @abstractmethod
     async def list_by_file_id(self, file_record_id: str) -> list[FileAuditLog]:
         """List audit log entries for a file record ordered by timestamp descending."""
+        pass
+
+    @abstractmethod
+    async def get_activity_feed(
+        self,
+        file_record_id: str,
+        event_type: str | None = None,
+        from_date: datetime | None = None,
+        to_date: datetime | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> tuple[list[FileAuditLog], int]:
+        """Query paginated and filtered activity audit log entries for a file record."""
         pass

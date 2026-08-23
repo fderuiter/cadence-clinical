@@ -3,6 +3,8 @@
 Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, PRD-DOC-003
 """
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,6 +32,8 @@ from apps.fileshare.domain.exceptions import (
 )
 from apps.fileshare.domain.models import TranscodeStatus
 from apps.fileshare.presentation.dtos import (
+    ActivityFeedEntryResponse,
+    ActivityFeedResponse,
     FileApproveRequest,
     FileAuditLogResponse,
     FileDeleteRequest,
@@ -154,12 +158,22 @@ async def get_upload_url(
 
 
 @router.post(
+    "/{file_id}/complete",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+@router.post(
     "/{file_id}/complete-upload",
     response_model=FileRecordResponse,
     status_code=status.HTTP_200_OK,
 )
 @router.post(
     "/{file_id}/upload-complete",
+    response_model=FileRecordResponse,
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.post(
+    "/{file_id}/complete",
     response_model=FileRecordResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -629,6 +643,103 @@ async def get_file_audit_logs(
     except FileNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+
+def format_actor_display_name(user_id: str) -> str:
+    """Format user identifier into human-readable display name."""
+    if not user_id:
+        return "Unknown"
+    cleaned = user_id.replace(".", " ").replace("_", " ")
+    return cleaned.title()
+
+
+def parse_optional_datetime(val: str | datetime | None) -> datetime | None:
+    """Parse optional datetime from string or datetime object with space/plus tolerance."""
+    if val is None or isinstance(val, datetime):
+        return val
+    val_str = str(val).strip()
+    if not val_str:
+        return None
+    if " " in val_str and ("+" in val_str or "-" in val_str or ":" in val_str):
+        val_str = val_str.replace(" ", "+")
+    val_str = val_str.replace("Z", "+00:00")
+    try:
+        return datetime.fromisoformat(val_str)
+    except Exception:
+        return None
+
+
+@router.get(
+    "/{file_id}/activity",
+    response_model=ActivityFeedResponse,
+    status_code=status.HTTP_200_OK,
+)
+@files_alias_router.get(
+    "/{file_id}/activity",
+    response_model=ActivityFeedResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_file_activity_feed(
+    file_id: str,
+    request: Request,
+    event_type: str | None = None,
+    from_date: str | None = None,
+    to_date: str | None = None,
+    page: int = 1,
+    page_size: int = 50,
+    service: FileShareService = Depends(get_fileshare_service),
+) -> ActivityFeedResponse:
+    """Retrieve paginated per-document activity feed audit log entries for inspection readiness.
+
+    Requirements: PRD-SYS-001, PRD-DOC-001, PRD-DOC-002, 21 CFR Part 11
+    """
+    user_id = current_user_id.get() or "system_user"
+    roles = extract_caller_roles(request)
+    site_id = current_site_id.get()
+
+    parsed_from_date = parse_optional_datetime(from_date)
+    parsed_to_date = parse_optional_datetime(to_date)
+
+    try:
+        entries, total = await service.get_activity_feed(
+            file_id=file_id,
+            caller_user_id=user_id,
+            caller_roles=roles,
+            caller_site_id=site_id,
+            event_type=event_type,
+            from_date=parsed_from_date,
+            to_date=parsed_to_date,
+            page=page,
+            page_size=page_size,
+        )
+        feed_entries = [
+            ActivityFeedEntryResponse(
+                event_type=e["event_type"] if isinstance(e, dict) else e.action,
+                actor_user_id=e["actor_user_id"] if isinstance(e, dict) else e.user_id,
+                actor_display_name=format_actor_display_name(
+                    e.get("actor_user_id", "unknown")
+                    if isinstance(e, dict)
+                    else getattr(e, "user_id", "unknown")
+                ),
+                timestamp=e["timestamp"] if isinstance(e, dict) else e.timestamp,
+                detail=e["detail"] if isinstance(e, dict) else e.detail,
+            )
+            for e in entries
+        ]
+        return ActivityFeedResponse(
+            entries=feed_entries,
+            total=total,
+            page=page,
+            page_size=page_size,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except FileSharePermissionDeniedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
         ) from exc
 
 
