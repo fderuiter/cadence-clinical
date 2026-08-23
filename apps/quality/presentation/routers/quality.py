@@ -22,6 +22,15 @@ from apps.quality.presentation.routers.capas import (
 from apps.quality.presentation.routers.capas import (
     router as capas_router,
 )
+from apps.quality.presentation.routers.data_integrity import (
+    map_finding_to_response as map_data_integrity_finding_to_response,
+)
+from apps.quality.presentation.routers.data_integrity import (
+    map_run_to_response as map_data_integrity_run_to_response,
+)
+from apps.quality.presentation.routers.data_integrity import (
+    router as data_integrity_router,
+)
 from apps.quality.presentation.routers.deviations import (
     map_deviation_to_response,
 )
@@ -67,6 +76,7 @@ router.include_router(rca_router)
 router.include_router(capas_router)
 router.include_router(rbqm_router)
 router.include_router(forensics_router)
+router.include_router(data_integrity_router)
 router.include_router(audits_router)
 router.include_router(serious_breaches_router)
 router.include_router(audit_logs_router)
@@ -82,6 +92,8 @@ __all__ = [
     "map_breach_to_response",
     "map_capa_to_response",
     "map_ctq_to_response",
+    "map_data_integrity_finding_to_response",
+    "map_data_integrity_run_to_response",
     "map_deviation_to_response",
     "map_effectiveness_check_to_response",
     "map_finding_to_response",

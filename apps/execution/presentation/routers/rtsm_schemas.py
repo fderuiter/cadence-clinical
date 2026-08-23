@@ -7,6 +7,72 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from apps.execution.domain.adaptive_models import (
+    AdaptiveTrialConfigDTO as AdaptiveTrialConfigDTO,
+)
+from apps.execution.domain.adaptive_models import (
+    BoinBoundariesCalculationRequest as BoinBoundariesCalculationRequest,
+)
+from apps.execution.domain.adaptive_models import (
+    BoinBoundariesCalculationResponse as BoinBoundariesCalculationResponse,
+)
+from apps.execution.domain.adaptive_models import (
+    BoinConfig as BoinConfig,
+)
+from apps.execution.domain.adaptive_models import (
+    CohortEvaluationInput as CohortEvaluationInput,
+)
+from apps.execution.domain.adaptive_models import (
+    CohortEvaluationResult as CohortEvaluationResult,
+)
+from apps.execution.domain.adaptive_models import (
+    CohortRecommendationAction as CohortRecommendationAction,
+)
+from apps.execution.domain.adaptive_models import (
+    CohortStatus as CohortStatus,
+)
+from apps.execution.domain.adaptive_models import (
+    CohortTransitionLogResponse as CohortTransitionLogResponse,
+)
+from apps.execution.domain.adaptive_models import (
+    CohortTransitionRequest as CohortTransitionRequest,
+)
+from apps.execution.domain.adaptive_models import (
+    CrmConfig as CrmConfig,
+)
+from apps.execution.domain.adaptive_models import (
+    CrmPosteriorCalculationRequest as CrmPosteriorCalculationRequest,
+)
+from apps.execution.domain.adaptive_models import (
+    CrmPosteriorCalculationResponse as CrmPosteriorCalculationResponse,
+)
+from apps.execution.domain.adaptive_models import (
+    DoseEscalationDesignType as DoseEscalationDesignType,
+)
+from apps.execution.domain.adaptive_models import (
+    DoseLevelDef as DoseLevelDef,
+)
+from apps.execution.domain.adaptive_models import (
+    DoseLevelEvaluationSummary as DoseLevelEvaluationSummary,
+)
+from apps.execution.domain.adaptive_models import (
+    RARArmEvaluationDTO as RARArmEvaluationDTO,
+)
+from apps.execution.domain.adaptive_models import (
+    RARArmStatus as RARArmStatus,
+)
+from apps.execution.domain.adaptive_models import (
+    RarConfig as RarConfig,
+)
+from apps.execution.domain.adaptive_models import (
+    RAREvaluationResult as RAREvaluationResult,
+)
+from apps.execution.domain.adaptive_models import (
+    RARExpandOrTerminateArmRequest as RARExpandOrTerminateArmRequest,
+)
+from apps.execution.domain.adaptive_models import (
+    ThreePlusThreeConfig as ThreePlusThreeConfig,
+)
 from apps.execution.domain.rtsm_models import (
     DailyDemandProjection,
 )
@@ -526,3 +592,331 @@ class ReLabelingTaskVerifyRequest(BaseModel):
 
     label_barcode_hash: str | None = None
     notes: str | None = None
+
+
+# =========================================================================
+# Cell & Gene Therapy (CGT) Vein-to-Vein COC/COI & Destruction Schemas
+# Requirements: PRD-SCM-005, PRD-SCM-006, ADR-2199
+# =========================================================================
+
+
+class CGTApheresisCreateRequest(BaseModel):
+    """Payload to register initial apheresis collection and start Vein-to-Vein tracking."""
+
+    model_config = ConfigDict(strict=True)
+
+    study_id: str
+    site_id: str
+    subject_id: str
+    collector_id: str
+    collector_name: str
+    collector_role: str = "Apheresis Nurse"
+    initial_temp_celsius: float = -196.0
+    din: str | None = None
+    dry_shipper_id: str | None = None
+    seal_id: str | None = None
+    notes: str | None = None
+
+
+class CGTChainOfCustodyResponse(BaseModel):
+    """Response schema for Vein-to-Vein Chain of Custody & Identity record."""
+
+    model_config = ConfigDict(strict=True)
+
+    id: str
+    study_id: str
+    subject_id: str
+    din: str
+    batch_id: str | None = None
+    current_stage: str
+    status: str
+    tamper_evident_barcode: str | None = None
+    barcode_signature: str | None = None
+    collection_site_id: str | None = None
+    collection_timestamp: datetime | None = None
+    manufacturing_facility_id: str | None = None
+    cryo_temp_excursion_count: int = 0
+    lowest_temp_celsius: float | None = None
+    highest_temp_celsius: float | None = None
+    infusion_unlocked: bool = False
+    infused_at: datetime | None = None
+    reconciled_at: datetime | None = None
+
+
+class CGTMilestoneCreateRequest(BaseModel):
+    """Payload to record a cryogenic transit milestone with GPS and temperature."""
+
+    model_config = ConfigDict(strict=True)
+
+    coc_id: str
+    stage: str
+    location_name: str
+    temperature_celsius: float
+    custodian_id: str
+    custodian_name: str
+    custodian_role: str
+    facility_id: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    carrier: str | None = None
+    tracking_number: str | None = None
+    seal_intact: bool = True
+    seal_id: str | None = None
+    dry_shipper_id: str | None = None
+    signature_token: str | None = None
+    notes: str | None = None
+
+
+class CGTMilestoneResponse(BaseModel):
+    """Response schema for a cryogenic transit milestone."""
+
+    model_config = ConfigDict(strict=True)
+
+    id: str
+    study_id: str
+    chain_of_custody_id: str
+    stage: str
+    milestone_type: str
+    timestamp: datetime
+    location_name: str
+    facility_id: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    temperature_celsius: float
+    temperature_status: str
+    custodian_id: str
+    custodian_name: str
+    custodian_role: str
+    carrier: str | None = None
+    tracking_number: str | None = None
+    seal_intact: bool
+    seal_id: str | None = None
+    dry_shipper_id: str | None = None
+    electronic_signature: dict | None = None
+    notes: str | None = None
+
+
+class CGTManufacturingBindRequest(BaseModel):
+    """Payload to bind a cell engineering manufacturing batch record to original subject identity."""
+
+    model_config = ConfigDict(strict=True)
+
+    coc_id: str
+    batch_id: str
+    manufacturing_facility_id: str
+    operator_id: str
+    operator_name: str
+    operator_role: str = "Cell Manufacturing Specialist"
+    temperature_celsius: float = -196.0
+    notes: str | None = None
+
+
+class CGTBedsideVerificationRequest(BaseModel):
+    """Payload for mandatory bedside two-person electronic verification gating infusion eCRF."""
+
+    model_config = ConfigDict(strict=True)
+
+    coc_id: str
+    scanned_wristband_subject_id: str
+    scanned_bag_barcode: str
+    primary_verifier_id: str
+    primary_verifier_name: str
+    primary_verifier_role: str
+    primary_signature_token: str
+    secondary_verifier_id: str
+    secondary_verifier_name: str
+    secondary_verifier_role: str
+    secondary_signature_token: str
+    notes: str | None = None
+
+
+class CGTBedsideVerificationResponse(BaseModel):
+    """Response schema for bedside two-person verification."""
+
+    model_config = ConfigDict(strict=True)
+
+    id: str
+    study_id: str
+    site_id: str
+    chain_of_custody_id: str
+    subject_id: str
+    din: str
+    batch_id: str
+    wristband_matched: bool
+    bag_matched: bool
+    temperature_chain_verified: bool
+    primary_verifier_id: str
+    primary_verifier_name: str
+    primary_verifier_role: str
+    primary_signed_at: datetime
+    secondary_verifier_id: str
+    secondary_verifier_name: str
+    secondary_verifier_role: str
+    secondary_signed_at: datetime
+    status: str
+    unlock_token: str
+    verification_notes: str | None = None
+
+
+class CGTInfusionExecuteRequest(BaseModel):
+    """Payload to execute infusion administration with unlock token verification."""
+
+    model_config = ConfigDict(strict=True)
+
+    coc_id: str
+    unlock_token: str
+    administrator_id: str
+    administrator_name: str
+    administrator_role: str = "Infusion Nurse"
+    volume_infused_ml: float = 50.0
+    vital_signs_pre_temp_celsius: float = 36.8
+    vital_signs_post_temp_celsius: float = 37.1
+    notes: str | None = None
+
+
+class CGTVialReturnReconciliationRequest(BaseModel):
+    """Payload to log returned kit/vial accountability and compute adherence percentage."""
+
+    model_config = ConfigDict(strict=True)
+
+    study_id: str
+    site_id: str
+    subject_id: str
+    kit_number: str
+    vial_identifier: str
+    lot_number: str
+    expected_quantity: int = 1
+    returned_quantity: int = 1
+    intact_vials: int = 0
+    used_vials: int = 1
+    residual_volume_ml: float = 0.0
+    din: str | None = None
+    logged_by: str
+    disposition: str = "RECONCILED_FOR_DESTRUCTION"
+
+
+class CGTVialReturnReconciliationResponse(BaseModel):
+    """Response schema for vial return reconciliation."""
+
+    model_config = ConfigDict(strict=True)
+
+    id: str
+    study_id: str
+    site_id: str
+    subject_id: str
+    kit_number: str
+    vial_identifier: str
+    lot_number: str
+    din: str | None = None
+    expected_quantity: int
+    returned_quantity: int
+    intact_vials: int
+    used_vials: int
+    residual_volume_ml: float
+    adherence_percentage: float
+    disposition: str
+    logged_by: str
+    logged_at: datetime
+    certificate_id: str | None = None
+
+
+class CGTDestructionCertificateCreateRequest(BaseModel):
+    """Payload to generate formal Certificate of Destruction with dual witness e-signatures."""
+
+    model_config = ConfigDict(strict=True)
+
+    study_id: str
+    site_id: str
+    lot_number: str
+    kit_numbers: list[str] = Field(min_length=1)
+    vial_identifiers: list[str] = Field(min_length=1)
+    destruction_reason: str
+    destruction_method: str = "HIGH_TEMPERATURE_INCINERATION"
+    destruction_facility: str
+    witness_1_id: str
+    witness_1_name: str
+    witness_1_role: str
+    witness_1_signature_token: str
+    witness_2_id: str
+    witness_2_name: str
+    witness_2_role: str
+    witness_2_signature_token: str
+    quantity_destroyed: int = 1
+    residual_volume_ml: float | None = None
+    subject_id: str | None = None
+    din: str | None = None
+    coc_id: str | None = None
+    notes: str | None = None
+
+
+class CGTDestructionCertificateResponse(BaseModel):
+    """Response schema for formal Certificate of Destruction."""
+
+    model_config = ConfigDict(strict=True)
+
+    id: str
+    study_id: str
+    site_id: str
+    certificate_number: str
+    chain_of_custody_id: str | None = None
+    subject_id: str | None = None
+    din: str | None = None
+    lot_number: str
+    kit_numbers: list[str]
+    vial_identifiers: list[str]
+    quantity_destroyed: int
+    unit_of_measure: str
+    residual_volume_ml: float | None = None
+    destruction_reason: str
+    destruction_method: str
+    destruction_facility: str
+    destruction_timestamp: datetime
+    witness_1_id: str
+    witness_1_name: str
+    witness_1_role: str
+    witness_1_signed_at: datetime
+    witness_2_id: str
+    witness_2_name: str
+    witness_2_role: str
+    witness_2_signed_at: datetime
+    cryptographic_seal: str
+    status: str
+    reconciliation_notes: str | None = None
+
+
+class CGTBarcodeVerifyRequest(BaseModel):
+    """Payload to verify cryptographic barcode authenticity."""
+
+    model_config = ConfigDict(strict=True)
+
+    barcode_payload: str
+    expected_subject_id: str | None = None
+    expected_din: str | None = None
+    expected_batch_id: str | None = None
+
+
+class CGTBarcodeVerifyResponse(BaseModel):
+    """Response schema for barcode verification."""
+
+    model_config = ConfigDict(strict=True)
+
+    is_valid: bool
+    failure_reason: str | None = None
+    barcode_id: str | None = None
+    study_id: str | None = None
+    site_id: str | None = None
+    subject_id: str | None = None
+    din: str | None = None
+    batch_id: str | None = None
+    crypto_hash: str | None = None
+
+
+class CGTFullTraceabilityResponse(BaseModel):
+    """Comprehensive response schema for end-to-end Vein-to-Vein tracking."""
+
+    model_config = ConfigDict(strict=True)
+
+    chain_of_custody: CGTChainOfCustodyResponse
+    milestones: list[CGTMilestoneResponse]
+    bedside_verification: CGTBedsideVerificationResponse | None = None
+    destruction_certificate: CGTDestructionCertificateResponse | None = None

@@ -582,3 +582,371 @@ class ReLabelingTask(AuditedModel):
     verified_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
     label_barcode_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     relabeling_notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+
+class AdaptiveTrialConfig(AuditedModel):
+    """Protocol configuration for adaptive oncology trial dose-escalation and RAR designs."""
+
+    __tablename__ = "adaptive_trial_configs"
+    __table_args__ = (
+        UniqueConstraint("study_id", name="uq_adaptive_trial_configs_study"),
+    )
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    design_type: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # THREE_PLUS_THREE, BOIN, CRM, RAR
+    target_toxicity_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    dose_levels: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    boin_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    crm_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    three_plus_three_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    rar_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    cohort_size: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
+    max_sample_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class DoseCohortState(AuditedModel):
+    """Tracks active and historical dose escalation cohort states for a trial."""
+
+    __tablename__ = "dose_cohort_states"
+    __table_args__ = (
+        UniqueConstraint(
+            "study_id", "cohort_number", name="uq_dose_cohort_study_cohort"
+        ),
+    )
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    cohort_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    current_dose_level_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    current_dose_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    enrolled_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    dlt_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    cumulative_dose_evaluations: Mapped[dict] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+    eliminated_doses: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    recommendation_action: Mapped[str] = mapped_column(
+        String(50), default="STAY", nullable=False
+    )
+    recommended_dose_level_index: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+    recommended_dose_name: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    status: Mapped[str] = mapped_column(String(50), default="ENROLLING", nullable=False)
+    rationale: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    mtd_declared_dose_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    mtd_declared_dose_name: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+
+
+class AdaptiveCohortTransitionLog(AuditedModel):
+    """Immutable 21 CFR Part 11 audited ledger of cohort transitions, decisions, and Bayesian updates."""
+
+    __tablename__ = "adaptive_cohort_transition_logs"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    cohort_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    from_dose_level: Mapped[int] = mapped_column(Integer, nullable=False)
+    to_dose_level: Mapped[int] = mapped_column(Integer, nullable=False)
+    action_taken: Mapped[str] = mapped_column(String(50), nullable=False)
+    algorithm_recommendation: Mapped[str] = mapped_column(String(50), nullable=False)
+    override_occurred: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    override_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    evaluated_dlt_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    posterior_toxicity_estimates: Mapped[dict | None] = mapped_column(
+        JSON, nullable=True
+    )
+    authorized_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    transitioned_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    signature_token: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    cryptographic_checksum: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+
+
+class RARArmState(AuditedModel):
+    """Current state and posterior metrics for Response-Adaptive Randomization treatment arms."""
+
+    __tablename__ = "rar_arm_states"
+    __table_args__ = (
+        UniqueConstraint("study_id", "arm_id", name="uq_rar_arm_study_arm"),
+    )
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    arm_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    arm_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_control: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(50), default="ACTIVE", nullable=False
+    )  # ACTIVE, DROPPED_FUTILITY, GRADUATED_SUCCESS, TERMINATED
+    enrolled_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    response_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    prior_alpha: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    prior_beta: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    posterior_alpha: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    posterior_beta: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    posterior_mean: Mapped[float] = mapped_column(Float, default=0.5, nullable=False)
+    allocation_probability: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    superiority_vs_control_prob: Mapped[float | None] = mapped_column(
+        Float, nullable=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+
+
+class RARAllocationLog(AuditedModel):
+    """21 CFR Part 11 audited history of dynamic RAR probability re-weighting and arm events."""
+
+    __tablename__ = "rar_allocation_logs"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    event_type: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # INITIALIZATION, UPDATE_PROBABILITIES, ARM_ADDED, ARM_DROPPED_FUTILITY, ARM_GRADUATED_SUCCESS
+    probabilities_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    sample_sizes_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    responses_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    triggered_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    change_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    cryptographic_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+# =========================================================================
+# Cell & Gene Therapy (CGT) Vein-to-Vein COC/COI & Destruction Database Models
+# Requirements: PRD-SCM-005, PRD-SCM-006, ADR-2199
+# =========================================================================
+
+
+class CGTChainOfCustody(AuditedModel):
+    """Represents an unbroken Vein-to-Vein Chain of Custody & Chain of Identity record.
+
+    Conforms to PRD-SCM-005, binding subject identity, ISBT 128 DIN, and batch records.
+    """
+
+    __tablename__ = "cgt_chains_of_custody"
+    __table_args__ = (UniqueConstraint("study_id", "din", name="uq_cgt_coc_study_din"),)
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    din: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    batch_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    current_stage: Mapped[str] = mapped_column(
+        String(50), default="APHERESIS_COLLECTION", nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(50), default="COLLECTED", nullable=False)
+    tamper_evident_barcode: Mapped[str | None] = mapped_column(
+        String(1000), nullable=True
+    )
+    barcode_signature: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    collection_site_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    collection_timestamp: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
+    manufacturing_facility_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    cryo_temp_excursion_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    lowest_temp_celsius: Mapped[float | None] = mapped_column(Float, nullable=True)
+    highest_temp_celsius: Mapped[float | None] = mapped_column(Float, nullable=True)
+    infusion_unlocked: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    infusion_unlock_token: Mapped[str | None] = mapped_column(
+        String(512), nullable=True
+    )
+    infused_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    reconciled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class CGTMilestoneEvent(AuditedModel):
+    """Audit-tracked lifecycle event with GPS coordinates and cryogenic temperature logging."""
+
+    __tablename__ = "cgt_milestone_events"
+    __table_args__ = (
+        Index("idx_cgt_milestone_coc_time", "chain_of_custody_id", "timestamp"),
+    )
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    chain_of_custody_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
+    stage: Mapped[str] = mapped_column(String(50), nullable=False)
+    milestone_type: Mapped[str] = mapped_column(
+        String(50), default="STATUS_UPDATE", nullable=False
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    location_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    facility_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    temperature_celsius: Mapped[float] = mapped_column(Float, nullable=False)
+    temperature_status: Mapped[str] = mapped_column(
+        String(50), default="OPTIMAL", nullable=False
+    )
+    custodian_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    custodian_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    custodian_role: Mapped[str] = mapped_column(String(100), nullable=False)
+    carrier: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    tracking_number: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    seal_intact: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    seal_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    dry_shipper_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    electronic_signature: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+
+class CGTBedsideVerification(AuditedModel):
+    """Mandatory dual-person electronic bedside verification record gating infusion eCRF."""
+
+    __tablename__ = "cgt_bedside_verifications"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    chain_of_custody_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    din: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    batch_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    scanned_wristband_subject_id: Mapped[str] = mapped_column(
+        String(255), nullable=False
+    )
+    scanned_bag_barcode: Mapped[str] = mapped_column(String(1000), nullable=False)
+    wristband_matched: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    bag_matched: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    temperature_chain_verified: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    primary_verifier_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    primary_verifier_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    primary_verifier_role: Mapped[str] = mapped_column(String(100), nullable=False)
+    primary_signature_token: Mapped[str] = mapped_column(String(512), nullable=False)
+    primary_signed_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    secondary_verifier_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    secondary_verifier_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    secondary_verifier_role: Mapped[str] = mapped_column(String(100), nullable=False)
+    secondary_signature_token: Mapped[str] = mapped_column(String(512), nullable=False)
+    secondary_signed_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(50), default="VERIFIED", nullable=False)
+    unlock_token: Mapped[str] = mapped_column(String(512), nullable=False)
+    verification_notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+
+class CGTDestructionCertificate(AuditedModel):
+    """Formal Certificate of Destruction with dual witness electronic signatures for drug reconciliation."""
+
+    __tablename__ = "cgt_destruction_certificates"
+    __table_args__ = (
+        UniqueConstraint(
+            "study_id", "certificate_number", name="uq_cgt_destruction_cert_num"
+        ),
+    )
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    certificate_number: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
+    chain_of_custody_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    subject_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    din: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    lot_number: Mapped[str] = mapped_column(String(255), nullable=False)
+    kit_numbers: Mapped[list] = mapped_column(JSON, nullable=False)
+    vial_identifiers: Mapped[list] = mapped_column(JSON, nullable=False)
+    quantity_destroyed: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    unit_of_measure: Mapped[str] = mapped_column(
+        String(50), default="VIALS", nullable=False
+    )
+    residual_volume_ml: Mapped[float | None] = mapped_column(Float, nullable=True)
+    destruction_reason: Mapped[str] = mapped_column(String(255), nullable=False)
+    destruction_method: Mapped[str] = mapped_column(String(100), nullable=False)
+    destruction_facility: Mapped[str] = mapped_column(String(255), nullable=False)
+    destruction_timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    witness_1_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    witness_1_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    witness_1_role: Mapped[str] = mapped_column(String(100), nullable=False)
+    witness_1_signature_token: Mapped[str] = mapped_column(String(512), nullable=False)
+    witness_1_signed_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    witness_2_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    witness_2_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    witness_2_role: Mapped[str] = mapped_column(String(100), nullable=False)
+    witness_2_signature_token: Mapped[str] = mapped_column(String(512), nullable=False)
+    witness_2_signed_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    cryptographic_seal: Mapped[str] = mapped_column(String(512), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="COMPLETED", nullable=False)
+    reconciliation_notes: Mapped[str | None] = mapped_column(
+        String(1000), nullable=True
+    )
+
+
+class CGTVialReturnReconciliation(AuditedModel):
+    """Accountability tracking for kit and vial returns with patient compliance calculation."""
+
+    __tablename__ = "cgt_vial_return_reconciliations"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    kit_number: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    vial_identifier: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
+    lot_number: Mapped[str] = mapped_column(String(255), nullable=False)
+    din: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    expected_quantity: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    returned_quantity: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    intact_vials: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    used_vials: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    residual_volume_ml: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    adherence_percentage: Mapped[float] = mapped_column(
+        Float, default=100.0, nullable=False
+    )
+    disposition: Mapped[str] = mapped_column(
+        String(50), default="RECONCILED_FOR_DESTRUCTION", nullable=False
+    )
+    logged_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    logged_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    certificate_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )

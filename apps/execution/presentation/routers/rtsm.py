@@ -3,12 +3,25 @@
 Requirements: PRD-SCM-001, GMP Annex 13
 """
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.execution.adapters.repositories import get_execution_db_session
+from apps.execution.adaptive_math import (
+    CrmDoseEscalationEngine as CrmDoseEscalationEngine,
+)
+from apps.execution.adaptive_math import (
+    calculate_boin_boundaries as calculate_boin_boundaries,
+)
 from apps.execution.database.models import (
+    CGTBedsideVerification,
+    CGTChainOfCustody,
+    CGTDestructionCertificate,
+    CGTMilestoneEvent,
+    CGTVialReturnReconciliation,
     DrugStabilityBudget,
     ExcursionEvaluation,
     IPKit,
@@ -20,12 +33,69 @@ from apps.execution.database.models import (
     TransferOrder,
 )
 from apps.execution.dependencies import verify_change_justification
+from apps.execution.domain.adaptive_models import (
+    AdaptiveTrialConfigDTO as AdaptiveTrialConfigDTO,
+)
+from apps.execution.domain.adaptive_models import (
+    BoinBoundariesCalculationRequest as BoinBoundariesCalculationRequest,
+)
+from apps.execution.domain.adaptive_models import (
+    BoinBoundariesCalculationResponse as BoinBoundariesCalculationResponse,
+)
+from apps.execution.domain.adaptive_models import (
+    BoinConfig as BoinConfig,
+)
+from apps.execution.domain.adaptive_models import (
+    CohortEvaluationInput as CohortEvaluationInput,
+)
+from apps.execution.domain.adaptive_models import (
+    CohortEvaluationResult as CohortEvaluationResult,
+)
+from apps.execution.domain.adaptive_models import (
+    CohortRecommendationAction as CohortRecommendationAction,
+)
+from apps.execution.domain.adaptive_models import (
+    CohortTransitionLogResponse as CohortTransitionLogResponse,
+)
+from apps.execution.domain.adaptive_models import (
+    CohortTransitionRequest as CohortTransitionRequest,
+)
+from apps.execution.domain.adaptive_models import (
+    CrmConfig as CrmConfig,
+)
+from apps.execution.domain.adaptive_models import (
+    CrmPosteriorCalculationRequest as CrmPosteriorCalculationRequest,
+)
+from apps.execution.domain.adaptive_models import (
+    CrmPosteriorCalculationResponse as CrmPosteriorCalculationResponse,
+)
+from apps.execution.domain.adaptive_models import (
+    RAREvaluationResult as RAREvaluationResult,
+)
+from apps.execution.domain.adaptive_models import (
+    RARExpandOrTerminateArmRequest as RARExpandOrTerminateArmRequest,
+)
 from apps.execution.domain.rtsm_models import (
     MultiEchelonRollup,
     PredictiveForecastInput,
     StabilityBudgetConfig,
 )
 from apps.execution.presentation.routers.rtsm_schemas import (
+    CGTApheresisCreateRequest,
+    CGTBarcodeVerifyRequest,
+    CGTBarcodeVerifyResponse,
+    CGTBedsideVerificationRequest,
+    CGTBedsideVerificationResponse,
+    CGTChainOfCustodyResponse,
+    CGTDestructionCertificateCreateRequest,
+    CGTDestructionCertificateResponse,
+    CGTFullTraceabilityResponse,
+    CGTInfusionExecuteRequest,
+    CGTManufacturingBindRequest,
+    CGTMilestoneCreateRequest,
+    CGTMilestoneResponse,
+    CGTVialReturnReconciliationRequest,
+    CGTVialReturnReconciliationResponse,
     DiscreteExcursionResponse,
     ExcursionEvaluationResponse,
     IPKitCreateRequest,
@@ -58,6 +128,35 @@ from apps.execution.presentation.routers.rtsm_schemas import (
     TransferOrderResponse,
     TransferOrderShipRequest,
 )
+from apps.execution.rtsm_adaptive import (
+    AdaptiveTrialConfigNotFoundError,
+    CohortTransitionError,
+    InvalidDoseLevelError,
+    RARArmNotFoundError,
+    add_or_terminate_rar_arm_transaction,
+    advance_cohort_decision_transaction,
+    create_or_update_adaptive_config_transaction,
+    evaluate_and_update_rar_transaction,
+    evaluate_cohort_outcomes_transaction,
+    get_adaptive_study_state_transaction,
+)
+from apps.execution.rtsm_cgt import (
+    BarcodeTamperError,
+    BedsideVerificationMismatchError,
+    CGTChainOfCustodyNotFoundError,
+    CryogenicExcursionError,
+    DuplicateWitnessError,
+    InfusionLockedError,
+    InvalidDINError,
+    bind_manufacturing_batch_transaction,
+    execute_infusion_administration_transaction,
+    generate_certificate_of_destruction_transaction,
+    initialize_apheresis_coc_transaction,
+    log_vial_return_reconciliation_transaction,
+    record_cryogenic_milestone_transaction,
+    verify_bedside_dual_signatures_transaction,
+    verify_crypto_barcode,
+)
 from apps.execution.rtsm_cold_chain import (
     InvalidLoggerFileError,
     ReLabelingTaskNotFoundError,
@@ -88,6 +187,7 @@ from apps.execution.trial_lock import TrialLockManager
 from packages.security import (
     ROLE_CRA,
     ROLE_CRC,
+    ROLE_DATA_MANAGER,
     ROLE_INVESTIGATOR,
     ROLE_SITE_INVESTIGATOR,
     ROLE_SPONSOR_ADMIN,
@@ -1778,4 +1878,1291 @@ async def verify_relabeling_task_endpoint(
         verified_by=task.verified_by,
         label_barcode_hash=task.label_barcode_hash,
         relabeling_notes=task.relabeling_notes,
+    )
+
+
+# =========================================================================
+# Cell & Gene Therapy (CGT) Vein-to-Vein COC/COI & Destruction Endpoints
+# Requirements: PRD-SCM-005, PRD-SCM-006, ADR-2199
+# =========================================================================
+
+
+@router.post(
+    "/cgt/apheresis", response_model=CGTChainOfCustodyResponse, status_code=201
+)
+async def initialize_apheresis_endpoint(
+    payload: CGTApheresisCreateRequest,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_SPONSOR_ADMIN,
+            ROLE_CRA,
+            ROLE_CRC,
+            ROLE_INVESTIGATOR,
+            ROLE_SITE_INVESTIGATOR,
+            ROLE_SYSADMIN,
+            "sponsor_admin",
+            "cra",
+            "crc",
+            "investigator",
+            "site_investigator",
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> CGTChainOfCustodyResponse:
+    """Initializes Vein-to-Vein tracking upon initial apheresis cellular harvest."""
+    if not can_access_study(principal, payload.study_id) or not can_access_site(
+        principal, payload.site_id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Access to requested study or site denied.",
+        )
+    if TrialLockManager.is_site_locked(payload.site_id):
+        raise HTTPException(
+            status_code=423,
+            detail=f"Locked: Site {payload.site_id} is currently locked against changes.",
+        )
+    verify_change_justification(request)
+
+    try:
+        coc = await initialize_apheresis_coc_transaction(
+            session=session,
+            study_id=payload.study_id,
+            site_id=payload.site_id,
+            subject_id=payload.subject_id,
+            collector_id=payload.collector_id,
+            collector_name=payload.collector_name,
+            collector_role=payload.collector_role,
+            initial_temp_celsius=payload.initial_temp_celsius,
+            din=payload.din,
+            dry_shipper_id=payload.dry_shipper_id,
+            seal_id=payload.seal_id,
+            notes=payload.notes,
+        )
+        await session.commit()
+        await session.refresh(coc)
+    except InvalidDINError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return CGTChainOfCustodyResponse(
+        id=str(coc.id),
+        study_id=coc.study_id,
+        subject_id=coc.subject_id,
+        din=coc.din,
+        batch_id=coc.batch_id,
+        current_stage=coc.current_stage,
+        status=coc.status,
+        tamper_evident_barcode=coc.tamper_evident_barcode,
+        barcode_signature=coc.barcode_signature,
+        collection_site_id=coc.collection_site_id,
+        collection_timestamp=coc.collection_timestamp,
+        manufacturing_facility_id=coc.manufacturing_facility_id,
+        cryo_temp_excursion_count=coc.cryo_temp_excursion_count,
+        lowest_temp_celsius=coc.lowest_temp_celsius,
+        highest_temp_celsius=coc.highest_temp_celsius,
+        infusion_unlocked=coc.infusion_unlocked,
+        infused_at=coc.infused_at,
+        reconciled_at=coc.reconciled_at,
+    )
+
+
+@router.post("/cgt/milestone", response_model=CGTMilestoneResponse, status_code=201)
+async def record_cgt_milestone_endpoint(
+    payload: CGTMilestoneCreateRequest,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_SPONSOR_ADMIN,
+            ROLE_CRA,
+            ROLE_CRC,
+            ROLE_INVESTIGATOR,
+            ROLE_SITE_INVESTIGATOR,
+            ROLE_SYSADMIN,
+            "sponsor_admin",
+            "cra",
+            "crc",
+            "investigator",
+            "site_investigator",
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> CGTMilestoneResponse:
+    """Records a cryogenic transit milestone with GPS coordinates and temperature logging."""
+    verify_change_justification(request)
+
+    try:
+        milestone = await record_cryogenic_milestone_transaction(
+            session=session,
+            coc_id=payload.coc_id,
+            stage=payload.stage,
+            location_name=payload.location_name,
+            temperature_celsius=payload.temperature_celsius,
+            custodian_id=payload.custodian_id,
+            custodian_name=payload.custodian_name,
+            custodian_role=payload.custodian_role,
+            facility_id=payload.facility_id,
+            latitude=payload.latitude,
+            longitude=payload.longitude,
+            carrier=payload.carrier,
+            tracking_number=payload.tracking_number,
+            seal_intact=payload.seal_intact,
+            seal_id=payload.seal_id,
+            dry_shipper_id=payload.dry_shipper_id,
+            signature_token=payload.signature_token,
+            notes=payload.notes,
+        )
+        await session.commit()
+        await session.refresh(milestone)
+    except CGTChainOfCustodyNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return CGTMilestoneResponse(
+        id=str(milestone.id),
+        study_id=milestone.study_id,
+        chain_of_custody_id=milestone.chain_of_custody_id,
+        stage=milestone.stage,
+        milestone_type=milestone.milestone_type,
+        timestamp=milestone.timestamp,
+        location_name=milestone.location_name,
+        facility_id=milestone.facility_id,
+        latitude=milestone.latitude,
+        longitude=milestone.longitude,
+        temperature_celsius=milestone.temperature_celsius,
+        temperature_status=milestone.temperature_status,
+        custodian_id=milestone.custodian_id,
+        custodian_name=milestone.custodian_name,
+        custodian_role=milestone.custodian_role,
+        carrier=milestone.carrier,
+        tracking_number=milestone.tracking_number,
+        seal_intact=milestone.seal_intact,
+        seal_id=milestone.seal_id,
+        dry_shipper_id=milestone.dry_shipper_id,
+        electronic_signature=milestone.electronic_signature,
+        notes=milestone.notes,
+    )
+
+
+@router.post("/cgt/manufacturing-bind", response_model=CGTChainOfCustodyResponse)
+async def bind_manufacturing_batch_endpoint(
+    payload: CGTManufacturingBindRequest,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_SPONSOR_ADMIN,
+            ROLE_CRA,
+            ROLE_SYSADMIN,
+            ROLE_INVESTIGATOR,
+            ROLE_SITE_INVESTIGATOR,
+            "sponsor_admin",
+            "cra",
+            "investigator",
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> CGTChainOfCustodyResponse:
+    """Binds manufacturing batch record to original subject identity and regenerates barcode."""
+    verify_change_justification(request)
+
+    try:
+        coc = await bind_manufacturing_batch_transaction(
+            session=session,
+            coc_id=payload.coc_id,
+            batch_id=payload.batch_id,
+            manufacturing_facility_id=payload.manufacturing_facility_id,
+            operator_id=payload.operator_id,
+            operator_name=payload.operator_name,
+            operator_role=payload.operator_role,
+            temperature_celsius=payload.temperature_celsius,
+            notes=payload.notes,
+        )
+        await session.commit()
+        await session.refresh(coc)
+    except CGTChainOfCustodyNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return CGTChainOfCustodyResponse(
+        id=str(coc.id),
+        study_id=coc.study_id,
+        subject_id=coc.subject_id,
+        din=coc.din,
+        batch_id=coc.batch_id,
+        current_stage=coc.current_stage,
+        status=coc.status,
+        tamper_evident_barcode=coc.tamper_evident_barcode,
+        barcode_signature=coc.barcode_signature,
+        collection_site_id=coc.collection_site_id,
+        collection_timestamp=coc.collection_timestamp,
+        manufacturing_facility_id=coc.manufacturing_facility_id,
+        cryo_temp_excursion_count=coc.cryo_temp_excursion_count,
+        lowest_temp_celsius=coc.lowest_temp_celsius,
+        highest_temp_celsius=coc.highest_temp_celsius,
+        infusion_unlocked=coc.infusion_unlocked,
+        infused_at=coc.infused_at,
+        reconciled_at=coc.reconciled_at,
+    )
+
+
+@router.post("/cgt/bedside-verify", response_model=CGTBedsideVerificationResponse)
+async def bedside_dual_verification_endpoint(
+    payload: CGTBedsideVerificationRequest,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_CRC,
+            ROLE_INVESTIGATOR,
+            ROLE_SITE_INVESTIGATOR,
+            ROLE_SPONSOR_ADMIN,
+            ROLE_SYSADMIN,
+            "crc",
+            "investigator",
+            "site_investigator",
+            "sponsor_admin",
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> CGTBedsideVerificationResponse:
+    """Executes mandatory two-person electronic bedside verification, unlocking the drug infusion eCRF."""
+    verify_change_justification(request)
+
+    try:
+        verification = await verify_bedside_dual_signatures_transaction(
+            session=session,
+            coc_id=payload.coc_id,
+            scanned_wristband_subject_id=payload.scanned_wristband_subject_id,
+            scanned_bag_barcode=payload.scanned_bag_barcode,
+            primary_verifier_id=payload.primary_verifier_id,
+            primary_verifier_name=payload.primary_verifier_name,
+            primary_verifier_role=payload.primary_verifier_role,
+            primary_signature_token=payload.primary_signature_token,
+            secondary_verifier_id=payload.secondary_verifier_id,
+            secondary_verifier_name=payload.secondary_verifier_name,
+            secondary_verifier_role=payload.secondary_verifier_role,
+            secondary_signature_token=payload.secondary_signature_token,
+            notes=payload.notes,
+        )
+        await session.commit()
+        await session.refresh(verification)
+    except CGTChainOfCustodyNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except (
+        DuplicateWitnessError,
+        BedsideVerificationMismatchError,
+        BarcodeTamperError,
+        CryogenicExcursionError,
+    ) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return CGTBedsideVerificationResponse(
+        id=str(verification.id),
+        study_id=verification.study_id,
+        site_id=verification.site_id,
+        chain_of_custody_id=verification.chain_of_custody_id,
+        subject_id=verification.subject_id,
+        din=verification.din,
+        batch_id=verification.batch_id,
+        wristband_matched=verification.wristband_matched,
+        bag_matched=verification.bag_matched,
+        temperature_chain_verified=verification.temperature_chain_verified,
+        primary_verifier_id=verification.primary_verifier_id,
+        primary_verifier_name=verification.primary_verifier_name,
+        primary_verifier_role=verification.primary_verifier_role,
+        primary_signed_at=verification.primary_signed_at,
+        secondary_verifier_id=verification.secondary_verifier_id,
+        secondary_verifier_name=verification.secondary_verifier_name,
+        secondary_verifier_role=verification.secondary_verifier_role,
+        secondary_signed_at=verification.secondary_signed_at,
+        status=verification.status,
+        unlock_token=verification.unlock_token,
+        verification_notes=verification.verification_notes,
+    )
+
+
+@router.post("/cgt/infuse", response_model=CGTChainOfCustodyResponse)
+async def execute_infusion_endpoint(
+    payload: CGTInfusionExecuteRequest,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_CRC,
+            ROLE_INVESTIGATOR,
+            ROLE_SITE_INVESTIGATOR,
+            ROLE_SPONSOR_ADMIN,
+            ROLE_SYSADMIN,
+            "crc",
+            "investigator",
+            "site_investigator",
+            "sponsor_admin",
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> CGTChainOfCustodyResponse:
+    """Records cellular drug infusion administration, gated by the bedside verification unlock token."""
+    verify_change_justification(request)
+
+    try:
+        coc = await execute_infusion_administration_transaction(
+            session=session,
+            coc_id=payload.coc_id,
+            unlock_token=payload.unlock_token,
+            administrator_id=payload.administrator_id,
+            administrator_name=payload.administrator_name,
+            administrator_role=payload.administrator_role,
+            volume_infused_ml=payload.volume_infused_ml,
+            vital_signs_pre_temp_celsius=payload.vital_signs_pre_temp_celsius,
+            vital_signs_post_temp_celsius=payload.vital_signs_post_temp_celsius,
+            notes=payload.notes,
+        )
+        await session.commit()
+        await session.refresh(coc)
+    except CGTChainOfCustodyNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except InfusionLockedError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+    return CGTChainOfCustodyResponse(
+        id=str(coc.id),
+        study_id=coc.study_id,
+        subject_id=coc.subject_id,
+        din=coc.din,
+        batch_id=coc.batch_id,
+        current_stage=coc.current_stage,
+        status=coc.status,
+        tamper_evident_barcode=coc.tamper_evident_barcode,
+        barcode_signature=coc.barcode_signature,
+        collection_site_id=coc.collection_site_id,
+        collection_timestamp=coc.collection_timestamp,
+        manufacturing_facility_id=coc.manufacturing_facility_id,
+        cryo_temp_excursion_count=coc.cryo_temp_excursion_count,
+        lowest_temp_celsius=coc.lowest_temp_celsius,
+        highest_temp_celsius=coc.highest_temp_celsius,
+        infusion_unlocked=coc.infusion_unlocked,
+        infused_at=coc.infused_at,
+        reconciled_at=coc.reconciled_at,
+    )
+
+
+@router.post(
+    "/cgt/returns", response_model=CGTVialReturnReconciliationResponse, status_code=201
+)
+async def log_vial_return_endpoint(
+    payload: CGTVialReturnReconciliationRequest,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_CRC,
+            ROLE_INVESTIGATOR,
+            ROLE_SITE_INVESTIGATOR,
+            ROLE_CRA,
+            ROLE_SPONSOR_ADMIN,
+            ROLE_SYSADMIN,
+            "crc",
+            "investigator",
+            "site_investigator",
+            "cra",
+            "sponsor_admin",
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> CGTVialReturnReconciliationResponse:
+    """Logs returned kit/vial accountability and calculates patient adherence compliance."""
+    if not can_access_study(principal, payload.study_id) or not can_access_site(
+        principal, payload.site_id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Access to requested study or site denied.",
+        )
+    if TrialLockManager.is_site_locked(payload.site_id):
+        raise HTTPException(
+            status_code=423,
+            detail=f"Locked: Site {payload.site_id} is currently locked against changes.",
+        )
+    verify_change_justification(request)
+
+    recon = await log_vial_return_reconciliation_transaction(
+        session=session,
+        study_id=payload.study_id,
+        site_id=payload.site_id,
+        subject_id=payload.subject_id,
+        kit_number=payload.kit_number,
+        vial_identifier=payload.vial_identifier,
+        lot_number=payload.lot_number,
+        expected_quantity=payload.expected_quantity,
+        returned_quantity=payload.returned_quantity,
+        intact_vials=payload.intact_vials,
+        used_vials=payload.used_vials,
+        residual_volume_ml=payload.residual_volume_ml,
+        din=payload.din,
+        logged_by=payload.logged_by,
+        disposition=payload.disposition,
+    )
+    await session.commit()
+    await session.refresh(recon)
+
+    return CGTVialReturnReconciliationResponse(
+        id=str(recon.id),
+        study_id=recon.study_id,
+        site_id=recon.site_id,
+        subject_id=recon.subject_id,
+        kit_number=recon.kit_number,
+        vial_identifier=recon.vial_identifier,
+        lot_number=recon.lot_number,
+        din=recon.din,
+        expected_quantity=recon.expected_quantity,
+        returned_quantity=recon.returned_quantity,
+        intact_vials=recon.intact_vials,
+        used_vials=recon.used_vials,
+        residual_volume_ml=recon.residual_volume_ml,
+        adherence_percentage=recon.adherence_percentage,
+        disposition=recon.disposition,
+        logged_by=recon.logged_by,
+        logged_at=recon.logged_at,
+        certificate_id=recon.certificate_id,
+    )
+
+
+@router.post(
+    "/cgt/destruction-certificate",
+    response_model=CGTDestructionCertificateResponse,
+    status_code=201,
+)
+async def generate_destruction_certificate_endpoint(
+    payload: CGTDestructionCertificateCreateRequest,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_INVESTIGATOR,
+            ROLE_SITE_INVESTIGATOR,
+            ROLE_CRC,
+            ROLE_CRA,
+            ROLE_SPONSOR_ADMIN,
+            ROLE_SYSADMIN,
+            "investigator",
+            "site_investigator",
+            "crc",
+            "cra",
+            "sponsor_admin",
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> CGTDestructionCertificateResponse:
+    """Generates a formal Certificate of Destruction with dual witness electronic signatures."""
+    if not can_access_study(principal, payload.study_id) or not can_access_site(
+        principal, payload.site_id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Access to requested study or site denied.",
+        )
+    if TrialLockManager.is_site_locked(payload.site_id):
+        raise HTTPException(
+            status_code=423,
+            detail=f"Locked: Site {payload.site_id} is currently locked against changes.",
+        )
+    verify_change_justification(request)
+
+    try:
+        cert = await generate_certificate_of_destruction_transaction(
+            session=session,
+            study_id=payload.study_id,
+            site_id=payload.site_id,
+            lot_number=payload.lot_number,
+            kit_numbers=payload.kit_numbers,
+            vial_identifiers=payload.vial_identifiers,
+            destruction_reason=payload.destruction_reason,
+            destruction_method=payload.destruction_method,
+            destruction_facility=payload.destruction_facility,
+            witness_1_id=payload.witness_1_id,
+            witness_1_name=payload.witness_1_name,
+            witness_1_role=payload.witness_1_role,
+            witness_1_signature_token=payload.witness_1_signature_token,
+            witness_2_id=payload.witness_2_id,
+            witness_2_name=payload.witness_2_name,
+            witness_2_role=payload.witness_2_role,
+            witness_2_signature_token=payload.witness_2_signature_token,
+            quantity_destroyed=payload.quantity_destroyed,
+            residual_volume_ml=payload.residual_volume_ml,
+            subject_id=payload.subject_id,
+            din=payload.din,
+            coc_id=payload.coc_id,
+            notes=payload.notes,
+        )
+        await session.commit()
+        await session.refresh(cert)
+    except DuplicateWitnessError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return CGTDestructionCertificateResponse(
+        id=str(cert.id),
+        study_id=cert.study_id,
+        site_id=cert.site_id,
+        certificate_number=cert.certificate_number,
+        chain_of_custody_id=cert.chain_of_custody_id,
+        subject_id=cert.subject_id,
+        din=cert.din,
+        lot_number=cert.lot_number,
+        kit_numbers=cert.kit_numbers,
+        vial_identifiers=cert.vial_identifiers,
+        quantity_destroyed=cert.quantity_destroyed,
+        unit_of_measure=cert.unit_of_measure,
+        residual_volume_ml=cert.residual_volume_ml,
+        destruction_reason=cert.destruction_reason,
+        destruction_method=cert.destruction_method,
+        destruction_facility=cert.destruction_facility,
+        destruction_timestamp=cert.destruction_timestamp,
+        witness_1_id=cert.witness_1_id,
+        witness_1_name=cert.witness_1_name,
+        witness_1_role=cert.witness_1_role,
+        witness_1_signed_at=cert.witness_1_signed_at,
+        witness_2_id=cert.witness_2_id,
+        witness_2_name=cert.witness_2_name,
+        witness_2_role=cert.witness_2_role,
+        witness_2_signed_at=cert.witness_2_signed_at,
+        cryptographic_seal=cert.cryptographic_seal,
+        status=cert.status,
+        reconciliation_notes=cert.reconciliation_notes,
+    )
+
+
+@router.post("/cgt/verify-barcode", response_model=CGTBarcodeVerifyResponse)
+async def verify_cgt_barcode_endpoint(
+    payload: CGTBarcodeVerifyRequest,
+    principal: Principal = Depends(get_principal),
+) -> CGTBarcodeVerifyResponse:
+    """Verifies cryptographic authenticity and entity bindings for a scanned barcode."""
+    is_valid, failure_reason, data = verify_crypto_barcode(
+        barcode_payload=payload.barcode_payload,
+        expected_subject_id=payload.expected_subject_id,
+        expected_din=payload.expected_din,
+        expected_batch_id=payload.expected_batch_id,
+    )
+
+    return CGTBarcodeVerifyResponse(
+        is_valid=is_valid,
+        failure_reason=failure_reason,
+        barcode_id=data.get("barcode_id"),
+        study_id=data.get("study_id"),
+        site_id=data.get("site_id"),
+        subject_id=data.get("subject_id"),
+        din=data.get("din"),
+        batch_id=data.get("batch_id"),
+        crypto_hash=data.get("crypto_hash"),
+    )
+
+
+@router.get(
+    "/cgt/chain-of-custody/{study_id}/{subject_id}",
+    response_model=CGTFullTraceabilityResponse,
+)
+async def get_subject_cgt_traceability_endpoint(
+    study_id: str,
+    subject_id: str,
+    principal: Principal = Depends(get_principal),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> CGTFullTraceabilityResponse:
+    """Retrieves full Vein-to-Vein traceability ledger for a subject."""
+    if not can_access_study(principal, study_id):
+        raise HTTPException(
+            status_code=403, detail="Forbidden: Access to requested study denied."
+        )
+
+    stmt_coc = select(CGTChainOfCustody).where(
+        CGTChainOfCustody.study_id == study_id,
+        CGTChainOfCustody.subject_id == subject_id,
+    )
+    res_coc = await session.execute(stmt_coc)
+    coc = res_coc.scalar_one_or_none()
+    if not coc:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No Chain of Custody record found for subject {subject_id} in study {study_id}.",
+        )
+
+    # Milestones
+    stmt_ms = (
+        select(CGTMilestoneEvent)
+        .where(CGTMilestoneEvent.chain_of_custody_id == str(coc.id))
+        .order_by(CGTMilestoneEvent.timestamp.asc())
+    )
+    res_ms = await session.execute(stmt_ms)
+    milestones = res_ms.scalars().all()
+
+    # Bedside verification
+    stmt_bv = select(CGTBedsideVerification).where(
+        CGTBedsideVerification.chain_of_custody_id == str(coc.id),
+        CGTBedsideVerification.status == "VERIFIED",
+    )
+    res_bv = await session.execute(stmt_bv)
+    bv = res_bv.scalar_one_or_none()
+
+    # Destruction cert
+    stmt_dc = select(CGTDestructionCertificate).where(
+        CGTDestructionCertificate.chain_of_custody_id == str(coc.id)
+    )
+    res_dc = await session.execute(stmt_dc)
+    dc = res_dc.scalar_one_or_none()
+
+    coc_resp = CGTChainOfCustodyResponse(
+        id=str(coc.id),
+        study_id=coc.study_id,
+        subject_id=coc.subject_id,
+        din=coc.din,
+        batch_id=coc.batch_id,
+        current_stage=coc.current_stage,
+        status=coc.status,
+        tamper_evident_barcode=coc.tamper_evident_barcode,
+        barcode_signature=coc.barcode_signature,
+        collection_site_id=coc.collection_site_id,
+        collection_timestamp=coc.collection_timestamp,
+        manufacturing_facility_id=coc.manufacturing_facility_id,
+        cryo_temp_excursion_count=coc.cryo_temp_excursion_count,
+        lowest_temp_celsius=coc.lowest_temp_celsius,
+        highest_temp_celsius=coc.highest_temp_celsius,
+        infusion_unlocked=coc.infusion_unlocked,
+        infused_at=coc.infused_at,
+        reconciled_at=coc.reconciled_at,
+    )
+
+    ms_resp = [
+        CGTMilestoneResponse(
+            id=str(m.id),
+            study_id=m.study_id,
+            chain_of_custody_id=m.chain_of_custody_id,
+            stage=m.stage,
+            milestone_type=m.milestone_type,
+            timestamp=m.timestamp,
+            location_name=m.location_name,
+            facility_id=m.facility_id,
+            latitude=m.latitude,
+            longitude=m.longitude,
+            temperature_celsius=m.temperature_celsius,
+            temperature_status=m.temperature_status,
+            custodian_id=m.custodian_id,
+            custodian_name=m.custodian_name,
+            custodian_role=m.custodian_role,
+            carrier=m.carrier,
+            tracking_number=m.tracking_number,
+            seal_intact=m.seal_intact,
+            seal_id=m.seal_id,
+            dry_shipper_id=m.dry_shipper_id,
+            electronic_signature=m.electronic_signature,
+            notes=m.notes,
+        )
+        for m in milestones
+    ]
+
+    bv_resp = (
+        CGTBedsideVerificationResponse(
+            id=str(bv.id),
+            study_id=bv.study_id,
+            site_id=bv.site_id,
+            chain_of_custody_id=bv.chain_of_custody_id,
+            subject_id=bv.subject_id,
+            din=bv.din,
+            batch_id=bv.batch_id,
+            wristband_matched=bv.wristband_matched,
+            bag_matched=bv.bag_matched,
+            temperature_chain_verified=bv.temperature_chain_verified,
+            primary_verifier_id=bv.primary_verifier_id,
+            primary_verifier_name=bv.primary_verifier_name,
+            primary_verifier_role=bv.primary_verifier_role,
+            primary_signed_at=bv.primary_signed_at,
+            secondary_verifier_id=bv.secondary_verifier_id,
+            secondary_verifier_name=bv.secondary_verifier_name,
+            secondary_verifier_role=bv.secondary_verifier_role,
+            secondary_signed_at=bv.secondary_signed_at,
+            status=bv.status,
+            unlock_token=bv.unlock_token,
+            verification_notes=bv.verification_notes,
+        )
+        if bv
+        else None
+    )
+
+    dc_resp = (
+        CGTDestructionCertificateResponse(
+            id=str(dc.id),
+            study_id=dc.study_id,
+            site_id=dc.site_id,
+            certificate_number=dc.certificate_number,
+            chain_of_custody_id=dc.chain_of_custody_id,
+            subject_id=dc.subject_id,
+            din=dc.din,
+            lot_number=dc.lot_number,
+            kit_numbers=dc.kit_numbers,
+            vial_identifiers=dc.vial_identifiers,
+            quantity_destroyed=dc.quantity_destroyed,
+            unit_of_measure=dc.unit_of_measure,
+            residual_volume_ml=dc.residual_volume_ml,
+            destruction_reason=dc.destruction_reason,
+            destruction_method=dc.destruction_method,
+            destruction_facility=dc.destruction_facility,
+            destruction_timestamp=dc.destruction_timestamp,
+            witness_1_id=dc.witness_1_id,
+            witness_1_name=dc.witness_1_name,
+            witness_1_role=dc.witness_1_role,
+            witness_1_signed_at=dc.witness_1_signed_at,
+            witness_2_id=dc.witness_2_id,
+            witness_2_name=dc.witness_2_name,
+            witness_2_role=dc.witness_2_role,
+            witness_2_signed_at=dc.witness_2_signed_at,
+            cryptographic_seal=dc.cryptographic_seal,
+            status=dc.status,
+            reconciliation_notes=dc.reconciliation_notes,
+        )
+        if dc
+        else None
+    )
+
+    return CGTFullTraceabilityResponse(
+        chain_of_custody=coc_resp,
+        milestones=ms_resp,
+        bedside_verification=bv_resp,
+        destruction_certificate=dc_resp,
+    )
+
+
+@router.get(
+    "/cgt/certificates/{study_id}",
+    response_model=list[CGTDestructionCertificateResponse],
+)
+async def list_destruction_certificates_endpoint(
+    study_id: str,
+    principal: Principal = Depends(get_principal),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> list[CGTDestructionCertificateResponse]:
+    """Lists all Certificates of Destruction for a study."""
+    if not can_access_study(principal, study_id):
+        raise HTTPException(
+            status_code=403, detail="Forbidden: Access to requested study denied."
+        )
+
+    stmt = (
+        select(CGTDestructionCertificate)
+        .where(CGTDestructionCertificate.study_id == study_id)
+        .order_by(CGTDestructionCertificate.destruction_timestamp.desc())
+    )
+    res = await session.execute(stmt)
+    certs = res.scalars().all()
+
+    return [
+        CGTDestructionCertificateResponse(
+            id=str(c.id),
+            study_id=c.study_id,
+            site_id=c.site_id,
+            certificate_number=c.certificate_number,
+            chain_of_custody_id=c.chain_of_custody_id,
+            subject_id=c.subject_id,
+            din=c.din,
+            lot_number=c.lot_number,
+            kit_numbers=c.kit_numbers,
+            vial_identifiers=c.vial_identifiers,
+            quantity_destroyed=c.quantity_destroyed,
+            unit_of_measure=c.unit_of_measure,
+            residual_volume_ml=c.residual_volume_ml,
+            destruction_reason=c.destruction_reason,
+            destruction_method=c.destruction_method,
+            destruction_facility=c.destruction_facility,
+            destruction_timestamp=c.destruction_timestamp,
+            witness_1_id=c.witness_1_id,
+            witness_1_name=c.witness_1_name,
+            witness_1_role=c.witness_1_role,
+            witness_1_signed_at=c.witness_1_signed_at,
+            witness_2_id=c.witness_2_id,
+            witness_2_name=c.witness_2_name,
+            witness_2_role=c.witness_2_role,
+            witness_2_signed_at=c.witness_2_signed_at,
+            cryptographic_seal=c.cryptographic_seal,
+            status=c.status,
+            reconciliation_notes=c.reconciliation_notes,
+        )
+        for c in certs
+    ]
+
+
+@router.get(
+    "/cgt/reconciliations/{study_id}",
+    response_model=list[CGTVialReturnReconciliationResponse],
+)
+async def list_vial_reconciliations_endpoint(
+    study_id: str,
+    principal: Principal = Depends(get_principal),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> list[CGTVialReturnReconciliationResponse]:
+    """Lists all product return and accountability reconciliation records for a study."""
+    if not can_access_study(principal, study_id):
+        raise HTTPException(
+            status_code=403, detail="Forbidden: Access to requested study denied."
+        )
+
+    stmt = (
+        select(CGTVialReturnReconciliation)
+        .where(CGTVialReturnReconciliation.study_id == study_id)
+        .order_by(CGTVialReturnReconciliation.logged_at.desc())
+    )
+    res = await session.execute(stmt)
+    recons = res.scalars().all()
+
+    return [
+        CGTVialReturnReconciliationResponse(
+            id=str(r.id),
+            study_id=r.study_id,
+            site_id=r.site_id,
+            subject_id=r.subject_id,
+            kit_number=r.kit_number,
+            vial_identifier=r.vial_identifier,
+            lot_number=r.lot_number,
+            din=r.din,
+            expected_quantity=r.expected_quantity,
+            returned_quantity=r.returned_quantity,
+            intact_vials=r.intact_vials,
+            used_vials=r.used_vials,
+            residual_volume_ml=r.residual_volume_ml,
+            adherence_percentage=r.adherence_percentage,
+            disposition=r.disposition,
+            logged_by=r.logged_by,
+            logged_at=r.logged_at,
+            certificate_id=r.certificate_id,
+        )
+        for r in recons
+    ]
+
+
+# =========================================================================
+# Adaptive Oncology Trial Dose Escalation (BOIN / CRM / 3+3) & RAR Endpoints
+# Requirements: PRD-SCM-004, ADR-2199
+# =========================================================================
+
+
+@router.post("/adaptive/config", response_model=dict[str, Any], status_code=201)
+async def create_or_update_adaptive_config_endpoint(
+    payload: AdaptiveTrialConfigDTO,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_SPONSOR_ADMIN,
+            ROLE_INVESTIGATOR,
+            ROLE_SITE_INVESTIGATOR,
+            ROLE_CRC,
+            ROLE_SYSADMIN,
+            ROLE_DATA_MANAGER,
+            "sponsor_admin",
+            "investigator",
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> dict[str, Any]:
+    """Registers or updates adaptive oncology dose-escalation or RAR trial design parameters."""
+    verify_change_justification(request)
+    change_reason = request.headers.get("X-Change-Reason")
+
+    if not can_access_study(principal, payload.study_id):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Forbidden: Access denied to study {payload.study_id}.",
+        )
+
+    record = await create_or_update_adaptive_config_transaction(
+        session=session,
+        config=payload,
+        user_id=principal.user_id,
+        change_reason=change_reason,
+    )
+    await session.commit()
+    await session.refresh(record)
+
+    return {
+        "id": record.id,
+        "study_id": record.study_id,
+        "design_type": record.design_type,
+        "target_toxicity_rate": record.target_toxicity_rate,
+        "cohort_size": record.cohort_size,
+        "is_active": record.is_active,
+    }
+
+
+@router.get("/adaptive/config", response_model=dict[str, Any])
+async def get_adaptive_config_endpoint(
+    study_id: str = Query(..., description="Clinical study identifier"),
+    principal: Principal = Depends(get_principal),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> dict[str, Any]:
+    """Retrieves current adaptive dose-escalation trial configuration, active cohort state, and history."""
+    if not can_access_study(principal, study_id):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Forbidden: Access denied to study {study_id}.",
+        )
+
+    state = await get_adaptive_study_state_transaction(
+        session=session, study_id=study_id
+    )
+    if not state.get("config"):
+        raise HTTPException(
+            status_code=404,
+            detail=f"No adaptive configuration found for study {study_id}.",
+        )
+
+    cfg = state["config"]
+    active_cohort = state["active_cohort"]
+    return {
+        "study_id": study_id,
+        "design_type": cfg.design_type,
+        "target_toxicity_rate": cfg.target_toxicity_rate,
+        "dose_levels": cfg.dose_levels,
+        "boin_config": cfg.boin_config,
+        "crm_config": cfg.crm_config,
+        "three_plus_three_config": cfg.three_plus_three_config,
+        "rar_config": cfg.rar_config,
+        "cohort_size": cfg.cohort_size,
+        "is_active": cfg.is_active,
+        "active_cohort": (
+            {
+                "cohort_number": active_cohort.cohort_number,
+                "current_dose_level_index": active_cohort.current_dose_level_index,
+                "current_dose_name": active_cohort.current_dose_name,
+                "enrolled_count": active_cohort.enrolled_count,
+                "dlt_count": active_cohort.dlt_count,
+                "recommendation_action": active_cohort.recommendation_action,
+                "recommended_dose_level_index": active_cohort.recommended_dose_level_index,
+                "recommended_dose_name": active_cohort.recommended_dose_name,
+                "status": active_cohort.status,
+                "rationale": active_cohort.rationale,
+            }
+            if active_cohort
+            else None
+        ),
+    }
+
+
+@router.post("/adaptive/cohorts/evaluate", response_model=CohortEvaluationResult)
+async def evaluate_adaptive_cohort_endpoint(
+    payload: CohortEvaluationInput,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_SPONSOR_ADMIN,
+            ROLE_INVESTIGATOR,
+            ROLE_SITE_INVESTIGATOR,
+            ROLE_CRC,
+            ROLE_SYSADMIN,
+            ROLE_DATA_MANAGER,
+            "sponsor_admin",
+            "investigator",
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> CohortEvaluationResult:
+    """Evaluates safety cohort DLTs and computes real-time recommendation flags (BOIN, CRM, 3+3)."""
+    verify_change_justification(request)
+    change_reason = request.headers.get("X-Change-Reason")
+
+    if not can_access_study(principal, payload.study_id):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Forbidden: Access denied to study {payload.study_id}.",
+        )
+
+    try:
+        result = await evaluate_cohort_outcomes_transaction(
+            session=session,
+            payload=payload,
+            user_id=principal.user_id,
+            change_reason=change_reason,
+        )
+        await session.commit()
+        return result
+    except AdaptiveTrialConfigNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except (InvalidDoseLevelError, CohortTransitionError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/adaptive/cohorts/transition", response_model=CohortTransitionLogResponse)
+async def transition_adaptive_cohort_endpoint(
+    payload: CohortTransitionRequest,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_SPONSOR_ADMIN,
+            ROLE_INVESTIGATOR,
+            ROLE_SITE_INVESTIGATOR,
+            ROLE_SYSADMIN,
+            "sponsor_admin",
+            "investigator",
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> CohortTransitionLogResponse:
+    """Advances or overrides a dose escalation cohort with 21 CFR Part 11 audit logging."""
+    verify_change_justification(request)
+    change_reason = request.headers.get("X-Change-Reason")
+
+    if not can_access_study(principal, payload.study_id):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Forbidden: Access denied to study {payload.study_id}.",
+        )
+
+    try:
+        log_res = await advance_cohort_decision_transaction(
+            session=session,
+            payload=payload,
+            user_id=principal.user_id,
+            change_reason=change_reason,
+        )
+        await session.commit()
+        return log_res
+    except AdaptiveTrialConfigNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except (CohortTransitionError, InvalidDoseLevelError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get(
+    "/adaptive/cohorts/history", response_model=list[CohortTransitionLogResponse]
+)
+async def get_adaptive_cohorts_history_endpoint(
+    study_id: str = Query(..., description="Clinical study identifier"),
+    principal: Principal = Depends(get_principal),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> list[CohortTransitionLogResponse]:
+    """Returns the immutable 21 CFR Part 11 audited transition log history for a study."""
+    if not can_access_study(principal, study_id):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Forbidden: Access denied to study {study_id}.",
+        )
+
+    state = await get_adaptive_study_state_transaction(
+        session=session, study_id=study_id
+    )
+    logs = state.get("transition_logs", [])
+
+    return [
+        CohortTransitionLogResponse(
+            id=log.id,
+            study_id=log.study_id,
+            cohort_number=log.cohort_number,
+            from_dose_level=log.from_dose_level,
+            to_dose_level=log.to_dose_level,
+            action_taken=log.action_taken,
+            algorithm_recommendation=log.algorithm_recommendation,
+            override_occurred=log.override_occurred,
+            override_reason=log.override_reason,
+            evaluated_dlt_rate=log.evaluated_dlt_rate,
+            posterior_toxicity_estimates=log.posterior_toxicity_estimates,
+            authorized_by=log.authorized_by,
+            transitioned_at=log.transitioned_at,
+            signature_token=log.signature_token,
+            cryptographic_checksum=log.cryptographic_checksum,
+        )
+        for log in logs
+    ]
+
+
+@router.post("/adaptive/rar/evaluate", response_model=RAREvaluationResult)
+async def evaluate_rar_endpoint(
+    study_id: str = Query(..., description="Clinical study identifier"),
+    request: Request = None,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_SPONSOR_ADMIN,
+            ROLE_INVESTIGATOR,
+            ROLE_SITE_INVESTIGATOR,
+            ROLE_SYSADMIN,
+            ROLE_DATA_MANAGER,
+            "sponsor_admin",
+            "investigator",
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> RAREvaluationResult:
+    """Calculates dynamic Response-Adaptive Randomization allocation weights across active arms."""
+    if request:
+        verify_change_justification(request)
+    change_reason = request.headers.get("X-Change-Reason") if request else None
+
+    if not can_access_study(principal, study_id):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Forbidden: Access denied to study {study_id}.",
+        )
+
+    try:
+        rar_res = await evaluate_and_update_rar_transaction(
+            session=session,
+            study_id=study_id,
+            user_id=principal.user_id,
+            change_reason=change_reason,
+        )
+        await session.commit()
+        return rar_res
+    except (AdaptiveTrialConfigNotFoundError, RARArmNotFoundError) as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/adaptive/rar/arms", response_model=RAREvaluationResult)
+async def expand_or_terminate_rar_arm_endpoint(
+    payload: RARExpandOrTerminateArmRequest,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_SPONSOR_ADMIN,
+            ROLE_SYSADMIN,
+            ROLE_INVESTIGATOR,
+            "sponsor_admin",
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> RAREvaluationResult:
+    """Seamlessly adds or terminates a treatment arm in RAR with zero study downtime."""
+    verify_change_justification(request)
+    change_reason = request.headers.get("X-Change-Reason")
+
+    if not can_access_study(principal, payload.study_id):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Forbidden: Access denied to study {payload.study_id}.",
+        )
+
+    try:
+        rar_res = await add_or_terminate_rar_arm_transaction(
+            session=session,
+            payload=payload,
+            user_id=principal.user_id,
+            change_reason=change_reason,
+        )
+        await session.commit()
+        return rar_res
+    except (AdaptiveTrialConfigNotFoundError, RARArmNotFoundError) as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except (CohortTransitionError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/adaptive/rar/state", response_model=dict[str, Any])
+async def get_rar_state_endpoint(
+    study_id: str = Query(..., description="Clinical study identifier"),
+    principal: Principal = Depends(get_principal),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> dict[str, Any]:
+    """Retrieves current Response-Adaptive Randomization arm allocation weights and posterior states."""
+    if not can_access_study(principal, study_id):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Forbidden: Access denied to study {study_id}.",
+        )
+
+    state = await get_adaptive_study_state_transaction(
+        session=session, study_id=study_id
+    )
+    rar_arms = state.get("rar_arms", [])
+    if not rar_arms:
+        raise HTTPException(
+            status_code=404, detail=f"No RAR arms found for study {study_id}."
+        )
+
+    return {
+        "study_id": study_id,
+        "arms": [
+            {
+                "arm_id": a.arm_id,
+                "arm_name": a.arm_name,
+                "is_control": a.is_control,
+                "status": a.status,
+                "enrolled_count": a.enrolled_count,
+                "response_count": a.response_count,
+                "posterior_mean": a.posterior_mean,
+                "allocation_probability": a.allocation_probability,
+                "superiority_vs_control_prob": a.superiority_vs_control_prob,
+            }
+            for a in rar_arms
+        ],
+        "active_probabilities": {
+            a.arm_id: a.allocation_probability for a in rar_arms if a.status == "ACTIVE"
+        },
+    }
+
+
+# =========================================================================
+# Pure Statistical Calculation / Protocol Designer Endpoints
+# =========================================================================
+
+
+@router.post(
+    "/adaptive/boin/calculate-boundaries",
+    response_model=BoinBoundariesCalculationResponse,
+)
+def calculate_boin_boundaries_endpoint(
+    payload: BoinBoundariesCalculationRequest,
+) -> BoinBoundariesCalculationResponse:
+    """Calculates theoretical BOIN escalation and de-escalation toxicity boundaries (lambda_e, lambda_d)."""
+    l_e, l_d, p1, p2 = calculate_boin_boundaries(
+        payload.target_toxicity_rate,
+        payload.factor_e,
+        payload.factor_d,
+    )
+    return BoinBoundariesCalculationResponse(
+        target_toxicity_rate=payload.target_toxicity_rate,
+        phi_1=p1,
+        phi_2=p2,
+        lambda_e=l_e,
+        lambda_d=l_d,
+        description=(
+            f"BOIN design boundaries for target DLT rate {payload.target_toxicity_rate}: "
+            f"Escalate if p_hat <= {l_e}; De-escalate if p_hat >= {l_d}; Stay if {l_e} < p_hat < {l_d}."
+        ),
+    )
+
+
+@router.post(
+    "/adaptive/crm/posterior",
+    response_model=CrmPosteriorCalculationResponse,
+)
+def calculate_crm_posterior_endpoint(
+    payload: CrmPosteriorCalculationRequest,
+) -> CrmPosteriorCalculationResponse:
+    """Calculates Bayesian posterior probabilities and recommended next dose under Continual Reassessment Method."""
+    crm_cfg = CrmConfig(
+        skeleton_probs=payload.skeleton_probs,
+        target_toxicity_rate=payload.target_toxicity_rate,
+        prior_std=payload.prior_std,
+    )
+    engine = CrmDoseEscalationEngine(crm_cfg)
+
+    dose_stats_dict = {
+        d["dose_index"]: {"enrolled": d.get("enrolled", 0), "dlts": d.get("dlts", 0)}
+        for d in payload.dose_evaluations
+    }
+
+    action, rec_dose, post_means, od_1, rat, safety_stop = engine.evaluate_cohort(
+        current_dose_index=payload.current_dose_index,
+        dose_stats=dose_stats_dict,
+    )
+
+    return CrmPosteriorCalculationResponse(
+        target_toxicity_rate=payload.target_toxicity_rate,
+        current_dose_index=payload.current_dose_index,
+        recommended_dose_index=rec_dose or payload.current_dose_index,
+        recommendation_action=action,
+        posterior_mean_probabilities=post_means,
+        overdose_probability_dose_1=od_1,
+        is_safety_stop_triggered=safety_stop,
+        rationale=rat,
     )

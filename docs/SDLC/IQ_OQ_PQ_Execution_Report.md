@@ -7,11 +7,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3333
-- **Passed:** 3303 🟢
+- **Total Automated Test Cases Run:** 3383
+- **Passed:** 3353 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 30 ⚪
-- **Overall Operational Pass Rate:** 99.10%
+- **Overall Operational Pass Rate:** 99.11%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -1720,6 +1720,24 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_get_visit_api_blinding_and_isolation` | `apps.execution.tests.test_role_redaction_and_access` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_site_isolation_guard_and_audit` | `apps.execution.tests.test_role_redaction_and_access` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trial_role_enum_and_helper` | `apps.execution.tests.test_role_redaction_and_access` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_adaptive_api_endpoints_e2e_flow` | `apps.execution.tests.test_rtsm_adaptive_dose_escalation_boin_crm` | ADR-2199, PRD-SCM-004 | 🟢 PASSED | < 1s |
+| `test_adaptive_dose_escalation_audit_trail_and_transitions` | `apps.execution.tests.test_rtsm_adaptive_dose_escalation_boin_crm` | ADR-2199, PRD-SCM-004 | 🟢 PASSED | < 1s |
+| `test_boin_bayesian_overdose_elimination` | `apps.execution.tests.test_rtsm_adaptive_dose_escalation_boin_crm` | ADR-2199, PRD-SCM-004 | 🟢 PASSED | < 1s |
+| `test_boin_cohort_decisions_and_interval_logic` | `apps.execution.tests.test_rtsm_adaptive_dose_escalation_boin_crm` | ADR-2199, PRD-SCM-004 | 🟢 PASSED | < 1s |
+| `test_boin_mtd_selection` | `apps.execution.tests.test_rtsm_adaptive_dose_escalation_boin_crm` | ADR-2199, PRD-SCM-004 | 🟢 PASSED | < 1s |
+| `test_boin_theoretical_boundaries_derivation` | `apps.execution.tests.test_rtsm_adaptive_dose_escalation_boin_crm` | ADR-2199, PRD-SCM-004 | 🟢 PASSED | < 1s |
+| `test_crm_bayesian_posterior_updating_and_no_skipping` | `apps.execution.tests.test_rtsm_adaptive_dose_escalation_boin_crm` | ADR-2199, PRD-SCM-004 | 🟢 PASSED | < 1s |
+| `test_crm_config_skeleton_validation` | `apps.execution.tests.test_rtsm_adaptive_dose_escalation_boin_crm` | ADR-2199, PRD-SCM-004 | 🟢 PASSED | < 1s |
+| `test_incomplete_beta_cdf_and_overdose_prob` | `apps.execution.tests.test_rtsm_adaptive_dose_escalation_boin_crm` | ADR-2199, PRD-SCM-004 | 🟢 PASSED | < 1s |
+| `test_rar_dynamic_arm_addition_and_termination_transaction` | `apps.execution.tests.test_rtsm_adaptive_dose_escalation_boin_crm` | ADR-2199, PRD-SCM-004 | 🟢 PASSED | < 1s |
+| `test_rar_dynamic_probability_weighting_and_bounds` | `apps.execution.tests.test_rtsm_adaptive_dose_escalation_boin_crm` | ADR-2199, PRD-SCM-004 | 🟢 PASSED | < 1s |
+| `test_rar_futility_dropping_and_efficacy_graduation` | `apps.execution.tests.test_rtsm_adaptive_dose_escalation_boin_crm` | ADR-2199, PRD-SCM-004 | 🟢 PASSED | < 1s |
+| `test_rtsm_allocator_integration_with_rar` | `apps.execution.tests.test_rtsm_adaptive_dose_escalation_boin_crm` | ADR-2199, PRD-SCM-004 | 🟢 PASSED | < 1s |
+| `test_three_plus_three_de_escalation_on_two_dlts` | `apps.execution.tests.test_rtsm_adaptive_dose_escalation_boin_crm` | ADR-2199, PRD-SCM-004 | 🟢 PASSED | < 1s |
+| `test_three_plus_three_escalation_on_zero_dlts` | `apps.execution.tests.test_rtsm_adaptive_dose_escalation_boin_crm` | ADR-2199, PRD-SCM-004 | 🟢 PASSED | < 1s |
+| `test_three_plus_three_expansion_on_one_dlt` | `apps.execution.tests.test_rtsm_adaptive_dose_escalation_boin_crm` | ADR-2199, PRD-SCM-004 | 🟢 PASSED | < 1s |
+| `test_three_plus_three_safety_halt_at_dose_level_one` | `apps.execution.tests.test_rtsm_adaptive_dose_escalation_boin_crm` | ADR-2199, PRD-SCM-004 | 🟢 PASSED | < 1s |
+| `test_three_plus_three_six_subject_evaluation` | `apps.execution.tests.test_rtsm_adaptive_dose_escalation_boin_crm` | ADR-2199, PRD-SCM-004 | 🟢 PASSED | < 1s |
 | `test_block_allocation_mechanics` | `apps.execution.tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_block_allocation_uneven_ratios` | `apps.execution.tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_canonical_stratum_key_generation` | `apps.execution.tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1728,6 +1746,23 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_randomization_config_validation` | `apps.execution.tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reproducibility_and_seeding` | `apps.execution.tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_stratified_block_isolation` | `apps.execution.tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bedside_dual_verification_rejects_identical_users` | `apps.execution.tests.test_rtsm_cell_gene_therapy_coc_coi.TestBedsideDualVerificationAndInfusionGating` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bedside_dual_verification_rejects_wristband_mismatch` | `apps.execution.tests.test_rtsm_cell_gene_therapy_coc_coi.TestBedsideDualVerificationAndInfusionGating` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_infusion_blocked_without_unlock_token` | `apps.execution.tests.test_rtsm_cell_gene_therapy_coc_coi.TestBedsideDualVerificationAndInfusionGating` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_successful_bedside_dual_verification_and_infusion_unlock` | `apps.execution.tests.test_rtsm_cell_gene_therapy_coc_coi.TestBedsideDualVerificationAndInfusionGating` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_full_traceability_ledger_query` | `apps.execution.tests.test_rtsm_cell_gene_therapy_coc_coi.TestFullVeinToVeinTraceabilityAndPart11Audit` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_trial_locking_blocks_coc_mutations` | `apps.execution.tests.test_rtsm_cell_gene_therapy_coc_coi.TestFullVeinToVeinTraceabilityAndPart11Audit` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_generate_and_verify_crypto_barcode` | `apps.execution.tests.test_rtsm_cell_gene_therapy_coc_coi.TestISBT128AndCryptoBarcodes` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_generate_isbt128_din_structure_and_checksum` | `apps.execution.tests.test_rtsm_cell_gene_therapy_coc_coi.TestISBT128AndCryptoBarcodes` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_isbt128_din_detects_tampering` | `apps.execution.tests.test_rtsm_cell_gene_therapy_coc_coi.TestISBT128AndCryptoBarcodes` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_verify_crypto_barcode_detects_tampered_payload` | `apps.execution.tests.test_rtsm_cell_gene_therapy_coc_coi.TestISBT128AndCryptoBarcodes` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_verify_crypto_barcode_mismatched_expectations` | `apps.execution.tests.test_rtsm_cell_gene_therapy_coc_coi.TestISBT128AndCryptoBarcodes` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_certificate_of_destruction_generation_with_dual_witness_signatures` | `apps.execution.tests.test_rtsm_cell_gene_therapy_coc_coi.TestReturnsReconciliationAndCertificatesOfDestruction` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_certificate_of_destruction_rejects_single_witness` | `apps.execution.tests.test_rtsm_cell_gene_therapy_coc_coi.TestReturnsReconciliationAndCertificatesOfDestruction` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_vial_return_reconciliation_and_adherence` | `apps.execution.tests.test_rtsm_cell_gene_therapy_coc_coi.TestReturnsReconciliationAndCertificatesOfDestruction` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_apheresis_harvest_initialization_flow` | `apps.execution.tests.test_rtsm_cell_gene_therapy_coc_coi.TestVeinToVeinLifecycleAndMilestones` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cryogenic_transit_milestones_and_gps_tracking` | `apps.execution.tests.test_rtsm_cell_gene_therapy_coc_coi.TestVeinToVeinLifecycleAndMilestones` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_manufacturing_batch_binding` | `apps.execution.tests.test_rtsm_cell_gene_therapy_coc_coi.TestVeinToVeinLifecycleAndMilestones` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_arrhenius_mkt_boundary_and_singularity_rejection` | `apps.execution.tests.test_rtsm_cold_chain_mkt` | ADR-2199, PRD-SCM-002 | 🟢 PASSED | < 1s |
 | `test_arrhenius_mkt_fluctuating_temperature_non_linear` | `apps.execution.tests.test_rtsm_cold_chain_mkt` | ADR-2199, PRD-SCM-002 | 🟢 PASSED | < 1s |
 | `test_arrhenius_mkt_spike_sensitivity` | `apps.execution.tests.test_rtsm_cold_chain_mkt` | ADR-2199, PRD-SCM-002 | 🟢 PASSED | < 1s |
@@ -2409,6 +2444,21 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_quality_health_check` | `apps.quality.tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sqlite_foreign_key_constraints` | `apps.quality.tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sqlite_pragma_exception_handling` | `apps.quality.tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cross_site_duplicate_patient_scan_detection` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-004 | 🟢 PASSED | < 1s |
+| `test_cross_subject_image_phash_scan` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-004 | 🟢 PASSED | < 1s |
+| `test_dct_2d_and_phash_deterministic_computation` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-004 | 🟢 PASSED | < 1s |
+| `test_duplicate_patient_vector_similarity_calculations` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-004 | 🟢 PASSED | < 1s |
+| `test_image_phash_rotation_and_transformation_invariance` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-004 | 🟢 PASSED | < 1s |
+| `test_rest_duplicate_patient_scan_endpoint` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-004 | 🟢 PASSED | < 1s |
+| `test_rest_image_phash_scan_endpoint` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-004 | 🟢 PASSED | < 1s |
+| `test_rest_list_runs_and_dispatch_investigation` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-003 | 🟢 PASSED | < 1s |
+| `test_rest_simulation_endpoint` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-003 | 🟢 PASSED | < 1s |
+| `test_rest_temporal_anomaly_scan_endpoint` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-003 | 🟢 PASSED | < 1s |
+| `test_rest_unauthorized_write_returns_forbidden` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_service_execute_comprehensive_scan_with_investigation_dispatch` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-003 | 🟢 PASSED | < 1s |
+| `test_subject_fingerprint_deterministic_sha256` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-004 | 🟢 PASSED | < 1s |
+| `test_temporal_off_hours_and_weekend_clustering` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-003 | 🟢 PASSED | < 1s |
+| `test_temporal_rapid_burst_and_identical_elapsed_intervals` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-003 | 🟢 PASSED | < 1s |
 | `test_amendment_impact_and_cost_estimation` | `apps.quality.tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_block_eligibility_soa_inconsistencies` | `apps.quality.tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_burden_tracing_with_invasiveness_modifiers` | `apps.quality.tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3614,28 +3664,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 956ad6ff41b92755da64da45016c9b8dc95f462c949db82ed0a78ade70d5f584
+- **Cryptographic Hash (SHA-256):** d7c7987dfb664e991b8317fde5c7588cd88b94645eb8b470658cf1eea7a58528
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUd4owC438T4HEpg6O8oN+SCMJ6nQwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUW+RdnHYUCup5w/KLuriSwzQV8V8wDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MjE1MTEwMVoXDTI3MDgyMzE1MTEwMVowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MjE1NDY0MFoXDTI3MDgyMzE1NDY0MFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwcnd
-+mmRS7zwRyagip4YbqiZkvHqDYk2OfezqC9F9hRnUCgP5jdsVfhK6JmYesHUntpY
-ByIImiwje2K4Q7GWS/9PAk6uBtNbL8grs6+sc526k3xFh3kV9Obu4F+ElPtjzjhU
-BocsyPe1iDAZjNiSA+iwAq+Is254+oF4mqCfpUxLKWLrwbOApHQKocRyZhjsTffh
-loCCraP03BiyMSYcKolN/4q/x79qKeKPF75hrykGHWX+U57RDskWq7laU2zDCbGr
-uXQijHQ3QKIRsJam4VWeRMG3ccHKP3IjLQjZuYx1RQeeUqRVZF8vKumvBMQD1z+C
-93CDx4SumoLbVcd7OQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAb0FAtKB6w3tBb
-lZxJlVwjDNMWi09DZPew0nXZXnPq5yGXu26hCVXxyteSvrGdSrgApoEffp2Zn6uf
-XWIw+93ULVCkpE16P/apaqOPFhmmaWs4hLn5dai4PCTflqrZaH8Pn1le4D4XYesb
-aPrZo8moRAu10x2DyVdfTwbDG/NvwghI320yM7r5tNlR7zkovlZv3c+LtxN1qDdd
-d7YIjcmfBjrrgRg3v43Gh9yb4tZcx7JLC9wMfsxpZwykLzCf4zKccsqCSUEEmIkP
-1xELMqzZyDH0aK+moo097AEB1XByjQSnRi0V5VxNnquunGKZTOx1QPF6zIAi35oA
-+Dm8bPwW
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0rOK
+F2gaCZoy+glCkKUPTa5I+2nO9pgPdpxbZbFLoFzuE3cEKPWajquUi8iDVtb6Gtzb
++5sT6Lxg5WTgL3TN1vcl+TzUpAC9yw49CDzfgUBnyT+GrJmZYbSoA1Xv5omAnhHq
+8gbERvphPmkOsbtzzR5CoonaUNOtqpflXYKgkTL9rGo3A+HZJEHVGyZ7pBQ9TcJv
+7/UNbNWt7pOEa6qRMjSNfLGXdYF2X7UO+58kU4rXexk4JT+rYruRZpxFTf5BPt0d
+W3IFL3J13K+i5pBsEwgD9YxMATDtdZSHxosAGg/gvhw0r3GelVuJRCE2830oyuep
+0q/tF0OmBlydCBx2OQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBpyx/H3xW6BjdZ
+RrIST/Xmh3xAV3Xh2OXpWAPCbYvJfrZKg8/Q5iqbTZJFHNsh6ukeqWveVcPrIlGn
+kpKGlq/uYFYixPX4VIuoLtJfhpKzCwZiA9Vio8NTBzzuIagg20VGBGSSkug/JnI1
+EFrAP6IVByPbNff3CnWCeVpgg+EcaJ8WER7+AKhG5n+6L1modZyYuRRJ0iFKZ5tc
+8SNxPsYqZgRGJqyUkwF7dUWWQXN900YIiG+tCPBzk/0d0a9KshLq6hqBMSdAbWbQ
+/22MvOIHQjPQBv25RaDL/AT5oOuUggn9UaYXfoi2X/3okV+xbANFV2ectZ5FoLig
+BbKA/up6
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-G2yy1NMCu9nnt3ic1f+oaq7pelthlTNEvj5WqLlOvOugwwcq3I93JqEIXTnEjJfNAngPjAthqEU09GobubOU59X+1j9HxdyzSPEAK/WD0Q2XCAnpB8WBmuvSlCSS83Y/7mSaXszk2O/ygaaYKfNuLMLD0XfpO0EPH3z5Hm8k6Qth2jVE6KlMQNcvyAC5aIDnmpbDR0XdfCZImspVl8nnxZS6Q+ke/8AB8XPJCCKna3/2ns1s31NUQ7frx+VKeU7gPj5wtfKrO/u6egamGjkch3TtnqLVW3VnA53Bsrf5owKc1pHQ1z17PI0CKPPAnd2MI8kvpLiTNmzdtCy/beYuKA==
+XYHc9MqPSo9SXjZQ32k8m2VGZYEruhn1buDMN/PIYuoLab20TzZO6ARcWHmhY6trYna4Gi+6vIUjsa0YbPOq9A8RXYnBL+4BXNwjISSgcr1d7qabn04gc49x+1dNH+XS8zyH6MG3PV+V+l0CNVJ44OgcnzE/tSZna6h3qPRdgqsPLGuCyutY/6PcP2T2AfQ1VlEOlDXgeBXdfPE1km2jUoI9+oEH4UaBA8/WlHTAJcMYoAIO1NGNXMIhN8hTMrzzC/V/2mv56IkNrBdPIeawTHKkSE71/tuCgjTs9LeIzgP9bYvwuAmuCmJ0O1m5i3i658l/E91ELVPiM30hiX+a6g==
 -----END SIGNATURE-----

@@ -3690,6 +3690,928 @@
         }
       }
     },
+    "/api/v1/execution/rtsm/cgt/apheresis": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Initialize Apheresis Endpoint",
+        "description": "Initializes Vein-to-Vein tracking upon initial apheresis cellular harvest.",
+        "operationId": "initialize_apheresis_endpoint_api_v1_execution_rtsm_cgt_apheresis_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CGTApheresisCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CGTChainOfCustodyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/milestone": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Record Cgt Milestone Endpoint",
+        "description": "Records a cryogenic transit milestone with GPS coordinates and temperature logging.",
+        "operationId": "record_cgt_milestone_endpoint_api_v1_execution_rtsm_cgt_milestone_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CGTMilestoneCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CGTMilestoneResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/manufacturing-bind": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Bind Manufacturing Batch Endpoint",
+        "description": "Binds manufacturing batch record to original subject identity and regenerates barcode.",
+        "operationId": "bind_manufacturing_batch_endpoint_api_v1_execution_rtsm_cgt_manufacturing_bind_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CGTManufacturingBindRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CGTChainOfCustodyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/bedside-verify": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Bedside Dual Verification Endpoint",
+        "description": "Executes mandatory two-person electronic bedside verification, unlocking the drug infusion eCRF.",
+        "operationId": "bedside_dual_verification_endpoint_api_v1_execution_rtsm_cgt_bedside_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CGTBedsideVerificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CGTBedsideVerificationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/infuse": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Execute Infusion Endpoint",
+        "description": "Records cellular drug infusion administration, gated by the bedside verification unlock token.",
+        "operationId": "execute_infusion_endpoint_api_v1_execution_rtsm_cgt_infuse_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CGTInfusionExecuteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CGTChainOfCustodyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/returns": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Log Vial Return Endpoint",
+        "description": "Logs returned kit/vial accountability and calculates patient adherence compliance.",
+        "operationId": "log_vial_return_endpoint_api_v1_execution_rtsm_cgt_returns_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CGTVialReturnReconciliationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CGTVialReturnReconciliationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/destruction-certificate": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Generate Destruction Certificate Endpoint",
+        "description": "Generates a formal Certificate of Destruction with dual witness electronic signatures.",
+        "operationId": "generate_destruction_certificate_endpoint_api_v1_execution_rtsm_cgt_destruction_certificate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CGTDestructionCertificateCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CGTDestructionCertificateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/verify-barcode": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Verify Cgt Barcode Endpoint",
+        "description": "Verifies cryptographic authenticity and entity bindings for a scanned barcode.",
+        "operationId": "verify_cgt_barcode_endpoint_api_v1_execution_rtsm_cgt_verify_barcode_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CGTBarcodeVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CGTBarcodeVerifyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/chain-of-custody/{study_id}/{subject_id}": {
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Get Subject Cgt Traceability Endpoint",
+        "description": "Retrieves full Vein-to-Vein traceability ledger for a subject.",
+        "operationId": "get_subject_cgt_traceability_endpoint_api_v1_execution_rtsm_cgt_chain_of_custody__study_id___subject_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CGTFullTraceabilityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/certificates/{study_id}": {
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "List Destruction Certificates Endpoint",
+        "description": "Lists all Certificates of Destruction for a study.",
+        "operationId": "list_destruction_certificates_endpoint_api_v1_execution_rtsm_cgt_certificates__study_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CGTDestructionCertificateResponse"
+                  },
+                  "title": "Response List Destruction Certificates Endpoint Api V1 Execution Rtsm Cgt Certificates  Study Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/reconciliations/{study_id}": {
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "List Vial Reconciliations Endpoint",
+        "description": "Lists all product return and accountability reconciliation records for a study.",
+        "operationId": "list_vial_reconciliations_endpoint_api_v1_execution_rtsm_cgt_reconciliations__study_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CGTVialReturnReconciliationResponse"
+                  },
+                  "title": "Response List Vial Reconciliations Endpoint Api V1 Execution Rtsm Cgt Reconciliations  Study Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/adaptive/config": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Create Or Update Adaptive Config Endpoint",
+        "description": "Registers or updates adaptive oncology dose-escalation or RAR trial design parameters.",
+        "operationId": "create_or_update_adaptive_config_endpoint_api_v1_execution_rtsm_adaptive_config_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdaptiveTrialConfigDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Create Or Update Adaptive Config Endpoint Api V1 Execution Rtsm Adaptive Config Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Get Adaptive Config Endpoint",
+        "description": "Retrieves current adaptive dose-escalation trial configuration, active cohort state, and history.",
+        "operationId": "get_adaptive_config_endpoint_api_v1_execution_rtsm_adaptive_config_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Adaptive Config Endpoint Api V1 Execution Rtsm Adaptive Config Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/adaptive/cohorts/evaluate": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Evaluate Adaptive Cohort Endpoint",
+        "description": "Evaluates safety cohort DLTs and computes real-time recommendation flags (BOIN, CRM, 3+3).",
+        "operationId": "evaluate_adaptive_cohort_endpoint_api_v1_execution_rtsm_adaptive_cohorts_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CohortEvaluationInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CohortEvaluationResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/adaptive/cohorts/transition": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Transition Adaptive Cohort Endpoint",
+        "description": "Advances or overrides a dose escalation cohort with 21 CFR Part 11 audit logging.",
+        "operationId": "transition_adaptive_cohort_endpoint_api_v1_execution_rtsm_adaptive_cohorts_transition_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CohortTransitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CohortTransitionLogResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/adaptive/cohorts/history": {
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Get Adaptive Cohorts History Endpoint",
+        "description": "Returns the immutable 21 CFR Part 11 audited transition log history for a study.",
+        "operationId": "get_adaptive_cohorts_history_endpoint_api_v1_execution_rtsm_adaptive_cohorts_history_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CohortTransitionLogResponse"
+                  },
+                  "title": "Response Get Adaptive Cohorts History Endpoint Api V1 Execution Rtsm Adaptive Cohorts History Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/adaptive/rar/evaluate": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Evaluate Rar Endpoint",
+        "description": "Calculates dynamic Response-Adaptive Randomization allocation weights across active arms.",
+        "operationId": "evaluate_rar_endpoint_api_v1_execution_rtsm_adaptive_rar_evaluate_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RAREvaluationResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/adaptive/rar/arms": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Expand Or Terminate Rar Arm Endpoint",
+        "description": "Seamlessly adds or terminates a treatment arm in RAR with zero study downtime.",
+        "operationId": "expand_or_terminate_rar_arm_endpoint_api_v1_execution_rtsm_adaptive_rar_arms_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RARExpandOrTerminateArmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RAREvaluationResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/adaptive/rar/state": {
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Get Rar State Endpoint",
+        "description": "Retrieves current Response-Adaptive Randomization arm allocation weights and posterior states.",
+        "operationId": "get_rar_state_endpoint_api_v1_execution_rtsm_adaptive_rar_state_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Rar State Endpoint Api V1 Execution Rtsm Adaptive Rar State Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/adaptive/boin/calculate-boundaries": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Calculate Boin Boundaries Endpoint",
+        "description": "Calculates theoretical BOIN escalation and de-escalation toxicity boundaries (lambda_e, lambda_d).",
+        "operationId": "calculate_boin_boundaries_endpoint_api_v1_execution_rtsm_adaptive_boin_calculate_boundaries_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BoinBoundariesCalculationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoinBoundariesCalculationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/adaptive/crm/posterior": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Calculate Crm Posterior Endpoint",
+        "description": "Calculates Bayesian posterior probabilities and recommended next dose under Continual Reassessment Method.",
+        "operationId": "calculate_crm_posterior_endpoint_api_v1_execution_rtsm_adaptive_crm_posterior_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrmPosteriorCalculationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrmPosteriorCalculationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/subjects/{subject_id}/unblind": {
       "post": {
         "tags": [
@@ -8499,6 +9421,98 @@
   },
   "components": {
     "schemas": {
+      "AdaptiveTrialConfigDTO": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id"
+          },
+          "design_type": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Design Type",
+            "description": "Design type: 'THREE_PLUS_THREE', 'BOIN', 'CRM', 'RAR'"
+          },
+          "dose_levels": {
+            "items": {
+              "$ref": "#/components/schemas/DoseLevelDef"
+            },
+            "type": "array",
+            "title": "Dose Levels"
+          },
+          "boin_config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoinConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "crm_config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CrmConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "three_plus_three_config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThreePlusThreeConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rar_config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RarConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cohort_size": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Cohort Size",
+            "default": 3
+          },
+          "max_sample_size": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Sample Size"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "design_type"
+        ],
+        "title": "AdaptiveTrialConfigDTO",
+        "description": "Comprehensive DTO for adaptive trial configuration."
+      },
       "AddDOAAssignmentRequest": {
         "properties": {
           "study_id": {
@@ -9364,6 +10378,131 @@
         ],
         "title": "Body_upload_document_api_v1_documents_upload_post"
       },
+      "BoinBoundariesCalculationRequest": {
+        "properties": {
+          "target_toxicity_rate": {
+            "type": "number",
+            "exclusiveMaximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Target Toxicity Rate",
+            "default": 0.25
+          },
+          "factor_e": {
+            "type": "number",
+            "exclusiveMaximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Factor E",
+            "default": 0.6
+          },
+          "factor_d": {
+            "type": "number",
+            "exclusiveMinimum": 1.0,
+            "title": "Factor D",
+            "default": 1.4
+          }
+        },
+        "type": "object",
+        "title": "BoinBoundariesCalculationRequest",
+        "description": "Direct calculation request for theoretical BOIN boundaries."
+      },
+      "BoinBoundariesCalculationResponse": {
+        "properties": {
+          "target_toxicity_rate": {
+            "type": "number",
+            "title": "Target Toxicity Rate"
+          },
+          "phi_1": {
+            "type": "number",
+            "title": "Phi 1"
+          },
+          "phi_2": {
+            "type": "number",
+            "title": "Phi 2"
+          },
+          "lambda_e": {
+            "type": "number",
+            "title": "Lambda E"
+          },
+          "lambda_d": {
+            "type": "number",
+            "title": "Lambda D"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_toxicity_rate",
+          "phi_1",
+          "phi_2",
+          "lambda_e",
+          "lambda_d",
+          "description"
+        ],
+        "title": "BoinBoundariesCalculationResponse",
+        "description": "Response containing exact theoretical BOIN boundaries."
+      },
+      "BoinConfig": {
+        "properties": {
+          "target_toxicity_rate": {
+            "type": "number",
+            "exclusiveMaximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Target Toxicity Rate",
+            "description": "Target Dose-Limiting Toxicity (DLT) rate phi (e.g. 0.25 or 0.30).",
+            "default": 0.25
+          },
+          "factor_e": {
+            "type": "number",
+            "exclusiveMaximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Factor E",
+            "description": "Escalation boundary factor c_e such that phi_1 = c_e * phi (default 0.6).",
+            "default": 0.6
+          },
+          "factor_d": {
+            "type": "number",
+            "exclusiveMinimum": 1.0,
+            "title": "Factor D",
+            "description": "De-escalation boundary factor c_d such that phi_2 = c_d * phi (default 1.4).",
+            "default": 1.4
+          },
+          "safety_cutoff": {
+            "type": "number",
+            "exclusiveMaximum": 1.0,
+            "exclusiveMinimum": 0.5,
+            "title": "Safety Cutoff",
+            "description": "Bayesian overdose stopping probability cutoff P(p_j > phi | data) > cutoff.",
+            "default": 0.95
+          },
+          "prior_alpha": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Prior Alpha",
+            "description": "Beta prior shape parameter alpha (default 1.0).",
+            "default": 1.0
+          },
+          "prior_beta": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Prior Beta",
+            "description": "Beta prior shape parameter beta (default 1.0).",
+            "default": 1.0
+          },
+          "min_subjects_for_elimination": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Min Subjects For Elimination",
+            "description": "Minimum evaluated subjects at a dose level before overdose elimination can trigger.",
+            "default": 3
+          }
+        },
+        "type": "object",
+        "title": "BoinConfig",
+        "description": "Configuration parameters for Bayesian Optimal Interval (BOIN) design."
+      },
       "BulkQueryGenerationRequest": {
         "properties": {
           "study_id": {
@@ -9723,6 +10862,1623 @@
         ],
         "title": "BulkSubjectReconsentRequest",
         "description": "Request payload to register batch subject re-consent for an amended version."
+      },
+      "CGTApheresisCreateRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "collector_id": {
+            "type": "string",
+            "title": "Collector Id"
+          },
+          "collector_name": {
+            "type": "string",
+            "title": "Collector Name"
+          },
+          "collector_role": {
+            "type": "string",
+            "title": "Collector Role",
+            "default": "Apheresis Nurse"
+          },
+          "initial_temp_celsius": {
+            "type": "number",
+            "title": "Initial Temp Celsius",
+            "default": -196.0
+          },
+          "din": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Din"
+          },
+          "dry_shipper_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dry Shipper Id"
+          },
+          "seal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seal Id"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_id",
+          "collector_id",
+          "collector_name"
+        ],
+        "title": "CGTApheresisCreateRequest",
+        "description": "Payload to register initial apheresis collection and start Vein-to-Vein tracking."
+      },
+      "CGTBarcodeVerifyRequest": {
+        "properties": {
+          "barcode_payload": {
+            "type": "string",
+            "title": "Barcode Payload"
+          },
+          "expected_subject_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Subject Id"
+          },
+          "expected_din": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Din"
+          },
+          "expected_batch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Batch Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "barcode_payload"
+        ],
+        "title": "CGTBarcodeVerifyRequest",
+        "description": "Payload to verify cryptographic barcode authenticity."
+      },
+      "CGTBarcodeVerifyResponse": {
+        "properties": {
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "barcode_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Barcode Id"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Id"
+          },
+          "din": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Din"
+          },
+          "batch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Id"
+          },
+          "crypto_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crypto Hash"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_valid"
+        ],
+        "title": "CGTBarcodeVerifyResponse",
+        "description": "Response schema for barcode verification."
+      },
+      "CGTBedsideVerificationRequest": {
+        "properties": {
+          "coc_id": {
+            "type": "string",
+            "title": "Coc Id"
+          },
+          "scanned_wristband_subject_id": {
+            "type": "string",
+            "title": "Scanned Wristband Subject Id"
+          },
+          "scanned_bag_barcode": {
+            "type": "string",
+            "title": "Scanned Bag Barcode"
+          },
+          "primary_verifier_id": {
+            "type": "string",
+            "title": "Primary Verifier Id"
+          },
+          "primary_verifier_name": {
+            "type": "string",
+            "title": "Primary Verifier Name"
+          },
+          "primary_verifier_role": {
+            "type": "string",
+            "title": "Primary Verifier Role"
+          },
+          "primary_signature_token": {
+            "type": "string",
+            "title": "Primary Signature Token"
+          },
+          "secondary_verifier_id": {
+            "type": "string",
+            "title": "Secondary Verifier Id"
+          },
+          "secondary_verifier_name": {
+            "type": "string",
+            "title": "Secondary Verifier Name"
+          },
+          "secondary_verifier_role": {
+            "type": "string",
+            "title": "Secondary Verifier Role"
+          },
+          "secondary_signature_token": {
+            "type": "string",
+            "title": "Secondary Signature Token"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "coc_id",
+          "scanned_wristband_subject_id",
+          "scanned_bag_barcode",
+          "primary_verifier_id",
+          "primary_verifier_name",
+          "primary_verifier_role",
+          "primary_signature_token",
+          "secondary_verifier_id",
+          "secondary_verifier_name",
+          "secondary_verifier_role",
+          "secondary_signature_token"
+        ],
+        "title": "CGTBedsideVerificationRequest",
+        "description": "Payload for mandatory bedside two-person electronic verification gating infusion eCRF."
+      },
+      "CGTBedsideVerificationResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "chain_of_custody_id": {
+            "type": "string",
+            "title": "Chain Of Custody Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "din": {
+            "type": "string",
+            "title": "Din"
+          },
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "wristband_matched": {
+            "type": "boolean",
+            "title": "Wristband Matched"
+          },
+          "bag_matched": {
+            "type": "boolean",
+            "title": "Bag Matched"
+          },
+          "temperature_chain_verified": {
+            "type": "boolean",
+            "title": "Temperature Chain Verified"
+          },
+          "primary_verifier_id": {
+            "type": "string",
+            "title": "Primary Verifier Id"
+          },
+          "primary_verifier_name": {
+            "type": "string",
+            "title": "Primary Verifier Name"
+          },
+          "primary_verifier_role": {
+            "type": "string",
+            "title": "Primary Verifier Role"
+          },
+          "primary_signed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Primary Signed At"
+          },
+          "secondary_verifier_id": {
+            "type": "string",
+            "title": "Secondary Verifier Id"
+          },
+          "secondary_verifier_name": {
+            "type": "string",
+            "title": "Secondary Verifier Name"
+          },
+          "secondary_verifier_role": {
+            "type": "string",
+            "title": "Secondary Verifier Role"
+          },
+          "secondary_signed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Secondary Signed At"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "unlock_token": {
+            "type": "string",
+            "title": "Unlock Token"
+          },
+          "verification_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "chain_of_custody_id",
+          "subject_id",
+          "din",
+          "batch_id",
+          "wristband_matched",
+          "bag_matched",
+          "temperature_chain_verified",
+          "primary_verifier_id",
+          "primary_verifier_name",
+          "primary_verifier_role",
+          "primary_signed_at",
+          "secondary_verifier_id",
+          "secondary_verifier_name",
+          "secondary_verifier_role",
+          "secondary_signed_at",
+          "status",
+          "unlock_token"
+        ],
+        "title": "CGTBedsideVerificationResponse",
+        "description": "Response schema for bedside two-person verification."
+      },
+      "CGTChainOfCustodyResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "din": {
+            "type": "string",
+            "title": "Din"
+          },
+          "batch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Id"
+          },
+          "current_stage": {
+            "type": "string",
+            "title": "Current Stage"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "tamper_evident_barcode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tamper Evident Barcode"
+          },
+          "barcode_signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Barcode Signature"
+          },
+          "collection_site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection Site Id"
+          },
+          "collection_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection Timestamp"
+          },
+          "manufacturing_facility_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manufacturing Facility Id"
+          },
+          "cryo_temp_excursion_count": {
+            "type": "integer",
+            "title": "Cryo Temp Excursion Count",
+            "default": 0
+          },
+          "lowest_temp_celsius": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lowest Temp Celsius"
+          },
+          "highest_temp_celsius": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Highest Temp Celsius"
+          },
+          "infusion_unlocked": {
+            "type": "boolean",
+            "title": "Infusion Unlocked",
+            "default": false
+          },
+          "infused_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Infused At"
+          },
+          "reconciled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciled At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "subject_id",
+          "din",
+          "current_stage",
+          "status"
+        ],
+        "title": "CGTChainOfCustodyResponse",
+        "description": "Response schema for Vein-to-Vein Chain of Custody & Identity record."
+      },
+      "CGTDestructionCertificateCreateRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "lot_number": {
+            "type": "string",
+            "title": "Lot Number"
+          },
+          "kit_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Kit Numbers"
+          },
+          "vial_identifiers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Vial Identifiers"
+          },
+          "destruction_reason": {
+            "type": "string",
+            "title": "Destruction Reason"
+          },
+          "destruction_method": {
+            "type": "string",
+            "title": "Destruction Method",
+            "default": "HIGH_TEMPERATURE_INCINERATION"
+          },
+          "destruction_facility": {
+            "type": "string",
+            "title": "Destruction Facility"
+          },
+          "witness_1_id": {
+            "type": "string",
+            "title": "Witness 1 Id"
+          },
+          "witness_1_name": {
+            "type": "string",
+            "title": "Witness 1 Name"
+          },
+          "witness_1_role": {
+            "type": "string",
+            "title": "Witness 1 Role"
+          },
+          "witness_1_signature_token": {
+            "type": "string",
+            "title": "Witness 1 Signature Token"
+          },
+          "witness_2_id": {
+            "type": "string",
+            "title": "Witness 2 Id"
+          },
+          "witness_2_name": {
+            "type": "string",
+            "title": "Witness 2 Name"
+          },
+          "witness_2_role": {
+            "type": "string",
+            "title": "Witness 2 Role"
+          },
+          "witness_2_signature_token": {
+            "type": "string",
+            "title": "Witness 2 Signature Token"
+          },
+          "quantity_destroyed": {
+            "type": "integer",
+            "title": "Quantity Destroyed",
+            "default": 1
+          },
+          "residual_volume_ml": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residual Volume Ml"
+          },
+          "subject_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Id"
+          },
+          "din": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Din"
+          },
+          "coc_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coc Id"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "lot_number",
+          "kit_numbers",
+          "vial_identifiers",
+          "destruction_reason",
+          "destruction_facility",
+          "witness_1_id",
+          "witness_1_name",
+          "witness_1_role",
+          "witness_1_signature_token",
+          "witness_2_id",
+          "witness_2_name",
+          "witness_2_role",
+          "witness_2_signature_token"
+        ],
+        "title": "CGTDestructionCertificateCreateRequest",
+        "description": "Payload to generate formal Certificate of Destruction with dual witness e-signatures."
+      },
+      "CGTDestructionCertificateResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "certificate_number": {
+            "type": "string",
+            "title": "Certificate Number"
+          },
+          "chain_of_custody_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chain Of Custody Id"
+          },
+          "subject_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Id"
+          },
+          "din": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Din"
+          },
+          "lot_number": {
+            "type": "string",
+            "title": "Lot Number"
+          },
+          "kit_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kit Numbers"
+          },
+          "vial_identifiers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Vial Identifiers"
+          },
+          "quantity_destroyed": {
+            "type": "integer",
+            "title": "Quantity Destroyed"
+          },
+          "unit_of_measure": {
+            "type": "string",
+            "title": "Unit Of Measure"
+          },
+          "residual_volume_ml": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residual Volume Ml"
+          },
+          "destruction_reason": {
+            "type": "string",
+            "title": "Destruction Reason"
+          },
+          "destruction_method": {
+            "type": "string",
+            "title": "Destruction Method"
+          },
+          "destruction_facility": {
+            "type": "string",
+            "title": "Destruction Facility"
+          },
+          "destruction_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Destruction Timestamp"
+          },
+          "witness_1_id": {
+            "type": "string",
+            "title": "Witness 1 Id"
+          },
+          "witness_1_name": {
+            "type": "string",
+            "title": "Witness 1 Name"
+          },
+          "witness_1_role": {
+            "type": "string",
+            "title": "Witness 1 Role"
+          },
+          "witness_1_signed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Witness 1 Signed At"
+          },
+          "witness_2_id": {
+            "type": "string",
+            "title": "Witness 2 Id"
+          },
+          "witness_2_name": {
+            "type": "string",
+            "title": "Witness 2 Name"
+          },
+          "witness_2_role": {
+            "type": "string",
+            "title": "Witness 2 Role"
+          },
+          "witness_2_signed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Witness 2 Signed At"
+          },
+          "cryptographic_seal": {
+            "type": "string",
+            "title": "Cryptographic Seal"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "reconciliation_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciliation Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "certificate_number",
+          "lot_number",
+          "kit_numbers",
+          "vial_identifiers",
+          "quantity_destroyed",
+          "unit_of_measure",
+          "destruction_reason",
+          "destruction_method",
+          "destruction_facility",
+          "destruction_timestamp",
+          "witness_1_id",
+          "witness_1_name",
+          "witness_1_role",
+          "witness_1_signed_at",
+          "witness_2_id",
+          "witness_2_name",
+          "witness_2_role",
+          "witness_2_signed_at",
+          "cryptographic_seal",
+          "status"
+        ],
+        "title": "CGTDestructionCertificateResponse",
+        "description": "Response schema for formal Certificate of Destruction."
+      },
+      "CGTFullTraceabilityResponse": {
+        "properties": {
+          "chain_of_custody": {
+            "$ref": "#/components/schemas/CGTChainOfCustodyResponse"
+          },
+          "milestones": {
+            "items": {
+              "$ref": "#/components/schemas/CGTMilestoneResponse"
+            },
+            "type": "array",
+            "title": "Milestones"
+          },
+          "bedside_verification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CGTBedsideVerificationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "destruction_certificate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CGTDestructionCertificateResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "chain_of_custody",
+          "milestones"
+        ],
+        "title": "CGTFullTraceabilityResponse",
+        "description": "Comprehensive response schema for end-to-end Vein-to-Vein tracking."
+      },
+      "CGTInfusionExecuteRequest": {
+        "properties": {
+          "coc_id": {
+            "type": "string",
+            "title": "Coc Id"
+          },
+          "unlock_token": {
+            "type": "string",
+            "title": "Unlock Token"
+          },
+          "administrator_id": {
+            "type": "string",
+            "title": "Administrator Id"
+          },
+          "administrator_name": {
+            "type": "string",
+            "title": "Administrator Name"
+          },
+          "administrator_role": {
+            "type": "string",
+            "title": "Administrator Role",
+            "default": "Infusion Nurse"
+          },
+          "volume_infused_ml": {
+            "type": "number",
+            "title": "Volume Infused Ml",
+            "default": 50.0
+          },
+          "vital_signs_pre_temp_celsius": {
+            "type": "number",
+            "title": "Vital Signs Pre Temp Celsius",
+            "default": 36.8
+          },
+          "vital_signs_post_temp_celsius": {
+            "type": "number",
+            "title": "Vital Signs Post Temp Celsius",
+            "default": 37.1
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "coc_id",
+          "unlock_token",
+          "administrator_id",
+          "administrator_name"
+        ],
+        "title": "CGTInfusionExecuteRequest",
+        "description": "Payload to execute infusion administration with unlock token verification."
+      },
+      "CGTManufacturingBindRequest": {
+        "properties": {
+          "coc_id": {
+            "type": "string",
+            "title": "Coc Id"
+          },
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "manufacturing_facility_id": {
+            "type": "string",
+            "title": "Manufacturing Facility Id"
+          },
+          "operator_id": {
+            "type": "string",
+            "title": "Operator Id"
+          },
+          "operator_name": {
+            "type": "string",
+            "title": "Operator Name"
+          },
+          "operator_role": {
+            "type": "string",
+            "title": "Operator Role",
+            "default": "Cell Manufacturing Specialist"
+          },
+          "temperature_celsius": {
+            "type": "number",
+            "title": "Temperature Celsius",
+            "default": -196.0
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "coc_id",
+          "batch_id",
+          "manufacturing_facility_id",
+          "operator_id",
+          "operator_name"
+        ],
+        "title": "CGTManufacturingBindRequest",
+        "description": "Payload to bind a cell engineering manufacturing batch record to original subject identity."
+      },
+      "CGTMilestoneCreateRequest": {
+        "properties": {
+          "coc_id": {
+            "type": "string",
+            "title": "Coc Id"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "location_name": {
+            "type": "string",
+            "title": "Location Name"
+          },
+          "temperature_celsius": {
+            "type": "number",
+            "title": "Temperature Celsius"
+          },
+          "custodian_id": {
+            "type": "string",
+            "title": "Custodian Id"
+          },
+          "custodian_name": {
+            "type": "string",
+            "title": "Custodian Name"
+          },
+          "custodian_role": {
+            "type": "string",
+            "title": "Custodian Role"
+          },
+          "facility_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Facility Id"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "carrier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carrier"
+          },
+          "tracking_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tracking Number"
+          },
+          "seal_intact": {
+            "type": "boolean",
+            "title": "Seal Intact",
+            "default": true
+          },
+          "seal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seal Id"
+          },
+          "dry_shipper_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dry Shipper Id"
+          },
+          "signature_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Token"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "coc_id",
+          "stage",
+          "location_name",
+          "temperature_celsius",
+          "custodian_id",
+          "custodian_name",
+          "custodian_role"
+        ],
+        "title": "CGTMilestoneCreateRequest",
+        "description": "Payload to record a cryogenic transit milestone with GPS and temperature."
+      },
+      "CGTMilestoneResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "chain_of_custody_id": {
+            "type": "string",
+            "title": "Chain Of Custody Id"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "milestone_type": {
+            "type": "string",
+            "title": "Milestone Type"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "location_name": {
+            "type": "string",
+            "title": "Location Name"
+          },
+          "facility_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Facility Id"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "temperature_celsius": {
+            "type": "number",
+            "title": "Temperature Celsius"
+          },
+          "temperature_status": {
+            "type": "string",
+            "title": "Temperature Status"
+          },
+          "custodian_id": {
+            "type": "string",
+            "title": "Custodian Id"
+          },
+          "custodian_name": {
+            "type": "string",
+            "title": "Custodian Name"
+          },
+          "custodian_role": {
+            "type": "string",
+            "title": "Custodian Role"
+          },
+          "carrier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carrier"
+          },
+          "tracking_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tracking Number"
+          },
+          "seal_intact": {
+            "type": "boolean",
+            "title": "Seal Intact"
+          },
+          "seal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seal Id"
+          },
+          "dry_shipper_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dry Shipper Id"
+          },
+          "electronic_signature": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Electronic Signature"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "chain_of_custody_id",
+          "stage",
+          "milestone_type",
+          "timestamp",
+          "location_name",
+          "temperature_celsius",
+          "temperature_status",
+          "custodian_id",
+          "custodian_name",
+          "custodian_role",
+          "seal_intact"
+        ],
+        "title": "CGTMilestoneResponse",
+        "description": "Response schema for a cryogenic transit milestone."
+      },
+      "CGTVialReturnReconciliationRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "kit_number": {
+            "type": "string",
+            "title": "Kit Number"
+          },
+          "vial_identifier": {
+            "type": "string",
+            "title": "Vial Identifier"
+          },
+          "lot_number": {
+            "type": "string",
+            "title": "Lot Number"
+          },
+          "expected_quantity": {
+            "type": "integer",
+            "title": "Expected Quantity",
+            "default": 1
+          },
+          "returned_quantity": {
+            "type": "integer",
+            "title": "Returned Quantity",
+            "default": 1
+          },
+          "intact_vials": {
+            "type": "integer",
+            "title": "Intact Vials",
+            "default": 0
+          },
+          "used_vials": {
+            "type": "integer",
+            "title": "Used Vials",
+            "default": 1
+          },
+          "residual_volume_ml": {
+            "type": "number",
+            "title": "Residual Volume Ml",
+            "default": 0.0
+          },
+          "din": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Din"
+          },
+          "logged_by": {
+            "type": "string",
+            "title": "Logged By"
+          },
+          "disposition": {
+            "type": "string",
+            "title": "Disposition",
+            "default": "RECONCILED_FOR_DESTRUCTION"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_id",
+          "kit_number",
+          "vial_identifier",
+          "lot_number",
+          "logged_by"
+        ],
+        "title": "CGTVialReturnReconciliationRequest",
+        "description": "Payload to log returned kit/vial accountability and compute adherence percentage."
+      },
+      "CGTVialReturnReconciliationResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "kit_number": {
+            "type": "string",
+            "title": "Kit Number"
+          },
+          "vial_identifier": {
+            "type": "string",
+            "title": "Vial Identifier"
+          },
+          "lot_number": {
+            "type": "string",
+            "title": "Lot Number"
+          },
+          "din": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Din"
+          },
+          "expected_quantity": {
+            "type": "integer",
+            "title": "Expected Quantity"
+          },
+          "returned_quantity": {
+            "type": "integer",
+            "title": "Returned Quantity"
+          },
+          "intact_vials": {
+            "type": "integer",
+            "title": "Intact Vials"
+          },
+          "used_vials": {
+            "type": "integer",
+            "title": "Used Vials"
+          },
+          "residual_volume_ml": {
+            "type": "number",
+            "title": "Residual Volume Ml"
+          },
+          "adherence_percentage": {
+            "type": "number",
+            "title": "Adherence Percentage"
+          },
+          "disposition": {
+            "type": "string",
+            "title": "Disposition"
+          },
+          "logged_by": {
+            "type": "string",
+            "title": "Logged By"
+          },
+          "logged_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Logged At"
+          },
+          "certificate_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certificate Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "kit_number",
+          "vial_identifier",
+          "lot_number",
+          "expected_quantity",
+          "returned_quantity",
+          "intact_vials",
+          "used_vials",
+          "residual_volume_ml",
+          "adherence_percentage",
+          "disposition",
+          "logged_by",
+          "logged_at"
+        ],
+        "title": "CGTVialReturnReconciliationResponse",
+        "description": "Response schema for vial return reconciliation."
       },
       "ClinicalQueryResponse": {
         "properties": {
@@ -10220,6 +12976,395 @@
         ],
         "title": "CodingAssignmentResponse"
       },
+      "CohortEvaluationInput": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "cohort_number": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Cohort Number"
+          },
+          "dose_level_index": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Dose Level Index"
+          },
+          "subjects_evaluated": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Subjects Evaluated"
+          },
+          "dlts_observed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Dlts Observed"
+          },
+          "subject_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Subject Ids"
+          },
+          "dlt_subject_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dlt Subject Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "cohort_number",
+          "dose_level_index",
+          "subjects_evaluated",
+          "dlts_observed"
+        ],
+        "title": "CohortEvaluationInput",
+        "description": "Input payload to evaluate an active cohort and compute adaptive dose recommendations."
+      },
+      "CohortEvaluationResult": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "cohort_number": {
+            "type": "integer",
+            "title": "Cohort Number"
+          },
+          "evaluated_dose_level_index": {
+            "type": "integer",
+            "title": "Evaluated Dose Level Index"
+          },
+          "evaluated_dose_name": {
+            "type": "string",
+            "title": "Evaluated Dose Name"
+          },
+          "subjects_in_cohort": {
+            "type": "integer",
+            "title": "Subjects In Cohort"
+          },
+          "dlts_in_cohort": {
+            "type": "integer",
+            "title": "Dlts In Cohort"
+          },
+          "recommendation_action": {
+            "type": "string",
+            "title": "Recommendation Action"
+          },
+          "recommended_dose_level_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Dose Level Index"
+          },
+          "recommended_dose_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Dose Name"
+          },
+          "lambda_e": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lambda E"
+          },
+          "lambda_d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lambda D"
+          },
+          "target_toxicity_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Toxicity Rate"
+          },
+          "overdose_probability": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overdose Probability"
+          },
+          "is_safety_stop_triggered": {
+            "type": "boolean",
+            "title": "Is Safety Stop Triggered",
+            "default": false
+          },
+          "is_mtd_declared": {
+            "type": "boolean",
+            "title": "Is Mtd Declared",
+            "default": false
+          },
+          "mtd_dose_level_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mtd Dose Level Index"
+          },
+          "mtd_dose_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mtd Dose Name"
+          },
+          "dose_summaries": {
+            "items": {
+              "$ref": "#/components/schemas/DoseLevelEvaluationSummary"
+            },
+            "type": "array",
+            "title": "Dose Summaries"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "cohort_number",
+          "evaluated_dose_level_index",
+          "evaluated_dose_name",
+          "subjects_in_cohort",
+          "dlts_in_cohort",
+          "recommendation_action",
+          "rationale"
+        ],
+        "title": "CohortEvaluationResult",
+        "description": "Output recommendation and Bayesian metrics from a cohort evaluation."
+      },
+      "CohortRecommendationAction": {
+        "type": "string",
+        "enum": [
+          "ESCALATE",
+          "DE_ESCALATE",
+          "STAY",
+          "EXPAND_COHORT",
+          "STOP_SAFETY",
+          "STOP_SUCCESS",
+          "MTD_FOUND"
+        ],
+        "title": "CohortRecommendationAction",
+        "description": "Automated and committee-reviewed cohort actions."
+      },
+      "CohortTransitionLogResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "cohort_number": {
+            "type": "integer",
+            "title": "Cohort Number"
+          },
+          "from_dose_level": {
+            "type": "integer",
+            "title": "From Dose Level"
+          },
+          "to_dose_level": {
+            "type": "integer",
+            "title": "To Dose Level"
+          },
+          "action_taken": {
+            "type": "string",
+            "title": "Action Taken"
+          },
+          "algorithm_recommendation": {
+            "type": "string",
+            "title": "Algorithm Recommendation"
+          },
+          "override_occurred": {
+            "type": "boolean",
+            "title": "Override Occurred"
+          },
+          "override_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Reason"
+          },
+          "evaluated_dlt_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluated Dlt Rate"
+          },
+          "posterior_toxicity_estimates": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posterior Toxicity Estimates"
+          },
+          "authorized_by": {
+            "type": "string",
+            "title": "Authorized By"
+          },
+          "transitioned_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Transitioned At"
+          },
+          "signature_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Token"
+          },
+          "cryptographic_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cryptographic Checksum"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "cohort_number",
+          "from_dose_level",
+          "to_dose_level",
+          "action_taken",
+          "algorithm_recommendation",
+          "override_occurred",
+          "authorized_by",
+          "transitioned_at"
+        ],
+        "title": "CohortTransitionLogResponse",
+        "description": "21 CFR Part 11 audited transition log record."
+      },
+      "CohortTransitionRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "cohort_number": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Cohort Number"
+          },
+          "decision_action": {
+            "type": "string",
+            "title": "Decision Action"
+          },
+          "target_dose_level_index": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Target Dose Level Index"
+          },
+          "override_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Reason"
+          },
+          "electronic_signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Electronic Signature"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "cohort_number",
+          "decision_action",
+          "target_dose_level_index"
+        ],
+        "title": "CohortTransitionRequest",
+        "description": "Payload to confirm or override an automated cohort recommendation."
+      },
       "ComplianceStatusResponse": {
         "properties": {
           "study_id": {
@@ -10301,6 +13446,155 @@
         ],
         "title": "CriterionLevelResult",
         "description": "Pydantic schema for individual criterion level evaluation result."
+      },
+      "CrmConfig": {
+        "properties": {
+          "target_toxicity_rate": {
+            "type": "number",
+            "exclusiveMaximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Target Toxicity Rate",
+            "description": "Target DLT rate phi.",
+            "default": 0.25
+          },
+          "skeleton_probs": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "minItems": 2,
+            "title": "Skeleton Probs",
+            "description": "Prior toxicity probability skeleton for each dose level (strictly increasing)."
+          },
+          "model_type": {
+            "type": "string",
+            "title": "Model Type",
+            "description": "Dose-toxicity link model (e.g. 'EMPIRIC_POWER' where p_j(theta) = p_{0,j}^{exp(theta)}).",
+            "default": "EMPIRIC_POWER"
+          },
+          "prior_std": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Prior Std",
+            "description": "Prior standard deviation for model parameter theta ~ Normal(0, sigma^2).",
+            "default": 1.34
+          },
+          "safety_cutoff": {
+            "type": "number",
+            "exclusiveMaximum": 1.0,
+            "exclusiveMinimum": 0.5,
+            "title": "Safety Cutoff",
+            "description": "Safety stopping threshold on dose 1 toxicity P(p_1 > phi | D) > cutoff.",
+            "default": 0.9
+          },
+          "allow_dose_skipping": {
+            "type": "boolean",
+            "title": "Allow Dose Skipping",
+            "description": "If False (modified CRM), forbids jumping over untried doses upon escalation.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "skeleton_probs"
+        ],
+        "title": "CrmConfig",
+        "description": "Configuration parameters for Continual Reassessment Method (CRM / mCRM)."
+      },
+      "CrmPosteriorCalculationRequest": {
+        "properties": {
+          "skeleton_probs": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Skeleton Probs"
+          },
+          "target_toxicity_rate": {
+            "type": "number",
+            "title": "Target Toxicity Rate",
+            "default": 0.25
+          },
+          "prior_std": {
+            "type": "number",
+            "title": "Prior Std",
+            "default": 1.34
+          },
+          "dose_evaluations": {
+            "items": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Dose Evaluations",
+            "description": "List of dicts per dose level: [{'dose_index': 1, 'enrolled': 3, 'dlts': 0}, ...]"
+          },
+          "current_dose_index": {
+            "type": "integer",
+            "title": "Current Dose Index",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "skeleton_probs",
+          "dose_evaluations"
+        ],
+        "title": "CrmPosteriorCalculationRequest",
+        "description": "Direct calculation request for CRM posterior curve."
+      },
+      "CrmPosteriorCalculationResponse": {
+        "properties": {
+          "target_toxicity_rate": {
+            "type": "number",
+            "title": "Target Toxicity Rate"
+          },
+          "current_dose_index": {
+            "type": "integer",
+            "title": "Current Dose Index"
+          },
+          "recommended_dose_index": {
+            "type": "integer",
+            "title": "Recommended Dose Index"
+          },
+          "recommendation_action": {
+            "$ref": "#/components/schemas/CohortRecommendationAction"
+          },
+          "posterior_mean_probabilities": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Posterior Mean Probabilities"
+          },
+          "overdose_probability_dose_1": {
+            "type": "number",
+            "title": "Overdose Probability Dose 1"
+          },
+          "is_safety_stop_triggered": {
+            "type": "boolean",
+            "title": "Is Safety Stop Triggered"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_toxicity_rate",
+          "current_dose_index",
+          "recommended_dose_index",
+          "recommendation_action",
+          "posterior_mean_probabilities",
+          "overdose_probability_dose_1",
+          "is_safety_stop_triggered",
+          "rationale"
+        ],
+        "title": "CrmPosteriorCalculationResponse",
+        "description": "Response containing calculated CRM posterior probabilities and recommended next dose."
       },
       "CrossDomainAnomaly": {
         "properties": {
@@ -11667,6 +14961,102 @@
         ],
         "title": "DocumentUploadResponse",
         "description": "Schema representing upload response.\n\nRequirements: PRD-SYS-001"
+      },
+      "DoseLevelDef": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Index",
+            "description": "1-based dose level sequence index."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name",
+            "description": "Dose identifier / label, e.g. '10 mg/kg'."
+          },
+          "dose_value": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Dose Value",
+            "description": "Numerical dose amount (e.g. 10.0)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "name",
+          "dose_value"
+        ],
+        "title": "DoseLevelDef",
+        "description": "Definition of a discrete dose level."
+      },
+      "DoseLevelEvaluationSummary": {
+        "properties": {
+          "dose_level_index": {
+            "type": "integer",
+            "title": "Dose Level Index"
+          },
+          "dose_name": {
+            "type": "string",
+            "title": "Dose Name"
+          },
+          "dose_value": {
+            "type": "number",
+            "title": "Dose Value"
+          },
+          "total_enrolled": {
+            "type": "integer",
+            "title": "Total Enrolled"
+          },
+          "total_dlts": {
+            "type": "integer",
+            "title": "Total Dlts"
+          },
+          "observed_dlt_rate": {
+            "type": "number",
+            "title": "Observed Dlt Rate"
+          },
+          "posterior_dlt_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posterior Dlt Rate"
+          },
+          "is_eliminated_for_safety": {
+            "type": "boolean",
+            "title": "Is Eliminated For Safety",
+            "default": false
+          },
+          "overdose_probability": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overdose Probability"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dose_level_index",
+          "dose_name",
+          "dose_value",
+          "total_enrolled",
+          "total_dlts",
+          "observed_dlt_rate"
+        ],
+        "title": "DoseLevelEvaluationSummary",
+        "description": "Summary of subjects and DLTs evaluated at a specific dose level."
       },
       "EISFDocumentRecord": {
         "properties": {
@@ -15741,6 +19131,186 @@
         "title": "QueryUpdate",
         "description": "Pydantic schema for general state transitions."
       },
+      "RARArmEvaluationDTO": {
+        "properties": {
+          "arm_id": {
+            "type": "string",
+            "title": "Arm Id"
+          },
+          "arm_name": {
+            "type": "string",
+            "title": "Arm Name"
+          },
+          "is_control": {
+            "type": "boolean",
+            "title": "Is Control"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "enrolled_count": {
+            "type": "integer",
+            "title": "Enrolled Count"
+          },
+          "response_count": {
+            "type": "integer",
+            "title": "Response Count"
+          },
+          "posterior_alpha": {
+            "type": "number",
+            "title": "Posterior Alpha"
+          },
+          "posterior_beta": {
+            "type": "number",
+            "title": "Posterior Beta"
+          },
+          "posterior_mean": {
+            "type": "number",
+            "title": "Posterior Mean"
+          },
+          "allocation_probability": {
+            "type": "number",
+            "title": "Allocation Probability"
+          },
+          "superiority_vs_control_prob": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superiority Vs Control Prob"
+          }
+        },
+        "type": "object",
+        "required": [
+          "arm_id",
+          "arm_name",
+          "is_control",
+          "status",
+          "enrolled_count",
+          "response_count",
+          "posterior_alpha",
+          "posterior_beta",
+          "posterior_mean",
+          "allocation_probability"
+        ],
+        "title": "RARArmEvaluationDTO",
+        "description": "State and metrics for an individual arm under Response-Adaptive Randomization."
+      },
+      "RAREvaluationResult": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "total_enrolled": {
+            "type": "integer",
+            "title": "Total Enrolled"
+          },
+          "arms": {
+            "items": {
+              "$ref": "#/components/schemas/RARArmEvaluationDTO"
+            },
+            "type": "array",
+            "title": "Arms"
+          },
+          "allocation_probabilities": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Allocation Probabilities"
+          },
+          "dropped_arms": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dropped Arms"
+          },
+          "graduated_arms": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Graduated Arms"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "total_enrolled",
+          "arms",
+          "allocation_probabilities",
+          "rationale",
+          "updated_at"
+        ],
+        "title": "RAREvaluationResult",
+        "description": "Overall RAR probability adjustment output."
+      },
+      "RARExpandOrTerminateArmRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "arm_id": {
+            "type": "string",
+            "title": "Arm Id"
+          },
+          "arm_name": {
+            "type": "string",
+            "title": "Arm Name"
+          },
+          "is_control": {
+            "type": "boolean",
+            "title": "Is Control",
+            "default": false
+          },
+          "action": {
+            "type": "string",
+            "title": "Action",
+            "description": "'ADD_ARM', 'DROP_FUTILITY', 'GRADUATE_SUCCESS', 'TERMINATE'"
+          },
+          "prior_alpha": {
+            "type": "number",
+            "title": "Prior Alpha",
+            "default": 1.0
+          },
+          "prior_beta": {
+            "type": "number",
+            "title": "Prior Beta",
+            "default": 1.0
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "arm_id",
+          "arm_name",
+          "action",
+          "reason"
+        ],
+        "title": "RARExpandOrTerminateArmRequest",
+        "description": "Request to seamlessly add or terminate a treatment arm with zero study downtime."
+      },
       "RaiseQueryRequest": {
         "properties": {
           "query_text": {
@@ -15835,6 +19405,72 @@
           "assignment_id"
         ],
         "title": "RaiseQueryResponse"
+      },
+      "RarConfig": {
+        "properties": {
+          "burn_in_sample_per_arm": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Burn In Sample Per Arm",
+            "description": "Initial fixed allocation sample size per arm before adaptive re-weighting activates.",
+            "default": 5
+          },
+          "power_tuning_param": {
+            "type": "number",
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Power Tuning Param",
+            "description": "Tuning exponent c for allocation probability weighting w_k ~ (q_k / n_k)^c.",
+            "default": 0.5
+          },
+          "min_allocation_prob": {
+            "type": "number",
+            "exclusiveMaximum": 0.5,
+            "minimum": 0.0,
+            "title": "Min Allocation Prob",
+            "description": "Floor boundary on active arm allocation probability to prevent arm starvation.",
+            "default": 0.05
+          },
+          "max_allocation_prob": {
+            "type": "number",
+            "maximum": 1.0,
+            "exclusiveMinimum": 0.5,
+            "title": "Max Allocation Prob",
+            "description": "Ceiling boundary on active arm allocation probability.",
+            "default": 0.85
+          },
+          "futility_threshold": {
+            "type": "number",
+            "exclusiveMaximum": 0.5,
+            "minimum": 0.0,
+            "title": "Futility Threshold",
+            "description": "Posterior probability threshold P(theta_k > theta_ctrl) < threshold to drop arm for futility.",
+            "default": 0.05
+          },
+          "efficacy_threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "exclusiveMinimum": 0.5,
+            "title": "Efficacy Threshold",
+            "description": "Posterior probability threshold P(theta_k > theta_ctrl) > threshold to graduate arm for efficacy.",
+            "default": 0.99
+          },
+          "prior_alpha": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Prior Alpha",
+            "default": 1.0
+          },
+          "prior_beta": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Prior Beta",
+            "default": 1.0
+          }
+        },
+        "type": "object",
+        "title": "RarConfig",
+        "description": "Configuration parameters for Response-Adaptive Randomization (RAR)."
       },
       "ReLabelingTaskCompleteRequest": {
         "properties": {
@@ -18379,6 +22015,37 @@
         ],
         "title": "TemperatureLoggerResponse",
         "description": "Response schema for a temperature logger device."
+      },
+      "ThreePlusThreeConfig": {
+        "properties": {
+          "initial_cohort_size": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Initial Cohort Size",
+            "default": 3
+          },
+          "expansion_cohort_size": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expansion Cohort Size",
+            "default": 3
+          },
+          "max_dlt_escalate": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Max Dlt Escalate",
+            "default": 0
+          },
+          "max_dlt_expand": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Max Dlt Expand",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "title": "ThreePlusThreeConfig",
+        "description": "Configuration parameters for classic 3+3 rule-based design."
       },
       "TransferOrderApprovalRequest": {
         "properties": {

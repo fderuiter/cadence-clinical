@@ -46,7 +46,13 @@ class RandomizationConfigSchema(BaseModel):
     @model_validator(mode="after")
     def validate_config(self) -> RandomizationConfigSchema:
         """Validates configuration parameters."""
-        allowed_types = {"PERMUTED_BLOCK", "STRATIFIED_BLOCK", "MINIMIZATION"}
+        allowed_types = {
+            "PERMUTED_BLOCK",
+            "STRATIFIED_BLOCK",
+            "MINIMIZATION",
+            "RESPONSE_ADAPTIVE",
+            "RAR",
+        }
         if self.algorithm_type not in allowed_types:
             raise ValueError(
                 f"Invalid algorithm_type: '{self.algorithm_type}'. Allowed types are {allowed_types}."
@@ -359,6 +365,25 @@ class PocockSimonMinimizationStrategy(RandomizationStrategy):
         }
 
 
+class ResponseAdaptiveStrategy(RandomizationStrategy):
+    """Strategy for Response-Adaptive Randomization (RAR) dynamic allocation."""
+
+    def allocate(
+        self,
+        subject_factors: dict[str, Any] | None = None,
+        sequence: list[str] | None = None,
+        block_index: int = 0,
+        previous_allocations: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        arms = list(self.config.arms_ratios.keys())
+        weights = [float(self.config.arms_ratios[arm]) for arm in arms]
+        selected_arm = self.rng.choices(arms, weights=weights, k=1)[0]
+        return {
+            "allocation": selected_arm,
+            "stratum_key": "DEFAULT",
+        }
+
+
 class RTSMAllocator:
     """Unified allocator coordinating multiple randomization strategies."""
 
@@ -370,6 +395,8 @@ class RTSMAllocator:
             self.strategy = StratifiedBlockStrategy(config)
         elif config.algorithm_type == "MINIMIZATION":
             self.strategy = PocockSimonMinimizationStrategy(config)
+        elif config.algorithm_type in ("RESPONSE_ADAPTIVE", "RAR"):
+            self.strategy = ResponseAdaptiveStrategy(config)
         else:
             raise ValueError(f"Unsupported algorithm type: '{config.algorithm_type}'")
 

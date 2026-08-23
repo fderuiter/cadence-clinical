@@ -1,0 +1,1160 @@
+<template>
+  <div class="cgt-coc-console">
+    <!-- Header -->
+    <header class="console-header">
+      <div class="header-left">
+        <div class="header-badge-row">
+          <span class="badge badge-cgt">Cell &amp; Gene Therapy</span>
+          <span class="badge badge-gxp">21 CFR Part 11 Regulated</span>
+          <span class="badge badge-isbt">ISBT 128 Compliant</span>
+          <span v-if="cocData?.status === 'BEDSIDE_VERIFIED'" class="badge badge-unlocked">Infusion Unlocked</span>
+          <span v-else-if="cocData?.status === 'QUARANTINED'" class="badge badge-quarantine">Cryo Quarantined</span>
+          <span v-else class="badge badge-stage">{{ cocData?.current_stage || 'Awaiting Harvest' }}</span>
+        </div>
+        <h2 class="title">Vein-to-Vein Chain of Custody &amp; Identity (COC/COI)</h2>
+        <p class="subtitle">
+          Unbroken cryptographic identity binding, cryogenic transit temperature logging, and mandatory two-person bedside verification.
+        </p>
+      </div>
+
+      <div class="header-actions">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isLoading"
+          @click="fetchTraceability"
+        >
+          Refresh Ledger
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          @click="openApheresisModal"
+        >
+          + Apheresis Harvest
+        </button>
+      </div>
+    </header>
+
+    <!-- Search & Filter Bar -->
+    <section class="filter-panel card">
+      <div class="filter-group">
+        <label for="input-study">Study Protocol</label>
+        <input
+          id="input-study"
+          v-model="filters.studyId"
+          type="text"
+          placeholder="e.g. STUDY-CGT-801"
+          @change="fetchTraceability"
+        >
+      </div>
+      <div class="filter-group">
+        <label for="input-subject">Subject ID / UUID</label>
+        <input
+          id="input-subject"
+          v-model="filters.subjectId"
+          type="text"
+          placeholder="e.g. SUBJ-101-0042"
+          @change="fetchTraceability"
+        >
+      </div>
+      <div class="filter-group action-btn-group">
+        <button
+          type="button"
+          class="btn btn-action"
+          :disabled="!filters.studyId || !filters.subjectId"
+          @click="fetchTraceability"
+        >
+          Load COC/COI
+        </button>
+      </div>
+    </section>
+
+    <!-- Main COC/COI Overview -->
+    <main v-if="cocData" class="console-body">
+      <!-- Top Metrics / Cards -->
+      <section class="overview-grid">
+        <div class="card metric-card">
+          <span class="metric-label">Donation ID (ISBT 128 DIN)</span>
+          <span class="metric-value code-font">{{ cocData.din }}</span>
+          <span class="metric-sub">Facility: {{ cocData.collection_site_id || 'N/A' }}</span>
+        </div>
+
+        <div class="card metric-card">
+          <span class="metric-label">Subject Identity Binding</span>
+          <span class="metric-value">{{ cocData.subject_id }}</span>
+          <span class="metric-sub">Study: {{ cocData.study_id }}</span>
+        </div>
+
+        <div class="card metric-card">
+          <span class="metric-label">Manufacturing Batch</span>
+          <span class="metric-value highlight">{{ cocData.batch_id || 'Pending Synthesis' }}</span>
+          <span class="metric-sub">CMO: {{ cocData.manufacturing_facility_id || 'In Queue' }}</span>
+        </div>
+
+        <div class="card metric-card" :class="{ 'card-excursion': cocData.cryo_temp_excursion_count > 0 }">
+          <span class="metric-label">Cryogenic Integrity</span>
+          <span class="metric-value">
+            {{ cocData.lowest_temp_celsius != null ? `${cocData.lowest_temp_celsius.toFixed(1)}°C` : '-196.0°C' }}
+          </span>
+          <span class="metric-sub" :class="cocData.cryo_temp_excursion_count > 0 ? 'text-danger' : 'text-success'">
+            {{ cocData.cryo_temp_excursion_count === 0 ? 'Optimal (0 Excursions)' : `${cocData.cryo_temp_excursion_count} Excursions` }}
+          </span>
+        </div>
+      </section>
+
+      <!-- Stage Visualizer Ribbon -->
+      <section class="card lifecycle-ribbon">
+        <h3 class="section-title">Vein-to-Vein Continuum Lifecycle</h3>
+        <div class="stages-track">
+          <div
+            v-for="(st, idx) in stagesList"
+            :key="st.key"
+            class="stage-node"
+            :class="{
+              'stage-complete': isStageComplete(st.key),
+              'stage-current': cocData.current_stage === st.key,
+              'stage-pending': !isStageComplete(st.key) && cocData.current_stage !== st.key
+            }"
+          >
+            <div class="node-circle">
+              <span class="node-idx">{{ idx + 1 }}</span>
+            </div>
+            <span class="node-label">{{ st.label }}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Action Toolbar -->
+      <section class="card action-toolbar">
+        <div class="toolbar-title-block">
+          <h4 class="toolbar-title">Chain of Custody Handover &amp; Verification Actions</h4>
+          <p class="toolbar-hint">Execute Part 11 e-signature step-up operations across the chain.</p>
+        </div>
+        <div class="toolbar-buttons">
+          <button
+            type="button"
+            class="btn btn-outline"
+            @click="openMilestoneModal"
+          >
+            + Log Transit Milestone
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline"
+            :disabled="!cocData || cocData.batch_id != null"
+            @click="openManufacturingModal"
+          >
+            Bind Manufacturing Batch
+          </button>
+          <button
+            type="button"
+            class="btn btn-stepup"
+            :disabled="cocData.status === 'BEDSIDE_VERIFIED' || cocData.status === 'INFUSED'"
+            @click="openBedsideModal"
+          >
+            Bedside Dual-Verification
+          </button>
+          <button
+            type="button"
+            class="btn btn-infuse"
+            :disabled="!cocData.infusion_unlocked || cocData.status === 'INFUSED'"
+            @click="openInfusionModal"
+          >
+            Administer Infusion
+          </button>
+          <button
+            type="button"
+            class="btn btn-danger-outline"
+            @click="openDestructionModal"
+          >
+            Generate Cert of Destruction
+          </button>
+        </div>
+      </section>
+
+      <!-- Cryptographic Barcode Verification Box -->
+      <section class="card barcode-verification-card">
+        <div class="barcode-info-col">
+          <h3 class="section-title">Tamper-Evident Cryptographic Barcode</h3>
+          <p class="barcode-meta">
+            HMAC-SHA256 signed 2D DataMatrix payload dynamically binding Subject UUID, ISBT 128 DIN, and Manufacturing Batch.
+          </p>
+          <div class="hash-display">
+            <span class="hash-label">Cryptographic Seal:</span>
+            <span class="hash-code">{{ cocData.barcode_signature || 'Not Generated' }}</span>
+          </div>
+          <div class="raw-payload-box">
+            <span class="raw-label">Encoded 2D Barcode Payload:</span>
+            <textarea readonly class="payload-textarea" :value="cocData.tamper_evident_barcode || ''" rows="3" />
+          </div>
+        </div>
+        <div class="barcode-scan-simulator">
+          <h4 class="scan-title">Direct Scanner Verification</h4>
+          <input
+            v-model="scanTestInput"
+            type="text"
+            placeholder="Scan / paste barcode payload here..."
+            class="scan-input"
+          >
+          <button
+            type="button"
+            class="btn btn-secondary btn-block"
+            :disabled="!scanTestInput"
+            @click="testScanBarcode"
+          >
+            Validate Barcode Cryptography
+          </button>
+          <div v-if="scanResult" class="scan-result" :class="scanResult.is_valid ? 'scan-valid' : 'scan-invalid'">
+            <span class="result-badge">{{ scanResult.is_valid ? 'VALID SEAL' : 'TAMPER DETECTED' }}</span>
+            <span class="result-detail">{{ scanResult.failure_reason || 'Cryptographic seal and identity bindings match.' }}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Milestone Ledger Table -->
+      <section class="card milestone-ledger-card">
+        <h3 class="section-title">Immutable Vein-to-Vein Audit Ledger ({{ milestones.length }} Milestones)</h3>
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Timestamp (UTC)</th>
+                <th>Stage</th>
+                <th>Location / Waypoint</th>
+                <th>GPS Coordinates</th>
+                <th>Cryo Temp</th>
+                <th>Custodian</th>
+                <th>Tamper Seal</th>
+                <th>E-Signature</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="m in milestones" :key="m.id">
+                <td class="code-font">{{ formatDateTime(m.timestamp) }}</td>
+                <td><span class="badge badge-sm">{{ m.stage }}</span></td>
+                <td>{{ m.location_name }}</td>
+                <td class="code-font">
+                  {{ m.latitude != null && m.longitude != null ? `${m.latitude.toFixed(4)}, ${m.longitude.toFixed(4)}` : 'N/A' }}
+                </td>
+                <td :class="m.temperature_status === 'EXCURSION' ? 'text-danger font-bold' : 'text-success'">
+                  {{ m.temperature_celsius.toFixed(1) }}°C
+                </td>
+                <td>{{ m.custodian_name }} ({{ m.custodian_role }})</td>
+                <td>
+                  <span :class="m.seal_intact ? 'status-pill-ok' : 'status-pill-breach'">
+                    {{ m.seal_intact ? (m.seal_id || 'Intact') : 'BREACH' }}
+                  </span>
+                </td>
+                <td>
+                  <span v-if="m.electronic_signature" class="sig-pill" title="Signed via 21 CFR Part 11">
+                    Verified
+                  </span>
+                  <span v-else class="text-muted">-</span>
+                </td>
+              </tr>
+              <tr v-if="milestones.length === 0">
+                <td colspan="8" class="text-center text-muted">No milestone logs recorded yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- Empty State -->
+    <div v-else class="card empty-state">
+      <p class="empty-text">Enter a valid Study Protocol and Subject UUID above to load the Vein-to-Vein Chain of Custody ledger.</p>
+    </div>
+
+    <!-- Modals -->
+
+    <!-- 1. Apheresis Modal -->
+    <div v-if="showApheresisModal" class="modal-overlay">
+      <div class="modal-card">
+        <header class="modal-header">
+          <h3>Register Apheresis Cellular Harvest</h3>
+          <button type="button" class="btn-close" @click="showApheresisModal = false">&times;</button>
+        </header>
+        <form @submit.prevent="submitApheresis">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Study Protocol</label>
+              <input v-model="apheresisForm.study_id" type="text" required>
+            </div>
+            <div class="form-group">
+              <label>Site ID</label>
+              <input v-model="apheresisForm.site_id" type="text" required>
+            </div>
+            <div class="form-group">
+              <label>Subject UUID</label>
+              <input v-model="apheresisForm.subject_id" type="text" required>
+            </div>
+            <div class="form-group">
+              <label>Donation ID (ISBT 128 DIN)</label>
+              <input v-model="apheresisForm.din" type="text" placeholder="Auto-generated if empty">
+            </div>
+            <div class="form-group">
+              <label>Collector User ID</label>
+              <input v-model="apheresisForm.collector_id" type="text" required>
+            </div>
+            <div class="form-group">
+              <label>Collector Name</label>
+              <input v-model="apheresisForm.collector_name" type="text" required>
+            </div>
+            <div class="form-group">
+              <label>Initial Cryo Temp (°C)</label>
+              <input v-model.number="apheresisForm.initial_temp_celsius" type="number" step="0.1" required>
+            </div>
+            <div class="form-group">
+              <label>Dry Shipper / Dewar ID</label>
+              <input v-model="apheresisForm.dry_shipper_id" type="text" placeholder="e.g. MVE-LN2-9901">
+            </div>
+          </div>
+          <footer class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="showApheresisModal = false">Cancel</button>
+            <button type="submit" class="btn btn-primary">Initialize Chain of Custody</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- 2. Bedside Dual Verification Modal -->
+    <div v-if="showBedsideModal" class="modal-overlay">
+      <div class="modal-card modal-lg">
+        <header class="modal-header">
+          <h3>Bedside Two-Person Electronic Verification (Infusion Gating)</h3>
+          <button type="button" class="btn-close" @click="showBedsideModal = false">&times;</button>
+        </header>
+        <form @submit.prevent="submitBedsideVerify">
+          <div class="verification-instructions alert alert-info">
+            <strong>Mandatory GxP Safety Gate:</strong> Both the Bedside Nurse and Principal Investigator must independently verify the patient wristband scan against the cell bag cryptographic barcode.
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group col-full">
+              <label>Scanned Patient Wristband Subject UUID</label>
+              <input v-model="bedsideForm.scanned_wristband_subject_id" type="text" required placeholder="Scan patient wristband barcode...">
+            </div>
+            <div class="form-group col-full">
+              <label>Scanned Cell Infusion Bag Cryptographic Barcode</label>
+              <textarea v-model="bedsideForm.scanned_bag_barcode" rows="2" required placeholder="Scan infusion bag DataMatrix..." />
+            </div>
+
+            <!-- Primary Verifier (Nurse) -->
+            <div class="verifier-panel col-half">
+              <h4 class="verifier-title">Primary Verifier (Bedside Nurse)</h4>
+              <div class="form-group">
+                <label>User ID</label>
+                <input v-model="bedsideForm.primary_verifier_id" type="text" required>
+              </div>
+              <div class="form-group">
+                <label>Full Name</label>
+                <input v-model="bedsideForm.primary_verifier_name" type="text" required>
+              </div>
+              <div class="form-group">
+                <label>E-Signature Step-Up Token</label>
+                <input v-model="bedsideForm.primary_signature_token" type="password" required>
+              </div>
+            </div>
+
+            <!-- Secondary Verifier (PI) -->
+            <div class="verifier-panel col-half">
+              <h4 class="verifier-title">Secondary Verifier (Principal Investigator)</h4>
+              <div class="form-group">
+                <label>User ID</label>
+                <input v-model="bedsideForm.secondary_verifier_id" type="text" required>
+              </div>
+              <div class="form-group">
+                <label>Full Name</label>
+                <input v-model="bedsideForm.secondary_verifier_name" type="text" required>
+              </div>
+              <div class="form-group">
+                <label>E-Signature Step-Up Token</label>
+                <input v-model="bedsideForm.secondary_signature_token" type="password" required>
+              </div>
+            </div>
+          </div>
+
+          <footer class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="showBedsideModal = false">Cancel</button>
+            <button type="submit" class="btn btn-stepup">Execute Dual Electronic Signature</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- 3. Certificate of Destruction Modal -->
+    <div v-if="showDestructionModal" class="modal-overlay">
+      <div class="modal-card modal-lg">
+        <header class="modal-header">
+          <h3>Generate Formal Certificate of Destruction</h3>
+          <button type="button" class="btn-close" @click="showDestructionModal = false">&times;</button>
+        </header>
+        <form @submit.prevent="submitDestruction">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Study Protocol</label>
+              <input v-model="destructionForm.study_id" type="text" required>
+            </div>
+            <div class="form-group">
+              <label>Site ID</label>
+              <input v-model="destructionForm.site_id" type="text" required>
+            </div>
+            <div class="form-group">
+              <label>Lot Number</label>
+              <input v-model="destructionForm.lot_number" type="text" required>
+            </div>
+            <div class="form-group">
+              <label>Kit Numbers (Comma-separated)</label>
+              <input v-model="destructionForm.kit_numbers_str" type="text" required placeholder="KIT-001, KIT-002">
+            </div>
+            <div class="form-group">
+              <label>Vial Identifiers (Comma-separated)</label>
+              <input v-model="destructionForm.vial_identifiers_str" type="text" required placeholder="VIAL-A1, VIAL-A2">
+            </div>
+            <div class="form-group">
+              <label>Destruction Method</label>
+              <select v-model="destructionForm.destruction_method" required>
+                <option value="HIGH_TEMPERATURE_INCINERATION">High Temperature Incineration</option>
+                <option value="AUTOCLAVE_BIOHAZARD">Autoclave Biohazard Decontamination</option>
+                <option value="CHEMICAL_INACTIVATION">Chemical Inactivation</option>
+                <option value="HAZARDOUS_WASTE_FACILITY">Hazardous Waste Facility</option>
+              </select>
+            </div>
+            <div class="form-group col-full">
+              <label>Destruction Facility</label>
+              <input v-model="destructionForm.destruction_facility" type="text" required placeholder="e.g. Bio-Hazard Waste Center Alpha">
+            </div>
+            <div class="form-group col-full">
+              <label>Destruction Reason</label>
+              <input v-model="destructionForm.destruction_reason" type="text" required placeholder="e.g. Residual post-infusion cellular product destruction per protocol.">
+            </div>
+
+            <!-- Witness 1 -->
+            <div class="verifier-panel col-half">
+              <h4 class="verifier-title">Witness 1 (Site Pharmacist / CRC)</h4>
+              <div class="form-group">
+                <label>User ID</label>
+                <input v-model="destructionForm.witness_1_id" type="text" required>
+              </div>
+              <div class="form-group">
+                <label>Full Name</label>
+                <input v-model="destructionForm.witness_1_name" type="text" required>
+              </div>
+              <div class="form-group">
+                <label>E-Signature Token</label>
+                <input v-model="destructionForm.witness_1_signature_token" type="password" required>
+              </div>
+            </div>
+
+            <!-- Witness 2 -->
+            <div class="verifier-panel col-half">
+              <h4 class="verifier-title">Witness 2 (Principal Investigator / QA)</h4>
+              <div class="form-group">
+                <label>User ID</label>
+                <input v-model="destructionForm.witness_2_id" type="text" required>
+              </div>
+              <div class="form-group">
+                <label>Full Name</label>
+                <input v-model="destructionForm.witness_2_name" type="text" required>
+              </div>
+              <div class="form-group">
+                <label>E-Signature Token</label>
+                <input v-model="destructionForm.witness_2_signature_token" type="password" required>
+              </div>
+            </div>
+          </div>
+
+          <footer class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="showDestructionModal = false">Cancel</button>
+            <button type="submit" class="btn btn-danger">Issue Dual-Witness Certificate</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive, onMounted } from 'vue';
+
+interface CGTChainOfCustody {
+  id: string;
+  study_id: string;
+  subject_id: string;
+  din: string;
+  batch_id: string | null;
+  current_stage: string;
+  status: string;
+  tamper_evident_barcode: string | null;
+  barcode_signature: string | null;
+  collection_site_id: string | null;
+  collection_timestamp: string | null;
+  manufacturing_facility_id: string | null;
+  cryo_temp_excursion_count: number;
+  lowest_temp_celsius: number | null;
+  highest_temp_celsius: number | null;
+  infusion_unlocked: boolean;
+  infused_at: string | null;
+  reconciled_at: string | null;
+}
+
+interface CGTMilestone {
+  id: string;
+  study_id: string;
+  chain_of_custody_id: string;
+  stage: string;
+  milestone_type: string;
+  timestamp: string;
+  location_name: string;
+  facility_id: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  temperature_celsius: number;
+  temperature_status: string;
+  custodian_id: string;
+  custodian_name: string;
+  custodian_role: string;
+  carrier: string | null;
+  tracking_number: string | null;
+  seal_intact: boolean;
+  seal_id: string | null;
+  dry_shipper_id: string | null;
+  electronic_signature: Record<string, any> | null;
+  notes: string | null;
+}
+
+const stagesList = [
+  { key: 'APHERESIS_COLLECTION', label: '1. Apheresis' },
+  { key: 'CRYOPRESERVATION', label: '2. Cryopreservation' },
+  { key: 'COURIER_TRANSIT_OUTBOUND', label: '3. Outbound Transit' },
+  { key: 'MANUFACTURING_PROCESSING', label: '4. Manufacturing' },
+  { key: 'COURIER_TRANSIT_RETURN', label: '5. Return Transit' },
+  { key: 'SITE_RECEIPT_AND_STORAGE', label: '6. Site Storage' },
+  { key: 'BEDSIDE_VERIFICATION', label: '7. Bedside Verify' },
+  { key: 'INFUSION_ADMINISTRATION', label: '8. Infusion' },
+  { key: 'DESTRUCTION', label: '9. Destruction' },
+];
+
+const filters = reactive({
+  study_id: 'STUDY-CGT-801',
+  studyId: 'STUDY-CGT-801',
+  subjectId: 'SUBJ-101-0042',
+});
+
+const cocData = ref<CGTChainOfCustody | null>(null);
+const milestones = ref<CGTMilestone[]>([]);
+const isLoading = ref(false);
+
+const scanTestInput = ref('');
+const scanResult = ref<{ is_valid: boolean; failure_reason?: string } | null>(null);
+
+// Modal visibility flags
+const showApheresisModal = ref(false);
+const showBedsideModal = ref(false);
+const showDestructionModal = ref(false);
+const showMilestoneModal = ref(false);
+const showManufacturingModal = ref(false);
+
+// Forms
+const apheresisForm = reactive({
+  study_id: 'STUDY-CGT-801',
+  site_id: 'SITE-101',
+  subject_id: 'SUBJ-101-0042',
+  din: '',
+  collector_id: 'nurse_smith',
+  collector_name: 'Sarah Smith, RN',
+  collector_role: 'Apheresis Nurse',
+  initial_temp_celsius: -196.0,
+  dry_shipper_id: 'DEWAR-LN2-9901',
+  seal_id: 'SEAL-4482',
+});
+
+const bedsideForm = reactive({
+  scanned_wristband_subject_id: '',
+  scanned_bag_barcode: '',
+  primary_verifier_id: 'nurse_smith',
+  primary_verifier_name: 'Sarah Smith, RN',
+  primary_verifier_role: 'Bedside Nurse',
+  primary_signature_token: 'valid-nurse-sig-token-12345',
+  secondary_verifier_id: 'dr_johnson_pi',
+  secondary_verifier_name: 'Dr. Robert Johnson, MD',
+  secondary_verifier_role: 'Principal Investigator',
+  secondary_signature_token: 'valid-pi-sig-token-67890',
+});
+
+const destructionForm = reactive({
+  study_id: 'STUDY-CGT-801',
+  site_id: 'SITE-101',
+  lot_number: 'LOT-CAR-T-2026-01',
+  kit_numbers_str: 'KIT-CGT-001',
+  vial_identifiers_str: 'VIAL-001-A',
+  destruction_reason: 'Residual post-infusion cell disposal.',
+  destruction_method: 'HIGH_TEMPERATURE_INCINERATION',
+  destruction_facility: 'Bio-Hazard Incineration Facility 1',
+  witness_1_id: 'pharmacist_lee',
+  witness_1_name: 'David Lee, PharmD',
+  witness_1_role: 'Investigational Pharmacist',
+  witness_1_signature_token: 'pharm-token-111',
+  witness_2_id: 'dr_johnson_pi',
+  witness_2_name: 'Dr. Robert Johnson, MD',
+  witness_2_role: 'Principal Investigator',
+  witness_2_signature_token: 'pi-token-222',
+});
+
+function isStageComplete(stageKey: string): boolean {
+  if (!cocData.value) return false;
+  const stageOrder = stagesList.map(s => s.key);
+  const currentIdx = stageOrder.indexOf(cocData.value.current_stage);
+  const targetIdx = stageOrder.indexOf(stageKey);
+  return targetIdx < currentIdx;
+}
+
+function formatDateTime(isoStr?: string | null): string {
+  if (!isoStr) return '-';
+  const d = new Date(isoStr);
+  return d.toISOString().replace('T', ' ').substring(0, 19);
+}
+
+async function fetchTraceability() {
+  if (!filters.studyId || !filters.subjectId) return;
+  isLoading.value = true;
+  try {
+    const res = await fetch(`/api/v1/execution/rtsm/cgt/chain-of-custody/${filters.studyId}/${filters.subjectId}`);
+    if (res.ok) {
+      const data = await res.json();
+      cocData.value = data.chain_of_custody;
+      milestones.value = data.milestones || [];
+      if (cocData.value) {
+        bedsideForm.scanned_wristband_subject_id = cocData.value.subject_id;
+        bedsideForm.scanned_bag_barcode = cocData.value.tamper_evident_barcode || '';
+      }
+    } else {
+      cocData.value = null;
+      milestones.value = [];
+    }
+  } catch (err) {
+    console.error('Failed to load COC traceability', err);
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+async function testScanBarcode() {
+  if (!scanTestInput.value) return;
+  try {
+    const res = await fetch('/api/v1/execution/rtsm/cgt/verify-barcode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        barcode_payload: scanTestInput.value,
+        expected_subject_id: cocData.value?.subject_id,
+        expected_din: cocData.value?.din,
+      }),
+    });
+    scanResult.value = await res.json();
+  } catch (err) {
+    scanResult.value = { is_valid: false, failure_reason: 'Verification request failed' };
+  }
+}
+
+function openApheresisModal() {
+  apheresisForm.study_id = filters.studyId;
+  apheresisForm.subject_id = filters.subjectId;
+  showApheresisModal.value = true;
+}
+
+async function submitApheresis() {
+  try {
+    const res = await fetch('/api/v1/execution/rtsm/cgt/apheresis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-change-justification': 'Initial apheresis harvest' },
+      body: JSON.stringify(apheresisForm),
+    });
+    if (res.ok) {
+      showApheresisModal.value = false;
+      await fetchTraceability();
+    }
+  } catch (err) {
+    console.error('Failed to initialize apheresis', err);
+  }
+}
+
+function openBedsideModal() {
+  showBedsideModal.value = true;
+}
+
+async function submitBedsideVerify() {
+  if (!cocData.value) return;
+  try {
+    const res = await fetch('/api/v1/execution/rtsm/cgt/bedside-verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-change-justification': 'Bedside dual verification' },
+      body: JSON.stringify({
+        coc_id: cocData.value.id,
+        ...bedsideForm,
+      }),
+    });
+    if (res.ok) {
+      showBedsideModal.value = false;
+      await fetchTraceability();
+    }
+  } catch (err) {
+    console.error('Bedside verification failed', err);
+  }
+}
+
+function openDestructionModal() {
+  if (cocData.value) {
+    destructionForm.study_id = cocData.value.study_id;
+  }
+  showDestructionModal.value = true;
+}
+
+async function submitDestruction() {
+  try {
+    const kit_numbers = destructionForm.kit_numbers_str.split(',').map(s => s.trim()).filter(Boolean);
+    const vial_identifiers = destructionForm.vial_identifiers_str.split(',').map(s => s.trim()).filter(Boolean);
+    const res = await fetch('/api/v1/execution/rtsm/cgt/destruction-certificate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-change-justification': 'Product destruction' },
+      body: JSON.stringify({
+        study_id: destructionForm.study_id,
+        site_id: destructionForm.site_id,
+        lot_number: destructionForm.lot_number,
+        kit_numbers,
+        vial_identifiers,
+        destruction_reason: destructionForm.destruction_reason,
+        destruction_method: destructionForm.destruction_method,
+        destruction_facility: destructionForm.destruction_facility,
+        witness_1_id: destructionForm.witness_1_id,
+        witness_1_name: destructionForm.witness_1_name,
+        witness_1_role: destructionForm.witness_1_role,
+        witness_1_signature_token: destructionForm.witness_1_signature_token,
+        witness_2_id: destructionForm.witness_2_id,
+        witness_2_name: destructionForm.witness_2_name,
+        witness_2_role: destructionForm.witness_2_role,
+        witness_2_signature_token: destructionForm.witness_2_signature_token,
+        coc_id: cocData.value?.id,
+      }),
+    });
+    if (res.ok) {
+      showDestructionModal.value = false;
+      await fetchTraceability();
+    }
+  } catch (err) {
+    console.error('Destruction certification failed', err);
+  }
+}
+
+onMounted(() => {
+  fetchTraceability();
+});
+</script>
+
+<style scoped>
+/* Pure Vanilla CSS Tokens — 0 Tailwind Classes */
+.cgt-coc-console {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 1.5rem);
+  padding: var(--space-4, 1.5rem);
+  background-color: var(--color-bg-base, #f8fafc);
+  color: var(--color-text-main, #0f172a);
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+}
+
+.console-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-3, 1rem);
+}
+
+.header-badge-row {
+  display: flex;
+  gap: var(--space-2, 0.5rem);
+  margin-bottom: var(--space-2, 0.5rem);
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-text-main, #0f172a);
+}
+
+.subtitle {
+  font-size: 0.875rem;
+  color: var(--color-text-muted, #64748b);
+  margin: 0.25rem 0 0 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: var(--space-2, 0.5rem);
+}
+
+.card {
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  padding: var(--space-4, 1.5rem);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+.filter-panel {
+  display: flex;
+  gap: var(--space-4, 1.5rem);
+  align-items: flex-end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.filter-group label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-text-muted, #64748b);
+}
+
+.filter-group input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border, #cbd5e1);
+  border-radius: var(--radius-sm, 4px);
+  font-size: 0.875rem;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3, 1rem);
+}
+
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted, #64748b);
+  text-transform: uppercase;
+}
+
+.metric-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text-main, #0f172a);
+}
+
+.metric-sub {
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #64748b);
+}
+
+.card-excursion {
+  border-left: 4px solid var(--color-danger, #ef4444);
+}
+
+.lifecycle-ribbon {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 1rem);
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-text-main, #0f172a);
+}
+
+.stages-track {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  overflow-x: auto;
+  padding: var(--space-2, 0.5rem) 0;
+}
+
+.stage-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 100px;
+  text-align: center;
+}
+
+.node-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.75rem;
+  background: var(--color-border, #e2e8f0);
+  color: var(--color-text-muted, #64748b);
+}
+
+.stage-complete .node-circle {
+  background: var(--color-success-bg, #dcfce7);
+  color: var(--color-success, #16a34a);
+}
+
+.stage-current .node-circle {
+  background: var(--color-primary, #3b82f6);
+  color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+.node-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.action-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3, 1rem);
+}
+
+.toolbar-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.toolbar-hint {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #64748b);
+  margin: 0;
+}
+
+.toolbar-buttons {
+  display: flex;
+  gap: var(--space-2, 0.5rem);
+  flex-wrap: wrap;
+}
+
+.barcode-verification-card {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: var(--space-4, 1.5rem);
+}
+
+.barcode-meta {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #64748b);
+}
+
+.hash-display {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.8rem;
+}
+
+.hash-code {
+  font-family: monospace;
+  background: var(--color-bg-base, #f1f5f9);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.payload-textarea {
+  width: 100%;
+  font-family: monospace;
+  font-size: 0.75rem;
+  background: var(--color-bg-base, #f8fafc);
+  border: 1px solid var(--color-border, #cbd5e1);
+  border-radius: 4px;
+  padding: 0.5rem;
+}
+
+.scan-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border, #cbd5e1);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.scan-result {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.scan-valid {
+  background: var(--color-success-bg, #dcfce7);
+  color: var(--color-success-text, #166534);
+}
+
+.scan-invalid {
+  background: var(--color-danger-bg, #fee2e2);
+  color: var(--color-danger-text, #991b1b);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.table th, .table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  text-align: left;
+}
+
+.table th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-text-muted, #64748b);
+  background: var(--color-bg-subtle, #f8fafc);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-cgt { background: #e0e7ff; color: #3730a3; }
+.badge-gxp { background: #fef3c7; color: #92400e; }
+.badge-isbt { background: #dbeafe; color: #1e40af; }
+.badge-unlocked { background: #dcfce7; color: #166534; }
+.badge-quarantine { background: #fee2e2; color: #991b1b; }
+.badge-stage { background: #f1f5f9; color: #475569; }
+
+.btn {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm, 4px);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-primary { background: var(--color-primary, #3b82f6); color: #ffffff; }
+.btn-secondary { background: var(--color-surface, #ffffff); border-color: var(--color-border, #cbd5e1); color: var(--color-text-main, #0f172a); }
+.btn-outline { background: transparent; border-color: var(--color-border, #cbd5e1); color: var(--color-text-main, #0f172a); }
+.btn-stepup { background: #7c3aed; color: #ffffff; }
+.btn-infuse { background: #16a34a; color: #ffffff; }
+.btn-danger { background: #dc2626; color: #ffffff; }
+.btn-danger-outline { background: transparent; border-color: #f87171; color: #dc2626; }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal-card {
+  background: var(--color-surface, #ffffff);
+  border-radius: var(--radius-md, 8px);
+  padding: var(--space-4, 1.5rem);
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-lg {
+  max-width: 760px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.btn-close {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.col-full { grid-column: span 2; }
+.col-half { grid-column: span 1; }
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.form-group label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted, #64748b);
+}
+
+.form-group input, .form-group select, .form-group textarea {
+  padding: 0.5rem;
+  border: 1px solid var(--color-border, #cbd5e1);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.verifier-panel {
+  background: var(--color-bg-subtle, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.verifier-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: #475569;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.code-font { font-family: monospace; }
+.text-danger { color: #dc2626; }
+.text-success { color: #16a34a; }
+.text-muted { color: #94a3b8; }
+.font-bold { font-weight: 700; }
+</style>

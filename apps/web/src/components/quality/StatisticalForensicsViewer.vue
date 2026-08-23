@@ -219,7 +219,35 @@
       >
         📉 Variance Shrinkage &amp; KL Divergence
       </button>
+      <button
+        role="tab"
+        :aria-selected="activeSubTab === 'duplicate-patients'"
+        class="tab-btn"
+        :class="{ active: activeSubTab === 'duplicate-patients' }"
+        @click="activeSubTab = 'duplicate-patients'"
+      >
+        👥 Duplicate Patient Records
+      </button>
+      <button
+        role="tab"
+        :aria-selected="activeSubTab === 'temporal'"
+        class="tab-btn"
+        :class="{ active: activeSubTab === 'temporal' }"
+        @click="activeSubTab = 'temporal'"
+      >
+        ⏱️ Temporal &amp; Behavioral Scanner
+      </button>
+      <button
+        role="tab"
+        :aria-selected="activeSubTab === 'phash'"
+        class="tab-btn"
+        :class="{ active: activeSubTab === 'phash' }"
+        @click="activeSubTab = 'phash'"
+      >
+        🖼️ Perceptual Image Hashing (pHash)
+      </button>
     </nav>
+
 
     <!-- Main Content Area -->
     <div class="tab-pane-container">
@@ -813,7 +841,302 @@
           </div>
         </div>
       </section>
+
+      <!-- TAB 6: Duplicate Patient Record Sentinel -->
+      <section
+        v-if="activeSubTab === 'duplicate-patients'"
+        class="tab-pane"
+      >
+        <div class="pane-header-row">
+          <div class="pane-title-group">
+            <h3 class="pane-title">
+              Cross-Site Duplicate Patient Record &amp; Vector Fingerprint Sentinel
+            </h3>
+            <p class="pane-description">
+              Surveillance under PRD-CSM-004 detecting identical or near-identical baseline clinical feature vectors across subjects (Demographics, 12-Lead ECG intervals, vital signs, and laboratory panels).
+            </p>
+          </div>
+          <div class="pane-action-group">
+            <button
+              class="csm-btn csm-btn-primary"
+              :disabled="isLoading"
+              @click="runDuplicatePatientScan"
+            >
+              <span class="btn-icon">🔍</span> Run Duplicate Vector Scan
+            </button>
+          </div>
+        </div>
+
+        <div class="sentinel-summary-bar">
+          <div class="summary-metric">
+            <span class="metric-num">{{ duplicateMatches.length }}</span>
+            <span class="metric-label">Flagged Duplicate Matches</span>
+          </div>
+          <div class="summary-metric">
+            <span class="metric-num text-danger">{{ crossSiteMatchesCount }}</span>
+            <span class="metric-label">Cross-Site Duplications</span>
+          </div>
+          <div class="summary-metric">
+            <span class="metric-num text-warning">{{ (highestSimilarity * 100).toFixed(1) }}%</span>
+            <span class="metric-label">Max Vector Similarity</span>
+          </div>
+        </div>
+
+        <div class="findings-cards-list">
+          <div
+            v-for="(match, idx) in duplicateMatches"
+            :key="idx"
+            class="finding-card"
+            :class="{ 'finding-card-critical': match.severity === 'CRITICAL' }"
+          >
+            <div class="finding-card-header">
+              <div class="finding-badge-row">
+                <span
+                  class="badge"
+                  :class="match.severity === 'CRITICAL' ? 'badge-danger' : 'badge-warning'"
+                >
+                  {{ match.severity }}
+                </span>
+                <span
+                  v-if="match.is_cross_site"
+                  class="badge badge-danger"
+                >
+                  CROSS-SITE MATCH
+                </span>
+                <span class="badge badge-standard">
+                  Confidence: {{ (match.confidence_score * 100).toFixed(0) }}%
+                </span>
+              </div>
+              <span class="similarity-score-pill">
+                {{ (match.similarity_score * 100).toFixed(1) }}% Match
+              </span>
+            </div>
+
+            <div class="finding-subjects-comparison">
+              <div class="subject-box">
+                <div class="subject-role">
+                  Primary Subject
+                </div>
+                <div class="subject-id-val">
+                  {{ match.primary_subject_id }}
+                </div>
+                <div class="subject-site-val">
+                  Site: {{ match.primary_site_id }}
+                </div>
+              </div>
+              <div class="comparison-connector">
+                ⮂ <span>VECTOR SIMILARITY</span> ⮃
+              </div>
+              <div class="subject-box">
+                <div class="subject-role">
+                  Matched Subject
+                </div>
+                <div class="subject-id-val">
+                  {{ match.matched_subject_id }}
+                </div>
+                <div class="subject-site-val">
+                  Site: {{ match.matched_site_id }}
+                </div>
+              </div>
+            </div>
+
+            <p class="finding-evidence-text">
+              {{ match.evidence_summary }}
+            </p>
+
+            <div class="vector-subscores-grid">
+              <div class="subscore-item">
+                <span class="subscore-label">Demographics</span>
+                <div class="subscore-bar-bg">
+                  <div
+                    class="subscore-bar-fill"
+                    :style="{ width: `${(match.forensic_metadata?.sub_scores?.demographics || 1) * 100}%` }"
+                  />
+                </div>
+                <span class="subscore-val">{{ ((match.forensic_metadata?.sub_scores?.demographics || 1) * 100).toFixed(0) }}%</span>
+              </div>
+              <div class="subscore-item">
+                <span class="subscore-label">ECG Intervals</span>
+                <div class="subscore-bar-bg">
+                  <div
+                    class="subscore-bar-fill"
+                    :style="{ width: `${(match.forensic_metadata?.sub_scores?.ecg_intervals || 1) * 100}%` }"
+                  />
+                </div>
+                <span class="subscore-val">{{ ((match.forensic_metadata?.sub_scores?.ecg_intervals || 1) * 100).toFixed(0) }}%</span>
+              </div>
+              <div class="subscore-item">
+                <span class="subscore-label">Lab Chemistry</span>
+                <div class="subscore-bar-bg">
+                  <div
+                    class="subscore-bar-fill"
+                    :style="{ width: `${(match.forensic_metadata?.sub_scores?.lab_panel || 1) * 100}%` }"
+                  />
+                </div>
+                <span class="subscore-val">{{ ((match.forensic_metadata?.sub_scores?.lab_panel || 1) * 100).toFixed(0) }}%</span>
+              </div>
+            </div>
+
+            <div class="finding-actions-row">
+              <button
+                class="csm-btn csm-btn-primary csm-btn-sm"
+                @click="dispatchInvestigationAlert(match)"
+              >
+                🚨 Dispatch 21 CFR Part 11 Investigation Ticket
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 7: Temporal & Behavioral Anomaly Scanner -->
+      <section
+        v-if="activeSubTab === 'temporal'"
+        class="tab-pane"
+      >
+        <div class="pane-header-row">
+          <div class="pane-title-group">
+            <h3 class="pane-title">
+              Temporal &amp; Behavioral Data Entry Anomaly Scanner
+            </h3>
+            <p class="pane-description">
+              Surveillance under PRD-CSM-003 detecting suspicious data entry clusters during non-working hours, rapid burst submissions (&lt; 10s intervals), and identical inter-procedure elapsed intervals across subjects.
+            </p>
+          </div>
+          <div class="pane-action-group">
+            <button
+              class="csm-btn csm-btn-primary"
+              :disabled="isLoading"
+              @click="runTemporalScan"
+            >
+              <span class="btn-icon">⏱️</span> Scan Timing Patterns
+            </button>
+          </div>
+        </div>
+
+        <div class="temporal-findings-grid">
+          <div
+            v-for="(anom, idx) in temporalAnomalies"
+            :key="idx"
+            class="temporal-card"
+            :class="{ 'temporal-card-alert': anom.severity === 'CRITICAL' }"
+          >
+            <div class="temporal-card-header">
+              <span
+                class="badge"
+                :class="anom.severity === 'CRITICAL' ? 'badge-danger' : 'badge-warning'"
+              >
+                {{ anom.anomaly_flag }}
+              </span>
+              <span class="site-tag">Site: {{ anom.primary_site_id }}</span>
+            </div>
+            <h4 class="temporal-title">
+              {{ anom.anomaly_flag === 'RAPID_BURST_SUBMISSION' ? 'Superhuman Rapid Burst Submissions' : (anom.anomaly_flag === 'IDENTICAL_PROCEDURE_INTERVALS' ? 'Identical Inter-Procedure Elapsed Intervals' : 'Off-Hours & Weekend Submission Cluster') }}
+            </h4>
+            <p class="temporal-evidence">
+              {{ anom.evidence_summary }}
+            </p>
+            <div class="temporal-footer">
+              <span class="confidence-text">Confidence: {{ (anom.confidence_score * 100).toFixed(0) }}%</span>
+              <button
+                class="csm-btn csm-btn-primary csm-btn-sm"
+                @click="dispatchInvestigationAlert(anom)"
+              >
+                Dispatch Deviation
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 8: Perceptual Image Hashing (pHash) Sentinel -->
+      <section
+        v-if="activeSubTab === 'phash'"
+        class="tab-pane"
+      >
+        <div class="pane-header-row">
+          <div class="pane-title-group">
+            <h3 class="pane-title">
+              Perceptual Image Hashing (pHash / dHash) Sentinel
+            </h3>
+            <p class="pane-description">
+              Surveillance under PRD-CSM-004 computing 64-bit DCT perceptual image hashes to detect reused, rotated, cropped, or brightness-adjusted radiological scans across clinical trial subjects.
+            </p>
+          </div>
+          <div class="pane-action-group">
+            <button
+              class="csm-btn csm-btn-primary"
+              :disabled="isLoading"
+              @click="runImagePhashScan"
+            >
+              <span class="btn-icon">🖼️</span> Execute pHash Scan
+            </button>
+          </div>
+        </div>
+
+        <div class="phash-findings-list">
+          <div
+            v-for="(imgMatch, idx) in imageDuplicates"
+            :key="idx"
+            class="phash-card"
+          >
+            <div class="phash-card-header">
+              <div class="badge-row">
+                <span class="badge badge-danger">IMAGE REUSE DETECTED</span>
+                <span class="badge badge-warning">Transformation: {{ imgMatch.transformation_type || 'ROTATED_90' }}</span>
+                <span class="badge badge-standard">Hamming Distance: {{ imgMatch.hamming_distance }}</span>
+              </div>
+              <span class="similarity-score-pill">
+                {{ (imgMatch.similarity_score * 100).toFixed(1) }}% Match
+              </span>
+            </div>
+
+            <div class="phash-comparison-view">
+              <div class="image-preview-box">
+                <div class="image-mock-canvas">
+                  🩻 [CT Slice #101]
+                </div>
+                <div class="image-meta">
+                  <strong>Subject:</strong> {{ imgMatch.primary_subject_id }} ({{ imgMatch.primary_site_id }})<br>
+                  <strong>Hash:</strong> <code>{{ imgMatch.forensic_metadata?.primary_phash || 'a3f01b92c4d5e678' }}</code>
+                </div>
+              </div>
+
+              <div class="phash-vs-badge">
+                <div class="hamming-circle">
+                  Δ = {{ imgMatch.hamming_distance }}
+                </div>
+                <span>MATCH</span>
+              </div>
+
+              <div class="image-preview-box">
+                <div class="image-mock-canvas image-rotated">
+                  🩻 [CT Slice #104 (Rotated)]
+                </div>
+                <div class="image-meta">
+                  <strong>Subject:</strong> {{ imgMatch.matched_subject_id }} ({{ imgMatch.matched_site_id }})<br>
+                  <strong>Hash:</strong> <code>{{ imgMatch.forensic_metadata?.matched_phash || 'a3f01b92c4d5e678' }}</code>
+                </div>
+              </div>
+            </div>
+
+            <p class="finding-evidence-text">
+              {{ imgMatch.evidence_summary }}
+            </p>
+
+            <div class="finding-actions-row">
+              <button
+                class="csm-btn csm-btn-primary csm-btn-sm"
+                @click="dispatchInvestigationAlert(imgMatch)"
+              >
+                🚨 Log GCP Investigation Deviation &amp; Quarantine Attachment
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
+
 
     <!-- Forensics Dossier Modal -->
     <div
@@ -887,15 +1210,28 @@ const selectedDrilldownSiteId = ref('');
 
 const activeRun = ref(null);
 const siteRecords = ref([]);
+const duplicateMatches = ref([]);
+const temporalAnomalies = ref([]);
+const imageDuplicates = ref([]);
 
 // Computed KPIs
 const anomalousSitesCount = computed(() => {
   return siteRecords.value.filter(s => s.is_anomalous_outlier).length;
 });
 
+const crossSiteMatchesCount = computed(() => {
+  return duplicateMatches.value.filter(m => m.is_cross_site).length;
+});
+
+const highestSimilarity = computed(() => {
+  if (duplicateMatches.value.length === 0) return 0;
+  return Math.max(...duplicateMatches.value.map(m => m.similarity_score || 0));
+});
+
 const benfordNonConformCount = computed(() => {
   return siteRecords.value.filter(s => s.benford?.conformity === 'NON_CONFORMING').length;
 });
+
 
 const severeRoundingCount = computed(() => {
   return siteRecords.value.filter(s => s.terminal_digit?.rounding_bias_tier === 'SEVERE_ROUNDING').length;
@@ -1187,6 +1523,88 @@ function generateSimulatedDataset() {
 
     siteRecords.value = mockSites;
     selectedDrilldownSiteId.value = mockSites[1].site_id;
+
+    duplicateMatches.value = [
+      {
+        primary_subject_id: 'SUBJ-101-001',
+        primary_site_id: 'SITE-101',
+        matched_subject_id: 'SUBJ-104-099',
+        matched_site_id: 'SITE-104',
+        is_cross_site: true,
+        similarity_score: 0.985,
+        confidence_score: 0.98,
+        severity: 'CRITICAL',
+        evidence_summary: 'Cross-Site duplicate clinical vector match between SUBJ-101-001 (SITE-101) and SUBJ-104-099 (SITE-104) with 98.5% composite vector similarity (100% ECG intervals & Lab panels).',
+        forensic_metadata: {
+          sub_scores: {
+            demographics: 0.96,
+            ecg_intervals: 1.00,
+            lab_panel: 1.00,
+          },
+        },
+      },
+      {
+        primary_subject_id: 'SUBJ-102-008',
+        primary_site_id: 'SITE-102',
+        matched_subject_id: 'SUBJ-102-014',
+        matched_site_id: 'SITE-102',
+        is_cross_site: false,
+        similarity_score: 0.892,
+        confidence_score: 0.89,
+        severity: 'MAJOR',
+        evidence_summary: 'Intra-Site potential duplicate subject record detected with 89.2% baseline feature similarity.',
+        forensic_metadata: {
+          sub_scores: {
+            demographics: 0.88,
+            ecg_intervals: 0.92,
+            lab_panel: 0.86,
+          },
+        },
+      },
+    ];
+
+    temporalAnomalies.value = [
+      {
+        primary_site_id: 'SITE-TEMPORAL-ANOMALY',
+        anomaly_flag: 'OFF_HOURS_BURST_ANOMALY',
+        severity: 'CRITICAL',
+        confidence_score: 0.95,
+        evidence_summary: "Site 'SITE-TEMPORAL-ANOMALY' exhibits 78.4% off-hours entries, 8 weekend submissions, and 6 midnight entries.",
+      },
+      {
+        primary_site_id: 'SITE-TEMPORAL-ANOMALY',
+        anomaly_flag: 'RAPID_BURST_SUBMISSION',
+        severity: 'CRITICAL',
+        confidence_score: 0.92,
+        evidence_summary: "Site 'SITE-TEMPORAL-ANOMALY' triggered rapid burst submission sentinel: 10 entries submitted at < 4.0s intervals, indicating scripted bot entry.",
+      },
+      {
+        primary_site_id: 'SITE-IDENTICAL-INTERVALS',
+        anomaly_flag: 'IDENTICAL_PROCEDURE_INTERVALS',
+        severity: 'CRITICAL',
+        confidence_score: 0.98,
+        evidence_summary: "Site 'SITE-IDENTICAL-INTERVALS' recorded identical procedure elapsed interval of 870s (14m 30s) across 5 different subjects for 'VITALS_TO_BLOOD_DRAW'.",
+      },
+    ];
+
+    imageDuplicates.value = [
+      {
+        primary_subject_id: 'SUBJ-101-001',
+        primary_site_id: 'SITE-101',
+        matched_subject_id: 'SUBJ-104-099',
+        matched_site_id: 'SITE-104',
+        hamming_distance: 2,
+        similarity_score: 0.969,
+        transformation_type: 'ROTATED_90',
+        severity: 'CRITICAL',
+        evidence_summary: "Medical image duplication detected (CHEST_CT): Image 'IMG-101-BL' for Subject 'SUBJ-101-001' (SITE-101) matches Image 'IMG-104-099' for Subject 'SUBJ-104-099' (SITE-104) with Hamming distance 2 (96.9% similarity, 90-deg rotation).",
+        forensic_metadata: {
+          primary_phash: 'd4e5f60123456789',
+          matched_phash: 'd4e5f6012345678b',
+        },
+      },
+    ];
+
     activeRun.value = {
       id: `RUN-${Date.now().toString().slice(-6)}`,
       study_id: selectedStudyId.value,
@@ -1204,6 +1622,34 @@ function executeSurveillanceScan() {
   generateSimulatedDataset();
 }
 
+function runDuplicatePatientScan() {
+  isLoading.value = true;
+  setTimeout(() => {
+    isLoading.value = false;
+    alert('Duplicate Patient Record Scan completed: 2 matches identified (1 cross-site CRITICAL).');
+  }, 350);
+}
+
+function runTemporalScan() {
+  isLoading.value = true;
+  setTimeout(() => {
+    isLoading.value = false;
+    alert('Temporal & Behavioral Anomaly Scan completed: 3 timing anomalies detected.');
+  }, 350);
+}
+
+function runImagePhashScan() {
+  isLoading.value = true;
+  setTimeout(() => {
+    isLoading.value = false;
+    alert('Perceptual Image Hashing (pHash) Scan completed: 1 rotated duplicate scan detected across sites.');
+  }, 350);
+}
+
+function dispatchInvestigationAlert(item) {
+  alert(`Dispatched 21 CFR Part 11 Data Integrity Investigation Deviation for ${item.primary_subject_id || item.primary_site_id} with full cryptographic audit trail.`);
+}
+
 function dispatchAllKriAlerts() {
   alert(`Successfully dispatched automated KRI breach events for ${anomalousSitesCount.value} outlier sites under ICH E6(R2)/(R3).`);
 }
@@ -1211,6 +1657,7 @@ function dispatchAllKriAlerts() {
 onMounted(() => {
   generateSimulatedDataset();
 });
+
 </script>
 
 <style scoped>
@@ -2114,4 +2561,322 @@ onMounted(() => {
   gap: 10px;
   background-color: #f8fafc;
 }
+
+/* ==========================================================================
+   Data Integrity Sentinels (Duplicate Patients, Temporal & pHash) Styles
+   ========================================================================== */
+
+.sentinel-summary-bar {
+  display: flex;
+  gap: 20px;
+  background-color: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.summary-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metric-num {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.metric-num.text-danger {
+  color: #dc2626;
+}
+
+.metric-num.text-warning {
+  color: #d97706;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.findings-cards-list,
+.phash-findings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.finding-card,
+.phash-card {
+  background-color: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.finding-card-critical,
+.temporal-card-alert {
+  border-left: 4px solid #dc2626;
+}
+
+.finding-card-header,
+.phash-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.finding-badge-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.similarity-score-pill {
+  padding: 4px 10px;
+  background-color: #fee2e2;
+  color: #991b1b;
+  font-size: 0.8rem;
+  font-weight: 800;
+  border-radius: 16px;
+}
+
+.finding-subjects-comparison {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 16px;
+  align-items: center;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.subject-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subject-role {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.subject-id-val {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.subject-site-val {
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.comparison-connector {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #0284c7;
+  text-align: center;
+}
+
+.finding-evidence-text {
+  font-size: 0.85rem;
+  color: #334155;
+  line-height: 1.45;
+}
+
+.vector-subscores-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.subscore-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+}
+
+.subscore-label {
+  font-weight: 600;
+  color: #475569;
+  min-width: 90px;
+}
+
+.subscore-bar-bg {
+  flex: 1;
+  height: 8px;
+  background-color: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.subscore-bar-fill {
+  height: 100%;
+  background-color: #0284c7;
+  border-radius: 4px;
+}
+
+.subscore-val {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.finding-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 6px;
+}
+
+.csm-btn-sm {
+  padding: 6px 12px;
+  font-size: 0.78rem;
+}
+
+/* Temporal Cards */
+.temporal-findings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.temporal-card {
+  background-color: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.temporal-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.site-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.temporal-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.temporal-evidence {
+  font-size: 0.82rem;
+  color: #475569;
+  line-height: 1.45;
+  flex: 1;
+}
+
+.temporal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.confidence-text {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+/* pHash Image Cards */
+.phash-comparison-view {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 20px;
+  align-items: center;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.image-preview-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  text-align: center;
+}
+
+.image-mock-canvas {
+  width: 140px;
+  height: 140px;
+  background-color: #0f172a;
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  border: 2px solid #334155;
+}
+
+.image-rotated {
+  transform: rotate(90deg);
+  border-color: #f59e0b;
+}
+
+.image-meta {
+  font-size: 0.75rem;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.image-meta code {
+  background-color: #e2e8f0;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.phash-vs-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.hamming-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #fee2e2;
+  color: #991b1b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.phash-vs-badge span {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #64748b;
+}
 </style>
+

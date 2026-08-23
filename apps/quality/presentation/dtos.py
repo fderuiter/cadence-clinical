@@ -13,11 +13,15 @@ from apps.quality.domain.models import (
     BreachStatus,
     CAPAStatus,
     CAPAType,
+    DataIntegrityFindingStatus,
+    DataIntegritySentinelType,
     DeviationSeverity,
     DeviationStatus,
     DeviationType,
     EffectivenessOutcome,
     FindingSeverity,
+    ForensicsAnomalyFlag,
+    ImageTransformationType,
     RCAMethodology,
     RiskCategory,
     RiskTier,
@@ -806,3 +810,232 @@ class ForensicsSimulationResponse(BaseModel):
     total_sites: int
     total_observations: int
     simulated_anomalies: list[str]
+
+
+# --- Data Integrity Sentinel DTOs (PRD-CSM-003, PRD-CSM-004) ---
+
+
+class SubjectClinicalVectorPayload(BaseModel):
+    subject_id: str = Field(..., description="Subject unique identifier")
+    site_id: str = Field(..., description="Clinical site ID")
+    study_id: str = Field(..., description="Study ID")
+    demographics: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Demographics: age, sex, race, ethnicity, height_cm, weight_kg, bmi, blood_type",
+    )
+    vital_signs: dict[str, float] = Field(
+        default_factory=dict,
+        description="Baseline vital signs: systolic_bp, diastolic_bp, heart_rate, respiratory_rate, temp",
+    )
+    ecg_intervals: dict[str, float] = Field(
+        default_factory=dict,
+        description="12-Lead ECG intervals: pr_interval_ms, qrs_duration_ms, qt_interval_ms, qtc_ms, rr_interval_ms",
+    )
+    lab_panel: dict[str, float] = Field(
+        default_factory=dict,
+        description="Baseline laboratory panel: creatinine, alt, ast, fasting_glucose, hemoglobin, etc.",
+    )
+    medical_history: list[str] = Field(
+        default_factory=list,
+        description="Baseline medical history ICD-10 codes or disease strings",
+    )
+
+
+class DuplicatePatientScanRequest(BaseModel):
+    study_id: str = Field(..., description="Study ID")
+    subjects: list[SubjectClinicalVectorPayload] | None = Field(
+        None, description="List of baseline subject clinical vector payloads"
+    )
+    raw_subjects: list[dict[str, Any]] | None = Field(
+        None, description="Optional raw dictionary format for subject vectors"
+    )
+    similarity_threshold: float = Field(
+        0.82,
+        ge=0.50,
+        le=1.0,
+        description="Minimum composite similarity threshold to flag duplicate",
+    )
+    auto_dispatch_investigation: bool = Field(
+        True,
+        description="Automatically dispatch Part 11 investigation deviation if critical match",
+    )
+
+
+class AuditEventPayload(BaseModel):
+    entry_id: str = Field(..., description="Audit event identifier")
+    subject_id: str = Field(..., description="Subject identifier")
+    site_id: str = Field(..., description="Site identifier")
+    user_id: str = Field(..., description="User identifier")
+    timestamp: str = Field(..., description="ISO datetime timestamp of event")
+    assessment_type: str = Field(..., description="Assessment or form type")
+    procedure_pair: str | None = Field(
+        None, description="Procedure pair identifier for elapsed interval evaluation"
+    )
+    elapsed_time_seconds: float | None = Field(
+        None, description="Inter-procedure elapsed interval in seconds"
+    )
+
+
+class TemporalAnomalyScanRequest(BaseModel):
+    study_id: str = Field(..., description="Study ID")
+    audit_events: list[AuditEventPayload] | None = Field(
+        None, description="List of data entry audit events"
+    )
+    raw_events: list[dict[str, Any]] | None = Field(
+        None, description="Optional raw dictionary format of audit events"
+    )
+    work_hour_start: int = Field(
+        7, ge=0, le=23, description="Clinic opening hour (0-23)"
+    )
+    work_hour_end: int = Field(
+        19, ge=0, le=23, description="Clinic closing hour (0-23)"
+    )
+    auto_dispatch_investigation: bool = Field(
+        True,
+        description="Automatically dispatch Part 11 investigation deviation if critical anomaly",
+    )
+
+
+class ImageAttachmentPayload(BaseModel):
+    image_id: str = Field(..., description="Image attachment identifier")
+    subject_id: str = Field(..., description="Subject identifier")
+    site_id: str = Field(..., description="Site identifier")
+    study_id: str = Field(..., description="Study identifier")
+    visit_name: str = Field("Screening", description="Visit / milestone name")
+    modality: str = Field(
+        "RADIOLOGY", description="Imaging modality (e.g. CHEST_CT, XRAY, MRI, DERM)"
+    )
+    pixel_matrix: list[list[float]] | None = Field(
+        None, description="2D grayscale pixel array (e.g. 32x32)"
+    )
+    base64_data: str | None = Field(
+        None, description="Optional base64 encoded image string"
+    )
+    phash: str | None = Field(None, description="Precomputed 16-hex pHash string")
+
+
+class ImageHashScanRequest(BaseModel):
+    study_id: str = Field(..., description="Study ID")
+    image_attachments: list[ImageAttachmentPayload] | None = Field(
+        None, description="List of medical image attachments"
+    )
+    raw_images: list[dict[str, Any]] | None = Field(
+        None, description="Optional raw dictionary format for image attachments"
+    )
+    hamming_threshold: int = Field(
+        10,
+        ge=0,
+        le=32,
+        description="Maximum Hamming distance threshold to classify duplicate (<=10)",
+    )
+    auto_dispatch_investigation: bool = Field(
+        True,
+        description="Automatically dispatch Part 11 investigation deviation if duplicate found",
+    )
+
+
+class DataIntegrityComprehensiveScanRequest(BaseModel):
+    study_id: str = Field(..., description="Study ID")
+    subjects: list[SubjectClinicalVectorPayload] | None = Field(
+        None, description="Baseline clinical subject vectors"
+    )
+    audit_events: list[AuditEventPayload] | None = Field(
+        None, description="Data entry audit events"
+    )
+    image_attachments: list[ImageAttachmentPayload] | None = Field(
+        None, description="Medical image attachments"
+    )
+    auto_dispatch_investigation: bool = Field(
+        True,
+        description="Automatically dispatch Part 11 investigation deviation for critical findings",
+    )
+
+
+class DataIntegrityFindingResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    run_id: str
+    study_id: str
+    sentinel_type: DataIntegritySentinelType
+    severity: DeviationSeverity
+    anomaly_flag: ForensicsAnomalyFlag
+    primary_subject_id: str
+    primary_site_id: str
+    matched_subject_id: str | None = None
+    matched_site_id: str | None = None
+    confidence_score: float
+    similarity_score: float
+    hamming_distance: int | None = None
+    transformation_type: ImageTransformationType | None = None
+    evidence_summary: str
+    forensic_metadata: dict[str, Any]
+    investigation_deviation_id: str | None = None
+    kri_evaluation_id: str | None = None
+    status: DataIntegrityFindingStatus
+    created_at: str
+    created_by: str
+    version_index: int
+    reason_for_change: str
+
+
+class DataIntegritySentinelRunResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    study_id: str
+    run_name: str
+    scan_timestamp: str
+    sentinel_types: list[str]
+    total_subjects_scanned: int
+    total_images_scanned: int
+    total_events_scanned: int
+    anomalies_detected_count: int
+    risk_tier: RiskTier
+    status: str
+    summary_findings: dict[str, Any]
+    findings: list[DataIntegrityFindingResponse]
+    created_at: str
+    created_by: str
+    version_index: int
+    reason_for_change: str
+
+
+class DataIntegrityInvestigationDispatchRequest(BaseModel):
+    finding_id: str = Field(
+        ..., description="Data integrity finding ID to dispatch investigation for"
+    )
+    rationale: str = Field(
+        "Manual investigation ticket dispatch from Data Integrity Sentinel Console",
+        description="Reason for change / investigation rationale",
+    )
+
+
+class DataIntegritySimulationRequest(BaseModel):
+    study_id: str = Field("STUDY-ONC-2026", description="Study ID for simulation")
+    num_subjects_per_site: int = Field(
+        15, ge=5, le=100, description="Subjects per benchmark site"
+    )
+    include_duplicate_patient: bool = Field(
+        True, description="Inject cross-site duplicate subject vector"
+    )
+    include_temporal_burst: bool = Field(
+        True, description="Inject Sunday off-hours rapid burst cluster"
+    )
+    include_identical_intervals: bool = Field(
+        True, description="Inject identical procedure elapsed intervals"
+    )
+    include_image_duplication: bool = Field(
+        True, description="Inject rotated 90 deg duplicate image scan"
+    )
+
+
+class DataIntegritySimulationResponse(BaseModel):
+    study_id: str
+    subjects_count: int
+    audit_events_count: int
+    image_attachments_count: int
+    simulated_scenarios: list[str]
+    sample_subjects: list[dict[str, Any]]
+    sample_audit_events: list[dict[str, Any]]
+    sample_image_attachments: list[dict[str, Any]]

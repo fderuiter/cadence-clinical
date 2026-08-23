@@ -260,3 +260,44 @@ class QualityRepositoryPort(RepositoryPort[Any]):
     @abstractmethod
     async def get_site_forensics_records_by_site(self, site_id: str) -> Sequence[Any]:
         pass
+
+    # --- Data Integrity Sentinels (Duplicate Patient, Temporal & pHash) ---
+    @abstractmethod
+    def create_data_integrity_run_entity(self, **kwargs) -> Any:
+        pass
+
+    @abstractmethod
+    def create_data_integrity_finding_entity(self, **kwargs) -> Any:
+        pass
+
+    @abstractmethod
+    async def save_data_integrity_run(self, run: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def save_data_integrity_finding(self, finding: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def get_data_integrity_runs(
+        self, study_id: str | None = None
+    ) -> Sequence[Any]:
+        pass
+
+    @abstractmethod
+    async def get_data_integrity_run_by_id(self, run_id: str) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def get_data_integrity_findings_by_run(self, run_id: str) -> Sequence[Any]:
+        pass
+
+    @abstractmethod
+    async def get_data_integrity_finding_by_id(self, finding_id: str) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def get_data_integrity_findings_by_subject(
+        self, subject_id: str
+    ) -> Sequence[Any]:
+        pass

@@ -21,11 +21,15 @@ from apps.quality.domain.models import (
     BreachStatus,
     CAPAStatus,
     CAPAType,
+    DataIntegrityFindingStatus,
+    DataIntegritySentinelType,
     DeviationSeverity,
     DeviationStatus,
     DeviationType,
     EffectivenessOutcome,
     FindingSeverity,
+    ForensicsAnomalyFlag,
+    ImageTransformationType,
     RCAMethodology,
     RiskCategory,
     RiskTier,
@@ -758,3 +762,124 @@ class SiteForensicsRecord(Base):
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
 
     run: Mapped[StatisticalForensicsRun] = relationship(back_populates="site_results")
+
+
+# --- Data Integrity Sentinels (Duplicate Patient, Temporal & pHash Models) ---
+
+
+class DataIntegritySentinelRun(Base):
+    """
+    Represents an automated or on-demand cross-site Data Integrity Sentinel run
+    covering duplicate patient detection, temporal/behavioral clustering, and pHash image matching.
+    """
+
+    __tablename__ = "quality_data_integrity_sentinel_runs"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    run_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    scan_timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    sentinel_types: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    total_subjects_scanned: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    total_images_scanned: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    total_events_scanned: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    anomalies_detected_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    risk_tier: Mapped[str] = mapped_column(
+        String(50), default=RiskTier.LOW, nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(50), default="COMPLETED", nullable=False)
+    summary_findings: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+    findings: Mapped[list[DataIntegrityFindingRecord]] = relationship(
+        back_populates="run", cascade="all, delete-orphan", lazy="selectin"
+    )
+
+
+class DataIntegrityFindingRecord(Base):
+    """
+    Detailed anomaly finding from a Data Integrity Sentinel run
+    (Duplicate patient match, off-hours burst, identical procedure intervals, or pHash match).
+    """
+
+    __tablename__ = "quality_data_integrity_finding_records"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    run_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("quality_data_integrity_sentinel_runs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    sentinel_type: Mapped[str] = mapped_column(
+        String(100),
+        default=DataIntegritySentinelType.DUPLICATE_PATIENT_RECORD,
+        nullable=False,
+    )
+    severity: Mapped[str] = mapped_column(
+        String(50), default=DeviationSeverity.MAJOR, nullable=False
+    )
+    anomaly_flag: Mapped[str] = mapped_column(
+        String(100),
+        default=ForensicsAnomalyFlag.DUPLICATE_PATIENT_RECORD,
+        nullable=False,
+    )
+    primary_subject_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
+    primary_site_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
+    matched_subject_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    matched_site_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    confidence_score: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    similarity_score: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    hamming_distance: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    transformation_type: Mapped[str | None] = mapped_column(
+        String(50), default=ImageTransformationType.EXACT, nullable=True
+    )
+    evidence_summary: Mapped[str] = mapped_column(String, nullable=False)
+    forensic_metadata: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    investigation_deviation_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, index=True
+    )
+    kri_evaluation_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, index=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(50), default=DataIntegrityFindingStatus.OPEN, nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+    run: Mapped[DataIntegritySentinelRun] = relationship(back_populates="findings")

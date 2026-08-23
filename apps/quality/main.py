@@ -10,6 +10,10 @@ from apps.quality.application.services.audit_service import (
     AuditServiceError,
     ClinicalAuditService,
 )
+from apps.quality.application.services.data_integrity_sentinel_service import (
+    DataIntegritySentinelError,
+    DataIntegritySentinelService,
+)
 from apps.quality.application.services.quality_service import (
     CAPA_TRANSITIONS,
     QualityService,
@@ -115,6 +119,16 @@ async def forensics_service_error_handler(request, exc: StatisticalForensicsErro
     )
 
 
+@app.exception_handler(DataIntegritySentinelError)
+async def data_integrity_service_error_handler(
+    request, exc: DataIntegritySentinelError
+):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": str(exc)},
+    )
+
+
 _repo_instance = SQLQualityRepository()
 
 
@@ -141,6 +155,11 @@ def get_serious_breach_service() -> SeriousBreachService:
 def get_forensics_service() -> StatisticalForensicsService:
     """FastAPI dependency to retrieve the StatisticalForensicsService."""
     return StatisticalForensicsService(_repo_instance)
+
+
+def get_data_integrity_service() -> DataIntegritySentinelService:
+    """FastAPI dependency to retrieve the DataIntegritySentinelService."""
+    return DataIntegritySentinelService(_repo_instance)
 
 
 def get_user_context(principal: Principal):
@@ -196,6 +215,7 @@ __all__ = [
     "authorize_quality_oversight",
     "authorize_quality_write",
     "get_audit_service",
+    "get_data_integrity_service",
     "get_forensics_service",
     "get_quality_service",
     "get_rbqm_service",

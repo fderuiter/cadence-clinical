@@ -11,6 +11,8 @@ from apps.quality.adapters.models import (
     CAPAEffectivenessCheck,
     CAPARecord,
     CtQFactor,
+    DataIntegrityFindingRecord,
+    DataIntegritySentinelRun,
     Deviation,
     KRIDefinition,
     KRIMetricEvaluation,
@@ -487,6 +489,95 @@ class SQLQualityRepository(QualityRepositoryPort):
             select(SiteForensicsRecord)
             .where(SiteForensicsRecord.site_id == site_id)
             .order_by(SiteForensicsRecord.created_at.desc())
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
+    # --- Data Integrity Sentinels (Duplicate Patient, Temporal & pHash) ---
+
+    def create_data_integrity_run_entity(self, **kwargs) -> DataIntegritySentinelRun:
+        return DataIntegritySentinelRun(**kwargs)
+
+    def create_data_integrity_finding_entity(
+        self, **kwargs
+    ) -> DataIntegrityFindingRecord:
+        return DataIntegrityFindingRecord(**kwargs)
+
+    @map_database_exceptions
+    async def save_data_integrity_run(
+        self, run: DataIntegritySentinelRun
+    ) -> DataIntegritySentinelRun:
+        self.session.add(run)
+        await self.session.flush()
+        return run
+
+    @map_database_exceptions
+    async def save_data_integrity_finding(
+        self, finding: DataIntegrityFindingRecord
+    ) -> DataIntegrityFindingRecord:
+        self.session.add(finding)
+        await self.session.flush()
+        return finding
+
+    @map_database_exceptions
+    async def get_data_integrity_runs(
+        self, study_id: str | None = None
+    ) -> Sequence[DataIntegritySentinelRun]:
+        stmt = (
+            select(DataIntegritySentinelRun)
+            .options(selectinload(DataIntegritySentinelRun.findings))
+            .order_by(DataIntegritySentinelRun.scan_timestamp.desc())
+        )
+        if study_id:
+            stmt = stmt.where(DataIntegritySentinelRun.study_id == study_id)
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
+    @map_database_exceptions
+    async def get_data_integrity_run_by_id(
+        self, run_id: str
+    ) -> DataIntegritySentinelRun | None:
+        stmt = (
+            select(DataIntegritySentinelRun)
+            .where(DataIntegritySentinelRun.id == run_id)
+            .options(selectinload(DataIntegritySentinelRun.findings))
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
+    @map_database_exceptions
+    async def get_data_integrity_findings_by_run(
+        self, run_id: str
+    ) -> Sequence[DataIntegrityFindingRecord]:
+        stmt = (
+            select(DataIntegrityFindingRecord)
+            .where(DataIntegrityFindingRecord.run_id == run_id)
+            .order_by(DataIntegrityFindingRecord.severity.asc())
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
+    @map_database_exceptions
+    async def get_data_integrity_finding_by_id(
+        self, finding_id: str
+    ) -> DataIntegrityFindingRecord | None:
+        stmt = select(DataIntegrityFindingRecord).where(
+            DataIntegrityFindingRecord.id == finding_id
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
+    @map_database_exceptions
+    async def get_data_integrity_findings_by_subject(
+        self, subject_id: str
+    ) -> Sequence[DataIntegrityFindingRecord]:
+        stmt = (
+            select(DataIntegrityFindingRecord)
+            .where(
+                (DataIntegrityFindingRecord.primary_subject_id == subject_id)
+                | (DataIntegrityFindingRecord.matched_subject_id == subject_id)
+            )
+            .order_by(DataIntegrityFindingRecord.created_at.desc())
         )
         result = await self.session.execute(stmt)
         return result.scalars().all()

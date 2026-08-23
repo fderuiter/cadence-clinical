@@ -369,3 +369,312 @@ class ExcursionAnalysisResult(BaseModel):
     evaluated_at: datetime
     evaluated_by: str
     summary_notes: str | None = None
+
+
+# =========================================================================
+# Cell & Gene Therapy (CGT) Vein-to-Vein COC/COI & Destruction Enums & Models
+# Requirements: PRD-SCM-005, PRD-SCM-006, ADR-2199
+# =========================================================================
+
+
+class CGTStage(StrEnum):
+    """Lifecycle stages across Cell & Gene Therapy Vein-to-Vein continuum."""
+
+    APHERESIS_COLLECTION = "APHERESIS_COLLECTION"
+    CRYOPRESERVATION = "CRYOPRESERVATION"
+    COURIER_TRANSIT_OUTBOUND = "COURIER_TRANSIT_OUTBOUND"
+    MANUFACTURING_PROCESSING = "MANUFACTURING_PROCESSING"
+    COURIER_TRANSIT_RETURN = "COURIER_TRANSIT_RETURN"
+    SITE_RECEIPT_AND_STORAGE = "SITE_RECEIPT_AND_STORAGE"
+    BEDSIDE_VERIFICATION = "BEDSIDE_VERIFICATION"
+    INFUSION_ADMINISTRATION = "INFUSION_ADMINISTRATION"
+    POST_INFUSION_RECONCILIATION = "POST_INFUSION_RECONCILIATION"
+    DESTRUCTION = "DESTRUCTION"
+
+
+class CGTCustodyStatus(StrEnum):
+    """Chain of Custody and Chain of Identity progression states."""
+
+    COLLECTED = "COLLECTED"
+    IN_TRANSIT = "IN_TRANSIT"
+    IN_MANUFACTURING = "IN_MANUFACTURING"
+    MANUFACTURED = "MANUFACTURED"
+    RETURNED_TO_SITE = "RETURNED_TO_SITE"
+    BEDSIDE_VERIFIED = "BEDSIDE_VERIFIED"
+    INFUSED = "INFUSED"
+    QUARANTINED = "QUARANTINED"
+    RECONCILED = "RECONCILED"
+    DESTROYED = "DESTROYED"
+
+
+class CryogenicTempStatus(StrEnum):
+    """Thermal integrity condition for cryogenic biologics transit."""
+
+    OPTIMAL = "OPTIMAL"
+    WARNING = "WARNING"
+    EXCURSION = "EXCURSION"
+
+
+class DestructionMethod(StrEnum):
+    """Approved GxP destruction methodologies for investigational cell product and vials."""
+
+    HIGH_TEMPERATURE_INCINERATION = "HIGH_TEMPERATURE_INCINERATION"
+    AUTOCLAVE_BIOHAZARD = "AUTOCLAVE_BIOHAZARD"
+    CHEMICAL_INACTIVATION = "CHEMICAL_INACTIVATION"
+    HAZARDOUS_WASTE_FACILITY = "HAZARDOUS_WASTE_FACILITY"
+
+
+class VialDisposition(StrEnum):
+    """Final reconciliation disposition for patient kit and product vials."""
+
+    INFUSED = "INFUSED"
+    PARTIALLY_INFUSED = "PARTIALLY_INFUSED"
+    EXPIRED = "EXPIRED"
+    CONTAMINATED = "CONTAMINATED"
+    DEFECTIVE = "DEFECTIVE"
+    UNUSED_EXCESS = "UNUSED_EXCESS"
+    RECONCILED_FOR_DESTRUCTION = "RECONCILED_FOR_DESTRUCTION"
+    DESTROYED = "DESTROYED"
+
+
+class TamperEvidentBarcode(BaseModel):
+    """Cryptographic barcode payload binding subject identity to biological sample."""
+
+    model_config = ConfigDict(strict=True)
+
+    barcode_id: str = Field(..., description="Unique barcode identifier.")
+    study_id: str = Field(..., description="Clinical study identifier.")
+    site_id: str = Field(..., description="Clinical site identifier.")
+    subject_id: str = Field(..., description="Subject UUID or primary subject ID.")
+    din: str = Field(
+        ...,
+        description="Donation Identification Number conforming to ISBT 128 standard.",
+    )
+    batch_id: str | None = Field(
+        default=None,
+        description="Optional cell therapy manufacturing batch or lot identifier.",
+    )
+    created_at: datetime = Field(
+        ..., description="Timestamp of cryptographic barcode generation."
+    )
+    crypto_hash: str = Field(
+        ..., description="HMAC-SHA256 tamper-evident cryptographic signature."
+    )
+    barcode_payload: str = Field(
+        ..., description="Encoded serialized payload suitable for 2D DataMatrix scan."
+    )
+
+
+class CryogenicMilestone(BaseModel):
+    """Cryptographic and temperature milestone logged during cryogenic transit and handling."""
+
+    model_config = ConfigDict(strict=True)
+
+    milestone_id: str = Field(..., description="Unique milestone identifier.")
+    chain_of_custody_id: str = Field(
+        ..., description="Reference to the parent CGT COC record."
+    )
+    stage: CGTStage = Field(..., description="Vein-to-vein lifecycle stage.")
+    timestamp: datetime = Field(..., description="Milestone event timestamp.")
+    location_name: str = Field(..., description="Facility or transit waypoint name.")
+    facility_id: str | None = Field(
+        default=None, description="Optional facility identifier."
+    )
+    latitude: float | None = Field(default=None, description="GPS latitude coordinate.")
+    longitude: float | None = Field(
+        default=None, description="GPS longitude coordinate."
+    )
+    temperature_celsius: float = Field(
+        ..., description="Observed cryogenic temperature in °C."
+    )
+    temperature_status: CryogenicTempStatus = Field(
+        default=CryogenicTempStatus.OPTIMAL,
+        description="Cryogenic temperature integrity classification.",
+    )
+    custodian_id: str = Field(..., description="User ID of the active custodian.")
+    custodian_name: str = Field(..., description="Full name of the active custodian.")
+    custodian_role: str = Field(..., description="Role of the active custodian.")
+    carrier: str | None = Field(
+        default=None, description="Courier or transport service."
+    )
+    tracking_number: str | None = Field(
+        default=None, description="Courier waybill or tracking number."
+    )
+    seal_intact: bool = Field(
+        default=True,
+        description="Physical tamper seal integrity status.",
+    )
+    seal_id: str | None = Field(default=None, description="Tamper seal serial number.")
+    dry_shipper_id: str | None = Field(
+        default=None, description="Cryogenic dry shipper / dewar identifier."
+    )
+    notes: str | None = Field(
+        default=None, description="Observations or handover notes."
+    )
+
+
+class DualBedsideVerification(BaseModel):
+    """Two-person electronic bedside verification result unlocking drug infusion."""
+
+    model_config = ConfigDict(strict=True)
+
+    verification_id: str = Field(..., description="Unique verification identifier.")
+    study_id: str = Field(..., description="Clinical study identifier.")
+    site_id: str = Field(..., description="Clinical site identifier.")
+    subject_id: str = Field(..., description="Subject UUID or primary subject ID.")
+    din: str = Field(..., description="Donation Identification Number.")
+    batch_id: str = Field(..., description="Manufacturing batch identifier.")
+    scanned_wristband_subject_id: str = Field(
+        ..., description="Subject ID decoded from physical patient wristband."
+    )
+    scanned_bag_barcode: str = Field(
+        ..., description="Barcode decoded from cell therapy infusion bag."
+    )
+    wristband_matched: bool = Field(
+        ..., description="Indicates subject wristband match."
+    )
+    bag_matched: bool = Field(
+        ..., description="Indicates cell bag barcode cryptographic match."
+    )
+    temperature_chain_verified: bool = Field(
+        ..., description="Indicates complete cold chain integrity verification."
+    )
+    primary_verifier_id: str = Field(..., description="User ID of primary verifier.")
+    primary_verifier_name: str = Field(
+        ..., description="Full name of primary verifier."
+    )
+    primary_verifier_role: str = Field(..., description="Role of primary verifier.")
+    primary_signature_token: str = Field(
+        ..., description="Cryptographic e-signature token of primary verifier."
+    )
+    primary_signed_at: datetime = Field(
+        ..., description="Timestamp of primary verification."
+    )
+    secondary_verifier_id: str = Field(
+        ..., description="User ID of secondary verifier (e.g. PI/Co-I)."
+    )
+    secondary_verifier_name: str = Field(
+        ..., description="Full name of secondary verifier."
+    )
+    secondary_verifier_role: str = Field(..., description="Role of secondary verifier.")
+    secondary_signature_token: str = Field(
+        ..., description="Cryptographic e-signature token of secondary verifier."
+    )
+    secondary_signed_at: datetime = Field(
+        ..., description="Timestamp of secondary verification."
+    )
+    status: str = Field(..., description="Verification status (VERIFIED or REJECTED).")
+    unlock_token: str = Field(
+        ..., description="Cryptographic unlock token passed to unlock infusion eCRF."
+    )
+    verification_notes: str | None = Field(
+        default=None, description="Optional clinical verification notes."
+    )
+
+
+class CertificateOfDestruction(BaseModel):
+    """Formal Certificate of Destruction record with dual witness electronic signatures."""
+
+    model_config = ConfigDict(strict=True)
+
+    certificate_id: str = Field(..., description="Unique certificate identifier.")
+    certificate_number: str = Field(
+        ..., description="Formal certificate sequential reference (e.g. COD-2026-0001)."
+    )
+    study_id: str = Field(..., description="Clinical study identifier.")
+    site_id: str = Field(..., description="Clinical site identifier.")
+    subject_id: str | None = Field(
+        default=None, description="Optional subject identifier."
+    )
+    din: str | None = Field(
+        default=None, description="Optional Donation Identification Number."
+    )
+    lot_number: str = Field(
+        ..., description="Lot or batch number of destroyed product."
+    )
+    kit_numbers: list[str] = Field(
+        ..., description="List of kit serial numbers included in destruction."
+    )
+    vial_identifiers: list[str] = Field(
+        ..., description="List of vial identifiers included in destruction."
+    )
+    quantity_destroyed: int = Field(
+        ..., description="Total quantity of units destroyed."
+    )
+    unit_of_measure: str = Field(
+        default="VIALS", description="Unit of measure (VIALS, KITS, BAGS)."
+    )
+    residual_volume_ml: float | None = Field(
+        default=None, description="Residual volume destroyed in mL."
+    )
+    destruction_reason: str = Field(..., description="Clinical or GxP reason.")
+    destruction_method: DestructionMethod = Field(
+        ..., description="Destruction methodology."
+    )
+    destruction_facility: str = Field(
+        ..., description="Authorized destruction facility or location."
+    )
+    destruction_timestamp: datetime = Field(
+        ..., description="Date and time destruction occurred."
+    )
+    witness_1_id: str = Field(..., description="User ID of first witness.")
+    witness_1_name: str = Field(..., description="Name of first witness.")
+    witness_1_role: str = Field(..., description="Role of first witness.")
+    witness_1_signature_token: str = Field(
+        ..., description="E-signature token of first witness."
+    )
+    witness_1_signed_at: datetime = Field(
+        ..., description="Timestamp of first witness signature."
+    )
+    witness_2_id: str = Field(..., description="User ID of second witness.")
+    witness_2_name: str = Field(..., description="Name of second witness.")
+    witness_2_role: str = Field(..., description="Role of second witness.")
+    witness_2_signature_token: str = Field(
+        ..., description="E-signature token of second witness."
+    )
+    witness_2_signed_at: datetime = Field(
+        ..., description="Timestamp of second witness signature."
+    )
+    cryptographic_seal: str = Field(
+        ..., description="SHA-256 seal across certificate contents and signatures."
+    )
+    status: str = Field(default="COMPLETED", description="Certificate status.")
+    reconciliation_notes: str | None = Field(
+        default=None, description="Reconciliation and disposal notes."
+    )
+
+
+class VialReturnReconciliation(BaseModel):
+    """Accountability and adherence tracking for returned product vials."""
+
+    model_config = ConfigDict(strict=True)
+
+    reconciliation_id: str = Field(..., description="Unique record identifier.")
+    study_id: str = Field(..., description="Clinical study identifier.")
+    site_id: str = Field(..., description="Clinical site identifier.")
+    subject_id: str = Field(..., description="Subject identifier.")
+    kit_number: str = Field(..., description="Kit identifier.")
+    vial_identifier: str = Field(..., description="Vial serial number.")
+    lot_number: str = Field(..., description="Lot number.")
+    din: str | None = Field(default=None, description="Donation Identification Number.")
+    expected_quantity: int = Field(
+        ..., description="Expected units dispensed to subject."
+    )
+    returned_quantity: int = Field(..., description="Units returned to site.")
+    intact_vials: int = Field(default=0, description="Intact unused vials.")
+    used_vials: int = Field(default=0, description="Used or empty vials.")
+    residual_volume_ml: float = Field(
+        default=0.0, description="Measured residual volume in mL."
+    )
+    adherence_percentage: float = Field(
+        ..., description="Calculated subject compliance / adherence percentage."
+    )
+    disposition: VialDisposition = Field(
+        default=VialDisposition.RECONCILED_FOR_DESTRUCTION,
+        description="Disposition state.",
+    )
+    logged_by: str = Field(..., description="User ID logging reconciliation.")
+    logged_at: datetime = Field(..., description="Timestamp logged.")
+    certificate_id: str | None = Field(
+        default=None, description="Bound Certificate of Destruction ID if destroyed."
+    )
