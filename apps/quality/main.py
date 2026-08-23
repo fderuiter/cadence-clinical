@@ -23,6 +23,10 @@ from apps.quality.application.services.serious_breach_service import (
     SeriousBreachService,
     SeriousBreachServiceError,
 )
+from apps.quality.application.services.statistical_forensics_service import (
+    StatisticalForensicsError,
+    StatisticalForensicsService,
+)
 from apps.quality.presentation.dtos import (
     AuditLogResponse,
     CAPACreate,
@@ -103,6 +107,14 @@ async def serious_breach_service_error_handler(request, exc: SeriousBreachServic
     )
 
 
+@app.exception_handler(StatisticalForensicsError)
+async def forensics_service_error_handler(request, exc: StatisticalForensicsError):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": str(exc)},
+    )
+
+
 _repo_instance = SQLQualityRepository()
 
 
@@ -124,6 +136,11 @@ def get_audit_service() -> ClinicalAuditService:
 def get_serious_breach_service() -> SeriousBreachService:
     """FastAPI dependency to retrieve the SeriousBreachService."""
     return SeriousBreachService(_repo_instance)
+
+
+def get_forensics_service() -> StatisticalForensicsService:
+    """FastAPI dependency to retrieve the StatisticalForensicsService."""
+    return StatisticalForensicsService(_repo_instance)
 
 
 def get_user_context(principal: Principal):
@@ -179,6 +196,7 @@ __all__ = [
     "authorize_quality_oversight",
     "authorize_quality_write",
     "get_audit_service",
+    "get_forensics_service",
     "get_quality_service",
     "get_rbqm_service",
     "get_serious_breach_service",

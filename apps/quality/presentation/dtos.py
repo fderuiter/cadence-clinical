@@ -9,6 +9,7 @@ from apps.quality.domain.models import (
     ActionItemStatus,
     AuditStatus,
     AuditType,
+    BenfordConformity,
     BreachStatus,
     CAPAStatus,
     CAPAType,
@@ -19,6 +20,8 @@ from apps.quality.domain.models import (
     FindingSeverity,
     RCAMethodology,
     RiskCategory,
+    RiskTier,
+    RoundingBiasTier,
 )
 
 
@@ -664,3 +667,142 @@ class AuditLogResponse(BaseModel):
     merkle_hash: str | None = None
     sha256_hash: str | None = None
     signature_hash: str | None = None
+
+
+# --- Centralized Statistical Monitoring (CSM) & Forensics DTOs ---
+
+
+class SiteObservationPayload(BaseModel):
+    site_id: str = Field(..., description="Site identifier")
+    observations: list[dict[str, float]] = Field(
+        ..., description="List of multi-variable continuous observation dictionaries"
+    )
+
+
+class StatisticalForensicsAnalyzeRequest(BaseModel):
+    study_id: str = Field(..., description="Clinical study ID")
+    target_variables: list[str] = Field(
+        default=["systolic_bp", "diastolic_bp", "heart_rate", "lab_creatinine"],
+        description="Continuous clinical variables for multivariate surveillance",
+    )
+    site_observations: dict[str, list[dict[str, float]]] | None = Field(
+        None, description="Mapping of site_id to list of observation dictionaries"
+    )
+    site_data: list[SiteObservationPayload] | None = Field(
+        None, description="Alternative list format of site observation payloads"
+    )
+    run_name: str | None = Field(
+        None, description="Custom name for the surveillance run"
+    )
+    auto_trigger_kri: bool = Field(
+        True,
+        description="Whether to automatically dispatch KRI breach alerts for flagged sites",
+    )
+
+
+class BenfordDigitDistributionResponse(BaseModel):
+    sample_size: int
+    chi_square: float
+    p_value: float
+    mad: float
+    conformity: BenfordConformity
+    observed_frequencies: dict[str, int]
+    expected_frequencies: dict[str, float]
+
+
+class TerminalDigitDistributionResponse(BaseModel):
+    sample_size: int
+    chi_square: float
+    p_value: float
+    zero_five_index: float
+    rounding_bias_tier: RoundingBiasTier
+    observed_frequencies: dict[str, int]
+    expected_frequencies: dict[str, float]
+
+
+class MahalanobisMetricsResponse(BaseModel):
+    mahalanobis_distance: float
+    mahalanobis_p_value: float
+    correlation_matrix_distance: float
+    site_mean_vector: dict[str, float]
+    site_covariance_matrix: dict[str, Any]
+
+
+class VarianceShrinkageMetricsResponse(BaseModel):
+    variance_ratio: float
+    variance_shrinkage_p_value: float
+    kl_divergence: float
+    is_variance_shrunk: bool
+
+
+class SiteForensicsResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    run_id: str
+    study_id: str
+    site_id: str
+    sample_size: int
+    benford: BenfordDigitDistributionResponse
+    terminal_digit: TerminalDigitDistributionResponse
+    multivariate: MahalanobisMetricsResponse
+    variance_shrinkage: VarianceShrinkageMetricsResponse
+    composite_risk_score: float
+    risk_tier: RiskTier
+    is_anomalous_outlier: bool
+    flagged_anomaly_reasons: list[str]
+    kri_evaluation_id: str | None = None
+    created_at: str
+    created_by: str
+    version_index: int
+    reason_for_change: str
+
+
+class StatisticalForensicsRunResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    study_id: str
+    run_name: str
+    analysis_timestamp: str
+    target_variables: list[str]
+    total_sites: int
+    total_observations: int
+    anomalous_sites_count: int
+    status: str
+    site_results: list[SiteForensicsResponse]
+    created_at: str
+    created_by: str
+    version_index: int
+    reason_for_change: str
+
+
+class ForensicsSimulationRequest(BaseModel):
+    study_id: str = Field("STUDY-ONC-2026", description="Study ID for simulation")
+    num_normal_sites: int = Field(
+        4, ge=1, le=50, description="Count of compliant benchmark sites"
+    )
+    include_benford_anomaly: bool = Field(
+        True, description="Include site violating Benford's Law"
+    )
+    include_rounding_bias: bool = Field(
+        True, description="Include site with excessive terminal digit rounding"
+    )
+    include_variance_shrinkage: bool = Field(
+        True, description="Include site with fabricated variance shrinkage"
+    )
+    include_multivariate_outlier: bool = Field(
+        True, description="Include site with shifted multivariate correlation centroid"
+    )
+    samples_per_site: int = Field(
+        60, ge=10, le=500, description="Observations per site"
+    )
+
+
+class ForensicsSimulationResponse(BaseModel):
+    study_id: str
+    target_variables: list[str]
+    site_data: dict[str, list[dict[str, float]]]
+    total_sites: int
+    total_observations: int
+    simulated_anomalies: list[str]

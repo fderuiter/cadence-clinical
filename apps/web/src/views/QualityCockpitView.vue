@@ -221,6 +221,13 @@
       >
         <span class="tab-icon">🚨</span> Serious Breach &amp; Regulatory Clock
       </button>
+      <button
+        class="quality-tab-btn"
+        :class="{ active: activeTab === 'forensics' }"
+        @click="activeTab = 'forensics'"
+      >
+        <span class="tab-icon">🔬</span> Statistical Forensics (CSM)
+      </button>
     </div>
 
     <!-- Tab 1: RBQM & Risk Index -->
@@ -921,8 +928,14 @@
               </div>
             </div>
           </div>
-        </div>
-      </div>
+    </div>
+
+    <!-- Tab 6: Centralized Statistical Monitoring Forensics (CSM) -->
+    <div
+      v-if="activeTab === 'forensics'"
+      class="tab-content"
+    >
+      <StatisticalForensicsViewer />
     </div>
 
     <!-- Modals -->
@@ -1294,6 +1307,8 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import StatisticalForensicsViewer from "@/components/quality/StatisticalForensicsViewer.vue";
+
 
 // Navigation state
 const activeTab = ref("rbqm");

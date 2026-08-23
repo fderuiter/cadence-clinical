@@ -232,3 +232,297 @@ class TransferOrderReceiveRequest(BaseModel):
     model_config = ConfigDict(strict=True)
 
     change_justification: str
+
+
+# =========================================================================
+# Cold Chain, Stability Budget & MKT Excursion Schemas
+# =========================================================================
+
+
+class StabilityBudgetCreateRequest(BaseModel):
+    """Payload to create or configure a drug stability budget."""
+
+    model_config = ConfigDict(strict=True)
+
+    study_id: str
+    kit_type: str
+    lot_number: str | None = None
+    storage_condition: str = "REFRIGERATED_2_TO_8"
+    min_temp_celsius: float = 2.0
+    max_temp_celsius: float = 8.0
+    max_mkt_celsius: float = 8.0
+    max_cumulative_hours_above_upper: float = Field(default=24.0, ge=0.0)
+    max_cumulative_hours_below_lower: float = Field(default=0.0, ge=0.0)
+    activation_energy_over_r: float = Field(default=10000.0, gt=0.0)
+    hard_min_temp_celsius: float | None = 0.0
+    hard_max_temp_celsius: float | None = 25.0
+
+
+class StabilityBudgetResponse(BaseModel):
+    """Response schema for a drug stability budget."""
+
+    model_config = ConfigDict(strict=True)
+
+    id: str
+    study_id: str
+    kit_type: str
+    lot_number: str | None = None
+    storage_condition: str
+    min_temp_celsius: float
+    max_temp_celsius: float
+    max_mkt_celsius: float
+    max_cumulative_hours_above_upper: float
+    max_cumulative_hours_below_lower: float
+    activation_energy_over_r: float
+    hard_min_temp_celsius: float | None = None
+    hard_max_temp_celsius: float | None = None
+
+
+class TemperatureLoggerRegisterRequest(BaseModel):
+    """Payload to register a hardware temperature logger device."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    study_id: str
+    logger_id: str
+    device_model: str = "Sensitech TempTale Ultra"
+    serial_number: str | None = None
+    logger_type: str = "SHIPMENT"
+    assigned_transfer_order_id: str | None = None
+    assigned_node_id: str | None = None
+    assigned_container_id: str | None = None
+    calibration_expiry_date: datetime | None = None
+
+
+class TemperatureLoggerResponse(BaseModel):
+    """Response schema for a temperature logger device."""
+
+    model_config = ConfigDict(strict=True)
+
+    id: str
+    study_id: str
+    logger_id: str
+    device_model: str
+    serial_number: str | None = None
+    logger_type: str
+    assigned_transfer_order_id: str | None = None
+    assigned_node_id: str | None = None
+    assigned_container_id: str | None = None
+    calibration_expiry_date: datetime | None = None
+    status: str
+
+
+class LoggerIngestionRequest(BaseModel):
+    """Payload to upload and ingest a raw temperature logger file."""
+
+    model_config = ConfigDict(strict=True)
+
+    study_id: str
+    logger_id: str
+    file_format: str = "CSV"  # CSV, XML, JSON
+    raw_payload: str
+    filename: str
+    entity_type: str = "SHIPMENT"  # SHIPMENT, SITE_STORAGE, DEPOT_STORAGE
+    entity_id: str
+    stability_budget_override: StabilityBudgetCreateRequest | None = None
+
+
+class DiscreteExcursionResponse(BaseModel):
+    """Segment representation of a continuous excursion window."""
+
+    model_config = ConfigDict(strict=True)
+
+    start_time: str
+    end_time: str
+    duration_hours: float
+    excursion_type: str
+    peak_or_nadir_temp_celsius: float
+    threshold_celsius: float
+
+
+class ExcursionEvaluationResponse(BaseModel):
+    """Detailed response schema for an excursion evaluation and MKT analysis."""
+
+    model_config = ConfigDict(strict=True)
+
+    id: str | None = None
+    study_id: str
+    logger_id: str
+    entity_type: str
+    entity_id: str
+    evaluation_status: str
+    mean_kinetic_temperature_celsius: float
+    arithmetic_mean_celsius: float
+    min_temperature_celsius: float
+    max_temperature_celsius: float
+    cumulative_hours_above_upper: float
+    cumulative_hours_below_lower: float
+    total_duration_hours: float
+    readings_count: int
+    hard_boundary_breached: bool
+    mkt_breached: bool
+    cumulative_time_breached: bool
+    quarantine_triggered: bool
+    quarantined_kit_count: int
+    excursions: list[DiscreteExcursionResponse] = Field(default_factory=list)
+    evaluated_at: datetime
+    evaluated_by: str
+    summary_notes: str | None = None
+
+
+class MktCalculationDirectRequest(BaseModel):
+    """Direct standalone MKT Arrhenius mathematical calculation payload."""
+
+    model_config = ConfigDict(strict=True)
+
+    temperatures_celsius: list[float] = Field(..., min_length=1)
+    activation_energy_over_r: float = Field(default=10000.0, gt=0.0)
+
+
+class MktCalculationDirectResponse(BaseModel):
+    """Direct standalone MKT calculation result."""
+
+    model_config = ConfigDict(strict=True)
+
+    mean_kinetic_temperature_celsius: float
+    arithmetic_mean_celsius: float
+    min_temperature_celsius: float
+    max_temperature_celsius: float
+    readings_count: int
+    formula_reference: str = "USP <1079> / PDA TR 39 Arrhenius Kinetic Model"
+
+
+# =========================================================================
+# IP Kit Catalog & Quarantine Disposition Schemas
+# =========================================================================
+
+
+class IPKitCreateRequest(BaseModel):
+    """Payload to catalog an investigational product kit."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    study_id: str
+    kit_number: str
+    kit_type: str
+    description: str | None = None
+    lot_number: str | None = None
+    expiration_date: datetime | None = None
+    node_id: str | None = None
+
+
+class IPKitResponse(BaseModel):
+    """Response schema for an investigational product kit."""
+
+    model_config = ConfigDict(strict=True)
+
+    id: str
+    study_id: str
+    kit_number: str
+    kit_type: str
+    description: str | None = None
+    status: str
+    lot_number: str | None = None
+    expiration_date: datetime | None = None
+    node_id: str | None = None
+    quarantine_reason: str | None = None
+    quarantined_at: datetime | None = None
+    quarantined_by: str | None = None
+
+
+class KitQuarantineRequest(BaseModel):
+    """Payload to manually quarantine kits with Part 11 justification."""
+
+    model_config = ConfigDict(strict=True)
+
+    study_id: str
+    kit_numbers: list[str]
+    quarantine_reason: str
+
+
+class KitReleaseQuarantineRequest(BaseModel):
+    """Payload for QA disposition release of quarantined kits."""
+
+    model_config = ConfigDict(strict=True)
+
+    study_id: str
+    kit_numbers: list[str]
+    qa_release_justification: str
+
+
+# =========================================================================
+# Lot Expiry Extension & Re-Labeling Schemas (PRD-SCM-003)
+# =========================================================================
+
+
+class LotExpiryExtensionRequest(BaseModel):
+    """Payload to execute automated lot expiration date extension."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    study_id: str
+    lot_number: str
+    kit_type: str
+    extended_expiry_date: datetime
+    extension_reason: str
+    stability_protocol_reference: str
+
+
+class LotExpiryExtensionResponse(BaseModel):
+    """Response schema for a lot expiration extension record."""
+
+    model_config = ConfigDict(strict=True)
+
+    id: str
+    study_id: str
+    lot_number: str
+    kit_type: str
+    initial_expiry_date: datetime
+    extended_expiry_date: datetime
+    extension_reason: str
+    stability_protocol_reference: str
+    authorized_by: str
+    approval_status: str
+    affected_kits_count: int
+    relabeling_tasks_generated: int
+    created_at: datetime
+
+
+class ReLabelingTaskResponse(BaseModel):
+    """Response schema for a physical kit re-labeling action task."""
+
+    model_config = ConfigDict(strict=True)
+
+    id: str
+    study_id: str
+    task_number: str
+    lot_number: str
+    node_id: str
+    affected_kit_count: int
+    old_expiry_date: datetime
+    new_expiry_date: datetime
+    status: str
+    assigned_to: str | None = None
+    completed_at: datetime | None = None
+    completed_by: str | None = None
+    verified_at: datetime | None = None
+    verified_by: str | None = None
+    label_barcode_hash: str | None = None
+    relabeling_notes: str | None = None
+
+
+class ReLabelingTaskCompleteRequest(BaseModel):
+    """Payload to record completion of a re-labeling task."""
+
+    model_config = ConfigDict(strict=True)
+
+    notes: str | None = None
+
+
+class ReLabelingTaskVerifyRequest(BaseModel):
+    """Payload for dual QA verification of a completed re-labeling task."""
+
+    model_config = ConfigDict(strict=True)
+
+    label_barcode_hash: str | None = None
+    notes: str | None = None

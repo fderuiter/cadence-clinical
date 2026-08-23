@@ -20778,6 +20778,902 @@
         }
       }
     },
+    "/execution/api/v1/execution/rtsm/stability-budgets": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Create Stability Budget Endpoint",
+        "description": "Configures allowable thermal excursion limits and Arrhenius activation parameters for a kit type or lot.",
+        "operationId": "Execution_create_stability_budget_endpoint_api_v1_execution_rtsm_stability_budgets_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_StabilityBudgetCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_StabilityBudgetResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "List Stability Budgets Endpoint",
+        "description": "Lists defined drug stability budgets for a clinical study.",
+        "operationId": "Execution_list_stability_budgets_endpoint_api_v1_execution_rtsm_stability_budgets_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_StabilityBudgetResponse"
+                  },
+                  "title": "Response List Stability Budgets Endpoint Api V1 Execution Rtsm Stability Budgets Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/rtsm/cold-chain/loggers": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Register Temperature Logger Endpoint",
+        "description": "Registers a temperature data logger device bound to a shipment or storage facility.",
+        "operationId": "Execution_register_temperature_logger_endpoint_api_v1_execution_rtsm_cold_chain_loggers_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_TemperatureLoggerRegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_TemperatureLoggerResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "List Temperature Loggers Endpoint",
+        "description": "Lists registered temperature loggers for a study.",
+        "operationId": "Execution_list_temperature_loggers_endpoint_api_v1_execution_rtsm_cold_chain_loggers_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_TemperatureLoggerResponse"
+                  },
+                  "title": "Response List Temperature Loggers Endpoint Api V1 Execution Rtsm Cold Chain Loggers Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/rtsm/cold-chain/ingest": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Ingest Temperature Logger File Endpoint",
+        "description": "Ingests a digital logger file (CSV, XML, JSON), calculates Arrhenius MKT, and enforces automated kit quarantine.",
+        "operationId": "Execution_ingest_temperature_logger_file_endpoint_api_v1_execution_rtsm_cold_chain_ingest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_LoggerIngestionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ExcursionEvaluationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/rtsm/cold-chain/evaluate-mkt": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Evaluate Mkt Direct Endpoint",
+        "description": "Direct Arrhenius Mean Kinetic Temperature (MKT) calculation per USP <1079> / PDA TR 39.",
+        "operationId": "Execution_evaluate_mkt_direct_endpoint_api_v1_execution_rtsm_cold_chain_evaluate_mkt_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_MktCalculationDirectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_MktCalculationDirectResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/rtsm/cold-chain/evaluations": {
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "List Excursion Evaluations Endpoint",
+        "description": "Lists cold chain excursion evaluation audit records.",
+        "operationId": "Execution_list_excursion_evaluations_endpoint_api_v1_execution_rtsm_cold_chain_evaluations_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          },
+          {
+            "name": "entity_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional filter by transfer order or node ID",
+              "title": "Entity Id"
+            },
+            "description": "Optional filter by transfer order or node ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_ExcursionEvaluationResponse"
+                  },
+                  "title": "Response List Excursion Evaluations Endpoint Api V1 Execution Rtsm Cold Chain Evaluations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/rtsm/kits": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Create Kit Endpoint",
+        "description": "Registers an investigational product kit into the blinded RTSM inventory catalog.",
+        "operationId": "Execution_create_kit_endpoint_api_v1_execution_rtsm_kits_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_IPKitCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_IPKitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "List Kits Endpoint",
+        "description": "Lists investigational product kits.",
+        "operationId": "Execution_list_kits_endpoint_api_v1_execution_rtsm_kits_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          },
+          {
+            "name": "node_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional node/site ID filter",
+              "title": "Node Id"
+            },
+            "description": "Optional node/site ID filter"
+          },
+          {
+            "name": "lot_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional lot number filter",
+              "title": "Lot Number"
+            },
+            "description": "Optional lot number filter"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional status filter (e.g. AVAILABLE, QUARANTINED)",
+              "title": "Status"
+            },
+            "description": "Optional status filter (e.g. AVAILABLE, QUARANTINED)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_IPKitResponse"
+                  },
+                  "title": "Response List Kits Endpoint Api V1 Execution Rtsm Kits Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/rtsm/kits/quarantine": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Quarantine Kits Endpoint",
+        "description": "Manually places investigational product kits in QUARANTINED status with Part 11 electronic audit trail.",
+        "operationId": "Execution_quarantine_kits_endpoint_api_v1_execution_rtsm_kits_quarantine_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_KitQuarantineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "type": "object",
+                  "title": "Response Quarantine Kits Endpoint Api V1 Execution Rtsm Kits Quarantine Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/rtsm/kits/release-quarantine": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Release Quarantine Kits Endpoint",
+        "description": "Authorizes QA disposition release of quarantined kits back into available inventory.",
+        "operationId": "Execution_release_quarantine_kits_endpoint_api_v1_execution_rtsm_kits_release_quarantine_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_KitReleaseQuarantineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "type": "object",
+                  "title": "Response Release Quarantine Kits Endpoint Api V1 Execution Rtsm Kits Release Quarantine Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/rtsm/lots/extend-expiry": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Extend Lot Expiry Endpoint",
+        "description": "Executes automated lot expiration extension workflow, updating kits across all sites and depots.",
+        "operationId": "Execution_extend_lot_expiry_endpoint_api_v1_execution_rtsm_lots_extend_expiry_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_LotExpiryExtensionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_LotExpiryExtensionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/rtsm/lots/extensions": {
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "List Lot Expiry Extensions Endpoint",
+        "description": "Lists lot expiration extension audit records.",
+        "operationId": "Execution_list_lot_expiry_extensions_endpoint_api_v1_execution_rtsm_lots_extensions_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          },
+          {
+            "name": "lot_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional lot number filter",
+              "title": "Lot Number"
+            },
+            "description": "Optional lot number filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_LotExpiryExtensionResponse"
+                  },
+                  "title": "Response List Lot Expiry Extensions Endpoint Api V1 Execution Rtsm Lots Extensions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/rtsm/relabeling-tasks": {
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "List Relabeling Tasks Endpoint",
+        "description": "Lists physical re-labeling action tasks across facilities.",
+        "operationId": "Execution_list_relabeling_tasks_endpoint_api_v1_execution_rtsm_relabeling_tasks_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          },
+          {
+            "name": "node_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional node/site ID filter",
+              "title": "Node Id"
+            },
+            "description": "Optional node/site ID filter"
+          },
+          {
+            "name": "lot_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional lot number filter",
+              "title": "Lot Number"
+            },
+            "description": "Optional lot number filter"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional status filter",
+              "title": "Status"
+            },
+            "description": "Optional status filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_ReLabelingTaskResponse"
+                  },
+                  "title": "Response List Relabeling Tasks Endpoint Api V1 Execution Rtsm Relabeling Tasks Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/rtsm/relabeling-tasks/{task_id}/complete": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Complete Relabeling Task Endpoint",
+        "description": "Records completion of a physical kit re-labeling task with electronic signature justification.",
+        "operationId": "Execution_complete_relabeling_task_endpoint_api_v1_execution_rtsm_relabeling_tasks__task_id__complete_post",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_ReLabelingTaskCompleteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ReLabelingTaskResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/execution/api/v1/execution/rtsm/relabeling-tasks/{task_id}/verify": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Verify Relabeling Task Endpoint",
+        "description": "Dual QA verification of completed re-labeling task with barcode verification hash.",
+        "operationId": "Execution_verify_relabeling_task_endpoint_api_v1_execution_rtsm_relabeling_tasks__task_id__verify_post",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_ReLabelingTaskVerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ReLabelingTaskResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/execution/api/v1/execution/subjects/{subject_id}/unblind": {
       "post": {
         "tags": [
@@ -37843,6 +38739,265 @@
                     "$ref": "#/components/schemas/Quality_QTLBreachEventResponse"
                   },
                   "title": "Response List Qtl Breaches Api V1 Quality Rbqm Qtls Breaches Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quality/api/v1/quality/forensics/analyze": {
+      "post": {
+        "summary": "Execute Forensics Analysis",
+        "description": "Executes automated multi-site statistical forensics surveillance.",
+        "operationId": "Quality_execute_forensics_analysis_api_v1_quality_forensics_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Quality_StatisticalForensicsAnalyzeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_StatisticalForensicsRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quality/api/v1/quality/forensics/runs": {
+      "get": {
+        "summary": "List Forensics Runs",
+        "description": "Lists historical statistical forensics surveillance runs.",
+        "operationId": "Quality_list_forensics_runs_api_v1_quality_forensics_runs_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional study ID filter",
+              "title": "Study Id"
+            },
+            "description": "Optional study ID filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Quality_StatisticalForensicsRunResponse"
+                  },
+                  "title": "Response List Forensics Runs Api V1 Quality Forensics Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quality/api/v1/quality/forensics/runs/{run_id}": {
+      "get": {
+        "summary": "Get Forensics Run",
+        "description": "Retrieves detailed results for a specific forensics surveillance run.",
+        "operationId": "Quality_get_forensics_run_api_v1_quality_forensics_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_StatisticalForensicsRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quality/api/v1/quality/forensics/sites/{site_id}": {
+      "get": {
+        "summary": "Get Site Forensics History",
+        "description": "Retrieves chronological forensics surveillance results for an individual site.",
+        "operationId": "Quality_get_site_forensics_history_api_v1_quality_forensics_sites__site_id__get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Quality_SiteForensicsResponse"
+                  },
+                  "title": "Response Get Site Forensics History Api V1 Quality Forensics Sites  Site Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quality/api/v1/quality/forensics/runs/{run_id}/trigger-kri-alerts": {
+      "post": {
+        "summary": "Trigger Run Kri Alerts",
+        "description": "Dispatches KRI breach events for all flagged anomalous sites in a forensics run.",
+        "operationId": "Quality_trigger_run_kri_alerts_api_v1_quality_forensics_runs__run_id__trigger_kri_alerts_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Quality_KRIMetricEvaluationResponse"
+                  },
+                  "title": "Response Trigger Run Kri Alerts Api V1 Quality Forensics Runs  Run Id  Trigger Kri Alerts Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quality/api/v1/quality/forensics/simulate": {
+      "post": {
+        "summary": "Simulate Forensics Dataset",
+        "description": "Generates synthetic multi-site clinical datasets for testing and calibration.",
+        "operationId": "Quality_simulate_forensics_dataset_api_v1_quality_forensics_simulate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Quality_ForensicsSimulationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_ForensicsSimulationResponse"
                 }
               }
             }
@@ -66277,6 +67432,45 @@
         ],
         "title": "DictTypeEnum"
       },
+      "Execution_DiscreteExcursionResponse": {
+        "properties": {
+          "start_time": {
+            "type": "string",
+            "title": "Start Time"
+          },
+          "end_time": {
+            "type": "string",
+            "title": "End Time"
+          },
+          "duration_hours": {
+            "type": "number",
+            "title": "Duration Hours"
+          },
+          "excursion_type": {
+            "type": "string",
+            "title": "Excursion Type"
+          },
+          "peak_or_nadir_temp_celsius": {
+            "type": "number",
+            "title": "Peak Or Nadir Temp Celsius"
+          },
+          "threshold_celsius": {
+            "type": "number",
+            "title": "Threshold Celsius"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start_time",
+          "end_time",
+          "duration_hours",
+          "excursion_type",
+          "peak_or_nadir_temp_celsius",
+          "threshold_celsius"
+        ],
+        "title": "DiscreteExcursionResponse",
+        "description": "Segment representation of a continuous excursion window."
+      },
       "Execution_DispenseRequest": {
         "properties": {
           "study_id": {
@@ -66565,6 +67759,145 @@
           "is_complete"
         ],
         "title": "ETMFCompletenessWebhookPayload"
+      },
+      "Execution_ExcursionEvaluationResponse": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "logger_id": {
+            "type": "string",
+            "title": "Logger Id"
+          },
+          "entity_type": {
+            "type": "string",
+            "title": "Entity Type"
+          },
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id"
+          },
+          "evaluation_status": {
+            "type": "string",
+            "title": "Evaluation Status"
+          },
+          "mean_kinetic_temperature_celsius": {
+            "type": "number",
+            "title": "Mean Kinetic Temperature Celsius"
+          },
+          "arithmetic_mean_celsius": {
+            "type": "number",
+            "title": "Arithmetic Mean Celsius"
+          },
+          "min_temperature_celsius": {
+            "type": "number",
+            "title": "Min Temperature Celsius"
+          },
+          "max_temperature_celsius": {
+            "type": "number",
+            "title": "Max Temperature Celsius"
+          },
+          "cumulative_hours_above_upper": {
+            "type": "number",
+            "title": "Cumulative Hours Above Upper"
+          },
+          "cumulative_hours_below_lower": {
+            "type": "number",
+            "title": "Cumulative Hours Below Lower"
+          },
+          "total_duration_hours": {
+            "type": "number",
+            "title": "Total Duration Hours"
+          },
+          "readings_count": {
+            "type": "integer",
+            "title": "Readings Count"
+          },
+          "hard_boundary_breached": {
+            "type": "boolean",
+            "title": "Hard Boundary Breached"
+          },
+          "mkt_breached": {
+            "type": "boolean",
+            "title": "Mkt Breached"
+          },
+          "cumulative_time_breached": {
+            "type": "boolean",
+            "title": "Cumulative Time Breached"
+          },
+          "quarantine_triggered": {
+            "type": "boolean",
+            "title": "Quarantine Triggered"
+          },
+          "quarantined_kit_count": {
+            "type": "integer",
+            "title": "Quarantined Kit Count"
+          },
+          "excursions": {
+            "items": {
+              "$ref": "#/components/schemas/Execution_DiscreteExcursionResponse"
+            },
+            "type": "array",
+            "title": "Excursions"
+          },
+          "evaluated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Evaluated At"
+          },
+          "evaluated_by": {
+            "type": "string",
+            "title": "Evaluated By"
+          },
+          "summary_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "logger_id",
+          "entity_type",
+          "entity_id",
+          "evaluation_status",
+          "mean_kinetic_temperature_celsius",
+          "arithmetic_mean_celsius",
+          "min_temperature_celsius",
+          "max_temperature_celsius",
+          "cumulative_hours_above_upper",
+          "cumulative_hours_below_lower",
+          "total_duration_hours",
+          "readings_count",
+          "hard_boundary_breached",
+          "mkt_breached",
+          "cumulative_time_breached",
+          "quarantine_triggered",
+          "quarantined_kit_count",
+          "evaluated_at",
+          "evaluated_by"
+        ],
+        "title": "ExcursionEvaluationResponse",
+        "description": "Detailed response schema for an excursion evaluation and MKT analysis."
       },
       "Execution_ExportBundleRequest": {
         "properties": {
@@ -66911,6 +68244,189 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "Execution_IPKitCreateRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "kit_number": {
+            "type": "string",
+            "title": "Kit Number"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "lot_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Number"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date"
+          },
+          "node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "kit_number",
+          "kit_type"
+        ],
+        "title": "IPKitCreateRequest",
+        "description": "Payload to catalog an investigational product kit."
+      },
+      "Execution_IPKitResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "kit_number": {
+            "type": "string",
+            "title": "Kit Number"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "lot_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Number"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date"
+          },
+          "node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node Id"
+          },
+          "quarantine_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quarantine Reason"
+          },
+          "quarantined_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quarantined At"
+          },
+          "quarantined_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quarantined By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "kit_number",
+          "kit_type",
+          "status"
+        ],
+        "title": "IPKitResponse",
+        "description": "Response schema for an investigational product kit."
+      },
       "Execution_ImpactAnalysisRequest": {
         "properties": {
           "dictionary_type": {
@@ -67140,6 +68656,60 @@
           "started_at"
         ],
         "title": "JobStatusResponse"
+      },
+      "Execution_KitQuarantineRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "kit_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kit Numbers"
+          },
+          "quarantine_reason": {
+            "type": "string",
+            "title": "Quarantine Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "kit_numbers",
+          "quarantine_reason"
+        ],
+        "title": "KitQuarantineRequest",
+        "description": "Payload to manually quarantine kits with Part 11 justification."
+      },
+      "Execution_KitReleaseQuarantineRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "kit_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kit Numbers"
+          },
+          "qa_release_justification": {
+            "type": "string",
+            "title": "Qa Release Justification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "kit_numbers",
+          "qa_release_justification"
+        ],
+        "title": "KitReleaseQuarantineRequest",
+        "description": "Payload for QA disposition release of quarantined kits."
       },
       "Execution_LabBatchIngestResult": {
         "properties": {
@@ -67797,6 +69367,178 @@
         "title": "LockStatusResponse",
         "description": "Pydantic model representing the active locking/freezing state of the system."
       },
+      "Execution_LoggerIngestionRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "logger_id": {
+            "type": "string",
+            "title": "Logger Id"
+          },
+          "file_format": {
+            "type": "string",
+            "title": "File Format",
+            "default": "CSV"
+          },
+          "raw_payload": {
+            "type": "string",
+            "title": "Raw Payload"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "entity_type": {
+            "type": "string",
+            "title": "Entity Type",
+            "default": "SHIPMENT"
+          },
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id"
+          },
+          "stability_budget_override": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Execution_StabilityBudgetCreateRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "logger_id",
+          "raw_payload",
+          "filename",
+          "entity_id"
+        ],
+        "title": "LoggerIngestionRequest",
+        "description": "Payload to upload and ingest a raw temperature logger file."
+      },
+      "Execution_LotExpiryExtensionRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "lot_number": {
+            "type": "string",
+            "title": "Lot Number"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type"
+          },
+          "extended_expiry_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Extended Expiry Date"
+          },
+          "extension_reason": {
+            "type": "string",
+            "title": "Extension Reason"
+          },
+          "stability_protocol_reference": {
+            "type": "string",
+            "title": "Stability Protocol Reference"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "lot_number",
+          "kit_type",
+          "extended_expiry_date",
+          "extension_reason",
+          "stability_protocol_reference"
+        ],
+        "title": "LotExpiryExtensionRequest",
+        "description": "Payload to execute automated lot expiration date extension."
+      },
+      "Execution_LotExpiryExtensionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "lot_number": {
+            "type": "string",
+            "title": "Lot Number"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type"
+          },
+          "initial_expiry_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Initial Expiry Date"
+          },
+          "extended_expiry_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Extended Expiry Date"
+          },
+          "extension_reason": {
+            "type": "string",
+            "title": "Extension Reason"
+          },
+          "stability_protocol_reference": {
+            "type": "string",
+            "title": "Stability Protocol Reference"
+          },
+          "authorized_by": {
+            "type": "string",
+            "title": "Authorized By"
+          },
+          "approval_status": {
+            "type": "string",
+            "title": "Approval Status"
+          },
+          "affected_kits_count": {
+            "type": "integer",
+            "title": "Affected Kits Count"
+          },
+          "relabeling_tasks_generated": {
+            "type": "integer",
+            "title": "Relabeling Tasks Generated"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "lot_number",
+          "kit_type",
+          "initial_expiry_date",
+          "extended_expiry_date",
+          "extension_reason",
+          "stability_protocol_reference",
+          "authorized_by",
+          "approval_status",
+          "affected_kits_count",
+          "relabeling_tasks_generated",
+          "created_at"
+        ],
+        "title": "LotExpiryExtensionResponse",
+        "description": "Response schema for a lot expiration extension record."
+      },
       "Execution_MedDRACodeLookupResponse": {
         "properties": {
           "status": {
@@ -68053,6 +69795,69 @@
           "rule_type"
         ],
         "title": "MigrationRuleResponse"
+      },
+      "Execution_MktCalculationDirectRequest": {
+        "properties": {
+          "temperatures_celsius": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Temperatures Celsius"
+          },
+          "activation_energy_over_r": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Activation Energy Over R",
+            "default": 10000.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "temperatures_celsius"
+        ],
+        "title": "MktCalculationDirectRequest",
+        "description": "Direct standalone MKT Arrhenius mathematical calculation payload."
+      },
+      "Execution_MktCalculationDirectResponse": {
+        "properties": {
+          "mean_kinetic_temperature_celsius": {
+            "type": "number",
+            "title": "Mean Kinetic Temperature Celsius"
+          },
+          "arithmetic_mean_celsius": {
+            "type": "number",
+            "title": "Arithmetic Mean Celsius"
+          },
+          "min_temperature_celsius": {
+            "type": "number",
+            "title": "Min Temperature Celsius"
+          },
+          "max_temperature_celsius": {
+            "type": "number",
+            "title": "Max Temperature Celsius"
+          },
+          "readings_count": {
+            "type": "integer",
+            "title": "Readings Count"
+          },
+          "formula_reference": {
+            "type": "string",
+            "title": "Formula Reference",
+            "default": "USP <1079> / PDA TR 39 Arrhenius Kinetic Model"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mean_kinetic_temperature_celsius",
+          "arithmetic_mean_celsius",
+          "min_temperature_celsius",
+          "max_temperature_celsius",
+          "readings_count"
+        ],
+        "title": "MktCalculationDirectResponse",
+        "description": "Direct standalone MKT calculation result."
       },
       "Execution_MultiEchelonRollup": {
         "properties": {
@@ -69975,6 +71780,188 @@
         ],
         "title": "RaiseQueryResponse"
       },
+      "Execution_ReLabelingTaskCompleteRequest": {
+        "properties": {
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "title": "ReLabelingTaskCompleteRequest",
+        "description": "Payload to record completion of a re-labeling task."
+      },
+      "Execution_ReLabelingTaskResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "task_number": {
+            "type": "string",
+            "title": "Task Number"
+          },
+          "lot_number": {
+            "type": "string",
+            "title": "Lot Number"
+          },
+          "node_id": {
+            "type": "string",
+            "title": "Node Id"
+          },
+          "affected_kit_count": {
+            "type": "integer",
+            "title": "Affected Kit Count"
+          },
+          "old_expiry_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Old Expiry Date"
+          },
+          "new_expiry_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "New Expiry Date"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "assigned_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned To"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "completed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed By"
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
+          },
+          "verified_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified By"
+          },
+          "label_barcode_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Barcode Hash"
+          },
+          "relabeling_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relabeling Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "task_number",
+          "lot_number",
+          "node_id",
+          "affected_kit_count",
+          "old_expiry_date",
+          "new_expiry_date",
+          "status"
+        ],
+        "title": "ReLabelingTaskResponse",
+        "description": "Response schema for a physical kit re-labeling action task."
+      },
+      "Execution_ReLabelingTaskVerifyRequest": {
+        "properties": {
+          "label_barcode_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Barcode Hash"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "title": "ReLabelingTaskVerifyRequest",
+        "description": "Payload for dual QA verification of a completed re-labeling task."
+      },
       "Execution_RedactPDFRequest": {
         "properties": {
           "pdf_base64": {
@@ -70467,6 +72454,190 @@
           "has_gcp_training"
         ],
         "title": "SiteStaffMemberResponse"
+      },
+      "Execution_StabilityBudgetCreateRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type"
+          },
+          "lot_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Number"
+          },
+          "storage_condition": {
+            "type": "string",
+            "title": "Storage Condition",
+            "default": "REFRIGERATED_2_TO_8"
+          },
+          "min_temp_celsius": {
+            "type": "number",
+            "title": "Min Temp Celsius",
+            "default": 2.0
+          },
+          "max_temp_celsius": {
+            "type": "number",
+            "title": "Max Temp Celsius",
+            "default": 8.0
+          },
+          "max_mkt_celsius": {
+            "type": "number",
+            "title": "Max Mkt Celsius",
+            "default": 8.0
+          },
+          "max_cumulative_hours_above_upper": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Max Cumulative Hours Above Upper",
+            "default": 24.0
+          },
+          "max_cumulative_hours_below_lower": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Max Cumulative Hours Below Lower",
+            "default": 0.0
+          },
+          "activation_energy_over_r": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Activation Energy Over R",
+            "default": 10000.0
+          },
+          "hard_min_temp_celsius": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hard Min Temp Celsius",
+            "default": 0.0
+          },
+          "hard_max_temp_celsius": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hard Max Temp Celsius",
+            "default": 25.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "kit_type"
+        ],
+        "title": "StabilityBudgetCreateRequest",
+        "description": "Payload to create or configure a drug stability budget."
+      },
+      "Execution_StabilityBudgetResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type"
+          },
+          "lot_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Number"
+          },
+          "storage_condition": {
+            "type": "string",
+            "title": "Storage Condition"
+          },
+          "min_temp_celsius": {
+            "type": "number",
+            "title": "Min Temp Celsius"
+          },
+          "max_temp_celsius": {
+            "type": "number",
+            "title": "Max Temp Celsius"
+          },
+          "max_mkt_celsius": {
+            "type": "number",
+            "title": "Max Mkt Celsius"
+          },
+          "max_cumulative_hours_above_upper": {
+            "type": "number",
+            "title": "Max Cumulative Hours Above Upper"
+          },
+          "max_cumulative_hours_below_lower": {
+            "type": "number",
+            "title": "Max Cumulative Hours Below Lower"
+          },
+          "activation_energy_over_r": {
+            "type": "number",
+            "title": "Activation Energy Over R"
+          },
+          "hard_min_temp_celsius": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hard Min Temp Celsius"
+          },
+          "hard_max_temp_celsius": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hard Max Temp Celsius"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "kit_type",
+          "storage_condition",
+          "min_temp_celsius",
+          "max_temp_celsius",
+          "max_mkt_celsius",
+          "max_cumulative_hours_above_upper",
+          "max_cumulative_hours_below_lower",
+          "activation_energy_over_r"
+        ],
+        "title": "StabilityBudgetResponse",
+        "description": "Response schema for a drug stability budget."
       },
       "Execution_StudyEvent": {
         "properties": {
@@ -71971,6 +74142,187 @@
           "explanation"
         ],
         "title": "TSDVEvaluationResponse"
+      },
+      "Execution_TemperatureLoggerRegisterRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "logger_id": {
+            "type": "string",
+            "title": "Logger Id"
+          },
+          "device_model": {
+            "type": "string",
+            "title": "Device Model",
+            "default": "Sensitech TempTale Ultra"
+          },
+          "serial_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serial Number"
+          },
+          "logger_type": {
+            "type": "string",
+            "title": "Logger Type",
+            "default": "SHIPMENT"
+          },
+          "assigned_transfer_order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Transfer Order Id"
+          },
+          "assigned_node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Node Id"
+          },
+          "assigned_container_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Container Id"
+          },
+          "calibration_expiry_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Expiry Date"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "logger_id"
+        ],
+        "title": "TemperatureLoggerRegisterRequest",
+        "description": "Payload to register a hardware temperature logger device."
+      },
+      "Execution_TemperatureLoggerResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "logger_id": {
+            "type": "string",
+            "title": "Logger Id"
+          },
+          "device_model": {
+            "type": "string",
+            "title": "Device Model"
+          },
+          "serial_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serial Number"
+          },
+          "logger_type": {
+            "type": "string",
+            "title": "Logger Type"
+          },
+          "assigned_transfer_order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Transfer Order Id"
+          },
+          "assigned_node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Node Id"
+          },
+          "assigned_container_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Container Id"
+          },
+          "calibration_expiry_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Expiry Date"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "logger_id",
+          "device_model",
+          "logger_type",
+          "status"
+        ],
+        "title": "TemperatureLoggerResponse",
+        "description": "Response schema for a temperature logger device."
       },
       "Execution_TransferOrderApprovalRequest": {
         "properties": {
@@ -85196,6 +87548,64 @@
         ],
         "title": "AuditStatusUpdate"
       },
+      "Quality_BenfordConformity": {
+        "type": "string",
+        "enum": [
+          "ACCEPTABLE_CONFORMITY",
+          "CLOSE_CONFORMITY",
+          "MARGINAL_CONFORMITY",
+          "NON_CONFORMING"
+        ],
+        "title": "BenfordConformity"
+      },
+      "Quality_BenfordDigitDistributionResponse": {
+        "properties": {
+          "sample_size": {
+            "type": "integer",
+            "title": "Sample Size"
+          },
+          "chi_square": {
+            "type": "number",
+            "title": "Chi Square"
+          },
+          "p_value": {
+            "type": "number",
+            "title": "P Value"
+          },
+          "mad": {
+            "type": "number",
+            "title": "Mad"
+          },
+          "conformity": {
+            "$ref": "#/components/schemas/Quality_BenfordConformity"
+          },
+          "observed_frequencies": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Observed Frequencies"
+          },
+          "expected_frequencies": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Expected Frequencies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sample_size",
+          "chi_square",
+          "p_value",
+          "mad",
+          "conformity",
+          "observed_frequencies",
+          "expected_frequencies"
+        ],
+        "title": "BenfordDigitDistributionResponse"
+      },
       "Quality_BreachStatus": {
         "type": "string",
         "enum": [
@@ -86425,6 +88835,111 @@
         ],
         "title": "EffectivenessOutcome"
       },
+      "Quality_ForensicsSimulationRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID for simulation",
+            "default": "STUDY-ONC-2026"
+          },
+          "num_normal_sites": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Num Normal Sites",
+            "description": "Count of compliant benchmark sites",
+            "default": 4
+          },
+          "include_benford_anomaly": {
+            "type": "boolean",
+            "title": "Include Benford Anomaly",
+            "description": "Include site violating Benford's Law",
+            "default": true
+          },
+          "include_rounding_bias": {
+            "type": "boolean",
+            "title": "Include Rounding Bias",
+            "description": "Include site with excessive terminal digit rounding",
+            "default": true
+          },
+          "include_variance_shrinkage": {
+            "type": "boolean",
+            "title": "Include Variance Shrinkage",
+            "description": "Include site with fabricated variance shrinkage",
+            "default": true
+          },
+          "include_multivariate_outlier": {
+            "type": "boolean",
+            "title": "Include Multivariate Outlier",
+            "description": "Include site with shifted multivariate correlation centroid",
+            "default": true
+          },
+          "samples_per_site": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 10.0,
+            "title": "Samples Per Site",
+            "description": "Observations per site",
+            "default": 60
+          }
+        },
+        "type": "object",
+        "title": "ForensicsSimulationRequest"
+      },
+      "Quality_ForensicsSimulationResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "target_variables": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Variables"
+          },
+          "site_data": {
+            "additionalProperties": {
+              "items": {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Site Data"
+          },
+          "total_sites": {
+            "type": "integer",
+            "title": "Total Sites"
+          },
+          "total_observations": {
+            "type": "integer",
+            "title": "Total Observations"
+          },
+          "simulated_anomalies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Simulated Anomalies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "target_variables",
+          "site_data",
+          "total_sites",
+          "total_observations",
+          "simulated_anomalies"
+        ],
+        "title": "ForensicsSimulationResponse"
+      },
       "Quality_HTTPValidationError": {
         "properties": {
           "detail": {
@@ -86679,6 +89194,43 @@
           "reason_for_change"
         ],
         "title": "KRIMetricEvaluationResponse"
+      },
+      "Quality_MahalanobisMetricsResponse": {
+        "properties": {
+          "mahalanobis_distance": {
+            "type": "number",
+            "title": "Mahalanobis Distance"
+          },
+          "mahalanobis_p_value": {
+            "type": "number",
+            "title": "Mahalanobis P Value"
+          },
+          "correlation_matrix_distance": {
+            "type": "number",
+            "title": "Correlation Matrix Distance"
+          },
+          "site_mean_vector": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Site Mean Vector"
+          },
+          "site_covariance_matrix": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Site Covariance Matrix"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mahalanobis_distance",
+          "mahalanobis_p_value",
+          "correlation_matrix_distance",
+          "site_mean_vector",
+          "site_covariance_matrix"
+        ],
+        "title": "MahalanobisMetricsResponse"
       },
       "Quality_PromoteFindingToCAPARequest": {
         "properties": {
@@ -87176,6 +89728,25 @@
         ],
         "title": "RegulatoryClockStatusResponse"
       },
+      "Quality_RiskTier": {
+        "type": "string",
+        "enum": [
+          "CRITICAL",
+          "HIGH",
+          "LOW",
+          "MEDIUM"
+        ],
+        "title": "RiskTier"
+      },
+      "Quality_RoundingBiasTier": {
+        "type": "string",
+        "enum": [
+          "MODERATE_ROUNDING",
+          "NORMAL",
+          "SEVERE_ROUNDING"
+        ],
+        "title": "RoundingBiasTier"
+      },
       "Quality_SeriousBreachConfirmRequest": {
         "properties": {
           "affected_authorities": {
@@ -87384,6 +89955,134 @@
         ],
         "title": "SeriousBreachStatusUpdate"
       },
+      "Quality_SiteForensicsResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "sample_size": {
+            "type": "integer",
+            "title": "Sample Size"
+          },
+          "benford": {
+            "$ref": "#/components/schemas/Quality_BenfordDigitDistributionResponse"
+          },
+          "terminal_digit": {
+            "$ref": "#/components/schemas/Quality_TerminalDigitDistributionResponse"
+          },
+          "multivariate": {
+            "$ref": "#/components/schemas/Quality_MahalanobisMetricsResponse"
+          },
+          "variance_shrinkage": {
+            "$ref": "#/components/schemas/Quality_VarianceShrinkageMetricsResponse"
+          },
+          "composite_risk_score": {
+            "type": "number",
+            "title": "Composite Risk Score"
+          },
+          "risk_tier": {
+            "$ref": "#/components/schemas/Quality_RiskTier"
+          },
+          "is_anomalous_outlier": {
+            "type": "boolean",
+            "title": "Is Anomalous Outlier"
+          },
+          "flagged_anomaly_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Flagged Anomaly Reasons"
+          },
+          "kri_evaluation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kri Evaluation Id"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "run_id",
+          "study_id",
+          "site_id",
+          "sample_size",
+          "benford",
+          "terminal_digit",
+          "multivariate",
+          "variance_shrinkage",
+          "composite_risk_score",
+          "risk_tier",
+          "is_anomalous_outlier",
+          "flagged_anomaly_reasons",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "SiteForensicsResponse"
+      },
+      "Quality_SiteObservationPayload": {
+        "properties": {
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site identifier"
+          },
+          "observations": {
+            "items": {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Observations",
+            "description": "List of multi-variable continuous observation dictionaries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "site_id",
+          "observations"
+        ],
+        "title": "SiteObservationPayload"
+      },
       "Quality_SiteRiskProfileResponse": {
         "properties": {
           "id": {
@@ -87452,6 +90151,220 @@
         ],
         "title": "SiteRiskProfileResponse"
       },
+      "Quality_StatisticalForensicsAnalyzeRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study ID"
+          },
+          "target_variables": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Variables",
+            "description": "Continuous clinical variables for multivariate surveillance",
+            "default": [
+              "systolic_bp",
+              "diastolic_bp",
+              "heart_rate",
+              "lab_creatinine"
+            ]
+          },
+          "site_observations": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "additionalProperties": {
+                      "type": "number"
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Observations",
+            "description": "Mapping of site_id to list of observation dictionaries"
+          },
+          "site_data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Quality_SiteObservationPayload"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Data",
+            "description": "Alternative list format of site observation payloads"
+          },
+          "run_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Name",
+            "description": "Custom name for the surveillance run"
+          },
+          "auto_trigger_kri": {
+            "type": "boolean",
+            "title": "Auto Trigger Kri",
+            "description": "Whether to automatically dispatch KRI breach alerts for flagged sites",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "StatisticalForensicsAnalyzeRequest"
+      },
+      "Quality_StatisticalForensicsRunResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "run_name": {
+            "type": "string",
+            "title": "Run Name"
+          },
+          "analysis_timestamp": {
+            "type": "string",
+            "title": "Analysis Timestamp"
+          },
+          "target_variables": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Variables"
+          },
+          "total_sites": {
+            "type": "integer",
+            "title": "Total Sites"
+          },
+          "total_observations": {
+            "type": "integer",
+            "title": "Total Observations"
+          },
+          "anomalous_sites_count": {
+            "type": "integer",
+            "title": "Anomalous Sites Count"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "site_results": {
+            "items": {
+              "$ref": "#/components/schemas/Quality_SiteForensicsResponse"
+            },
+            "type": "array",
+            "title": "Site Results"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "run_name",
+          "analysis_timestamp",
+          "target_variables",
+          "total_sites",
+          "total_observations",
+          "anomalous_sites_count",
+          "status",
+          "site_results",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "StatisticalForensicsRunResponse"
+      },
+      "Quality_TerminalDigitDistributionResponse": {
+        "properties": {
+          "sample_size": {
+            "type": "integer",
+            "title": "Sample Size"
+          },
+          "chi_square": {
+            "type": "number",
+            "title": "Chi Square"
+          },
+          "p_value": {
+            "type": "number",
+            "title": "P Value"
+          },
+          "zero_five_index": {
+            "type": "number",
+            "title": "Zero Five Index"
+          },
+          "rounding_bias_tier": {
+            "$ref": "#/components/schemas/Quality_RoundingBiasTier"
+          },
+          "observed_frequencies": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Observed Frequencies"
+          },
+          "expected_frequencies": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Expected Frequencies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sample_size",
+          "chi_square",
+          "p_value",
+          "zero_five_index",
+          "rounding_bias_tier",
+          "observed_frequencies",
+          "expected_frequencies"
+        ],
+        "title": "TerminalDigitDistributionResponse"
+      },
       "Quality_ValidationError": {
         "properties": {
           "loc": {
@@ -87491,6 +90404,34 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "Quality_VarianceShrinkageMetricsResponse": {
+        "properties": {
+          "variance_ratio": {
+            "type": "number",
+            "title": "Variance Ratio"
+          },
+          "variance_shrinkage_p_value": {
+            "type": "number",
+            "title": "Variance Shrinkage P Value"
+          },
+          "kl_divergence": {
+            "type": "number",
+            "title": "Kl Divergence"
+          },
+          "is_variance_shrunk": {
+            "type": "boolean",
+            "title": "Is Variance Shrunk"
+          }
+        },
+        "type": "object",
+        "required": [
+          "variance_ratio",
+          "variance_shrinkage_p_value",
+          "kl_divergence",
+          "is_variance_shrunk"
+        ],
+        "title": "VarianceShrinkageMetricsResponse"
       },
       "Safety_AIReviewStatus": {
         "type": "string",

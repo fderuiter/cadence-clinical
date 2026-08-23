@@ -227,3 +227,36 @@ class QualityRepositoryPort(RepositoryPort[Any]):
     @abstractmethod
     async def save_audit_log(self, log: Any) -> Any:
         pass
+
+    # --- Statistical Forensics (CSM) ---
+    @abstractmethod
+    def create_forensics_run_entity(self, **kwargs) -> Any:
+        pass
+
+    @abstractmethod
+    def create_site_forensics_record_entity(self, **kwargs) -> Any:
+        pass
+
+    @abstractmethod
+    async def save_forensics_run(self, run: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def save_site_forensics_record(self, record: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def get_forensics_runs(self, study_id: str | None = None) -> Sequence[Any]:
+        pass
+
+    @abstractmethod
+    async def get_forensics_run_by_id(self, run_id: str) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def get_site_forensics_records_by_run(self, run_id: str) -> Sequence[Any]:
+        pass
+
+    @abstractmethod
+    async def get_site_forensics_records_by_site(self, site_id: str) -> Sequence[Any]:
+        pass

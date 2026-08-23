@@ -14,6 +14,7 @@ from apps.execution.database.context import current_change_reason, current_user_
 from apps.execution.database.models import (
     ClinicalSubject,
     IntegrationOutbox,
+    IPKit,
     KitDispensation,
     PackingManifest,
     PredictiveResupplyForecast,
@@ -43,6 +44,18 @@ class SiteInventoryNotFoundError(Exception):
 
 class InsufficientStockError(Exception):
     """Raised when the requested dispensation quantity exceeds on-hand site inventory."""
+
+    pass
+
+
+class QuarantinedKitError(Exception):
+    """Raised when attempting to allocate or dispense a quarantined investigational product kit."""
+
+    pass
+
+
+class ExpiredKitError(Exception):
+    """Raised when attempting to allocate or dispense an expired investigational product kit."""
 
     pass
 
@@ -430,6 +443,29 @@ async def dispense_kit_transaction(
         raise SiteInventoryNotFoundError(
             f"No inventory record found for site {site_id} and kit {kit_id}."
         )
+
+    # Validate IPKit status gating (quarantine and expiry locks)
+    stmt_kit = select(IPKit).where(
+        IPKit.study_id == study_id,
+        (IPKit.kit_number == kit_id) | (IPKit.id == kit_id),
+        IPKit.is_deleted.is_(False),
+    )
+    res_kit = await session.execute(stmt_kit)
+    kit_obj = res_kit.scalars().first()
+    if kit_obj:
+        if kit_obj.status == "QUARANTINED":
+            raise QuarantinedKitError(
+                f"Kit {kit_obj.kit_number} is QUARANTINED due to temperature excursion breach and cannot be dispensed."
+            )
+        exp_date = kit_obj.expiration_date
+        if exp_date is not None and exp_date.tzinfo is None:
+            exp_date = exp_date.replace(tzinfo=UTC)
+        if kit_obj.status == "EXPIRED" or (
+            exp_date is not None and exp_date < datetime.now(UTC)
+        ):
+            raise ExpiredKitError(
+                f"Kit {kit_obj.kit_number} is EXPIRED and cannot be dispensed."
+            )
 
     if inventory.on_hand_qty < quantity:
         raise InsufficientStockError(

@@ -2794,6 +2794,902 @@
         }
       }
     },
+    "/api/v1/execution/rtsm/stability-budgets": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Create Stability Budget Endpoint",
+        "description": "Configures allowable thermal excursion limits and Arrhenius activation parameters for a kit type or lot.",
+        "operationId": "create_stability_budget_endpoint_api_v1_execution_rtsm_stability_budgets_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StabilityBudgetCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StabilityBudgetResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "List Stability Budgets Endpoint",
+        "description": "Lists defined drug stability budgets for a clinical study.",
+        "operationId": "list_stability_budgets_endpoint_api_v1_execution_rtsm_stability_budgets_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StabilityBudgetResponse"
+                  },
+                  "title": "Response List Stability Budgets Endpoint Api V1 Execution Rtsm Stability Budgets Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cold-chain/loggers": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Register Temperature Logger Endpoint",
+        "description": "Registers a temperature data logger device bound to a shipment or storage facility.",
+        "operationId": "register_temperature_logger_endpoint_api_v1_execution_rtsm_cold_chain_loggers_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemperatureLoggerRegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemperatureLoggerResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "List Temperature Loggers Endpoint",
+        "description": "Lists registered temperature loggers for a study.",
+        "operationId": "list_temperature_loggers_endpoint_api_v1_execution_rtsm_cold_chain_loggers_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TemperatureLoggerResponse"
+                  },
+                  "title": "Response List Temperature Loggers Endpoint Api V1 Execution Rtsm Cold Chain Loggers Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cold-chain/ingest": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Ingest Temperature Logger File Endpoint",
+        "description": "Ingests a digital logger file (CSV, XML, JSON), calculates Arrhenius MKT, and enforces automated kit quarantine.",
+        "operationId": "ingest_temperature_logger_file_endpoint_api_v1_execution_rtsm_cold_chain_ingest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoggerIngestionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExcursionEvaluationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cold-chain/evaluate-mkt": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Evaluate Mkt Direct Endpoint",
+        "description": "Direct Arrhenius Mean Kinetic Temperature (MKT) calculation per USP <1079> / PDA TR 39.",
+        "operationId": "evaluate_mkt_direct_endpoint_api_v1_execution_rtsm_cold_chain_evaluate_mkt_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MktCalculationDirectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MktCalculationDirectResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cold-chain/evaluations": {
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "List Excursion Evaluations Endpoint",
+        "description": "Lists cold chain excursion evaluation audit records.",
+        "operationId": "list_excursion_evaluations_endpoint_api_v1_execution_rtsm_cold_chain_evaluations_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          },
+          {
+            "name": "entity_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional filter by transfer order or node ID",
+              "title": "Entity Id"
+            },
+            "description": "Optional filter by transfer order or node ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExcursionEvaluationResponse"
+                  },
+                  "title": "Response List Excursion Evaluations Endpoint Api V1 Execution Rtsm Cold Chain Evaluations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/kits": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Create Kit Endpoint",
+        "description": "Registers an investigational product kit into the blinded RTSM inventory catalog.",
+        "operationId": "create_kit_endpoint_api_v1_execution_rtsm_kits_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IPKitCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IPKitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "List Kits Endpoint",
+        "description": "Lists investigational product kits.",
+        "operationId": "list_kits_endpoint_api_v1_execution_rtsm_kits_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          },
+          {
+            "name": "node_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional node/site ID filter",
+              "title": "Node Id"
+            },
+            "description": "Optional node/site ID filter"
+          },
+          {
+            "name": "lot_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional lot number filter",
+              "title": "Lot Number"
+            },
+            "description": "Optional lot number filter"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional status filter (e.g. AVAILABLE, QUARANTINED)",
+              "title": "Status"
+            },
+            "description": "Optional status filter (e.g. AVAILABLE, QUARANTINED)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IPKitResponse"
+                  },
+                  "title": "Response List Kits Endpoint Api V1 Execution Rtsm Kits Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/kits/quarantine": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Quarantine Kits Endpoint",
+        "description": "Manually places investigational product kits in QUARANTINED status with Part 11 electronic audit trail.",
+        "operationId": "quarantine_kits_endpoint_api_v1_execution_rtsm_kits_quarantine_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KitQuarantineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "type": "object",
+                  "title": "Response Quarantine Kits Endpoint Api V1 Execution Rtsm Kits Quarantine Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/kits/release-quarantine": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Release Quarantine Kits Endpoint",
+        "description": "Authorizes QA disposition release of quarantined kits back into available inventory.",
+        "operationId": "release_quarantine_kits_endpoint_api_v1_execution_rtsm_kits_release_quarantine_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KitReleaseQuarantineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "type": "object",
+                  "title": "Response Release Quarantine Kits Endpoint Api V1 Execution Rtsm Kits Release Quarantine Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/lots/extend-expiry": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Extend Lot Expiry Endpoint",
+        "description": "Executes automated lot expiration extension workflow, updating kits across all sites and depots.",
+        "operationId": "extend_lot_expiry_endpoint_api_v1_execution_rtsm_lots_extend_expiry_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LotExpiryExtensionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotExpiryExtensionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/lots/extensions": {
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "List Lot Expiry Extensions Endpoint",
+        "description": "Lists lot expiration extension audit records.",
+        "operationId": "list_lot_expiry_extensions_endpoint_api_v1_execution_rtsm_lots_extensions_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          },
+          {
+            "name": "lot_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional lot number filter",
+              "title": "Lot Number"
+            },
+            "description": "Optional lot number filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LotExpiryExtensionResponse"
+                  },
+                  "title": "Response List Lot Expiry Extensions Endpoint Api V1 Execution Rtsm Lots Extensions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/relabeling-tasks": {
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "List Relabeling Tasks Endpoint",
+        "description": "Lists physical re-labeling action tasks across facilities.",
+        "operationId": "list_relabeling_tasks_endpoint_api_v1_execution_rtsm_relabeling_tasks_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          },
+          {
+            "name": "node_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional node/site ID filter",
+              "title": "Node Id"
+            },
+            "description": "Optional node/site ID filter"
+          },
+          {
+            "name": "lot_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional lot number filter",
+              "title": "Lot Number"
+            },
+            "description": "Optional lot number filter"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional status filter",
+              "title": "Status"
+            },
+            "description": "Optional status filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReLabelingTaskResponse"
+                  },
+                  "title": "Response List Relabeling Tasks Endpoint Api V1 Execution Rtsm Relabeling Tasks Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/relabeling-tasks/{task_id}/complete": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Complete Relabeling Task Endpoint",
+        "description": "Records completion of a physical kit re-labeling task with electronic signature justification.",
+        "operationId": "complete_relabeling_task_endpoint_api_v1_execution_rtsm_relabeling_tasks__task_id__complete_post",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReLabelingTaskCompleteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReLabelingTaskResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/relabeling-tasks/{task_id}/verify": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Verify Relabeling Task Endpoint",
+        "description": "Dual QA verification of completed re-labeling task with barcode verification hash.",
+        "operationId": "verify_relabeling_task_endpoint_api_v1_execution_rtsm_relabeling_tasks__task_id__verify_post",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReLabelingTaskVerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReLabelingTaskResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/subjects/{subject_id}/unblind": {
       "post": {
         "tags": [
@@ -10592,6 +11488,45 @@
         ],
         "title": "DictTypeEnum"
       },
+      "DiscreteExcursionResponse": {
+        "properties": {
+          "start_time": {
+            "type": "string",
+            "title": "Start Time"
+          },
+          "end_time": {
+            "type": "string",
+            "title": "End Time"
+          },
+          "duration_hours": {
+            "type": "number",
+            "title": "Duration Hours"
+          },
+          "excursion_type": {
+            "type": "string",
+            "title": "Excursion Type"
+          },
+          "peak_or_nadir_temp_celsius": {
+            "type": "number",
+            "title": "Peak Or Nadir Temp Celsius"
+          },
+          "threshold_celsius": {
+            "type": "number",
+            "title": "Threshold Celsius"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start_time",
+          "end_time",
+          "duration_hours",
+          "excursion_type",
+          "peak_or_nadir_temp_celsius",
+          "threshold_celsius"
+        ],
+        "title": "DiscreteExcursionResponse",
+        "description": "Segment representation of a continuous excursion window."
+      },
       "DispenseRequest": {
         "properties": {
           "study_id": {
@@ -10880,6 +11815,145 @@
           "is_complete"
         ],
         "title": "ETMFCompletenessWebhookPayload"
+      },
+      "ExcursionEvaluationResponse": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "logger_id": {
+            "type": "string",
+            "title": "Logger Id"
+          },
+          "entity_type": {
+            "type": "string",
+            "title": "Entity Type"
+          },
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id"
+          },
+          "evaluation_status": {
+            "type": "string",
+            "title": "Evaluation Status"
+          },
+          "mean_kinetic_temperature_celsius": {
+            "type": "number",
+            "title": "Mean Kinetic Temperature Celsius"
+          },
+          "arithmetic_mean_celsius": {
+            "type": "number",
+            "title": "Arithmetic Mean Celsius"
+          },
+          "min_temperature_celsius": {
+            "type": "number",
+            "title": "Min Temperature Celsius"
+          },
+          "max_temperature_celsius": {
+            "type": "number",
+            "title": "Max Temperature Celsius"
+          },
+          "cumulative_hours_above_upper": {
+            "type": "number",
+            "title": "Cumulative Hours Above Upper"
+          },
+          "cumulative_hours_below_lower": {
+            "type": "number",
+            "title": "Cumulative Hours Below Lower"
+          },
+          "total_duration_hours": {
+            "type": "number",
+            "title": "Total Duration Hours"
+          },
+          "readings_count": {
+            "type": "integer",
+            "title": "Readings Count"
+          },
+          "hard_boundary_breached": {
+            "type": "boolean",
+            "title": "Hard Boundary Breached"
+          },
+          "mkt_breached": {
+            "type": "boolean",
+            "title": "Mkt Breached"
+          },
+          "cumulative_time_breached": {
+            "type": "boolean",
+            "title": "Cumulative Time Breached"
+          },
+          "quarantine_triggered": {
+            "type": "boolean",
+            "title": "Quarantine Triggered"
+          },
+          "quarantined_kit_count": {
+            "type": "integer",
+            "title": "Quarantined Kit Count"
+          },
+          "excursions": {
+            "items": {
+              "$ref": "#/components/schemas/DiscreteExcursionResponse"
+            },
+            "type": "array",
+            "title": "Excursions"
+          },
+          "evaluated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Evaluated At"
+          },
+          "evaluated_by": {
+            "type": "string",
+            "title": "Evaluated By"
+          },
+          "summary_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "logger_id",
+          "entity_type",
+          "entity_id",
+          "evaluation_status",
+          "mean_kinetic_temperature_celsius",
+          "arithmetic_mean_celsius",
+          "min_temperature_celsius",
+          "max_temperature_celsius",
+          "cumulative_hours_above_upper",
+          "cumulative_hours_below_lower",
+          "total_duration_hours",
+          "readings_count",
+          "hard_boundary_breached",
+          "mkt_breached",
+          "cumulative_time_breached",
+          "quarantine_triggered",
+          "quarantined_kit_count",
+          "evaluated_at",
+          "evaluated_by"
+        ],
+        "title": "ExcursionEvaluationResponse",
+        "description": "Detailed response schema for an excursion evaluation and MKT analysis."
       },
       "ExportBundleRequest": {
         "properties": {
@@ -11226,6 +12300,189 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "IPKitCreateRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "kit_number": {
+            "type": "string",
+            "title": "Kit Number"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "lot_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Number"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date"
+          },
+          "node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "kit_number",
+          "kit_type"
+        ],
+        "title": "IPKitCreateRequest",
+        "description": "Payload to catalog an investigational product kit."
+      },
+      "IPKitResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "kit_number": {
+            "type": "string",
+            "title": "Kit Number"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "lot_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Number"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date"
+          },
+          "node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node Id"
+          },
+          "quarantine_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quarantine Reason"
+          },
+          "quarantined_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quarantined At"
+          },
+          "quarantined_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quarantined By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "kit_number",
+          "kit_type",
+          "status"
+        ],
+        "title": "IPKitResponse",
+        "description": "Response schema for an investigational product kit."
+      },
       "ImpactAnalysisRequest": {
         "properties": {
           "dictionary_type": {
@@ -11455,6 +12712,60 @@
           "started_at"
         ],
         "title": "JobStatusResponse"
+      },
+      "KitQuarantineRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "kit_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kit Numbers"
+          },
+          "quarantine_reason": {
+            "type": "string",
+            "title": "Quarantine Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "kit_numbers",
+          "quarantine_reason"
+        ],
+        "title": "KitQuarantineRequest",
+        "description": "Payload to manually quarantine kits with Part 11 justification."
+      },
+      "KitReleaseQuarantineRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "kit_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kit Numbers"
+          },
+          "qa_release_justification": {
+            "type": "string",
+            "title": "Qa Release Justification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "kit_numbers",
+          "qa_release_justification"
+        ],
+        "title": "KitReleaseQuarantineRequest",
+        "description": "Payload for QA disposition release of quarantined kits."
       },
       "LabBatchIngestResult": {
         "properties": {
@@ -12112,6 +13423,178 @@
         "title": "LockStatusResponse",
         "description": "Pydantic model representing the active locking/freezing state of the system."
       },
+      "LoggerIngestionRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "logger_id": {
+            "type": "string",
+            "title": "Logger Id"
+          },
+          "file_format": {
+            "type": "string",
+            "title": "File Format",
+            "default": "CSV"
+          },
+          "raw_payload": {
+            "type": "string",
+            "title": "Raw Payload"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "entity_type": {
+            "type": "string",
+            "title": "Entity Type",
+            "default": "SHIPMENT"
+          },
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id"
+          },
+          "stability_budget_override": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StabilityBudgetCreateRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "logger_id",
+          "raw_payload",
+          "filename",
+          "entity_id"
+        ],
+        "title": "LoggerIngestionRequest",
+        "description": "Payload to upload and ingest a raw temperature logger file."
+      },
+      "LotExpiryExtensionRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "lot_number": {
+            "type": "string",
+            "title": "Lot Number"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type"
+          },
+          "extended_expiry_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Extended Expiry Date"
+          },
+          "extension_reason": {
+            "type": "string",
+            "title": "Extension Reason"
+          },
+          "stability_protocol_reference": {
+            "type": "string",
+            "title": "Stability Protocol Reference"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "lot_number",
+          "kit_type",
+          "extended_expiry_date",
+          "extension_reason",
+          "stability_protocol_reference"
+        ],
+        "title": "LotExpiryExtensionRequest",
+        "description": "Payload to execute automated lot expiration date extension."
+      },
+      "LotExpiryExtensionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "lot_number": {
+            "type": "string",
+            "title": "Lot Number"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type"
+          },
+          "initial_expiry_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Initial Expiry Date"
+          },
+          "extended_expiry_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Extended Expiry Date"
+          },
+          "extension_reason": {
+            "type": "string",
+            "title": "Extension Reason"
+          },
+          "stability_protocol_reference": {
+            "type": "string",
+            "title": "Stability Protocol Reference"
+          },
+          "authorized_by": {
+            "type": "string",
+            "title": "Authorized By"
+          },
+          "approval_status": {
+            "type": "string",
+            "title": "Approval Status"
+          },
+          "affected_kits_count": {
+            "type": "integer",
+            "title": "Affected Kits Count"
+          },
+          "relabeling_tasks_generated": {
+            "type": "integer",
+            "title": "Relabeling Tasks Generated"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "lot_number",
+          "kit_type",
+          "initial_expiry_date",
+          "extended_expiry_date",
+          "extension_reason",
+          "stability_protocol_reference",
+          "authorized_by",
+          "approval_status",
+          "affected_kits_count",
+          "relabeling_tasks_generated",
+          "created_at"
+        ],
+        "title": "LotExpiryExtensionResponse",
+        "description": "Response schema for a lot expiration extension record."
+      },
       "MedDRACodeLookupResponse": {
         "properties": {
           "status": {
@@ -12368,6 +13851,69 @@
           "rule_type"
         ],
         "title": "MigrationRuleResponse"
+      },
+      "MktCalculationDirectRequest": {
+        "properties": {
+          "temperatures_celsius": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Temperatures Celsius"
+          },
+          "activation_energy_over_r": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Activation Energy Over R",
+            "default": 10000.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "temperatures_celsius"
+        ],
+        "title": "MktCalculationDirectRequest",
+        "description": "Direct standalone MKT Arrhenius mathematical calculation payload."
+      },
+      "MktCalculationDirectResponse": {
+        "properties": {
+          "mean_kinetic_temperature_celsius": {
+            "type": "number",
+            "title": "Mean Kinetic Temperature Celsius"
+          },
+          "arithmetic_mean_celsius": {
+            "type": "number",
+            "title": "Arithmetic Mean Celsius"
+          },
+          "min_temperature_celsius": {
+            "type": "number",
+            "title": "Min Temperature Celsius"
+          },
+          "max_temperature_celsius": {
+            "type": "number",
+            "title": "Max Temperature Celsius"
+          },
+          "readings_count": {
+            "type": "integer",
+            "title": "Readings Count"
+          },
+          "formula_reference": {
+            "type": "string",
+            "title": "Formula Reference",
+            "default": "USP <1079> / PDA TR 39 Arrhenius Kinetic Model"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mean_kinetic_temperature_celsius",
+          "arithmetic_mean_celsius",
+          "min_temperature_celsius",
+          "max_temperature_celsius",
+          "readings_count"
+        ],
+        "title": "MktCalculationDirectResponse",
+        "description": "Direct standalone MKT calculation result."
       },
       "MultiEchelonRollup": {
         "properties": {
@@ -14290,6 +15836,188 @@
         ],
         "title": "RaiseQueryResponse"
       },
+      "ReLabelingTaskCompleteRequest": {
+        "properties": {
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "title": "ReLabelingTaskCompleteRequest",
+        "description": "Payload to record completion of a re-labeling task."
+      },
+      "ReLabelingTaskResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "task_number": {
+            "type": "string",
+            "title": "Task Number"
+          },
+          "lot_number": {
+            "type": "string",
+            "title": "Lot Number"
+          },
+          "node_id": {
+            "type": "string",
+            "title": "Node Id"
+          },
+          "affected_kit_count": {
+            "type": "integer",
+            "title": "Affected Kit Count"
+          },
+          "old_expiry_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Old Expiry Date"
+          },
+          "new_expiry_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "New Expiry Date"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "assigned_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned To"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "completed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed By"
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
+          },
+          "verified_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified By"
+          },
+          "label_barcode_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Barcode Hash"
+          },
+          "relabeling_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relabeling Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "task_number",
+          "lot_number",
+          "node_id",
+          "affected_kit_count",
+          "old_expiry_date",
+          "new_expiry_date",
+          "status"
+        ],
+        "title": "ReLabelingTaskResponse",
+        "description": "Response schema for a physical kit re-labeling action task."
+      },
+      "ReLabelingTaskVerifyRequest": {
+        "properties": {
+          "label_barcode_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Barcode Hash"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "title": "ReLabelingTaskVerifyRequest",
+        "description": "Payload for dual QA verification of a completed re-labeling task."
+      },
       "RedactPDFRequest": {
         "properties": {
           "pdf_base64": {
@@ -14782,6 +16510,190 @@
           "has_gcp_training"
         ],
         "title": "SiteStaffMemberResponse"
+      },
+      "StabilityBudgetCreateRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type"
+          },
+          "lot_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Number"
+          },
+          "storage_condition": {
+            "type": "string",
+            "title": "Storage Condition",
+            "default": "REFRIGERATED_2_TO_8"
+          },
+          "min_temp_celsius": {
+            "type": "number",
+            "title": "Min Temp Celsius",
+            "default": 2.0
+          },
+          "max_temp_celsius": {
+            "type": "number",
+            "title": "Max Temp Celsius",
+            "default": 8.0
+          },
+          "max_mkt_celsius": {
+            "type": "number",
+            "title": "Max Mkt Celsius",
+            "default": 8.0
+          },
+          "max_cumulative_hours_above_upper": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Max Cumulative Hours Above Upper",
+            "default": 24.0
+          },
+          "max_cumulative_hours_below_lower": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Max Cumulative Hours Below Lower",
+            "default": 0.0
+          },
+          "activation_energy_over_r": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Activation Energy Over R",
+            "default": 10000.0
+          },
+          "hard_min_temp_celsius": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hard Min Temp Celsius",
+            "default": 0.0
+          },
+          "hard_max_temp_celsius": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hard Max Temp Celsius",
+            "default": 25.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "kit_type"
+        ],
+        "title": "StabilityBudgetCreateRequest",
+        "description": "Payload to create or configure a drug stability budget."
+      },
+      "StabilityBudgetResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type"
+          },
+          "lot_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Number"
+          },
+          "storage_condition": {
+            "type": "string",
+            "title": "Storage Condition"
+          },
+          "min_temp_celsius": {
+            "type": "number",
+            "title": "Min Temp Celsius"
+          },
+          "max_temp_celsius": {
+            "type": "number",
+            "title": "Max Temp Celsius"
+          },
+          "max_mkt_celsius": {
+            "type": "number",
+            "title": "Max Mkt Celsius"
+          },
+          "max_cumulative_hours_above_upper": {
+            "type": "number",
+            "title": "Max Cumulative Hours Above Upper"
+          },
+          "max_cumulative_hours_below_lower": {
+            "type": "number",
+            "title": "Max Cumulative Hours Below Lower"
+          },
+          "activation_energy_over_r": {
+            "type": "number",
+            "title": "Activation Energy Over R"
+          },
+          "hard_min_temp_celsius": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hard Min Temp Celsius"
+          },
+          "hard_max_temp_celsius": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hard Max Temp Celsius"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "kit_type",
+          "storage_condition",
+          "min_temp_celsius",
+          "max_temp_celsius",
+          "max_mkt_celsius",
+          "max_cumulative_hours_above_upper",
+          "max_cumulative_hours_below_lower",
+          "activation_energy_over_r"
+        ],
+        "title": "StabilityBudgetResponse",
+        "description": "Response schema for a drug stability budget."
       },
       "StudyEvent": {
         "properties": {
@@ -16286,6 +18198,187 @@
           "explanation"
         ],
         "title": "TSDVEvaluationResponse"
+      },
+      "TemperatureLoggerRegisterRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "logger_id": {
+            "type": "string",
+            "title": "Logger Id"
+          },
+          "device_model": {
+            "type": "string",
+            "title": "Device Model",
+            "default": "Sensitech TempTale Ultra"
+          },
+          "serial_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serial Number"
+          },
+          "logger_type": {
+            "type": "string",
+            "title": "Logger Type",
+            "default": "SHIPMENT"
+          },
+          "assigned_transfer_order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Transfer Order Id"
+          },
+          "assigned_node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Node Id"
+          },
+          "assigned_container_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Container Id"
+          },
+          "calibration_expiry_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Expiry Date"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "logger_id"
+        ],
+        "title": "TemperatureLoggerRegisterRequest",
+        "description": "Payload to register a hardware temperature logger device."
+      },
+      "TemperatureLoggerResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "logger_id": {
+            "type": "string",
+            "title": "Logger Id"
+          },
+          "device_model": {
+            "type": "string",
+            "title": "Device Model"
+          },
+          "serial_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serial Number"
+          },
+          "logger_type": {
+            "type": "string",
+            "title": "Logger Type"
+          },
+          "assigned_transfer_order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Transfer Order Id"
+          },
+          "assigned_node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Node Id"
+          },
+          "assigned_container_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Container Id"
+          },
+          "calibration_expiry_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Expiry Date"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "logger_id",
+          "device_model",
+          "logger_type",
+          "status"
+        ],
+        "title": "TemperatureLoggerResponse",
+        "description": "Response schema for a temperature logger device."
       },
       "TransferOrderApprovalRequest": {
         "properties": {

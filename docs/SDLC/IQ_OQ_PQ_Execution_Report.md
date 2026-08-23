@@ -7,11 +7,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3311
-- **Passed:** 3281 🟢
+- **Total Automated Test Cases Run:** 3333
+- **Passed:** 3303 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 30 ⚪
-- **Overall Operational Pass Rate:** 99.09%
+- **Overall Operational Pass Rate:** 99.10%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -1728,6 +1728,21 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_randomization_config_validation` | `apps.execution.tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reproducibility_and_seeding` | `apps.execution.tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_stratified_block_isolation` | `apps.execution.tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_arrhenius_mkt_boundary_and_singularity_rejection` | `apps.execution.tests.test_rtsm_cold_chain_mkt` | ADR-2199, PRD-SCM-002 | 🟢 PASSED | < 1s |
+| `test_arrhenius_mkt_fluctuating_temperature_non_linear` | `apps.execution.tests.test_rtsm_cold_chain_mkt` | ADR-2199, PRD-SCM-002 | 🟢 PASSED | < 1s |
+| `test_arrhenius_mkt_spike_sensitivity` | `apps.execution.tests.test_rtsm_cold_chain_mkt` | ADR-2199, PRD-SCM-002 | 🟢 PASSED | < 1s |
+| `test_arrhenius_mkt_uniform_temperature` | `apps.execution.tests.test_rtsm_cold_chain_mkt` | ADR-2199, PRD-SCM-002 | 🟢 PASSED | < 1s |
+| `test_dispensation_gating_blocks_quarantined_and_expired_kits` | `apps.execution.tests.test_rtsm_cold_chain_mkt` | ADR-2199, PRD-SCM-002 | 🟢 PASSED | < 1s |
+| `test_lot_expiry_extension_and_relabeling_task_lifecycle` | `apps.execution.tests.test_rtsm_cold_chain_mkt` | ADR-2199, PRD-SCM-003 | 🟢 PASSED | < 1s |
+| `test_manual_quarantine_and_qa_disposition_release_workflow` | `apps.execution.tests.test_rtsm_cold_chain_mkt` | ADR-2199, PRD-SCM-002 | 🟢 PASSED | < 1s |
+| `test_parse_logger_corrupt_file_raises` | `apps.execution.tests.test_rtsm_cold_chain_mkt` | ADR-2199, PRD-SCM-002 | 🟢 PASSED | < 1s |
+| `test_parse_logger_csv_standard_and_semicolon` | `apps.execution.tests.test_rtsm_cold_chain_mkt` | ADR-2199, PRD-SCM-002 | 🟢 PASSED | < 1s |
+| `test_parse_logger_json_payload` | `apps.execution.tests.test_rtsm_cold_chain_mkt` | ADR-2199, PRD-SCM-002 | 🟢 PASSED | < 1s |
+| `test_parse_logger_xml_sensitech_and_temptale` | `apps.execution.tests.test_rtsm_cold_chain_mkt` | ADR-2199, PRD-SCM-002 | 🟢 PASSED | < 1s |
+| `test_shipment_temperature_excursion_quarantines_kits_and_outbox` | `apps.execution.tests.test_rtsm_cold_chain_mkt` | ADR-2199, PRD-SCM-002 | 🟢 PASSED | < 1s |
+| `test_stability_budget_evaluation_acceptable_excursion` | `apps.execution.tests.test_rtsm_cold_chain_mkt` | ADR-2199, PRD-SCM-002 | 🟢 PASSED | < 1s |
+| `test_stability_budget_evaluation_breach_and_hard_boundary` | `apps.execution.tests.test_rtsm_cold_chain_mkt` | ADR-2199, PRD-SCM-002 | 🟢 PASSED | < 1s |
+| `test_stability_budget_evaluation_compliant` | `apps.execution.tests.test_rtsm_cold_chain_mkt` | ADR-2199, PRD-SCM-002 | 🟢 PASSED | < 1s |
 | `test_forecast_storage_capacity_bounding` | `apps.execution.tests.test_rtsm_predictive_forecasting` | PRD-SCM-001 | 🟢 PASSED | < 1s |
 | `test_predictive_forecast_endpoint_and_persistence` | `apps.execution.tests.test_rtsm_predictive_forecasting` | PRD-SCM-001 | 🟢 PASSED | < 1s |
 | `test_predictive_forecast_pure_calculation` | `apps.execution.tests.test_rtsm_predictive_forecasting` | PRD-SCM-001 | 🟢 PASSED | < 1s |
@@ -2404,6 +2419,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_quality_sentinel_router_endpoint_dependency_override` | `apps.quality.tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_readability_metrics_and_scoring` | `apps.quality.tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_syllable_counter_deterministic` | `apps.quality.tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_benford_law_goodness_of_fit_compliant_and_non_compliant` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-001 | 🟢 PASSED | < 1s |
+| `test_chi_square_distribution_accuracy` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-001 | 🟢 PASSED | < 1s |
+| `test_forensics_rest_api_full_surveillance_and_kri_breach_alerts` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-001 | 🟢 PASSED | < 1s |
+| `test_multivariate_mahalanobis_distance_and_correlation_matrices` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-002 | 🟢 PASSED | < 1s |
+| `test_simulation_dataset_generator` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-001 | 🟢 PASSED | < 1s |
+| `test_terminal_digit_uniform_distribution_and_rounding_bias` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-001 | 🟢 PASSED | < 1s |
+| `test_variance_shrinkage_and_kullback_leibler_divergence` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-002 | 🟢 PASSED | < 1s |
 | `test_audit_log_endpoint_properties` | `apps.quality.tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_capa_approval_closure_requires_quality_oversight` | `apps.quality.tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_capa_creation_validations` | `apps.quality.tests.test_quality_workflow` | PRD-SUB-001 | 🟢 PASSED | < 1s |
@@ -3592,28 +3614,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 119af4590f5b6892b81bac27fb68e9e8cf9ed8b85518fdd4c819ab1ff943323f
+- **Cryptographic Hash (SHA-256):** 956ad6ff41b92755da64da45016c9b8dc95f462c949db82ed0a78ade70d5f584
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUNc48/0KRXHH5Q1rmNJk/8KKccp0wDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUd4owC438T4HEpg6O8oN+SCMJ6nQwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MjE0NTUxNFoXDTI3MDgyMzE0NTUxNFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MjE1MTEwMVoXDTI3MDgyMzE1MTEwMVowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArwTq
-0OQ1vbwJCLaAE1VZpdwhzzBdhSMBhglE5pBqQOFEhyeORNEiwxlOcIfiPBnfANzP
-p2GFg5d9tbff/4SRrUIyLUcp9oAx40Km2jnhK2GMyXb/vfBfOotQIxESPusCBUR+
-Q7ekRTxWJPAHwqYjwUu8+ReeCk0D3CgkxbySQBznavMFnJuM+q+jta7709e7Unga
-ivpyPYBjwH9btP3q5/EoQzkItPB3O7+RL2lA2Hf3df2q2DoRG6RdltBMwHTxJS7S
-Is2brUz9b7JKl4/Vb4YguMWDvfRyp2t0GTfdvKfffHqbmo2NJSEbFFQlvXjU3iHm
-0SU77NFhhOZfCmat/wIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBaIDkhxzrUYDWf
-k1zazxOMQS7Thwkmv0JJFg4mJNYdzGgcDgPbeZsHrioVogHhWp+dWEzbgFRNbQ/C
-zv5DEvqvT+wpYSX0eLg9wYB4ZRTrM3sMsHg1LVZoIUYB5Uwzpk3vQGN6qvHPZN2j
-GKjw3NdVwY79tsVToyNDyuAyBXeKrmFf8L2boOpFrYbuFe0eq0Imvre/fcSdbuM9
-8BCQYZVogtdstfRuKxVjTALO+diYpo01AsHQ/Vr4ZKdvah/uVO1ujqu/Qj8+DP9F
-pvxhG+C7N++isZDPMQghm2fgPZj/Thf1AD/cL7f3OJQBMFaBQyxcdz0EySAHAD0l
-hFc3aBRJ
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwcnd
++mmRS7zwRyagip4YbqiZkvHqDYk2OfezqC9F9hRnUCgP5jdsVfhK6JmYesHUntpY
+ByIImiwje2K4Q7GWS/9PAk6uBtNbL8grs6+sc526k3xFh3kV9Obu4F+ElPtjzjhU
+BocsyPe1iDAZjNiSA+iwAq+Is254+oF4mqCfpUxLKWLrwbOApHQKocRyZhjsTffh
+loCCraP03BiyMSYcKolN/4q/x79qKeKPF75hrykGHWX+U57RDskWq7laU2zDCbGr
+uXQijHQ3QKIRsJam4VWeRMG3ccHKP3IjLQjZuYx1RQeeUqRVZF8vKumvBMQD1z+C
+93CDx4SumoLbVcd7OQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAb0FAtKB6w3tBb
+lZxJlVwjDNMWi09DZPew0nXZXnPq5yGXu26hCVXxyteSvrGdSrgApoEffp2Zn6uf
+XWIw+93ULVCkpE16P/apaqOPFhmmaWs4hLn5dai4PCTflqrZaH8Pn1le4D4XYesb
+aPrZo8moRAu10x2DyVdfTwbDG/NvwghI320yM7r5tNlR7zkovlZv3c+LtxN1qDdd
+d7YIjcmfBjrrgRg3v43Gh9yb4tZcx7JLC9wMfsxpZwykLzCf4zKccsqCSUEEmIkP
+1xELMqzZyDH0aK+moo097AEB1XByjQSnRi0V5VxNnquunGKZTOx1QPF6zIAi35oA
++Dm8bPwW
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-AT+zNBf6yPw7iaBM8iCPZlMoqlYMlC8acGRohrY3pkmWIlr8EZwYBOVBXkvf3EtRBi32ZfJe5pmI3fjgD3h98rGaRL6NvWC12dGSeY8Ci7cAKT8moCaSf3I+ceenDYgfRLNTOkbrMgO8y53Iq4w77EPC0UX3JqXeIBGrjmKIyXgPQ6mPkNMxwizBX2NJqeDtagTtzoJIDw7t7E+ASSK1nb+TU7SlAwoVeef6nNKykju5GYgo+5uGUuzfV6PZZaJJ1txeQZaeZbchxUFI2k+zBpgREuDOUnFpIYDimCO63RWmskni9+xhw4dd5rrEu5DsCNUhFztLrZ7EocB0+vrWaw==
+G2yy1NMCu9nnt3ic1f+oaq7pelthlTNEvj5WqLlOvOugwwcq3I93JqEIXTnEjJfNAngPjAthqEU09GobubOU59X+1j9HxdyzSPEAK/WD0Q2XCAnpB8WBmuvSlCSS83Y/7mSaXszk2O/ygaaYKfNuLMLD0XfpO0EPH3z5Hm8k6Qth2jVE6KlMQNcvyAC5aIDnmpbDR0XdfCZImspVl8nnxZS6Q+ke/8AB8XPJCCKna3/2ns1s31NUQ7frx+VKeU7gPj5wtfKrO/u6egamGjkch3TtnqLVW3VnA53Bsrf5owKc1pHQ1z17PI0CKPPAnd2MI8kvpLiTNmzdtCy/beYuKA==
 -----END SIGNATURE-----

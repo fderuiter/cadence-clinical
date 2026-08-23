@@ -205,3 +205,167 @@ class MultiEchelonRollup(BaseModel):
     total_global_storage_capacity: int
     overall_capacity_utilization_pct: float
     hierarchy_tree: list[SupplyHierarchyNode]
+
+
+class ExcursionEvaluationStatus(StrEnum):
+    """Evaluation decision statuses for cold chain stability compliance."""
+
+    COMPLIANT = "COMPLIANT"
+    EXCURSION_ACCEPTABLE = "EXCURSION_ACCEPTABLE"
+    EXCURSION_BREACH = "EXCURSION_BREACH"
+
+
+class LoggerDeviceStatus(StrEnum):
+    """Lifecycle states for digital temperature logger hardware."""
+
+    ACTIVE = "ACTIVE"
+    INGESTED = "INGESTED"
+    DECOMMISSIONED = "DECOMMISSIONED"
+
+
+class LoggerEntityType(StrEnum):
+    """Supply chain entities to which a data logger is affixed."""
+
+    SHIPMENT = "SHIPMENT"
+    SITE_STORAGE = "SITE_STORAGE"
+    DEPOT_STORAGE = "DEPOT_STORAGE"
+
+
+class FileFormat(StrEnum):
+    """Supported file formats for digital temperature logger ingestion."""
+
+    CSV = "CSV"
+    XML = "XML"
+    JSON = "JSON"
+
+
+class KitStatus(StrEnum):
+    """Investigational product kit physical and dispensing disposition states."""
+
+    AVAILABLE = "AVAILABLE"
+    QUARANTINED = "QUARANTINED"
+    DISPENSED = "DISPENSED"
+    DESTROYED = "DESTROYED"
+    DAMAGED = "DAMAGED"
+    EXPIRED = "EXPIRED"
+
+
+class ReLabelingTaskStatus(StrEnum):
+    """Workflow states for GxP physical re-labeling action tasks."""
+
+    PENDING_RELABEL = "PENDING_RELABEL"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    VERIFIED = "VERIFIED"
+
+
+class RawTemperaturePoint(BaseModel):
+    """Individual timeseries temperature observation point."""
+
+    model_config = ConfigDict(strict=True)
+
+    timestamp: datetime = Field(
+        ..., description="Timestamp of the temperature reading."
+    )
+    temperature_celsius: float = Field(
+        ..., description="Observed temperature in degrees Celsius."
+    )
+
+
+class DiscreteExcursionEvent(BaseModel):
+    """Segment of contiguous thermal excursion above or below stability boundaries."""
+
+    model_config = ConfigDict(strict=True)
+
+    start_time: str = Field(..., description="ISO 8601 start timestamp of excursion.")
+    end_time: str = Field(..., description="ISO 8601 end timestamp of excursion.")
+    duration_hours: float = Field(
+        ..., description="Duration of continuous excursion in decimal hours."
+    )
+    excursion_type: str = Field(
+        ...,
+        description="Type of excursion (e.g. HIGH_TEMPERATURE, LOW_TEMPERATURE, HARD_MAX_BREACH, HARD_MIN_BREACH).",
+    )
+    peak_or_nadir_temp_celsius: float = Field(
+        ..., description="Extreme temperature reached during the excursion interval."
+    )
+    threshold_celsius: float = Field(
+        ..., description="Stability boundary threshold in degrees Celsius."
+    )
+
+
+class StabilityBudgetConfig(BaseModel):
+    """Specification of thermal stability limits and Arrhenius parameters for a kit type or lot."""
+
+    model_config = ConfigDict(strict=True)
+
+    study_id: str = Field(..., description="Clinical study identifier.")
+    kit_type: str = Field(..., description="Blinded kit type or product SKU.")
+    lot_number: str | None = Field(
+        default=None, description="Optional specific lot number override."
+    )
+    storage_condition: str = Field(
+        default="REFRIGERATED_2_TO_8",
+        description="Standard storage regime label.",
+    )
+    min_temp_celsius: float = Field(
+        default=2.0, description="Lower standard storage temperature bound in °C."
+    )
+    max_temp_celsius: float = Field(
+        default=8.0, description="Upper standard storage temperature bound in °C."
+    )
+    max_mkt_celsius: float = Field(
+        default=8.0, description="Maximum allowable Mean Kinetic Temperature in °C."
+    )
+    max_cumulative_hours_above_upper: float = Field(
+        default=24.0,
+        ge=0.0,
+        description="Allowable cumulative time in hours above max_temp_celsius.",
+    )
+    max_cumulative_hours_below_lower: float = Field(
+        default=0.0,
+        ge=0.0,
+        description="Allowable cumulative time in hours below min_temp_celsius.",
+    )
+    activation_energy_over_r: float = Field(
+        default=10000.0,
+        gt=0.0,
+        description="Arrhenius activation energy over gas constant ratio (ΔH / R in K). Standard universal value is 10000 K.",
+    )
+    hard_min_temp_celsius: float | None = Field(
+        default=0.0,
+        description="Hard lower limit below which product is immediately compromised (e.g. freezing for biologics).",
+    )
+    hard_max_temp_celsius: float | None = Field(
+        default=25.0,
+        description="Hard upper limit above which product is immediately compromised.",
+    )
+
+
+class ExcursionAnalysisResult(BaseModel):
+    """Complete mathematical results of a cold chain logger excursion evaluation."""
+
+    model_config = ConfigDict(strict=True)
+
+    study_id: str
+    logger_id: str
+    entity_type: LoggerEntityType
+    entity_id: str
+    evaluation_status: ExcursionEvaluationStatus
+    mean_kinetic_temperature_celsius: float
+    arithmetic_mean_celsius: float
+    min_temperature_celsius: float
+    max_temperature_celsius: float
+    cumulative_hours_above_upper: float
+    cumulative_hours_below_lower: float
+    total_duration_hours: float
+    readings_count: int
+    hard_boundary_breached: bool
+    mkt_breached: bool
+    cumulative_time_breached: bool
+    quarantine_triggered: bool
+    quarantined_kit_count: int
+    excursions: list[DiscreteExcursionEvent] = Field(default_factory=list)
+    evaluated_at: datetime
+    evaluated_by: str
+    summary_notes: str | None = None

@@ -859,6 +859,24 @@ export interface DoaDelegationRecord {
   is_deleted: boolean;
 }
 
+export interface DrugStabilityBudget {
+  study_id: string;
+  kit_type: string;
+  lot_number?: string | null;
+  storage_condition: string;
+  min_temp_celsius: number;
+  max_temp_celsius: number;
+  max_mkt_celsius: number;
+  max_cumulative_hours_above_upper: number;
+  max_cumulative_hours_below_lower: number;
+  activation_energy_over_r: number;
+  hard_min_temp_celsius?: number | null;
+  hard_max_temp_celsius?: number | null;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
 export interface EisfDocumentRecord {
   id: string;
   site_id: string;
@@ -887,6 +905,32 @@ export interface EisfSectionTaxonomy {
   is_mandatory: boolean;
 }
 
+export interface ExcursionEvaluation {
+  study_id: string;
+  logger_id: string;
+  entity_type: string;
+  entity_id: string;
+  evaluation_status: string;
+  mean_kinetic_temperature_celsius: number;
+  arithmetic_mean_celsius: number;
+  min_temperature_celsius: number;
+  max_temperature_celsius: number;
+  cumulative_hours_above_upper: number;
+  cumulative_hours_below_lower: number;
+  hard_boundary_breached: boolean;
+  mkt_breached: boolean;
+  cumulative_time_breached: boolean;
+  quarantine_triggered: boolean;
+  quarantined_kit_count: number;
+  evaluated_at: string;
+  evaluated_by: string;
+  excursion_events?: Record<string, any> | null;
+  summary_notes?: string | null;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
 export interface FormSubmission {
   study_id: string;
   site_id?: string | null;
@@ -910,6 +954,13 @@ export interface IpKit {
   kit_number: string;
   kit_type: string;
   description?: string | null;
+  status: string;
+  lot_number?: string | null;
+  expiration_date?: string | null;
+  node_id?: string | null;
+  quarantine_reason?: string | null;
+  quarantined_at?: string | null;
+  quarantined_by?: string | null;
   id: string;
   version: number;
   is_deleted: boolean;
@@ -1022,6 +1073,25 @@ export interface LabUnitConversion {
   is_deleted: boolean;
 }
 
+export interface LotExpiryExtension {
+  study_id: string;
+  lot_number: string;
+  kit_type: string;
+  initial_expiry_date: string;
+  extended_expiry_date: string;
+  extension_reason: string;
+  stability_protocol_reference: string;
+  authorized_by: string;
+  qa_approver_id?: string | null;
+  approval_status: string;
+  affected_kits_count: number;
+  relabeling_tasks_generated: number;
+  created_at: string;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
 export interface MeddraHierarchy {
   dictionary_version: string;
   llt_code: string;
@@ -1107,6 +1177,27 @@ export interface RandomizationConfig {
   stratification_factors?: Record<string, any> | null;
   encrypted_block_config?: string | null;
   seed?: number | null;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
+export interface RelabelingTask {
+  study_id: string;
+  task_number: string;
+  lot_number: string;
+  node_id: string;
+  affected_kit_count: number;
+  old_expiry_date: string;
+  new_expiry_date: string;
+  status: string;
+  assigned_to?: string | null;
+  completed_at?: string | null;
+  completed_by?: string | null;
+  verified_at?: string | null;
+  verified_by?: string | null;
+  label_barcode_hash?: string | null;
+  relabeling_notes?: string | null;
   id: string;
   version: number;
   is_deleted: boolean;
@@ -1286,6 +1377,46 @@ export interface SupplyNode {
   lead_time_days: number;
   temperature_conditions?: Record<string, any> | null;
   is_active: boolean;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
+export interface TemperatureLogIngestion {
+  study_id: string;
+  logger_id: string;
+  file_format: string;
+  filename: string;
+  reading_count: number;
+  ingested_at: string;
+  ingested_by: string;
+  raw_data_hash?: string | null;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
+export interface TemperatureLogger {
+  study_id: string;
+  logger_id: string;
+  device_model: string;
+  serial_number?: string | null;
+  logger_type: string;
+  assigned_transfer_order_id?: string | null;
+  assigned_node_id?: string | null;
+  assigned_container_id?: string | null;
+  calibration_expiry_date?: string | null;
+  status: string;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
+export interface TemperatureReading {
+  study_id: string;
+  logger_id: string;
+  timestamp: string;
+  temperature_celsius: number;
   id: string;
   version: number;
   is_deleted: boolean;

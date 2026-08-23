@@ -20,7 +20,9 @@ from apps.quality.adapters.models import (
     QualityToleranceLimit,
     RootCauseAnalysis,
     SeriousBreachRecord,
+    SiteForensicsRecord,
     SiteRiskProfile,
+    StatisticalForensicsRun,
 )
 from apps.quality.domain.ports import QualityRepositoryPort
 from packages.database import map_database_exceptions
@@ -414,3 +416,77 @@ class SQLQualityRepository(QualityRepositoryPort):
         self.session.add(log)
         await self.session.flush()
         return log
+
+    # --- Statistical Forensics (CSM) ---
+
+    def create_forensics_run_entity(self, **kwargs) -> StatisticalForensicsRun:
+        return StatisticalForensicsRun(**kwargs)
+
+    def create_site_forensics_record_entity(self, **kwargs) -> SiteForensicsRecord:
+        return SiteForensicsRecord(**kwargs)
+
+    @map_database_exceptions
+    async def save_forensics_run(
+        self, run: StatisticalForensicsRun
+    ) -> StatisticalForensicsRun:
+        self.session.add(run)
+        await self.session.flush()
+        return run
+
+    @map_database_exceptions
+    async def save_site_forensics_record(
+        self, record: SiteForensicsRecord
+    ) -> SiteForensicsRecord:
+        self.session.add(record)
+        await self.session.flush()
+        return record
+
+    @map_database_exceptions
+    async def get_forensics_runs(
+        self, study_id: str | None = None
+    ) -> Sequence[StatisticalForensicsRun]:
+        stmt = (
+            select(StatisticalForensicsRun)
+            .options(selectinload(StatisticalForensicsRun.site_results))
+            .order_by(StatisticalForensicsRun.analysis_timestamp.desc())
+        )
+        if study_id:
+            stmt = stmt.where(StatisticalForensicsRun.study_id == study_id)
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
+    @map_database_exceptions
+    async def get_forensics_run_by_id(
+        self, run_id: str
+    ) -> StatisticalForensicsRun | None:
+        stmt = (
+            select(StatisticalForensicsRun)
+            .where(StatisticalForensicsRun.id == run_id)
+            .options(selectinload(StatisticalForensicsRun.site_results))
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
+    @map_database_exceptions
+    async def get_site_forensics_records_by_run(
+        self, run_id: str
+    ) -> Sequence[SiteForensicsRecord]:
+        stmt = (
+            select(SiteForensicsRecord)
+            .where(SiteForensicsRecord.run_id == run_id)
+            .order_by(SiteForensicsRecord.composite_risk_score.desc())
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
+    @map_database_exceptions
+    async def get_site_forensics_records_by_site(
+        self, site_id: str
+    ) -> Sequence[SiteForensicsRecord]:
+        stmt = (
+            select(SiteForensicsRecord)
+            .where(SiteForensicsRecord.site_id == site_id)
+            .order_by(SiteForensicsRecord.created_at.desc())
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().all()

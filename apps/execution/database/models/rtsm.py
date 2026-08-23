@@ -122,10 +122,23 @@ class IPKit(AuditedModel):
 
     __tablename__ = "ip_kits"
 
-    study_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    kit_number: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    kit_number: Mapped[str] = mapped_column(
+        String(255), unique=True, nullable=False, index=True
+    )
     kit_type: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(String(1000), nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(50), default="AVAILABLE", nullable=False
+    )  # AVAILABLE, QUARANTINED, DISPENSED, DESTROYED, DAMAGED, EXPIRED
+    lot_number: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    expiration_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    node_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    quarantine_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    quarantined_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    quarantined_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 class SiteInventory(AuditedModel):
@@ -356,3 +369,216 @@ class PredictiveResupplyForecast(AuditedModel):
         String(50), default="LOW", nullable=False
     )  # LOW, MEDIUM, HIGH, CRITICAL
     forecast_details: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+
+class DrugStabilityBudget(AuditedModel):
+    """Defines allowable thermal excursion limits and Arrhenius activation parameters per kit type / lot.
+
+    Conforms to USP <1079> and PDA Technical Report 39.
+    """
+
+    __tablename__ = "drug_stability_budgets"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    kit_type: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    lot_number: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    storage_condition: Mapped[str] = mapped_column(
+        String(100), default="REFRIGERATED_2_TO_8", nullable=False
+    )
+    min_temp_celsius: Mapped[float] = mapped_column(Float, default=2.0, nullable=False)
+    max_temp_celsius: Mapped[float] = mapped_column(Float, default=8.0, nullable=False)
+    max_mkt_celsius: Mapped[float] = mapped_column(Float, default=8.0, nullable=False)
+    max_cumulative_hours_above_upper: Mapped[float] = mapped_column(
+        Float, default=24.0, nullable=False
+    )
+    max_cumulative_hours_below_lower: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    activation_energy_over_r: Mapped[float] = mapped_column(
+        Float, default=10000.0, nullable=False
+    )  # delta_H / R = 10000 K
+    hard_min_temp_celsius: Mapped[float | None] = mapped_column(
+        Float, default=0.0, nullable=True
+    )  # Freezing threshold
+    hard_max_temp_celsius: Mapped[float | None] = mapped_column(
+        Float, default=25.0, nullable=True
+    )  # Upper critical limit
+
+
+class TemperatureLogger(AuditedModel):
+    """Represents a digital temperature data logger device bound to a shipment or storage facility."""
+
+    __tablename__ = "temperature_loggers"
+    __table_args__ = (
+        UniqueConstraint("study_id", "logger_id", name="uq_temp_loggers_study_logger"),
+    )
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    logger_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    device_model: Mapped[str] = mapped_column(
+        String(255), default="Sensitech TempTale Ultra", nullable=False
+    )
+    serial_number: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    logger_type: Mapped[str] = mapped_column(
+        String(50), default="SHIPMENT", nullable=False
+    )  # SHIPMENT, SITE_STORAGE, DEPOT_STORAGE
+    assigned_transfer_order_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    assigned_node_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    assigned_container_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    calibration_expiry_date: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(50), default="ACTIVE", nullable=False
+    )  # ACTIVE, INGESTED, DECOMMISSIONED
+
+
+class TemperatureLogIngestion(AuditedModel):
+    """Audit record for an ingested temperature data logger file (CSV, XML, JSON)."""
+
+    __tablename__ = "temperature_log_ingestions"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    logger_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    file_format: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # CSV, XML, JSON
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    reading_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    ingested_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    ingested_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    raw_data_hash: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )  # SHA-256 hash for Part 11 integrity
+
+
+class TemperatureReading(AuditedModel):
+    """Individual timeseries temperature observation point from a data logger."""
+
+    __tablename__ = "temperature_readings"
+    __table_args__ = (
+        Index(
+            "idx_temp_readings_study_logger_time", "study_id", "logger_id", "timestamp"
+        ),
+    )
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    logger_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    temperature_celsius: Mapped[float] = mapped_column(Float, nullable=False)
+
+
+class ExcursionEvaluation(AuditedModel):
+    """Evaluated MKT and thermal stability budget result with automated quarantine decisions."""
+
+    __tablename__ = "excursion_evaluations"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    logger_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    entity_type: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # SHIPMENT, SITE_STORAGE, DEPOT_STORAGE
+    entity_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )  # transfer_order_id, node_id, or storage_unit_id
+    evaluation_status: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # COMPLIANT, EXCURSION_ACCEPTABLE, EXCURSION_BREACH
+    mean_kinetic_temperature_celsius: Mapped[float] = mapped_column(
+        Float, nullable=False
+    )
+    arithmetic_mean_celsius: Mapped[float] = mapped_column(Float, nullable=False)
+    min_temperature_celsius: Mapped[float] = mapped_column(Float, nullable=False)
+    max_temperature_celsius: Mapped[float] = mapped_column(Float, nullable=False)
+    cumulative_hours_above_upper: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    cumulative_hours_below_lower: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    hard_boundary_breached: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    mkt_breached: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    cumulative_time_breached: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    quarantine_triggered: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    quarantined_kit_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    evaluated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    evaluated_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    excursion_events: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    summary_notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+
+class LotExpiryExtension(AuditedModel):
+    """Tracks stability-backed lot expiration date extensions across clinical depots and sites."""
+
+    __tablename__ = "lot_expiry_extensions"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    lot_number: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    kit_type: Mapped[str] = mapped_column(String(255), nullable=False)
+    initial_expiry_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    extended_expiry_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    extension_reason: Mapped[str] = mapped_column(String(500), nullable=False)
+    stability_protocol_reference: Mapped[str] = mapped_column(
+        String(255), nullable=False
+    )
+    authorized_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    qa_approver_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    approval_status: Mapped[str] = mapped_column(
+        String(50), default="APPROVED", nullable=False
+    )  # APPROVED, PENDING_QA, REJECTED
+    affected_kits_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    relabeling_tasks_generated: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+
+
+class ReLabelingTask(AuditedModel):
+    """GxP physical re-labeling action task for a lot expiry extension at a facility."""
+
+    __tablename__ = "relabeling_tasks"
+    __table_args__ = (
+        UniqueConstraint(
+            "study_id", "task_number", name="uq_relabeling_task_study_num"
+        ),
+    )
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    task_number: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    lot_number: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    node_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    affected_kit_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    old_expiry_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    new_expiry_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(50), default="PENDING_RELABEL", nullable=False
+    )  # PENDING_RELABEL, IN_PROGRESS, COMPLETED, VERIFIED
+    assigned_to: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    completed_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    verified_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    label_barcode_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    relabeling_notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)

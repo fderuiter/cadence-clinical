@@ -28,6 +28,13 @@ from apps.quality.presentation.routers.deviations import (
 from apps.quality.presentation.routers.deviations import (
     router as deviations_router,
 )
+from apps.quality.presentation.routers.forensics import (
+    map_run_to_response,
+    map_site_forensics_to_response,
+)
+from apps.quality.presentation.routers.forensics import (
+    router as forensics_router,
+)
 from apps.quality.presentation.routers.rbqm import (
     map_ctq_to_response,
     map_kri_definition_to_response,
@@ -59,9 +66,11 @@ router.include_router(deviations_router)
 router.include_router(rca_router)
 router.include_router(capas_router)
 router.include_router(rbqm_router)
+router.include_router(forensics_router)
 router.include_router(audits_router)
 router.include_router(serious_breaches_router)
 router.include_router(audit_logs_router)
+
 
 __all__ = [
     "authorize_quality_oversight",
@@ -82,5 +91,7 @@ __all__ = [
     "map_qtl_breach_to_response",
     "map_qtl_to_response",
     "map_rca_to_response",
+    "map_run_to_response",
+    "map_site_forensics_to_response",
     "router",
 ]

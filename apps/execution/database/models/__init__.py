@@ -68,6 +68,13 @@ _submodule_mappings = {
     "TransferOrder": "rtsm",
     "PackingManifest": "rtsm",
     "PredictiveResupplyForecast": "rtsm",
+    "DrugStabilityBudget": "rtsm",
+    "TemperatureLogger": "rtsm",
+    "TemperatureLogIngestion": "rtsm",
+    "TemperatureReading": "rtsm",
+    "ExcursionEvaluation": "rtsm",
+    "LotExpiryExtension": "rtsm",
+    "ReLabelingTask": "rtsm",
     # biostat
     "BiostatExport": "biostat",
     "SDTMDomainRecord": "biostat",

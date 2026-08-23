@@ -102,7 +102,9 @@ from apps.execution.routers.signatures import router as signatures_router
 from apps.execution.routers.unblinding import router as unblinding_router
 from apps.execution.rtsm_authz import redact_response, verify_site_access
 from apps.execution.rtsm_supply import (
+    ExpiredKitError,
     InsufficientStockError,
+    QuarantinedKitError,
     SiteInventoryNotFoundError,
     dispense_kit_transaction,
 )
@@ -3933,6 +3935,8 @@ async def dispense_kit_endpoint(
 
         except SiteInventoryNotFoundError as e:
             raise HTTPException(status_code=404, detail=str(e))
+        except (QuarantinedKitError, ExpiredKitError) as e:
+            raise HTTPException(status_code=422, detail=str(e))
         except InsufficientStockError as e:
             raise HTTPException(status_code=400, detail=str(e))
         except PermissionError as e:

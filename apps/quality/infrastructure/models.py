@@ -17,6 +17,7 @@ from apps.quality.domain.models import (
     ActionItemStatus,
     AuditStatus,
     AuditType,
+    BenfordConformity,
     BreachStatus,
     CAPAStatus,
     CAPAType,
@@ -28,6 +29,7 @@ from apps.quality.domain.models import (
     RCAMethodology,
     RiskCategory,
     RiskTier,
+    RoundingBiasTier,
 )
 
 
@@ -614,3 +616,145 @@ class QualityAuditLog(Base):
     record_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     change_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     merkle_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+# --- Centralized Statistical Monitoring (CSM) & Forensics Models ---
+
+
+class StatisticalForensicsRun(Base):
+    """
+    Represents an automated or on-demand Centralized Statistical Monitoring (CSM) run
+    executing Benford's Law, Rounding Bias, Mahalanobis distances, and Variance Shrinkage tests.
+    """
+
+    __tablename__ = "quality_statistical_forensics_runs"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    run_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    analysis_timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    target_variables: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    total_sites: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_observations: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    anomalous_sites_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(50), default="COMPLETED", nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+    site_results: Mapped[list[SiteForensicsRecord]] = relationship(
+        back_populates="run", cascade="all, delete-orphan", lazy="selectin"
+    )
+
+
+class SiteForensicsRecord(Base):
+    """
+    Detailed statistical forensics and digit preference evaluation for an individual site
+    within a Centralized Statistical Monitoring (CSM) surveillance run.
+    """
+
+    __tablename__ = "quality_site_forensics_records"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    run_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("quality_statistical_forensics_runs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    sample_size: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    # Benford's Law (Leading Digit) metrics
+    benford_chi_square: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    benford_p_value: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    benford_mad: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    benford_conformity: Mapped[str] = mapped_column(
+        String(50), default=BenfordConformity.CLOSE_CONFORMITY, nullable=False
+    )
+    benford_leading_digits: Mapped[dict] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+
+    # Terminal Digit (Rounding Bias) metrics
+    terminal_digit_chi_square: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    terminal_digit_p_value: Mapped[float] = mapped_column(
+        Float, default=1.0, nullable=False
+    )
+    terminal_digit_zero_five_index: Mapped[float] = mapped_column(
+        Float, default=0.2, nullable=False
+    )
+    terminal_digit_distribution: Mapped[dict] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+    rounding_bias_tier: Mapped[str] = mapped_column(
+        String(50), default=RoundingBiasTier.NORMAL, nullable=False
+    )
+
+    # Multivariate Correlation & Mahalanobis Distance metrics
+    mahalanobis_distance: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    mahalanobis_p_value: Mapped[float] = mapped_column(
+        Float, default=1.0, nullable=False
+    )
+    correlation_matrix_distance: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    site_mean_vector: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    site_covariance_matrix: Mapped[dict] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+
+    # Variance Shrinkage & KL Divergence metrics
+    variance_ratio: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    variance_shrinkage_p_value: Mapped[float] = mapped_column(
+        Float, default=1.0, nullable=False
+    )
+    kl_divergence: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    is_variance_shrunk: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+
+    # Composite Risk & Anomaly Sentinel classification
+    composite_risk_score: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    risk_tier: Mapped[str] = mapped_column(
+        String(50), default=RiskTier.LOW, nullable=False
+    )
+    is_anomalous_outlier: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    flagged_anomaly_reasons: Mapped[list] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    kri_evaluation_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, index=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+    run: Mapped[StatisticalForensicsRun] = relationship(back_populates="site_results")

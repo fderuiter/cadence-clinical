@@ -1256,6 +1256,265 @@
         }
       }
     },
+    "/api/v1/quality/forensics/analyze": {
+      "post": {
+        "summary": "Execute Forensics Analysis",
+        "description": "Executes automated multi-site statistical forensics surveillance.",
+        "operationId": "execute_forensics_analysis_api_v1_quality_forensics_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatisticalForensicsAnalyzeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatisticalForensicsRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/forensics/runs": {
+      "get": {
+        "summary": "List Forensics Runs",
+        "description": "Lists historical statistical forensics surveillance runs.",
+        "operationId": "list_forensics_runs_api_v1_quality_forensics_runs_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional study ID filter",
+              "title": "Study Id"
+            },
+            "description": "Optional study ID filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StatisticalForensicsRunResponse"
+                  },
+                  "title": "Response List Forensics Runs Api V1 Quality Forensics Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/forensics/runs/{run_id}": {
+      "get": {
+        "summary": "Get Forensics Run",
+        "description": "Retrieves detailed results for a specific forensics surveillance run.",
+        "operationId": "get_forensics_run_api_v1_quality_forensics_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatisticalForensicsRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/forensics/sites/{site_id}": {
+      "get": {
+        "summary": "Get Site Forensics History",
+        "description": "Retrieves chronological forensics surveillance results for an individual site.",
+        "operationId": "get_site_forensics_history_api_v1_quality_forensics_sites__site_id__get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SiteForensicsResponse"
+                  },
+                  "title": "Response Get Site Forensics History Api V1 Quality Forensics Sites  Site Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/forensics/runs/{run_id}/trigger-kri-alerts": {
+      "post": {
+        "summary": "Trigger Run Kri Alerts",
+        "description": "Dispatches KRI breach events for all flagged anomalous sites in a forensics run.",
+        "operationId": "trigger_run_kri_alerts_api_v1_quality_forensics_runs__run_id__trigger_kri_alerts_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/KRIMetricEvaluationResponse"
+                  },
+                  "title": "Response Trigger Run Kri Alerts Api V1 Quality Forensics Runs  Run Id  Trigger Kri Alerts Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/forensics/simulate": {
+      "post": {
+        "summary": "Simulate Forensics Dataset",
+        "description": "Generates synthetic multi-site clinical datasets for testing and calibration.",
+        "operationId": "simulate_forensics_dataset_api_v1_quality_forensics_simulate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForensicsSimulationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForensicsSimulationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/quality/audits": {
       "post": {
         "summary": "Create Audit",
@@ -2642,6 +2901,64 @@
         ],
         "title": "AuditStatusUpdate"
       },
+      "BenfordConformity": {
+        "type": "string",
+        "enum": [
+          "ACCEPTABLE_CONFORMITY",
+          "CLOSE_CONFORMITY",
+          "MARGINAL_CONFORMITY",
+          "NON_CONFORMING"
+        ],
+        "title": "BenfordConformity"
+      },
+      "BenfordDigitDistributionResponse": {
+        "properties": {
+          "sample_size": {
+            "type": "integer",
+            "title": "Sample Size"
+          },
+          "chi_square": {
+            "type": "number",
+            "title": "Chi Square"
+          },
+          "p_value": {
+            "type": "number",
+            "title": "P Value"
+          },
+          "mad": {
+            "type": "number",
+            "title": "Mad"
+          },
+          "conformity": {
+            "$ref": "#/components/schemas/BenfordConformity"
+          },
+          "observed_frequencies": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Observed Frequencies"
+          },
+          "expected_frequencies": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Expected Frequencies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sample_size",
+          "chi_square",
+          "p_value",
+          "mad",
+          "conformity",
+          "observed_frequencies",
+          "expected_frequencies"
+        ],
+        "title": "BenfordDigitDistributionResponse"
+      },
       "BreachStatus": {
         "type": "string",
         "enum": [
@@ -3871,6 +4188,111 @@
         ],
         "title": "EffectivenessOutcome"
       },
+      "ForensicsSimulationRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID for simulation",
+            "default": "STUDY-ONC-2026"
+          },
+          "num_normal_sites": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Num Normal Sites",
+            "description": "Count of compliant benchmark sites",
+            "default": 4
+          },
+          "include_benford_anomaly": {
+            "type": "boolean",
+            "title": "Include Benford Anomaly",
+            "description": "Include site violating Benford's Law",
+            "default": true
+          },
+          "include_rounding_bias": {
+            "type": "boolean",
+            "title": "Include Rounding Bias",
+            "description": "Include site with excessive terminal digit rounding",
+            "default": true
+          },
+          "include_variance_shrinkage": {
+            "type": "boolean",
+            "title": "Include Variance Shrinkage",
+            "description": "Include site with fabricated variance shrinkage",
+            "default": true
+          },
+          "include_multivariate_outlier": {
+            "type": "boolean",
+            "title": "Include Multivariate Outlier",
+            "description": "Include site with shifted multivariate correlation centroid",
+            "default": true
+          },
+          "samples_per_site": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 10.0,
+            "title": "Samples Per Site",
+            "description": "Observations per site",
+            "default": 60
+          }
+        },
+        "type": "object",
+        "title": "ForensicsSimulationRequest"
+      },
+      "ForensicsSimulationResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "target_variables": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Variables"
+          },
+          "site_data": {
+            "additionalProperties": {
+              "items": {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Site Data"
+          },
+          "total_sites": {
+            "type": "integer",
+            "title": "Total Sites"
+          },
+          "total_observations": {
+            "type": "integer",
+            "title": "Total Observations"
+          },
+          "simulated_anomalies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Simulated Anomalies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "target_variables",
+          "site_data",
+          "total_sites",
+          "total_observations",
+          "simulated_anomalies"
+        ],
+        "title": "ForensicsSimulationResponse"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -4125,6 +4547,43 @@
           "reason_for_change"
         ],
         "title": "KRIMetricEvaluationResponse"
+      },
+      "MahalanobisMetricsResponse": {
+        "properties": {
+          "mahalanobis_distance": {
+            "type": "number",
+            "title": "Mahalanobis Distance"
+          },
+          "mahalanobis_p_value": {
+            "type": "number",
+            "title": "Mahalanobis P Value"
+          },
+          "correlation_matrix_distance": {
+            "type": "number",
+            "title": "Correlation Matrix Distance"
+          },
+          "site_mean_vector": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Site Mean Vector"
+          },
+          "site_covariance_matrix": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Site Covariance Matrix"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mahalanobis_distance",
+          "mahalanobis_p_value",
+          "correlation_matrix_distance",
+          "site_mean_vector",
+          "site_covariance_matrix"
+        ],
+        "title": "MahalanobisMetricsResponse"
       },
       "PromoteFindingToCAPARequest": {
         "properties": {
@@ -4622,6 +5081,25 @@
         ],
         "title": "RegulatoryClockStatusResponse"
       },
+      "RiskTier": {
+        "type": "string",
+        "enum": [
+          "CRITICAL",
+          "HIGH",
+          "LOW",
+          "MEDIUM"
+        ],
+        "title": "RiskTier"
+      },
+      "RoundingBiasTier": {
+        "type": "string",
+        "enum": [
+          "MODERATE_ROUNDING",
+          "NORMAL",
+          "SEVERE_ROUNDING"
+        ],
+        "title": "RoundingBiasTier"
+      },
       "SeriousBreachConfirmRequest": {
         "properties": {
           "affected_authorities": {
@@ -4830,6 +5308,134 @@
         ],
         "title": "SeriousBreachStatusUpdate"
       },
+      "SiteForensicsResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "sample_size": {
+            "type": "integer",
+            "title": "Sample Size"
+          },
+          "benford": {
+            "$ref": "#/components/schemas/BenfordDigitDistributionResponse"
+          },
+          "terminal_digit": {
+            "$ref": "#/components/schemas/TerminalDigitDistributionResponse"
+          },
+          "multivariate": {
+            "$ref": "#/components/schemas/MahalanobisMetricsResponse"
+          },
+          "variance_shrinkage": {
+            "$ref": "#/components/schemas/VarianceShrinkageMetricsResponse"
+          },
+          "composite_risk_score": {
+            "type": "number",
+            "title": "Composite Risk Score"
+          },
+          "risk_tier": {
+            "$ref": "#/components/schemas/RiskTier"
+          },
+          "is_anomalous_outlier": {
+            "type": "boolean",
+            "title": "Is Anomalous Outlier"
+          },
+          "flagged_anomaly_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Flagged Anomaly Reasons"
+          },
+          "kri_evaluation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kri Evaluation Id"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "run_id",
+          "study_id",
+          "site_id",
+          "sample_size",
+          "benford",
+          "terminal_digit",
+          "multivariate",
+          "variance_shrinkage",
+          "composite_risk_score",
+          "risk_tier",
+          "is_anomalous_outlier",
+          "flagged_anomaly_reasons",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "SiteForensicsResponse"
+      },
+      "SiteObservationPayload": {
+        "properties": {
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Site identifier"
+          },
+          "observations": {
+            "items": {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Observations",
+            "description": "List of multi-variable continuous observation dictionaries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "site_id",
+          "observations"
+        ],
+        "title": "SiteObservationPayload"
+      },
       "SiteRiskProfileResponse": {
         "properties": {
           "id": {
@@ -4898,6 +5504,220 @@
         ],
         "title": "SiteRiskProfileResponse"
       },
+      "StatisticalForensicsAnalyzeRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study ID"
+          },
+          "target_variables": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Variables",
+            "description": "Continuous clinical variables for multivariate surveillance",
+            "default": [
+              "systolic_bp",
+              "diastolic_bp",
+              "heart_rate",
+              "lab_creatinine"
+            ]
+          },
+          "site_observations": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "additionalProperties": {
+                      "type": "number"
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Observations",
+            "description": "Mapping of site_id to list of observation dictionaries"
+          },
+          "site_data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SiteObservationPayload"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Data",
+            "description": "Alternative list format of site observation payloads"
+          },
+          "run_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Name",
+            "description": "Custom name for the surveillance run"
+          },
+          "auto_trigger_kri": {
+            "type": "boolean",
+            "title": "Auto Trigger Kri",
+            "description": "Whether to automatically dispatch KRI breach alerts for flagged sites",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "StatisticalForensicsAnalyzeRequest"
+      },
+      "StatisticalForensicsRunResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "run_name": {
+            "type": "string",
+            "title": "Run Name"
+          },
+          "analysis_timestamp": {
+            "type": "string",
+            "title": "Analysis Timestamp"
+          },
+          "target_variables": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Variables"
+          },
+          "total_sites": {
+            "type": "integer",
+            "title": "Total Sites"
+          },
+          "total_observations": {
+            "type": "integer",
+            "title": "Total Observations"
+          },
+          "anomalous_sites_count": {
+            "type": "integer",
+            "title": "Anomalous Sites Count"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "site_results": {
+            "items": {
+              "$ref": "#/components/schemas/SiteForensicsResponse"
+            },
+            "type": "array",
+            "title": "Site Results"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "run_name",
+          "analysis_timestamp",
+          "target_variables",
+          "total_sites",
+          "total_observations",
+          "anomalous_sites_count",
+          "status",
+          "site_results",
+          "created_at",
+          "created_by",
+          "version_index",
+          "reason_for_change"
+        ],
+        "title": "StatisticalForensicsRunResponse"
+      },
+      "TerminalDigitDistributionResponse": {
+        "properties": {
+          "sample_size": {
+            "type": "integer",
+            "title": "Sample Size"
+          },
+          "chi_square": {
+            "type": "number",
+            "title": "Chi Square"
+          },
+          "p_value": {
+            "type": "number",
+            "title": "P Value"
+          },
+          "zero_five_index": {
+            "type": "number",
+            "title": "Zero Five Index"
+          },
+          "rounding_bias_tier": {
+            "$ref": "#/components/schemas/RoundingBiasTier"
+          },
+          "observed_frequencies": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Observed Frequencies"
+          },
+          "expected_frequencies": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Expected Frequencies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sample_size",
+          "chi_square",
+          "p_value",
+          "zero_five_index",
+          "rounding_bias_tier",
+          "observed_frequencies",
+          "expected_frequencies"
+        ],
+        "title": "TerminalDigitDistributionResponse"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -4937,6 +5757,34 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VarianceShrinkageMetricsResponse": {
+        "properties": {
+          "variance_ratio": {
+            "type": "number",
+            "title": "Variance Ratio"
+          },
+          "variance_shrinkage_p_value": {
+            "type": "number",
+            "title": "Variance Shrinkage P Value"
+          },
+          "kl_divergence": {
+            "type": "number",
+            "title": "Kl Divergence"
+          },
+          "is_variance_shrunk": {
+            "type": "boolean",
+            "title": "Is Variance Shrunk"
+          }
+        },
+        "type": "object",
+        "required": [
+          "variance_ratio",
+          "variance_shrinkage_p_value",
+          "kl_divergence",
+          "is_variance_shrunk"
+        ],
+        "title": "VarianceShrinkageMetricsResponse"
       }
     }
   }

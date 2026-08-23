@@ -984,6 +984,10 @@ def can_access_site(principal: Principal, site_id: str) -> bool:
     Returns:
         True if the principal may access the site; False otherwise.
     """
+    if isinstance(principal, (list, tuple, set)):
+        user_site_roles = [r for r in principal if r in SITE_SCOPED_ROLES]
+        return not bool(user_site_roles)
+
     user_site_roles = [r for r in principal.roles if r in SITE_SCOPED_ROLES]
 
     # Fail-closed handling for missing/empty site_id on legacy/study-level rows
@@ -999,11 +1003,16 @@ def can_access_site(principal: Principal, site_id: str) -> bool:
     return True
 
 
-def can_access_study(principal: Principal, study_id: str) -> bool:
+def can_access_study(
+    principal: Principal | list[str] | tuple[str, ...], study_id: str
+) -> bool:
     """
     Checks if the principal has access to a specific study.
     Study-scoped users are restricted to their assigned_studies.
     """
+    if isinstance(principal, (list, tuple, set)):
+        return "external_monitor" not in principal
+
     if study_id is None or str(study_id).strip() == "":
         return not ("external_monitor" in principal.roles or principal.assigned_studies)
 
