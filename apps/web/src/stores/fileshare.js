@@ -325,7 +325,7 @@ export const useFileshareStore = defineStore("fileshare", {
     /**
      * Tree hierarchy filtered by the current user's role/persona
      */
-    filteredStudiesTree: (state) => {
+    filteredStudiesTree: (_state) => {
       const authStore = useAuthStore();
       const roles = authStore.normalizedRoles || [];
       const isSuperAdmin = roles.includes("sponsor_admin") || authStore.currentPersona === "super_admin";
@@ -483,7 +483,7 @@ export const useFileshareStore = defineStore("fileshare", {
      */
     async addGrant(fileId, payload) {
       this.error = null;
-      let newGrant = null;
+      let newGrant;
       try {
         newGrant = await fileshareService.createShareGrant(fileId, payload);
       } catch (err) {
@@ -543,7 +543,7 @@ export const useFileshareStore = defineStore("fileshare", {
      * Create external guest link
      */
     async generateGuestLink(fileId, payload) {
-      let newLink = null;
+      let newLink;
       try {
         newLink = await fileshareService.createGuestLink(fileId, payload);
       } catch (err) {

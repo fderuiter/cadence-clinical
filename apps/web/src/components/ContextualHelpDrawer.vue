@@ -436,7 +436,7 @@ function handleEscalate() {
   knowledgeStore.prepareEscalation();
 }
 
-function handleTicketCreated(payload) {
+function handleTicketCreated(_payload) {
   knowledgeStore.cancelEscalation();
   knowledgeStore.closeDrawer();
 }

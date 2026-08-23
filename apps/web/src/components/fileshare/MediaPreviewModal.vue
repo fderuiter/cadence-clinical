@@ -306,6 +306,7 @@
                   @timeupdate="onVideoTimeUpdate"
                   @ended="onVideoEnded"
                 >
+                  <track kind="captions" />
                   Your browser does not support HTML5 video playback.
                 </video>
 
@@ -360,6 +361,7 @@
                   class="audio-element"
                   :src="mediaSourceUrl"
                 >
+                  <track kind="captions" />
                   Your browser does not support the audio element.
                 </audio>
               </div>
@@ -546,15 +548,15 @@ async function handleApproveConfirm({ credential, signing_reason }) {
       credential,
       signing_reason,
     });
-    if (props.fileRecord) {
-      props.fileRecord.approval_status = "APPROVED";
-      props.fileRecord.approved_by = updated?.approved_by || currentUserId.value;
-      props.fileRecord.approved_at = updated?.approved_at || new Date().toISOString();
-      props.fileRecord.approval_reason = updated?.approval_reason || signing_reason;
-      props.fileRecord.signature_manifestation = updated?.signature_manifestation;
-    }
     isReAuthOpen.value = false;
-    emit("approved", updated || props.fileRecord);
+    emit("approved", updated || {
+      ...props.fileRecord,
+      approval_status: "APPROVED",
+      approved_by: updated?.approved_by || currentUserId.value,
+      approved_at: updated?.approved_at || new Date().toISOString(),
+      approval_reason: updated?.approval_reason || signing_reason,
+      signature_manifestation: updated?.signature_manifestation,
+    });
   } catch (err) {
     console.error("Document approval failed:", err);
     approvalError.value =

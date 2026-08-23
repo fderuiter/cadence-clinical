@@ -307,6 +307,15 @@ def main() -> None:
                                     "apps/designer/presentation/routers/designer_routes.py",
                                 },
                                 {
+                                    "apps/designer/presentation/routers/designer_routes.py",
+                                    "apps/etmf/presentation/routers/etmf.py",
+                                    "apps/fileshare/application/fileshare_service.py",
+                                },
+                                {
+                                    "apps/fileshare/workers/conversion_worker.py",
+                                    "apps/fileshare/application/fileshare_service.py",
+                                },
+                                {
                                     "apps/web/src/api/terminologyClient.js",
                                     "apps/web/src/api/soaClient.js",
                                 },

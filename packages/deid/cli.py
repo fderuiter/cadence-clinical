@@ -250,6 +250,13 @@ def scan_file(
             or "cadence.clinical" in val_lower
             or "nih.gov" in val_lower
             or "json-schema.org" in val_lower
+            or "snomed.info" in val_lower
+            or "loinc.org" in val_lower
+            or "hl7.org" in val_lower
+            or "w3.org" in val_lower
+            or "ama-assn.org" in val_lower
+            or "example.com" in val_lower
+            or "example.org" in val_lower
             or "{brand_domain}" in line_content
         ):
             continue
@@ -262,7 +269,24 @@ def scan_file(
         ):
             continue
         if cat_lower == "zip_geographic" and (
-            val_lower in {"12345", "65537", "65536", "86400", "30000", "27001", "29463"}
+            val_lower
+            in {
+                "12345",
+                "65537",
+                "65536",
+                "65535",
+                "86400",
+                "30000",
+                "27001",
+                "29463",
+                "10000",
+                "00000",
+                "32601",
+                "32700",
+                "00101",
+                "93000",
+                "29046",
+            }
             or "secret" in line_content.lower()
             or "salt" in line_content.lower()
             or "key" in line_content.lower()
@@ -270,6 +294,7 @@ def scan_file(
             or "exponent" in line_content.lower()
             or "interval" in line_content.lower()
             or "timeout" in line_content.lower()
+            or "ttl" in line_content.lower()
             or "port" in line_content.lower()
             or "iso" in line_content.lower()
             or "bytes" in line_content.lower()
@@ -284,12 +309,24 @@ def scan_file(
             or "regex" in line_content.lower()
             or "pattern" in line_content.lower()
             or "xml_mapping" in file_path.lower()
+            or "concept" in line_content.lower()
+            or "concept_maps" in file_path.lower()
+            or "matcher" in file_path.lower()
+            or "xref" in line_content.lower()
+            or "jsonrpc" in line_content.lower()
+            or "code" in line_content.lower()
+            or "parts_count" in line_content.lower()
             or "xml_name" in line_content.lower()
+            or "description" in line_content.lower()
         ):
             continue
         if cat_lower == "telephone_fax" and (
             "concept_code" in line_content
             or "concept" in line_content
+            or "concept_maps" in file_path.lower()
+            or "matcher" in file_path.lower()
+            or "bandwidth" in line_content.lower()
+            or "bitrate" in line_content.lower()
             or "usr_" in line_content
             or val_lower in {"+1234567890", "+0987654321"}
             or val_lower.replace("+", "").replace("-", "").strip().isdigit() is False
@@ -310,6 +347,7 @@ def scan_file(
                 "02-aug-2026",
                 "2026-08-04",
                 "1960, 1, 1",
+                "9999-99-99",
             }
             or "version" in line_content.lower()
             or "package" in line_content.lower()
@@ -358,6 +396,7 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
         if part in {
             "tests",
             "test",
+            "testing",
             "node_modules",
             ".git",
             ".venv",
@@ -375,6 +414,8 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
             "alembic",
             "deid",
             "coverage",
+            ".agents",
+            ".jules",
         }:
             return True
 

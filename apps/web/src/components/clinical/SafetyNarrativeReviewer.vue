@@ -104,10 +104,14 @@
                 <li
                   v-for="claim in section.grounded_claims"
                   :key="claim.claim_id"
+                  tabindex="0"
                   :class="['claim-item', { 'is-active': activeClaimId === claim.claim_id }]"
                   @mouseenter="highlightEvents(claim.grounded_event_ids, claim.claim_id)"
                   @mouseleave="clearHighlight"
+                  @focus="highlightEvents(claim.grounded_event_ids, claim.claim_id)"
+                  @blur="clearHighlight"
                   @click="highlightEvents(claim.grounded_event_ids, claim.claim_id)"
+                  @keydown.enter="highlightEvents(claim.grounded_event_ids, claim.claim_id)"
                 >
                   <span class="claim-bullet">🔗</span>
                   <span class="claim-text">"{{ claim.sentence_text }}"</span>
