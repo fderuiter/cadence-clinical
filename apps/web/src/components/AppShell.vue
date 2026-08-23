@@ -381,7 +381,26 @@
                     @click="navigate"
                   >
                     <span class="nav-icon">⌚</span>
-                    <span class="nav-label">Connected Sensors &amp; DCT</span>
+                    <span class="nav-label">Connected Sensors &amp; IoT</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
+                id="tab-btn-dct"
+                class="nav-item"
+                :class="{ active: $route.name === 'dct' }"
+              >
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/dct"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
+                    <span class="nav-icon">📹</span>
+                    <span class="nav-label">Telehealth &amp; DTP Logistics</span>
                   </button>
                 </router-link>
               </li>

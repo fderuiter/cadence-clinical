@@ -146,7 +146,9 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-01: Cryptographic Signature Verification Engine for Part 11 eSignatures](2026-08-01-cryptographic-signature-verification-engine-for-esignatures.md)
 
 ### 3. Clinical Data Interoperability & Standards
+- [2026-08-23: SMART on FHIR Ingestion Pipeline & CRC Source Data Reconciliation Drawer](2026-08-23-smart-backend-services-and-crc-reconciliation-drawer.md)
 - [2026-08-21: Hybrid Semantic Medical Coding Pipeline with pgvector](2026-08-21-hybrid-semantic-medical-coding-pipeline-with-pgvector.md)
+
 
 - [2026-08-22: Hybrid FHIR-to-CDISC Semantic Interoperability Mapper](2026-08-22-hybrid-fhir-to-cdisc-semantic-interoperability-mapper.md)
 - [2026-08-17: Fast Version-Check with Immediate Quarantine and Client Alerting](2026-08-17-fast-version-check-with-immediate-quarantine-and-client-alerting.md)
@@ -181,6 +183,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+- [2026-08-23: GxP Telehealth Video Consultation Direct to Patient Logistics and Tiered Pediatric Assent](2026-08-23-gxp-telehealth-video-consultation-direct-to-patient-logistics-and-tiered-pediatric-assent.md)
 - [2026-08-23: Cell & Gene Therapy Vein-to-Vein Chain of Custody and Identity](2026-08-23-cell-and-gene-therapy-vein-to-vein-chain-of-custody-and-identity.md)
 - [2026-08-23: Multi-Echelon RTSM Supply Hierarchy and Predictive Resupply](2026-08-23-multi-echelon-rtsm-supply-hierarchy-and-predictive-resupply.md)
 

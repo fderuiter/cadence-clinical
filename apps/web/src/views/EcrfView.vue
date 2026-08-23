@@ -40,7 +40,7 @@
         >{{ activeUserRole.toUpperCase() }}</span>
       </div>
 
-      <!-- Demo role tester select -->
+      <!-- Demo role tester select & EHR Reconciliation Drawer toggle -->
       <div
         style="
           display: flex;
@@ -49,6 +49,25 @@
           flex-wrap: wrap;
         "
       >
+        <button
+          type="button"
+          class="btn btn-secondary"
+          style="
+            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+          "
+          @click="showEhrReconciliationDrawer = true"
+        >
+          🏥 EHR Source Reconciliation
+        </button>
+
         <label
           for="role-tester-select"
           style="font-size: 0.8rem; font-weight: bold"
@@ -71,6 +90,7 @@
         </select>
       </div>
     </div>
+
 
     <div
       class="ecrf-workspace-layout"
@@ -304,6 +324,14 @@
       @confirm="handleResolveConflict"
       @cancel="handleCancelConflict"
     />
+
+    <!-- eSource EHR Source Data Reconciliation Drawer -->
+    <EhrReconciliationDrawer
+      :is-open="showEhrReconciliationDrawer"
+      :study-id="store.currentStudyId || 'STUDY-101'"
+      :subject-id="selectedSubjectId"
+      @close="showEhrReconciliationDrawer = false"
+    />
   </div>
 </template>
 
@@ -328,6 +356,7 @@ import CraVerificationConsole from "../components/persona/CraVerificationConsole
 import PiSignatureDrawer from "../components/persona/PiSignatureDrawer.vue";
 import DesignerSchemaPanel from "../components/persona/DesignerSchemaPanel.vue";
 import SubjectEnrollmentForm from "../components/clinical/SubjectEnrollmentForm.vue";
+import EhrReconciliationDrawer from "../components/clinical/EhrReconciliationDrawer.vue";
 
 // Import Domain Composables
 import { useConsentGating } from "../composables/useConsentGating";
@@ -338,6 +367,9 @@ import { useSchemaIngestion } from "../composables/useSchemaIngestion";
 const store = useClinicalStore();
 const authStore = useAuthStore();
 const route = useRoute();
+
+const showEhrReconciliationDrawer = ref(false);
+
 
 // Selected Subject & Visit State
 const selectedSubjectId = ref("SUBJ-001");

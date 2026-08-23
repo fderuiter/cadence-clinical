@@ -943,6 +943,8 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
     </div>
 
     <!-- Tab 6: Centralized Statistical Monitoring Forensics (CSM) -->

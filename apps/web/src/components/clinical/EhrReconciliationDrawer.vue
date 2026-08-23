@@ -1,0 +1,1562 @@
+<template>
+  <div
+    v-if="isOpen"
+    class="drawer-backdrop"
+    @click.self="closeDrawer"
+  >
+    <aside
+      class="ehr-reconciliation-drawer"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="drawer-heading"
+    >
+      <!-- Drawer Header -->
+      <header class="drawer-header">
+        <div class="header-titles">
+          <div class="badge-row">
+            <span class="badge badge-smart">SMART on FHIR</span>
+            <span class="badge badge-gxp">21 CFR Part 11</span>
+            <span class="badge badge-provenance">Immutable Provenance</span>
+          </div>
+          <h2 id="drawer-heading" class="drawer-title">
+            eSource EHR Reconciliation Drawer
+          </h2>
+          <p class="drawer-subtitle">
+            Side-by-side reconciliation of candidate EHR records with current eCRF fields.
+            Non-destructive review gating eliminates silent background data overwrites.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="btn-close"
+          aria-label="Close Reconciliation Drawer"
+          @click="closeDrawer"
+        >
+          ✕
+        </button>
+      </header>
+
+      <!-- Subject & Study Context Bar -->
+      <div class="context-bar">
+        <div class="context-item">
+          <span class="context-label">Study:</span>
+          <span class="context-value">{{ studyId || 'STUDY-101' }}</span>
+        </div>
+        <div class="context-item">
+          <span class="context-label">Subject Pseudonym:</span>
+          <span class="context-value mono">{{ subjectPseudonym || subjectId || 'PAT-001' }}</span>
+        </div>
+        <div class="context-item">
+          <span class="context-label">Site:</span>
+          <span class="context-value">{{ siteId || 'SITE-01' }}</span>
+        </div>
+        <div class="context-actions">
+          <button
+            type="button"
+            class="btn btn-sm btn-secondary"
+            :disabled="isLoading"
+            @click="fetchCandidates"
+          >
+            🔄 Refresh
+          </button>
+        </div>
+      </div>
+
+      <!-- Metric Cards / Summary Counters -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <span class="metric-num">{{ candidates.length }}</span>
+          <span class="metric-label">Total Ingested</span>
+        </div>
+        <div class="metric-card metric-pending">
+          <span class="metric-num">{{ pendingCount }}</span>
+          <span class="metric-label">Pending Review</span>
+        </div>
+        <div class="metric-card metric-accepted">
+          <span class="metric-num">{{ acceptedCount }}</span>
+          <span class="metric-label">Accepted & Committed</span>
+        </div>
+        <div class="metric-card metric-rejected">
+          <span class="metric-num">{{ rejectedCount }}</span>
+          <span class="metric-label">Rejected</span>
+        </div>
+        <div class="metric-card metric-queried">
+          <span class="metric-num">{{ queriedCount }}</span>
+          <span class="metric-label">Queries Raised</span>
+        </div>
+      </div>
+
+      <!-- Filters & Search Toolbar -->
+      <div class="toolbar">
+        <!-- CDISC Domain Filter Tabs -->
+        <div class="domain-tabs" role="tablist" aria-label="CDISC Domain Filter">
+          <button
+            v-for="d in domainOptions"
+            :key="d.value"
+            role="tab"
+            :aria-selected="selectedDomain === d.value"
+            :class="['domain-tab', { active: selectedDomain === d.value }]"
+            @click="selectedDomain = d.value"
+          >
+            {{ d.label }}
+          </button>
+        </div>
+
+        <!-- Status Filter & Search Input -->
+        <div class="toolbar-controls">
+          <div class="filter-control">
+            <label for="status-filter" class="filter-label">Status:</label>
+            <select
+              id="status-filter"
+              v-model="selectedStatus"
+              class="select-input"
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="PENDING_REVIEW">Pending Review</option>
+              <option value="ACCEPTED">Accepted</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="QUERIED">Queried</option>
+            </select>
+          </div>
+
+          <div class="search-control">
+            <input
+              v-model="searchQuery"
+              type="text"
+              class="search-input"
+              placeholder="Search variable, test code, or value..."
+              aria-label="Search candidate records"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Split-Screen Reconciliation View -->
+      <main class="drawer-body">
+        <div v-if="isLoading" class="state-container">
+          <div class="spinner" />
+          <p>Loading eSource candidate data and current eCRF mappings...</p>
+        </div>
+
+        <div v-else-if="filteredCandidates.length === 0" class="state-container empty-state">
+          <span class="empty-icon">📋</span>
+          <h3>No Candidate Records Found</h3>
+          <p>No EHR source data items match the current filters or need reconciliation.</p>
+        </div>
+
+        <div v-else class="candidate-list">
+          <article
+            v-for="item in filteredCandidates"
+            :key="item.id"
+            class="reconciliation-card"
+            :class="[`status-${item.status.toLowerCase()}`, `disc-${item.discrepancy_type.toLowerCase()}`]"
+          >
+            <!-- Card Header: Variable & Provenance Tag -->
+            <div class="card-header">
+              <div class="card-meta-left">
+                <span class="domain-tag">{{ item.target_domain }}</span>
+                <span class="variable-tag mono">{{ item.target_variable }}</span>
+                <span class="test-name">{{ item.cdash_test || item.cdash_testcd }}</span>
+              </div>
+              <div class="card-meta-right">
+                <span :class="['discrepancy-pill', `pill-${item.discrepancy_type.toLowerCase()}`]">
+                  {{ formatDiscrepancy(item.discrepancy_type) }}
+                </span>
+                <span :class="['status-pill', `status-${item.status.toLowerCase()}`]">
+                  {{ formatStatus(item.status) }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Split-Screen Grid: Left (Candidate EHR Data) vs Right (Current eCRF Field) -->
+            <div class="split-screen-grid">
+              <!-- LEFT PANE: Ingested EHR Source Data -->
+              <div class="split-pane ehr-pane">
+                <div class="pane-header">
+                  <span class="pane-title">🏥 Candidate EHR Source Data</span>
+                  <span class="source-badge">{{ item.ehr_system_id }}</span>
+                </div>
+                <div class="data-row-primary">
+                  <span class="val-num">{{ formatValue(item.candidate_value) }}</span>
+                  <span v-if="item.candidate_unit" class="val-unit">{{ item.candidate_unit }}</span>
+                </div>
+                <div class="provenance-metadata">
+                  <div class="meta-row">
+                    <span class="lbl">Resource:</span>
+                    <span class="val mono">{{ item.fhir_resource_type }}/{{ item.fhir_resource_id }}</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="lbl">Obs Timestamp:</span>
+                    <span class="val">{{ formatDate(item.source_timestamp) }}</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="lbl">Confidence:</span>
+                    <span class="val">{{ Math.round(item.confidence_score * 100) }}%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- RIGHT PANE: Current eCRF Field in EDC -->
+              <div class="split-pane ecrf-pane">
+                <div class="pane-header">
+                  <span class="pane-title">📝 Current eCRF Target Field</span>
+                  <span class="form-badge">{{ item.target_domain }} Form</span>
+                </div>
+                <div class="data-row-primary">
+                  <span v-if="item.current_ecrf_value !== null && item.current_ecrf_value !== undefined" class="val-num">
+                    {{ formatValue(item.current_ecrf_value) }}
+                  </span>
+                  <span v-else class="val-empty italic">
+                    [Empty / Unentered Field]
+                  </span>
+                </div>
+                <div class="provenance-metadata">
+                  <div class="meta-row">
+                    <span class="lbl">Field Target:</span>
+                    <span class="val mono">{{ item.target_variable }}</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="lbl">Last Modified:</span>
+                    <span class="val">{{ item.current_ecrf_updated_at ? formatDate(item.current_ecrf_updated_at) : 'Not populated' }}</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="lbl">Mapping Rule:</span>
+                    <span class="val truncate" :title="item.mapping_provenance">{{ item.mapping_provenance }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Resolution / Audit Trail Banner (If Resolved) -->
+            <div v-if="item.status !== 'PENDING_REVIEW'" class="resolution-banner" :class="`banner-${item.status.toLowerCase()}`">
+              <div class="resolution-info">
+                <strong>{{ formatResolutionAction(item.resolution_action) }}:</strong>
+                <span class="reason-text">{{ item.resolution_reason || 'No comment provided' }}</span>
+                <span class="resolved-by-tag">by {{ item.resolved_by || 'CRC Coordinator' }} at {{ formatDate(item.resolved_at) }}</span>
+              </div>
+              <div v-if="item.electronic_signature" class="esign-badge">
+                ✍️ 21 CFR Part 11 eSigned
+              </div>
+              <div v-if="item.clinical_query_id" class="query-badge">
+                ❓ Query #{{ item.clinical_query_id.substring(0, 8) }} Open
+              </div>
+            </div>
+
+            <!-- Card Footer: Non-Destructive 1-Click Action Buttons & Provenance Inspector -->
+            <footer class="card-footer">
+              <div class="action-btn-group">
+                <!-- 1-Click Accept & Commit -->
+                <button
+                  type="button"
+                  class="btn btn-action btn-accept"
+                  :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
+                  @click="promptAccept(item)"
+                >
+                  <span class="icon">✓</span> Accept & Commit
+                </button>
+
+                <!-- 1-Click Reject with Reason -->
+                <button
+                  type="button"
+                  class="btn btn-action btn-reject"
+                  :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
+                  @click="openRejectModal(item)"
+                >
+                  <span class="icon">✕</span> Reject with Reason
+                </button>
+
+                <!-- 1-Click Raise Clinical Query -->
+                <button
+                  type="button"
+                  class="btn btn-action btn-query"
+                  :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
+                  @click="openQueryModal(item)"
+                >
+                  <span class="icon">❓</span> Raise Query
+                </button>
+              </div>
+
+              <!-- Provenance Inspector Toggle -->
+              <button
+                type="button"
+                class="btn btn-link-provenance"
+                @click="openProvenanceModal(item)"
+              >
+                🔍 Inspect Provenance
+              </button>
+            </footer>
+          </article>
+        </div>
+      </main>
+
+      <!-- MODAL 1: Reject with Reason Dialog -->
+      <div v-if="showRejectModal" class="modal-backdrop" @click.self="closeRejectModal">
+        <div class="modal-card" role="dialog" aria-labelledby="reject-modal-title">
+          <div class="modal-header">
+            <h3 id="reject-modal-title">Reject EHR Candidate Data</h3>
+            <button type="button" class="btn-close" @click="closeRejectModal">✕</button>
+          </div>
+          <div class="modal-body">
+            <p class="modal-instruction">
+              Under GxP and FDA Electronic Source Data guidelines, a clinical justification is mandatory
+              when rejecting candidate EHR records.
+            </p>
+            <div class="field-summary">
+              <strong>Field:</strong> {{ activeItem?.target_variable }} ({{ activeItem?.cdash_test }})<br />
+              <strong>Candidate Value:</strong> {{ activeItem?.candidate_value }} {{ activeItem?.candidate_unit }}
+            </div>
+            <div class="form-group">
+              <label for="reject-reason" class="form-label">Rejection Reason: *</label>
+              <textarea
+                id="reject-reason"
+                v-model="rejectReasonInput"
+                class="textarea-input"
+                rows="4"
+                placeholder="e.g., Outside protocol visit window, duplicate entry, clinical value verified inconsistent with chart notes..."
+              />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="closeRejectModal">Cancel</button>
+            <button
+              type="button"
+              class="btn btn-danger"
+              :disabled="!rejectReasonInput.trim() || isSubmitting"
+              @click="submitReject"
+            >
+              Confirm Rejection
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL 2: Raise Clinical Query Dialog -->
+      <div v-if="showQueryModal" class="modal-backdrop" @click.self="closeQueryModal">
+        <div class="modal-card" role="dialog" aria-labelledby="query-modal-title">
+          <div class="modal-header">
+            <h3 id="query-modal-title">Raise GxP Discrepancy Query</h3>
+            <button type="button" class="btn-close" @click="closeQueryModal">✕</button>
+          </div>
+          <div class="modal-body">
+            <p class="modal-instruction">
+              Opens a formal clinical query in the study query ledger to flag a discrepancy between the EHR source
+              and the eCRF.
+            </p>
+            <div class="field-summary">
+              <strong>Target Field:</strong> {{ activeItem?.target_variable }}<br />
+              <strong>EHR Source Value:</strong> {{ activeItem?.candidate_value }} {{ activeItem?.candidate_unit }}<br />
+              <strong>Current eCRF Value:</strong> {{ activeItem?.current_ecrf_value || '[Empty]' }}
+            </div>
+            <div class="form-group">
+              <label for="query-explanation" class="form-label">Discrepancy Explanation: *</label>
+              <textarea
+                id="query-explanation"
+                v-model="queryExplanationInput"
+                class="textarea-input"
+                rows="4"
+                placeholder="Describe the discrepancy and required resolution from the study investigator..."
+              />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="closeQueryModal">Cancel</button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              :disabled="!queryExplanationInput.trim() || isSubmitting"
+              @click="submitQuery"
+            >
+              Raise Query
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL 3: Source Provenance & Part 11 Audit Trail Viewer -->
+      <div v-if="showProvenanceModal" class="modal-backdrop" @click.self="closeProvenanceModal">
+        <div class="modal-card modal-lg" role="dialog" aria-labelledby="prov-modal-title">
+          <div class="modal-header">
+            <h3 id="prov-modal-title">FHIR Resource Provenance & Audit Trail</h3>
+            <button type="button" class="btn-close" @click="closeProvenanceModal">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="provenance-summary-grid">
+              <div class="prov-stat">
+                <span class="lbl">EHR System:</span>
+                <span class="val">{{ activeItem?.ehr_system_id }}</span>
+              </div>
+              <div class="prov-stat">
+                <span class="lbl">FHIR Resource:</span>
+                <span class="val mono">{{ activeItem?.fhir_resource_type }}/{{ activeItem?.fhir_resource_id }}</span>
+              </div>
+              <div class="prov-stat">
+                <span class="lbl">Observation Date:</span>
+                <span class="val">{{ activeItem?.source_timestamp ? formatDate(activeItem.source_timestamp) : '' }}</span>
+              </div>
+              <div class="prov-stat">
+                <span class="lbl">CDASH Target:</span>
+                <span class="val mono">{{ activeItem?.target_variable }}</span>
+              </div>
+            </div>
+
+            <div class="raw-fhir-container">
+              <h4 class="section-subheading">Raw FHIR JSON Payload:</h4>
+              <pre class="json-code"><code>{{ JSON.stringify(activeItem?.raw_fhir_resource, null, 2) }}</code></pre>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="closeProvenanceModal">Close</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from "vue";
+import { interopService } from "../../api/interop";
+
+export interface EhrCandidate {
+  id: string;
+  study_id: string;
+  site_id: string;
+  subject_id: string;
+  subject_pseudonym: string;
+  ehr_system_id: string;
+  fhir_resource_type: string;
+  fhir_resource_id: string;
+  source_timestamp: string;
+  target_domain: string;
+  target_variable: string;
+  cdash_testcd?: string;
+  cdash_test?: string;
+  candidate_value: any;
+  candidate_unit?: string;
+  current_ecrf_value?: any;
+  current_ecrf_updated_at?: string;
+  discrepancy_type: "NEW_FIELD" | "EXACT_MATCH" | "VALUE_MISMATCH" | "UNIT_MISMATCH" | "DATE_MISMATCH";
+  confidence_score: number;
+  mapping_provenance: string;
+  raw_fhir_resource: Record<string, any>;
+  status: "PENDING_REVIEW" | "ACCEPTED" | "REJECTED" | "QUERIED";
+  resolution_action?: string;
+  resolution_reason?: string;
+  resolved_by?: string;
+  resolved_at?: string;
+  electronic_signature?: Record<string, any>;
+  clinical_query_id?: string;
+  created_at?: string;
+  version_index: number;
+}
+
+const props = defineProps<{
+  isOpen: boolean;
+  studyId?: string;
+  subjectId?: string;
+  subjectPseudonym?: string;
+  siteId?: string;
+}>();
+
+const emit = defineEmits<{
+  (e: "close"): void;
+  (e: "commit", candidate: EhrCandidate): void;
+  (e: "reject", candidate: EhrCandidate): void;
+  (e: "query", candidate: EhrCandidate, queryId: string): void;
+}>();
+
+const candidates = ref<EhrCandidate[]>([]);
+const isLoading = ref(false);
+const isSubmitting = ref(false);
+
+const selectedDomain = ref<string>("ALL");
+const selectedStatus = ref<string>("ALL");
+const searchQuery = ref<string>("");
+
+const activeItem = ref<EhrCandidate | null>(null);
+const showRejectModal = ref(false);
+const rejectReasonInput = ref("");
+const showQueryModal = ref(false);
+const queryExplanationInput = ref("");
+const showProvenanceModal = ref(false);
+
+const domainOptions = [
+  { label: "All Domains", value: "ALL" },
+  { label: "Demographics (DM)", value: "DM" },
+  { label: "Vital Signs (VS)", value: "VS" },
+  { label: "Laboratory (LB)", value: "LB" },
+  { label: "Medical History (MH)", value: "MH" },
+  { label: "Medications (CM)", value: "CM" },
+];
+
+const pendingCount = computed(() => candidates.value.filter((c) => c.status === "PENDING_REVIEW").length);
+const acceptedCount = computed(() => candidates.value.filter((c) => c.status === "ACCEPTED").length);
+const rejectedCount = computed(() => candidates.value.filter((c) => c.status === "REJECTED").length);
+const queriedCount = computed(() => candidates.value.filter((c) => c.status === "QUERIED").length);
+
+const filteredCandidates = computed(() => {
+  return candidates.value.filter((item) => {
+    // Domain filter
+    if (selectedDomain.value !== "ALL" && item.target_domain !== selectedDomain.value) {
+      return false;
+    }
+    // Status filter
+    if (selectedStatus.value !== "ALL" && item.status !== selectedStatus.value) {
+      return false;
+    }
+    // Search query
+    if (searchQuery.value.trim()) {
+      const q = searchQuery.value.toLowerCase().trim();
+      const matchVar = item.target_variable.toLowerCase().includes(q);
+      const matchTest = (item.cdash_test || "").toLowerCase().includes(q);
+      const matchVal = String(item.candidate_value).toLowerCase().includes(q);
+      const matchSys = item.ehr_system_id.toLowerCase().includes(q);
+      if (!matchVar && !matchTest && !matchVal && !matchSys) {
+        return false;
+      }
+    }
+    return true;
+  });
+});
+
+async function fetchCandidates() {
+  isLoading.value = true;
+  try {
+    const params: Record<string, any> = {};
+    if (props.studyId) params.studyId = props.studyId;
+    if (props.subjectId || props.subjectPseudonym) {
+      params.subjectId = props.subjectPseudonym || props.subjectId;
+    }
+    const resp = await interopService.listEhrCandidates(params);
+    candidates.value = resp.candidates || [];
+  } catch (err) {
+    console.error("Failed to load eSource candidates:", err);
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+watch(
+  () => props.isOpen,
+  (val) => {
+    if (val) {
+      fetchCandidates();
+    }
+  }
+);
+
+onMounted(() => {
+  if (props.isOpen) {
+    fetchCandidates();
+  }
+});
+
+function closeDrawer() {
+  emit("close");
+}
+
+async function promptAccept(item: EhrCandidate) {
+  isSubmitting.value = true;
+  try {
+    const payload = {
+      candidate_id: item.id,
+      commit_reason: "CRC accepted candidate data from hospital EHR",
+      change_reason: "CRC eSource Reconciliation Accept & Commit",
+    };
+    const resp = await interopService.acceptEhrCandidate(payload);
+    if (resp.success && resp.candidate) {
+      // Update local state
+      const idx = candidates.value.findIndex((c) => c.id === item.id);
+      if (idx !== -1) {
+        candidates.value[idx] = resp.candidate;
+      }
+      emit("commit", resp.candidate);
+    }
+  } catch (err) {
+    console.error("Failed to accept candidate:", err);
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+
+function openRejectModal(item: EhrCandidate) {
+  activeItem.value = item;
+  rejectReasonInput.value = "";
+  showRejectModal.value = true;
+}
+
+function closeRejectModal() {
+  showRejectModal.value = false;
+  activeItem.value = null;
+  rejectReasonInput.value = "";
+}
+
+async function submitReject() {
+  if (!activeItem.value || !rejectReasonInput.value.trim()) return;
+  isSubmitting.value = true;
+  try {
+    const payload = {
+      candidate_id: activeItem.value.id,
+      rejection_reason: rejectReasonInput.value.trim(),
+      change_reason: "CRC eSource Reconciliation Reject",
+    };
+    const resp = await interopService.rejectEhrCandidate(payload);
+    if (resp.success && resp.candidate) {
+      const idx = candidates.value.findIndex((c) => c.id === activeItem.value?.id);
+      if (idx !== -1) {
+        candidates.value[idx] = resp.candidate;
+      }
+      emit("reject", resp.candidate);
+    }
+    closeRejectModal();
+  } catch (err) {
+    console.error("Failed to reject candidate:", err);
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+
+function openQueryModal(item: EhrCandidate) {
+  activeItem.value = item;
+  queryExplanationInput.value = "";
+  showQueryModal.value = true;
+}
+
+function closeQueryModal() {
+  showQueryModal.value = false;
+  activeItem.value = null;
+  queryExplanationInput.value = "";
+}
+
+async function submitQuery() {
+  if (!activeItem.value || !queryExplanationInput.value.trim()) return;
+  isSubmitting.value = true;
+  try {
+    const payload = {
+      candidate_id: activeItem.value.id,
+      query_explanation: queryExplanationInput.value.trim(),
+      discrepancy_type: activeItem.value.discrepancy_type,
+      change_reason: "CRC Raised eSource Discrepancy Query",
+    };
+    const resp = await interopService.raiseEhrClinicalQuery(payload);
+    if (resp.success && resp.candidate) {
+      const idx = candidates.value.findIndex((c) => c.id === activeItem.value?.id);
+      if (idx !== -1) {
+        candidates.value[idx] = resp.candidate;
+      }
+      emit("query", resp.candidate, resp.clinical_query_id || "");
+    }
+    closeQueryModal();
+  } catch (err) {
+    console.error("Failed to raise query:", err);
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+
+function openProvenanceModal(item: EhrCandidate) {
+  activeItem.value = item;
+  showProvenanceModal.value = true;
+}
+
+function closeProvenanceModal() {
+  showProvenanceModal.value = false;
+  activeItem.value = null;
+}
+
+function formatValue(val: any): string {
+  if (val === null || val === undefined) return "";
+  if (typeof val === "object") return JSON.stringify(val);
+  return String(val);
+}
+
+function formatDate(dt?: string): string {
+  if (!dt) return "";
+  try {
+    return new Date(dt).toLocaleString();
+  } catch {
+    return dt;
+  }
+}
+
+function formatDiscrepancy(disc: string): string {
+  switch (disc) {
+    case "NEW_FIELD":
+      return "✨ New Field";
+    case "EXACT_MATCH":
+      return "✓ Matches eCRF";
+    case "VALUE_MISMATCH":
+      return "⚠️ Value Conflict";
+    case "UNIT_MISMATCH":
+      return "🔄 Unit Mismatch";
+    default:
+      return disc;
+  }
+}
+
+function formatStatus(st: string): string {
+  switch (st) {
+    case "PENDING_REVIEW":
+      return "Pending Review";
+    case "ACCEPTED":
+      return "Accepted & Committed";
+    case "REJECTED":
+      return "Rejected";
+    case "QUERIED":
+      return "Query Open";
+    default:
+      return st;
+  }
+}
+
+function formatResolutionAction(act?: string): string {
+  switch (act) {
+    case "ACCEPT_COMMIT":
+      return "Committed to eCRF";
+    case "REJECT":
+      return "Rejected by CRC";
+    case "QUERY":
+      return "Clinical Discrepancy Query Raised";
+    default:
+      return act || "Resolved";
+  }
+}
+</script>
+
+<style scoped>
+/* 100% Vanilla CSS Tokens Architecture — Zero Tailwind Classes */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(3px);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 1050;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.ehr-reconciliation-drawer {
+  width: 920px;
+  max-width: 95vw;
+  height: 100vh;
+  background-color: #ffffff;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+/* Header */
+.drawer-header {
+  padding: 20px 24px;
+  background-color: #0f172a;
+  color: #f8fafc;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid #1e293b;
+}
+
+.header-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.badge-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.badge-smart {
+  background-color: #0284c7;
+  color: #ffffff;
+}
+
+.badge-gxp {
+  background-color: #10b981;
+  color: #ffffff;
+}
+
+.badge-provenance {
+  background-color: #6366f1;
+  color: #ffffff;
+}
+
+.drawer-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.drawer-subtitle {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin: 0;
+  max-width: 750px;
+  line-height: 1.4;
+}
+
+.btn-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.btn-close:hover {
+  color: #ffffff;
+  background-color: #1e293b;
+}
+
+/* Context Bar */
+.context-bar {
+  padding: 10px 24px;
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.context-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.context-label {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.context-value {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.context-actions {
+  margin-left: auto;
+}
+
+/* Metrics Grid */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  padding: 16px 24px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.metric-card {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.metric-card.metric-pending {
+  border-color: #fde68a;
+  background-color: #fffbeb;
+}
+
+.metric-card.metric-accepted {
+  border-color: #bbf7d0;
+  background-color: #f0fdf4;
+}
+
+.metric-card.metric-rejected {
+  border-color: #fecaca;
+  background-color: #fef2f2;
+}
+
+.metric-card.metric-queried {
+  border-color: #ddd6fe;
+  background-color: #f5f3ff;
+}
+
+.metric-num {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.metric-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+/* Toolbar & Filter Tabs */
+.toolbar {
+  padding: 12px 24px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.domain-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.domain-tab {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.domain-tab:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+.domain-tab.active {
+  background-color: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+}
+
+.toolbar-controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.filter-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.select-input, .search-input {
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+.search-input {
+  width: 280px;
+}
+
+/* Body & Candidate List */
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px;
+  background-color: #f8fafc;
+}
+
+.state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #64748b;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #cbd5e1;
+  border-top-color: #0284c7;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 12px;
+}
+
+.candidate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Card Architecture */
+.reconciliation-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.reconciliation-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.reconciliation-card.status-accepted {
+  border-left: 4px solid #10b981;
+}
+
+.reconciliation-card.status-rejected {
+  border-left: 4px solid #ef4444;
+}
+
+.reconciliation-card.status-queried {
+  border-left: 4px solid #8b5cf6;
+}
+
+.reconciliation-card.status-pending_review {
+  border-left: 4px solid #f59e0b;
+}
+
+/* Card Header */
+.card-header {
+  padding: 12px 16px;
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-meta-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.domain-tag {
+  background-color: #e2e8f0;
+  color: #334155;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.variable-tag {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #0284c7;
+}
+
+.test-name {
+  font-size: 0.82rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.card-meta-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.discrepancy-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+.pill-new_field {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.pill-exact_match {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.pill-value_mismatch {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.pill-unit_mismatch {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.status-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+.status-pending_review {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.status-accepted {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.status-rejected {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.status-queried {
+  background-color: #ede9fe;
+  color: #6d28d9;
+}
+
+/* Split Screen Grid */
+.split-screen-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  divide-x: 1px solid #e2e8f0;
+}
+
+.split-pane {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ehr-pane {
+  background-color: #ffffff;
+  border-right: 1px solid #e2e8f0;
+}
+
+.ecrf-pane {
+  background-color: #fafafa;
+}
+
+.pane-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pane-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.source-badge, .form-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.data-row-primary {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 32px;
+}
+
+.val-num {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.val-unit {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.val-empty {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.provenance-metadata {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.75rem;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 6px;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.meta-row .lbl {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.meta-row .val {
+  color: #0f172a;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 260px;
+}
+
+/* Resolution Banner */
+.resolution-banner {
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  border-top: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.banner-accepted {
+  background-color: #f0fdf4;
+  color: #166534;
+}
+
+.banner-rejected {
+  background-color: #fef2f2;
+  color: #991b1b;
+}
+
+.banner-queried {
+  background-color: #f5f3ff;
+  color: #5b21b6;
+}
+
+.resolved-by-tag {
+  margin-left: 6px;
+  font-size: 0.72rem;
+  opacity: 0.85;
+}
+
+.esign-badge, .query-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid currentColor;
+}
+
+/* Card Footer & Action Buttons */
+.card-footer {
+  padding: 10px 16px;
+  background-color: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.action-btn-group {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-sm {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+}
+
+.btn-primary {
+  background-color: #0284c7;
+  color: #ffffff;
+}
+
+.btn-secondary {
+  background-color: #e2e8f0;
+  color: #1e293b;
+}
+
+.btn-danger {
+  background-color: #dc2626;
+  color: #ffffff;
+}
+
+.btn-accept {
+  background-color: #10b981;
+  color: #ffffff;
+}
+
+.btn-accept:hover:not(:disabled) {
+  background-color: #059669;
+}
+
+.btn-reject {
+  background-color: #f59e0b;
+  color: #ffffff;
+}
+
+.btn-reject:hover:not(:disabled) {
+  background-color: #d97706;
+}
+
+.btn-query {
+  background-color: #6366f1;
+  color: #ffffff;
+}
+
+.btn-query:hover:not(:disabled) {
+  background-color: #4f46e5;
+}
+
+.btn-link-provenance {
+  background: none;
+  border: none;
+  color: #0284c7;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.btn-link-provenance:hover {
+  color: #0369a1;
+}
+
+/* Modals */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.modal-card {
+  background: #ffffff;
+  border-radius: 8px;
+  width: 520px;
+  max-width: 90vw;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-lg {
+  width: 720px;
+}
+
+.modal-header {
+  padding: 16px 20px;
+  background-color: #0f172a;
+  color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 0.85rem;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.modal-instruction {
+  color: #475569;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.field-summary {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.textarea-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.modal-footer {
+  padding: 14px 20px;
+  background-color: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Provenance Inspector specifics */
+.provenance-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  background-color: #f8fafc;
+  padding: 12px 16px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.prov-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.prov-stat .lbl {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.prov-stat .val {
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+
+.section-subheading {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 10px 0 6px 0;
+}
+
+.raw-fhir-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.json-code {
+  background-color: #0f172a;
+  color: #38bdf8;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  max-height: 250px;
+  overflow: auto;
+  margin: 0;
+}
+
+/* Keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>

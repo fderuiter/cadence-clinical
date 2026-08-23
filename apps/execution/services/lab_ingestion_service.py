@@ -1,23 +1,31 @@
-"""Central and Local Laboratory Batch Ingestion Service.
+"""Central and Local Laboratory Batch Ingestion Service with Normal Range Governance
+and Automated CTCAE/DAIDS Toxicity Grading.
 
-Provides multi-format parsing (delimited CSV/TSV, HL7 v2.x ORU^R01, and HL7 FHIR
-Observation JSON), UCUM unit conversion, demographic-stratified normal reference range
-matching and evaluation, automated discrepancy query creation, and critical SAE alerts.
+Provides multi-format parsing (delimited CSV/TSV/sFTP, HL7 v2.x ORU^R01, HL7 FHIR
+Observation JSON, CDISC LAB Standard v1.0.1 XML ODM & JSON, and Manual Local Lab Batch Entry),
+LOINC and UCUM unit conversion, demographic-stratified normal reference range matching,
+local lab certification/expiration tracking and uncalibrated range safeguards, real-time
+CTCAE v5.0 / DAIDS v2.1 toxicity evaluation, acute baseline delta checks, and automated
+Grade 3/4 Adverse Event eCRF drafting with 21 CFR Part 11 audit trails.
 
 Requirements:
+- ADR-2199 / PRD-SYS-123 (Lab Normal Range Governance & Interoperability)
 - PRD-LAB-001 (Laboratory Batch Ingestion & Range Evaluation)
+- PRD-PVG-001 (Pharmacovigilance & AE Staging Automation)
 - PRD-MDR-001 (Metadata Repository & Catalog Normalization)
 - PRD-QRY-001 (Automated Discrepancy Query Escalation)
 - Trace-1 (Audit Trail & 21 CFR Part 11)
 - Trace-15 (Laboratory Data Flow & Reference Ranges)
 """
 
+import contextlib
 import csv
 import io
 import json
 import logging
 import re
 import uuid
+import xml.etree.ElementTree as ET
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -31,7 +39,10 @@ from apps.execution.database.models import (
     ClinicalObservation,
     ClinicalQuery,
     ClinicalSubject,
+    FormSubmission,
     LabTestMaster,
+    LocalLabCertification,
+    StagedAdverseEventReview,
     SubjectConsent,
 )
 from apps.execution.demographics import get_safe_demographics
@@ -39,9 +50,14 @@ from apps.execution.lab_range_cache import get_active_lab_ranges, lab_range_cach
 from apps.execution.lab_ranges import (
     convert_lab_unit,
     evaluate_lab_value,
+    resolve_loinc_mapping,
     select_reference_range,
 )
 from apps.execution.notification_events import dispatch_critical_lab_alerts
+from apps.execution.services.lab_toxicity_engine import (
+    CTCAEGrade,
+    LabToxicityEngine,
+)
 from apps.execution.ucum import get_normalized_representation
 
 logger = logging.getLogger(__name__)
@@ -53,6 +69,8 @@ class LabIngestFormat(StrEnum):
     CSV = "csv"
     HL7 = "hl7"
     FHIR = "fhir"
+    CDISC_LAB = "cdisc_lab"
+    LOCAL_MANUAL = "local_manual"
 
 
 class RawLabRecord(BaseModel):
@@ -74,6 +92,7 @@ class RawLabRecord(BaseModel):
     critical_low: float | None = None
     critical_high: float | None = None
     raw_abnormal_flag: str | None = None
+    co_analytes: dict[str, float] = Field(default_factory=dict)
     additional_metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -86,6 +105,7 @@ class LabBatchIngestRequest(BaseModel):
     study_id: str | None = None
     site_id: str | None = None
     lab_source: str = "CENTRAL"
+    grading_scale: str = "CTCAE_V5"
     reason_for_change: str = "Batch laboratory data ingestion"
 
 
@@ -101,6 +121,9 @@ class LabBatchIngestResult(BaseModel):
     out_of_range_count: int = 0
     critical_alerts: int = 0
     queries_raised: int = 0
+    staged_aes_count: int = 0
+    uncalibrated_safeguards: int = 0
+    toxicity_grades: dict[str, int] = Field(default_factory=dict)
     errors: list[dict[str, Any]] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
@@ -183,13 +206,12 @@ def _parse_numeric_value(val: Any) -> tuple[float | None, str | None]:
 def _parse_reference_range_bounds(
     range_str: str | None,
 ) -> tuple[float | None, float | None]:
-    """Extract low and high numeric bounds from clinical range strings (e.g. '4.0-11.0', '4.0 - 11.0', '10 to 40', '< 200')."""
+    """Extract low and high numeric bounds from clinical range strings."""
     if not range_str or not str(range_str).strip():
         return None, None
 
     s = str(range_str).strip()
 
-    # Pattern: low - high or low to high
     m_between = re.search(
         r"([0-9]+(?:\.[0-9]+)?)\s*(?:-|–|—|to)\s*([0-9]+(?:\.[0-9]+)?)",
         s,
@@ -201,7 +223,6 @@ def _parse_reference_range_bounds(
         except ValueError:
             pass
 
-    # Pattern: < high (upper bound only)
     m_less = re.search(r"<\s*([0-9]+(?:\.[0-9]+)?)", s)
     if m_less:
         try:
@@ -209,7 +230,6 @@ def _parse_reference_range_bounds(
         except ValueError:
             pass
 
-    # Pattern: > low (lower bound only)
     m_greater = re.search(r">\s*([0-9]+(?:\.[0-9]+)?)", s)
     if m_greater:
         try:
@@ -226,24 +246,11 @@ def parse_csv_payload(
     default_site_id: str | None = None,
     default_source: str = "CENTRAL",
 ) -> tuple[list[RawLabRecord], list[dict[str, Any]]]:
-    """Parse delimited CSV/TSV laboratory observation data into RawLabRecord items.
-
-    Supports automatic delimiter sniffing (comma, tab, semicolon, pipe) and case-insensitive
-    flexible column header matching.
-
-    Args:
-        payload: String or bytes containing delimited data.
-        default_study_id: Optional fallback study identifier.
-        default_site_id: Optional fallback site identifier.
-        default_source: Lab source ('CENTRAL' or 'LOCAL').
-
-    Returns:
-        tuple containing parsed records and list of parsing errors.
-    """
+    """Parse delimited CSV/TSV/sFTP laboratory observation data into RawLabRecord items."""
     if isinstance(payload, bytes):
         payload_str = payload.decode("utf-8-sig", errors="replace")
     else:
-        payload_str = payload
+        payload_str = str(payload)
 
     records: list[RawLabRecord] = []
     errors: list[dict[str, Any]] = []
@@ -251,7 +258,6 @@ def parse_csv_payload(
     if not payload_str.strip():
         return records, errors
 
-    # Detect delimiter
     sample = payload_str[:2048]
     delimiter = ","
     for d in ["\t", ";", "|", ","]:
@@ -267,7 +273,6 @@ def parse_csv_payload(
     except StopIteration:
         return records, errors
 
-    # Header normalization mapping
     def norm_col(h: str) -> str:
         return re.sub(r"[^a-z0-9]", "", h.lower().strip())
 
@@ -288,7 +293,6 @@ def parse_csv_payload(
                         return val
         return default
 
-    # Aliases
     subj_aliases = [
         "subjectid",
         "subject",
@@ -359,6 +363,8 @@ def parse_csv_payload(
         "normallow",
         "refrangelow",
         "low",
+        "lbornrlo",
+        "lbstnrlo",
     ]
     ref_high_aliases = [
         "refhigh",
@@ -368,6 +374,8 @@ def parse_csv_payload(
         "normalhigh",
         "refrangehigh",
         "high",
+        "lbornrhi",
+        "lbstnrhi",
     ]
     crit_low_aliases = ["criticallow", "critlow", "paniclow"]
     crit_high_aliases = ["criticalhigh", "crithigh", "panichigh"]
@@ -378,6 +386,7 @@ def parse_csv_payload(
         "abnormal",
         "severity",
         "alert",
+        "lbnrind",
     ]
 
     for row_idx, row in enumerate(reader, start=2):
@@ -424,7 +433,6 @@ def parse_csv_payload(
             )
             continue
 
-        # Parse reference range bounds
         ref_low_str = get_field(row, ref_low_aliases)
         ref_high_str = get_field(row, ref_high_aliases)
         crit_low_str = get_field(row, crit_low_aliases)
@@ -475,24 +483,11 @@ def parse_hl7_v2_payload(
     default_site_id: str | None = None,
     default_source: str = "CENTRAL",
 ) -> tuple[list[RawLabRecord], list[dict[str, Any]]]:
-    """Parse HL7 v2.x (ORU^R01) observation messages into RawLabRecord items.
-
-    Extracts MSH, PID, PV1, OBR, and OBX segments, preserving observation dates,
-    reference ranges, units, and abnormal flags.
-
-    Args:
-        payload: String or bytes containing HL7 v2 message text.
-        default_study_id: Optional fallback study identifier.
-        default_site_id: Optional fallback site identifier.
-        default_source: Lab source ('CENTRAL' or 'LOCAL').
-
-    Returns:
-        tuple containing parsed records and list of parsing errors.
-    """
+    """Parse HL7 v2.x (ORU^R01) observation messages into RawLabRecord items."""
     if isinstance(payload, bytes):
         payload_str = payload.decode("utf-8", errors="replace")
     else:
-        payload_str = payload
+        payload_str = str(payload)
 
     records: list[RawLabRecord] = []
     errors: list[dict[str, Any]] = []
@@ -500,7 +495,6 @@ def parse_hl7_v2_payload(
     if not payload_str.strip():
         return records, errors
 
-    # Split lines by carriage returns or newlines
     lines = [line.strip() for line in re.split(r"[\r\n]+", payload_str) if line.strip()]
 
     current_subject_id: str | None = None
@@ -515,14 +509,12 @@ def parse_hl7_v2_payload(
         seg_type = fields[0].upper()
 
         if seg_type == "MSH":
-            # MSH-4: Sending Facility (maps to site or source)
             if len(fields) > 4 and fields[4].strip():
                 sending_fac = fields[4].strip()
                 if not current_site_id:
                     current_site_id = sending_fac
 
         elif seg_type == "PID":
-            # PID-3: Patient Identifier List (e.g. SUBJ-101 or SUBJ-101^^^MRN)
             if len(fields) > 3 and fields[3].strip():
                 pid_components = fields[3].split("^")
                 current_subject_id = pid_components[0].strip()
@@ -536,16 +528,13 @@ def parse_hl7_v2_payload(
                 )
 
         elif seg_type == "PV1":
-            # PV1-19: Visit Number
             if len(fields) > 19 and fields[19].strip():
                 current_visit_id = fields[19].strip()
 
         elif seg_type == "OBR":
-            # OBR-7: Observation Date/Time
             if len(fields) > 7 and fields[7].strip():
                 current_order_date = _parse_iso_or_clinical_date(fields[7].strip())
 
-            # OBR-20: Filler Field (can contain site / source metadata)
             if len(fields) > 20 and fields[20].strip():
                 obr_meta = fields[20].strip()
                 if obr_meta.upper() in ("CENTRAL", "LOCAL"):
@@ -562,10 +551,8 @@ def parse_hl7_v2_payload(
                 )
                 continue
 
-            # OBX-2: Value Type (NM, ST, TX, CE, CWE)
             val_type = fields[2].strip().upper() if len(fields) > 2 else "ST"
 
-            # OBX-3: Observation Identifier (code^name^system)
             obs_ident = fields[3].strip() if len(fields) > 3 else ""
             ident_parts = obs_ident.split("^")
             test_code = ident_parts[0].strip() if ident_parts else ""
@@ -585,29 +572,23 @@ def parse_hl7_v2_payload(
                 )
                 continue
 
-            # OBX-5: Observation Value
             raw_val_str = fields[5].strip() if len(fields) > 5 else ""
             val_num, val_text = _parse_numeric_value(raw_val_str)
             if val_type == "NM" and val_num is None:
-                # Value was declared numeric but could not parse
                 val_text = raw_val_str
 
-            # OBX-6: Units (e.g. 10^9/L^UCUM or mg/dL)
             raw_unit = fields[6].strip() if len(fields) > 6 else None
             unit = raw_unit.split("^")[0].strip() if raw_unit else None
 
-            # OBX-7: Reference Range string (e.g. 4.0-11.0)
             ref_range_str = fields[7].strip() if len(fields) > 7 else None
             ref_low, ref_high = _parse_reference_range_bounds(ref_range_str)
 
-            # OBX-8: Abnormal Flags (L, H, LL, HH, N, A, CRIT, PANIC)
             abnormal_flag = (
                 fields[8].strip().upper()
                 if len(fields) > 8 and fields[8].strip()
                 else None
             )
 
-            # OBX-14: Date/Time of the Observation
             obs_date = current_order_date
             if len(fields) > 14 and fields[14].strip():
                 parsed_obx_date = _parse_iso_or_clinical_date(fields[14].strip())
@@ -641,20 +622,7 @@ def parse_fhir_payload(
     default_site_id: str | None = None,
     default_source: str = "CENTRAL",
 ) -> tuple[list[RawLabRecord], list[dict[str, Any]]]:
-    """Parse HL7 FHIR Observation resource JSON into RawLabRecord items.
-
-    Accepts a single FHIR Observation resource, a FHIR Bundle containing Observations,
-    or a JSON array of Observation resources.
-
-    Args:
-        payload: JSON string, bytes, dict, or list of FHIR resources.
-        default_study_id: Optional fallback study identifier.
-        default_site_id: Optional fallback site identifier.
-        default_source: Lab source ('CENTRAL' or 'LOCAL').
-
-    Returns:
-        tuple containing parsed records and list of parsing errors.
-    """
+    """Parse HL7 FHIR Observation resource JSON into RawLabRecord items."""
     records: list[RawLabRecord] = []
     errors: list[dict[str, Any]] = []
 
@@ -677,7 +645,6 @@ def parse_fhir_payload(
     if not data:
         return records, errors
 
-    # Normalize into list of observation resource dicts
     observation_resources: list[dict[str, Any]] = []
 
     if isinstance(data, dict):
@@ -695,14 +662,14 @@ def parse_fhir_payload(
             return records, errors
     elif isinstance(data, list):
         for item in data:
-            if isinstance(item, dict) and item.get("resourceType") == "Observation":
-                observation_resources.append(item)
-            elif isinstance(item, dict):
-                # Loose observation dictionary
+            if (
+                isinstance(item, dict)
+                and item.get("resourceType") == "Observation"
+                or isinstance(item, dict)
+            ):
                 observation_resources.append(item)
 
     for idx, obs_json in enumerate(observation_resources):
-        # 1. Subject extraction
         subj_id = None
         subj_obj = obs_json.get("subject") or obs_json.get("patient")
         if isinstance(subj_obj, dict):
@@ -728,7 +695,6 @@ def parse_fhir_payload(
             )
             continue
 
-        # 2. Test code & name extraction
         test_code = None
         test_name = None
         code_obj = obs_json.get("code")
@@ -757,7 +723,6 @@ def parse_fhir_payload(
 
         test_name = test_name or test_code
 
-        # 3. Value extraction
         val_num = None
         val_text = None
         unit = None
@@ -792,7 +757,6 @@ def parse_fhir_payload(
             )
             continue
 
-        # 4. Observation datetime extraction
         obs_date_str = (
             obs_json.get("effectiveDateTime")
             or obs_json.get("effectiveInstant")
@@ -802,7 +766,6 @@ def parse_fhir_payload(
             obs_date_str = obs_json["effectivePeriod"].get("start")
         obs_date = _parse_iso_or_clinical_date(obs_date_str)
 
-        # 5. Reference range extraction
         ref_low = None
         ref_high = None
         ref_ranges = obs_json.get("referenceRange")
@@ -818,7 +781,6 @@ def parse_fhir_payload(
                         first_rr.get("text")
                     )
 
-        # 6. Interpretation flag extraction
         abnormal_flag = None
         interp = obs_json.get("interpretation")
         if isinstance(interp, list) and len(interp) > 0:
@@ -834,7 +796,6 @@ def parse_fhir_payload(
             if isinstance(codings, list) and len(codings) > 0:
                 abnormal_flag = codings[0].get("code")
 
-        # 7. Visit / Encounter extraction
         visit_id = None
         enc = obs_json.get("encounter") or obs_json.get("context")
         if isinstance(enc, dict):
@@ -863,9 +824,328 @@ def parse_fhir_payload(
     return records, errors
 
 
+def parse_cdisc_lab_payload(
+    payload: str | bytes | dict | list,
+    default_study_id: str | None = None,
+    default_site_id: str | None = None,
+    default_source: str = "CENTRAL",
+) -> tuple[list[RawLabRecord], list[dict[str, Any]]]:
+    """Parse CDISC LAB Standard v1.0.1 XML ODM or CDISC LAB JSON observation records.
+
+    Supports CDISC standard domain variables:
+    STUDYID, USUBJID/SUBJID, LBTESTCD, LBTEST, LBCAT, LBORRES, LBORRESU,
+    LBORNRLO, LBORNRHI, LBSTRESC, LBSTRESN, LBSTRESU, LBSTNRLO, LBSTNRHI,
+    LBNRIND, LBDTC, VISIT, VISITNUM, LBSPEC, LBMETHOD.
+    """
+    records: list[RawLabRecord] = []
+    errors: list[dict[str, Any]] = []
+
+    if isinstance(payload, bytes):
+        payload_str = payload.decode("utf-8-sig", errors="replace")
+    elif isinstance(payload, str):
+        payload_str = payload
+    else:
+        payload_str = ""
+
+    # 1. XML ODM Parsing
+    if (
+        payload_str.strip().startswith("<")
+        or "<ODM" in payload_str
+        or "<ClinicalData" in payload_str
+    ):
+        try:
+            root = ET.fromstring(payload_str.strip())
+
+            # Handle XML namespaces gracefully
+            def strip_ns(tag: str) -> str:
+                return tag.split("}")[-1] if "}" in tag else tag
+
+            for clinical_data in root.iter():
+                if strip_ns(clinical_data.tag) == "ClinicalData":
+                    study_id = clinical_data.get("StudyOID") or default_study_id
+                    for subj_data in clinical_data:
+                        if strip_ns(subj_data.tag) == "SubjectData":
+                            subj_id = subj_data.get("SubjectKey")
+                            site_id = subj_data.get("SiteOID") or default_site_id
+
+                            for event_data in subj_data:
+                                if strip_ns(event_data.tag) == "StudyEventData":
+                                    visit_id = event_data.get("StudyEventOID")
+                                    for form_data in event_data:
+                                        for item_group in form_data:
+                                            if (
+                                                strip_ns(item_group.tag)
+                                                == "ItemGroupData"
+                                            ):
+                                                # Extract item values
+                                                item_dict: dict[str, str] = {}
+                                                for item in item_group:
+                                                    if strip_ns(item.tag) == "ItemData":
+                                                        oid = item.get(
+                                                            "ItemOID", ""
+                                                        ).upper()
+                                                        val = (
+                                                            item.get("Value")
+                                                            or item.text
+                                                            or ""
+                                                        )
+                                                        item_dict[oid] = val.strip()
+
+                                                test_code = (
+                                                    item_dict.get("LBTESTCD")
+                                                    or item_dict.get("PARAMCD")
+                                                    or item_dict.get("TESTCD")
+                                                )
+                                                if not test_code:
+                                                    continue
+
+                                                test_name = (
+                                                    item_dict.get("LBTEST")
+                                                    or item_dict.get("PARAM")
+                                                    or test_code
+                                                )
+                                                raw_val_str = (
+                                                    item_dict.get("LBSTRESN")
+                                                    or item_dict.get("LBORRES")
+                                                    or item_dict.get("VALUE")
+                                                )
+                                                val_num, val_text = (
+                                                    _parse_numeric_value(raw_val_str)
+                                                )
+                                                unit = (
+                                                    item_dict.get("LBSTRESU")
+                                                    or item_dict.get("LBORRESU")
+                                                    or item_dict.get("UNIT")
+                                                )
+                                                obs_date = _parse_iso_or_clinical_date(
+                                                    item_dict.get("LBDTC")
+                                                    or item_dict.get("DATE")
+                                                )
+                                                ref_low, _ = _parse_numeric_value(
+                                                    item_dict.get("LBSTNRLO")
+                                                    or item_dict.get("LBORNRLO")
+                                                )
+                                                ref_high, _ = _parse_numeric_value(
+                                                    item_dict.get("LBSTNRHI")
+                                                    or item_dict.get("LBORNRHI")
+                                                )
+                                                flag = item_dict.get(
+                                                    "LBNRIND"
+                                                ) or item_dict.get("FLAG")
+
+                                                if subj_id and (
+                                                    val_num is not None
+                                                    or val_text is not None
+                                                ):
+                                                    records.append(
+                                                        RawLabRecord(
+                                                            subject_id=subj_id,
+                                                            study_id=study_id,
+                                                            site_id=site_id,
+                                                            visit_id=visit_id,
+                                                            test_code=test_code,
+                                                            test_name=test_name,
+                                                            value=val_num,
+                                                            value_string=val_text,
+                                                            unit=unit,
+                                                            observation_date=obs_date,
+                                                            lab_source=default_source.upper(),
+                                                            reference_range_low=ref_low,
+                                                            reference_range_high=ref_high,
+                                                            raw_abnormal_flag=flag,
+                                                        )
+                                                    )
+        except Exception as e:
+            errors.append({"error": f"Failed to parse CDISC LAB XML ODM: {e}"})
+            return records, errors
+
+        return records, errors
+
+    # 2. JSON or Dictionary / List representation
+    json_data = None
+    if isinstance(payload, (dict, list)):
+        json_data = payload
+    elif payload_str.strip():
+        with contextlib.suppress(Exception):
+            json_data = json.loads(payload_str)
+
+    if json_data is not None:
+        items = (
+            json_data
+            if isinstance(json_data, list)
+            else json_data.get("records") or json_data.get("items") or [json_data]
+        )
+        for idx, item in enumerate(items):
+            if not isinstance(item, dict):
+                continue
+            subj_id = (
+                item.get("USUBJID") or item.get("SUBJID") or item.get("subject_id")
+            )
+            test_code = (
+                item.get("LBTESTCD") or item.get("PARAMCD") or item.get("test_code")
+            )
+
+            if not subj_id or not test_code:
+                errors.append(
+                    {
+                        "index": idx,
+                        "error": "Missing USUBJID or LBTESTCD in CDISC record",
+                    }
+                )
+                continue
+
+            test_name = item.get("LBTEST") or item.get("test_name") or test_code
+            val_num, val_text = _parse_numeric_value(
+                item.get("LBSTRESN") or item.get("LBORRES") or item.get("value")
+            )
+            unit = item.get("LBSTRESU") or item.get("LBORRESU") or item.get("unit")
+            obs_date = _parse_iso_or_clinical_date(
+                item.get("LBDTC") or item.get("observation_date")
+            )
+            ref_low, _ = _parse_numeric_value(
+                item.get("LBSTNRLO") or item.get("LBORNRLO") or item.get("ref_low")
+            )
+            ref_high, _ = _parse_numeric_value(
+                item.get("LBSTNRHI") or item.get("LBORNRHI") or item.get("ref_high")
+            )
+            flag = item.get("LBNRIND") or item.get("flag")
+            site_id = item.get("SITEID") or item.get("site_id") or default_site_id
+            study_id = item.get("STUDYID") or item.get("study_id") or default_study_id
+            visit_id = item.get("VISIT") or item.get("visit_id")
+
+            records.append(
+                RawLabRecord(
+                    subject_id=subj_id,
+                    study_id=study_id,
+                    site_id=site_id,
+                    visit_id=visit_id,
+                    test_code=test_code,
+                    test_name=test_name,
+                    value=val_num,
+                    value_string=val_text,
+                    unit=unit,
+                    observation_date=obs_date,
+                    lab_source=default_source.upper(),
+                    reference_range_low=ref_low,
+                    reference_range_high=ref_high,
+                    raw_abnormal_flag=flag,
+                )
+            )
+        return records, errors
+
+    # 3. Delimited fallback
+    return parse_csv_payload(
+        payload=payload,
+        default_study_id=default_study_id,
+        default_site_id=default_site_id,
+        default_source=default_source,
+    )
+
+
+def parse_local_manual_payload(
+    payload: str | bytes | dict | list,
+    default_study_id: str | None = None,
+    default_site_id: str | None = None,
+) -> tuple[list[RawLabRecord], list[dict[str, Any]]]:
+    """Parse manual local laboratory batch entry payloads."""
+    records: list[RawLabRecord] = []
+    errors: list[dict[str, Any]] = []
+
+    json_data = None
+    if isinstance(payload, (dict, list)):
+        json_data = payload
+    else:
+        try:
+            raw_str = (
+                payload.decode("utf-8") if isinstance(payload, bytes) else str(payload)
+            )
+            json_data = json.loads(raw_str)
+        except Exception:
+            pass
+
+    if json_data is not None:
+        batch_site = default_site_id
+        batch_study = default_study_id
+
+        if isinstance(json_data, dict):
+            batch_site = json_data.get("site_id") or default_site_id
+            batch_study = json_data.get("study_id") or default_study_id
+            items = json_data.get("records") or json_data.get("items") or [json_data]
+        else:
+            items = json_data
+
+        for idx, item in enumerate(items):
+            if not isinstance(item, dict):
+                continue
+            subj_id = (
+                item.get("subject_id") or item.get("USUBJID") or item.get("subjid")
+            )
+            test_code = (
+                item.get("test_code") or item.get("LBTESTCD") or item.get("code")
+            )
+
+            if not subj_id or not test_code:
+                errors.append(
+                    {
+                        "index": idx,
+                        "error": "Manual local lab entry missing subject_id or test_code",
+                    }
+                )
+                continue
+
+            test_name = item.get("test_name") or item.get("LBTEST") or test_code
+            val_num, val_text = _parse_numeric_value(
+                item.get("value") or item.get("result")
+            )
+            unit = item.get("unit") or item.get("units")
+            obs_date = _parse_iso_or_clinical_date(
+                item.get("observation_date") or item.get("date")
+            )
+            ref_low, _ = _parse_numeric_value(
+                item.get("reference_range_low") or item.get("low_bound")
+            )
+            ref_high, _ = _parse_numeric_value(
+                item.get("reference_range_high") or item.get("high_bound")
+            )
+            crit_low, _ = _parse_numeric_value(item.get("critical_low"))
+            crit_high, _ = _parse_numeric_value(item.get("critical_high"))
+            visit_id = item.get("visit_id") or item.get("visit")
+            site_id = item.get("site_id") or batch_site
+            study_id = item.get("study_id") or batch_study
+
+            records.append(
+                RawLabRecord(
+                    subject_id=subj_id,
+                    study_id=study_id,
+                    site_id=site_id,
+                    visit_id=visit_id,
+                    test_code=test_code,
+                    test_name=test_name,
+                    value=val_num,
+                    value_string=val_text,
+                    unit=unit,
+                    observation_date=obs_date,
+                    lab_source="LOCAL",
+                    reference_range_low=ref_low,
+                    reference_range_high=ref_high,
+                    critical_low=crit_low,
+                    critical_high=crit_high,
+                )
+            )
+        return records, errors
+
+    return parse_csv_payload(
+        payload=payload,
+        default_study_id=default_study_id,
+        default_site_id=default_site_id,
+        default_source="LOCAL",
+    )
+
+
 class LabIngestionService:
     """Service executing batch ingestion, normalization, reference range evaluation,
-    auto-query generation, and critical alert notification."""
+    local lab certification tracking, CTCAE/DAIDS toxicity grading, auto-query generation,
+    and automated Grade 3/4 Adverse Event drafting with 21 CFR Part 11 audit trails."""
 
     @staticmethod
     async def ingest_batch(
@@ -875,41 +1155,17 @@ class LabIngestionService:
         study_id: str | None = None,
         site_id: str | None = None,
         lab_source: str = "CENTRAL",
+        grading_scale: str = "CTCAE_V5",
         user_id: str = "system_lab_ingestion",
         change_reason: str = "Batch laboratory data ingestion",
         background_tasks: Any | None = None,
     ) -> LabBatchIngestResult:
-        """Process and persist a laboratory batch payload.
-
-        Performs:
-        1. Multi-format parsing (CSV, HL7 v2.x, FHIR Observation).
-        2. Subject demographics resolution (age and sex at observation date).
-        3. Standardized UCUM unit conversion and catalog alignment.
-        4. Multi-dimensional age/sex/site-stratified reference range selection.
-        5. Normal and critical boundary evaluation.
-        6. ClinicalObservation record creation with evaluated indicator snapshot.
-        7. Automated ClinicalQuery discrepancy creation for out-of-range results.
-        8. Critical SAE alert notification dispatch.
-
-        Args:
-            session: Async SQLAlchemy database session.
-            payload: Raw batch content (CSV string, HL7 text, or FHIR JSON).
-            format: Format type ('csv', 'hl7', 'fhir').
-            study_id: Optional default study identifier.
-            site_id: Optional default site identifier.
-            lab_source: Source laboratory type ('CENTRAL' or 'LOCAL').
-            user_id: Authenticated GxP user identifier.
-            change_reason: GxP 21 CFR Part 11 audit rationale.
-            background_tasks: Optional Starlette BackgroundTasks for alert dispatches.
-
-        Returns:
-            LabBatchIngestResult containing summary statistics and error records.
-        """
+        """Process and persist a laboratory batch payload."""
         batch_id = str(uuid.uuid4())
         norm_format = str(format).lower().strip()
 
         # 1. Parse payload into RawLabRecord items
-        if norm_format in ("csv", "tsv", "delimited"):
+        if norm_format in ("csv", "tsv", "delimited", "sftp"):
             raw_records, parse_errors = parse_csv_payload(
                 payload=payload,
                 default_study_id=study_id,
@@ -923,12 +1179,25 @@ class LabIngestionService:
                 default_site_id=site_id,
                 default_source=lab_source,
             )
-        elif norm_format in ("fhir", "json"):
+        elif norm_format in ("fhir", "fhir_json"):
             raw_records, parse_errors = parse_fhir_payload(
                 payload=payload,
                 default_study_id=study_id,
                 default_site_id=site_id,
                 default_source=lab_source,
+            )
+        elif norm_format in ("cdisc_lab", "cdisc", "cdisc_odm", "xml"):
+            raw_records, parse_errors = parse_cdisc_lab_payload(
+                payload=payload,
+                default_study_id=study_id,
+                default_site_id=site_id,
+                default_source=lab_source,
+            )
+        elif norm_format in ("local_manual", "manual", "local"):
+            raw_records, parse_errors = parse_local_manual_payload(
+                payload=payload,
+                default_study_id=study_id,
+                default_site_id=site_id,
             )
         else:
             res = LabBatchIngestResult(
@@ -941,6 +1210,8 @@ class LabIngestionService:
                 out_of_range_count=0,
                 critical_alerts=0,
                 queries_raised=0,
+                staged_aes_count=0,
+                uncalibrated_safeguards=0,
                 errors=[{"error": f"Unsupported laboratory batch format: {format}"}],
             )
             _BATCH_STORE[batch_id] = res
@@ -951,12 +1222,24 @@ class LabIngestionService:
         out_of_range_count = 0
         critical_alerts_count = 0
         queries_raised_count = 0
+        staged_aes_count = 0
+        uncalibrated_safeguards_count = 0
+        toxicity_counts: dict[str, int] = {
+            "Grade 0": 0,
+            "Grade 1": 0,
+            "Grade 2": 0,
+            "Grade 3": 0,
+            "Grade 4": 0,
+        }
         all_errors = list(parse_errors)
 
         with audit_context(user_id, change_reason):
             for idx, raw_rec in enumerate(raw_records, start=1):
                 try:
                     effective_study_id = raw_rec.study_id or study_id
+                    obs_date = raw_rec.observation_date or datetime.now(UTC).replace(
+                        tzinfo=None
+                    )
 
                     # Resolve subject from database
                     subj_db = None
@@ -984,21 +1267,46 @@ class LabIngestionService:
                         or site_id
                     )
 
-                    obs_date = raw_rec.observation_date or datetime.now(UTC).replace(
-                        tzinfo=None
-                    )
-
-                    # Demographics extraction
+                    # Demographics extraction (Age, Sex, Ethnicity)
                     gender = "U"
                     age = None
+                    ethnicity = None
                     if subj_db:
                         demo = get_safe_demographics(
                             subj_db, obs_date, preserve_custom=True
                         )
                         gender = demo.get("gender", "U")
                         age = demo.get("age")
+                        ethnicity = demo.get("ethnicity")
 
-                    # Catalog normalization lookup
+                    # Local lab certification & uncalibrated range safeguard
+                    is_uncalibrated_safeguard = False
+                    safeguard_message = None
+                    if raw_rec.lab_source == "LOCAL" and effective_site_id:
+                        stmt_cert = select(LocalLabCertification).where(
+                            LocalLabCertification.site_id == effective_site_id,
+                            LocalLabCertification.study_id == effective_study_id,
+                            LocalLabCertification.is_deleted.is_(False),
+                        )
+                        res_cert = await session.execute(stmt_cert)
+                        certs = res_cert.scalars().all()
+
+                        valid_cert = None
+                        for c in certs:
+                            if c.status == "ACTIVE" and c.is_accredited:
+                                if c.effective_date <= obs_date <= c.expiration_date:
+                                    valid_cert = c
+                                    break
+
+                        if not valid_cert:
+                            is_uncalibrated_safeguard = True
+                            uncalibrated_safeguards_count += 1
+                            safeguard_message = (
+                                f"Local laboratory certification missing, inactive, or expired "
+                                f"for site {effective_site_id} as of observation date {obs_date}."
+                            )
+
+                    # Catalog & LOINC normalization lookup
                     stmt_master = select(LabTestMaster).where(
                         LabTestMaster.study_id == effective_study_id,
                         LabTestMaster.test_code == raw_rec.test_code,
@@ -1013,6 +1321,12 @@ class LabIngestionService:
                         if not test_name or test_name == raw_rec.test_code:
                             test_name = master.test_name
                         target_unit = master.normalized_unit
+                    else:
+                        loinc_info = resolve_loinc_mapping(raw_rec.test_code)
+                        if loinc_info and (
+                            not test_name or test_name == raw_rec.test_code
+                        ):
+                            test_name = loinc_info.get("test_name")
 
                     test_name = test_name or raw_rec.test_code
 
@@ -1034,7 +1348,7 @@ class LabIngestionService:
                                 norm_unit = target_unit
                             except Exception as conv_err:
                                 logger.warning(
-                                    f"Catalog unit conversion failed ({conv_err}); attempting standard UCUM normalization"
+                                    f"Catalog unit conversion failed ({conv_err}); falling back to standard UCUM"
                                 )
                                 norm_val, norm_unit = get_normalized_representation(
                                     raw_rec.value, raw_rec.unit
@@ -1061,6 +1375,7 @@ class LabIngestionService:
                         sex=gender,
                         age=age,
                         site_id=effective_site_id,
+                        ethnicity=ethnicity,
                     )
 
                     ref_low = raw_rec.reference_range_low
@@ -1073,7 +1388,6 @@ class LabIngestionService:
                         ref_low = getattr(matched_range, "low_bound", None)
                         ref_high = getattr(matched_range, "high_bound", None)
                     else:
-                        # Fallback to payload bounds if provided
                         if (
                             raw_rec.reference_range_low is not None
                             or raw_rec.reference_range_high is not None
@@ -1089,25 +1403,12 @@ class LabIngestionService:
                             indicator, out_of_range, matched_bounds = (
                                 evaluate_lab_value(norm_val, ad_hoc_range)
                             )
-                            if raw_rec.raw_abnormal_flag:
-                                flag_u = raw_rec.raw_abnormal_flag.upper()
-                                if flag_u in ("HH", "CRITICAL_HIGH") and indicator in (
-                                    "HIGH",
-                                    "NORMAL",
-                                    None,
-                                ):
-                                    indicator = "HIGH HIGH"
-                                    out_of_range = True
-                                elif flag_u in (
-                                    "LL",
-                                    "CRIT",
-                                    "PANIC",
-                                    "CRITICAL_LOW",
-                                ) and indicator in ("LOW", "NORMAL", None):
-                                    indicator = "LOW LOW"
-                                    out_of_range = True
-                        elif raw_rec.raw_abnormal_flag:
-                            # Map raw abnormal flag
+                        else:
+                            indicator = None
+                            out_of_range = False
+                            matched_bounds = None
+
+                        if raw_rec.raw_abnormal_flag:
                             flag_u = raw_rec.raw_abnormal_flag.upper()
                             if flag_u in ("LL", "CRIT", "PANIC", "CRITICAL_LOW"):
                                 indicator = "LOW LOW"
@@ -1115,25 +1416,17 @@ class LabIngestionService:
                             elif flag_u in ("HH", "CRITICAL_HIGH"):
                                 indicator = "HIGH HIGH"
                                 out_of_range = True
-                            elif flag_u in ("L", "LOW"):
+                            elif flag_u in ("L", "LOW") and not indicator:
                                 indicator = "LOW"
                                 out_of_range = True
-                            elif flag_u in ("H", "HIGH"):
+                            elif flag_u in ("H", "HIGH") and not indicator:
                                 indicator = "HIGH"
                                 out_of_range = True
-                            elif flag_u in ("A", "ABNORMAL"):
+                            elif flag_u in ("A", "ABNORMAL", "AA") and not indicator:
                                 indicator = "ABNORMAL"
                                 out_of_range = True
-                            else:
-                                indicator = "NORMAL"
-                                out_of_range = False
-                            matched_bounds = None
-                        else:
-                            indicator = None
-                            out_of_range = False
-                            matched_bounds = None
 
-                    # Stamping capture-time protocol-version identity
+                    # Protocol consent version stamping
                     protocol_version_tag = None
                     protocol_version_index = None
                     stmt_consent = (
@@ -1151,7 +1444,43 @@ class LabIngestionService:
                         protocol_version_tag = active_consent.version_tag
                         protocol_version_index = active_consent.version_index
 
-                    # 6. Create and persist ClinicalObservation
+                    # Baseline observation lookup for acute delta checks
+                    stmt_baseline = (
+                        select(ClinicalObservation)
+                        .where(
+                            ClinicalObservation.subject_id == raw_rec.subject_id,
+                            ClinicalObservation.study_id == effective_study_id,
+                            ClinicalObservation.test_code == raw_rec.test_code,
+                            ClinicalObservation.is_deleted.is_(False),
+                        )
+                        .order_by(ClinicalObservation.observation_date.asc())
+                    )
+                    res_baseline = await session.execute(stmt_baseline)
+                    first_obs = res_baseline.scalars().first()
+                    baseline_val = first_obs.normalized_value if first_obs else None
+
+                    # Automated Toxicity Grading (CTCAE v5.0 / DAIDS)
+                    tox_assessment = LabToxicityEngine.evaluate_observation(
+                        test_code=raw_rec.test_code,
+                        test_name=test_name,
+                        value=norm_val or 0.0,
+                        unit=norm_unit or raw_rec.unit or "",
+                        ref_low=ref_low,
+                        ref_high=ref_high,
+                        baseline_value=baseline_val,
+                        grading_scale=grading_scale,
+                        alt_co_analyte=raw_rec.co_analytes.get("ALT"),
+                        ast_co_analyte=raw_rec.co_analytes.get("AST"),
+                        bili_co_analyte=raw_rec.co_analytes.get("BILI")
+                        or raw_rec.co_analytes.get("TBIL"),
+                        alkp_co_analyte=raw_rec.co_analytes.get("ALKP")
+                        or raw_rec.co_analytes.get("ALP"),
+                    )
+
+                    grade_key = f"Grade {int(tox_assessment.ctcae_grade)}"
+                    toxicity_counts[grade_key] = toxicity_counts.get(grade_key, 0) + 1
+
+                    # Persist ClinicalObservation
                     obs = ClinicalObservation(
                         subject_id=raw_rec.subject_id,
                         study_id=effective_study_id,
@@ -1166,7 +1495,8 @@ class LabIngestionService:
                         unit=raw_rec.unit,
                         normalized_value=norm_val,
                         normalized_unit=norm_unit,
-                        is_outlier=out_of_range,
+                        is_outlier=out_of_range
+                        or tox_assessment.ctcae_grade >= CTCAEGrade.GRADE_3,
                         lab_source=raw_rec.lab_source or "CENTRAL",
                         lab_site_id=effective_site_id,
                         lab_indicator=indicator,
@@ -1176,25 +1506,176 @@ class LabIngestionService:
                         reference_range_high=ref_high,
                         protocol_version_tag=protocol_version_tag,
                         protocol_version_index=protocol_version_index,
+                        additional_properties={
+                            "ctcae_grade": int(tox_assessment.ctcae_grade),
+                            "toxicity_description": tox_assessment.toxicity_description,
+                            "grading_scale": tox_assessment.grading_scale,
+                            "is_hys_law_warning": tox_assessment.is_hys_law_warning,
+                            "is_delta_check_alert": tox_assessment.is_delta_check_alert,
+                            "delta_percentage": tox_assessment.delta_percentage,
+                            "uncalibrated_safeguard_triggered": is_uncalibrated_safeguard,
+                        },
                     )
                     session.add(obs)
-                    await session.flush()  # Populates obs.id
+                    await session.flush()
 
-                    # 7. Discrepancy & SAE Auto-Query Generation
-                    is_critical = indicator in ("LOW LOW", "HIGH HIGH")
-                    if out_of_range or is_critical or indicator in ("LOW", "HIGH"):
+                    # Uncalibrated local lab safeguard query
+                    if is_uncalibrated_safeguard and safeguard_message:
+                        query_safeguard = ClinicalQuery(
+                            id=str(uuid.uuid4()),
+                            study_id=effective_study_id,
+                            site_id=effective_site_id,
+                            subject_id=raw_rec.subject_id,
+                            visit_id=raw_rec.visit_id,
+                            domain="LB",
+                            test_code=raw_rec.test_code,
+                            observation_id=obs.id,
+                            status="OPEN",
+                            priority="HIGH",
+                            query_type="UNCALIBRATED_LOCAL_LAB_WARNING",
+                            origin="SYSTEM_LAB_INGESTION",
+                            explanation="Uncalibrated or expired local lab certification safeguard",
+                            message=safeguard_message,
+                            created_by=user_id,
+                            created_at=datetime.now(UTC).replace(tzinfo=None),
+                        )
+                        session.add(query_safeguard)
+                        queries_raised_count += 1
+
+                    is_critical_ind = indicator in ("LOW LOW", "HIGH HIGH")
+                    is_out_range = out_of_range or indicator in (
+                        "LOW",
+                        "HIGH",
+                        "LOW LOW",
+                        "HIGH HIGH",
+                    )
+
+                    if is_out_range:
+                        out_of_range_count += 1
+
+                    if is_critical_ind:
+                        critical_alerts_count += 1
+
+                    # Grade 3/4 AE Trigger Workflow
+                    if tox_assessment.is_critical_ae_trigger:
+                        ae_term = test_name + (
+                            " (Hy's Law DILI Alert)"
+                            if tox_assessment.is_hys_law_warning
+                            else f" Abnormality (Grade {int(tox_assessment.ctcae_grade)})"
+                        )
+                        ae_payload = {
+                            "aeterm": ae_term,
+                            "aestdat": obs_date.isoformat(),
+                            "aetoxgr": f"Grade {int(tox_assessment.ctcae_grade)}",
+                            "aetoxscale": tox_assessment.grading_scale,
+                            "aeser": "Y"
+                            if tox_assessment.ctcae_grade >= CTCAEGrade.GRADE_4
+                            or tox_assessment.is_hys_law_warning
+                            else "N",
+                            "lab_test_code": raw_rec.test_code,
+                            "lab_test_name": test_name,
+                            "lab_value": raw_rec.value,
+                            "lab_unit": raw_rec.unit,
+                            "observation_id": obs.id,
+                            "is_auto_drafted": True,
+                            "staging_status": "STAGED_FOR_INVESTIGATOR_REVIEW",
+                            "clinical_significance": "POTENTIAL_LAB_ABNORMALITY_AE",
+                            "hys_law_dili_flag": tox_assessment.is_hys_law_warning,
+                            "delta_check_alert": tox_assessment.is_delta_check_alert,
+                        }
+                        form_sub = FormSubmission(
+                            study_id=effective_study_id,
+                            site_id=effective_site_id,
+                            subject_id=raw_rec.subject_id,
+                            visit_id=raw_rec.visit_id,
+                            form_id="AE",
+                            status="DRAFT",
+                            payload=ae_payload,
+                            protocol_version=protocol_version_tag,
+                        )
+                        session.add(form_sub)
+                        await session.flush()
+
+                        staged_review = StagedAdverseEventReview(
+                            study_id=effective_study_id,
+                            site_id=effective_site_id,
+                            subject_id=raw_rec.subject_id,
+                            visit_id=raw_rec.visit_id,
+                            observation_id=obs.id,
+                            form_submission_id=form_sub.id,
+                            test_code=raw_rec.test_code,
+                            test_name=test_name,
+                            lab_value=raw_rec.value or 0.0,
+                            unit=raw_rec.unit or "",
+                            ctcae_grade=int(tox_assessment.ctcae_grade),
+                            grading_scale=tox_assessment.grading_scale,
+                            toxicity_term=ae_term,
+                            clinical_description=tox_assessment.toxicity_description,
+                            is_hys_law_warning=tox_assessment.is_hys_law_warning,
+                            is_delta_check_alert=tox_assessment.is_delta_check_alert,
+                            delta_percentage=tox_assessment.delta_percentage,
+                            review_status="STAGED_FOR_INVESTIGATOR_REVIEW",
+                            reason_for_change=change_reason,
+                            created_by=user_id,
+                        )
+                        session.add(staged_review)
+
+                        # Auto-query escalation for AE trigger
+                        ae_qtype = (
+                            "POTENTIAL_SAE_CRITICAL"
+                            if is_critical_ind
+                            else "GRADE_3_4_AE_TRIGGER"
+                        )
+                        ae_qexpl = (
+                            "Potential SAE critical threshold alert staged for Investigator review"
+                            if is_critical_ind
+                            else "Automated CTCAE Grade 3/4 AE Trigger staged for Investigator review"
+                        )
+                        query_ae = ClinicalQuery(
+                            id=str(uuid.uuid4()),
+                            study_id=effective_study_id,
+                            site_id=effective_site_id,
+                            subject_id=raw_rec.subject_id,
+                            visit_id=raw_rec.visit_id,
+                            domain="LB",
+                            test_code=raw_rec.test_code,
+                            observation_id=obs.id,
+                            status="OPEN",
+                            priority="CRITICAL",
+                            query_type=ae_qtype,
+                            origin="SYSTEM_TOXICITY_TRIGGER",
+                            explanation=ae_qexpl,
+                            message=(
+                                f"Grade {int(tox_assessment.ctcae_grade)} Laboratory Toxicity Trigger for {test_name}: "
+                                f"Value {raw_rec.value} {raw_rec.unit or ''}. {tox_assessment.toxicity_description}. "
+                                f"Staged AE eCRF draft auto-created for Investigator review."
+                            ),
+                            created_by=user_id,
+                            created_at=datetime.now(UTC).replace(tzinfo=None),
+                        )
+                        session.add(query_ae)
+                        staged_review.query_id = query_ae.id
+
+                        staged_aes_count += 1
+                        queries_raised_count += 1
+                        if not is_critical_ind:
+                            critical_alerts_count += 1
+
+                        if background_tasks is not None:
+                            dispatch_critical_lab_alerts(
+                                background_tasks,
+                                obs,
+                                f"GRADE_{int(tox_assessment.ctcae_grade)}_AE_TRIGGER",
+                                user_id,
+                                change_reason,
+                            )
+                    elif is_out_range:
                         query_type = (
                             "POTENTIAL_SAE_CRITICAL"
-                            if is_critical
+                            if is_critical_ind
                             else "OUT_OF_RANGE_WARNING"
                         )
-                        priority = (
-                            "CRITICAL"
-                            if is_critical
-                            else "HIGH"
-                            if indicator in ("LOW", "HIGH")
-                            else "MEDIUM"
-                        )
+                        priority = "CRITICAL" if is_critical_ind else "HIGH"
 
                         query_msg = (
                             f"Laboratory observation for test {raw_rec.test_code} ({test_name}) "
@@ -1222,18 +1703,15 @@ class LabIngestionService:
                         )
                         session.add(query)
                         queries_raised_count += 1
-                        out_of_range_count += 1
 
-                        if is_critical:
-                            critical_alerts_count += 1
-                            if background_tasks is not None:
-                                dispatch_critical_lab_alerts(
-                                    background_tasks,
-                                    obs,
-                                    indicator or "CRITICAL",
-                                    user_id,
-                                    change_reason,
-                                )
+                        if is_critical_ind and background_tasks is not None:
+                            dispatch_critical_lab_alerts(
+                                background_tasks,
+                                obs,
+                                indicator or "CRITICAL",
+                                user_id,
+                                change_reason,
+                            )
 
                     ingested_count += 1
 
@@ -1250,10 +1728,8 @@ class LabIngestionService:
                         }
                     )
 
-            # Commit all observations and queries in this batch
             await session.commit()
 
-        # Compute final batch status
         if not all_errors:
             status = "COMPLETED"
         elif ingested_count > 0:
@@ -1271,6 +1747,9 @@ class LabIngestionService:
             out_of_range_count=out_of_range_count,
             critical_alerts=critical_alerts_count,
             queries_raised=queries_raised_count,
+            staged_aes_count=staged_aes_count,
+            uncalibrated_safeguards=uncalibrated_safeguards_count,
+            toxicity_grades=toxicity_counts,
             errors=all_errors,
         )
 

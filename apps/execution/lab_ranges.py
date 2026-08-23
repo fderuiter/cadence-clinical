@@ -1,30 +1,10 @@
-"""
-Deterministic, side-effect-free lab reference-range selection and indicator engine.
+"""Deterministic, side-effect-free lab reference-range selection, indicator evaluation,
+and LOINC-aligned mathematical unit conversion engine.
 
-This engine matches clinical laboratory observations to configured reference ranges
-based on Study, Test Code, Normalized Unit, Lab Source, Site, Sex, and Age. It then
-evaluates normalized numeric values against the matched range's normal and critical
-boundaries to derive clinical indicators.
-
-Specificity/Tie-Breaking Policy:
-- Exact local site and applicable sex/age rules must win over generic alternatives.
-- Specificity is computed multi-dimensionally:
-    1. Site specificity: Exact local site (score 3) > Generic local (score 2) > Central (score 1)
-    2. Sex specificity: Exact sex match (score 2) > Generic/ALL sex (score 1)
-    3. Age specificity: Exact age range with both bounds (score 3) > Single bound (score 2) > No bounds (score 1)
-- If any score is 0, the rule is incompatible and discarded.
-- Equal-specificity rules are resolved deterministically using a stable tie-breaking key
-  based on narrowest age span, age boundaries, normal boundaries, and record identifier.
-
-Boundary Inclusion Policy:
-- Normal boundaries (low_bound, high_bound) are inclusive.
-- Critical boundaries (critical_low, critical_high) are exclusive.
-- Thus, the indicators are derived as follows:
-    - LOW LOW: value < critical_low (if critical_low is present)
-    - HIGH HIGH: value > critical_high (if critical_high is present)
-    - LOW: low_bound is present and value < low_bound (and not LOW LOW)
-    - HIGH: high_bound is present and value > high_bound (and not HIGH HIGH)
-    - NORMAL: low_bound <= value <= high_bound (or compatible other cases not falling in LOW/HIGH)
+Requirements:
+- PRD-LAB-001 (Laboratory Batch Ingestion & Range Evaluation)
+- PRD-SYS-123 / ADR-2199 (Reference Range Governance & Interoperability)
+- 21 CFR Part 11 / GxP Compliance
 """
 
 import json
@@ -33,6 +13,376 @@ from collections.abc import Iterable
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+# Standard LOINC Catalog with standard mappings and exact mathematical conversion factors
+LOINC_STANDARD_CATALOG: dict[str, dict[str, Any]] = {
+    "ALT": {
+        "loinc_code": "1742-6",
+        "test_name": "Alanine Aminotransferase",
+        "standard_unit": "U/L",
+        "category": "HEPATIC",
+        "conversions": {
+            ("U/L", "ukat/L"): (0.01667, 0.0),
+            ("ukat/L", "U/L"): (60.0, 0.0),
+            ("IU/L", "U/L"): (1.0, 0.0),
+            ("U/L", "IU/L"): (1.0, 0.0),
+        },
+    },
+    "AST": {
+        "loinc_code": "1920-8",
+        "test_name": "Aspartate Aminotransferase",
+        "standard_unit": "U/L",
+        "category": "HEPATIC",
+        "conversions": {
+            ("U/L", "ukat/L"): (0.01667, 0.0),
+            ("ukat/L", "U/L"): (60.0, 0.0),
+            ("IU/L", "U/L"): (1.0, 0.0),
+            ("U/L", "IU/L"): (1.0, 0.0),
+        },
+    },
+    "BILI": {
+        "loinc_code": "1975-2",
+        "test_name": "Total Bilirubin",
+        "standard_unit": "umol/L",
+        "category": "HEPATIC",
+        "molecular_weight": 584.66,
+        "conversions": {
+            ("mg/dL", "umol/L"): (17.1, 0.0),
+            ("umol/L", "mg/dL"): (1.0 / 17.1, 0.0),
+            ("mg/dL", "mg/L"): (10.0, 0.0),
+            ("mg/L", "mg/dL"): (0.1, 0.0),
+            ("mg/L", "umol/L"): (1.71, 0.0),
+            ("umol/L", "mg/L"): (1.0 / 1.71, 0.0),
+        },
+    },
+    "TBIL": {
+        "loinc_code": "1975-2",
+        "test_name": "Total Bilirubin",
+        "standard_unit": "umol/L",
+        "category": "HEPATIC",
+        "conversions": {
+            ("mg/dL", "umol/L"): (17.1, 0.0),
+            ("umol/L", "mg/dL"): (1.0 / 17.1, 0.0),
+        },
+    },
+    "ALKP": {
+        "loinc_code": "6768-6",
+        "test_name": "Alkaline Phosphatase",
+        "standard_unit": "U/L",
+        "category": "HEPATIC",
+        "conversions": {
+            ("U/L", "ukat/L"): (0.01667, 0.0),
+            ("ukat/L", "U/L"): (60.0, 0.0),
+            ("IU/L", "U/L"): (1.0, 0.0),
+        },
+    },
+    "CREAT": {
+        "loinc_code": "2160-0",
+        "test_name": "Serum Creatinine",
+        "standard_unit": "umol/L",
+        "category": "RENAL",
+        "molecular_weight": 113.12,
+        "conversions": {
+            ("mg/dL", "umol/L"): (88.4, 0.0),
+            ("umol/L", "mg/dL"): (1.0 / 88.4, 0.0),
+            ("mg/dL", "mmol/L"): (0.0884, 0.0),
+            ("mmol/L", "mg/dL"): (1.0 / 0.0884, 0.0),
+            ("mg/dL", "mg/L"): (10.0, 0.0),
+            ("mg/L", "mg/dL"): (0.1, 0.0),
+        },
+    },
+    "CREATININE": {
+        "loinc_code": "2160-0",
+        "test_name": "Serum Creatinine",
+        "standard_unit": "umol/L",
+        "category": "RENAL",
+        "conversions": {
+            ("mg/dL", "umol/L"): (88.4, 0.0),
+            ("umol/L", "mg/dL"): (1.0 / 88.4, 0.0),
+            ("mg/dL", "mmol/L"): (0.0884, 0.0),
+            ("mmol/L", "mg/dL"): (1.0 / 0.0884, 0.0),
+        },
+    },
+    "BUN": {
+        "loinc_code": "3094-0",
+        "test_name": "Blood Urea Nitrogen",
+        "standard_unit": "mmol/L",
+        "category": "RENAL",
+        "conversions": {
+            ("mg/dL", "mmol/L"): (0.357, 0.0),
+            ("mmol/L", "mg/dL"): (1.0 / 0.357, 0.0),
+        },
+    },
+    "EGFR": {
+        "loinc_code": "33914-3",
+        "test_name": "Glomerular Filtration Rate",
+        "standard_unit": "mL/min/1.73m2",
+        "category": "RENAL",
+        "conversions": {},
+    },
+    "GLUCOSE": {
+        "loinc_code": "2345-7",
+        "test_name": "Glucose (Fasting)",
+        "standard_unit": "mmol/L",
+        "category": "METABOLIC",
+        "molecular_weight": 180.16,
+        "conversions": {
+            ("mg/dL", "mmol/L"): (0.0555, 0.0),
+            ("mmol/L", "mg/dL"): (18.0182, 0.0),
+            ("g/L", "mmol/L"): (5.551, 0.0),
+            ("mg/dL", "g/L"): (0.01, 0.0),
+            ("g/L", "mg/dL"): (100.0, 0.0),
+        },
+    },
+    "GLUC": {
+        "loinc_code": "2345-7",
+        "test_name": "Glucose (Fasting)",
+        "standard_unit": "mmol/L",
+        "category": "METABOLIC",
+        "conversions": {
+            ("mg/dL", "mmol/L"): (0.0555, 0.0),
+            ("mmol/L", "mg/dL"): (18.0182, 0.0),
+        },
+    },
+    "HEMOGLOBIN": {
+        "loinc_code": "718-7",
+        "test_name": "Hemoglobin",
+        "standard_unit": "g/dL",
+        "category": "HEMATOLOGY",
+        "conversions": {
+            ("g/dL", "g/L"): (10.0, 0.0),
+            ("g/L", "g/dL"): (0.1, 0.0),
+            ("g/dL", "mmol/L"): (0.6206, 0.0),
+            ("mmol/L", "g/dL"): (1.0 / 0.6206, 0.0),
+        },
+    },
+    "HGB": {
+        "loinc_code": "718-7",
+        "test_name": "Hemoglobin",
+        "standard_unit": "g/dL",
+        "category": "HEMATOLOGY",
+        "conversions": {
+            ("g/dL", "g/L"): (10.0, 0.0),
+            ("g/L", "g/dL"): (0.1, 0.0),
+            ("g/dL", "mmol/L"): (0.6206, 0.0),
+            ("mmol/L", "g/dL"): (1.0 / 0.6206, 0.0),
+        },
+    },
+    "PLATELETS": {
+        "loinc_code": "777-3",
+        "test_name": "Platelets",
+        "standard_unit": "10^9/L",
+        "category": "HEMATOLOGY",
+        "conversions": {
+            ("10^3/uL", "10^9/L"): (1.0, 0.0),
+            ("10^9/L", "10^3/uL"): (1.0, 0.0),
+            ("/uL", "10^9/L"): (0.001, 0.0),
+            ("10^9/L", "/uL"): (1000.0, 0.0),
+            ("K/uL", "10^9/L"): (1.0, 0.0),
+            ("10*3/uL", "10^9/L"): (1.0, 0.0),
+        },
+    },
+    "PLT": {
+        "loinc_code": "777-3",
+        "test_name": "Platelets",
+        "standard_unit": "10^9/L",
+        "category": "HEMATOLOGY",
+        "conversions": {
+            ("10^3/uL", "10^9/L"): (1.0, 0.0),
+            ("10^9/L", "10^3/uL"): (1.0, 0.0),
+            ("/uL", "10^9/L"): (0.001, 0.0),
+            ("10^9/L", "/uL"): (1000.0, 0.0),
+            ("K/uL", "10^9/L"): (1.0, 0.0),
+        },
+    },
+    "ANC": {
+        "loinc_code": "26499-4",
+        "test_name": "Absolute Neutrophil Count",
+        "standard_unit": "10^9/L",
+        "category": "HEMATOLOGY",
+        "conversions": {
+            ("10^3/uL", "10^9/L"): (1.0, 0.0),
+            ("10^9/L", "10^3/uL"): (1.0, 0.0),
+            ("/uL", "10^9/L"): (0.001, 0.0),
+            ("10^9/L", "/uL"): (1000.0, 0.0),
+            ("K/uL", "10^9/L"): (1.0, 0.0),
+        },
+    },
+    "NEUT": {
+        "loinc_code": "26499-4",
+        "test_name": "Absolute Neutrophils",
+        "standard_unit": "10^9/L",
+        "category": "HEMATOLOGY",
+        "conversions": {
+            ("10^3/uL", "10^9/L"): (1.0, 0.0),
+            ("10^9/L", "10^3/uL"): (1.0, 0.0),
+            ("/uL", "10^9/L"): (0.001, 0.0),
+        },
+    },
+    "WBC": {
+        "loinc_code": "6690-2",
+        "test_name": "Leukocytes",
+        "standard_unit": "10^9/L",
+        "category": "HEMATOLOGY",
+        "conversions": {
+            ("10^3/uL", "10^9/L"): (1.0, 0.0),
+            ("10^9/L", "10^3/uL"): (1.0, 0.0),
+            ("/uL", "10^9/L"): (0.001, 0.0),
+            ("10^9/L", "/uL"): (1000.0, 0.0),
+            ("K/uL", "10^9/L"): (1.0, 0.0),
+        },
+    },
+    "LYMPH": {
+        "loinc_code": "731-0",
+        "test_name": "Lymphocytes",
+        "standard_unit": "10^9/L",
+        "category": "HEMATOLOGY",
+        "conversions": {
+            ("10^3/uL", "10^9/L"): (1.0, 0.0),
+            ("10^9/L", "10^3/uL"): (1.0, 0.0),
+            ("/uL", "10^9/L"): (0.001, 0.0),
+        },
+    },
+    "POTASSIUM": {
+        "loinc_code": "2823-3",
+        "test_name": "Potassium",
+        "standard_unit": "mmol/L",
+        "category": "ELECTROLYTES",
+        "conversions": {
+            ("mEq/L", "mmol/L"): (1.0, 0.0),
+            ("mmol/L", "mEq/L"): (1.0, 0.0),
+        },
+    },
+    "K": {
+        "loinc_code": "2823-3",
+        "test_name": "Potassium",
+        "standard_unit": "mmol/L",
+        "category": "ELECTROLYTES",
+        "conversions": {
+            ("mEq/L", "mmol/L"): (1.0, 0.0),
+            ("mmol/L", "mEq/L"): (1.0, 0.0),
+        },
+    },
+    "SODIUM": {
+        "loinc_code": "2951-2",
+        "test_name": "Sodium",
+        "standard_unit": "mmol/L",
+        "category": "ELECTROLYTES",
+        "conversions": {
+            ("mEq/L", "mmol/L"): (1.0, 0.0),
+            ("mmol/L", "mEq/L"): (1.0, 0.0),
+        },
+    },
+    "NA": {
+        "loinc_code": "2951-2",
+        "test_name": "Sodium",
+        "standard_unit": "mmol/L",
+        "category": "ELECTROLYTES",
+        "conversions": {
+            ("mEq/L", "mmol/L"): (1.0, 0.0),
+            ("mmol/L", "mEq/L"): (1.0, 0.0),
+        },
+    },
+    "CALCIUM": {
+        "loinc_code": "17861-6",
+        "test_name": "Calcium",
+        "standard_unit": "mmol/L",
+        "category": "ELECTROLYTES",
+        "conversions": {
+            ("mg/dL", "mmol/L"): (0.25, 0.0),
+            ("mmol/L", "mg/dL"): (4.0, 0.0),
+            ("mEq/L", "mmol/L"): (0.5, 0.0),
+            ("mmol/L", "mEq/L"): (2.0, 0.0),
+        },
+    },
+    "CA": {
+        "loinc_code": "17861-6",
+        "test_name": "Calcium",
+        "standard_unit": "mmol/L",
+        "category": "ELECTROLYTES",
+        "conversions": {
+            ("mg/dL", "mmol/L"): (0.25, 0.0),
+            ("mmol/L", "mg/dL"): (4.0, 0.0),
+        },
+    },
+    "CHOLESTEROL": {
+        "loinc_code": "2093-3",
+        "test_name": "Total Cholesterol",
+        "standard_unit": "mmol/L",
+        "category": "METABOLIC",
+        "conversions": {
+            ("mg/dL", "mmol/L"): (0.02586, 0.0),
+            ("mmol/L", "mg/dL"): (1.0 / 0.02586, 0.0),
+        },
+    },
+    "CHOL": {
+        "loinc_code": "2093-3",
+        "test_name": "Total Cholesterol",
+        "standard_unit": "mmol/L",
+        "category": "METABOLIC",
+        "conversions": {
+            ("mg/dL", "mmol/L"): (0.02586, 0.0),
+            ("mmol/L", "mg/dL"): (1.0 / 0.02586, 0.0),
+        },
+    },
+    "TRIGLYCERIDES": {
+        "loinc_code": "2571-8",
+        "test_name": "Triglycerides",
+        "standard_unit": "mmol/L",
+        "category": "METABOLIC",
+        "conversions": {
+            ("mg/dL", "mmol/L"): (0.01129, 0.0),
+            ("mmol/L", "mg/dL"): (1.0 / 0.01129, 0.0),
+        },
+    },
+    "TRIG": {
+        "loinc_code": "2571-8",
+        "test_name": "Triglycerides",
+        "standard_unit": "mmol/L",
+        "category": "METABOLIC",
+        "conversions": {
+            ("mg/dL", "mmol/L"): (0.01129, 0.0),
+            ("mmol/L", "mg/dL"): (1.0 / 0.01129, 0.0),
+        },
+    },
+}
+
+
+def resolve_loinc_mapping(
+    test_code: str, loinc_code: str | None = None
+) -> dict[str, Any] | None:
+    """Resolves LOINC dictionary metadata for a given lab test code."""
+    code_u = test_code.strip().upper()
+    if code_u in LOINC_STANDARD_CATALOG:
+        return LOINC_STANDARD_CATALOG[code_u]
+
+    if loinc_code:
+        loinc_clean = loinc_code.strip()
+        for _, v in LOINC_STANDARD_CATALOG.items():
+            if v.get("loinc_code") == loinc_clean:
+                return v
+    return None
+
+
+def get_loinc_catalog() -> list[dict[str, Any]]:
+    """Returns the standardized LOINC catalog items list."""
+    items = []
+    seen = set()
+    for code, entry in LOINC_STANDARD_CATALOG.items():
+        loinc_code = entry["loinc_code"]
+        if loinc_code not in seen:
+            seen.add(loinc_code)
+            items.append(
+                {
+                    "test_code": code,
+                    "test_name": entry["test_name"],
+                    "loinc_code": loinc_code,
+                    "standard_unit": entry["standard_unit"],
+                    "category": entry.get("category", "GENERAL"),
+                    "molecular_weight": entry.get("molecular_weight"),
+                }
+            )
+    return items
 
 
 def _get_val(obj: object | dict[str, Any], key: str, default: Any = None) -> Any:
@@ -52,6 +402,8 @@ def _get_val(obj: object | dict[str, Any], key: str, default: Any = None) -> Any
             "lab_source": ["source"],
             "sex_applicability": ["sex", "gender"],
             "sex": ["sex_applicability", "gender"],
+            "ethnicity_applicability": ["ethnicity", "race_ethnicity"],
+            "ethnicity": ["ethnicity_applicability", "race_ethnicity"],
         }
         if key in synonyms:
             for syn in synonyms[key]:
@@ -70,10 +422,11 @@ def select_reference_range(
     sex: str | None,
     age: float | None,
     site_id: str | None = None,
+    ethnicity: str | None = None,
 ) -> object | dict[str, Any] | None:
     """Selects an active LabReferenceRange based on study, test code, normalized unit,
-    lab source, site, sex, and age, following a stable multi-dimensional specificity
-    and tie-breaking policy.
+    lab source, site, sex, ethnicity, and age, following a stable multi-dimensional
+    specificity and tie-breaking policy.
 
     Args:
         ranges (Iterable[Any]): Iterable of LabReferenceRange objects or dictionaries.
@@ -84,6 +437,7 @@ def select_reference_range(
         sex (Optional[str]): The subject's sex/gender ('M', 'F', 'U', or None).
         age (Optional[float]): The subject's age in completed years at observation.
         site_id (Optional[str]): The clinical site identifier (optional, used for local ranges).
+        ethnicity (Optional[str]): The subject's ethnicity or race (e.g. 'HISPANIC', 'ASIAN', 'ALL').
 
     Returns:
         Any: The best-matched LabReferenceRange object or dict, or None if no match is found.
@@ -94,6 +448,9 @@ def select_reference_range(
     from apps.execution.demographics import normalize_gender
 
     norm_sex = normalize_gender(sex, preserve_custom=True) if sex is not None else "U"
+    norm_ethnicity = (
+        str(ethnicity).strip().upper() if ethnicity and str(ethnicity).strip() else None
+    )
 
     for r in ranges:
         # 1. Skip deleted records
@@ -136,7 +493,6 @@ def select_reference_range(
             continue
 
         # 4. Calculate Sex Specificity Score
-        # LabReferenceRange sex_applicability can be "M", "F", "ALL", None, or empty
         r_sex = _get_val(r, "sex_applicability")
         if r_sex:
             r_sex = str(r_sex).strip().upper()
@@ -155,7 +511,25 @@ def select_reference_range(
         if sex_score == 0:
             continue
 
-        # 5. Calculate Age Specificity Score
+        # 5. Calculate Ethnicity Specificity Score
+        r_ethnicity = _get_val(r, "ethnicity_applicability") or _get_val(r, "ethnicity")
+        if r_ethnicity:
+            r_ethnicity = str(r_ethnicity).strip().upper()
+
+        ethnicity_score = 0
+        if norm_ethnicity and norm_ethnicity not in ("ALL", "U", "UNKNOWN"):
+            if r_ethnicity == norm_ethnicity:
+                ethnicity_score = 2  # Exact ethnicity match
+            elif r_ethnicity in ("ALL", None, "", "U", "UNKNOWN"):
+                ethnicity_score = 1  # Generic/ALL fallback
+        else:
+            if r_ethnicity in ("ALL", None, "", "U", "UNKNOWN"):
+                ethnicity_score = 1
+
+        if ethnicity_score == 0:
+            continue
+
+        # 6. Calculate Age Specificity Score
         r_age_low = _get_val(r, "age_low")
         r_age_high = _get_val(r, "age_high")
 
@@ -187,19 +561,12 @@ def select_reference_range(
         r_id = _get_val(r, "id")
         id_str = str(r_id) if r_id is not None else ""
 
-        # Deterministic sorting key for ascending sort (best match will be sorted first/minimum)
-        # We negate the scores to ensure higher scores sort first.
-        # We compute age span safely, preferring smaller spans (more specific).
         age_span = (
             (age_high_val - age_low_val)
             if (age_low_val is not None and age_high_val is not None)
             else float("inf")
         )
 
-        # Tie-breakers to ensure stability:
-        # - age_low descending (negated)
-        # - age_high ascending
-        # - low_bound ascending (normalized to float for safe comparison)
         r_low_bound = _get_val(r, "low_bound")
         low_bound_val = float(r_low_bound) if r_low_bound is not None else float("-inf")
 
@@ -211,6 +578,7 @@ def select_reference_range(
         sort_key = (
             -site_score,
             -sex_score,
+            -ethnicity_score,
             -age_score,
             age_span,
             -age_low_val if age_low_val is not None else float("inf"),
@@ -370,9 +738,11 @@ async def recalculate_range_flags(
             demo = get_safe_demographics(subj, obs_date, preserve_custom=True)
             gender = demo.get("gender")
             age = demo.get("age")
+            ethnicity = demo.get("ethnicity")
         else:
             gender = "U"
             age = None
+            ethnicity = None
 
         matched_range = select_reference_range(
             ranges=ranges,
@@ -383,6 +753,7 @@ async def recalculate_range_flags(
             sex=gender,
             age=age,
             site_id=obs.lab_site_id,
+            ethnicity=ethnicity,
         )
 
         indicator, out_of_range, matched_bounds = evaluate_lab_value(
@@ -430,8 +801,8 @@ async def convert_lab_unit(
     value: float,
 ) -> float:
     """Converts a numeric laboratory value from one unit to another, utilizing
-    database-defined LabUnitConversion entries first, and falling back to static
-    UCUM conversions.
+    database-defined LabUnitConversion entries first, then standard LOINC
+    mathematical conversions, and falling back to static UCUM conversions.
 
     Args:
         session (Any): Async SQLAlchemy database session.
@@ -448,18 +819,35 @@ async def convert_lab_unit(
     from apps.execution.database.models import LabUnitConversion
     from apps.execution.ucum import convert_unit
 
-    stmt = select(LabUnitConversion).where(
-        LabUnitConversion.test_code == test_code,
-        LabUnitConversion.from_unit == from_unit,
-        LabUnitConversion.to_unit == to_unit,
-        LabUnitConversion.is_deleted.is_(False),
-    )
-    result = await session.execute(stmt)
-    row = result.scalars().first()
+    if from_unit == to_unit:
+        return value
 
-    if row is not None:
-        factor = float(row.factor)
-        offset = float(row.offset) if row.offset is not None else 0.0
-        return value * factor + offset
+    # 1. Check database-defined custom unit conversion
+    if session is not None:
+        try:
+            stmt = select(LabUnitConversion).where(
+                LabUnitConversion.test_code == test_code,
+                LabUnitConversion.from_unit == from_unit,
+                LabUnitConversion.to_unit == to_unit,
+                LabUnitConversion.is_deleted.is_(False),
+            )
+            result = await session.execute(stmt)
+            row = result.scalars().first()
 
+            if row is not None:
+                factor = float(row.factor)
+                offset = float(row.offset) if row.offset is not None else 0.0
+                return value * factor + offset
+        except Exception as e:
+            logger.debug(f"Database unit conversion query skipped/failed: {e}")
+
+    # 2. Check LOINC standard mathematical catalog conversions
+    loinc_entry = resolve_loinc_mapping(test_code)
+    if loinc_entry and "conversions" in loinc_entry:
+        conv_map = loinc_entry["conversions"]
+        if (from_unit, to_unit) in conv_map:
+            factor, offset = conv_map[(from_unit, to_unit)]
+            return value * factor + offset
+
+    # 3. Fallback to generic UCUM conversion
     return convert_unit(value, from_unit, to_unit)

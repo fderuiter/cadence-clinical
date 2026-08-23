@@ -2585,6 +2585,8 @@ async def create_lab_range(
                 unit=data["unit"],
                 normalized_unit=data["normalized_unit"],
                 sex_applicability=data["sex_applicability"],
+                ethnicity_applicability=data.get("ethnicity_applicability")
+                or data.get("ethnicity"),
                 age_low=data.get("age_low"),
                 age_high=data.get("age_high"),
                 low_bound=data.get("low_bound"),
@@ -2608,6 +2610,7 @@ async def create_lab_range(
             unit=lab_range.unit,
             normalized_unit=lab_range.normalized_unit,
             sex_applicability=lab_range.sex_applicability,
+            ethnicity_applicability=lab_range.ethnicity_applicability,
             age_low=lab_range.age_low,
             age_high=lab_range.age_high,
             low_bound=lab_range.low_bound,
@@ -2662,6 +2665,7 @@ async def list_lab_ranges(
                 unit=r.unit,
                 normalized_unit=r.normalized_unit,
                 sex_applicability=r.sex_applicability,
+                ethnicity_applicability=r.ethnicity_applicability,
                 age_low=r.age_low,
                 age_high=r.age_high,
                 low_bound=r.low_bound,
@@ -2703,6 +2707,7 @@ async def get_lab_range(
             unit=r.unit,
             normalized_unit=r.normalized_unit,
             sex_applicability=r.sex_applicability,
+            ethnicity_applicability=r.ethnicity_applicability,
             age_low=r.age_low,
             age_high=r.age_high,
             low_bound=r.low_bound,
@@ -2751,6 +2756,7 @@ async def update_lab_range(
                 "unit": r.unit,
                 "normalized_unit": r.normalized_unit,
                 "sex_applicability": r.sex_applicability,
+                "ethnicity_applicability": r.ethnicity_applicability,
                 "age_low": r.age_low,
                 "age_high": r.age_high,
                 "low_bound": r.low_bound,
@@ -2771,6 +2777,7 @@ async def update_lab_range(
             r.unit = merged_data["unit"]
             r.normalized_unit = merged_data["normalized_unit"]
             r.sex_applicability = merged_data["sex_applicability"]
+            r.ethnicity_applicability = merged_data.get("ethnicity_applicability")
             r.age_low = merged_data["age_low"]
             r.age_high = merged_data["age_high"]
             r.low_bound = merged_data["low_bound"]
@@ -2794,6 +2801,7 @@ async def update_lab_range(
             unit=r.unit,
             normalized_unit=r.normalized_unit,
             sex_applicability=r.sex_applicability,
+            ethnicity_applicability=r.ethnicity_applicability,
             age_low=r.age_low,
             age_high=r.age_high,
             low_bound=r.low_bound,

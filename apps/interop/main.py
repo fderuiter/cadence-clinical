@@ -13,6 +13,12 @@ from apps.interop.infrastructure.models import Base
 from apps.interop.presentation.routers.cdr_pipeline import (
     router as cdr_pipeline_router,
 )
+from apps.interop.presentation.routers.dct import (
+    router as dct_router,
+)
+from apps.interop.presentation.routers.esource import (
+    router as esource_router,
+)
 from apps.interop.presentation.routers.interop import (
     router as interop_router,
 )
@@ -63,12 +69,15 @@ async def health_check() -> dict[str, str]:
     return {"status": "ok", "service": "interop"}
 
 
-# Include Interop, Lakehouse, CDR Pipeline, SCE & Sensors routers
+# Include Interop, Lakehouse, CDR Pipeline, SCE, Sensors, DCT & eSource routers
 app.include_router(interop_router)
 app.include_router(lakehouse_router)
 app.include_router(cdr_pipeline_router)
 app.include_router(sce_router)
 app.include_router(sensors_router)
+app.include_router(dct_router)
+app.include_router(esource_router)
+
 
 from apps.interop.infrastructure.designer_client import (  # noqa: E402
     fetch_eligibility_criteria,

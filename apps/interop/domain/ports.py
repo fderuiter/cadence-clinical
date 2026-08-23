@@ -331,3 +331,168 @@ class ISensorRepositoryPort(RepositoryPort[Any]):
     @abstractmethod
     async def get_sensor_dashboard_metrics(self, study_id: str) -> dict[str, Any]:
         pass
+
+
+class IDCTRepositoryPort(ABC):
+    """Port for Decentralized Clinical Trial (DCT) repository persistence."""
+
+    @abstractmethod
+    async def create_telehealth_session(self, record: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def get_telehealth_session_by_id(self, session_id: str) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def get_telehealth_session_by_room(self, room_id: str) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def list_telehealth_sessions(
+        self, study_id: str | None = None, subject_id: str | None = None
+    ) -> list[Any]:
+        pass
+
+    @abstractmethod
+    async def update_telehealth_session(self, record: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def create_pediatric_assent(self, record: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def get_pediatric_assent_by_id(self, assent_id: str) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def list_pediatric_assents(
+        self, study_id: str | None = None, subject_id: str | None = None
+    ) -> list[Any]:
+        pass
+
+    @abstractmethod
+    async def create_dtp_shipment(self, record: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def get_dtp_shipment_by_tracking(self, tracking_number: str) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def get_dtp_shipment_by_id(self, shipment_id: str) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def list_dtp_shipments(
+        self,
+        study_id: str | None = None,
+        site_id: str | None = None,
+        subject_pseudonym_id: str | None = None,
+    ) -> list[Any]:
+        pass
+
+    @abstractmethod
+    async def update_dtp_shipment(self, record: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def create_in_home_visit(self, record: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def get_in_home_visit_by_id(self, visit_id: str) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def list_in_home_visits(
+        self,
+        study_id: str | None = None,
+        site_id: str | None = None,
+        nurse_id: str | None = None,
+        subject_id: str | None = None,
+    ) -> list[Any]:
+        pass
+
+    @abstractmethod
+    async def update_in_home_visit(self, record: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def get_dct_metrics(self, study_id: str) -> Any:
+        pass
+
+
+class IEsourceReconciliationRepositoryPort(RepositoryPort[Any]):
+    """Driven repository port for eSource Candidate Ingestion and CRC Reconciliation."""
+
+    @abstractmethod
+    async def get_by_id(self, entity_id: str) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def save(self, entity: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def save_candidates_batch(
+        self,
+        candidates: list[Any],
+        user_id: str,
+        user_role: str,
+        change_reason: str,
+    ) -> list[Any]:
+        pass
+
+    @abstractmethod
+    async def list_candidates(
+        self,
+        study_id: str | None = None,
+        subject_id: str | None = None,
+        site_id: str | None = None,
+        domain: str | None = None,
+        status: str | None = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> tuple[list[Any], int]:
+        pass
+
+    @abstractmethod
+    async def accept_candidate(
+        self,
+        candidate_id: str,
+        user_id: str,
+        user_role: str,
+        signature_token: str | None = None,
+        commit_reason: str | None = None,
+        change_reason: str = "CRC Accept & Commit",
+    ) -> Any:
+        pass
+
+    @abstractmethod
+    async def reject_candidate(
+        self,
+        candidate_id: str,
+        user_id: str,
+        user_role: str,
+        rejection_reason: str,
+        change_reason: str = "CRC Reject Candidate",
+    ) -> Any:
+        pass
+
+    @abstractmethod
+    async def raise_clinical_query(
+        self,
+        candidate_id: str,
+        user_id: str,
+        user_role: str,
+        query_explanation: str,
+        discrepancy_type: str = "VALUE_MISMATCH",
+        change_reason: str = "CRC Raise Discrepancy Query",
+    ) -> tuple[Any, Any]:
+        pass
+
+    @abstractmethod
+    async def get_provenance_audit(self, candidate_id: str) -> dict[str, Any]:
+        pass

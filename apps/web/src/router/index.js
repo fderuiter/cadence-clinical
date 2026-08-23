@@ -259,6 +259,42 @@ const routes = [
     },
   },
   {
+    path: "/labs",
+    name: "labs",
+    component: () => import("../views/LabGovernanceView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: [
+        "site_investigator",
+        "crc",
+        "data_manager",
+        "cra",
+        "monitor",
+        "sponsor_designer",
+        "sponsor_admin",
+        "super_admin",
+      ],
+    },
+  },
+  {
+    path: "/dct",
+    name: "dct",
+    component: () => import("../views/TelehealthDtpView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: [
+        "site_investigator",
+        "crc",
+        "data_manager",
+        "sponsor_designer",
+        "sponsor_admin",
+        "cra",
+        "monitor",
+        "super_admin",
+      ],
+    },
+  },
+  {
     path: "/exports",
     name: "exports",
     component: () => import("../views/ExportWizardView.vue"),

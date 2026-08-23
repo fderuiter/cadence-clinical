@@ -50,6 +50,8 @@ _submodule_mappings = {
     "LabTestMasterLegacy": "lab",
     "LabUnitConversion": "lab",
     "LabTestMaster": "lab",
+    "LocalLabCertification": "lab",
+    "StagedAdverseEventReview": "lab",
     # form
     "FormSubmission": "form",
     "FormSubmissionStatus": "form",

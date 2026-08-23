@@ -266,6 +266,10 @@ class EPROSubmissionQuarantine(Base):
     )
 
 
+from apps.interop.infrastructure.esource_models import (  # noqa: E402
+    EhrEndpointRecord,
+    EhrReconciliationCandidateRecord,
+)
 from apps.interop.infrastructure.sensor_models import (  # noqa: E402
     DeviceRegistrationRecord,
     SensorDailySummaryRecord,
@@ -280,6 +284,8 @@ __all__ = [
     "EPROSubmission",
     "EPROSubmissionDefeated",
     "EPROSubmissionQuarantine",
+    "EhrEndpointRecord",
+    "EhrReconciliationCandidateRecord",
     "Instrument",
     "InteropAuditLog",
     "SensorDailySummaryRecord",

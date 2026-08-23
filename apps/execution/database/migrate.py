@@ -22,6 +22,7 @@ from apps.execution.database.models import (  # noqa: F401
     LabTestMaster,
     LabTestMasterLegacy,
     LabUnitConversion,
+    LocalLabCertification,
     MedDRAHierarchy,
     MedDRATerm,
     PendingPredecessorCheck,
@@ -29,6 +30,7 @@ from apps.execution.database.models import (  # noqa: F401
     RandomizationConfig,
     SDTMDomainRecord,
     SDVSignOff,
+    StagedAdverseEventReview,
     StratumState,
     StudyAuthoredRule,
     SubjectRandomization,
@@ -554,6 +556,7 @@ async def upgrade_existing_tables(conn) -> None:
             ("created_by", "VARCHAR(255)"),
             ("reason_for_change", "VARCHAR(1000)"),
             ("version_index", "INTEGER DEFAULT 1"),
+            ("ethnicity", "VARCHAR(100)"),
         ]
         for col_name, col_type in new_ref_cols:
             if col_name not in ref_cols:
