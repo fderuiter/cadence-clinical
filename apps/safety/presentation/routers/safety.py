@@ -17,6 +17,11 @@ from fastapi import (
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.safety.domain.as2_models import (
+    AS2Authority,
+    AS2OutboundTransmissionInput,
+    TransmissionStatus,
+)
 from apps.safety.domain.expedited_rules import (
     ClockAlertLevel,
     ICSRRuleEvaluationInput,
@@ -32,16 +37,25 @@ from apps.safety.domain.narrative_models import (
 )
 from apps.safety.infrastructure.database import db_manager
 from apps.safety.infrastructure.models import (
+    AS2Transmission,
     ExportJob,
     SAEDiscrepancy,
     SAEReconciliationJob,
     SAEReconciliationRun,
     SafetyAuditLog,
     SafetyCaseICSR,
+    write_as2_audit_log,
     write_audit_log,
 )
 from apps.safety.presentation.dtos import (
+    AS2OutboundTransmissionRequestDTO,
+    AS2TransmissionAuditLogDTO,
+    AS2TransmissionResponseDTO,
     ICSRDataExportRequest,
+    MDNProcessRequestDTO,
+    MDNProcessResponseDTO,
+    RegulatoryAckProcessRequestDTO,
+    RegulatoryAckProcessResponseDTO,
     SAEDiscrepancyResponse,
     SAEReconciliationJobRequest,
     SAEReconciliationJobResponse,
@@ -54,6 +68,7 @@ from apps.safety.presentation.dtos import (
     SafetyExportJobResponse,
 )
 from apps.safety.processor import process_sae_reconciliation
+from apps.safety.services.as2_gateway_client import AS2GatewayClient
 from apps.safety.services.expedited_rules_engine import (
     ExpeditedSafetyReportingRulesEngine,
 )
@@ -1331,3 +1346,373 @@ async def get_safety_countdown_alerts_endpoint(
     )
     await session.commit()
     return alerting
+
+
+# =========================================================================
+# AS2 B2B Transmission Gateway & MDN Parser Endpoints (PRD-PVG-002)
+# =========================================================================
+
+
+def map_transmission_to_response(tx: AS2Transmission) -> AS2TransmissionResponseDTO:
+    """Helper to serialize an AS2Transmission ORM entity into a Pydantic DTO."""
+    events = []
+    if hasattr(tx, "audit_events") and tx.audit_events:
+        for ev in tx.audit_events:
+            events.append(
+                AS2TransmissionAuditLogDTO(
+                    id=ev.id,
+                    transmission_id=ev.transmission_id,
+                    action=ev.action,
+                    from_status=ev.from_status,
+                    to_status=ev.to_status,
+                    details=ev.details,
+                    created_at=ev.created_at.isoformat() if ev.created_at else "",
+                    created_by=ev.created_by,
+                    reason_for_change=ev.reason_for_change,
+                    version_index=ev.version_index,
+                )
+            )
+
+    return AS2TransmissionResponseDTO(
+        id=tx.id,
+        transmission_id=tx.transmission_id,
+        case_id=tx.case_id,
+        study_id=tx.study_id,
+        worldwide_unique_case_id=tx.worldwide_unique_case_id,
+        message_id=tx.message_id,
+        as2_from=tx.as2_from,
+        as2_to=tx.as2_to,
+        target_authority=tx.target_authority,
+        environment=tx.environment,
+        status=tx.status,
+        payload_digest_sha256=tx.payload_digest_sha256,
+        mic=tx.mic,
+        encryption_algorithm=tx.encryption_algorithm,
+        signature_algorithm=tx.signature_algorithm,
+        outbound_payload_size=tx.outbound_payload_size,
+        outbound_xml=tx.outbound_xml,
+        mdn_message_id=tx.mdn_message_id,
+        mdn_disposition=tx.mdn_disposition,
+        mdn_mic=tx.mdn_mic,
+        mdn_status=tx.mdn_status,
+        mdn_received_at=tx.mdn_received_at.isoformat() if tx.mdn_received_at else None,
+        ack_a_status=tx.ack_a_status,
+        ack_a_received_at=tx.ack_a_received_at.isoformat()
+        if tx.ack_a_received_at
+        else None,
+        ack_b_status=tx.ack_b_status,
+        ack_b_received_at=tx.ack_b_received_at.isoformat()
+        if tx.ack_b_received_at
+        else None,
+        ack_b_errors=tx.ack_b_errors or [],
+        ack_c_status=tx.ack_c_status,
+        ack_c_received_at=tx.ack_c_received_at.isoformat()
+        if tx.ack_c_received_at
+        else None,
+        ack_c_details=tx.ack_c_details or {},
+        error_message=tx.error_message,
+        retry_count=tx.retry_count,
+        created_at=tx.created_at.isoformat() if tx.created_at else "",
+        created_by=tx.created_by,
+        reason_for_change=tx.reason_for_change,
+        version_index=tx.version_index,
+        audit_events=events,
+    )
+
+
+@router.post(
+    "/api/v1/safety/as2/transmissions",
+    response_model=AS2TransmissionResponseDTO,
+    status_code=201,
+)
+async def send_as2_transmission_endpoint(
+    request: Request,
+    payload: AS2OutboundTransmissionRequestDTO,
+    session: AsyncSession = Depends(get_db_session),
+) -> AS2TransmissionResponseDTO:
+    """Dispatch an outbound ICH E2B(R3) XML payload directly to a Regulatory Health Authority AS2 Gateway.
+
+    Requirements: PRD-PVG-002, ADR-2199
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    if not change_reason or not change_reason.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Reason for change is mandatory for AS2 B2B regulatory transmissions.",
+        )
+
+    client = AS2GatewayClient(session=session)
+    input_data = AS2OutboundTransmissionInput(
+        case_id=payload.case_id,
+        study_id=payload.study_id,
+        icsr_xml_payload=payload.icsr_xml_payload,
+        target_authority=payload.target_authority,
+        sender_as2_id=payload.sender_as2_id,
+        receiver_as2_id=payload.receiver_as2_id,
+        environment=payload.environment,
+        custom_headers=payload.custom_headers,
+    )
+
+    result = await client.send_e2b_payload(
+        input_data=input_data,
+        user_id=user_id,
+        change_reason=change_reason,
+    )
+
+    # Fetch created transmission with audit events
+    stmt = select(AS2Transmission).where(
+        AS2Transmission.transmission_id == result.transmission_id
+    )
+    res = await session.execute(stmt)
+    tx = res.scalars().first()
+    if not tx:
+        raise HTTPException(
+            status_code=500, detail="Transmission ledger record creation failed"
+        )
+
+    await session.commit()
+    return map_transmission_to_response(tx)
+
+
+@router.get(
+    "/api/v1/safety/as2/transmissions",
+    response_model=list[AS2TransmissionResponseDTO],
+)
+async def list_as2_transmissions_endpoint(
+    request: Request,
+    target_authority: str | None = None,
+    status: str | None = None,
+    study_id: str | None = None,
+    case_id: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[AS2TransmissionResponseDTO]:
+    """List append-only AS2 B2B transmission ledger records with optional filters.
+
+    Requirements: PRD-PVG-002, ADR-2199
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+
+    stmt = select(AS2Transmission)
+    if target_authority:
+        stmt = stmt.where(AS2Transmission.target_authority == target_authority)
+    if status:
+        stmt = stmt.where(AS2Transmission.status == status)
+    if study_id:
+        stmt = stmt.where(AS2Transmission.study_id == study_id)
+    if case_id:
+        stmt = stmt.where(AS2Transmission.case_id == case_id)
+
+    stmt = stmt.order_by(AS2Transmission.created_at.desc()).offset(offset).limit(limit)
+    res = await session.execute(stmt)
+    transmissions = res.scalars().all()
+
+    await write_safety_audit_log(
+        session=session,
+        user_id=user_id,
+        action="AS2_TRANSMISSIONS_QUERY",
+        details=f"Queried AS2 transmission ledger (found {len(transmissions)} records).",
+        change_reason=change_reason or "Query AS2 transmission ledger",
+        version_index=1,
+    )
+    await session.commit()
+    return [map_transmission_to_response(tx) for tx in transmissions]
+
+
+@router.get(
+    "/api/v1/safety/as2/transmissions/{id}",
+    response_model=AS2TransmissionResponseDTO,
+)
+async def get_as2_transmission_endpoint(
+    request: Request,
+    id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> AS2TransmissionResponseDTO:
+    """Retrieve full audit history and status of an AS2 B2B transmission by ID.
+
+    Requirements: PRD-PVG-002, ADR-2199
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+
+    stmt = select(AS2Transmission).where(
+        (AS2Transmission.id == id) | (AS2Transmission.transmission_id == id)
+    )
+    res = await session.execute(stmt)
+    tx = res.scalars().first()
+    if not tx:
+        raise HTTPException(
+            status_code=404, detail=f"AS2 Transmission '{id}' not found"
+        )
+
+    await write_safety_audit_log(
+        session=session,
+        user_id=user_id,
+        action="AS2_TRANSMISSION_READ",
+        details=f"Retrieved AS2 transmission details for {tx.transmission_id}.",
+        change_reason=change_reason or "View AS2 transmission",
+        version_index=1,
+        record_id=tx.id,
+    )
+    await session.commit()
+    return map_transmission_to_response(tx)
+
+
+@router.post(
+    "/api/v1/safety/as2/mdn",
+    response_model=MDNProcessResponseDTO,
+)
+async def process_inbound_mdn_endpoint(
+    request: Request,
+    payload: MDNProcessRequestDTO,
+    session: AsyncSession = Depends(get_db_session),
+) -> MDNProcessResponseDTO:
+    """Process an asynchronous Message Disposition Notification (MDN) callback.
+
+    Requirements: PRD-PVG-002, ADR-2199
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    client = AS2GatewayClient(session=session)
+
+    mdn_res = await client.process_inbound_mdn(
+        mdn_raw=payload.mdn_payload,
+        user_id=user_id,
+        change_reason=change_reason or "Inbound Asynchronous MDN Callback",
+        authority_cert=payload.authority_cert_pem,
+    )
+    await session.commit()
+
+    return MDNProcessResponseDTO(
+        is_valid_mdn=mdn_res.is_valid_mdn,
+        original_message_id=mdn_res.original_message_id,
+        disposition_mode=mdn_res.disposition_mode,
+        disposition_type=mdn_res.disposition_type.value,
+        disposition_raw=mdn_res.disposition_raw,
+        received_content_mic=mdn_res.received_content_mic,
+        mic_matches=mdn_res.mic_matches,
+        is_signed=mdn_res.is_signed,
+        signature_valid=mdn_res.signature_valid,
+        human_readable_text=mdn_res.human_readable_text,
+        error_details=mdn_res.error_details,
+    )
+
+
+@router.post(
+    "/api/v1/safety/as2/ack",
+    response_model=RegulatoryAckProcessResponseDTO,
+)
+async def process_regulatory_ack_endpoint(
+    request: Request,
+    payload: RegulatoryAckProcessRequestDTO,
+    session: AsyncSession = Depends(get_db_session),
+) -> RegulatoryAckProcessResponseDTO:
+    """Process an inbound Regulatory ACK B (Syntactic) or ACK C (Authority Ingestion) receipt.
+
+    Requirements: PRD-PVG-002, ADR-2199
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    client = AS2GatewayClient(session=session)
+
+    ack_res = await client.process_inbound_ack(
+        ack_payload=payload.ack_payload,
+        ack_type=payload.ack_type,
+        user_id=user_id,
+        change_reason=change_reason or f"Process Regulatory {payload.ack_type.value}",
+        transmission_id=payload.transmission_id,
+    )
+    await session.commit()
+
+    return RegulatoryAckProcessResponseDTO(
+        ack_type=ack_res.ack_type.value,
+        ack_status=ack_res.ack_status.value,
+        is_accepted=ack_res.is_accepted,
+        authority_receipt_id=ack_res.authority_receipt_id,
+        worldwide_unique_case_id=ack_res.worldwide_unique_case_id,
+        message_id=ack_res.message_id,
+        authority_status_code=ack_res.authority_status_code,
+        errors=ack_res.errors,
+        warnings=ack_res.warnings,
+        received_at=ack_res.received_at.isoformat(),
+    )
+
+
+@router.post(
+    "/api/v1/safety/as2/transmissions/{id}/retry",
+    response_model=AS2TransmissionResponseDTO,
+)
+async def retry_as2_transmission_endpoint(
+    request: Request,
+    id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> AS2TransmissionResponseDTO:
+    """Retry a failed AS2 transmission.
+
+    Requirements: PRD-PVG-002, ADR-2199
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    if not change_reason or not change_reason.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Reason for change is mandatory for AS2 transmission retry.",
+        )
+
+    stmt = select(AS2Transmission).where(
+        (AS2Transmission.id == id) | (AS2Transmission.transmission_id == id)
+    )
+    res = await session.execute(stmt)
+    tx = res.scalars().first()
+    if not tx:
+        raise HTTPException(
+            status_code=404, detail=f"AS2 Transmission '{id}' not found"
+        )
+
+    if not tx.outbound_xml:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot retry transmission without preserved outbound XML.",
+        )
+
+    client = AS2GatewayClient(session=session)
+    input_data = AS2OutboundTransmissionInput(
+        case_id=tx.case_id,
+        study_id=tx.study_id,
+        icsr_xml_payload=tx.outbound_xml,
+        target_authority=AS2Authority(tx.target_authority),
+        sender_as2_id=tx.as2_from,
+        receiver_as2_id=tx.as2_to,
+        environment=tx.environment,
+    )
+
+    # Increment retry count on original record
+    tx.retry_count += 1
+    await write_as2_audit_log(
+        session=session,
+        transmission_id=tx.id,
+        action="AS2_TRANSMISSION_RETRY_TRIGGERED",
+        from_status=tx.status,
+        to_status=TransmissionStatus.TRANSMITTED.value,
+        details=f"Triggered transmission retry attempt #{tx.retry_count}",
+        created_by=user_id,
+        reason_for_change=change_reason,
+    )
+    await session.flush()
+
+    retry_res = await client.send_e2b_payload(
+        input_data=input_data,
+        user_id=user_id,
+        change_reason=f"Retry attempt #{tx.retry_count}: {change_reason}",
+    )
+
+    # Fetch updated retry transmission
+    retry_stmt = select(AS2Transmission).where(
+        AS2Transmission.transmission_id == retry_res.transmission_id
+    )
+    retry_tx_res = await session.execute(retry_stmt)
+    retry_tx = retry_tx_res.scalars().first()
+    if not retry_tx:
+        raise HTTPException(
+            status_code=500, detail="Retry transmission record not found"
+        )
+
+    await session.commit()
+    return map_transmission_to_response(retry_tx)

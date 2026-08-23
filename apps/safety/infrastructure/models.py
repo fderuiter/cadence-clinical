@@ -325,18 +325,144 @@ class SafetyAuditLog(Base):
     record_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
+class AS2Transmission(Base):
+    """
+    Represents an outbound AS2 B2B Transmission record of ICH E2B(R3) XML payloads
+    to regulatory health authorities with S/MIME encryption, digital signatures,
+    and multi-tier ACK tracking (ACK A, ACK B, ACK C).
+
+    Requirements: PRD-PVG-002, ADR-2199
+    """
+
+    __tablename__ = "safety_as2_transmissions"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    transmission_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, unique=True, index=True
+    )
+    case_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    study_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    worldwide_unique_case_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    message_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, unique=True, index=True
+    )
+    as2_from: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    as2_to: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    target_authority: Mapped[str] = mapped_column(
+        String(100), nullable=False, index=True
+    )
+    environment: Mapped[str] = mapped_column(
+        String(50), default="PRODUCTION", nullable=False
+    )
+    status: Mapped[str] = mapped_column(
+        String(50), default="PENDING", nullable=False, index=True
+    )
+
+    # Cryptographic & payload integrity verification
+    payload_digest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    mic: Mapped[str] = mapped_column(String(255), nullable=False)
+    encryption_algorithm: Mapped[str] = mapped_column(
+        String(50), default="AES-256-GCM", nullable=False
+    )
+    signature_algorithm: Mapped[str] = mapped_column(
+        String(50), default="SHA-256-RSA", nullable=False
+    )
+    outbound_payload_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    outbound_xml: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # ACK A: Perimeter Transport / MDN Receipt
+    mdn_message_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    mdn_disposition: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    mdn_mic: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    mdn_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    mdn_received_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    ack_a_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    ack_a_received_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    # ACK B: Syntactic / Technical Schema Validation Receipt
+    ack_b_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    ack_b_received_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    ack_b_errors: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSON, nullable=False, default=list
+    )
+
+    # ACK C: Regulatory Health Authority Business Acceptance / DB Ingestion Receipt
+    ack_c_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    ack_c_received_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    ack_c_details: Mapped[dict[str, Any]] = mapped_column(
+        JSON, nullable=False, default=dict
+    )
+
+    error_message: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    # 21 CFR Part 11 Audit fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    audit_events: Mapped[list[AS2TransmissionAuditLog]] = relationship(
+        "AS2TransmissionAuditLog",
+        back_populates="transmission",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+
+class AS2TransmissionAuditLog(Base):
+    """
+    Represents an immutable, append-only B2B transmission ledger event log.
+
+    Requirements: PRD-PVG-002, 21 CFR Part 11
+    """
+
+    __tablename__ = "safety_as2_transmission_audit_logs"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    transmission_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("safety_as2_transmissions.id"),
+        nullable=False,
+        index=True,
+    )
+    action: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    from_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    to_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    details: Mapped[str] = mapped_column(String(2000), nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False, index=True
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    transmission: Mapped[AS2Transmission] = relationship(
+        "AS2Transmission", back_populates="audit_events"
+    )
+
+
 @event.listens_for(Session, "before_flush")
 def prevent_audit_log_modification(session: Session, flush_context, instances) -> None:
     for obj in session.dirty:
-        if isinstance(obj, SafetyAuditLog):
+        if isinstance(obj, (SafetyAuditLog, AS2TransmissionAuditLog)):
             raise ValueError(
-                "Updates to SafetyAuditLog are strictly forbidden to comply with 21 CFR Part 11."
+                f"Updates to {type(obj).__name__} are strictly forbidden to comply with 21 CFR Part 11."
             )
 
     for obj in session.deleted:
-        if isinstance(obj, SafetyAuditLog):
+        if isinstance(obj, (SafetyAuditLog, AS2TransmissionAuditLog)):
             raise ValueError(
-                "Deletions from SafetyAuditLog are strictly forbidden to comply with 21 CFR Part 11."
+                f"Deletions from {type(obj).__name__} are strictly forbidden to comply with 21 CFR Part 11."
             )
 
 
@@ -359,3 +485,33 @@ async def write_audit_log(
     )
     session.add(log_entry)
     await session.flush()
+
+
+async def write_as2_audit_log(
+    session: AsyncSession,
+    transmission_id: str,
+    action: str,
+    details: str,
+    created_by: str,
+    from_status: str | None = None,
+    to_status: str | None = None,
+    reason_for_change: str | None = None,
+    version_index: int = 1,
+) -> AS2TransmissionAuditLog:
+    """Record an immutable append-only event into the B2B transmission ledger.
+
+    Requirements: PRD-PVG-002, 21 CFR Part 11
+    """
+    event_entry = AS2TransmissionAuditLog(
+        transmission_id=transmission_id,
+        action=action,
+        details=details,
+        from_status=from_status,
+        to_status=to_status,
+        created_by=created_by,
+        reason_for_change=reason_for_change,
+        version_index=version_index,
+    )
+    session.add(event_entry)
+    await session.flush()
+    return event_entry

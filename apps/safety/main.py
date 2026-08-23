@@ -5,7 +5,14 @@ from fastapi import FastAPI
 from apps.safety.infrastructure.database import db_manager
 from apps.safety.infrastructure.models import Base
 from apps.safety.presentation.dtos import (
+    AS2OutboundTransmissionRequestDTO,
+    AS2TransmissionAuditLogDTO,
+    AS2TransmissionResponseDTO,
     ICSRDataExportRequest,
+    MDNProcessRequestDTO,
+    MDNProcessResponseDTO,
+    RegulatoryAckProcessRequestDTO,
+    RegulatoryAckProcessResponseDTO,
     SAEDiscrepancyResponse,
     SAEReconciliationJobRequest,
     SAEReconciliationJobResponse,
@@ -24,6 +31,7 @@ from apps.safety.presentation.routers.safety import (
     map_job_to_reconciliation_response,
     map_job_to_response,
     map_run_to_response,
+    map_transmission_to_response,
     reconciliation_worker,
     send_medical_monitor_alert,
     write_safety_audit_log,
@@ -71,7 +79,14 @@ async def health_check() -> dict[str, str]:
 app.include_router(safety_router)
 
 __all__ = [
+    "AS2OutboundTransmissionRequestDTO",
+    "AS2TransmissionAuditLogDTO",
+    "AS2TransmissionResponseDTO",
     "ICSRDataExportRequest",
+    "MDNProcessRequestDTO",
+    "MDNProcessResponseDTO",
+    "RegulatoryAckProcessRequestDTO",
+    "RegulatoryAckProcessResponseDTO",
     "SAEDiscrepancyResponse",
     "SAEReconciliationJobRequest",
     "SAEReconciliationJobResponse",
@@ -89,6 +104,7 @@ __all__ = [
     "map_job_to_reconciliation_response",
     "map_job_to_response",
     "map_run_to_response",
+    "map_transmission_to_response",
     "reconciliation_worker",
     "send_medical_monitor_alert",
     "write_safety_audit_log",

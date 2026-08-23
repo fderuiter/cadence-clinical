@@ -1,5 +1,7 @@
 from apps.safety.infrastructure.models import (
     ICSR,
+    AS2Transmission,
+    AS2TransmissionAuditLog,
     Base,
     ExportJob,
     ICSRReportingEvaluation,
@@ -12,11 +14,14 @@ from apps.safety.infrastructure.models import (
     SafetyExportJob,
     SafetyNarrative,
     prevent_audit_log_modification,
+    write_as2_audit_log,
     write_audit_log,
 )
 
 __all__ = [
     "ICSR",
+    "AS2Transmission",
+    "AS2TransmissionAuditLog",
     "Base",
     "ExportJob",
     "ICSRReportingEvaluation",
@@ -29,5 +34,6 @@ __all__ = [
     "SafetyExportJob",
     "SafetyNarrative",
     "prevent_audit_log_modification",
+    "write_as2_audit_log",
     "write_audit_log",
 ]
