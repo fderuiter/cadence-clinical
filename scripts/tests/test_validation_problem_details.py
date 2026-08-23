@@ -1,3 +1,5 @@
+import os
+
 import httpx
 import pytest
 
@@ -37,8 +39,8 @@ async def test_designer_validation_error_rfc7807():
         assert "instance" in data
         assert "code" in data
         assert data["status"] == 400
-        assert data["code"] == "REQUEST_VALIDATION_ERROR"
-        assert data["type"] == "https://api.ccrsoft.com/errors/validation-failed"
+        expected_type = f"https://api.{os.getenv('BRAND_DOMAIN', 'ccrsoft.com')}/errors/validation-failed"
+        assert data["type"] == expected_type
         assert data["title"] == "Request Validation Failed"
 
         # Verify invalid_params
@@ -66,7 +68,8 @@ async def test_execution_validation_error_rfc7807():
         data = response.json()
 
         # Verify RFC 7807 required fields
-        assert data["type"] == "https://api.ccrsoft.com/errors/validation-failed"
+        expected_type = f"https://api.{os.getenv('BRAND_DOMAIN', 'ccrsoft.com')}/errors/validation-failed"
+        assert data["type"] == expected_type
         assert data["title"] == "Request Validation Failed"
         assert data["status"] == 400
         assert data["code"] == "REQUEST_VALIDATION_ERROR"
