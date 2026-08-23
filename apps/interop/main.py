@@ -10,11 +10,20 @@ from fastapi import FastAPI
 
 from apps.interop.infrastructure.database import db_manager
 from apps.interop.infrastructure.models import Base
+from apps.interop.presentation.routers.cdr_pipeline import (
+    router as cdr_pipeline_router,
+)
 from apps.interop.presentation.routers.interop import (
     router as interop_router,
 )
 from apps.interop.presentation.routers.lakehouse import (
     router as lakehouse_router,
+)
+from apps.interop.presentation.routers.sensors import (
+    router as sensors_router,
+)
+from apps.interop.presentation.routers.statistical_computing import (
+    router as sce_router,
 )
 from packages.database import get_relational_db_lifespan
 from packages.security import assert_secure_secrets, validate_branding
@@ -54,9 +63,12 @@ async def health_check() -> dict[str, str]:
     return {"status": "ok", "service": "interop"}
 
 
-# Include Interop & Lakehouse routers
+# Include Interop, Lakehouse, CDR Pipeline, SCE & Sensors routers
 app.include_router(interop_router)
 app.include_router(lakehouse_router)
+app.include_router(cdr_pipeline_router)
+app.include_router(sce_router)
+app.include_router(sensors_router)
 
 from apps.interop.infrastructure.designer_client import (  # noqa: E402
     fetch_eligibility_criteria,

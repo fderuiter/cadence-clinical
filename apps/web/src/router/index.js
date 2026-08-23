@@ -232,6 +232,24 @@ const routes = [
     },
   },
   {
+    path: "/sensors",
+    name: "sensors",
+    component: () => import("../views/SensorTelemetryView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: [
+        "site_investigator",
+        "crc",
+        "data_manager",
+        "sponsor_designer",
+        "sponsor_admin",
+        "cra",
+        "monitor",
+        "super_admin",
+      ],
+    },
+  },
+  {
     path: "/exports",
     name: "exports",
     component: () => import("../views/ExportWizardView.vue"),

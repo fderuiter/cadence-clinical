@@ -68,14 +68,16 @@ class ObservationDomain(StrEnum):
 
     DM = "DM"  # Demographics
     AE = "AE"  # Adverse Events
+    CM = "CM"  # Concomitant Medications
     VS = "VS"  # Vital Signs
     LB = "LB"  # Laboratory Tests
+    EX = "EX"  # Exposure / Treatment
+    DS = "DS"  # Disposition
     QS = "QS"  # Questionnaires / PRO
     PR = "PR"  # Procedures
     TR = "TR"  # Tumor Response / Lesion Measurements
     TU = "TU"  # Tumor Identification
     RS = "RS"  # Disease Response
-    EX = "EX"  # Exposure / Treatment
     TI = "TI"  # Trial Inclusion / Exclusion
     CO = "CO"  # Comments
     OTHER = "OTHER"
@@ -630,3 +632,8 @@ class LakehouseMetrics(BaseModel):
     last_ingested_at: datetime | None = Field(
         None, description="Timestamp of most recent ingestion"
     )
+
+
+# Type aliases for backward-compatibility across Lakehouse and SCE subsystems
+CanonicalObservationRecord = CanonicalClinicalRecord
+VersionPinnedSnapshot = ClinicalSnapshot

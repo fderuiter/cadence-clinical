@@ -7,11 +7,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3414
-- **Passed:** 3384 🟢
+- **Total Automated Test Cases Run:** 3482
+- **Passed:** 3452 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 30 ⚪
-- **Overall Operational Pass Rate:** 99.12%
+- **Overall Operational Pass Rate:** 99.14%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -2190,6 +2190,21 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_upload_zip_archive_endpoint` | `apps.imaging.tests.test_imaging_endpoints` | PRD-IMG-001, PRD-IMG-002 | 🟢 PASSED | < 1s |
 | `test_single_dicom_ingestion_pipeline` | `apps.imaging.tests.test_imaging_pipeline` | PRD-IMG-001, PRD-IMG-002 | 🟢 PASSED | < 1s |
 | `test_zip_archive_multi_slice_ingestion` | `apps.imaging.tests.test_imaging_pipeline` | PRD-IMG-001, PRD-IMG-002 | 🟢 PASSED | < 1s |
+| `test_adam_datasets_derived_accurately` | `apps.interop.tests.test_cdr_cdisc_sdtm_adam_pipeline.TestADaMPipelineEngine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_adam_endpoint` | `apps.interop.tests.test_cdr_cdisc_sdtm_adam_pipeline.TestCDRPipelineAPI` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_execute_pipeline_endpoint` | `apps.interop.tests.test_cdr_cdisc_sdtm_adam_pipeline.TestCDRPipelineAPI` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_export_dataset_json` | `apps.interop.tests.test_cdr_cdisc_sdtm_adam_pipeline.TestCDRPipelineAPI` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_export_define_xml` | `apps.interop.tests.test_cdr_cdisc_sdtm_adam_pipeline.TestCDRPipelineAPI` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_metadata_catalog` | `apps.interop.tests.test_cdr_cdisc_sdtm_adam_pipeline.TestCDRPipelineAPI` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_sdtm_endpoint` | `apps.interop.tests.test_cdr_cdisc_sdtm_adam_pipeline.TestCDRPipelineAPI` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_validate_dataset_json` | `apps.interop.tests.test_cdr_cdisc_sdtm_adam_pipeline.TestCDRPipelineAPI` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_validate_define_xml` | `apps.interop.tests.test_cdr_cdisc_sdtm_adam_pipeline.TestCDRPipelineAPI` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_blinding_isolation_masks_treatment_arms` | `apps.interop.tests.test_cdr_cdisc_sdtm_adam_pipeline.TestCDRPipelineService` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_continuous_pipeline_execution_and_audit` | `apps.interop.tests.test_cdr_cdisc_sdtm_adam_pipeline.TestCDRPipelineService` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_dataset_json_referential_validation_failure` | `apps.interop.tests.test_cdr_cdisc_sdtm_adam_pipeline.TestDatasetJSONCompiler` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_dataset_json_serialization_and_validation` | `apps.interop.tests.test_cdr_cdisc_sdtm_adam_pipeline.TestDatasetJSONCompiler` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_define_xml_compilation_with_vlm_whereclauses_origins` | `apps.interop.tests.test_cdr_cdisc_sdtm_adam_pipeline.TestDefineXMLCompiler` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sdtm_10_domains_mapped_successfully` | `apps.interop.tests.test_cdr_cdisc_sdtm_adam_pipeline.TestSDTMPipelineEngine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deterministic_record_hashing` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestCryptographicIntegrityAndBlinding` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_snapshot_pool_digest_reproducibility` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestCryptographicIntegrityAndBlinding` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unblinded_masking_partition` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestCryptographicIntegrityAndBlinding` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2205,6 +2220,39 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_normalize_local_lab` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestLakehouseNormalization` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_medical_imaging` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestLakehouseNormalization` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_full_lakehouse_ingest_pool_snapshot_verify_lifecycle` | `apps.interop.tests.test_cdr_lakehouse_snapshot_pooling.TestLakehouseServiceLayer` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_issue_and_verify_database_lock_token` | `apps.interop.tests.test_cdr_statistical_computing_sandbox.TestDatabaseLockAuthorization` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_reject_expired_or_revoked_token` | `apps.interop.tests.test_cdr_statistical_computing_sandbox.TestDatabaseLockAuthorization` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_reject_unauthorized_role` | `apps.interop.tests.test_cdr_statistical_computing_sandbox.TestDatabaseLockAuthorization` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_detect_invalid_syntax` | `apps.interop.tests.test_cdr_statistical_computing_sandbox.TestLockfileIntegrityVerification` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_detect_tampered_lockfile` | `apps.interop.tests.test_cdr_statistical_computing_sandbox.TestLockfileIntegrityVerification` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_detect_unqualified_package` | `apps.interop.tests.test_cdr_statistical_computing_sandbox.TestLockfileIntegrityVerification` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_renv_lock_parsing_and_digest` | `apps.interop.tests.test_cdr_statistical_computing_sandbox.TestLockfileIntegrityVerification` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_uv_lock_parsing_and_digest` | `apps.interop.tests.test_cdr_statistical_computing_sandbox.TestLockfileIntegrityVerification` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_python_statistical_sandbox_execution` | `apps.interop.tests.test_cdr_statistical_computing_sandbox.TestSandboxExecutionOrchestrator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_r_statistical_sandbox_execution` | `apps.interop.tests.test_cdr_statistical_computing_sandbox.TestSandboxExecutionOrchestrator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sandbox_timeout_enforcement` | `apps.interop.tests.test_cdr_statistical_computing_sandbox.TestSandboxExecutionOrchestrator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sce_rest_api_workflow` | `apps.interop.tests.test_cdr_statistical_computing_sandbox.TestStatisticalComputingRESTAPI` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_full_sce_lifecycle_with_unblinded_gating` | `apps.interop.tests.test_cdr_statistical_computing_sandbox.TestStatisticalComputingServiceIntegration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_compute_clock_drift_offset` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestClockDriftCorrection` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_correct_reading_timestamps` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestClockDriftCorrection` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_blood_pressure_daily_summary` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestDailySummaryEndpointsCalculation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cgm_mmol_unit_conversion` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestDailySummaryEndpointsCalculation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cgm_time_in_range_and_metrics` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestDailySummaryEndpointsCalculation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_spirometry_daily_summary` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestDailySummaryEndpointsCalculation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_transform_actigraphy_to_omh_and_fhir` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestOpenMHealthAndFHIRNormalization` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_transform_blood_pressure_to_fhir_components` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestOpenMHealthAndFHIRNormalization` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_transform_cgm_to_omh_and_fhir` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestOpenMHealthAndFHIRNormalization` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_generate_device_token` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestPseudonymizationAndDeviceMapping` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_mask_mac_address` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestPseudonymizationAndDeviceMapping` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_udi` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestPseudonymizationAndDeviceMapping` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_pseudonymize_subject_id` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestPseudonymizationAndDeviceMapping` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_register_device_entity` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestPseudonymizationAndDeviceMapping` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_extreme_tachycardia_and_bradycardia_alerts` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestSafetyThresholdAlertsEngine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_hypertensive_crisis_alert` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestSafetyThresholdAlertsEngine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_severe_hypoglycemia_alert` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestSafetyThresholdAlertsEngine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_full_ingestion_pipeline_with_lakehouse_feed` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestSensorServiceIntegration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_device_registration_and_list_api` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestSensorTelemetryRestApi` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_telemetry_stream_ingest_api` | `apps.interop.tests.test_dct_sensor_telemetry_ingestion.TestSensorTelemetryRestApi` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_basic_detection_results` | `apps.interop.tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_get_line_and_col` | `apps.interop.tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_load_gitignore_patterns` | `apps.interop.tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3627,6 +3675,26 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_tier4_scenario03_meddra_upversioning_and_batch_coding` | `tests.e2e.test_phase1_e2e_suite` | PRD-QRY-001, PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
 | `test_tier4_scenario04_regulatory_submission_bundle_generation` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, Trace-12, Trace-7 | 🟢 PASSED | < 1s |
 | `test_tier4_scenario05_full_lifecycle_e2e_trial_workflow` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, PRD-LAB-001, PRD-MDR-002, PRD-QRY-001, PRD-SYS-001, Trace-1, Trace-17 | 🟢 PASSED | < 1s |
+| `test_compute_clock_drift_offset` | `tests.test_dct_sensor_telemetry_ingestion.TestClockDriftCorrection` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_correct_reading_timestamps` | `tests.test_dct_sensor_telemetry_ingestion.TestClockDriftCorrection` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_blood_pressure_daily_summary` | `tests.test_dct_sensor_telemetry_ingestion.TestDailySummaryEndpointsCalculation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cgm_mmol_unit_conversion` | `tests.test_dct_sensor_telemetry_ingestion.TestDailySummaryEndpointsCalculation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cgm_time_in_range_and_metrics` | `tests.test_dct_sensor_telemetry_ingestion.TestDailySummaryEndpointsCalculation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_spirometry_daily_summary` | `tests.test_dct_sensor_telemetry_ingestion.TestDailySummaryEndpointsCalculation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_transform_actigraphy_to_omh_and_fhir` | `tests.test_dct_sensor_telemetry_ingestion.TestOpenMHealthAndFHIRNormalization` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_transform_blood_pressure_to_fhir_components` | `tests.test_dct_sensor_telemetry_ingestion.TestOpenMHealthAndFHIRNormalization` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_transform_cgm_to_omh_and_fhir` | `tests.test_dct_sensor_telemetry_ingestion.TestOpenMHealthAndFHIRNormalization` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_generate_device_token` | `tests.test_dct_sensor_telemetry_ingestion.TestPseudonymizationAndDeviceMapping` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_mask_mac_address` | `tests.test_dct_sensor_telemetry_ingestion.TestPseudonymizationAndDeviceMapping` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_udi` | `tests.test_dct_sensor_telemetry_ingestion.TestPseudonymizationAndDeviceMapping` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_pseudonymize_subject_id` | `tests.test_dct_sensor_telemetry_ingestion.TestPseudonymizationAndDeviceMapping` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_register_device_entity` | `tests.test_dct_sensor_telemetry_ingestion.TestPseudonymizationAndDeviceMapping` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_extreme_tachycardia_and_bradycardia_alerts` | `tests.test_dct_sensor_telemetry_ingestion.TestSafetyThresholdAlertsEngine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_hypertensive_crisis_alert` | `tests.test_dct_sensor_telemetry_ingestion.TestSafetyThresholdAlertsEngine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_severe_hypoglycemia_alert` | `tests.test_dct_sensor_telemetry_ingestion.TestSafetyThresholdAlertsEngine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_full_ingestion_pipeline_with_lakehouse_feed` | `tests.test_dct_sensor_telemetry_ingestion.TestSensorServiceIntegration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_device_registration_and_list_api` | `tests.test_dct_sensor_telemetry_ingestion.TestSensorTelemetryRestApi` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_telemetry_stream_ingest_api` | `tests.test_dct_sensor_telemetry_ingestion.TestSensorTelemetryRestApi` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_build_worker_suffix_uniqueness` | `tests.test_harness_isolation` | PRD-SYS-004 | 🟢 PASSED | < 1s |
 | `test_get_run_uid_from_config` | `tests.test_harness_isolation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_worker_id_from_config` | `tests.test_harness_isolation` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3695,28 +3763,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 580df00e93100d7d811511ce0c841c3efa4842081eec97a992c40c145a5740a1
+- **Cryptographic Hash (SHA-256):** 1cd2ca2f18b367ac9080139c74dba7185050f7ebabc91a4deedeb389f522fe65
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUAkzvj2CZRBhi14TE77TcYQIU2ZMwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUBDIeoG2sA0q7S+ARjP9d6IuKqU0wDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MjE2NTUwMFoXDTI3MDgyMzE2NTUwMFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MjE3MjUyMFoXDTI3MDgyMzE3MjUyMFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwCmc
-vTik5bqVO8iVBTMd/vwTVtnUtt9CkeYk5heug6mnQH8AuWgy0RrBGrY+RWxUKUNZ
-59zzmai1fVipZAJioTt6nxE/9qq5l1EmGXyXbn4MM+GlT0oT9Br/n1PRBHhKCPPv
-bJO3Aqg6SGGEsr5mW9+IfigCYfy8RtgmY1w/wPTQ1wnaL36XJZtYZo2Zuu8xkZOz
-Gj553Ymjhwry3wTDSkRy69/XkLZYJBwXI86yeLuQwHUAlsNVb6YFtkClX7Q/M2Bf
-lRfg5AMT/TrxF10xLMffLsgZIaGTXGJkLrmSx5MeTXWGM/2enLwaTUXzP/17I7pm
-rGcnaXIcKdmWxVrcZwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQCJfsJNrKOU3ZzL
-tqJbSfWUWzfaYllreZP8JcgNalbMGtWnmpYNPYTKbnCw8zgO7E2YebHm70qgGSrU
-jX43LwBxYFx8wIQy+QiHpal9qpx1LyJMbbBLtKvASoDRuuWfbGVm/pn85Jd3ivjC
-9EZ+HFt654icBuThLVPee3rMYt64Gs1bSa+FTnms9whSOVbNNQGF425jFFQJtpVb
-ERfO+Za4nE3FVgVghZ7s5QVRmFIcaeBJfp3gRWmG0io6lPmbXKxAM9qz3NvJ/kul
-i9/iM0/PpJR9oxX65bvGxVOVnYDRnecq0+qt03EoR4mEorJTYMUVXCa61nUlj7+Z
-twOsYblB
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoR9c
+O8SNsakgU9NbmAENNKAVWub1aCPlN1IHJc8JBjXS93Rhw9H36jCPRkYAy5oAX2Tt
+aR5SKxHNrbUfaoO8dATz5hiynWHbT3j3Ff1PYMXUrNnYLaYZuA4dUPuGhWyg/VI5
+1uJa8M31cQNB03TlpiSDp72uV1mgd5/y1mlCTPN/bNOIUO5WNxJOwBsVF0NGXnWk
+SUSPw+6c8gHcO0efieo9K8k/zsojcPTkjzBSbPNulHdM8sH2Gk2HuFo6MiG6NncN
+S1htf5oGAjMlyeuwhmimn+aUyVIW9SGfiza3RjIUiMvqP8dFN3DmO2DCooHm+Wco
+iHIo9qzBlRmoaLkjNwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQCKDyKJpX33IWyk
+LckmhmKiqJeXMPEDNPvBnRaJs2OfRwryKv6rb/KF1FaNcuSbiUYmSNf6fQenOVxs
+u4K0OVixUWGjm6F0+irSvvm1bKhpK1nOfP9rL0kLagITPJLuSpsuwR+L7GJKCOgP
+VCKQHmstkZnwjX9trSVNR3coySo9A6N8l9i78Q3JO3C4NWvmguxja5swepC7AOfJ
+YCkk1qL4vMLa+R7mUHw+oQYhjKbcSNKztu2ApfXW33OyRZsBY90YSP/5p/ISqvpZ
+x61LkNtY+LsAtLd0R3WCdy0y5YuzKJkrVDdn2VNZvNTeELYPHJiRzDV4/xjIWzj6
+Ca39NwqO
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-eAE5r5q/sHhCSRYCpxb/cy3wTJThEY9ru+nBM3p69s1Ydf3xwGRXFnNQ4F2GScNwkPyir0HyQbxfKMEqA6t+b/p5sTJkEXkdNIWw4s9N2WZ4YEk+7T5LD9oh6dNAS/rQYdE6AHWMG7kBZaQKYp+7Swx8jMkDAsA9zZOhAqDY9A1wy5V2IWYmvqXyfKxT/73bxT4KY+ZP2wVI2kVDm0GvPv8jnPSskinwpx1QAhfPtme5i3V82tUAGmI4NIEMadG7hDViAtYpHQYRUWdv3opa3bPwIOQPvqeDKJGn027cPe42SRh0Fy8OS9BH36o1/wF9YKKmQWspfx4qF3EeT8dIOg==
+TczSUZ5/7Sd+iANYkSn2RnCAmltxZ+KLjw1H14oXWE+NKzOynBX8HgRk8yFMMvVLkUZEzv4qzJmaiRCk5ScCyZRkqPgg7ulXM9UxvQXjLKp/cGgfW2B4JXTceyMY2Xxi0PzpJWapmRaOtzQ8NsCyeSl2ifKvMpP3IWm3N9jANCsNT6U7cm2S+0Gn7iz82OlDBiJLfXgllUIscbjHSQQ3MbgM2loN1i2DjRt88w7sNqESjoFr3SGxjEvii7leeIZM5OmgwMOj2J/yR9n7thhz8E0hY5888TvmyXzrsxHG9Y/8G1pt1nuWVXKqqSSlOtLzHciC+dM3zp0aPno0l08MYQ==
 -----END SIGNATURE-----

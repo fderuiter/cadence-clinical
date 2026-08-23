@@ -367,6 +367,25 @@
                 </router-link>
               </li>
               <li
+                id="tab-btn-sensors"
+                class="nav-item"
+                :class="{ active: $route.name === 'sensors' }"
+              >
+                <router-link
+                  v-slot="{ navigate }"
+                  to="/sensors"
+                  custom
+                >
+                  <button
+                    type="button"
+                    @click="navigate"
+                  >
+                    <span class="nav-icon">⌚</span>
+                    <span class="nav-label">Connected Sensors &amp; DCT</span>
+                  </button>
+                </router-link>
+              </li>
+              <li
                 v-if="
                   canAccess([
                     'data_manager',

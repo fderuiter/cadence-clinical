@@ -1296,10 +1296,1562 @@
           }
         }
       }
+    },
+    "/api/v1/interop/cdr/pipeline/execute": {
+      "post": {
+        "tags": [
+          "CDR Pipeline & CDISC Compiler"
+        ],
+        "summary": "Execute end-to-end continuous CDISC SDTM/ADaM pipeline and compiler",
+        "description": "Execute automated continuous transformation mapping raw clinical observations to 10 SDTM domains, 4 ADaM datasets, Dataset-JSON, and Define-XML.",
+        "operationId": "execute_continuous_pipeline_api_v1_interop_cdr_pipeline_execute_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunContinuousPipelineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineExecutionResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/cdr/pipeline/results/{execution_id}": {
+      "get": {
+        "tags": [
+          "CDR Pipeline & CDISC Compiler"
+        ],
+        "summary": "Retrieve execution manifest for a pipeline run",
+        "description": "Retrieve details and metadata summary for a completed pipeline run.",
+        "operationId": "get_pipeline_execution_result_api_v1_interop_cdr_pipeline_results__execution_id__get",
+        "parameters": [
+          {
+            "name": "execution_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Execution Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineExecutionResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/cdr/pipeline/sdtm": {
+      "post": {
+        "tags": [
+          "CDR Pipeline & CDISC Compiler"
+        ],
+        "summary": "Execute CDISC SDTM 10-domain transformation engine",
+        "description": "Transform canonical observations into 10 standard CDISC SDTM domains.",
+        "operationId": "execute_sdtm_pipeline_api_v1_interop_cdr_pipeline_sdtm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunSDTMPipelineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SDTMPipelineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/cdr/pipeline/adam": {
+      "post": {
+        "tags": [
+          "CDR Pipeline & CDISC Compiler"
+        ],
+        "summary": "Execute CDISC ADaM 4-dataset derivation engine",
+        "description": "Execute statistical derivation rules generating ADSL, ADAE, ADTTE, BDS datasets.",
+        "operationId": "execute_adam_pipeline_api_v1_interop_cdr_pipeline_adam_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunADaMPipelineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ADaMPipelineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/cdr/export/dataset-json": {
+      "post": {
+        "tags": [
+          "CDR Pipeline & CDISC Compiler"
+        ],
+        "summary": "Export clinical datasets in official CDISC Dataset-JSON 1.1 / 2.0",
+        "description": "Serialize and export SDTM and ADaM datasets in CDISC Dataset-JSON 1.1 / 2.0 format.",
+        "operationId": "export_dataset_json_api_v1_interop_cdr_export_dataset_json_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportDatasetJSONRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetJSONDocument"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/cdr/export/define-xml": {
+      "post": {
+        "tags": [
+          "CDR Pipeline & CDISC Compiler"
+        ],
+        "summary": "Auto-compile and export CDISC Define-XML v2.1 metadata specification",
+        "description": "Auto-compile CDISC Define-XML v2.1 metadata document encapsulating dataset definitions, VLM, WhereClauses, and Origins.",
+        "operationId": "export_define_xml_api_v1_interop_cdr_export_define_xml_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportDefineXMLRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/cdr/validate/dataset-json": {
+      "post": {
+        "tags": [
+          "CDR Pipeline & CDISC Compiler"
+        ],
+        "summary": "Validate a Dataset-JSON 1.1 / 2.0 payload",
+        "description": "Perform strict structural and schema conformance validation for CDISC Dataset-JSON.",
+        "operationId": "validate_dataset_json_endpoint_api_v1_interop_cdr_validate_dataset_json_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateDatasetJSONRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateDatasetJSONResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/cdr/validate/define-xml": {
+      "post": {
+        "tags": [
+          "CDR Pipeline & CDISC Compiler"
+        ],
+        "summary": "Validate a CDISC Define-XML v2.1 document",
+        "description": "Validate CDISC Define-XML v2.1 document syntax, ODM root, and element presence.",
+        "operationId": "validate_define_xml_endpoint_api_v1_interop_cdr_validate_define_xml_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateDefineXMLRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefineXMLValidationResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/cdr/metadata/catalog": {
+      "get": {
+        "tags": [
+          "CDR Pipeline & CDISC Compiler"
+        ],
+        "summary": "Retrieve CDISC domain and variable metadata catalog",
+        "description": "Retrieve catalog of supported SDTM domains, ADaM datasets, variable definitions, and VLM.",
+        "operationId": "get_metadata_catalog_api_v1_interop_cdr_metadata_catalog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DomainCatalogResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/programs": {
+      "post": {
+        "tags": [
+          "CDR Statistical Computing Environment"
+        ],
+        "summary": "Create or register a statistical analysis program",
+        "description": "Register a version-controlled R or Python statistical program with package lockfile.",
+        "operationId": "create_program_api_v1_interop_sce_programs_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProgramRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CDR Statistical Computing Environment"
+        ],
+        "summary": "List statistical programs for a study",
+        "description": "List all version-controlled statistical programs for a study.",
+        "operationId": "list_programs_api_v1_interop_sce_programs_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study ID",
+              "title": "Study Id"
+            },
+            "description": "Clinical study ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/programs/{program_id}": {
+      "get": {
+        "tags": [
+          "CDR Statistical Computing Environment"
+        ],
+        "summary": "Retrieve statistical program by ID",
+        "description": "Retrieve statistical program definition.",
+        "operationId": "get_program_api_v1_interop_sce_programs__program_id__get",
+        "parameters": [
+          {
+            "name": "program_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Program Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/validate-lockfile": {
+      "post": {
+        "tags": [
+          "CDR Statistical Computing Environment"
+        ],
+        "summary": "Validate package lockfile integrity and GxP qualification",
+        "description": "Parse and verify package lockfile (uv.lock / renv.lock) integrity and qualification.",
+        "operationId": "validate_lockfile_api_v1_interop_sce_validate_lockfile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateLockfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateLockfileResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/lock-tokens": {
+      "post": {
+        "tags": [
+          "CDR Statistical Computing Environment"
+        ],
+        "summary": "Issue database lock authorization token for unblinded analysis",
+        "description": "Issue a cryptographically signed database lock token granting unblinded statistical analysis access.",
+        "operationId": "issue_lock_token_api_v1_interop_sce_lock_tokens_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueLockTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LockTokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "CDR Statistical Computing Environment"
+        ],
+        "summary": "List active database lock authorization tokens",
+        "description": "List active authorization tokens for unblinded analysis.",
+        "operationId": "list_lock_tokens_api_v1_interop_sce_lock_tokens_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study ID",
+              "title": "Study Id"
+            },
+            "description": "Clinical study ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LockTokenListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/lock-tokens/{token_id}/revoke": {
+      "post": {
+        "tags": [
+          "CDR Statistical Computing Environment"
+        ],
+        "summary": "Revoke an active database lock authorization token",
+        "description": "Revoke an active database lock token.",
+        "operationId": "revoke_lock_token_api_v1_interop_sce_lock_tokens__token_id__revoke_post",
+        "parameters": [
+          {
+            "name": "token_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token Id"
+            }
+          },
+          {
+            "name": "reason",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Revocation reason",
+              "default": "Administrative revocation",
+              "title": "Reason"
+            },
+            "description": "Revocation reason"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Revoke Lock Token Api V1 Interop Sce Lock Tokens  Token Id  Revoke Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/execute": {
+      "post": {
+        "tags": [
+          "CDR Statistical Computing Environment"
+        ],
+        "summary": "Execute statistical program in isolated containerized sandbox",
+        "description": "Execute validated R or Python script against version-pinned data snapshot with signed run manifest.",
+        "operationId": "execute_program_api_v1_interop_sce_execute_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecuteProgramRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteProgramResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/runs": {
+      "get": {
+        "tags": [
+          "CDR Statistical Computing Environment"
+        ],
+        "summary": "List historical execution runs for a study",
+        "description": "List all historical analytical execution runs.",
+        "operationId": "list_execution_runs_api_v1_interop_sce_runs_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study ID",
+              "title": "Study Id"
+            },
+            "description": "Clinical study ID"
+          },
+          {
+            "name": "program_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional program ID filter",
+              "title": "Program Id"
+            },
+            "description": "Optional program ID filter"
+          },
+          {
+            "name": "snapshot_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional snapshot ID filter",
+              "title": "Snapshot Id"
+            },
+            "description": "Optional snapshot ID filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionRunListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "CDR Statistical Computing Environment"
+        ],
+        "summary": "Retrieve execution run manifest and details",
+        "description": "Retrieve details and signed manifest of an execution run.",
+        "operationId": "get_execution_run_api_v1_interop_sce_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionRunDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/runs/{run_id}/verify": {
+      "post": {
+        "tags": [
+          "CDR Statistical Computing Environment"
+        ],
+        "summary": "Cryptographically verify execution run manifest seal",
+        "description": "Assert bit-for-bit SHA-256 seal integrity and 21 CFR Part 11 electronic signature.",
+        "operationId": "verify_run_manifest_api_v1_interop_sce_runs__run_id__verify_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyManifestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/runs/{run_id}/artifacts/{artifact_id}": {
+      "get": {
+        "tags": [
+          "CDR Statistical Computing Environment"
+        ],
+        "summary": "Retrieve generated artifact details and preview",
+        "description": "Retrieve output artifact metadata and content preview.",
+        "operationId": "get_run_artifact_api_v1_interop_sce_runs__run_id__artifacts__artifact_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Run Artifact Api V1 Interop Sce Runs  Run Id  Artifacts  Artifact Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sensors/devices": {
+      "post": {
+        "tags": [
+          "Biometric Sensors & DCT"
+        ],
+        "summary": "Register & map approved medical IoT sensor device",
+        "description": "Register and map an approved medical IoT sensor device (CGM, Actigraphy, Spirometry, BP).\n\n@req:PRD-DCT-002\n@req:ADR-2199",
+        "operationId": "register_device_api_v1_interop_sensors_devices_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceRegistrationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceRegistrationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Biometric Sensors & DCT"
+        ],
+        "summary": "List registered medical IoT devices",
+        "description": "List registered medical IoT sensor devices for a clinical study.\n\n@req:PRD-DCT-002\n@req:ADR-2199",
+        "operationId": "list_devices_api_v1_interop_sensors_devices_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study protocol ID",
+              "title": "Study Id"
+            },
+            "description": "Study protocol ID"
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional site ID filter",
+              "title": "Site Id"
+            },
+            "description": "Optional site ID filter"
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional subject ID filter",
+              "title": "Subject Id"
+            },
+            "description": "Optional subject ID filter"
+          },
+          {
+            "name": "device_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SensorDeviceType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional device type filter",
+              "title": "Device Type"
+            },
+            "description": "Optional device type filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sensors/ingest": {
+      "post": {
+        "tags": [
+          "Biometric Sensors & DCT"
+        ],
+        "summary": "Ingest continuous biometric IoT sensor telemetry",
+        "description": "Ingest continuous time-series telemetry streams from approved medical IoT devices.\n\nApplies:\n1. Automated HMAC-SHA256 pseudonymization & device MAC/UDI mapping\n2. Clock drift correction between device RTC and gateway UTC\n3. Normalization into Open mHealth (OMH) & HL7 FHIR Observation schemas\n4. Aggregate daily summary endpoints calculation (Time-in-Range TIR, mean glucose, steps, FEV1)\n5. Automated safety threshold alert evaluation\n6. Automated feeding into the Clinical Data Repository (CDR) Lakehouse\n\n@req:PRD-DCT-002\n@req:PRD-DCT-001\n@req:ADR-2199",
+        "operationId": "ingest_telemetry_stream_api_v1_interop_sensors_ingest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SensorIngestStreamPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorIngestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sensors/daily-summaries": {
+      "get": {
+        "tags": [
+          "Biometric Sensors & DCT"
+        ],
+        "summary": "Query calculated daily summary endpoints",
+        "description": "Retrieve aggregate daily summary endpoints (TIR, glucose, steps, cadence, RHR, FEV1).\n\n@req:PRD-DCT-002\n@req:ADR-2199",
+        "operationId": "list_daily_summaries_api_v1_interop_sensors_daily_summaries_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study ID",
+              "title": "Study Id"
+            },
+            "description": "Study ID"
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional pseudonymized subject ID",
+              "title": "Subject Id"
+            },
+            "description": "Optional pseudonymized subject ID"
+          },
+          {
+            "name": "device_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SensorDeviceType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Device type filter",
+              "title": "Device Type"
+            },
+            "description": "Device type filter"
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Start date filter",
+              "title": "Start Date"
+            },
+            "description": "Start date filter"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "End date filter",
+              "title": "End Date"
+            },
+            "description": "End date filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailySummariesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sensors/safety-alerts": {
+      "get": {
+        "tags": [
+          "Biometric Sensors & DCT"
+        ],
+        "summary": "Query automated safety threshold alerts",
+        "description": "Retrieve triggered biometric safety threshold alerts for clinical investigation.\n\n@req:PRD-DCT-002\n@req:ADR-2199",
+        "operationId": "list_safety_alerts_api_v1_interop_sensors_safety_alerts_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Study protocol ID",
+              "title": "Study Id"
+            },
+            "description": "Study protocol ID"
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional pseudonymized subject filter",
+              "title": "Subject Id"
+            },
+            "description": "Optional pseudonymized subject filter"
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Severity filter (CRITICAL, WARNING)",
+              "title": "Severity"
+            },
+            "description": "Severity filter (CRITICAL, WARNING)"
+          },
+          {
+            "name": "alert_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Alert type filter",
+              "title": "Alert Type"
+            },
+            "description": "Alert type filter"
+          },
+          {
+            "name": "is_acknowledged",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Acknowledgment filter",
+              "title": "Is Acknowledged"
+            },
+            "description": "Acknowledgment filter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafetyAlertsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sensors/safety-alerts/{alert_id}/acknowledge": {
+      "post": {
+        "tags": [
+          "Biometric Sensors & DCT"
+        ],
+        "summary": "Acknowledge safety alert with electronic signature",
+        "description": "Acknowledge a safety threshold alert with 21 CFR Part 11 electronic sign-off and clinical notes.\n\n@req:PRD-DCT-002\n@req:ADR-2199",
+        "operationId": "acknowledge_safety_alert_api_v1_interop_sensors_safety_alerts__alert_id__acknowledge_post",
+        "parameters": [
+          {
+            "name": "alert_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Alert Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcknowledgeAlertRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcknowledgeAlertResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sensors/metrics/{study_id}": {
+      "get": {
+        "tags": [
+          "Biometric Sensors & DCT"
+        ],
+        "summary": "Get connected IoT sensor dashboard metrics",
+        "description": "Retrieve real-time IoT sensor telemetry metrics across a clinical study.\n\n@req:PRD-DCT-002\n@req:ADR-2199",
+        "operationId": "get_sensor_dashboard_metrics_api_v1_interop_sensors_metrics__study_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorMetricsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "ADaMPipelineResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id"
+          },
+          "dataset_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Dataset Counts"
+          },
+          "total_records": {
+            "type": "integer",
+            "title": "Total Records"
+          },
+          "datasets": {
+            "additionalProperties": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Datasets"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "snapshot_id",
+          "dataset_counts",
+          "total_records",
+          "datasets"
+        ],
+        "title": "ADaMPipelineResponse",
+        "description": "Response containing derived ADaM dataset records."
+      },
+      "AcknowledgeAlertRequest": {
+        "properties": {
+          "notes": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Notes",
+            "description": "Clinical evaluation and justification notes"
+          },
+          "audit_signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audit Signature",
+            "description": "21 CFR Part 11 electronic signature token"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "notes"
+        ],
+        "title": "AcknowledgeAlertRequest",
+        "description": "Request payload to acknowledge a safety threshold alert."
+      },
+      "AcknowledgeAlertResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "alert": {
+            "$ref": "#/components/schemas/SensorSafetyAlert",
+            "description": "Updated safety alert with acknowledgment details"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Status message",
+            "default": "Safety alert acknowledged successfully"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "alert"
+        ],
+        "title": "AcknowledgeAlertResponse",
+        "description": "Response returned upon acknowledging a safety alert."
+      },
       "AcknowledgeNotificationRequest": {
         "properties": {
           "reason_for_change": {
@@ -1313,6 +2865,91 @@
           "reason_for_change"
         ],
         "title": "AcknowledgeNotificationRequest"
+      },
+      "ActigraphyDailySummary": {
+        "properties": {
+          "total_steps": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Steps",
+            "description": "Total daily step count"
+          },
+          "mean_cadence_spm": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Mean Cadence Spm",
+            "description": "Average active cadence in steps/minute"
+          },
+          "peak_cadence_spm": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Peak Cadence Spm",
+            "description": "Peak 1-minute cadence in steps/minute"
+          },
+          "active_minutes": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Active Minutes",
+            "description": "Total moderate-to-vigorous active minutes"
+          },
+          "sedentary_minutes": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Sedentary Minutes",
+            "description": "Total sedentary minutes"
+          },
+          "sleep_duration_minutes": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Sleep Duration Minutes",
+            "description": "Total sleep duration in minutes"
+          },
+          "sleep_efficiency_percent": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Sleep Efficiency Percent",
+            "description": "Sleep efficiency percentage (time asleep / time in bed)"
+          },
+          "resting_heart_rate_bpm": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Resting Heart Rate Bpm",
+            "description": "Resting heart rate in beats per minute"
+          },
+          "readings_count": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Readings Count",
+            "description": "Total telemetry epochs analyzed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "total_steps",
+          "mean_cadence_spm",
+          "peak_cadence_spm",
+          "active_minutes",
+          "sedentary_minutes",
+          "sleep_duration_minutes",
+          "sleep_efficiency_percent",
+          "resting_heart_rate_bpm",
+          "readings_count"
+        ],
+        "title": "ActigraphyDailySummary",
+        "description": "Standard actigraphy and activity tracking daily endpoints."
+      },
+      "AlertSeverity": {
+        "type": "string",
+        "enum": [
+          "INFO",
+          "WARNING",
+          "CRITICAL",
+          "LIFE_THREATENING"
+        ],
+        "title": "AlertSeverity",
+        "description": "Clinical alert severity classification."
       },
       "AssignmentComplianceDetailDTO": {
         "properties": {
@@ -1373,6 +3010,68 @@
         ],
         "title": "AssignmentComplianceDetailDTO"
       },
+      "BloodPressureDailySummary": {
+        "properties": {
+          "mean_systolic_mmhg": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Mean Systolic Mmhg",
+            "description": "Mean Systolic Blood Pressure in mmHg"
+          },
+          "mean_diastolic_mmhg": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Mean Diastolic Mmhg",
+            "description": "Mean Diastolic Blood Pressure in mmHg"
+          },
+          "mean_arterial_pressure_mmhg": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Mean Arterial Pressure Mmhg",
+            "description": "Mean Arterial Pressure in mmHg: MAP = (2*DBP + SBP)/3"
+          },
+          "morning_systolic_mmhg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Morning Systolic Mmhg",
+            "description": "Morning mean systolic BP"
+          },
+          "evening_systolic_mmhg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evening Systolic Mmhg",
+            "description": "Evening mean systolic BP"
+          },
+          "readings_count": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Readings Count",
+            "description": "Total blood pressure cuff readings"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mean_systolic_mmhg",
+          "mean_diastolic_mmhg",
+          "mean_arterial_pressure_mmhg",
+          "readings_count"
+        ],
+        "title": "BloodPressureDailySummary",
+        "description": "Standard blood pressure daily summary endpoints."
+      },
       "BulkSyncPayload": {
         "properties": {
           "submissions": {
@@ -1390,6 +3089,110 @@
         ],
         "title": "BulkSyncPayload",
         "description": "A bulk list of ePRO submissions for offline queue reconciliation."
+      },
+      "CGMDailySummary": {
+        "properties": {
+          "tir_percentage": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Tir Percentage",
+            "description": "Time-in-Range percentage (70-180 mg/dL / 3.9-10.0 mmol/L)"
+          },
+          "tbr_level1_percentage": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Tbr Level1 Percentage",
+            "description": "Time-Below-Range Level 1 (54-69 mg/dL / 3.0-3.8 mmol/L)"
+          },
+          "tbr_level2_percentage": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Tbr Level2 Percentage",
+            "description": "Time-Below-Range Level 2 / Severe Hypoglycemia (<54 mg/dL / <3.0 mmol/L)"
+          },
+          "tar_level1_percentage": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Tar Level1 Percentage",
+            "description": "Time-Above-Range Level 1 (181-250 mg/dL / 10.1-13.9 mmol/L)"
+          },
+          "tar_level2_percentage": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Tar Level2 Percentage",
+            "description": "Time-Above-Range Level 2 / Severe Hyperglycemia (>250 mg/dL / >13.9 mmol/L)"
+          },
+          "mean_glucose_mg_dl": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Mean Glucose Mg Dl",
+            "description": "Mean daily glucose in mg/dL"
+          },
+          "glucose_sd": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Glucose Sd",
+            "description": "Standard deviation of glucose in mg/dL"
+          },
+          "glucose_cv_percent": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Glucose Cv Percent",
+            "description": "Glucose Coefficient of Variation (CV% = SD/mean * 100)"
+          },
+          "glucose_management_indicator": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Glucose Management Indicator",
+            "description": "Estimated HbA1c proxy: GMI = 3.31 + (0.02392 * mean_glucose)"
+          },
+          "readings_count": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Readings Count",
+            "description": "Total CGM readings analyzed"
+          },
+          "active_wear_percentage": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Active Wear Percentage",
+            "description": "Sensor active wear compliance percentage"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tir_percentage",
+          "tbr_level1_percentage",
+          "tbr_level2_percentage",
+          "tar_level1_percentage",
+          "tar_level2_percentage",
+          "mean_glucose_mg_dl",
+          "glucose_sd",
+          "glucose_cv_percent",
+          "glucose_management_indicator",
+          "readings_count",
+          "active_wear_percentage"
+        ],
+        "title": "CGMDailySummary",
+        "description": "Standard clinical Continuous Glucose Monitoring daily endpoints."
+      },
+      "CalibrationState": {
+        "type": "string",
+        "enum": [
+          "CALIBRATED",
+          "PENDING_CALIBRATION",
+          "EXPIRED",
+          "FACTORY_CALIBRATED"
+        ],
+        "title": "CalibrationState",
+        "description": "Medical device calibration status."
       },
       "CanonicalClinicalRecord": {
         "properties": {
@@ -1951,6 +3754,96 @@
         "title": "ConflictStrategy",
         "description": "Explicit validated conflict resolution strategies."
       },
+      "CreateProgramRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id",
+            "description": "Associated clinical study ID"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name",
+            "description": "Program script filename (e.g. t_14_1_demog.py)"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Title",
+            "description": "Human-readable program title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Detailed statistical methodology description",
+            "default": ""
+          },
+          "language": {
+            "$ref": "#/components/schemas/ExecutionLanguage",
+            "description": "Runtime language: PYTHON or R"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "Semantic version string",
+            "default": "1.0.0"
+          },
+          "source_code": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Source Code",
+            "description": "Script source code"
+          },
+          "lockfile_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lockfile Content",
+            "description": "Raw text of uv.lock or renv.lock"
+          },
+          "lock_type": {
+            "$ref": "#/components/schemas/PackageLockType",
+            "description": "Lockfile format",
+            "default": "UV_LOCK"
+          },
+          "target_domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Domain",
+            "description": "Target CDISC output domain (e.g. ADSL, TLF-14.1)"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "21 CFR Part 11 change rationale",
+            "default": "Initial program authoring"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "name",
+          "title",
+          "language",
+          "source_code"
+        ],
+        "title": "CreateProgramRequest",
+        "description": "Request payload to create or register a statistical analysis program."
+      },
       "CreateSnapshotRequest": {
         "properties": {
           "study_id": {
@@ -2048,6 +3941,162 @@
         ],
         "title": "CriterionExplanation"
       },
+      "DailySummariesResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "total_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Count",
+            "description": "Total daily summaries"
+          },
+          "summaries": {
+            "items": {
+              "$ref": "#/components/schemas/DailySummaryEndpoints"
+            },
+            "type": "array",
+            "title": "Summaries",
+            "description": "List of daily summary endpoints"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "total_count"
+        ],
+        "title": "DailySummariesResponse",
+        "description": "Response containing calculated daily summary endpoints."
+      },
+      "DailySummaryEndpoints": {
+        "properties": {
+          "summary_id": {
+            "type": "string",
+            "title": "Summary Id",
+            "description": "Daily summary UUID"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Pseudonymized subject ID"
+          },
+          "summary_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Summary Date",
+            "description": "Date of aggregate summary"
+          },
+          "device_type": {
+            "$ref": "#/components/schemas/SensorDeviceType",
+            "description": "Device category"
+          },
+          "device_token": {
+            "type": "string",
+            "title": "Device Token",
+            "description": "Device token"
+          },
+          "cgm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CGMDailySummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "CGM summary if device_type=CGM"
+          },
+          "actigraphy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActigraphyDailySummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Actigraphy summary if device_type=ACTIGRAPHY"
+          },
+          "spirometry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SpirometryDailySummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Spirometry summary if device_type=SPIROMETRY"
+          },
+          "blood_pressure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BloodPressureDailySummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Blood pressure summary if device_type=BLOOD_PRESSURE"
+          },
+          "lakehouse_record_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lakehouse Record Id",
+            "description": "Reference to generated Lakehouse canonical record"
+          },
+          "data_hash": {
+            "type": "string",
+            "title": "Data Hash",
+            "description": "SHA-256 integrity seal"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Creation timestamp"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "subject_id",
+          "summary_date",
+          "device_type",
+          "device_token",
+          "data_hash"
+        ],
+        "title": "DailySummaryEndpoints",
+        "description": "Aggregated daily biometric endpoints for a study subject and device."
+      },
       "DataStreamType": {
         "type": "string",
         "enum": [
@@ -2061,6 +4110,799 @@
         ],
         "title": "DataStreamType",
         "description": "Supported heterogeneous clinical data stream types."
+      },
+      "DatabaseLockAuthToken": {
+        "properties": {
+          "token_id": {
+            "type": "string",
+            "title": "Token Id",
+            "description": "Unique authorization token ID (e.g. DBLOCK-AUTH-...)"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target study identifier"
+          },
+          "lock_id": {
+            "type": "string",
+            "title": "Lock Id",
+            "description": "Associated database lock reference"
+          },
+          "milestone": {
+            "type": "string",
+            "title": "Milestone",
+            "description": "Milestone tier (e.g. INTERIM_ANALYSIS_1, DATABASE_LOCK)"
+          },
+          "issued_to": {
+            "type": "string",
+            "title": "Issued To",
+            "description": "Authorized statistician or committee lead user ID"
+          },
+          "authorized_roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Authorized Roles",
+            "description": "Permitted unblinded roles"
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Issued At",
+            "description": "Issuance timestamp"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At",
+            "description": "Token expiration timestamp"
+          },
+          "signature_hash": {
+            "type": "string",
+            "title": "Signature Hash",
+            "description": "Cryptographic HMAC signature of token claims"
+          },
+          "is_revoked": {
+            "type": "boolean",
+            "title": "Is Revoked",
+            "description": "Whether token has been explicitly revoked",
+            "default": false
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "Regulatory justification for unblinded analysis access"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token_id",
+          "study_id",
+          "lock_id",
+          "milestone",
+          "issued_to",
+          "authorized_roles",
+          "issued_at",
+          "expires_at",
+          "signature_hash",
+          "reason"
+        ],
+        "title": "DatabaseLockAuthToken",
+        "description": "Formal database lock authorization token gating unblinded statistical analysis."
+      },
+      "DatasetJSONClinicalData": {
+        "properties": {
+          "studyOID": {
+            "type": "string",
+            "title": "Studyoid",
+            "description": "Study OID"
+          },
+          "metaDataVersionOID": {
+            "type": "string",
+            "title": "Metadataversionoid",
+            "description": "Metadata Version OID"
+          },
+          "metaDataRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadataref",
+            "description": "Reference to Define-XML"
+          },
+          "itemGroupData": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DatasetJSONItemGroup"
+            },
+            "type": "object",
+            "title": "Itemgroupdata",
+            "description": "Dictionary of ItemGroup datasets keyed by ItemGroupOID"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "studyOID",
+          "metaDataVersionOID",
+          "itemGroupData"
+        ],
+        "title": "DatasetJSONClinicalData",
+        "description": "ClinicalData container in Dataset-JSON document."
+      },
+      "DatasetJSONDocument": {
+        "properties": {
+          "datasetJSONCreationDateTime": {
+            "type": "string",
+            "title": "Datasetjsoncreationdatetime",
+            "description": "Document Creation Timestamp ISO 8601"
+          },
+          "datasetJSONVersion": {
+            "type": "string",
+            "title": "Datasetjsonversion",
+            "description": "Specification version (1.0.0, 1.1.0, 2.0.0)",
+            "default": "1.1.0"
+          },
+          "fileOID": {
+            "type": "string",
+            "title": "Fileoid",
+            "description": "Unique File OID"
+          },
+          "dbLastModifiedDateTime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dblastmodifieddatetime",
+            "description": "Database Last Modified Timestamp"
+          },
+          "originator": {
+            "type": "string",
+            "title": "Originator",
+            "description": "Dataset Originator",
+            "default": "Cadence Clinical CDR Engine"
+          },
+          "sourceSystem": {
+            "type": "string",
+            "title": "Sourcesystem",
+            "description": "Source System",
+            "default": "Cadence Clinical"
+          },
+          "sourceSystemVersion": {
+            "type": "string",
+            "title": "Sourcesystemversion",
+            "description": "Source System Version",
+            "default": "2.1.0"
+          },
+          "clinicalData": {
+            "$ref": "#/components/schemas/DatasetJSONClinicalData",
+            "description": "Clinical Data Container"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "fileOID",
+          "clinicalData"
+        ],
+        "title": "DatasetJSONDocument",
+        "description": "Root CDISC Dataset-JSON 1.1 / 2.0 document envelope."
+      },
+      "DatasetJSONItem": {
+        "properties": {
+          "OID": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oid",
+            "description": "Item OID"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Variable Name (e.g. USUBJID)"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Variable Label"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "Data Type (string, integer, float, double, decimal, boolean, date, datetime)"
+          },
+          "length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Length",
+            "description": "Max Length"
+          },
+          "displayFormat": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Displayformat",
+            "description": "Display Format"
+          },
+          "keySequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Keysequence",
+            "description": "Key Sequence Number"
+          },
+          "mandatory": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mandatory",
+            "description": "Mandatory Flag"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "type"
+        ],
+        "title": "DatasetJSONItem",
+        "description": "Metadata for an individual variable in CDISC Dataset-JSON 1.1/2.0."
+      },
+      "DatasetJSONItemGroup": {
+        "properties": {
+          "itemGroupOID": {
+            "type": "string",
+            "title": "Itemgroupoid",
+            "description": "ItemGroup OID identifier (e.g. IG.DM)"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Dataset Name (e.g. DM)"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Dataset Label"
+          },
+          "records": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Records",
+            "description": "Record Count"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetJSONItem"
+            },
+            "type": "array",
+            "title": "Items",
+            "description": "List of variable metadata"
+          },
+          "itemData": {
+            "items": {
+              "items": {},
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Itemdata",
+            "description": "2D Matrix of row records"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "itemGroupOID",
+          "name",
+          "label",
+          "records",
+          "items",
+          "itemData"
+        ],
+        "title": "DatasetJSONItemGroup",
+        "description": "ItemGroup container in Dataset-JSON clinicalData/referenceData."
+      },
+      "DefineXMLValidationResult": {
+        "properties": {
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid",
+            "description": "Whether XML conforms to Define-XML 2.1 schema"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors",
+            "description": "Validation errors"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "description": "Validation warnings"
+          },
+          "item_group_count": {
+            "type": "integer",
+            "title": "Item Group Count",
+            "description": "Number of ItemGroupDef elements",
+            "default": 0
+          },
+          "item_def_count": {
+            "type": "integer",
+            "title": "Item Def Count",
+            "description": "Number of ItemDef elements",
+            "default": 0
+          },
+          "value_level_metadata_count": {
+            "type": "integer",
+            "title": "Value Level Metadata Count",
+            "description": "Number of ValueListDef elements",
+            "default": 0
+          },
+          "where_clause_count": {
+            "type": "integer",
+            "title": "Where Clause Count",
+            "description": "Number of WhereClauseDef elements",
+            "default": 0
+          },
+          "codelist_count": {
+            "type": "integer",
+            "title": "Codelist Count",
+            "description": "Number of CodeList elements",
+            "default": 0
+          },
+          "method_count": {
+            "type": "integer",
+            "title": "Method Count",
+            "description": "Number of MethodDef derivation elements",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "is_valid"
+        ],
+        "title": "DefineXMLValidationResult",
+        "description": "Validation outcome for compiled CDISC Define-XML v2.1."
+      },
+      "DeviceListResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study protocol ID"
+          },
+          "total_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Count",
+            "description": "Total registered devices"
+          },
+          "devices": {
+            "items": {
+              "$ref": "#/components/schemas/DeviceRegistration"
+            },
+            "type": "array",
+            "title": "Devices",
+            "description": "Registered device entities"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "total_count"
+        ],
+        "title": "DeviceListResponse",
+        "description": "List response of registered medical IoT devices."
+      },
+      "DeviceRegistration": {
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "title": "Device Id",
+            "description": "Device entity UUID"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study protocol ID"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Pseudonymized subject ID"
+          },
+          "device_type": {
+            "$ref": "#/components/schemas/SensorDeviceType",
+            "description": "Device category"
+          },
+          "vendor": {
+            "type": "string",
+            "title": "Vendor",
+            "description": "Device manufacturer"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Model Name",
+            "description": "Device model"
+          },
+          "udi_di": {
+            "type": "string",
+            "title": "Udi Di",
+            "description": "UDI Device Identifier"
+          },
+          "udi_pi_serial": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Udi Pi Serial",
+            "description": "UDI Production Serial"
+          },
+          "udi_pi_lot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Udi Pi Lot",
+            "description": "UDI Production Lot"
+          },
+          "mac_address_masked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mac Address Masked",
+            "description": "Cryptographically masked MAC address"
+          },
+          "device_token": {
+            "type": "string",
+            "title": "Device Token",
+            "description": "Deterministic GxP device identifier token"
+          },
+          "firmware_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firmware Version",
+            "description": "Firmware version"
+          },
+          "calibration_status": {
+            "$ref": "#/components/schemas/CalibrationState",
+            "description": "Calibration state"
+          },
+          "calibration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Date",
+            "description": "Calibration date"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "description": "Active status",
+            "default": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Creation timestamp"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Author user ID",
+            "default": "system"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "GxP reason"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Record version",
+            "default": 1
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "subject_id",
+          "device_type",
+          "vendor",
+          "model_name",
+          "udi_di",
+          "device_token",
+          "calibration_status",
+          "reason_for_change"
+        ],
+        "title": "DeviceRegistration",
+        "description": "Registered and mapped medical IoT sensor device."
+      },
+      "DeviceRegistrationRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id",
+            "description": "Study protocol ID"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id",
+            "description": "Assigned subject ID"
+          },
+          "device_type": {
+            "$ref": "#/components/schemas/SensorDeviceType",
+            "description": "Device category"
+          },
+          "vendor": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Vendor",
+            "description": "Device manufacturer"
+          },
+          "model_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Model Name",
+            "description": "Device model"
+          },
+          "device_udi": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Udi",
+            "description": "FDA Unique Device Identifier (UDI)"
+          },
+          "mac_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mac Address",
+            "description": "Bluetooth MAC address"
+          },
+          "serial_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serial Number",
+            "description": "Device serial number"
+          },
+          "firmware_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firmware Version",
+            "description": "Firmware version"
+          },
+          "calibration_status": {
+            "$ref": "#/components/schemas/CalibrationState",
+            "description": "Initial calibration state",
+            "default": "CALIBRATED"
+          },
+          "calibration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Date",
+            "description": "Date of last calibration"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "GxP justification",
+            "default": "Initial device registration and subject mapping"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "subject_id",
+          "device_type",
+          "vendor",
+          "model_name"
+        ],
+        "title": "DeviceRegistrationRequest",
+        "description": "Payload to register and map an approved medical IoT sensor device."
+      },
+      "DeviceRegistrationResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "device": {
+            "$ref": "#/components/schemas/DeviceRegistration",
+            "description": "Registered device details"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Status message",
+            "default": "Device registered and mapped successfully"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "device"
+        ],
+        "title": "DeviceRegistrationResponse",
+        "description": "Response returned upon device registration."
+      },
+      "DomainCatalogResponse": {
+        "properties": {
+          "sdtm_domains": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sdtm Domains"
+          },
+          "adam_datasets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Adam Datasets"
+          },
+          "domain_metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Domain Metadata"
+          },
+          "vlm_catalog": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Vlm Catalog"
+          },
+          "codelist_catalog": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Codelist Catalog"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sdtm_domains",
+          "adam_datasets",
+          "domain_metadata",
+          "vlm_catalog",
+          "codelist_catalog"
+        ],
+        "title": "DomainCatalogResponse",
+        "description": "Catalog of supported SDTM & ADaM domains, variables, and VLM definitions."
       },
       "EDCEcrfIngestItem": {
         "properties": {
@@ -2431,6 +5273,603 @@
           "change_reason"
         ],
         "title": "EditQuarantinedSubmissionRequest"
+      },
+      "ElectronicSignatureBlock": {
+        "properties": {
+          "signer_id": {
+            "type": "string",
+            "title": "Signer Id",
+            "description": "Unique user ID of executing statistician"
+          },
+          "signer_role": {
+            "type": "string",
+            "title": "Signer Role",
+            "description": "Regulatory role of statistician"
+          },
+          "signed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Signed At",
+            "description": "Timestamp of electronic signature"
+          },
+          "signature_meaning": {
+            "type": "string",
+            "title": "Signature Meaning",
+            "description": "Regulatory intent of the signature",
+            "default": "Electronic signature confirming authoring, validation, and execution of statistical run"
+          },
+          "hmac_signature": {
+            "type": "string",
+            "title": "Hmac Signature",
+            "description": "HMAC-SHA256 signature sealing the execution run"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "signer_id",
+          "signer_role",
+          "hmac_signature"
+        ],
+        "title": "ElectronicSignatureBlock",
+        "description": "21 CFR Part 11 compliant electronic signature block."
+      },
+      "ExecuteProgramRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id",
+            "description": "Clinical study ID"
+          },
+          "program_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Program Id",
+            "description": "Statistical program ID to execute"
+          },
+          "snapshot_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Snapshot Id",
+            "description": "Version-pinned data snapshot ID"
+          },
+          "is_unblinded": {
+            "type": "boolean",
+            "title": "Is Unblinded",
+            "description": "Request unblinded treatment arm access",
+            "default": false
+          },
+          "database_lock_token_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Database Lock Token Id",
+            "description": "Required formal database lock authorization token if is_unblinded is True"
+          },
+          "sandbox_config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExecutionSandboxConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional resource bounds and sandbox settings"
+          },
+          "reason_for_execution": {
+            "type": "string",
+            "title": "Reason For Execution",
+            "description": "GxP execution rationale",
+            "default": "Statistical analysis execution run"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "program_id",
+          "snapshot_id"
+        ],
+        "title": "ExecuteProgramRequest",
+        "description": "Request payload to launch an isolated, sandboxed statistical run."
+      },
+      "ExecuteProgramResponse": {
+        "properties": {
+          "manifest": {
+            "$ref": "#/components/schemas/ExecutionRunManifest",
+            "description": "Signed execution run manifest"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "manifest"
+        ],
+        "title": "ExecuteProgramResponse",
+        "description": "Response containing executed run manifest and Part 11 electronic signature."
+      },
+      "ExecutionLanguage": {
+        "type": "string",
+        "enum": [
+          "PYTHON",
+          "R"
+        ],
+        "title": "ExecutionLanguage",
+        "description": "Supported statistical computing languages."
+      },
+      "ExecutionRunDetailResponse": {
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/ExecutionRunManifest",
+            "description": "Execution run manifest details"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run"
+        ],
+        "title": "ExecutionRunDetailResponse",
+        "description": "Response containing detailed execution run manifest and output artifacts."
+      },
+      "ExecutionRunListResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total",
+            "description": "Total execution runs"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/ExecutionRunManifest"
+            },
+            "type": "array",
+            "title": "Runs",
+            "description": "Historical runs"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "total"
+        ],
+        "title": "ExecutionRunListResponse",
+        "description": "Response listing historical execution runs for a study."
+      },
+      "ExecutionRunManifest": {
+        "properties": {
+          "manifest_id": {
+            "type": "string",
+            "title": "Manifest Id",
+            "description": "Unique manifest identifier"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id",
+            "description": "Associated execution run identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Clinical study identifier"
+          },
+          "program_id": {
+            "type": "string",
+            "title": "Program Id",
+            "description": "Executed statistical program ID"
+          },
+          "program_name": {
+            "type": "string",
+            "title": "Program Name",
+            "description": "Program filename"
+          },
+          "program_version": {
+            "type": "string",
+            "title": "Program Version",
+            "description": "Executed program version"
+          },
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id",
+            "description": "Version-pinned clinical data snapshot ID"
+          },
+          "snapshot_version_tag": {
+            "type": "string",
+            "title": "Snapshot Version Tag",
+            "description": "Data snapshot version tag"
+          },
+          "snapshot_digest": {
+            "type": "string",
+            "title": "Snapshot Digest",
+            "description": "SHA-256 seal of input pooled dataset snapshot"
+          },
+          "language": {
+            "$ref": "#/components/schemas/ExecutionLanguage",
+            "description": "Execution runtime language"
+          },
+          "script_code_digest": {
+            "type": "string",
+            "title": "Script Code Digest",
+            "description": "SHA-256 digest of executed source code"
+          },
+          "lockfile_digest": {
+            "type": "string",
+            "title": "Lockfile Digest",
+            "description": "SHA-256 digest of verified package lockfile"
+          },
+          "container_image_digest": {
+            "type": "string",
+            "title": "Container Image Digest",
+            "description": "Base container image digest"
+          },
+          "execution_start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Execution Start",
+            "description": "Execution start timestamp"
+          },
+          "execution_end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Execution End",
+            "description": "Execution completion timestamp"
+          },
+          "duration_ms": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Duration Ms",
+            "description": "Total execution duration in milliseconds"
+          },
+          "exit_code": {
+            "type": "integer",
+            "title": "Exit Code",
+            "description": "Process exit code (0 = success)"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExecutionStatus",
+            "description": "Final execution outcome status"
+          },
+          "stdout_capture": {
+            "type": "string",
+            "title": "Stdout Capture",
+            "description": "Standard output captured from execution sandbox",
+            "default": ""
+          },
+          "stderr_capture": {
+            "type": "string",
+            "title": "Stderr Capture",
+            "description": "Standard error captured from execution sandbox",
+            "default": ""
+          },
+          "output_artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/OutputArtifact"
+            },
+            "type": "array",
+            "title": "Output Artifacts",
+            "description": "List of generated output artifacts with SHA-256 digests"
+          },
+          "output_artifacts_digest": {
+            "type": "string",
+            "title": "Output Artifacts Digest",
+            "description": "Combined Merkle/SHA-256 digest of all generated output artifacts"
+          },
+          "is_unblinded_run": {
+            "type": "boolean",
+            "title": "Is Unblinded Run",
+            "description": "Whether unblinded treatment arms were accessed during analysis",
+            "default": false
+          },
+          "database_lock_token_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Database Lock Token Id",
+            "description": "Database lock authorization token if unblinded analysis executed"
+          },
+          "executed_by": {
+            "type": "string",
+            "title": "Executed By",
+            "description": "Executing biostatistician user ID"
+          },
+          "executed_by_role": {
+            "type": "string",
+            "title": "Executed By Role",
+            "description": "Regulatory role of executing user"
+          },
+          "signature_block": {
+            "$ref": "#/components/schemas/ElectronicSignatureBlock",
+            "description": "21 CFR Part 11 electronic signature block"
+          },
+          "manifest_sha256_seal": {
+            "type": "string",
+            "title": "Manifest Sha256 Seal",
+            "description": "Root SHA-256 seal of this complete execution run manifest"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run_id",
+          "study_id",
+          "program_id",
+          "program_name",
+          "program_version",
+          "snapshot_id",
+          "snapshot_version_tag",
+          "snapshot_digest",
+          "language",
+          "script_code_digest",
+          "lockfile_digest",
+          "container_image_digest",
+          "execution_start",
+          "execution_end",
+          "duration_ms",
+          "exit_code",
+          "status",
+          "output_artifacts_digest",
+          "executed_by",
+          "executed_by_role",
+          "signature_block",
+          "manifest_sha256_seal"
+        ],
+        "title": "ExecutionRunManifest",
+        "description": "Cryptographically signed, bit-for-bit reproducible execution run manifest (21 CFR Part 11)."
+      },
+      "ExecutionSandboxConfig": {
+        "properties": {
+          "max_memory_mb": {
+            "type": "integer",
+            "maximum": 16384.0,
+            "minimum": 256.0,
+            "title": "Max Memory Mb",
+            "description": "Maximum RAM allocated to sandbox (MB)",
+            "default": 2048
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "maximum": 3600.0,
+            "minimum": 1.0,
+            "title": "Timeout Seconds",
+            "description": "Execution timeout limit in seconds",
+            "default": 300
+          },
+          "network_isolated": {
+            "type": "boolean",
+            "title": "Network Isolated",
+            "description": "Enforces zero outbound network egress",
+            "default": true
+          },
+          "filesystem_readonly_root": {
+            "type": "boolean",
+            "title": "Filesystem Readonly Root",
+            "description": "Read-only root filesystem with ephemeral workspace",
+            "default": true
+          },
+          "max_output_bytes": {
+            "type": "integer",
+            "title": "Max Output Bytes",
+            "description": "Maximum stdout/stderr capture buffer size (10 MB)",
+            "default": 10485760
+          },
+          "docker_image_digest": {
+            "type": "string",
+            "title": "Docker Image Digest",
+            "description": "Immutable container base image digest",
+            "default": "sha256:cadence-sce-r4.4-py3.14-validated-base-2026"
+          },
+          "python_version": {
+            "type": "string",
+            "title": "Python Version",
+            "description": "Pinned Python runtime version",
+            "default": "3.14.0"
+          },
+          "r_version": {
+            "type": "string",
+            "title": "R Version",
+            "description": "Pinned R runtime version",
+            "default": "4.4.2"
+          },
+          "environment_variables": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Environment Variables",
+            "description": "Safe runtime environment variables"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ExecutionSandboxConfig",
+        "description": "Resource bounds and security controls for containerized statistical execution."
+      },
+      "ExecutionStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "RUNNING",
+          "COMPLETED",
+          "FAILED",
+          "TIMEOUT",
+          "REJECTED"
+        ],
+        "title": "ExecutionStatus",
+        "description": "Lifecycle status of a statistical computing run."
+      },
+      "ExportDatasetJSONRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id",
+            "description": "Study Identifier"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id",
+            "description": "Optional snapshot ID"
+          },
+          "datasets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datasets",
+            "description": "List of domains/datasets to include (e.g. ['DM', 'AE', 'ADSL', 'ADAE'])"
+          },
+          "dataset_json_version": {
+            "type": "string",
+            "title": "Dataset Json Version",
+            "description": "Dataset-JSON specification version ('1.0.0', '1.1.0', '2.0.0')",
+            "default": "1.1.0"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Reason For Change",
+            "default": "Dataset-JSON biostatistical export"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "ExportDatasetJSONRequest",
+        "description": "Request payload for exporting datasets in CDISC Dataset-JSON 1.1 / 2.0."
+      },
+      "ExportDefineXMLRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id",
+            "description": "Study Identifier"
+          },
+          "study_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Name",
+            "description": "Study Name"
+          },
+          "protocol_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Name",
+            "description": "Protocol Name"
+          },
+          "metadata_version_oid": {
+            "type": "string",
+            "title": "Metadata Version Oid",
+            "description": "Metadata Version OID",
+            "default": "MDV.CDISC.001"
+          },
+          "standard_name": {
+            "type": "string",
+            "title": "Standard Name",
+            "description": "Standard Name",
+            "default": "SDTM-IG"
+          },
+          "standard_version": {
+            "type": "string",
+            "title": "Standard Version",
+            "description": "Standard Version",
+            "default": "3.4"
+          },
+          "domains": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Domains",
+            "description": "SDTM domains to document"
+          },
+          "adam_datasets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Adam Datasets",
+            "description": "ADaM datasets to document"
+          },
+          "include_vlm": {
+            "type": "boolean",
+            "title": "Include Vlm",
+            "description": "Include Value Level Metadata",
+            "default": true
+          },
+          "include_where_clauses": {
+            "type": "boolean",
+            "title": "Include Where Clauses",
+            "description": "Include WhereClauses",
+            "default": true
+          },
+          "include_origins": {
+            "type": "boolean",
+            "title": "Include Origins",
+            "description": "Include Origin annotations",
+            "default": true
+          },
+          "reason_for_change": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Reason For Change",
+            "default": "Define-XML v2.1 compilation export"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "ExportDefineXMLRequest",
+        "description": "Request payload for compiling and exporting CDISC Define-XML v2.1."
       },
       "FHIRPreScreenRequest": {
         "properties": {
@@ -2966,6 +6405,74 @@
         "title": "IoTTelemetryReading",
         "description": "Single time-series point from a connected sensor or wearable device."
       },
+      "IssueLockTokenRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id",
+            "description": "Clinical study ID"
+          },
+          "lock_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Lock Id",
+            "description": "Database lock reference ID"
+          },
+          "milestone": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Milestone",
+            "description": "Lock milestone tier (e.g. DATABASE_LOCK)"
+          },
+          "issued_to": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Issued To",
+            "description": "Authorized user ID"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Reason",
+            "description": "Regulatory justification for unblinded access"
+          },
+          "expires_in_hours": {
+            "type": "integer",
+            "maximum": 720.0,
+            "minimum": 1.0,
+            "title": "Expires In Hours",
+            "description": "Validity duration in hours (default 24h)",
+            "default": 24
+          },
+          "authorized_roles": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authorized Roles",
+            "description": "Optional list of permitted unblinded roles"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "lock_id",
+          "milestone",
+          "issued_to",
+          "reason"
+        ],
+        "title": "IssueLockTokenRequest",
+        "description": "Request payload to issue a formal database lock authorization token for unblinded analysis."
+      },
       "LakehouseMetrics": {
         "properties": {
           "study_id": {
@@ -3212,6 +6719,64 @@
         ],
         "title": "LockMilestoneType",
         "description": "Clinical database lock and interim analysis milestones."
+      },
+      "LockTokenListResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total",
+            "description": "Total active tokens"
+          },
+          "tokens": {
+            "items": {
+              "$ref": "#/components/schemas/DatabaseLockAuthToken"
+            },
+            "type": "array",
+            "title": "Tokens",
+            "description": "Active tokens"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "total"
+        ],
+        "title": "LockTokenListResponse",
+        "description": "Response listing active authorization tokens for a study."
+      },
+      "LockTokenResponse": {
+        "properties": {
+          "token": {
+            "$ref": "#/components/schemas/DatabaseLockAuthToken",
+            "description": "Signed authorization token"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "LockTokenResponse",
+        "description": "Response containing database lock authorization token."
+      },
+      "LockValidationStatus": {
+        "type": "string",
+        "enum": [
+          "VALID",
+          "TAMPERED",
+          "INVALID_SYNTAX",
+          "UNQUALIFIED_PACKAGE",
+          "UNVERIFIED"
+        ],
+        "title": "LockValidationStatus",
+        "description": "Integrity and qualification status of a package lockfile."
       },
       "MappingTierStatisticsDTO": {
         "properties": {
@@ -3634,6 +7199,378 @@
         "title": "OfflineSyncMarkers",
         "description": "Offline queue reconciliation and conflict resolution parameters."
       },
+      "OutputArtifact": {
+        "properties": {
+          "artifact_id": {
+            "type": "string",
+            "title": "Artifact Id",
+            "description": "Unique artifact identifier"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name",
+            "description": "Artifact filename (e.g. t_14_1_demographics.csv)"
+          },
+          "artifact_type": {
+            "$ref": "#/components/schemas/OutputArtifactType",
+            "description": "Categorized artifact type"
+          },
+          "file_path": {
+            "type": "string",
+            "title": "File Path",
+            "description": "Relative artifact path in run directory"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME content type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Size Bytes",
+            "description": "File size in bytes"
+          },
+          "sha256_digest": {
+            "type": "string",
+            "title": "Sha256 Digest",
+            "description": "SHA-256 hash of artifact content"
+          },
+          "content_preview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Preview",
+            "description": "Text or base64 preview snippet"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "artifact_type",
+          "file_path",
+          "mime_type",
+          "size_bytes",
+          "sha256_digest"
+        ],
+        "title": "OutputArtifact",
+        "description": "Individual statistical output artifact generated by an analytical run."
+      },
+      "OutputArtifactType": {
+        "type": "string",
+        "enum": [
+          "TABLE",
+          "LISTING",
+          "FIGURE",
+          "DATASET",
+          "LOG",
+          "MANIFEST"
+        ],
+        "title": "OutputArtifactType",
+        "description": "Standard statistical output artifact types."
+      },
+      "PackageEntry": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name",
+            "description": "Package name (e.g. pandas, rtables)"
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Version",
+            "description": "Pinned package version string"
+          },
+          "checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checksum",
+            "description": "Cryptographic package digest (SHA-256)"
+          },
+          "repository": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repository",
+            "description": "Source repository (e.g. PyPI, CRAN, Posit)"
+          },
+          "is_qualified": {
+            "type": "boolean",
+            "title": "Is Qualified",
+            "description": "Whether package is qualified in the GxP platform whitelist",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "version"
+        ],
+        "title": "PackageEntry",
+        "description": "Individual qualified package dependency entry."
+      },
+      "PackageLockType": {
+        "type": "string",
+        "enum": [
+          "UV_LOCK",
+          "RENV_LOCK",
+          "REQUIREMENTS_TXT"
+        ],
+        "title": "PackageLockType",
+        "description": "Supported package dependency lockfile formats."
+      },
+      "PackageLockValidationResult": {
+        "properties": {
+          "lock_type": {
+            "$ref": "#/components/schemas/PackageLockType",
+            "description": "Detected lockfile type"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LockValidationStatus",
+            "description": "Validation outcome"
+          },
+          "lock_digest": {
+            "type": "string",
+            "title": "Lock Digest",
+            "description": "Canonical SHA-256 hash of normalized lockfile content"
+          },
+          "package_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Package Count",
+            "description": "Total number of pinned packages parsed"
+          },
+          "packages": {
+            "items": {
+              "$ref": "#/components/schemas/PackageEntry"
+            },
+            "type": "array",
+            "title": "Packages",
+            "description": "Parsed package definitions"
+          },
+          "is_qualified": {
+            "type": "boolean",
+            "title": "Is Qualified",
+            "description": "Whether all packages meet platform qualification rules"
+          },
+          "unqualified_packages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unqualified Packages",
+            "description": "List of unapproved packages if any"
+          },
+          "details": {
+            "type": "string",
+            "title": "Details",
+            "description": "Human-readable validation summary or error message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "lock_type",
+          "status",
+          "lock_digest",
+          "package_count",
+          "is_qualified",
+          "details"
+        ],
+        "title": "PackageLockValidationResult",
+        "description": "Result of lockfile parsing and cryptographic integrity assertion."
+      },
+      "PipelineExecutionResult": {
+        "properties": {
+          "execution_id": {
+            "type": "string",
+            "title": "Execution Id",
+            "description": "Unique Pipeline Execution Identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study Identifier"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id",
+            "description": "Linked Snapshot ID if snapshot-pinned"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PipelineExecutionStatus",
+            "description": "Execution Status"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At",
+            "description": "Execution Start Timestamp"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At",
+            "description": "Execution Completion Timestamp"
+          },
+          "sdtm_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Sdtm Counts",
+            "description": "Record counts per SDTM domain"
+          },
+          "adam_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Adam Counts",
+            "description": "Record counts per ADaM dataset"
+          },
+          "total_sdtm_records": {
+            "type": "integer",
+            "title": "Total Sdtm Records",
+            "description": "Total SDTM records generated",
+            "default": 0
+          },
+          "total_adam_records": {
+            "type": "integer",
+            "title": "Total Adam Records",
+            "description": "Total ADaM records derived",
+            "default": 0
+          },
+          "dataset_json_manifest": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Dataset Json Manifest",
+            "description": "Dataset-JSON metadata manifest"
+          },
+          "define_xml_summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Define Xml Summary",
+            "description": "Define-XML 2.1 compilation summary"
+          },
+          "validation_summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Validation Summary",
+            "description": "Conformance validation results"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors",
+            "description": "Execution errors if failed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "execution_id",
+          "study_id",
+          "status",
+          "started_at"
+        ],
+        "title": "PipelineExecutionResult",
+        "description": "Comprehensive execution manifest for a CDISC SDTM/ADaM & Dataset-JSON/Define-XML run."
+      },
+      "PipelineExecutionStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "RUNNING",
+          "COMPLETED",
+          "FAILED"
+        ],
+        "title": "PipelineExecutionStatus",
+        "description": "Execution status for the continuous CDR transformation pipeline."
+      },
+      "ProgramListResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target study ID"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total",
+            "description": "Total programs registered"
+          },
+          "programs": {
+            "items": {
+              "$ref": "#/components/schemas/StatisticalProgram"
+            },
+            "type": "array",
+            "title": "Programs",
+            "description": "List of programs"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "total"
+        ],
+        "title": "ProgramListResponse",
+        "description": "Response containing list of statistical programs for a study."
+      },
+      "ProgramResponse": {
+        "properties": {
+          "program": {
+            "$ref": "#/components/schemas/StatisticalProgram",
+            "description": "Statistical program details"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "program"
+        ],
+        "title": "ProgramResponse",
+        "description": "Response containing statistical program definition."
+      },
       "QuarantinedSubmissionResponse": {
         "properties": {
           "id": {
@@ -3715,6 +7652,61 @@
         ],
         "title": "QuarantinedSubmissionResponse"
       },
+      "RawSensorReading": {
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp",
+            "description": "Raw device observation timestamp (pre-drift correction)"
+          },
+          "metric_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Metric Name",
+            "description": "Metric name (e.g. glucose, step_count, heart_rate, fev1, fvc, systolic_bp, diastolic_bp)"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value",
+            "description": "Numeric measurement value"
+          },
+          "unit": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Unit",
+            "description": "Standard measurement unit (e.g. mg/dL, mmol/L, steps, bpm, L, mmHg)"
+          },
+          "flag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flag",
+            "description": "Raw sensor quality or status flag (e.g. VALID, NOISE, CAL_ERROR)"
+          },
+          "extra_attributes": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Extra Attributes",
+            "description": "Additional device-specific telemetry tags"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "timestamp",
+          "metric_name",
+          "value",
+          "unit"
+        ],
+        "title": "RawSensorReading",
+        "description": "Single high-frequency biometric measurement data point."
+      },
       "ReplayQuarantinedSubmissionRequest": {
         "properties": {
           "password": {
@@ -3734,6 +7726,238 @@
           "change_reason"
         ],
         "title": "ReplayQuarantinedSubmissionRequest"
+      },
+      "RunADaMPipelineRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id",
+            "description": "Study Identifier"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id",
+            "description": "Optional snapshot ID"
+          },
+          "datasets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datasets",
+            "description": "Optional list of specific ADaM datasets (ADSL, ADAE, ADTTE, BDS)"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Reason For Change",
+            "default": "ADaM dataset derivation execution"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "RunADaMPipelineRequest",
+        "description": "Request payload to execute ADaM derivation pipeline."
+      },
+      "RunContinuousPipelineRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id",
+            "description": "Unique Study Identifier (e.g. STUDY-001)"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id",
+            "description": "Optional version-pinned snapshot ID to execute over"
+          },
+          "dataset_json_version": {
+            "type": "string",
+            "title": "Dataset Json Version",
+            "description": "Target Dataset-JSON version ('1.0.0', '1.1.0', '2.0.0')",
+            "default": "1.1.0"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Reason For Change",
+            "description": "21 CFR Part 11 required reason for change",
+            "default": "Automated CDISC SDTM/ADaM pipeline continuous derivation run"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "RunContinuousPipelineRequest",
+        "description": "Request payload to trigger end-to-end continuous CDISC SDTM/ADaM and Dataset-JSON/Define-XML pipeline."
+      },
+      "RunSDTMPipelineRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id",
+            "description": "Study Identifier"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id",
+            "description": "Optional snapshot ID"
+          },
+          "domains": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domains",
+            "description": "Optional list of specific SDTM domains (DM, AE, CM, VS, LB, EX, DS, TU, TR, RS)"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "minLength": 3,
+            "title": "Reason For Change",
+            "default": "SDTM domain mapping execution"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "RunSDTMPipelineRequest",
+        "description": "Request payload to execute SDTM mapping pipeline."
+      },
+      "SDTMPipelineResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id"
+          },
+          "domain_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Domain Counts"
+          },
+          "total_records": {
+            "type": "integer",
+            "title": "Total Records"
+          },
+          "domains": {
+            "additionalProperties": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Domains"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "snapshot_id",
+          "domain_counts",
+          "total_records",
+          "domains"
+        ],
+        "title": "SDTMPipelineResponse",
+        "description": "Response containing mapped SDTM domain records."
+      },
+      "SafetyAlertsResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "total_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Count",
+            "description": "Total alerts count"
+          },
+          "unacknowledged_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Unacknowledged Count",
+            "description": "Pending unacknowledged count"
+          },
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/SensorSafetyAlert"
+            },
+            "type": "array",
+            "title": "Alerts",
+            "description": "Safety threshold alert entities"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "total_count",
+          "unacknowledged_count"
+        ],
+        "title": "SafetyAlertsResponse",
+        "description": "Response containing automated safety threshold alerts."
       },
       "SemanticMappedItemDTO": {
         "properties": {
@@ -3878,6 +8102,602 @@
         ],
         "title": "SemanticMappedItemDTO",
         "description": "Individual mapped clinical observation or variable."
+      },
+      "SensorAlertType": {
+        "type": "string",
+        "enum": [
+          "SEVERE_HYPOGLYCEMIA",
+          "HYPOGLYCEMIA",
+          "SEVERE_HYPERGLYCEMIA",
+          "HYPERGLYCEMIA",
+          "EXTREME_TACHYCARDIA",
+          "TACHYCARDIA",
+          "SEVERE_BRADYCARDIA",
+          "BRADYCARDIA",
+          "HYPERTENSIVE_CRISIS",
+          "STAGE2_HYPERTENSION",
+          "SEVERE_HYPOTENSION",
+          "ACUTE_BRONCHOCONSTRICTION",
+          "DEVICE_CLOCK_DRIFT_EXCESSIVE",
+          "BATTERY_CRITICAL"
+        ],
+        "title": "SensorAlertType",
+        "description": "Automated safety threshold alert types."
+      },
+      "SensorDashboardMetrics": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "total_streams_ingested": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Streams Ingested",
+            "description": "Total stream batches ingested",
+            "default": 0
+          },
+          "total_readings_ingested": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Readings Ingested",
+            "description": "Total individual readings",
+            "default": 0
+          },
+          "active_devices_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Active Devices Count",
+            "description": "Registered active devices count",
+            "default": 0
+          },
+          "device_breakdown": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Device Breakdown",
+            "description": "Active devices count per device type"
+          },
+          "total_safety_alerts": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Safety Alerts",
+            "description": "Total alerts triggered",
+            "default": 0
+          },
+          "unacknowledged_alerts": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Unacknowledged Alerts",
+            "description": "Pending unacknowledged alerts",
+            "default": 0
+          },
+          "mean_time_in_range_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Time In Range Percent",
+            "description": "Study-wide mean CGM Time-in-Range percentage"
+          },
+          "mean_daily_steps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Daily Steps",
+            "description": "Study-wide mean daily step count"
+          },
+          "mean_resting_hr_bpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Resting Hr Bpm",
+            "description": "Study-wide mean resting heart rate"
+          },
+          "mean_fev1_liters": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Fev1 Liters",
+            "description": "Study-wide mean FEV1 in Liters"
+          },
+          "last_telemetry_received_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Telemetry Received At",
+            "description": "Most recent telemetry ingestion timestamp"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "SensorDashboardMetrics",
+        "description": "Aggregate real-time metrics for connected IoT sensors across a clinical study."
+      },
+      "SensorDeviceType": {
+        "type": "string",
+        "enum": [
+          "CGM",
+          "ACTIGRAPHY",
+          "SPIROMETRY",
+          "BLOOD_PRESSURE",
+          "PULSE_OXIMETER",
+          "ECG"
+        ],
+        "title": "SensorDeviceType",
+        "description": "Supported medical IoT sensor device categories."
+      },
+      "SensorIngestResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "result": {
+            "$ref": "#/components/schemas/SensorIngestResult",
+            "description": "Telemetry ingestion processing result"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Status message",
+            "default": "Biometric sensor telemetry ingested and normalized successfully"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "result"
+        ],
+        "title": "SensorIngestResponse",
+        "description": "Response returned upon continuous sensor telemetry ingestion."
+      },
+      "SensorIngestResult": {
+        "properties": {
+          "stream_id": {
+            "type": "string",
+            "title": "Stream Id",
+            "description": "Ingestion stream UUID"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study protocol ID"
+          },
+          "subject_id_pseudonymized": {
+            "type": "string",
+            "title": "Subject Id Pseudonymized",
+            "description": "Pseudonymized subject ID"
+          },
+          "device_token": {
+            "type": "string",
+            "title": "Device Token",
+            "description": "GxP device identifier token"
+          },
+          "device_type": {
+            "$ref": "#/components/schemas/SensorDeviceType",
+            "description": "Device category"
+          },
+          "readings_ingested": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Readings Ingested",
+            "description": "Total readings processed"
+          },
+          "clock_drift_offset_ms": {
+            "type": "number",
+            "title": "Clock Drift Offset Ms",
+            "description": "Computed clock drift between device RTC and server (ms)"
+          },
+          "drift_corrected": {
+            "type": "boolean",
+            "title": "Drift Corrected",
+            "description": "Whether timestamps were drift-adjusted"
+          },
+          "omh_data_points_count": {
+            "type": "integer",
+            "title": "Omh Data Points Count",
+            "description": "Generated OMH standard packets count"
+          },
+          "fhir_observations_count": {
+            "type": "integer",
+            "title": "Fhir Observations Count",
+            "description": "Generated FHIR Observations count"
+          },
+          "safety_alerts_triggered": {
+            "items": {
+              "$ref": "#/components/schemas/SensorSafetyAlert"
+            },
+            "type": "array",
+            "title": "Safety Alerts Triggered",
+            "description": "Automated safety threshold alerts triggered"
+          },
+          "daily_summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DailySummaryEndpoints"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Calculated aggregate daily summary endpoints"
+          },
+          "lakehouse_record_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Lakehouse Record Ids",
+            "description": "Canonical clinical record IDs fed to CDR Lakehouse"
+          },
+          "data_hash": {
+            "type": "string",
+            "title": "Data Hash",
+            "description": "SHA-256 cryptographic stream seal"
+          },
+          "ingested_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ingested At",
+            "description": "Ingestion timestamp"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "subject_id_pseudonymized",
+          "device_token",
+          "device_type",
+          "readings_ingested",
+          "clock_drift_offset_ms",
+          "drift_corrected",
+          "omh_data_points_count",
+          "fhir_observations_count",
+          "data_hash"
+        ],
+        "title": "SensorIngestResult",
+        "description": "Result of continuous IoT sensor telemetry ingestion."
+      },
+      "SensorIngestStreamPayload": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id",
+            "description": "Clinical trial protocol ID (e.g. STUDY-901)"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Clinical site identifier"
+          },
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Subject Id",
+            "description": "Participant identifier (raw or pseudonymized)"
+          },
+          "device_type": {
+            "$ref": "#/components/schemas/SensorDeviceType",
+            "description": "Medical IoT device category (CGM, ACTIGRAPHY, SPIROMETRY, BLOOD_PRESSURE)"
+          },
+          "vendor": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Vendor",
+            "description": "Device manufacturer/vendor (e.g. Dexcom, Abbott, ActiGraph, MIR, Omron)"
+          },
+          "model_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Model Name",
+            "description": "Device model name (e.g. G7, FreeStyle Libre 3, wGT3X-BT, Spirobank Smart)"
+          },
+          "device_udi": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Udi",
+            "description": "FDA Unique Device Identifier (UDI) barcode/string"
+          },
+          "mac_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mac Address",
+            "description": "Bluetooth Low Energy (BLE) MAC address (e.g. 00:1A:7D:DA:71:13)"
+          },
+          "serial_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serial Number",
+            "description": "Device hardware serial number"
+          },
+          "firmware_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firmware Version",
+            "description": "Device firmware build version"
+          },
+          "device_sync_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Device Sync Timestamp",
+            "description": "Timestamp reported by device RTC at the synchronization moment"
+          },
+          "gateway_receive_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Gateway Receive Timestamp",
+            "description": "Authoritative UTC timestamp when gateway received the payload"
+          },
+          "readings": {
+            "items": {
+              "$ref": "#/components/schemas/RawSensorReading"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Readings",
+            "description": "Batch of high-frequency sensor readings"
+          },
+          "feed_to_lakehouse": {
+            "type": "boolean",
+            "title": "Feed To Lakehouse",
+            "description": "Whether to automatically feed normalized records to CDR Lakehouse",
+            "default": true
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "GxP audit trail justification",
+            "default": "Continuous IoT biometric sensor stream ingestion"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "subject_id",
+          "device_type",
+          "vendor",
+          "model_name",
+          "device_sync_timestamp",
+          "gateway_receive_timestamp",
+          "readings"
+        ],
+        "title": "SensorIngestStreamPayload",
+        "description": "High-frequency continuous biometric telemetry ingestion stream payload."
+      },
+      "SensorMetricsResponse": {
+        "properties": {
+          "metrics": {
+            "$ref": "#/components/schemas/SensorDashboardMetrics",
+            "description": "Aggregated study-wide sensor metrics"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "metrics"
+        ],
+        "title": "SensorMetricsResponse",
+        "description": "Response containing real-time IoT sensor telemetry metrics."
+      },
+      "SensorSafetyAlert": {
+        "properties": {
+          "alert_id": {
+            "type": "string",
+            "title": "Alert Id",
+            "description": "Unique alert identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Site ID"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Pseudonymized subject ID"
+          },
+          "device_type": {
+            "$ref": "#/components/schemas/SensorDeviceType",
+            "description": "Device category"
+          },
+          "device_token": {
+            "type": "string",
+            "title": "Device Token",
+            "description": "Device token"
+          },
+          "alert_type": {
+            "$ref": "#/components/schemas/SensorAlertType",
+            "description": "Alert classification"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/AlertSeverity",
+            "description": "Alert severity level"
+          },
+          "parameter_name": {
+            "type": "string",
+            "title": "Parameter Name",
+            "description": "Breached parameter (e.g. glucose, heart_rate, fev1, systolic_bp)"
+          },
+          "observed_value": {
+            "type": "number",
+            "title": "Observed Value",
+            "description": "Actual observed measurement"
+          },
+          "threshold_value": {
+            "type": "number",
+            "title": "Threshold Value",
+            "description": "Clinical safety limit breached"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit",
+            "description": "Measurement unit"
+          },
+          "triggered_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Triggered At",
+            "description": "Timestamp of breach (drift-corrected UTC)"
+          },
+          "is_acknowledged": {
+            "type": "boolean",
+            "title": "Is Acknowledged",
+            "description": "Investigator acknowledgment flag",
+            "default": false
+          },
+          "acknowledged_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acknowledged By",
+            "description": "User ID of acknowledging clinician"
+          },
+          "acknowledged_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acknowledged At",
+            "description": "Timestamp of acknowledgment"
+          },
+          "acknowledgment_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acknowledgment Notes",
+            "description": "Clinical justification notes"
+          },
+          "audit_signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audit Signature",
+            "description": "Cryptographic Part 11 signature seal"
+          },
+          "notified_roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notified Roles",
+            "description": "Clinical roles alerted"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "subject_id",
+          "device_type",
+          "device_token",
+          "alert_type",
+          "severity",
+          "parameter_name",
+          "observed_value",
+          "threshold_value",
+          "unit",
+          "triggered_at"
+        ],
+        "title": "SensorSafetyAlert",
+        "description": "Automated biometric safety threshold alert."
       },
       "SnapshotAuditTrailResponse": {
         "properties": {
@@ -4189,6 +9009,184 @@
         "title": "SnapshotVerificationResult",
         "description": "Result of cryptographic SHA-256 integrity verification against a sealed snapshot."
       },
+      "SpirometryDailySummary": {
+        "properties": {
+          "best_fev1_liters": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Best Fev1 Liters",
+            "description": "Highest Forced Expiratory Volume in 1 second (Liters)"
+          },
+          "best_fvc_liters": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Best Fvc Liters",
+            "description": "Highest Forced Vital Capacity (Liters)"
+          },
+          "fev1_fvc_ratio": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Fev1 Fvc Ratio",
+            "description": "FEV1 / FVC ratio (Tiffeneau-Pinelli index)"
+          },
+          "fev1_percent_predicted": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Fev1 Percent Predicted",
+            "description": "FEV1 percent of predicted reference baseline (%)"
+          },
+          "peak_expiratory_flow_l_min": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Peak Expiratory Flow L Min",
+            "description": "Peak Expiratory Flow in Liters per minute"
+          },
+          "maneuver_count": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Maneuver Count",
+            "description": "Total acceptable spirometry maneuvers"
+          },
+          "session_quality_grade": {
+            "type": "string",
+            "title": "Session Quality Grade",
+            "description": "ATS/ERS session quality grade (A, B, C, D, F)",
+            "default": "A"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "best_fev1_liters",
+          "best_fvc_liters",
+          "fev1_fvc_ratio",
+          "fev1_percent_predicted",
+          "peak_expiratory_flow_l_min",
+          "maneuver_count"
+        ],
+        "title": "SpirometryDailySummary",
+        "description": "Standard digital spirometry daily summary endpoints."
+      },
+      "StatisticalProgram": {
+        "properties": {
+          "program_id": {
+            "type": "string",
+            "title": "Program Id",
+            "description": "Unique program identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Study Id",
+            "description": "Associated clinical study identifier"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name",
+            "description": "Program script filename (e.g. t_14_1_demog.py)"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Title",
+            "description": "Descriptive program title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Detailed explanation of statistical analysis",
+            "default": ""
+          },
+          "language": {
+            "$ref": "#/components/schemas/ExecutionLanguage",
+            "description": "Runtime language (PYTHON or R)"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "Semantic version string",
+            "default": "1.0.0"
+          },
+          "source_code": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Source Code",
+            "description": "Validated script source code"
+          },
+          "code_hash": {
+            "type": "string",
+            "title": "Code Hash",
+            "description": "SHA-256 hash of the script source code"
+          },
+          "lockfile_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lockfile Content",
+            "description": "Raw package lockfile text (uv.lock / renv.lock)"
+          },
+          "lock_type": {
+            "$ref": "#/components/schemas/PackageLockType",
+            "description": "Lockfile format",
+            "default": "UV_LOCK"
+          },
+          "lock_digest": {
+            "type": "string",
+            "title": "Lock Digest",
+            "description": "SHA-256 hash of normalized package lockfile"
+          },
+          "target_domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Domain",
+            "description": "Target CDISC output domain (e.g. ADSL, TLF-14.1)"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Authoring biostatistician user ID"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Creation timestamp"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "GxP change rationale (21 CFR Part 11)",
+            "default": "Initial program authoring"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "name",
+          "title",
+          "language",
+          "source_code",
+          "code_hash",
+          "lock_digest",
+          "created_by"
+        ],
+        "title": "StatisticalProgram",
+        "description": "Version-controlled, validated statistical program definition."
+      },
       "SubjectAssignmentCreateDTO": {
         "properties": {
           "study_id": {
@@ -4467,6 +9465,141 @@
         ],
         "title": "SubjectNotificationResponse"
       },
+      "ValidateDatasetJSONRequest": {
+        "properties": {
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Payload",
+            "description": "Dataset-JSON document or dictionary"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "payload"
+        ],
+        "title": "ValidateDatasetJSONRequest",
+        "description": "Request payload for validating Dataset-JSON."
+      },
+      "ValidateDatasetJSONResponse": {
+        "properties": {
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "dataset_count": {
+            "type": "integer",
+            "title": "Dataset Count",
+            "default": 0
+          },
+          "record_count": {
+            "type": "integer",
+            "title": "Record Count",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "is_valid"
+        ],
+        "title": "ValidateDatasetJSONResponse",
+        "description": "Validation response for Dataset-JSON."
+      },
+      "ValidateDefineXMLRequest": {
+        "properties": {
+          "xml_content": {
+            "type": "string",
+            "minLength": 10,
+            "title": "Xml Content",
+            "description": "Define-XML document string"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "xml_content"
+        ],
+        "title": "ValidateDefineXMLRequest",
+        "description": "Request payload for validating Define-XML 2.1."
+      },
+      "ValidateLockfileRequest": {
+        "properties": {
+          "lock_type": {
+            "$ref": "#/components/schemas/PackageLockType",
+            "description": "Format: UV_LOCK, RENV_LOCK, or REQUIREMENTS_TXT"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Content",
+            "description": "Raw text content of lockfile"
+          },
+          "expected_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Digest",
+            "description": "Optional SHA-256 digest to assert immutability"
+          },
+          "strict_qualification": {
+            "type": "boolean",
+            "title": "Strict Qualification",
+            "description": "Enforce strict package whitelist validation",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "lock_type",
+          "content"
+        ],
+        "title": "ValidateLockfileRequest",
+        "description": "Request payload to validate package lockfile integrity and GxP qualification."
+      },
+      "ValidateLockfileResponse": {
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/PackageLockValidationResult",
+            "description": "Verification result"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "result"
+        ],
+        "title": "ValidateLockfileResponse",
+        "description": "Response containing lockfile parsing and cryptographic verification results."
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -4506,6 +9639,23 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VerifyManifestResponse": {
+        "properties": {
+          "result": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Result",
+            "description": "Verification summary and cryptographic checks"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "result"
+        ],
+        "title": "VerifyManifestResponse",
+        "description": "Response containing cryptographic manifest seal verification results."
       },
       "VerifySnapshotResponse": {
         "properties": {

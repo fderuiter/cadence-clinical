@@ -1,11 +1,16 @@
 """Driven ports for Interop microservice.
 
-Requirements: PRD-CRF-007, PRD-SYS-051
+Requirements: PRD-CRF-007, PRD-SYS-051, PRD-CDR-001, PRD-CDR-004, PRD-CDR-005, PRD-CDR-006, ADR-2199
 """
 
 from abc import ABC, abstractmethod
 from typing import Any
 
+from apps.interop.domain.sce_models import (
+    DatabaseLockAuthToken,
+    ExecutionRunManifest,
+    StatisticalProgram,
+)
 from apps.interop.domain.semantic_mapping_models import (
     ConceptMapElement,
     SemanticMappedItem,
@@ -72,7 +77,7 @@ class LLMSemanticReasonerPort(ABC):
 
 
 class LakehouseRepositoryPort(RepositoryPort[Any]):
-    """Port for Lakehouse persistence, snapshots, pooling, and 21 CFR Part 11 audit records."""
+    """Port for Lakehouse persistence, snapshots, pooling, SCE workspaces, and 21 CFR Part 11 audit records."""
 
     @abstractmethod
     async def get_by_id(self, entity_id: str) -> Any | None:
@@ -148,6 +153,181 @@ class LakehouseRepositoryPort(RepositoryPort[Any]):
         pass
 
     @abstractmethod
+    async def get_audit_logs(
+        self, study_id: str | None = None, snapshot_id: str | None = None
+    ) -> list[dict[str, Any]]:
+        """Retrieve audit logs filtered by study_id and/or snapshot_id."""
+        pass
+
+    @abstractmethod
     async def get_metrics(self, study_id: str) -> Any:
         """Aggregate real-time Lakehouse repository metrics for a study."""
+        pass
+
+    # Statistical Computing Environment (SCE) Operations
+    @abstractmethod
+    async def save_program(self, program: StatisticalProgram) -> StatisticalProgram:
+        """Persist or update a statistical program definition."""
+        pass
+
+    @abstractmethod
+    async def get_program_by_id(self, program_id: str) -> StatisticalProgram | None:
+        """Retrieve statistical program by ID."""
+        pass
+
+    @abstractmethod
+    async def get_program_by_name(
+        self, study_id: str, name: str
+    ) -> StatisticalProgram | None:
+        """Retrieve statistical program by study and filename."""
+        pass
+
+    @abstractmethod
+    async def list_programs(self, study_id: str) -> list[StatisticalProgram]:
+        """List all statistical programs for a study."""
+        pass
+
+    @abstractmethod
+    async def save_execution_run(
+        self, manifest: ExecutionRunManifest
+    ) -> ExecutionRunManifest:
+        """Persist execution run results and sealed manifest."""
+        pass
+
+    @abstractmethod
+    async def get_execution_run_by_id(self, run_id: str) -> ExecutionRunManifest | None:
+        """Retrieve execution run manifest by run ID."""
+        pass
+
+    @abstractmethod
+    async def list_execution_runs(
+        self,
+        study_id: str,
+        program_id: str | None = None,
+        snapshot_id: str | None = None,
+    ) -> list[ExecutionRunManifest]:
+        """List execution runs for a study filtered by program or snapshot."""
+        pass
+
+    @abstractmethod
+    async def save_lock_token(
+        self, token: DatabaseLockAuthToken
+    ) -> DatabaseLockAuthToken:
+        """Persist a cryptographic database lock authorization token."""
+        pass
+
+    @abstractmethod
+    async def get_lock_token_by_id(self, token_id: str) -> DatabaseLockAuthToken | None:
+        """Retrieve database lock authorization token by ID."""
+        pass
+
+    @abstractmethod
+    async def revoke_lock_token(self, token_id: str) -> bool:
+        """Revoke an active database lock authorization token."""
+        pass
+
+    @abstractmethod
+    async def list_lock_tokens(self, study_id: str) -> list[DatabaseLockAuthToken]:
+        """List active authorization tokens for a study."""
+        pass
+
+
+class ISensorRepositoryPort(RepositoryPort[Any]):
+    """Port for IoT sensor repository persistence."""
+
+    @abstractmethod
+    async def get_by_id(self, entity_id: str) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def save(self, entity: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def save_device(self, device: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def get_device_by_token(self, device_token: str) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def get_device_by_udi(
+        self, udi_di: str, serial: str | None = None
+    ) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def list_devices(
+        self,
+        study_id: str,
+        site_id: str | None = None,
+        subject_id: str | None = None,
+        device_type: str | None = None,
+        is_active: bool | None = True,
+    ) -> list[Any]:
+        pass
+
+    @abstractmethod
+    async def save_telemetry_stream(self, stream_record: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def list_telemetry_streams(
+        self,
+        study_id: str,
+        subject_id: str | None = None,
+        device_token: str | None = None,
+        device_type: str | None = None,
+        limit: int = 100,
+    ) -> list[Any]:
+        pass
+
+    @abstractmethod
+    async def save_daily_summary(self, summary: Any) -> Any:
+        pass
+
+    @abstractmethod
+    async def list_daily_summaries(
+        self,
+        study_id: str,
+        subject_id: str | None = None,
+        device_type: str | None = None,
+        start_date: Any | None = None,
+        end_date: Any | None = None,
+    ) -> list[Any]:
+        pass
+
+    @abstractmethod
+    async def save_safety_alerts(self, alerts: list[Any]) -> list[Any]:
+        pass
+
+    @abstractmethod
+    async def get_safety_alert_by_id(self, alert_id: str) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def list_safety_alerts(
+        self,
+        study_id: str,
+        subject_id: str | None = None,
+        severity: str | None = None,
+        alert_type: str | None = None,
+        is_acknowledged: bool | None = None,
+        limit: int = 100,
+    ) -> list[Any]:
+        pass
+
+    @abstractmethod
+    async def acknowledge_safety_alert(
+        self,
+        alert_id: str,
+        acknowledged_by: str,
+        action_taken: str | None = None,
+        investigator_notes: str | None = None,
+    ) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def get_sensor_dashboard_metrics(self, study_id: str) -> dict[str, Any]:
         pass

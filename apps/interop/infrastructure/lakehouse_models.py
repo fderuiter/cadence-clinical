@@ -1,12 +1,15 @@
-"""SQLAlchemy ORM models for the Multi-Source Clinical Lakehouse repository.
+"""SQLAlchemy ORM models for the Multi-Source Clinical Lakehouse and Statistical Computing Environment (SCE).
 
 Maps:
 - lakehouse_canonical_records: Harmonized clinical observations across all streams
 - lakehouse_snapshots: Immutable, version-pinned snapshot pools sealed with SHA-256
 - lakehouse_snapshot_records: M:N relational link between snapshots and records
 - lakehouse_audit_logs: 21 CFR Part 11 immutable audit trail for lakehouse operations
+- lakehouse_statistical_programs: Version-controlled validated R & Python scripts
+- lakehouse_execution_runs: Ephemeral sandbox execution run records with signed manifests
+- lakehouse_database_lock_tokens: Cryptographic authorization tokens gating unblinded statistical analysis
 
-Requirements: PRD-CDR-001, ADR-2199, 21 CFR Part 11
+Requirements: PRD-CDR-001, PRD-CDR-004, PRD-CDR-005, PRD-CDR-006, ADR-2199, 21 CFR Part 11
 """
 
 from __future__ import annotations
@@ -15,7 +18,17 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, func
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from apps.interop.infrastructure.models import Base
@@ -128,8 +141,115 @@ class LakehouseSnapshotRecordLink(Base):
     record: Mapped[LakehouseCanonicalRecord] = relationship("LakehouseCanonicalRecord")
 
 
+class LakehouseStatisticalProgram(Base):
+    """Version-controlled, validated statistical program definition (R or Python)."""
+
+    __tablename__ = "lakehouse_statistical_programs"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    language: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    version: Mapped[str] = mapped_column(String(50), default="1.0.0", nullable=False)
+    source_code: Mapped[str] = mapped_column(Text, nullable=False)
+    code_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    lockfile_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    lock_type: Mapped[str] = mapped_column(
+        String(50), default="UV_LOCK", nullable=False
+    )
+    lock_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    target_domain: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+
+class LakehouseExecutionRun(Base):
+    """Persisted record of an analytical execution run within the isolated sandbox."""
+
+    __tablename__ = "lakehouse_execution_runs"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    program_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("lakehouse_statistical_programs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    snapshot_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("lakehouse_snapshots.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    status: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    language: Mapped[str] = mapped_column(String(50), nullable=False)
+    script_code_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    snapshot_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    lockfile_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    container_image_digest: Mapped[str] = mapped_column(String(255), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    duration_ms: Mapped[float] = mapped_column(Float, nullable=False)
+    exit_code: Mapped[int] = mapped_column(Integer, nullable=False)
+    stdout_capture: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    stderr_capture: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    is_unblinded_run: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, index=True
+    )
+    database_lock_token_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    executed_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    executed_by_role: Mapped[str] = mapped_column(String(255), nullable=False)
+    artifacts_manifest: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    output_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    signed_manifest: Mapped[dict[str, Any]] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+    manifest_sha256_seal: Mapped[str] = mapped_column(
+        String(64), nullable=False, index=True
+    )
+    signature_block: Mapped[dict[str, Any]] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+
+
+class LakehouseDatabaseLockToken(Base):
+    """Cryptographic authorization token gating unblinded statistical analysis."""
+
+    __tablename__ = "lakehouse_database_lock_tokens"
+
+    id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    lock_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    milestone: Mapped[str] = mapped_column(String(100), nullable=False)
+    authorized_roles: Mapped[list[str]] = mapped_column(
+        JSON, default=list, nullable=False
+    )
+    issued_to: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    issued_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    is_revoked: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, index=True
+    )
+    signature_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    reason: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+
 class LakehouseAuditLog(Base):
-    """Immutable, chronological 21 CFR Part 11 audit log of all Lakehouse repository operations."""
+    """Immutable, chronological 21 CFR Part 11 audit log of all Lakehouse & SCE operations."""
 
     __tablename__ = "lakehouse_audit_logs"
 

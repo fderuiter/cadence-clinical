@@ -93,6 +93,22 @@
       >
         📜 21 CFR Part 11 Audit Trail
       </button>
+      <button
+        role="tab"
+        :aria-selected="activeTab === 'sce'"
+        :class="['tab-button', { active: activeTab === 'sce' }]"
+        @click="activeTab = 'sce'"
+      >
+        🧮 Statistical Computing (R / Python)
+      </button>
+      <button
+        role="tab"
+        :aria-selected="activeTab === 'cdisc_pipeline'"
+        :class="['tab-button', { active: activeTab === 'cdisc_pipeline' }]"
+        @click="activeTab = 'cdisc_pipeline'"
+      >
+        🧬 CDISC SDTM/ADaM &amp; Define-XML
+      </button>
     </nav>
 
     <!-- TAB 1: Version-Pinned Snapshots -->
@@ -380,6 +396,22 @@
       </div>
     </div>
 
+    <!-- TAB 4: Statistical Computing Environment -->
+    <div v-if="activeTab === 'sce'" class="tab-panel" role="tabpanel">
+      <StatisticalComputingConsole
+        :study-id="studyId"
+        :initial-unblinded="isUnblindedRole"
+      />
+    </div>
+
+    <!-- TAB 5: CDISC SDTM / ADaM Pipeline & Compiler -->
+    <div v-if="activeTab === 'cdisc_pipeline'" class="tab-panel" role="tabpanel">
+      <CdiscPipelineConsole
+        :study-id="studyId"
+        :is-unblinded="isUnblindedRole"
+      />
+    </div>
+
     <!-- Create Version-Pinned Snapshot Modal -->
     <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
       <div class="modal-card">
@@ -449,6 +481,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import CdiscPipelineConsole from './CdiscPipelineConsole.vue';
+import StatisticalComputingConsole from './StatisticalComputingConsole.vue';
 
 export interface CanonicalRecord {
   record_id: string;
@@ -534,7 +568,7 @@ const emit = defineEmits<{
 }>();
 
 // State
-const activeTab = ref<'snapshots' | 'pool_data' | 'audit_log'>('snapshots');
+const activeTab = ref<'snapshots' | 'pool_data' | 'audit_log' | 'sce' | 'cdisc_pipeline'>('snapshots');
 const isUnblindedRole = ref(props.initialUnblinded);
 const isLoading = ref(false);
 const isCreating = ref(false);

@@ -534,3 +534,44 @@ class SDTMRecordRS(AuditableModel):
     @classmethod
     def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
+
+
+class SDTMRecordEX(AuditableModel):
+    """
+    Mapped SDTM Record Exposure (EX) domain schema.
+    """
+
+    STUDYID: str = Field(..., description="Study Identifier (Required)")
+    DOMAIN: str = Field("EX", description="Domain Abbreviation (Required)")
+    USUBJID: str = Field(..., description="Unique Subject Identifier (Required)")
+    EXSEQ: int = Field(..., description="Sequence Number (Required)")
+    EXTRT: str = Field(..., description="Name of Actual Treatment (Required)")
+    EXDOSE: float | None = Field(None, description="Dose per Administration")
+    EXDOSU: str | None = Field(None, description="Dose Units")
+    EXDOSFRM: str | None = Field(None, description="Dose Form")
+    EXDOSFRQ: str | None = Field(None, description="Dosing Frequency")
+    EXROUTE: str | None = Field(None, description="Route of Administration")
+    EXSTDTC: str | None = Field(None, description="Start Date/Time of Treatment")
+    EXENDTC: str | None = Field(None, description="End Date/Time of Treatment")
+    VISITNUM: float | int | None = Field(None, description="Visit Number")
+    VISIT: str | None = Field(None, description="Visit Name")
+    EXLOT: str | None = Field(None, description="Lot Number")
+
+    @field_validator("STUDYID", "DOMAIN", "USUBJID", "EXTRT")
+    @classmethod
+    def validate_non_empty_strings(cls, v: str) -> str:
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError("Field cannot be empty or consist only of whitespace.")
+        return v
+
+    @field_validator("EXSEQ")
+    @classmethod
+    def validate_sequence(cls, v: int) -> int:
+        if v < 1:
+            raise ValueError("EXSEQ must be greater than or equal to 1")
+        return v
+
+    @field_validator("EXSTDTC", "EXENDTC")
+    @classmethod
+    def validate_dates(cls, v: str | None) -> str | None:
+        return validate_dtc_format(v)
