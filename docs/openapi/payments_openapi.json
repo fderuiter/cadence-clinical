@@ -1,0 +1,4430 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cadence Clinical - Site Payments & Split-Payee Engine",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/payments/contracts": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Create Budget Contract",
+        "description": "Creates or versions an active investigator grant contract schedule.",
+        "operationId": "create_budget_contract_api_v1_payments_contracts_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetContractCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetContractResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "List Budget Contracts",
+        "description": "Lists budget contracts matching filters.",
+        "operationId": "list_budget_contracts_api_v1_payments_contracts_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "is_active_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Is Active Only"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BudgetContractResponse"
+                  },
+                  "title": "Response List Budget Contracts Api V1 Payments Contracts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/contracts/{contract_id}": {
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Get Budget Contract",
+        "description": "Retrieves a single budget contract by ID.",
+        "operationId": "get_budget_contract_api_v1_payments_contracts__contract_id__get",
+        "parameters": [
+          {
+            "name": "contract_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Contract Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetContractResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/contracts/{contract_id}/fee-schedules": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Add Fee Schedule",
+        "description": "Adds a procedure reimbursement rate item to the contract fee schedule.",
+        "operationId": "add_fee_schedule_api_v1_payments_contracts__contract_id__fee_schedules_post",
+        "parameters": [
+          {
+            "name": "contract_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Contract Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeeScheduleCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeeScheduleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "List Fee Schedules",
+        "description": "Lists procedure fee schedules configured for a contract.",
+        "operationId": "list_fee_schedules_api_v1_payments_contracts__contract_id__fee_schedules_get",
+        "parameters": [
+          {
+            "name": "contract_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Contract Id"
+            }
+          },
+          {
+            "name": "visit_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Visit Code"
+            }
+          },
+          {
+            "name": "form_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Form Id"
+            }
+          },
+          {
+            "name": "is_active_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Is Active Only"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FeeScheduleResponse"
+                  },
+                  "title": "Response List Fee Schedules Api V1 Payments Contracts  Contract Id  Fee Schedules Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/contracts/{contract_id}/split-payees": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Configure Split Payees",
+        "description": "Configures multi-party split payee allocation percentages (must sum to 100%).",
+        "operationId": "configure_split_payees_api_v1_payments_contracts__contract_id__split_payees_post",
+        "parameters": [
+          {
+            "name": "contract_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Contract Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SplitPayeeConfigBulkUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SplitPayeeConfigResponse"
+                  },
+                  "title": "Response Configure Split Payees Api V1 Payments Contracts  Contract Id  Split Payees Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "List Split Payees",
+        "description": "Lists configured split payee shares for a contract.",
+        "operationId": "list_split_payees_api_v1_payments_contracts__contract_id__split_payees_get",
+        "parameters": [
+          {
+            "name": "contract_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Contract Id"
+            }
+          },
+          {
+            "name": "is_active_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Is Active Only"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SplitPayeeConfigResponse"
+                  },
+                  "title": "Response List Split Payees Api V1 Payments Contracts  Contract Id  Split Payees Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/events/ecrf-submission": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Ingest Ecrf Submission Event",
+        "description": "Real-time event listener ingesting eCRF submission to trigger payables.",
+        "operationId": "ingest_ecrf_submission_event_api_v1_payments_events_ecrf_submission_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EcrfSubmissionEventDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PayableResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Ingest Ecrf Submission Event Api V1 Payments Events Ecrf Submission Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/events/cra-sdv-verification": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Ingest Cra Sdv Verification Event",
+        "description": "Real-time event listener ingesting CRA SDV verification to unlock payables.",
+        "operationId": "ingest_cra_sdv_verification_event_api_v1_payments_events_cra_sdv_verification_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CraSdvVerificationEventDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PayableResponse"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Ingest Cra Sdv Verification Event Api V1 Payments Events Cra Sdv Verification Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/events/milestone-completion": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Ingest Milestone Completion Event",
+        "description": "Real-time event listener ingesting CTMS milestone completion.",
+        "operationId": "ingest_milestone_completion_event_api_v1_payments_events_milestone_completion_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MilestoneCompletionEventDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayableResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/events/batch": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Ingest Batch Events",
+        "description": "Ingests batch of mixed clinical financial events.",
+        "operationId": "ingest_batch_events_api_v1_payments_events_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchEventIngestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Ingest Batch Events Api V1 Payments Events Batch Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/payables": {
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "List Payables",
+        "description": "Lists payables with split allocations and holdback reserve status.",
+        "operationId": "list_payables_api_v1_payments_payables_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "visit_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Visit Code"
+            }
+          },
+          {
+            "name": "form_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Form Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "is_sdv_gated",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Sdv Gated"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PayableResponse"
+                  },
+                  "title": "Response List Payables Api V1 Payments Payables Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/payables/{payable_id}": {
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Get Payable",
+        "description": "Retrieves payable details by ID.",
+        "operationId": "get_payable_api_v1_payments_payables__payable_id__get",
+        "parameters": [
+          {
+            "name": "payable_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Payable Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayableResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/payables/{payable_id}/approve": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Approve Payable",
+        "description": "Approves a payable for disbursement.",
+        "operationId": "approve_payable_api_v1_payments_payables__payable_id__approve_post",
+        "parameters": [
+          {
+            "name": "payable_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Payable Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayableResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/holdbacks": {
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "List Holdback Reserves",
+        "description": "Lists 10% holdback retention reserves.",
+        "operationId": "list_holdback_reserves_api_v1_payments_holdbacks_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HoldbackReserveResponse"
+                  },
+                  "title": "Response List Holdback Reserves Api V1 Payments Holdbacks Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/holdbacks/release": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Release Holdback Reserves",
+        "description": "Releases holdback retention reserves with dual DM and Quality oversight sign-offs.",
+        "operationId": "release_holdback_reserves_api_v1_payments_holdbacks_release_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoldbackReleaseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoldbackReleaseResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/audit-logs": {
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "List Payment Audit Logs",
+        "description": "Queries immutable 21 CFR Part 11 payment transaction audit logs.",
+        "operationId": "list_payment_audit_logs_api_v1_payments_audit_logs_get",
+        "parameters": [
+          {
+            "name": "entity_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Type"
+            }
+          },
+          {
+            "name": "entity_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PaymentAuditLogResponse"
+                  },
+                  "title": "Response List Payment Audit Logs Api V1 Payments Audit Logs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/compile": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Compile Billing Cycle",
+        "description": "Automates monthly or quarterly billing cycle compilation into a self-billing invoice.",
+        "operationId": "compile_billing_cycle_api_v1_payments_invoices_compile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingCycleCompilationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelfBillingInvoiceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices": {
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "List Invoices",
+        "description": "Lists compiled self-billing invoices matching filter criteria.",
+        "operationId": "list_invoices_api_v1_payments_invoices_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Id"
+            }
+          },
+          {
+            "name": "billing_cycle",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Billing Cycle"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "erp_sync_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Erp Sync Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SelfBillingInvoiceResponse"
+                  },
+                  "title": "Response List Invoices Api V1 Payments Invoices Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{invoice_id}": {
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Get Invoice",
+        "description": "Retrieves full self-billing invoice details with line items and remittance advice.",
+        "operationId": "get_invoice_api_v1_payments_invoices__invoice_id__get",
+        "parameters": [
+          {
+            "name": "invoice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Invoice Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelfBillingInvoiceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{invoice_id}/approve": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Approve Self Billing Invoice",
+        "description": "Approves a draft self-billing invoice for ERP synchronization and disbursement.",
+        "operationId": "approve_self_billing_invoice_api_v1_payments_invoices__invoice_id__approve_post",
+        "parameters": [
+          {
+            "name": "invoice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Invoice Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelfBillingInvoiceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{invoice_id}/remittance-advice": {
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Get Remittance Advice",
+        "description": "Retrieves remittance advice statement record for an invoice.",
+        "operationId": "get_remittance_advice_api_v1_payments_invoices__invoice_id__remittance_advice_get",
+        "parameters": [
+          {
+            "name": "invoice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Invoice Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemittanceAdviceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{invoice_id}/remittance-advice/pdf": {
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Download Remittance Advice Pdf",
+        "description": "Downloads binary PDF remittance advice statement.",
+        "operationId": "download_remittance_advice_pdf_api_v1_payments_invoices__invoice_id__remittance_advice_pdf_get",
+        "parameters": [
+          {
+            "name": "invoice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Invoice Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{invoice_id}/remittance-advice/sign": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Sign Remittance Advice",
+        "description": "Applies 21 CFR Part 11 cryptographic digital signature to remittance advice statement.",
+        "operationId": "sign_remittance_advice_api_v1_payments_invoices__invoice_id__remittance_advice_sign_post",
+        "parameters": [
+          {
+            "name": "invoice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Invoice Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemittanceAdviceSignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemittanceAdviceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{invoice_id}/remittance-advice/verify-signature": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Verify Remittance Advice Signature",
+        "description": "Verifies cryptographic signature validity and tamper resistance of remittance advice statement.",
+        "operationId": "verify_remittance_advice_signature_api_v1_payments_invoices__invoice_id__remittance_advice_verify_signature_post",
+        "parameters": [
+          {
+            "name": "invoice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Invoice Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemittanceSignatureVerificationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{invoice_id}/remittance-advice/dispatch": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Dispatch Remittance Advice",
+        "description": "Dispatches signed remittance advice statement via automated email notification.",
+        "operationId": "dispatch_remittance_advice_api_v1_payments_invoices__invoice_id__remittance_advice_dispatch_post",
+        "parameters": [
+          {
+            "name": "invoice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Invoice Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemittanceAdviceDispatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemittanceAdviceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{invoice_id}/erp-export": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Export Invoice To Erp",
+        "description": "Exports invoice into standardized ERP transmission format (SAP/NetSuite).",
+        "operationId": "export_invoice_to_erp_api_v1_payments_invoices__invoice_id__erp_export_post",
+        "parameters": [
+          {
+            "name": "invoice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Invoice Id"
+            }
+          },
+          {
+            "name": "erp_system",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Target ERP (SAP, NETSUITE)",
+              "default": "SAP",
+              "title": "Erp System"
+            },
+            "description": "Target ERP (SAP, NETSUITE)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErpExportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/erp/webhook": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Process Erp Webhook",
+        "description": "Inbound enterprise ERP webhook receiver for payment execution and reconciliation status updates.",
+        "operationId": "process_erp_webhook_api_v1_payments_erp_webhook_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErpWebhookPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErpWebhookResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{invoice_id}/reconcile": {
+      "post": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "Reconcile Invoice Payment",
+        "description": "Reconciles payment execution against self-billing invoice and underlying payables.",
+        "operationId": "reconcile_invoice_payment_api_v1_payments_invoices__invoice_id__reconcile_post",
+        "parameters": [
+          {
+            "name": "invoice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Invoice Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentReconciliationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentReconciliationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{invoice_id}/erp-logs": {
+      "get": {
+        "tags": [
+          "Site Payments"
+        ],
+        "summary": "List Erp Sync Logs",
+        "description": "Lists ERP synchronization history and webhook audit records for an invoice.",
+        "operationId": "list_erp_sync_logs_api_v1_payments_invoices__invoice_id__erp_logs_get",
+        "parameters": [
+          {
+            "name": "invoice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Invoice Id"
+            }
+          },
+          {
+            "name": "erp_system",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Erp System"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ErpSyncLogResponse"
+                  },
+                  "title": "Response List Erp Sync Logs Api V1 Payments Invoices  Invoice Id  Erp Logs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Service health check endpoint.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BatchEventIngestDto": {
+        "properties": {
+          "ecrf_submissions": {
+            "items": {
+              "$ref": "#/components/schemas/EcrfSubmissionEventDto"
+            },
+            "type": "array",
+            "title": "Ecrf Submissions"
+          },
+          "sdv_verifications": {
+            "items": {
+              "$ref": "#/components/schemas/CraSdvVerificationEventDto"
+            },
+            "type": "array",
+            "title": "Sdv Verifications"
+          },
+          "milestones": {
+            "items": {
+              "$ref": "#/components/schemas/MilestoneCompletionEventDto"
+            },
+            "type": "array",
+            "title": "Milestones"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "BatchEventIngestDto",
+        "description": "Batch ingestion container for clinical financial events."
+      },
+      "BillingCycleCompilationRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target Study Protocol UUID or Identifier"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Target Trial Site UUID or Identifier"
+          },
+          "billing_cycle": {
+            "type": "string",
+            "title": "Billing Cycle",
+            "description": "Billing cycle type (MONTHLY, QUARTERLY, MANUAL)",
+            "default": "MONTHLY"
+          },
+          "period_start": {
+            "type": "string",
+            "title": "Period Start",
+            "description": "Billing cycle start date (YYYY-MM-DD)"
+          },
+          "period_end": {
+            "type": "string",
+            "title": "Period End",
+            "description": "Billing cycle end date (YYYY-MM-DD)"
+          },
+          "auto_approve": {
+            "type": "boolean",
+            "title": "Auto Approve",
+            "description": "Automatically approve invoice upon compilation",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "period_start",
+          "period_end"
+        ],
+        "title": "BillingCycleCompilationRequest",
+        "description": "Request payload for compiling monthly/quarterly billing cycle into draft self-billing invoice."
+      },
+      "BudgetContractCreate": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target Study Protocol UUID or Identifier"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Target Trial Site UUID or Identifier"
+          },
+          "contract_name": {
+            "type": "string",
+            "title": "Contract Name",
+            "description": "Descriptive contract schedule title"
+          },
+          "tier_level": {
+            "type": "string",
+            "title": "Tier Level",
+            "description": "Contract tier level (TIER_1_ACADEMIC, TIER_2_COMMUNITY, TIER_3_GLOBAL)",
+            "default": "TIER_1_ACADEMIC"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "description": "ISO-4217 Currency code",
+            "default": "USD"
+          },
+          "total_budget": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Total Budget",
+            "description": "Total contracted grant budget cap",
+            "default": 0.0
+          },
+          "overhead_percentage": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Overhead Percentage",
+            "description": "Default institutional overhead percentage",
+            "default": 0.0
+          },
+          "withholding_percentage": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Withholding Percentage",
+            "description": "Default holdback retention reserve percentage",
+            "default": 10.0
+          },
+          "effective_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Date",
+            "description": "Contract effective execution date"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "contract_name"
+        ],
+        "title": "BudgetContractCreate",
+        "description": "Request payload for creating or versioning an investigator site budget contract."
+      },
+      "BudgetContractResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "contract_name": {
+            "type": "string",
+            "title": "Contract Name"
+          },
+          "tier_level": {
+            "type": "string",
+            "title": "Tier Level"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "total_budget": {
+            "type": "number",
+            "title": "Total Budget"
+          },
+          "overhead_percentage": {
+            "type": "number",
+            "title": "Overhead Percentage"
+          },
+          "withholding_percentage": {
+            "type": "number",
+            "title": "Withholding Percentage"
+          },
+          "effective_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Date"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "fee_schedules_count": {
+            "type": "integer",
+            "title": "Fee Schedules Count",
+            "default": 0
+          },
+          "split_payees_count": {
+            "type": "integer",
+            "title": "Split Payees Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "contract_name",
+          "tier_level",
+          "currency",
+          "total_budget",
+          "overhead_percentage",
+          "withholding_percentage",
+          "effective_date",
+          "status",
+          "is_active",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "BudgetContractResponse",
+        "description": "Response payload for budget contract details."
+      },
+      "CraSdvVerificationEventDto": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "visit_code": {
+            "type": "string",
+            "title": "Visit Code"
+          },
+          "form_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form Id"
+          },
+          "verified_by": {
+            "type": "string",
+            "title": "Verified By",
+            "description": "CRA User ID performing the verification"
+          },
+          "event_id": {
+            "type": "string",
+            "title": "Event Id",
+            "description": "Unique event UUID for deterministic idempotency"
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_id",
+          "visit_code",
+          "verified_by",
+          "event_id"
+        ],
+        "title": "CraSdvVerificationEventDto",
+        "description": "Clinical event emitted when a CRA verifies/signs off Source Data Verification (SDV)."
+      },
+      "EcrfSubmissionEventDto": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "visit_code": {
+            "type": "string",
+            "title": "Visit Code"
+          },
+          "form_id": {
+            "type": "string",
+            "title": "Form Id"
+          },
+          "event_id": {
+            "type": "string",
+            "title": "Event Id",
+            "description": "Unique event UUID for deterministic idempotency"
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp"
+          },
+          "actor_id": {
+            "type": "string",
+            "title": "Actor Id",
+            "default": "edc_system"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_id",
+          "visit_code",
+          "form_id",
+          "event_id"
+        ],
+        "title": "EcrfSubmissionEventDto",
+        "description": "Clinical event emitted when an eCRF form is completed/submitted in EDC."
+      },
+      "ErpExportResponse": {
+        "properties": {
+          "erp_system": {
+            "type": "string",
+            "title": "Erp System"
+          },
+          "invoice_number": {
+            "type": "string",
+            "title": "Invoice Number"
+          },
+          "document_type": {
+            "type": "string",
+            "title": "Document Type",
+            "default": "SELF_BILLING_INVOICE"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "export_timestamp": {
+            "type": "string",
+            "title": "Export Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "erp_system",
+          "invoice_number",
+          "payload",
+          "export_timestamp"
+        ],
+        "title": "ErpExportResponse",
+        "description": "Standard enterprise ERP export payload schema."
+      },
+      "ErpSyncLogResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "invoice_id": {
+            "type": "string",
+            "title": "Invoice Id"
+          },
+          "erp_system": {
+            "type": "string",
+            "title": "Erp System"
+          },
+          "sync_direction": {
+            "type": "string",
+            "title": "Sync Direction"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "response_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Data"
+          },
+          "external_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Reference"
+          },
+          "reconciled": {
+            "type": "boolean",
+            "title": "Reconciled"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "invoice_id",
+          "erp_system",
+          "sync_direction",
+          "status",
+          "payload",
+          "response_data",
+          "external_reference",
+          "reconciled",
+          "created_at",
+          "created_by",
+          "version_index"
+        ],
+        "title": "ErpSyncLogResponse",
+        "description": "Response payload for ERP synchronization transaction log."
+      },
+      "ErpWebhookPayload": {
+        "properties": {
+          "erp_system": {
+            "type": "string",
+            "title": "Erp System",
+            "description": "Source ERP system (SAP, NETSUITE, ORACLE_FINANCIALS)",
+            "default": "SAP"
+          },
+          "invoice_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Number",
+            "description": "Cadence invoice number"
+          },
+          "invoice_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Id",
+            "description": "Cadence invoice UUID"
+          },
+          "erp_reference_id": {
+            "type": "string",
+            "title": "Erp Reference Id",
+            "description": "ERP Document Number / Transaction ID"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "ERP execution status (PENDING, APPROVED, PAID, RECONCILED)"
+          },
+          "payment_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Date",
+            "description": "Bank settlement date (YYYY-MM-DD)"
+          },
+          "amount_paid": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Paid",
+            "description": "Amount disbursed by ERP"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "description": "Currency of payment",
+            "default": "USD"
+          },
+          "bank_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Reference",
+            "description": "Bank wire reference or clearing check number"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "ERP reconciliation processing notes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "erp_reference_id",
+          "status"
+        ],
+        "title": "ErpWebhookPayload",
+        "description": "Inbound enterprise ERP webhook payload from SAP / NetSuite."
+      },
+      "ErpWebhookResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "invoice_id": {
+            "type": "string",
+            "title": "Invoice Id"
+          },
+          "invoice_number": {
+            "type": "string",
+            "title": "Invoice Number"
+          },
+          "erp_system": {
+            "type": "string",
+            "title": "Erp System"
+          },
+          "erp_reference_id": {
+            "type": "string",
+            "title": "Erp Reference Id"
+          },
+          "previous_status": {
+            "type": "string",
+            "title": "Previous Status"
+          },
+          "new_status": {
+            "type": "string",
+            "title": "New Status"
+          },
+          "reconciled": {
+            "type": "boolean",
+            "title": "Reconciled"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "invoice_id",
+          "invoice_number",
+          "erp_system",
+          "erp_reference_id",
+          "previous_status",
+          "new_status",
+          "reconciled",
+          "message"
+        ],
+        "title": "ErpWebhookResponse",
+        "description": "Response acknowledging ERP webhook processing and status transition."
+      },
+      "FeeScheduleCreate": {
+        "properties": {
+          "visit_code": {
+            "type": "string",
+            "title": "Visit Code",
+            "description": "Visit name or identifier (e.g. SCREENING, CYCLE_1_DAY_1)"
+          },
+          "activity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activity Id",
+            "description": "CDISC USDM Activity UUID"
+          },
+          "form_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form Id",
+            "description": "Linked eCRF Form UUID or ID"
+          },
+          "procedure_code": {
+            "type": "string",
+            "title": "Procedure Code",
+            "description": "Procedure code (e.g. PROC-ECG-01)"
+          },
+          "procedure_name": {
+            "type": "string",
+            "title": "Procedure Name",
+            "description": "Human readable procedure title"
+          },
+          "base_amount": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Base Amount",
+            "description": "Base reimbursement fee"
+          },
+          "overhead_percentage": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overhead Percentage",
+            "description": "Override institutional overhead % (inherits from contract if omitted)"
+          },
+          "withholding_percentage": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Withholding Percentage",
+            "description": "Override withholding holdback % (inherits from contract if omitted)"
+          },
+          "patient_stipend": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Patient Stipend",
+            "description": "Patient reimbursement stipend",
+            "default": 0.0
+          },
+          "travel_reimbursement": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Travel Reimbursement",
+            "description": "Travel reimbursement allowance",
+            "default": 0.0
+          },
+          "requires_sdv": {
+            "type": "boolean",
+            "title": "Requires Sdv",
+            "description": "True if CRA SDV verification gates payment",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "visit_code",
+          "procedure_code",
+          "procedure_name",
+          "base_amount"
+        ],
+        "title": "FeeScheduleCreate",
+        "description": "Request payload for adding procedure fee schedule items to a contract."
+      },
+      "FeeScheduleResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "contract_id": {
+            "type": "string",
+            "title": "Contract Id"
+          },
+          "visit_code": {
+            "type": "string",
+            "title": "Visit Code"
+          },
+          "activity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activity Id"
+          },
+          "form_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form Id"
+          },
+          "procedure_code": {
+            "type": "string",
+            "title": "Procedure Code"
+          },
+          "procedure_name": {
+            "type": "string",
+            "title": "Procedure Name"
+          },
+          "base_amount": {
+            "type": "number",
+            "title": "Base Amount"
+          },
+          "overhead_percentage": {
+            "type": "number",
+            "title": "Overhead Percentage"
+          },
+          "withholding_percentage": {
+            "type": "number",
+            "title": "Withholding Percentage"
+          },
+          "patient_stipend": {
+            "type": "number",
+            "title": "Patient Stipend"
+          },
+          "travel_reimbursement": {
+            "type": "number",
+            "title": "Travel Reimbursement"
+          },
+          "requires_sdv": {
+            "type": "boolean",
+            "title": "Requires Sdv"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "contract_id",
+          "visit_code",
+          "activity_id",
+          "form_id",
+          "procedure_code",
+          "procedure_name",
+          "base_amount",
+          "overhead_percentage",
+          "withholding_percentage",
+          "patient_stipend",
+          "travel_reimbursement",
+          "requires_sdv",
+          "is_active",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "FeeScheduleResponse",
+        "description": "Response payload for fee schedule line item."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HoldbackReleaseRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "release_reason": {
+            "type": "string",
+            "title": "Release Reason",
+            "description": "Clinical justification (e.g. Study closeout & query resolution)"
+          },
+          "dm_signoff_by": {
+            "type": "string",
+            "title": "Dm Signoff By",
+            "description": "Data Management Lead electronic signature ID"
+          },
+          "quality_signoff_by": {
+            "type": "string",
+            "title": "Quality Signoff By",
+            "description": "Quality Oversight electronic signature ID"
+          },
+          "holdback_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holdback Ids",
+            "description": "Optional specific holdback IDs to release (releases all site reserves if omitted)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "release_reason",
+          "dm_signoff_by",
+          "quality_signoff_by"
+        ],
+        "title": "HoldbackReleaseRequest",
+        "description": "Formal request payload to release withholding holdback reserves with dual DM and Quality sign-off."
+      },
+      "HoldbackReleaseResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "total_released_amount": {
+            "type": "number",
+            "title": "Total Released Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "released_count": {
+            "type": "integer",
+            "title": "Released Count"
+          },
+          "dm_signoff_by": {
+            "type": "string",
+            "title": "Dm Signoff By"
+          },
+          "quality_signoff_by": {
+            "type": "string",
+            "title": "Quality Signoff By"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "released_reserves": {
+            "items": {
+              "$ref": "#/components/schemas/HoldbackReserveResponse"
+            },
+            "type": "array",
+            "title": "Released Reserves"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "total_released_amount",
+          "currency",
+          "released_count",
+          "dm_signoff_by",
+          "quality_signoff_by",
+          "status"
+        ],
+        "title": "HoldbackReleaseResponse",
+        "description": "Summary response for released holdback retention reserves."
+      },
+      "HoldbackReserveResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "contract_id": {
+            "type": "string",
+            "title": "Contract Id"
+          },
+          "payable_id": {
+            "type": "string",
+            "title": "Payable Id"
+          },
+          "holdback_amount": {
+            "type": "number",
+            "title": "Holdback Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "release_authorized_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Authorized By"
+          },
+          "release_authorized_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Authorized At"
+          },
+          "dm_signoff_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dm Signoff By"
+          },
+          "dm_signoff_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dm Signoff At"
+          },
+          "quality_signoff_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Signoff By"
+          },
+          "quality_signoff_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Signoff At"
+          },
+          "release_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Notes"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "contract_id",
+          "payable_id",
+          "holdback_amount",
+          "currency",
+          "status",
+          "release_authorized_by",
+          "release_authorized_at",
+          "dm_signoff_by",
+          "dm_signoff_at",
+          "quality_signoff_by",
+          "quality_signoff_at",
+          "release_notes",
+          "created_at",
+          "version_index"
+        ],
+        "title": "HoldbackReserveResponse",
+        "description": "Response payload for 10% holdback retention reserve details."
+      },
+      "InvoiceLineItemResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "invoice_id": {
+            "type": "string",
+            "title": "Invoice Id"
+          },
+          "payable_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payable Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "visit_code": {
+            "type": "string",
+            "title": "Visit Code"
+          },
+          "procedure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procedure Code"
+          },
+          "procedure_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procedure Name"
+          },
+          "base_amount": {
+            "type": "number",
+            "title": "Base Amount"
+          },
+          "overhead_amount": {
+            "type": "number",
+            "title": "Overhead Amount"
+          },
+          "patient_stipend": {
+            "type": "number",
+            "title": "Patient Stipend"
+          },
+          "travel_reimbursement": {
+            "type": "number",
+            "title": "Travel Reimbursement"
+          },
+          "gross_amount": {
+            "type": "number",
+            "title": "Gross Amount"
+          },
+          "withholding_rate": {
+            "type": "number",
+            "title": "Withholding Rate"
+          },
+          "withholding_amount": {
+            "type": "number",
+            "title": "Withholding Amount"
+          },
+          "net_amount": {
+            "type": "number",
+            "title": "Net Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "invoice_id",
+          "payable_id",
+          "subject_id",
+          "visit_code",
+          "procedure_code",
+          "procedure_name",
+          "base_amount",
+          "overhead_amount",
+          "patient_stipend",
+          "travel_reimbursement",
+          "gross_amount",
+          "withholding_rate",
+          "withholding_amount",
+          "net_amount",
+          "currency",
+          "created_at",
+          "version_index"
+        ],
+        "title": "InvoiceLineItemResponse",
+        "description": "Response model for an itemized procedure line item on an invoice."
+      },
+      "MilestoneCompletionEventDto": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "milestone_code": {
+            "type": "string",
+            "title": "Milestone Code"
+          },
+          "milestone_name": {
+            "type": "string",
+            "title": "Milestone Name"
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Amount"
+          },
+          "verified_by": {
+            "type": "string",
+            "title": "Verified By"
+          },
+          "event_id": {
+            "type": "string",
+            "title": "Event Id",
+            "description": "Unique event UUID for deterministic idempotency"
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "milestone_code",
+          "milestone_name",
+          "amount",
+          "verified_by",
+          "event_id"
+        ],
+        "title": "MilestoneCompletionEventDto",
+        "description": "Clinical event emitted when a study/site milestone is verified."
+      },
+      "PayableAllocationResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "payable_id": {
+            "type": "string",
+            "title": "Payable Id"
+          },
+          "payee_id": {
+            "type": "string",
+            "title": "Payee Id"
+          },
+          "payee_name": {
+            "type": "string",
+            "title": "Payee Name"
+          },
+          "payee_role": {
+            "type": "string",
+            "title": "Payee Role"
+          },
+          "allocation_percentage": {
+            "type": "number",
+            "title": "Allocation Percentage"
+          },
+          "gross_share": {
+            "type": "number",
+            "title": "Gross Share"
+          },
+          "withholding_share": {
+            "type": "number",
+            "title": "Withholding Share"
+          },
+          "net_share": {
+            "type": "number",
+            "title": "Net Share"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "payable_id",
+          "payee_id",
+          "payee_name",
+          "payee_role",
+          "allocation_percentage",
+          "gross_share",
+          "withholding_share",
+          "net_share",
+          "currency",
+          "status",
+          "created_at",
+          "version_index"
+        ],
+        "title": "PayableAllocationResponse",
+        "description": "Response payload for an allocated split payee share."
+      },
+      "PayableResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "contract_id": {
+            "type": "string",
+            "title": "Contract Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "visit_code": {
+            "type": "string",
+            "title": "Visit Code"
+          },
+          "form_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form Id"
+          },
+          "procedure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procedure Code"
+          },
+          "procedure_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Procedure Name"
+          },
+          "trigger_type": {
+            "type": "string",
+            "title": "Trigger Type"
+          },
+          "trigger_event_id": {
+            "type": "string",
+            "title": "Trigger Event Id"
+          },
+          "trigger_source": {
+            "type": "string",
+            "title": "Trigger Source"
+          },
+          "base_amount": {
+            "type": "number",
+            "title": "Base Amount"
+          },
+          "overhead_amount": {
+            "type": "number",
+            "title": "Overhead Amount"
+          },
+          "patient_stipend_amount": {
+            "type": "number",
+            "title": "Patient Stipend Amount"
+          },
+          "travel_reimbursement_amount": {
+            "type": "number",
+            "title": "Travel Reimbursement Amount"
+          },
+          "gross_amount": {
+            "type": "number",
+            "title": "Gross Amount"
+          },
+          "withholding_rate": {
+            "type": "number",
+            "title": "Withholding Rate"
+          },
+          "withholding_amount": {
+            "type": "number",
+            "title": "Withholding Amount"
+          },
+          "net_amount": {
+            "type": "number",
+            "title": "Net Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "is_sdv_gated": {
+            "type": "boolean",
+            "title": "Is Sdv Gated"
+          },
+          "sdv_verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sdv Verified At"
+          },
+          "sdv_verified_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sdv Verified By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "allocations": {
+            "items": {
+              "$ref": "#/components/schemas/PayableAllocationResponse"
+            },
+            "type": "array",
+            "title": "Allocations"
+          },
+          "holdback_reserve": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HoldbackReserveResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "contract_id",
+          "subject_id",
+          "visit_code",
+          "form_id",
+          "procedure_code",
+          "procedure_name",
+          "trigger_type",
+          "trigger_event_id",
+          "trigger_source",
+          "base_amount",
+          "overhead_amount",
+          "patient_stipend_amount",
+          "travel_reimbursement_amount",
+          "gross_amount",
+          "withholding_rate",
+          "withholding_amount",
+          "net_amount",
+          "currency",
+          "status",
+          "is_sdv_gated",
+          "sdv_verified_at",
+          "sdv_verified_by",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "PayableResponse",
+        "description": "Response payload for a site payable line item with full split allocation breakdown."
+      },
+      "PaymentAuditLogResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "entity_type": {
+            "type": "string",
+            "title": "Entity Type"
+          },
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "previous_state": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous State"
+          },
+          "new_state": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New State"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "user_roles": {
+            "type": "string",
+            "title": "User Roles"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "entity_type",
+          "entity_id",
+          "action",
+          "previous_state",
+          "new_state",
+          "details",
+          "user_id",
+          "user_roles",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "PaymentAuditLogResponse",
+        "description": "Response model for immutable 21 CFR Part 11 payment audit records."
+      },
+      "PaymentReconciliationRequest": {
+        "properties": {
+          "payment_reference": {
+            "type": "string",
+            "title": "Payment Reference",
+            "description": "Bank Wire / Check / ERP Settlement Document Number"
+          },
+          "erp_system": {
+            "type": "string",
+            "title": "Erp System",
+            "description": "ERP system identifier (SAP, NETSUITE, etc.)",
+            "default": "SAP"
+          },
+          "payment_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Date",
+            "description": "Payment execution date (YYYY-MM-DD)"
+          },
+          "amount_paid": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Amount Paid",
+            "description": "Actual disbursed net amount"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Financial reconciliation notes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "payment_reference",
+          "amount_paid"
+        ],
+        "title": "PaymentReconciliationRequest",
+        "description": "Formal request payload for reconciling bank disbursement against invoice."
+      },
+      "PaymentReconciliationResponse": {
+        "properties": {
+          "invoice_id": {
+            "type": "string",
+            "title": "Invoice Id"
+          },
+          "invoice_number": {
+            "type": "string",
+            "title": "Invoice Number"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "erp_sync_status": {
+            "type": "string",
+            "title": "Erp Sync Status"
+          },
+          "reconciled_by": {
+            "type": "string",
+            "title": "Reconciled By"
+          },
+          "reconciled_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Reconciled At"
+          },
+          "reconciliation_reference": {
+            "type": "string",
+            "title": "Reconciliation Reference"
+          },
+          "total_net_amount": {
+            "type": "number",
+            "title": "Total Net Amount"
+          },
+          "amount_paid": {
+            "type": "number",
+            "title": "Amount Paid"
+          },
+          "reconciled_payables_count": {
+            "type": "integer",
+            "title": "Reconciled Payables Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "invoice_id",
+          "invoice_number",
+          "status",
+          "erp_sync_status",
+          "reconciled_by",
+          "reconciled_at",
+          "reconciliation_reference",
+          "total_net_amount",
+          "amount_paid",
+          "reconciled_payables_count"
+        ],
+        "title": "PaymentReconciliationResponse",
+        "description": "Summary response for completed payment reconciliation."
+      },
+      "RemittanceAdviceDispatchRequest": {
+        "properties": {
+          "recipient_email": {
+            "type": "string",
+            "title": "Recipient Email",
+            "description": "Site financial contact destination email address"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "recipient_email"
+        ],
+        "title": "RemittanceAdviceDispatchRequest",
+        "description": "Request payload for dispatching signed remittance advice statement via automated email."
+      },
+      "RemittanceAdviceResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "remittance_number": {
+            "type": "string",
+            "title": "Remittance Number"
+          },
+          "invoice_id": {
+            "type": "string",
+            "title": "Invoice Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "gross_amount": {
+            "type": "number",
+            "title": "Gross Amount"
+          },
+          "overhead_amount": {
+            "type": "number",
+            "title": "Overhead Amount"
+          },
+          "holdback_amount": {
+            "type": "number",
+            "title": "Holdback Amount"
+          },
+          "net_amount": {
+            "type": "number",
+            "title": "Net Amount"
+          },
+          "pdf_sha256_hash": {
+            "type": "string",
+            "title": "Pdf Sha256 Hash"
+          },
+          "is_sealed": {
+            "type": "boolean",
+            "title": "Is Sealed"
+          },
+          "is_signed": {
+            "type": "boolean",
+            "title": "Is Signed"
+          },
+          "signed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signed By"
+          },
+          "signed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signed At"
+          },
+          "signer_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signer Role"
+          },
+          "signature_manifest": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Manifest"
+          },
+          "dispatched_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispatched To"
+          },
+          "dispatched_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispatched At"
+          },
+          "dispatch_status": {
+            "type": "string",
+            "title": "Dispatch Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "remittance_number",
+          "invoice_id",
+          "study_id",
+          "site_id",
+          "currency",
+          "gross_amount",
+          "overhead_amount",
+          "holdback_amount",
+          "net_amount",
+          "pdf_sha256_hash",
+          "is_sealed",
+          "is_signed",
+          "signed_by",
+          "signed_at",
+          "signer_role",
+          "signature_manifest",
+          "dispatched_to",
+          "dispatched_at",
+          "dispatch_status",
+          "created_at",
+          "version_index"
+        ],
+        "title": "RemittanceAdviceResponse",
+        "description": "Response payload for cryptographically sealed PDF remittance advice statement."
+      },
+      "RemittanceAdviceSignRequest": {
+        "properties": {
+          "signer_name": {
+            "type": "string",
+            "title": "Signer Name",
+            "description": "Authorized Grants Lead Name"
+          },
+          "signer_role": {
+            "type": "string",
+            "title": "Signer Role",
+            "description": "Signer corporate or clinical title",
+            "default": "Grants Lead"
+          },
+          "signature_reason": {
+            "type": "string",
+            "title": "Signature Reason",
+            "description": "21 CFR Part 11 Electronic Signature manifestation statement",
+            "default": "Authorized Self-Billing Remittance Disbursement Statement"
+          },
+          "cert_pem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cert Pem",
+            "description": "Optional custom X.509 Certificate PEM"
+          },
+          "private_key_pem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Private Key Pem",
+            "description": "Optional custom RSA Private Key PEM"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "signer_name"
+        ],
+        "title": "RemittanceAdviceSignRequest",
+        "description": "Request payload for applying 21 CFR Part 11 digital signature to a remittance advice document."
+      },
+      "RemittanceSignatureVerificationResponse": {
+        "properties": {
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "pdf_sha256_hash": {
+            "type": "string",
+            "title": "Pdf Sha256 Hash"
+          },
+          "signed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signed By"
+          },
+          "signed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signed At"
+          },
+          "signer_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signer Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_valid",
+          "status",
+          "pdf_sha256_hash"
+        ],
+        "title": "RemittanceSignatureVerificationResponse",
+        "description": "Response payload for cryptographic verification of a remittance advice statement."
+      },
+      "SelfBillingInvoiceResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "invoice_number": {
+            "type": "string",
+            "title": "Invoice Number"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "contract_id": {
+            "type": "string",
+            "title": "Contract Id"
+          },
+          "billing_cycle": {
+            "type": "string",
+            "title": "Billing Cycle"
+          },
+          "period_start": {
+            "type": "string",
+            "title": "Period Start"
+          },
+          "period_end": {
+            "type": "string",
+            "title": "Period End"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "total_base_amount": {
+            "type": "number",
+            "title": "Total Base Amount"
+          },
+          "total_overhead_amount": {
+            "type": "number",
+            "title": "Total Overhead Amount"
+          },
+          "total_patient_stipend": {
+            "type": "number",
+            "title": "Total Patient Stipend"
+          },
+          "total_travel_reimbursement": {
+            "type": "number",
+            "title": "Total Travel Reimbursement"
+          },
+          "total_gross_amount": {
+            "type": "number",
+            "title": "Total Gross Amount"
+          },
+          "total_holdback_amount": {
+            "type": "number",
+            "title": "Total Holdback Amount"
+          },
+          "total_net_amount": {
+            "type": "number",
+            "title": "Total Net Amount"
+          },
+          "payable_count": {
+            "type": "integer",
+            "title": "Payable Count"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "erp_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erp System"
+          },
+          "erp_reference_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erp Reference Id"
+          },
+          "erp_sync_status": {
+            "type": "string",
+            "title": "Erp Sync Status"
+          },
+          "erp_synced_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erp Synced At"
+          },
+          "reconciled_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciled By"
+          },
+          "reconciled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciled At"
+          },
+          "reconciliation_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciliation Reference"
+          },
+          "reconciliation_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciliation Notes"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "line_items": {
+            "items": {
+              "$ref": "#/components/schemas/InvoiceLineItemResponse"
+            },
+            "type": "array",
+            "title": "Line Items"
+          },
+          "remittance_advice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RemittanceAdviceResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "invoice_number",
+          "study_id",
+          "site_id",
+          "contract_id",
+          "billing_cycle",
+          "period_start",
+          "period_end",
+          "currency",
+          "total_base_amount",
+          "total_overhead_amount",
+          "total_patient_stipend",
+          "total_travel_reimbursement",
+          "total_gross_amount",
+          "total_holdback_amount",
+          "total_net_amount",
+          "payable_count",
+          "status",
+          "approved_by",
+          "approved_at",
+          "erp_system",
+          "erp_reference_id",
+          "erp_sync_status",
+          "erp_synced_at",
+          "reconciled_by",
+          "reconciled_at",
+          "reconciliation_reference",
+          "reconciliation_notes",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "SelfBillingInvoiceResponse",
+        "description": "Response payload for a compiled self-billing invoice statement."
+      },
+      "SplitPayeeConfigBulkUpdate": {
+        "properties": {
+          "payees": {
+            "items": {
+              "$ref": "#/components/schemas/SplitPayeeConfigItem"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Payees",
+            "description": "List of recipient payees (must sum to 100%)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "payees"
+        ],
+        "title": "SplitPayeeConfigBulkUpdate",
+        "description": "Bulk update payload for contract split payee allocations (must sum to 100%)."
+      },
+      "SplitPayeeConfigItem": {
+        "properties": {
+          "payee_id": {
+            "type": "string",
+            "title": "Payee Id",
+            "description": "Payee unique identifier (e.g. PAYEE-HOSP-01)"
+          },
+          "payee_name": {
+            "type": "string",
+            "title": "Payee Name",
+            "description": "Payee legal name (e.g. Hospital Research Foundation)"
+          },
+          "payee_role": {
+            "type": "string",
+            "title": "Payee Role",
+            "description": "Role/type: HOSPITAL, PI_PRACTICE, CENTRAL_PHARMACY, LAB, etc."
+          },
+          "allocation_percentage": {
+            "type": "number",
+            "maximum": 100.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Allocation Percentage",
+            "description": "Percentage of payable allocated to payee"
+          },
+          "bank_account_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Reference",
+            "description": "Bank routing/account token"
+          },
+          "tax_identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Identifier",
+            "description": "Tax ID / EIN"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "payee_id",
+          "payee_name",
+          "payee_role",
+          "allocation_percentage"
+        ],
+        "title": "SplitPayeeConfigItem",
+        "description": "Configuration for a single recipient payee share."
+      },
+      "SplitPayeeConfigResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "contract_id": {
+            "type": "string",
+            "title": "Contract Id"
+          },
+          "payee_id": {
+            "type": "string",
+            "title": "Payee Id"
+          },
+          "payee_name": {
+            "type": "string",
+            "title": "Payee Name"
+          },
+          "payee_role": {
+            "type": "string",
+            "title": "Payee Role"
+          },
+          "allocation_percentage": {
+            "type": "number",
+            "title": "Allocation Percentage"
+          },
+          "bank_account_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Reference"
+          },
+          "tax_identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Identifier"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "contract_id",
+          "payee_id",
+          "payee_name",
+          "payee_role",
+          "allocation_percentage",
+          "bank_account_reference",
+          "tax_identifier",
+          "is_active",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "SplitPayeeConfigResponse",
+        "description": "Response payload for split payee configuration."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

@@ -4,11 +4,11 @@
 @req:PRD-SYS-001
 """
 
+from apps.imaging.domain.models import LesionMeasurement
 from apps.imaging.services.adjudication import (
     AdjudicationWorkflowStatus,
     DualReaderAdjudicationSession,
     ImagingAdjudicationEngine,
-    LesionMeasurement,
     ReaderAssessment,
     ReaderRole,
     RECISTResponse,

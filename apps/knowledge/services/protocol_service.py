@@ -10,6 +10,7 @@ Requirements: PRD-TCK-005, PRD-SYS-051, ADR-2192
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import math
@@ -46,16 +47,16 @@ def generate_dense_embedding(text: str, dim: int = 64) -> list[float]:
         return [0.0] * dim
 
     for word_idx, word in enumerate(words):
-        # Hash full word and character n-grams
-        h = hash(word)
-        slot = abs(h) % dim
+        # Hash full word and character n-grams using SHA-256 for deterministic, collision-resistant projection
+        h = int(hashlib.sha256(word.encode("utf-8")).hexdigest(), 16)
+        slot = h % dim
         weight = 1.0 / math.sqrt(word_idx + 1)
         vector[slot] += weight
 
         # Character 3-grams
         for i in range(max(0, len(word) - 2)):
             gram = word[i : i + 3]
-            g_slot = abs(hash(gram)) % dim
+            g_slot = int(hashlib.sha256(gram.encode("utf-8")).hexdigest(), 16) % dim
             vector[g_slot] += 0.5 * weight
 
     # L2 normalize

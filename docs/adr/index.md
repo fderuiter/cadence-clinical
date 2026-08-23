@@ -181,6 +181,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+- [2026-08-23: Multi-Echelon RTSM Supply Hierarchy and Predictive Resupply](2026-08-23-multi-echelon-rtsm-supply-hierarchy-and-predictive-resupply.md)
 - [2026-08-22: Cumulative Mean Kinetic Temperature Stability Budget Engine](2026-08-22-cumulative-mean-kinetic-temperature-stability-budget-engine.md)
 - [2026-08-22: Country-Aware Greenlight Site Activation and Execution Gating Engine](2026-08-22-country-aware-greenlight-site-activation-and-execution-gating-engine.md)
 - [2026-08-22: Automated Site Financials Fee Matrix and Real-Time Payable Engine](2026-08-22-automated-site-financials-fee-matrix-and-real-time-payable-engine.md)

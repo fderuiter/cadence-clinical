@@ -2144,6 +2144,656 @@
         }
       }
     },
+    "/api/v1/execution/rtsm/hierarchy": {
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Get Supply Hierarchy Endpoint",
+        "description": "Returns the complete multi-echelon supply hierarchy tree and stock rollup for a study.",
+        "operationId": "get_supply_hierarchy_endpoint_api_v1_execution_rtsm_hierarchy_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiEchelonRollup"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/nodes": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Create Supply Node Endpoint",
+        "description": "Registers or updates a supply node in the clinical supply hierarchy.",
+        "operationId": "create_supply_node_endpoint_api_v1_execution_rtsm_nodes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupplyNodeCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplyNodeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/nodes/{node_id}/inventory": {
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Get Node Inventory Endpoint",
+        "description": "Lists inventory records and stock levels for a specific supply node.",
+        "operationId": "get_node_inventory_endpoint_api_v1_execution_rtsm_nodes__node_id__inventory_get",
+        "parameters": [
+          {
+            "name": "node_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Node Id"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SupplyNodeInventoryResponse"
+                  },
+                  "title": "Response Get Node Inventory Endpoint Api V1 Execution Rtsm Nodes  Node Id  Inventory Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/nodes/{node_id}/inventory/adjust": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Adjust Node Inventory Endpoint",
+        "description": "Adjusts or initializes stock levels for a supply node.",
+        "operationId": "adjust_node_inventory_endpoint_api_v1_execution_rtsm_nodes__node_id__inventory_adjust_post",
+        "parameters": [
+          {
+            "name": "node_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Node Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupplyNodeInventoryAdjustRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplyNodeInventoryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/forecast/site": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Forecast Site Resupply Endpoint",
+        "description": "Executes a predictive demand and resupply forecast for a clinical site.",
+        "operationId": "forecast_site_resupply_endpoint_api_v1_execution_rtsm_forecast_site_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PredictiveForecastRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictiveForecastResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/forecast/study": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Forecast Study Resupply Endpoint",
+        "description": "Generates concurrent predictive forecasts across all active clinical sites in a study.",
+        "operationId": "forecast_study_resupply_endpoint_api_v1_execution_rtsm_forecast_study_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          },
+          {
+            "name": "horizon_days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 365,
+              "minimum": 7,
+              "default": 60,
+              "title": "Horizon Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PredictiveForecastResponse"
+                  },
+                  "title": "Response Forecast Study Resupply Endpoint Api V1 Execution Rtsm Forecast Study Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/transfer-orders": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Create Transfer Order Endpoint",
+        "description": "Creates a stock transfer order between supply nodes.",
+        "operationId": "create_transfer_order_endpoint_api_v1_execution_rtsm_transfer_orders_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferOrderCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferOrderResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "List Transfer Orders Endpoint",
+        "description": "Lists active transfer orders with optional filtering.",
+        "operationId": "list_transfer_orders_endpoint_api_v1_execution_rtsm_transfer_orders_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Clinical study identifier",
+              "title": "Study Id"
+            },
+            "description": "Clinical study identifier"
+          },
+          {
+            "name": "source_node_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Node Id"
+            }
+          },
+          {
+            "name": "destination_node_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Destination Node Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransferOrderResponse"
+                  },
+                  "title": "Response List Transfer Orders Endpoint Api V1 Execution Rtsm Transfer Orders Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/transfer-orders/{order_id}/approve": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Approve Transfer Order Endpoint",
+        "description": "Approves a transfer order for warehouse packing.",
+        "operationId": "approve_transfer_order_endpoint_api_v1_execution_rtsm_transfer_orders__order_id__approve_post",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Order Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferOrderApprovalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferOrderResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/transfer-orders/{order_id}/manifest": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Generate Packing Manifest Endpoint",
+        "description": "Generates a formal GxP packing manifest binding serialized kits to an approved transfer order.",
+        "operationId": "generate_packing_manifest_endpoint_api_v1_execution_rtsm_transfer_orders__order_id__manifest_post",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Order Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackingManifestCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackingManifestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/transfer-orders/{order_id}/ship": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Ship Transfer Order Endpoint",
+        "description": "Marks a transfer order shipped, moves inventory to in-transit, and dispatches depot notification.",
+        "operationId": "ship_transfer_order_endpoint_api_v1_execution_rtsm_transfer_orders__order_id__ship_post",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Order Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferOrderShipRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferOrderResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/transfer-orders/{order_id}/receive": {
+      "post": {
+        "tags": [
+          "RTSM Multi-Echelon Supply"
+        ],
+        "summary": "Receive Transfer Order Endpoint",
+        "description": "Marks a transfer order delivered/received at destination node, transferring in-transit stock to on-hand.",
+        "operationId": "receive_transfer_order_endpoint_api_v1_execution_rtsm_transfer_orders__order_id__receive_post",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Order Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferOrderReceiveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferOrderResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/subjects/{subject_id}/unblind": {
       "post": {
         "tags": [
@@ -9235,6 +9885,57 @@
         "title": "DOATaskRoleEnum",
         "description": "Site personnel roles on Delegation of Authority log.\n\nRequirements: PRD-SYS-001"
       },
+      "DailyDemandProjection": {
+        "properties": {
+          "day_index": {
+            "type": "integer",
+            "title": "Day Index",
+            "description": "Day index from forecast start (1..N)."
+          },
+          "date": {
+            "type": "string",
+            "title": "Date",
+            "description": "Projected calendar date (YYYY-MM-DD)."
+          },
+          "scheduled_dispensations": {
+            "type": "integer",
+            "title": "Scheduled Dispensations",
+            "description": "Kits required for active subject visits on this day."
+          },
+          "projected_new_subject_dispensations": {
+            "type": "integer",
+            "title": "Projected New Subject Dispensations",
+            "description": "Kits required for newly randomized subjects entering on this day."
+          },
+          "total_daily_demand": {
+            "type": "integer",
+            "title": "Total Daily Demand",
+            "description": "Sum of scheduled and newly projected kit demands."
+          },
+          "cumulative_demand": {
+            "type": "integer",
+            "title": "Cumulative Demand",
+            "description": "Cumulative demand from day 1 to day t."
+          },
+          "projected_closing_balance": {
+            "type": "integer",
+            "title": "Projected Closing Balance",
+            "description": "Projected inventory at close of day."
+          }
+        },
+        "type": "object",
+        "required": [
+          "day_index",
+          "date",
+          "scheduled_dispensations",
+          "projected_new_subject_dispensations",
+          "total_daily_demand",
+          "cumulative_demand",
+          "projected_closing_balance"
+        ],
+        "title": "DailyDemandProjection",
+        "description": "Daily projected kit requirement and stock trajectory."
+      },
       "DataLockRecord": {
         "properties": {
           "lock_id": {
@@ -11668,6 +12369,78 @@
         ],
         "title": "MigrationRuleResponse"
       },
+      "MultiEchelonRollup": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "total_nodes_count": {
+            "type": "integer",
+            "title": "Total Nodes Count"
+          },
+          "manufacturers_count": {
+            "type": "integer",
+            "title": "Manufacturers Count"
+          },
+          "central_depots_count": {
+            "type": "integer",
+            "title": "Central Depots Count"
+          },
+          "regional_depots_count": {
+            "type": "integer",
+            "title": "Regional Depots Count"
+          },
+          "clinical_sites_count": {
+            "type": "integer",
+            "title": "Clinical Sites Count"
+          },
+          "total_global_on_hand_stock": {
+            "type": "integer",
+            "title": "Total Global On Hand Stock"
+          },
+          "total_global_in_transit_stock": {
+            "type": "integer",
+            "title": "Total Global In Transit Stock"
+          },
+          "total_global_reserved_stock": {
+            "type": "integer",
+            "title": "Total Global Reserved Stock"
+          },
+          "total_global_storage_capacity": {
+            "type": "integer",
+            "title": "Total Global Storage Capacity"
+          },
+          "overall_capacity_utilization_pct": {
+            "type": "number",
+            "title": "Overall Capacity Utilization Pct"
+          },
+          "hierarchy_tree": {
+            "items": {
+              "$ref": "#/components/schemas/SupplyHierarchyNode"
+            },
+            "type": "array",
+            "title": "Hierarchy Tree"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "total_nodes_count",
+          "manufacturers_count",
+          "central_depots_count",
+          "regional_depots_count",
+          "clinical_sites_count",
+          "total_global_on_hand_stock",
+          "total_global_in_transit_stock",
+          "total_global_reserved_stock",
+          "total_global_storage_capacity",
+          "overall_capacity_utilization_pct",
+          "hierarchy_tree"
+        ],
+        "title": "MultiEchelonRollup",
+        "description": "Aggregated global and echelon-level supply metrics."
+      },
       "ObservationCreate": {
         "properties": {
           "subject_id": {
@@ -12213,6 +12986,406 @@
         ],
         "title": "PHIScanRequest",
         "description": "Request payload to scan text for HIPAA 18 PHI identifiers.\n\nRequirements: PRD-SYS-001"
+      },
+      "PackingManifestCreateRequest": {
+        "properties": {
+          "manifest_number": {
+            "type": "string",
+            "title": "Manifest Number"
+          },
+          "serialized_kit_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Serialized Kit Numbers"
+          },
+          "lot_number": {
+            "type": "string",
+            "title": "Lot Number"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date"
+          },
+          "container_serial_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Container Serial Number"
+          },
+          "data_logger_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Logger Id"
+          },
+          "tamper_seal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tamper Seal Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "manifest_number",
+          "serialized_kit_numbers",
+          "lot_number"
+        ],
+        "title": "PackingManifestCreateRequest",
+        "description": "Payload to generate a packing manifest for an approved transfer order."
+      },
+      "PackingManifestResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "transfer_order_id": {
+            "type": "string",
+            "title": "Transfer Order Id"
+          },
+          "manifest_number": {
+            "type": "string",
+            "title": "Manifest Number"
+          },
+          "serialized_kit_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Serialized Kit Numbers"
+          },
+          "lot_number": {
+            "type": "string",
+            "title": "Lot Number"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date"
+          },
+          "container_serial_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Container Serial Number"
+          },
+          "data_logger_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Logger Id"
+          },
+          "tamper_seal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tamper Seal Id"
+          },
+          "packed_by": {
+            "type": "string",
+            "title": "Packed By"
+          },
+          "packed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Packed At"
+          },
+          "verified_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified By"
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "transfer_order_id",
+          "manifest_number",
+          "serialized_kit_numbers",
+          "lot_number",
+          "packed_by",
+          "packed_at"
+        ],
+        "title": "PackingManifestResponse",
+        "description": "Response schema for packing manifests."
+      },
+      "PredictiveForecastRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type",
+            "default": "DEFAULT"
+          },
+          "horizon_days": {
+            "type": "integer",
+            "maximum": 365.0,
+            "minimum": 7.0,
+            "title": "Horizon Days",
+            "default": 60
+          },
+          "enrollment_velocity_weekly": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Enrollment Velocity Weekly",
+            "default": 0.5
+          },
+          "screening_pipeline_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Screening Pipeline Count",
+            "default": 0
+          },
+          "screening_conversion_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Screening Conversion Rate",
+            "default": 0.75
+          },
+          "lead_time_days": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Lead Time Days",
+            "default": 3
+          },
+          "buffer_days": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Buffer Days",
+            "default": 5
+          },
+          "safety_stock_threshold": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Safety Stock Threshold",
+            "default": 5
+          },
+          "storage_capacity": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Storage Capacity",
+            "default": 500
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id"
+        ],
+        "title": "PredictiveForecastRequest",
+        "description": "Request payload to execute a predictive resupply forecast."
+      },
+      "PredictiveForecastResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type"
+          },
+          "forecast_generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Forecast Generated At"
+          },
+          "horizon_days": {
+            "type": "integer",
+            "title": "Horizon Days"
+          },
+          "current_on_hand_qty": {
+            "type": "integer",
+            "title": "Current On Hand Qty"
+          },
+          "current_reserved_qty": {
+            "type": "integer",
+            "title": "Current Reserved Qty"
+          },
+          "current_in_transit_qty": {
+            "type": "integer",
+            "title": "Current In Transit Qty"
+          },
+          "effective_available_stock": {
+            "type": "integer",
+            "title": "Effective Available Stock"
+          },
+          "active_subjects_count": {
+            "type": "integer",
+            "title": "Active Subjects Count"
+          },
+          "screening_pipeline_count": {
+            "type": "integer",
+            "title": "Screening Pipeline Count"
+          },
+          "enrollment_velocity_weekly": {
+            "type": "number",
+            "title": "Enrollment Velocity Weekly"
+          },
+          "total_projected_demand": {
+            "type": "integer",
+            "title": "Total Projected Demand"
+          },
+          "average_daily_burn_rate": {
+            "type": "number",
+            "title": "Average Daily Burn Rate"
+          },
+          "days_of_supply_remaining": {
+            "type": "number",
+            "title": "Days Of Supply Remaining"
+          },
+          "projected_runout_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projected Runout Date"
+          },
+          "stockout_risk_level": {
+            "type": "string",
+            "title": "Stockout Risk Level"
+          },
+          "recommended_order_qty": {
+            "type": "integer",
+            "title": "Recommended Order Qty"
+          },
+          "reorder_recommended": {
+            "type": "boolean",
+            "title": "Reorder Recommended"
+          },
+          "reorder_trigger_day": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reorder Trigger Day"
+          },
+          "timeline": {
+            "items": {
+              "$ref": "#/components/schemas/DailyDemandProjection"
+            },
+            "type": "array",
+            "title": "Timeline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "kit_type",
+          "forecast_generated_at",
+          "horizon_days",
+          "current_on_hand_qty",
+          "current_reserved_qty",
+          "current_in_transit_qty",
+          "effective_available_stock",
+          "active_subjects_count",
+          "screening_pipeline_count",
+          "enrollment_velocity_weekly",
+          "total_projected_demand",
+          "average_daily_burn_rate",
+          "days_of_supply_remaining",
+          "projected_runout_date",
+          "stockout_risk_level",
+          "recommended_order_qty",
+          "reorder_recommended",
+          "reorder_trigger_day",
+          "timeline"
+        ],
+        "title": "PredictiveForecastResponse",
+        "description": "Detailed response schema for predictive demand forecast."
       },
       "ProblemDetails": {
         "properties": {
@@ -14231,6 +15404,423 @@
         "title": "SubjectUnblindResponse",
         "description": "Pydantic schema for returning emergency unblind details."
       },
+      "SupplyHierarchyNode": {
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "title": "Node Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "node_type": {
+            "$ref": "#/components/schemas/SupplyNodeType"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "country": {
+            "type": "string",
+            "title": "Country"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "parent_node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Node Id"
+          },
+          "storage_capacity": {
+            "type": "integer",
+            "title": "Storage Capacity"
+          },
+          "current_utilization": {
+            "type": "integer",
+            "title": "Current Utilization"
+          },
+          "utilization_percentage": {
+            "type": "number",
+            "title": "Utilization Percentage"
+          },
+          "lead_time_days": {
+            "type": "integer",
+            "title": "Lead Time Days"
+          },
+          "temperature_conditions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Temperature Conditions"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "total_on_hand": {
+            "type": "integer",
+            "title": "Total On Hand",
+            "default": 0
+          },
+          "total_reserved": {
+            "type": "integer",
+            "title": "Total Reserved",
+            "default": 0
+          },
+          "total_in_transit": {
+            "type": "integer",
+            "title": "Total In Transit",
+            "default": 0
+          },
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/SupplyHierarchyNode"
+            },
+            "type": "array",
+            "title": "Children"
+          }
+        },
+        "type": "object",
+        "required": [
+          "node_id",
+          "study_id",
+          "node_type",
+          "name",
+          "country",
+          "storage_capacity",
+          "current_utilization",
+          "utilization_percentage",
+          "lead_time_days",
+          "is_active"
+        ],
+        "title": "SupplyHierarchyNode",
+        "description": "Node in the hierarchical supply chain tree representation."
+      },
+      "SupplyNodeCreateRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "node_id": {
+            "type": "string",
+            "title": "Node Id"
+          },
+          "node_type": {
+            "type": "string",
+            "title": "Node Type",
+            "default": "CLINICAL_SITE"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "country": {
+            "type": "string",
+            "title": "Country"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "parent_node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Node Id"
+          },
+          "storage_capacity": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Storage Capacity",
+            "default": 1000
+          },
+          "lead_time_days": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Lead Time Days",
+            "default": 3
+          },
+          "temperature_conditions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Temperature Conditions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "node_id",
+          "name",
+          "country"
+        ],
+        "title": "SupplyNodeCreateRequest",
+        "description": "Payload to register or update a supply node in the clinical supply hierarchy."
+      },
+      "SupplyNodeInventoryAdjustRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "node_id": {
+            "type": "string",
+            "title": "Node Id"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type"
+          },
+          "lot_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Number"
+          },
+          "on_hand_qty": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "On Hand Qty"
+          },
+          "safety_stock_threshold": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Safety Stock Threshold",
+            "default": 10
+          },
+          "reorder_point": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Reorder Point",
+            "default": 20
+          },
+          "max_capacity": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Max Capacity",
+            "default": 500
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "node_id",
+          "kit_type",
+          "on_hand_qty"
+        ],
+        "title": "SupplyNodeInventoryAdjustRequest",
+        "description": "Payload to initialize or adjust inventory levels at a supply node."
+      },
+      "SupplyNodeInventoryResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "node_id": {
+            "type": "string",
+            "title": "Node Id"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type"
+          },
+          "lot_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Number"
+          },
+          "on_hand_qty": {
+            "type": "integer",
+            "title": "On Hand Qty"
+          },
+          "reserved_qty": {
+            "type": "integer",
+            "title": "Reserved Qty"
+          },
+          "in_transit_qty": {
+            "type": "integer",
+            "title": "In Transit Qty"
+          },
+          "safety_stock_threshold": {
+            "type": "integer",
+            "title": "Safety Stock Threshold"
+          },
+          "reorder_point": {
+            "type": "integer",
+            "title": "Reorder Point"
+          },
+          "max_capacity": {
+            "type": "integer",
+            "title": "Max Capacity"
+          },
+          "resupply_signal": {
+            "type": "boolean",
+            "title": "Resupply Signal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "node_id",
+          "kit_type",
+          "on_hand_qty",
+          "reserved_qty",
+          "in_transit_qty",
+          "safety_stock_threshold",
+          "reorder_point",
+          "max_capacity",
+          "resupply_signal"
+        ],
+        "title": "SupplyNodeInventoryResponse",
+        "description": "Response schema for node inventory."
+      },
+      "SupplyNodeResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "node_id": {
+            "type": "string",
+            "title": "Node Id"
+          },
+          "node_type": {
+            "type": "string",
+            "title": "Node Type"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "country": {
+            "type": "string",
+            "title": "Country"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "parent_node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Node Id"
+          },
+          "storage_capacity": {
+            "type": "integer",
+            "title": "Storage Capacity"
+          },
+          "current_utilization": {
+            "type": "integer",
+            "title": "Current Utilization"
+          },
+          "lead_time_days": {
+            "type": "integer",
+            "title": "Lead Time Days"
+          },
+          "temperature_conditions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Temperature Conditions"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "node_id",
+          "node_type",
+          "name",
+          "country",
+          "storage_capacity",
+          "current_utilization",
+          "lead_time_days",
+          "is_active"
+        ],
+        "title": "SupplyNodeResponse",
+        "description": "Response schema for a supply node."
+      },
+      "SupplyNodeType": {
+        "type": "string",
+        "enum": [
+          "PRIMARY_MANUFACTURER",
+          "CENTRAL_DEPOT",
+          "REGIONAL_DEPOT",
+          "CLINICAL_SITE"
+        ],
+        "title": "SupplyNodeType",
+        "description": "Hierarchy tiers for clinical trial drug supply chain."
+      },
       "SyncBlockDetails": {
         "properties": {
           "fieldId": {
@@ -14696,6 +16286,333 @@
           "explanation"
         ],
         "title": "TSDVEvaluationResponse"
+      },
+      "TransferOrderApprovalRequest": {
+        "properties": {
+          "change_justification": {
+            "type": "string",
+            "title": "Change Justification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "change_justification"
+        ],
+        "title": "TransferOrderApprovalRequest",
+        "description": "Approval or rejection justification payload."
+      },
+      "TransferOrderCreateRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "source_node_id": {
+            "type": "string",
+            "title": "Source Node Id"
+          },
+          "destination_node_id": {
+            "type": "string",
+            "title": "Destination Node Id"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Quantity"
+          },
+          "priority": {
+            "type": "string",
+            "title": "Priority",
+            "default": "ROUTINE"
+          },
+          "temperature_condition": {
+            "type": "string",
+            "title": "Temperature Condition",
+            "default": "CONTROLLED_ROOM_TEMP"
+          },
+          "carrier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carrier"
+          },
+          "transfer_order_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transfer Order Number"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "source_node_id",
+          "destination_node_id",
+          "kit_type",
+          "quantity"
+        ],
+        "title": "TransferOrderCreateRequest",
+        "description": "Payload to create a multi-echelon stock transfer order."
+      },
+      "TransferOrderReceiveRequest": {
+        "properties": {
+          "change_justification": {
+            "type": "string",
+            "title": "Change Justification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "change_justification"
+        ],
+        "title": "TransferOrderReceiveRequest",
+        "description": "Payload to mark a transfer order as delivered/received."
+      },
+      "TransferOrderResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "transfer_order_number": {
+            "type": "string",
+            "title": "Transfer Order Number"
+          },
+          "source_node_id": {
+            "type": "string",
+            "title": "Source Node Id"
+          },
+          "destination_node_id": {
+            "type": "string",
+            "title": "Destination Node Id"
+          },
+          "kit_type": {
+            "type": "string",
+            "title": "Kit Type"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "priority": {
+            "type": "string",
+            "title": "Priority"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "temperature_condition": {
+            "type": "string",
+            "title": "Temperature Condition"
+          },
+          "carrier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carrier"
+          },
+          "tracking_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tracking Number"
+          },
+          "estimated_delivery_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Delivery Date"
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Requested At"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "shipped_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shipped At"
+          },
+          "shipped_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shipped By"
+          },
+          "delivered_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivered At"
+          },
+          "delivered_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivered By"
+          },
+          "rejection_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejection Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "transfer_order_number",
+          "source_node_id",
+          "destination_node_id",
+          "kit_type",
+          "quantity",
+          "priority",
+          "status",
+          "temperature_condition",
+          "requested_at"
+        ],
+        "title": "TransferOrderResponse",
+        "description": "Response schema for transfer orders."
+      },
+      "TransferOrderShipRequest": {
+        "properties": {
+          "tracking_number": {
+            "type": "string",
+            "title": "Tracking Number"
+          },
+          "carrier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carrier"
+          },
+          "estimated_delivery_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Delivery Date"
+          },
+          "change_justification": {
+            "type": "string",
+            "title": "Change Justification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tracking_number",
+          "change_justification"
+        ],
+        "title": "TransferOrderShipRequest",
+        "description": "Payload to mark a transfer order as shipped."
       },
       "TranslationJobResponse": {
         "properties": {

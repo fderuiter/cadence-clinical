@@ -1080,6 +1080,969 @@
           }
         }
       }
+    },
+    "/api/v1/safety/as2/transmissions": {
+      "post": {
+        "summary": "Send As2 Transmission Endpoint",
+        "description": "Dispatch an outbound ICH E2B(R3) XML payload directly to a Regulatory Health Authority AS2 Gateway.\n\nRequirements: PRD-PVG-002, ADR-2199",
+        "operationId": "send_as2_transmission_endpoint_api_v1_safety_as2_transmissions_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AS2OutboundTransmissionRequestDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AS2TransmissionResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List As2 Transmissions Endpoint",
+        "description": "List append-only AS2 B2B transmission ledger records with optional filters.\n\nRequirements: PRD-PVG-002, ADR-2199",
+        "operationId": "list_as2_transmissions_endpoint_api_v1_safety_as2_transmissions_get",
+        "parameters": [
+          {
+            "name": "target_authority",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Authority"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AS2TransmissionResponseDTO"
+                  },
+                  "title": "Response List As2 Transmissions Endpoint Api V1 Safety As2 Transmissions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/as2/transmissions/{id}": {
+      "get": {
+        "summary": "Get As2 Transmission Endpoint",
+        "description": "Retrieve full audit history and status of an AS2 B2B transmission by ID.\n\nRequirements: PRD-PVG-002, ADR-2199",
+        "operationId": "get_as2_transmission_endpoint_api_v1_safety_as2_transmissions__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AS2TransmissionResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/as2/mdn": {
+      "post": {
+        "summary": "Process Inbound Mdn Endpoint",
+        "description": "Process an asynchronous Message Disposition Notification (MDN) callback.\n\nRequirements: PRD-PVG-002, ADR-2199",
+        "operationId": "process_inbound_mdn_endpoint_api_v1_safety_as2_mdn_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MDNProcessRequestDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MDNProcessResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/as2/ack": {
+      "post": {
+        "summary": "Process Regulatory Ack Endpoint",
+        "description": "Process an inbound Regulatory ACK B (Syntactic) or ACK C (Authority Ingestion) receipt.\n\nRequirements: PRD-PVG-002, ADR-2199",
+        "operationId": "process_regulatory_ack_endpoint_api_v1_safety_as2_ack_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegulatoryAckProcessRequestDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegulatoryAckProcessResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/as2/transmissions/{id}/retry": {
+      "post": {
+        "summary": "Retry As2 Transmission Endpoint",
+        "description": "Retry a failed AS2 transmission.\n\nRequirements: PRD-PVG-002, ADR-2199",
+        "operationId": "retry_as2_transmission_endpoint_api_v1_safety_as2_transmissions__id__retry_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AS2TransmissionResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/signals/detect": {
+      "post": {
+        "summary": "Execute Signal Detection Scan Endpoint",
+        "description": "Execute statistical disproportionality signal detection (PRR, ROR, EBGM/MGPS) across PT and SOC pairs.\n\nRequirements: PRD-PVG-003, ADR-2199",
+        "operationId": "execute_signal_detection_scan_endpoint_api_v1_safety_signals_detect_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignalDetectionScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalDetectionScanResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/signals/runs": {
+      "get": {
+        "summary": "List Signal Detection Runs Endpoint",
+        "description": "List historical disproportionality signal detection scan runs.\n\nRequirements: PRD-PVG-003, ADR-2199",
+        "operationId": "list_signal_detection_runs_endpoint_api_v1_safety_signals_runs_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "target_drug",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Drug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response List Signal Detection Runs Endpoint Api V1 Safety Signals Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/signals/runs/{id}": {
+      "get": {
+        "summary": "Get Signal Detection Run Endpoint",
+        "description": "Retrieve full metric tables and details for a signal detection scan run.\n\nRequirements: PRD-PVG-003, ADR-2199",
+        "operationId": "get_signal_detection_run_endpoint_api_v1_safety_signals_runs__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Signal Detection Run Endpoint Api V1 Safety Signals Runs  Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/signals/alerts": {
+      "get": {
+        "summary": "List Signal Alerts Endpoint",
+        "description": "List safety signal review alerts with optional filtering by status, severity, or study.\n\nRequirements: PRD-PVG-003, ADR-2199",
+        "operationId": "list_signal_alerts_endpoint_api_v1_safety_signals_alerts_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "target_drug",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Drug"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SafetySignalAlertDTO"
+                  },
+                  "title": "Response List Signal Alerts Endpoint Api V1 Safety Signals Alerts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/signals/alerts/{id}": {
+      "get": {
+        "summary": "Get Signal Alert Endpoint",
+        "description": "Retrieve details of an individual safety signal review alert.\n\nRequirements: PRD-PVG-003, ADR-2199",
+        "operationId": "get_signal_alert_endpoint_api_v1_safety_signals_alerts__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafetySignalAlertDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/signals/alerts/{id}/review": {
+      "post": {
+        "summary": "Review Signal Alert Endpoint",
+        "description": "Review and update the clinical triage disposition of a safety signal alert.\n\nRequirements: PRD-PVG-003, ADR-2199",
+        "operationId": "review_signal_alert_endpoint_api_v1_safety_signals_alerts__id__review_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SafetySignalAlertReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafetySignalAlertDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/signals/alerts/{id}/sign": {
+      "post": {
+        "summary": "Sign Signal Alert Endpoint",
+        "description": "Apply a 21 CFR Part 11 Electronic Signature to approve a safety signal disposition.\n\nRequirements: PRD-PVG-003, PRD-PVG-008, ADR-2199",
+        "operationId": "sign_signal_alert_endpoint_api_v1_safety_signals_alerts__id__sign_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SafetySignalAlertSignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafetySignalAlertSignResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/periodic-reports/compile": {
+      "post": {
+        "summary": "Compile Periodic Safety Report Endpoint",
+        "description": "Compile an aggregate periodic safety report (ICH E2F DSUR, ICH E2C(R2) PSUR/PBRER).\n\nRequirements: PRD-PVG-004, ADR-2199",
+        "operationId": "compile_periodic_safety_report_endpoint_api_v1_safety_periodic_reports_compile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeriodicReportCompilationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeriodicReportResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/periodic-reports": {
+      "get": {
+        "summary": "List Periodic Safety Reports Endpoint",
+        "description": "List compiled periodic regulatory safety reports with optional filters.\n\nRequirements: PRD-PVG-004, ADR-2199",
+        "operationId": "list_periodic_safety_reports_endpoint_api_v1_safety_periodic_reports_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "compound_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Compound Name"
+            }
+          },
+          {
+            "name": "report_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Report Type"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PeriodicReportResponseDTO"
+                  },
+                  "title": "Response List Periodic Safety Reports Endpoint Api V1 Safety Periodic Reports Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/periodic-reports/{id}": {
+      "get": {
+        "summary": "Get Periodic Safety Report Endpoint",
+        "description": "Retrieve full structured JSON payload of a periodic regulatory safety report by ID.\n\nRequirements: PRD-PVG-004, ADR-2199",
+        "operationId": "get_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeriodicReportResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/periodic-reports/{id}/sign": {
+      "post": {
+        "summary": "Sign Periodic Safety Report Endpoint",
+        "description": "Apply a 21 CFR Part 11 Electronic Signature to approve a Periodic Safety Report.\n\nRequirements: PRD-PVG-004, PRD-PVG-008, ADR-2199",
+        "operationId": "sign_periodic_safety_report_endpoint_api_v1_safety_periodic_reports__id__sign_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeriodicReportSignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeriodicReportSignResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/periodic-reports/{id}/export": {
+      "get": {
+        "summary": "Export Periodic Safety Report Html Endpoint",
+        "description": "Export a publication-ready HTML representation of a periodic safety report.\n\nRequirements: PRD-PVG-004, ADR-2199",
+        "operationId": "export_periodic_safety_report_html_endpoint_api_v1_safety_periodic_reports__id__export_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1094,6 +2057,479 @@
         ],
         "title": "AIReviewStatus",
         "description": "Lifecycle review statuses for AI-generated or AI-assisted clinical entities."
+      },
+      "AS2Authority": {
+        "type": "string",
+        "enum": [
+          "FDA_ESG",
+          "EMA_GATEWAY",
+          "PMDA",
+          "MHRA",
+          "HEALTH_CANADA"
+        ],
+        "title": "AS2Authority",
+        "description": "Supported Global Regulatory Health Authorities and AS2 Endpoints."
+      },
+      "AS2OutboundTransmissionRequestDTO": {
+        "properties": {
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id",
+            "description": "Internal Safety Case ID"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Clinical Study Protocol ID"
+          },
+          "icsr_xml_payload": {
+            "type": "string",
+            "title": "Icsr Xml Payload",
+            "description": "ICH E2B(R3) ICSR XML payload string"
+          },
+          "target_authority": {
+            "$ref": "#/components/schemas/AS2Authority",
+            "description": "Target Regulatory Health Authority (e.g. FDA_ESG, EMA_GATEWAY)"
+          },
+          "sender_as2_id": {
+            "type": "string",
+            "title": "Sender As2 Id",
+            "description": "Sender AS2 Identifier",
+            "default": "CADENCE-SPONSOR"
+          },
+          "receiver_as2_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receiver As2 Id",
+            "description": "Receiver AS2 Identifier"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment",
+            "description": "Environment (PRODUCTION / TEST)",
+            "default": "PRODUCTION"
+          },
+          "custom_headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Custom Headers",
+            "description": "Custom AS2 / HTTP headers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "icsr_xml_payload",
+          "target_authority"
+        ],
+        "title": "AS2OutboundTransmissionRequestDTO",
+        "description": "Request schema for dispatching an outbound ICH E2B(R3) payload via AS2."
+      },
+      "AS2TransmissionAuditLogDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "transmission_id": {
+            "type": "string",
+            "title": "Transmission Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "from_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Status"
+          },
+          "to_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Status"
+          },
+          "details": {
+            "type": "string",
+            "title": "Details"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "transmission_id",
+          "action",
+          "details",
+          "created_at",
+          "created_by",
+          "version_index"
+        ],
+        "title": "AS2TransmissionAuditLogDTO",
+        "description": "Schema for individual immutable event log records in the transmission ledger."
+      },
+      "AS2TransmissionResponseDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "transmission_id": {
+            "type": "string",
+            "title": "Transmission Id"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id"
+          },
+          "worldwide_unique_case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worldwide Unique Case Id"
+          },
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          },
+          "as2_from": {
+            "type": "string",
+            "title": "As2 From"
+          },
+          "as2_to": {
+            "type": "string",
+            "title": "As2 To"
+          },
+          "target_authority": {
+            "type": "string",
+            "title": "Target Authority"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "payload_digest_sha256": {
+            "type": "string",
+            "title": "Payload Digest Sha256"
+          },
+          "mic": {
+            "type": "string",
+            "title": "Mic"
+          },
+          "encryption_algorithm": {
+            "type": "string",
+            "title": "Encryption Algorithm"
+          },
+          "signature_algorithm": {
+            "type": "string",
+            "title": "Signature Algorithm"
+          },
+          "outbound_payload_size": {
+            "type": "integer",
+            "title": "Outbound Payload Size"
+          },
+          "outbound_xml": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outbound Xml"
+          },
+          "mdn_message_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mdn Message Id"
+          },
+          "mdn_disposition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mdn Disposition"
+          },
+          "mdn_mic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mdn Mic"
+          },
+          "mdn_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mdn Status"
+          },
+          "mdn_received_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mdn Received At"
+          },
+          "ack_a_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ack A Status"
+          },
+          "ack_a_received_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ack A Received At"
+          },
+          "ack_b_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ack B Status"
+          },
+          "ack_b_received_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ack B Received At"
+          },
+          "ack_b_errors": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Ack B Errors",
+            "default": []
+          },
+          "ack_c_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ack C Status"
+          },
+          "ack_c_received_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ack C Received At"
+          },
+          "ack_c_details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Ack C Details",
+            "default": {}
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "retry_count": {
+            "type": "integer",
+            "title": "Retry Count",
+            "default": 0
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "audit_events": {
+            "items": {
+              "$ref": "#/components/schemas/AS2TransmissionAuditLogDTO"
+            },
+            "type": "array",
+            "title": "Audit Events",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "transmission_id",
+          "message_id",
+          "as2_from",
+          "as2_to",
+          "target_authority",
+          "environment",
+          "status",
+          "payload_digest_sha256",
+          "mic",
+          "encryption_algorithm",
+          "signature_algorithm",
+          "outbound_payload_size",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "AS2TransmissionResponseDTO",
+        "description": "Response schema for AS2 B2B Transmission record details and handshake status."
+      },
+      "AckType": {
+        "type": "string",
+        "enum": [
+          "ACK_A",
+          "ACK_B",
+          "ACK_C"
+        ],
+        "title": "AckType",
+        "description": "Multi-tier regulatory acknowledgement types for pharmacovigilance gateways."
       },
       "AuthorityRuleEvaluationResult": {
         "properties": {
@@ -1178,6 +2614,17 @@
         ],
         "title": "AuthorityRuleEvaluationResult",
         "description": "Deterministic evaluation outcome for a specific regulatory health authority."
+      },
+      "BenchmarkReferenceDataset": {
+        "type": "string",
+        "enum": [
+          "INTERNAL_TRIAL_POOL",
+          "FAERS",
+          "EUDRAVIGILANCE",
+          "CUSTOM"
+        ],
+        "title": "BenchmarkReferenceDataset",
+        "description": "Reference background datasets for disproportionality comparisons."
       },
       "CausalityCategory": {
         "type": "string",
@@ -1345,6 +2792,378 @@
         ],
         "title": "CountdownClockStatus",
         "description": "Real-time statutory countdown clock status."
+      },
+      "DSURLineListingItem": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "treatment_arm": {
+            "type": "string",
+            "title": "Treatment Arm",
+            "default": "Investigational Drug"
+          },
+          "age": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age"
+          },
+          "sex": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sex"
+          },
+          "country": {
+            "type": "string",
+            "title": "Country",
+            "default": "US"
+          },
+          "meddra_pt": {
+            "type": "string",
+            "title": "Meddra Pt"
+          },
+          "meddra_soc": {
+            "type": "string",
+            "title": "Meddra Soc"
+          },
+          "ae_term": {
+            "type": "string",
+            "title": "Ae Term"
+          },
+          "onset_date": {
+            "type": "string",
+            "title": "Onset Date"
+          },
+          "resolution_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Date"
+          },
+          "outcome": {
+            "type": "string",
+            "title": "Outcome",
+            "default": "RECOVERED"
+          },
+          "seriousness_death": {
+            "type": "boolean",
+            "title": "Seriousness Death",
+            "default": false
+          },
+          "seriousness_life_threatening": {
+            "type": "boolean",
+            "title": "Seriousness Life Threatening",
+            "default": false
+          },
+          "seriousness_hospitalization": {
+            "type": "boolean",
+            "title": "Seriousness Hospitalization",
+            "default": false
+          },
+          "seriousness_disability": {
+            "type": "boolean",
+            "title": "Seriousness Disability",
+            "default": false
+          },
+          "seriousness_congenital_anomaly": {
+            "type": "boolean",
+            "title": "Seriousness Congenital Anomaly",
+            "default": false
+          },
+          "seriousness_other": {
+            "type": "boolean",
+            "title": "Seriousness Other",
+            "default": false
+          },
+          "causality": {
+            "type": "string",
+            "title": "Causality",
+            "default": "RELATED"
+          },
+          "expectedness": {
+            "type": "string",
+            "title": "Expectedness",
+            "default": "UNEXPECTED"
+          },
+          "susar": {
+            "type": "boolean",
+            "title": "Susar",
+            "default": false
+          },
+          "action_taken": {
+            "type": "string",
+            "title": "Action Taken",
+            "default": "DRUG_WITHDRAWN"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "subject_id",
+          "study_id",
+          "meddra_pt",
+          "meddra_soc",
+          "ae_term",
+          "onset_date"
+        ],
+        "title": "DSURLineListingItem",
+        "description": "ICH E2F Standard Line Listing item for Serious Adverse Events."
+      },
+      "DSURSummaryTabulationRow": {
+        "properties": {
+          "meddra_soc": {
+            "type": "string",
+            "title": "Meddra Soc"
+          },
+          "meddra_pt": {
+            "type": "string",
+            "title": "Meddra Pt"
+          },
+          "active_arm_count": {
+            "type": "integer",
+            "title": "Active Arm Count",
+            "default": 0
+          },
+          "active_arm_subjects": {
+            "type": "integer",
+            "title": "Active Arm Subjects",
+            "default": 0
+          },
+          "comparator_arm_count": {
+            "type": "integer",
+            "title": "Comparator Arm Count",
+            "default": 0
+          },
+          "comparator_arm_subjects": {
+            "type": "integer",
+            "title": "Comparator Arm Subjects",
+            "default": 0
+          },
+          "placebo_arm_count": {
+            "type": "integer",
+            "title": "Placebo Arm Count",
+            "default": 0
+          },
+          "placebo_arm_subjects": {
+            "type": "integer",
+            "title": "Placebo Arm Subjects",
+            "default": 0
+          },
+          "total_event_count": {
+            "type": "integer",
+            "title": "Total Event Count",
+            "default": 0
+          },
+          "total_subjects_count": {
+            "type": "integer",
+            "title": "Total Subjects Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "meddra_soc",
+          "meddra_pt"
+        ],
+        "title": "DSURSummaryTabulationRow",
+        "description": "Interval summary tabulation row aggregated by SOC and PT."
+      },
+      "DisproportionalityMetricResult": {
+        "properties": {
+          "drug_name": {
+            "type": "string",
+            "title": "Drug Name"
+          },
+          "meddra_pt": {
+            "type": "string",
+            "title": "Meddra Pt"
+          },
+          "meddra_soc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meddra Soc"
+          },
+          "term_level": {
+            "$ref": "#/components/schemas/StratificationLevel",
+            "default": "PT"
+          },
+          "case_count_a": {
+            "type": "integer",
+            "title": "Case Count A"
+          },
+          "case_count_b": {
+            "type": "integer",
+            "title": "Case Count B",
+            "default": 0
+          },
+          "case_count_c": {
+            "type": "integer",
+            "title": "Case Count C",
+            "default": 0
+          },
+          "case_count_d": {
+            "type": "integer",
+            "title": "Case Count D",
+            "default": 0
+          },
+          "total_n": {
+            "type": "integer",
+            "title": "Total N",
+            "default": 0
+          },
+          "expected_count_e": {
+            "type": "number",
+            "title": "Expected Count E"
+          },
+          "prr": {
+            "type": "number",
+            "title": "Prr"
+          },
+          "prr_ci_lower": {
+            "type": "number",
+            "title": "Prr Ci Lower"
+          },
+          "prr_ci_upper": {
+            "type": "number",
+            "title": "Prr Ci Upper"
+          },
+          "chi_square_yates": {
+            "type": "number",
+            "title": "Chi Square Yates"
+          },
+          "ror": {
+            "type": "number",
+            "title": "Ror"
+          },
+          "ror_ci_lower": {
+            "type": "number",
+            "title": "Ror Ci Lower"
+          },
+          "ror_ci_upper": {
+            "type": "number",
+            "title": "Ror Ci Upper"
+          },
+          "ebgm": {
+            "type": "number",
+            "title": "Ebgm"
+          },
+          "eb05": {
+            "type": "number",
+            "title": "Eb05"
+          },
+          "eb95": {
+            "type": "number",
+            "title": "Eb95"
+          },
+          "is_prr_signal": {
+            "type": "boolean",
+            "title": "Is Prr Signal",
+            "default": false
+          },
+          "is_ror_signal": {
+            "type": "boolean",
+            "title": "Is Ror Signal",
+            "default": false
+          },
+          "is_ebgm_signal": {
+            "type": "boolean",
+            "title": "Is Ebgm Signal",
+            "default": false
+          },
+          "overall_signal_flag": {
+            "type": "boolean",
+            "title": "Overall Signal Flag",
+            "default": false
+          },
+          "signal_strength": {
+            "$ref": "#/components/schemas/SignalStrength",
+            "default": "NONE"
+          },
+          "stratum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stratum"
+          },
+          "benchmark_dataset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benchmark Dataset"
+          },
+          "benchmark_relative_risk": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benchmark Relative Risk"
+          }
+        },
+        "type": "object",
+        "required": [
+          "drug_name",
+          "meddra_pt",
+          "case_count_a",
+          "expected_count_e",
+          "prr",
+          "prr_ci_lower",
+          "prr_ci_upper",
+          "chi_square_yates",
+          "ror",
+          "ror_ci_lower",
+          "ror_ci_upper",
+          "ebgm",
+          "eb05",
+          "eb95"
+        ],
+        "title": "DisproportionalityMetricResult",
+        "description": "Calculated statistical signal detection metrics for a Drug-Event pair."
       },
       "ExpectednessCategory": {
         "type": "string",
@@ -2076,6 +3895,199 @@
         "title": "IndividualCaseSafetyReport",
         "description": "Root Individual Case Safety Report (ICSR) according to ICH E2B(R3)."
       },
+      "MDNProcessRequestDTO": {
+        "properties": {
+          "mdn_payload": {
+            "type": "string",
+            "title": "Mdn Payload",
+            "description": "Raw MDN multipart MIME or text body"
+          },
+          "authority_cert_pem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authority Cert Pem",
+            "description": "Optional sender certificate for signature verification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mdn_payload"
+        ],
+        "title": "MDNProcessRequestDTO",
+        "description": "Request schema for processing an inbound asynchronous MDN receipt."
+      },
+      "MDNProcessResponseDTO": {
+        "properties": {
+          "is_valid_mdn": {
+            "type": "boolean",
+            "title": "Is Valid Mdn"
+          },
+          "original_message_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Message Id"
+          },
+          "disposition_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disposition Mode"
+          },
+          "disposition_type": {
+            "type": "string",
+            "title": "Disposition Type"
+          },
+          "disposition_raw": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disposition Raw"
+          },
+          "received_content_mic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Received Content Mic"
+          },
+          "mic_matches": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mic Matches"
+          },
+          "is_signed": {
+            "type": "boolean",
+            "title": "Is Signed",
+            "default": false
+          },
+          "signature_valid": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Valid"
+          },
+          "human_readable_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Human Readable Text"
+          },
+          "error_details": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_valid_mdn",
+          "disposition_type"
+        ],
+        "title": "MDNProcessResponseDTO",
+        "description": "Response schema after parsing and verifying an MDN receipt."
+      },
+      "MGPSMultiItemResult": {
+        "properties": {
+          "item_set": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Item Set",
+            "description": "Combination of drug(s) and event(s)"
+          },
+          "observed_n": {
+            "type": "integer",
+            "title": "Observed N"
+          },
+          "expected_e": {
+            "type": "number",
+            "title": "Expected E"
+          },
+          "ebgm": {
+            "type": "number",
+            "title": "Ebgm"
+          },
+          "eb05": {
+            "type": "number",
+            "title": "Eb05"
+          },
+          "eb95": {
+            "type": "number",
+            "title": "Eb95"
+          },
+          "interaction_score": {
+            "type": "number",
+            "title": "Interaction Score",
+            "description": "Ratio of multi-item EBGM to expected marginal product"
+          },
+          "is_interaction_signal": {
+            "type": "boolean",
+            "title": "Is Interaction Signal",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "item_set",
+          "observed_n",
+          "expected_e",
+          "ebgm",
+          "eb05",
+          "eb95",
+          "interaction_score"
+        ],
+        "title": "MGPSMultiItemResult",
+        "description": "Multi-item Gamma Poisson Shrinker interaction score for drug/event combinations."
+      },
       "MedDRACoding": {
         "properties": {
           "llt_code": {
@@ -2309,6 +4321,521 @@
         ],
         "title": "NarrativeSignResponse",
         "description": "Response payload returned upon successful Part 11 signing."
+      },
+      "PeriodicReportCompilationRequest": {
+        "properties": {
+          "report_type": {
+            "$ref": "#/components/schemas/PeriodicSafetyReportType",
+            "default": "DSUR"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "compound_name": {
+            "type": "string",
+            "title": "Compound Name"
+          },
+          "reporting_period_start": {
+            "type": "string",
+            "title": "Reporting Period Start"
+          },
+          "reporting_period_end": {
+            "type": "string",
+            "title": "Reporting Period End"
+          },
+          "sponsor_name": {
+            "type": "string",
+            "title": "Sponsor Name",
+            "default": "Cadence Clinical Sponsor Inc."
+          },
+          "include_line_listings": {
+            "type": "boolean",
+            "title": "Include Line Listings",
+            "default": true
+          },
+          "include_summary_tabulations": {
+            "type": "boolean",
+            "title": "Include Summary Tabulations",
+            "default": true
+          },
+          "include_signal_analyses": {
+            "type": "boolean",
+            "title": "Include Signal Analyses",
+            "default": true
+          },
+          "benefit_risk_narrative": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benefit Risk Narrative"
+          },
+          "cumulative_exposure_subjects": {
+            "type": "integer",
+            "title": "Cumulative Exposure Subjects",
+            "default": 0
+          },
+          "cases": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cases"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "compound_name",
+          "reporting_period_start",
+          "reporting_period_end"
+        ],
+        "title": "PeriodicReportCompilationRequest",
+        "description": "Request payload to trigger automated periodic safety report compilation."
+      },
+      "PeriodicReportPayload": {
+        "properties": {
+          "report_id": {
+            "type": "string",
+            "title": "Report Id"
+          },
+          "report_type": {
+            "$ref": "#/components/schemas/PeriodicSafetyReportType"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "compound_name": {
+            "type": "string",
+            "title": "Compound Name"
+          },
+          "reporting_period_start": {
+            "type": "string",
+            "title": "Reporting Period Start"
+          },
+          "reporting_period_end": {
+            "type": "string",
+            "title": "Reporting Period End"
+          },
+          "sponsor_name": {
+            "type": "string",
+            "title": "Sponsor Name"
+          },
+          "total_subject_exposure": {
+            "type": "integer",
+            "title": "Total Subject Exposure"
+          },
+          "total_saes": {
+            "type": "integer",
+            "title": "Total Saes"
+          },
+          "total_susars": {
+            "type": "integer",
+            "title": "Total Susars"
+          },
+          "line_listings": {
+            "items": {
+              "$ref": "#/components/schemas/DSURLineListingItem"
+            },
+            "type": "array",
+            "title": "Line Listings",
+            "default": []
+          },
+          "summary_tabulations": {
+            "items": {
+              "$ref": "#/components/schemas/DSURSummaryTabulationRow"
+            },
+            "type": "array",
+            "title": "Summary Tabulations",
+            "default": []
+          },
+          "signal_summary": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Signal Summary",
+            "default": []
+          },
+          "benefit_risk_assessment": {
+            "type": "string",
+            "title": "Benefit Risk Assessment"
+          },
+          "conclusions": {
+            "type": "string",
+            "title": "Conclusions"
+          },
+          "regulatory_guidelines": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Regulatory Guidelines",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "report_id",
+          "report_type",
+          "study_id",
+          "compound_name",
+          "reporting_period_start",
+          "reporting_period_end",
+          "sponsor_name",
+          "total_subject_exposure",
+          "total_saes",
+          "total_susars",
+          "benefit_risk_assessment",
+          "conclusions"
+        ],
+        "title": "PeriodicReportPayload",
+        "description": "Full structured JSON payload of a periodic regulatory safety report."
+      },
+      "PeriodicReportResponseDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "report_type": {
+            "type": "string",
+            "title": "Report Type"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "compound_name": {
+            "type": "string",
+            "title": "Compound Name"
+          },
+          "reporting_period_start": {
+            "type": "string",
+            "title": "Reporting Period Start"
+          },
+          "reporting_period_end": {
+            "type": "string",
+            "title": "Reporting Period End"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "total_subject_exposure": {
+            "type": "integer",
+            "title": "Total Subject Exposure"
+          },
+          "total_saes": {
+            "type": "integer",
+            "title": "Total Saes"
+          },
+          "line_listings_count": {
+            "type": "integer",
+            "title": "Line Listings Count"
+          },
+          "summary_tabulations_count": {
+            "type": "integer",
+            "title": "Summary Tabulations Count"
+          },
+          "signals_included_count": {
+            "type": "integer",
+            "title": "Signals Included Count"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/PeriodicReportPayload"
+          },
+          "approved_by_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By User Id"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "esignature_manifest_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Esignature Manifest Id"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "report_type",
+          "study_id",
+          "compound_name",
+          "reporting_period_start",
+          "reporting_period_end",
+          "status",
+          "total_subject_exposure",
+          "total_saes",
+          "line_listings_count",
+          "summary_tabulations_count",
+          "signals_included_count",
+          "payload",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "PeriodicReportResponseDTO",
+        "description": "DTO for a persisted Periodic Safety Report record."
+      },
+      "PeriodicReportSignRequest": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "meaning_of_signature": {
+            "type": "string",
+            "title": "Meaning Of Signature",
+            "default": "Approval of ICH E2F DSUR / ICH E2C(R2) Periodic Safety Report"
+          },
+          "signature_secret": {
+            "type": "string",
+            "title": "Signature Secret"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "signature_secret"
+        ],
+        "title": "PeriodicReportSignRequest",
+        "description": "21 CFR Part 11 Electronic Signature request for approving a Periodic Safety Report."
+      },
+      "PeriodicReportSignResponse": {
+        "properties": {
+          "report_id": {
+            "type": "string",
+            "title": "Report Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PeriodicReportStatus"
+          },
+          "approved_by_user_id": {
+            "type": "string",
+            "title": "Approved By User Id"
+          },
+          "approved_at": {
+            "type": "string",
+            "title": "Approved At"
+          },
+          "esignature_manifest_id": {
+            "type": "string",
+            "title": "Esignature Manifest Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "report_id",
+          "status",
+          "approved_by_user_id",
+          "approved_at",
+          "esignature_manifest_id",
+          "message"
+        ],
+        "title": "PeriodicReportSignResponse",
+        "description": "Response returned after electronic signature on a periodic report."
+      },
+      "PeriodicReportStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "IN_REVIEW",
+          "APPROVED",
+          "ARCHIVED"
+        ],
+        "title": "PeriodicReportStatus",
+        "description": "Lifecycle state of a periodic regulatory safety report."
+      },
+      "PeriodicSafetyReportType": {
+        "type": "string",
+        "enum": [
+          "DSUR",
+          "PSUR",
+          "PBRER"
+        ],
+        "title": "PeriodicSafetyReportType",
+        "description": "Supported periodic aggregate regulatory safety report formats."
+      },
+      "RegulatoryAckProcessRequestDTO": {
+        "properties": {
+          "ack_payload": {
+            "type": "string",
+            "title": "Ack Payload",
+            "description": "ACK B or ACK C XML payload string"
+          },
+          "ack_type": {
+            "$ref": "#/components/schemas/AckType",
+            "description": "Acknowledgement type: ACK_B (syntactic) or ACK_C (authority acceptance)"
+          },
+          "transmission_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transmission Id",
+            "description": "Optional transmission ID to associate directly"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ack_payload",
+          "ack_type"
+        ],
+        "title": "RegulatoryAckProcessRequestDTO",
+        "description": "Request schema for processing an inbound ACK B or ACK C payload."
+      },
+      "RegulatoryAckProcessResponseDTO": {
+        "properties": {
+          "ack_type": {
+            "type": "string",
+            "title": "Ack Type"
+          },
+          "ack_status": {
+            "type": "string",
+            "title": "Ack Status"
+          },
+          "is_accepted": {
+            "type": "boolean",
+            "title": "Is Accepted"
+          },
+          "authority_receipt_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authority Receipt Id"
+          },
+          "worldwide_unique_case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worldwide Unique Case Id"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
+          "authority_status_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authority Status Code"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors",
+            "default": []
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "default": []
+          },
+          "received_at": {
+            "type": "string",
+            "title": "Received At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ack_type",
+          "ack_status",
+          "is_accepted",
+          "received_at"
+        ],
+        "title": "RegulatoryAckProcessResponseDTO",
+        "description": "Response schema after processing a regulatory acknowledgement."
       },
       "ReportingAuthority": {
         "type": "string",
@@ -2989,6 +5516,400 @@
         "title": "SafetyNarrativeSection",
         "description": "A structured narrative section containing formatted prose and grounded claim references."
       },
+      "SafetySignalAlertDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "detection_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detection Run Id"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id"
+          },
+          "target_drug": {
+            "type": "string",
+            "title": "Target Drug"
+          },
+          "meddra_term": {
+            "type": "string",
+            "title": "Meddra Term"
+          },
+          "term_level": {
+            "type": "string",
+            "title": "Term Level"
+          },
+          "meddra_soc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meddra Soc"
+          },
+          "case_count_a": {
+            "type": "integer",
+            "title": "Case Count A"
+          },
+          "expected_count_e": {
+            "type": "number",
+            "title": "Expected Count E"
+          },
+          "prr": {
+            "type": "number",
+            "title": "Prr"
+          },
+          "prr_ci_lower": {
+            "type": "number",
+            "title": "Prr Ci Lower"
+          },
+          "prr_ci_upper": {
+            "type": "number",
+            "title": "Prr Ci Upper"
+          },
+          "chi_square_yates": {
+            "type": "number",
+            "title": "Chi Square Yates"
+          },
+          "ror": {
+            "type": "number",
+            "title": "Ror"
+          },
+          "ror_ci_lower": {
+            "type": "number",
+            "title": "Ror Ci Lower"
+          },
+          "ror_ci_upper": {
+            "type": "number",
+            "title": "Ror Ci Upper"
+          },
+          "ebgm": {
+            "type": "number",
+            "title": "Ebgm"
+          },
+          "eb05": {
+            "type": "number",
+            "title": "Eb05"
+          },
+          "eb95": {
+            "type": "number",
+            "title": "Eb95"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "triage_summary": {
+            "type": "string",
+            "title": "Triage Summary"
+          },
+          "assigned_safety_officer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Safety Officer"
+          },
+          "review_decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Decision"
+          },
+          "review_justification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Justification"
+          },
+          "clinical_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinical Summary"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "esignature_manifest_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Esignature Manifest Id"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "target_drug",
+          "meddra_term",
+          "term_level",
+          "case_count_a",
+          "expected_count_e",
+          "prr",
+          "prr_ci_lower",
+          "prr_ci_upper",
+          "chi_square_yates",
+          "ror",
+          "ror_ci_lower",
+          "ror_ci_upper",
+          "ebgm",
+          "eb05",
+          "eb95",
+          "severity",
+          "status",
+          "triage_summary",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "SafetySignalAlertDTO",
+        "description": "Data transfer object for a safety signal review alert."
+      },
+      "SafetySignalAlertReviewRequest": {
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/SafetySignalReviewDecision"
+          },
+          "justification": {
+            "type": "string",
+            "minLength": 5,
+            "title": "Justification",
+            "description": "Medical rationale for the review decision"
+          },
+          "clinical_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinical Summary"
+          },
+          "assigned_safety_officer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Safety Officer"
+          },
+          "recommended_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Action"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision",
+          "justification"
+        ],
+        "title": "SafetySignalAlertReviewRequest",
+        "description": "Request payload for reviewing and updating a signal alert."
+      },
+      "SafetySignalAlertSignRequest": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "meaning_of_signature": {
+            "type": "string",
+            "title": "Meaning Of Signature",
+            "default": "Approval of Signal Review Assessment & Disposition"
+          },
+          "signature_secret": {
+            "type": "string",
+            "title": "Signature Secret"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/SafetySignalReviewDecision"
+          },
+          "justification": {
+            "type": "string",
+            "minLength": 5,
+            "title": "Justification",
+            "description": "Medical rationale for signature disposition"
+          },
+          "clinical_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinical Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "signature_secret",
+          "decision",
+          "justification"
+        ],
+        "title": "SafetySignalAlertSignRequest",
+        "description": "21 CFR Part 11 Electronic Signature request on a safety signal review disposition."
+      },
+      "SafetySignalAlertSignResponse": {
+        "properties": {
+          "alert_id": {
+            "type": "string",
+            "title": "Alert Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SafetySignalAlertStatus"
+          },
+          "reviewed_by": {
+            "type": "string",
+            "title": "Reviewed By"
+          },
+          "reviewed_at": {
+            "type": "string",
+            "title": "Reviewed At"
+          },
+          "esignature_manifest_id": {
+            "type": "string",
+            "title": "Esignature Manifest Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "alert_id",
+          "status",
+          "reviewed_by",
+          "reviewed_at",
+          "esignature_manifest_id",
+          "message"
+        ],
+        "title": "SafetySignalAlertSignResponse",
+        "description": "Response returned after applying a Part 11 electronic signature to an alert."
+      },
+      "SafetySignalAlertStatus": {
+        "type": "string",
+        "enum": [
+          "TRIGGERED",
+          "UNDER_REVIEW",
+          "CONFIRMED_SIGNAL",
+          "REFUTED",
+          "CLOSED"
+        ],
+        "title": "SafetySignalAlertStatus",
+        "description": "Operational lifecycle status of a safety signal review alert."
+      },
+      "SafetySignalReviewDecision": {
+        "type": "string",
+        "enum": [
+          "CONFIRM_SIGNAL",
+          "REFUTE_SIGNAL",
+          "REQUEST_SAFETY_INQUIRY",
+          "CLOSE_ALERT"
+        ],
+        "title": "SafetySignalReviewDecision",
+        "description": "Clinical safety review assessment decision."
+      },
       "SignICSRRuleEvaluationRequest": {
         "properties": {
           "reason_for_change": {
@@ -3066,6 +5987,216 @@
         ],
         "title": "SignICSRRuleEvaluationResponse",
         "description": "Response payload for 21 CFR Part 11 Safety Physician electronic signature."
+      },
+      "SignalDetectionScanRequest": {
+        "properties": {
+          "target_drug": {
+            "type": "string",
+            "title": "Target Drug"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id"
+          },
+          "comparator_drugs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Comparator Drugs",
+            "default": []
+          },
+          "benchmark_dataset": {
+            "$ref": "#/components/schemas/BenchmarkReferenceDataset",
+            "default": "INTERNAL_TRIAL_POOL"
+          },
+          "stratification_levels": {
+            "items": {
+              "$ref": "#/components/schemas/StratificationLevel"
+            },
+            "type": "array",
+            "title": "Stratification Levels",
+            "default": [
+              "PT",
+              "SOC"
+            ]
+          },
+          "min_case_count": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Min Case Count",
+            "default": 3
+          },
+          "prr_threshold": {
+            "type": "number",
+            "minimum": 1.0,
+            "title": "Prr Threshold",
+            "default": 2.0
+          },
+          "chi_square_threshold": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Chi Square Threshold",
+            "default": 4.0
+          },
+          "ror_ci_lower_threshold": {
+            "type": "number",
+            "minimum": 0.5,
+            "title": "Ror Ci Lower Threshold",
+            "default": 1.0
+          },
+          "eb05_threshold": {
+            "type": "number",
+            "minimum": 1.0,
+            "title": "Eb05 Threshold",
+            "default": 2.0
+          },
+          "auto_trigger_alerts": {
+            "type": "boolean",
+            "title": "Auto Trigger Alerts",
+            "default": true
+          },
+          "cases": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cases"
+          },
+          "benchmark_cases": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benchmark Cases"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_drug"
+        ],
+        "title": "SignalDetectionScanRequest",
+        "description": "Request schema for executing a disproportionality safety signal detection scan."
+      },
+      "SignalDetectionScanResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id"
+          },
+          "target_drug": {
+            "type": "string",
+            "title": "Target Drug"
+          },
+          "benchmark_dataset": {
+            "type": "string",
+            "title": "Benchmark Dataset"
+          },
+          "total_cases_analyzed": {
+            "type": "integer",
+            "title": "Total Cases Analyzed"
+          },
+          "total_terms_evaluated": {
+            "type": "integer",
+            "title": "Total Terms Evaluated"
+          },
+          "signals_detected_count": {
+            "type": "integer",
+            "title": "Signals Detected Count"
+          },
+          "alerts_triggered_count": {
+            "type": "integer",
+            "title": "Alerts Triggered Count"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/DisproportionalityMetricResult"
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "multi_item_results": {
+            "items": {
+              "$ref": "#/components/schemas/MGPSMultiItemResult"
+            },
+            "type": "array",
+            "title": "Multi Item Results",
+            "default": []
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "target_drug",
+          "benchmark_dataset",
+          "total_cases_analyzed",
+          "total_terms_evaluated",
+          "signals_detected_count",
+          "alerts_triggered_count",
+          "results",
+          "created_at"
+        ],
+        "title": "SignalDetectionScanResponse",
+        "description": "Response schema returned after executing a disproportionality scan."
+      },
+      "SignalStrength": {
+        "type": "string",
+        "enum": [
+          "CRITICAL",
+          "STRONG",
+          "MODERATE",
+          "WEAK",
+          "NONE"
+        ],
+        "title": "SignalStrength",
+        "description": "Classification of signal strength based on multi-metric consensus."
+      },
+      "StratificationLevel": {
+        "type": "string",
+        "enum": [
+          "PT",
+          "SOC"
+        ],
+        "title": "StratificationLevel",
+        "description": "MedDRA hierarchical level for disproportionality analysis."
       },
       "TimelineEventType": {
         "type": "string",

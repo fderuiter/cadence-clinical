@@ -63,6 +63,11 @@ _submodule_mappings = {
     "SiteInventory": "rtsm",
     "KitDispensation": "rtsm",
     "ResupplyEvent": "rtsm",
+    "SupplyNode": "rtsm",
+    "SupplyNodeInventory": "rtsm",
+    "TransferOrder": "rtsm",
+    "PackingManifest": "rtsm",
+    "PredictiveResupplyForecast": "rtsm",
     # biostat
     "BiostatExport": "biostat",
     "SDTMDomainRecord": "biostat",

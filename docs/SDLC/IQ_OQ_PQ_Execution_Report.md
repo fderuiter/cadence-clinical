@@ -7,11 +7,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3303
-- **Passed:** 3272 🟢
-- **Failed/Errors:** 1 🔴
+- **Total Automated Test Cases Run:** 3311
+- **Passed:** 3281 🟢
+- **Failed/Errors:** 0 🔴
 - **Skipped:** 30 ⚪
-- **Overall Operational Pass Rate:** 99.06%
+- **Overall Operational Pass Rate:** 99.09%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -243,7 +243,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 ### 3.1 Traceability Mappings Verification
 | Test Case Name | Classname / Suite | Target Req | Status | Duration |
 | :--- | :--- | :--- | :--- | :--- |
-| `apps.imaging.tests.test_adjudication` | `` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_embedding_batch_sanitization` | `apps.ai_gateway.tests.test_deid_airgap` | PRD-SYS-051 | 🟢 PASSED | < 1s |
 | `test_enable_deid_false_bypasses_scrubbing` | `apps.ai_gateway.tests.test_deid_airgap` | PRD-SYS-051 | 🟢 PASSED | < 1s |
 | `test_inflight_prompt_deidentification_and_rehydration` | `apps.ai_gateway.tests.test_deid_airgap` | PRD-SYS-051 | 🟢 PASSED | < 1s |
@@ -1729,6 +1728,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_randomization_config_validation` | `apps.execution.tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reproducibility_and_seeding` | `apps.execution.tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_stratified_block_isolation` | `apps.execution.tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_forecast_storage_capacity_bounding` | `apps.execution.tests.test_rtsm_predictive_forecasting` | PRD-SCM-001 | 🟢 PASSED | < 1s |
+| `test_predictive_forecast_endpoint_and_persistence` | `apps.execution.tests.test_rtsm_predictive_forecasting` | PRD-SCM-001 | 🟢 PASSED | < 1s |
+| `test_predictive_forecast_pure_calculation` | `apps.execution.tests.test_rtsm_predictive_forecasting` | PRD-SCM-001 | 🟢 PASSED | < 1s |
 | `test_evaluate_resupply_boundaries` | `apps.execution.tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_hard_delete_prevented_for_supply_entities` | `apps.execution.tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_insufficient_stock_rejection_and_rollback` | `apps.execution.tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1739,6 +1741,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_successful_dispensation_endpoint` | `apps.execution.tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_supply_entities_audit_trail_and_soft_delete` | `apps.execution.tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trial_locking_conformity` | `apps.execution.tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_build_supply_hierarchy_tree_pure` | `apps.execution.tests.test_rtsm_supply_hierarchy` | PRD-SCM-001 | 🟢 PASSED | < 1s |
+| `test_hierarchy_circular_dependency_rejection` | `apps.execution.tests.test_rtsm_supply_hierarchy` | PRD-SCM-001 | 🟢 PASSED | < 1s |
+| `test_supply_node_endpoints_and_audit` | `apps.execution.tests.test_rtsm_supply_hierarchy` | PRD-SCM-001 | 🟢 PASSED | < 1s |
+| `test_full_transfer_order_and_manifest_lifecycle` | `apps.execution.tests.test_rtsm_transfer_orders` | PRD-SCM-001 | 🟢 PASSED | < 1s |
+| `test_locked_destination_blocks_transfer_order` | `apps.execution.tests.test_rtsm_transfer_orders` | PRD-SCM-001 | 🟢 PASSED | < 1s |
+| `test_storage_capacity_exceeded_rejection` | `apps.execution.tests.test_rtsm_transfer_orders` | PRD-SCM-001 | 🟢 PASSED | < 1s |
 | `test_ae_required_optional_and_date_order` | `apps.execution.tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_auditable_model_fields_and_validation` | `apps.execution.tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cm_required_optional_and_date_order` | `apps.execution.tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3584,28 +3592,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 8eee6f745bac638388503b35a5883a60c6686273208540d97a39f8687ef7da8e
+- **Cryptographic Hash (SHA-256):** 119af4590f5b6892b81bac27fb68e9e8cf9ed8b85518fdd4c819ab1ff943323f
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUFvAPB1yGVZ8Lp8AvlfWOLUgxv7owDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUNc48/0KRXHH5Q1rmNJk/8KKccp0wDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MjA1MTEyMloXDTI3MDgyMzA1MTEyMlowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MjE0NTUxNFoXDTI3MDgyMzE0NTUxNFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqTQl
-ydiMUk3H33g4dtM35ejHZtBp9djgcJZlT3eC87Hy1H/Zlfi9HlNhXiGR8ZDIGK8q
-8UJVUgugcuPqK/mrSHe2w1k1w2Y8lKAYrbUk7ObZfQBX16D09fIsEIqfd40coJ8p
-cKDPsA6RvEVLQEVlAsQHszFNGlMYWUQwRbACoPvgIXoxYwL3MZbB2E2lEF9528rz
-JAOwNfJSgcGV1IQtIqQVqysivC0ZvFIC5uxx/I+yjjq69RMrVLiX4hjoGyr/dEja
-S37ddm5Y72po3lLJvoNNpq86EdHXyVHn6Crmshjt7szv2pHcuH1GXS95y+CQt67e
-DdfiI6/r/osuSYog8wIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQA4quYAh02W11Sj
-2hEjvy315HY8quy2Zm/2yEbhOJISOskVTGuYq4Qlidywz07/WG2g29k8zGZpzxJX
-ek41zmQCYxWLqfRNgvZt2l7k0ZO7vs2kn19mjc4aRZ+dfv6xcVZR81fZko74OECO
-sHGUzSyjNVv7fTKKgOX+SCWiyResHXHqSqNFiqRu2QvwAUPC3kWap3NIHthFrReT
-eGp3/5Bld2aaYBIueGnNpqYdZBRokweo+RMqmo+CTmaEMgiYoh8xCrH/CmcE8cyq
-tWJpDC3V9l05lFgC2jkd//ak2YXOes0A8dGAzwSeVRDk1jy0PIEoWNu2+ee+uTPo
-gnrVSGnA
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArwTq
+0OQ1vbwJCLaAE1VZpdwhzzBdhSMBhglE5pBqQOFEhyeORNEiwxlOcIfiPBnfANzP
+p2GFg5d9tbff/4SRrUIyLUcp9oAx40Km2jnhK2GMyXb/vfBfOotQIxESPusCBUR+
+Q7ekRTxWJPAHwqYjwUu8+ReeCk0D3CgkxbySQBznavMFnJuM+q+jta7709e7Unga
+ivpyPYBjwH9btP3q5/EoQzkItPB3O7+RL2lA2Hf3df2q2DoRG6RdltBMwHTxJS7S
+Is2brUz9b7JKl4/Vb4YguMWDvfRyp2t0GTfdvKfffHqbmo2NJSEbFFQlvXjU3iHm
+0SU77NFhhOZfCmat/wIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBaIDkhxzrUYDWf
+k1zazxOMQS7Thwkmv0JJFg4mJNYdzGgcDgPbeZsHrioVogHhWp+dWEzbgFRNbQ/C
+zv5DEvqvT+wpYSX0eLg9wYB4ZRTrM3sMsHg1LVZoIUYB5Uwzpk3vQGN6qvHPZN2j
+GKjw3NdVwY79tsVToyNDyuAyBXeKrmFf8L2boOpFrYbuFe0eq0Imvre/fcSdbuM9
+8BCQYZVogtdstfRuKxVjTALO+diYpo01AsHQ/Vr4ZKdvah/uVO1ujqu/Qj8+DP9F
+pvxhG+C7N++isZDPMQghm2fgPZj/Thf1AD/cL7f3OJQBMFaBQyxcdz0EySAHAD0l
+hFc3aBRJ
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-f/h0p2jY0mrrHJgAi1hORGHnWFNPl9AwSq620VR8D1gmMXMxDski4yTvthkXgnMjwNE86nUcA2IPCic/rF9Xfsj30mmemGhcLD+JgzJEZkEALNHm8dh7s89fHAyu08xpTv6dNOL3D8GMEJGoylkd40mPoR6HLD3ukov/oXs+cZaR35F7HPN2u7Vc7u+mI4PzkPKAbE+6Uoc9ESeE7RS84u9A8mmQZF4RW9Xs/+3EV41eU729LeIf+OaFluNdUTTa8OZcB4VmDvFUKz1x36SiUJFETSxW59L9UTlizTVkJpihCgZ+wyvH7pt54mmkD+b6gEkf8uhQE/AsXoizLk+6ag==
+AT+zNBf6yPw7iaBM8iCPZlMoqlYMlC8acGRohrY3pkmWIlr8EZwYBOVBXkvf3EtRBi32ZfJe5pmI3fjgD3h98rGaRL6NvWC12dGSeY8Ci7cAKT8moCaSf3I+ceenDYgfRLNTOkbrMgO8y53Iq4w77EPC0UX3JqXeIBGrjmKIyXgPQ6mPkNMxwizBX2NJqeDtagTtzoJIDw7t7E+ASSK1nb+TU7SlAwoVeef6nNKykju5GYgo+5uGUuzfV6PZZaJJ1txeQZaeZbchxUFI2k+zBpgREuDOUnFpIYDimCO63RWmskni9+xhw4dd5rrEu5DsCNUhFztLrZ7EocB0+vrWaw==
 -----END SIGNATURE-----

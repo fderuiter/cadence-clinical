@@ -406,6 +406,891 @@
         }
       }
     },
+    "/api/v1/imaging/series/{series_instance_uid}/mpr-metadata": {
+      "get": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Get Series Mpr Metadata",
+        "description": "Retrieves 3D volume geometry, voxel spacing, and MPR orientation metadata.\n\n@req:PRD-IMG-001\n@req:PRD-IMG-004",
+        "operationId": "get_series_mpr_metadata_api_v1_imaging_series__series_instance_uid__mpr_metadata_get",
+        "parameters": [
+          {
+            "name": "series_instance_uid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Series Instance Uid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MprMetadataResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/annotations": {
+      "post": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Create Caliper Annotation",
+        "description": "Creates a new oncologic caliper annotation with 21 CFR Part 11 audit logging.\n\n@req:PRD-IMG-004\n@req:PRD-SYS-001",
+        "operationId": "create_caliper_annotation_api_v1_imaging_annotations_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaliperAnnotationCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaliperAnnotationResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "List Caliper Annotations",
+        "description": "Lists caliper annotations matching criteria.\n\n@req:PRD-IMG-004",
+        "operationId": "list_caliper_annotations_api_v1_imaging_annotations_get",
+        "parameters": [
+          {
+            "name": "study_envelope_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Envelope Id"
+            }
+          },
+          {
+            "name": "series_envelope_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Series Envelope Id"
+            }
+          },
+          {
+            "name": "sop_instance_uid",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sop Instance Uid"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "timepoint_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timepoint Name"
+            }
+          },
+          {
+            "name": "reader_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Reader Id"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CaliperAnnotationResponseDto"
+                  },
+                  "title": "Response List Caliper Annotations Api V1 Imaging Annotations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/annotations/{annotation_id}": {
+      "delete": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Delete Caliper Annotation",
+        "description": "Deletes a caliper annotation with 21 CFR Part 11 reason for change.\n\n@req:PRD-IMG-004\n@req:PRD-SYS-001",
+        "operationId": "delete_caliper_annotation_api_v1_imaging_annotations__annotation_id__delete",
+        "parameters": [
+          {
+            "name": "annotation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Annotation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete Caliper Annotation Api V1 Imaging Annotations  Annotation Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/response-evaluations/recist": {
+      "post": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Evaluate Recist Response",
+        "description": "Computes automated RECIST 1.1 derivation for target and non-target lesions.\n\n@req:PRD-IMG-004",
+        "operationId": "evaluate_recist_response_api_v1_imaging_response_evaluations_recist_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RECISTEvaluationRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RECISTEvaluationResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/response-evaluations/lugano": {
+      "post": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Evaluate Lugano Response",
+        "description": "Computes automated Lugano 2014 & Cheson derivation for lymphoma.\n\n@req:PRD-IMG-004",
+        "operationId": "evaluate_lugano_response_api_v1_imaging_response_evaluations_lugano_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LuganoEvaluationRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LuganoEvaluationResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/subjects/{subject_id}/timepoints": {
+      "get": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Get Subject Timepoints Trajectory",
+        "description": "Retrieves full chronological trajectory of locked oncologic evaluations for a subject.\n\n@req:PRD-IMG-004",
+        "operationId": "get_subject_timepoints_trajectory_api_v1_imaging_subjects__subject_id__timepoints_get",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectTimepointsTrajectoryResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/subjects/{subject_id}/timepoints/evaluate": {
+      "post": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Evaluate And Lock Timepoint",
+        "description": "Evaluates, cryptographically signs, and locks an oncologic timepoint assessment.\n\n@req:PRD-IMG-004\n@req:PRD-SYS-001",
+        "operationId": "evaluate_and_lock_timepoint_api_v1_imaging_subjects__subject_id__timepoints_evaluate_post",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectTimepointEvaluateRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimepointTrajectorySummaryDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/adjudication/sessions": {
+      "post": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Create Adjudication Session",
+        "description": "Instantiates and routes a new Blinded Dual-Reader Independent Review Charter session.\n\n@req:PRD-IMG-003\n@req:PRD-SYS-001",
+        "operationId": "create_adjudication_session_api_v1_imaging_adjudication_sessions_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAdjudicationSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdjudicationSessionResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "List Adjudication Sessions",
+        "description": "Lists adjudication sessions with dynamic blinding enforcement based on requesting role.\n\n@req:PRD-IMG-003",
+        "operationId": "list_adjudication_sessions_api_v1_imaging_adjudication_sessions_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "timepoint_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timepoint Name"
+            }
+          },
+          {
+            "name": "workflow_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Workflow Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdjudicationSessionResponseDto"
+                  },
+                  "title": "Response List Adjudication Sessions Api V1 Imaging Adjudication Sessions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/adjudication/sessions/{session_id}": {
+      "get": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Get Adjudication Session",
+        "description": "Retrieves an adjudication session with strict blinding isolation between readers.\n\n@req:PRD-IMG-003",
+        "operationId": "get_adjudication_session_api_v1_imaging_adjudication_sessions__session_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdjudicationSessionResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/adjudication/sessions/{session_id}/assessments": {
+      "post": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Submit Reader Assessment",
+        "description": "Submits a blinded reader assessment and automatically detects response discordance.\n\n@req:PRD-IMG-003\n@req:PRD-IMG-005",
+        "operationId": "submit_reader_assessment_api_v1_imaging_adjudication_sessions__session_id__assessments_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitReaderAssessmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdjudicationSessionResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/adjudication/sessions/{session_id}/sign-off": {
+      "post": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Sign Off Adjudication",
+        "description": "Executes 21 CFR Part 11 step-up electronic signature sign-off for binding tie-breaker determination.\n\n@req:PRD-IMG-005\n@req:PRD-SYS-001",
+        "operationId": "sign_off_adjudication_api_v1_imaging_adjudication_sessions__session_id__sign_off_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StepUpAdjudicationSignOffDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdjudicationSessionResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/adjudication/sessions/{session_id}/edc-binding": {
+      "get": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Get Edc Ecrf Tumor Binding",
+        "description": "Extracts direct EDC eCRF tumor assessment form bindings from verified adjudication measurements.\n\n@req:PRD-IMG-006",
+        "operationId": "get_edc_ecrf_tumor_binding_api_v1_imaging_adjudication_sessions__session_id__edc_binding_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EDCTumorBindingResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/adjudication/sessions/{session_id}/export-sdtm": {
+      "get": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Export Adjudication Sdtm Datasets",
+        "description": "Exports CDISC SDTM TU (Tumor Identification), TR (Tumor Results), and RS (Disease Response) datasets.\n\n@req:PRD-IMG-006",
+        "operationId": "export_adjudication_sdtm_datasets_api_v1_imaging_adjudication_sessions__session_id__export_sdtm_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SDTMDatasetExportResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/adjudication/sessions/{session_id}/sdtm": {
+      "get": {
+        "tags": [
+          "Medical Imaging"
+        ],
+        "summary": "Export Adjudication Sdtm Datasets",
+        "description": "Exports CDISC SDTM TU (Tumor Identification), TR (Tumor Results), and RS (Disease Response) datasets.\n\n@req:PRD-IMG-006",
+        "operationId": "export_adjudication_sdtm_datasets_api_v1_imaging_adjudication_sessions__session_id__sdtm_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SDTMDatasetExportResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -432,6 +1317,292 @@
   },
   "components": {
     "schemas": {
+      "AdjudicationSessionResponseDto": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "study_envelope_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Envelope Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "timepoint_name": {
+            "type": "string",
+            "title": "Timepoint Name"
+          },
+          "assessment_criteria": {
+            "type": "string",
+            "title": "Assessment Criteria"
+          },
+          "workflow_status": {
+            "type": "string",
+            "title": "Workflow Status"
+          },
+          "reader_1_status": {
+            "type": "string",
+            "title": "Reader 1 Status"
+          },
+          "reader_2_status": {
+            "type": "string",
+            "title": "Reader 2 Status"
+          },
+          "reader_1_assessment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlindedReaderAssessmentDto"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reader_2_assessment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlindedReaderAssessmentDto"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "adjudicator_assessment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlindedReaderAssessmentDto"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sld_discordance_delta": {
+            "type": "number",
+            "title": "Sld Discordance Delta",
+            "default": 0.0
+          },
+          "is_response_discordant": {
+            "type": "boolean",
+            "title": "Is Response Discordant",
+            "default": false
+          },
+          "discordance_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Discordance Reasons"
+          },
+          "final_consensus_response": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Consensus Response"
+          },
+          "final_consensus_sld_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Consensus Sld Mm"
+          },
+          "binding_reader": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Binding Reader"
+          },
+          "adjudication_rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjudication Rationale"
+          },
+          "electronic_signature": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Electronic Signature"
+          },
+          "locked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked At"
+          },
+          "locked_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked By"
+          },
+          "session_digest": {
+            "type": "string",
+            "title": "Session Digest",
+            "default": ""
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "timepoint_name",
+          "assessment_criteria",
+          "workflow_status",
+          "reader_1_status",
+          "reader_2_status"
+        ],
+        "title": "AdjudicationSessionResponseDto",
+        "description": "Dual-reader adjudication session response (dynamically filtered for blinding)."
+      },
+      "BlindedReaderAssessmentDto": {
+        "properties": {
+          "reader_id": {
+            "type": "string",
+            "title": "Reader Id"
+          },
+          "reader_name": {
+            "type": "string",
+            "title": "Reader Name"
+          },
+          "reader_role": {
+            "type": "string",
+            "title": "Reader Role"
+          },
+          "timepoint_name": {
+            "type": "string",
+            "title": "Timepoint Name"
+          },
+          "target_lesions": {
+            "items": {
+              "$ref": "#/components/schemas/LesionMeasurementDto"
+            },
+            "type": "array",
+            "title": "Target Lesions"
+          },
+          "non_target_status": {
+            "type": "string",
+            "title": "Non Target Status"
+          },
+          "new_lesions_present": {
+            "type": "boolean",
+            "title": "New Lesions Present"
+          },
+          "new_lesions_count": {
+            "type": "integer",
+            "title": "New Lesions Count"
+          },
+          "sum_longest_diameters_mm": {
+            "type": "number",
+            "title": "Sum Longest Diameters Mm"
+          },
+          "overall_response": {
+            "type": "string",
+            "title": "Overall Response"
+          },
+          "assessment_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessment Notes"
+          },
+          "submitted_at": {
+            "type": "string",
+            "title": "Submitted At"
+          },
+          "digital_signature": {
+            "type": "string",
+            "title": "Digital Signature"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reader_id",
+          "reader_name",
+          "reader_role",
+          "timepoint_name",
+          "non_target_status",
+          "new_lesions_present",
+          "new_lesions_count",
+          "sum_longest_diameters_mm",
+          "overall_response",
+          "submitted_at",
+          "digital_signature"
+        ],
+        "title": "BlindedReaderAssessmentDto",
+        "description": "Blinded reader assessment representation."
+      },
       "Body_deidentify_in_flight_api_v1_imaging_deidentify_post": {
         "properties": {
           "file": {
@@ -527,6 +1698,407 @@
         ],
         "title": "Body_upload_dicom_api_v1_imaging_upload_post"
       },
+      "CaliperAnnotationCreateDto": {
+        "properties": {
+          "study_envelope_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Envelope Id"
+          },
+          "series_envelope_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series Envelope Id"
+          },
+          "sop_instance_uid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sop Instance Uid"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "timepoint_name": {
+            "type": "string",
+            "title": "Timepoint Name"
+          },
+          "lesion_id": {
+            "type": "string",
+            "title": "Lesion Id"
+          },
+          "lesion_type": {
+            "type": "string",
+            "title": "Lesion Type",
+            "default": "TARGET"
+          },
+          "organ_site": {
+            "type": "string",
+            "title": "Organ Site"
+          },
+          "measurement_criteria": {
+            "type": "string",
+            "title": "Measurement Criteria",
+            "default": "RECIST_1_1"
+          },
+          "measurement_type": {
+            "type": "string",
+            "title": "Measurement Type",
+            "default": "1D_RECIST"
+          },
+          "longest_diameter_mm": {
+            "type": "number",
+            "title": "Longest Diameter Mm"
+          },
+          "perpendicular_diameter_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Perpendicular Diameter Mm"
+          },
+          "volume_mm3": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume Mm3"
+          },
+          "slice_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slice Index"
+          },
+          "slice_location": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slice Location"
+          },
+          "deauville_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deauville Score"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/PointCoordinateDto"
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "hounsfield_stats": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hounsfield Stats"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_id",
+          "timepoint_name",
+          "lesion_id",
+          "organ_site",
+          "longest_diameter_mm"
+        ],
+        "title": "CaliperAnnotationCreateDto",
+        "description": "Request payload to create a new oncologic caliper annotation."
+      },
+      "CaliperAnnotationResponseDto": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_envelope_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Envelope Id"
+          },
+          "series_envelope_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series Envelope Id"
+          },
+          "sop_instance_uid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sop Instance Uid"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "timepoint_name": {
+            "type": "string",
+            "title": "Timepoint Name"
+          },
+          "lesion_id": {
+            "type": "string",
+            "title": "Lesion Id"
+          },
+          "lesion_type": {
+            "type": "string",
+            "title": "Lesion Type"
+          },
+          "organ_site": {
+            "type": "string",
+            "title": "Organ Site"
+          },
+          "measurement_criteria": {
+            "type": "string",
+            "title": "Measurement Criteria"
+          },
+          "measurement_type": {
+            "type": "string",
+            "title": "Measurement Type"
+          },
+          "longest_diameter_mm": {
+            "type": "number",
+            "title": "Longest Diameter Mm"
+          },
+          "perpendicular_diameter_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Perpendicular Diameter Mm"
+          },
+          "product_perpendicular_mm2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Perpendicular Mm2"
+          },
+          "volume_mm3": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume Mm3"
+          },
+          "slice_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slice Index"
+          },
+          "slice_location": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slice Location"
+          },
+          "deauville_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deauville Score"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/PointCoordinateDto"
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "hounsfield_stats": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hounsfield Stats"
+          },
+          "reader_id": {
+            "type": "string",
+            "title": "Reader Id"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "timepoint_name",
+          "lesion_id",
+          "lesion_type",
+          "organ_site",
+          "measurement_criteria",
+          "measurement_type",
+          "longest_diameter_mm",
+          "reader_id",
+          "created_by",
+          "version_index"
+        ],
+        "title": "CaliperAnnotationResponseDto",
+        "description": "Response representing a stored caliper annotation."
+      },
       "CertificateVerificationResponse": {
         "properties": {
           "certificate_id": {
@@ -595,6 +2167,106 @@
         ],
         "title": "CertificateVerificationResponse",
         "description": "Response returned when validating a cryptographic de-identification certificate."
+      },
+      "CreateAdjudicationSessionDto": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Trial Protocol Identifier"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Clinical Trial Site ID"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Trial Subject UUID"
+          },
+          "timepoint_name": {
+            "type": "string",
+            "title": "Timepoint Name",
+            "description": "e.g. BASELINE, CYCLE_2_DAY_1"
+          },
+          "study_envelope_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Envelope Id",
+            "description": "Optional study envelope ID"
+          },
+          "assessment_criteria": {
+            "type": "string",
+            "title": "Assessment Criteria",
+            "description": "RECIST_1_1, LUGANO_2014, RANO",
+            "default": "RECIST_1_1"
+          },
+          "reader_1_id": {
+            "type": "string",
+            "title": "Reader 1 Id",
+            "description": "Certified Radiologist 1 User ID"
+          },
+          "reader_1_name": {
+            "type": "string",
+            "title": "Reader 1 Name",
+            "description": "Reader 1 Full Name",
+            "default": "Reader 1"
+          },
+          "reader_2_id": {
+            "type": "string",
+            "title": "Reader 2 Id",
+            "description": "Certified Radiologist 2 User ID"
+          },
+          "reader_2_name": {
+            "type": "string",
+            "title": "Reader 2 Name",
+            "description": "Reader 2 Full Name",
+            "default": "Reader 2"
+          },
+          "adjudicator_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjudicator Id",
+            "description": "Adjudication Committee Chair User ID"
+          },
+          "adjudicator_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjudicator Name",
+            "description": "Adjudicator Full Name",
+            "default": "Adjudication Committee Chair"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_id",
+          "timepoint_name",
+          "reader_1_id",
+          "reader_2_id"
+        ],
+        "title": "CreateAdjudicationSessionDto",
+        "description": "Payload to instantiate a new Blinded Dual-Reader IRC adjudication session."
       },
       "DicomDeidCertificate": {
         "properties": {
@@ -775,6 +2447,160 @@
         "title": "DicomUploadResponse",
         "description": "Response returned upon successful upload and de-identification of DICOM files."
       },
+      "EDCTumorBindingResponseDto": {
+        "properties": {
+          "form_id": {
+            "type": "string",
+            "title": "Form Id",
+            "default": "eCRF_TUMOR_ASSESSMENT"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "timepoint_name": {
+            "type": "string",
+            "title": "Timepoint Name"
+          },
+          "assessment_criteria": {
+            "type": "string",
+            "title": "Assessment Criteria"
+          },
+          "target_lesions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Target Lesions"
+          },
+          "sum_longest_diameters_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sum Longest Diameters Mm"
+          },
+          "baseline_sld_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Sld Mm"
+          },
+          "nadir_sld_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nadir Sld Mm"
+          },
+          "pct_change_baseline": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Change Baseline"
+          },
+          "pct_change_nadir": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Change Nadir"
+          },
+          "non_target_status": {
+            "type": "string",
+            "title": "Non Target Status"
+          },
+          "new_lesions_present": {
+            "type": "boolean",
+            "title": "New Lesions Present"
+          },
+          "overall_response": {
+            "type": "string",
+            "title": "Overall Response"
+          },
+          "adjudication_status": {
+            "type": "string",
+            "title": "Adjudication Status"
+          },
+          "binding_source": {
+            "type": "string",
+            "title": "Binding Source"
+          },
+          "manifest_sha256": {
+            "type": "string",
+            "title": "Manifest Sha256"
+          },
+          "signed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signed By"
+          },
+          "signed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_id",
+          "timepoint_name",
+          "assessment_criteria",
+          "non_target_status",
+          "new_lesions_present",
+          "overall_response",
+          "adjudication_status",
+          "binding_source",
+          "manifest_sha256"
+        ],
+        "title": "EDCTumorBindingResponseDto",
+        "description": "Direct EDC eCRF binding payload."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -905,6 +2731,358 @@
         "title": "InstanceEnvelopeSummaryDto",
         "description": "Summary of a stored de-identified instance envelope."
       },
+      "LesionMeasurementDto": {
+        "properties": {
+          "lesion_id": {
+            "type": "string",
+            "title": "Lesion Id",
+            "description": "Lesion tag, e.g. TL1, TL2, NTL1"
+          },
+          "organ_site": {
+            "type": "string",
+            "title": "Organ Site",
+            "description": "Anatomical organ location"
+          },
+          "longest_diameter_mm": {
+            "type": "number",
+            "title": "Longest Diameter Mm",
+            "description": "Longest axis diameter in mm"
+          },
+          "short_axis_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Axis Mm",
+            "description": "Short / perpendicular axis in mm"
+          },
+          "slice_location": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slice Location",
+            "description": "Slice Z-position"
+          },
+          "slice_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slice Index",
+            "description": "Instance slice index"
+          },
+          "sop_instance_uid": {
+            "type": "string",
+            "title": "Sop Instance Uid",
+            "description": "DICOM SOP Instance UID",
+            "default": ""
+          },
+          "deauville_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deauville Score",
+            "description": "Deauville 1-5 score for PET"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lesion_id",
+          "organ_site",
+          "longest_diameter_mm"
+        ],
+        "title": "LesionMeasurementDto",
+        "description": "Individual target or non-target lesion caliper measurement."
+      },
+      "LuganoEvaluationRequestDto": {
+        "properties": {
+          "current_lesions": {
+            "items": {
+              "$ref": "#/components/schemas/LuganoLesionInputDto"
+            },
+            "type": "array",
+            "title": "Current Lesions"
+          },
+          "baseline_spd_mm2": {
+            "type": "number",
+            "title": "Baseline Spd Mm2",
+            "default": 0.0
+          },
+          "prior_timepoints_spd": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Prior Timepoints Spd"
+          },
+          "new_lesions_present": {
+            "type": "boolean",
+            "title": "New Lesions Present",
+            "default": false
+          },
+          "single_lesion_progression": {
+            "type": "boolean",
+            "title": "Single Lesion Progression",
+            "default": false
+          },
+          "non_measured_progression": {
+            "type": "boolean",
+            "title": "Non Measured Progression",
+            "default": false
+          },
+          "is_baseline": {
+            "type": "boolean",
+            "title": "Is Baseline",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "current_lesions"
+        ],
+        "title": "LuganoEvaluationRequestDto",
+        "description": "Request payload to derive Lugano 2014 / Cheson response."
+      },
+      "LuganoEvaluationResponseDto": {
+        "properties": {
+          "criteria": {
+            "type": "string",
+            "title": "Criteria",
+            "default": "LUGANO_2014"
+          },
+          "baseline_spd_mm2": {
+            "type": "number",
+            "title": "Baseline Spd Mm2"
+          },
+          "nadir_spd_mm2": {
+            "type": "number",
+            "title": "Nadir Spd Mm2"
+          },
+          "current_spd_mm2": {
+            "type": "number",
+            "title": "Current Spd Mm2"
+          },
+          "pct_change_spd_baseline": {
+            "type": "number",
+            "title": "Pct Change Spd Baseline"
+          },
+          "pct_change_spd_nadir": {
+            "type": "number",
+            "title": "Pct Change Spd Nadir"
+          },
+          "ct_response": {
+            "type": "string",
+            "title": "Ct Response"
+          },
+          "pet_metabolic_response": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pet Metabolic Response"
+          },
+          "max_deauville_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Deauville Score"
+          },
+          "new_lesions_present": {
+            "type": "boolean",
+            "title": "New Lesions Present"
+          },
+          "overall_response": {
+            "type": "string",
+            "title": "Overall Response"
+          }
+        },
+        "type": "object",
+        "required": [
+          "baseline_spd_mm2",
+          "nadir_spd_mm2",
+          "current_spd_mm2",
+          "pct_change_spd_baseline",
+          "pct_change_spd_nadir",
+          "ct_response",
+          "new_lesions_present",
+          "overall_response"
+        ],
+        "title": "LuganoEvaluationResponseDto",
+        "description": "Response containing derived Lugano 2014 parameters."
+      },
+      "LuganoLesionInputDto": {
+        "properties": {
+          "lesion_id": {
+            "type": "string",
+            "title": "Lesion Id"
+          },
+          "organ_site": {
+            "type": "string",
+            "title": "Organ Site"
+          },
+          "longest_diameter_mm": {
+            "type": "number",
+            "title": "Longest Diameter Mm"
+          },
+          "perpendicular_diameter_mm": {
+            "type": "number",
+            "title": "Perpendicular Diameter Mm"
+          },
+          "is_extranodal": {
+            "type": "boolean",
+            "title": "Is Extranodal",
+            "default": false
+          },
+          "deauville_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deauville Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lesion_id",
+          "organ_site",
+          "longest_diameter_mm",
+          "perpendicular_diameter_mm"
+        ],
+        "title": "LuganoLesionInputDto",
+        "description": "Input representation of a target lesion for Lugano derivation."
+      },
+      "MprMetadataResponseDto": {
+        "properties": {
+          "series_instance_uid": {
+            "type": "string",
+            "title": "Series Instance Uid"
+          },
+          "modality": {
+            "type": "string",
+            "title": "Modality"
+          },
+          "rows": {
+            "type": "integer",
+            "title": "Rows"
+          },
+          "columns": {
+            "type": "integer",
+            "title": "Columns"
+          },
+          "slice_count": {
+            "type": "integer",
+            "title": "Slice Count"
+          },
+          "pixel_spacing": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Pixel Spacing"
+          },
+          "slice_thickness": {
+            "type": "number",
+            "title": "Slice Thickness"
+          },
+          "slice_spacing": {
+            "type": "number",
+            "title": "Slice Spacing"
+          },
+          "volume_dimensions_mm": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Volume Dimensions Mm"
+          },
+          "window_center": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Center"
+          },
+          "window_width": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Width"
+          },
+          "available_planes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Available Planes"
+          },
+          "window_presets": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Window Presets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "series_instance_uid",
+          "modality",
+          "rows",
+          "columns",
+          "slice_count",
+          "pixel_spacing",
+          "slice_thickness",
+          "slice_spacing",
+          "volume_dimensions_mm",
+          "available_planes",
+          "window_presets"
+        ],
+        "title": "MprMetadataResponseDto",
+        "description": "Response containing 3D volume geometry and MPR slice configuration."
+      },
       "PixelMaskBoundingBox": {
         "properties": {
           "x_min": {
@@ -938,6 +3116,36 @@
         "title": "PixelMaskBoundingBox",
         "description": "Bounding box coordinates for burned-in pixel PHI masking."
       },
+      "PointCoordinateDto": {
+        "properties": {
+          "x": {
+            "type": "number",
+            "title": "X"
+          },
+          "y": {
+            "type": "number",
+            "title": "Y"
+          },
+          "z": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Z"
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "PointCoordinateDto",
+        "description": "2D or 3D point in pixel space or patient physical space."
+      },
       "PresignedDownloadUrlResponse": {
         "properties": {
           "sop_instance_uid": {
@@ -961,6 +3169,238 @@
         ],
         "title": "PresignedDownloadUrlResponse",
         "description": "Response containing a short-lived presigned URL for secure instance download."
+      },
+      "RECISTEvaluationRequestDto": {
+        "properties": {
+          "current_lesions": {
+            "items": {
+              "$ref": "#/components/schemas/RECISTLesionInputDto"
+            },
+            "type": "array",
+            "title": "Current Lesions"
+          },
+          "baseline_sld_mm": {
+            "type": "number",
+            "title": "Baseline Sld Mm",
+            "default": 0.0
+          },
+          "prior_timepoints_sld": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Prior Timepoints Sld"
+          },
+          "non_target_status": {
+            "type": "string",
+            "title": "Non Target Status",
+            "default": "NON_CR_NON_PD"
+          },
+          "new_lesions_present": {
+            "type": "boolean",
+            "title": "New Lesions Present",
+            "default": false
+          },
+          "new_lesions_count": {
+            "type": "integer",
+            "title": "New Lesions Count",
+            "default": 0
+          },
+          "is_baseline": {
+            "type": "boolean",
+            "title": "Is Baseline",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "current_lesions"
+        ],
+        "title": "RECISTEvaluationRequestDto",
+        "description": "Request payload to derive RECIST 1.1 tumor response."
+      },
+      "RECISTEvaluationResponseDto": {
+        "properties": {
+          "criteria": {
+            "type": "string",
+            "title": "Criteria",
+            "default": "RECIST_1_1"
+          },
+          "baseline_sld_mm": {
+            "type": "number",
+            "title": "Baseline Sld Mm"
+          },
+          "nadir_sld_mm": {
+            "type": "number",
+            "title": "Nadir Sld Mm"
+          },
+          "current_sld_mm": {
+            "type": "number",
+            "title": "Current Sld Mm"
+          },
+          "pct_change_baseline": {
+            "type": "number",
+            "title": "Pct Change Baseline"
+          },
+          "pct_change_nadir": {
+            "type": "number",
+            "title": "Pct Change Nadir"
+          },
+          "absolute_change_nadir_mm": {
+            "type": "number",
+            "title": "Absolute Change Nadir Mm"
+          },
+          "target_response": {
+            "type": "string",
+            "title": "Target Response"
+          },
+          "non_target_status": {
+            "type": "string",
+            "title": "Non Target Status"
+          },
+          "new_lesions_present": {
+            "type": "boolean",
+            "title": "New Lesions Present"
+          },
+          "new_lesions_count": {
+            "type": "integer",
+            "title": "New Lesions Count"
+          },
+          "overall_response": {
+            "type": "string",
+            "title": "Overall Response"
+          },
+          "is_nadir": {
+            "type": "boolean",
+            "title": "Is Nadir"
+          }
+        },
+        "type": "object",
+        "required": [
+          "baseline_sld_mm",
+          "nadir_sld_mm",
+          "current_sld_mm",
+          "pct_change_baseline",
+          "pct_change_nadir",
+          "absolute_change_nadir_mm",
+          "target_response",
+          "non_target_status",
+          "new_lesions_present",
+          "new_lesions_count",
+          "overall_response",
+          "is_nadir"
+        ],
+        "title": "RECISTEvaluationResponseDto",
+        "description": "Response containing derived RECIST 1.1 parameters and overall response classification."
+      },
+      "RECISTLesionInputDto": {
+        "properties": {
+          "lesion_id": {
+            "type": "string",
+            "title": "Lesion Id"
+          },
+          "organ_site": {
+            "type": "string",
+            "title": "Organ Site"
+          },
+          "lesion_type": {
+            "type": "string",
+            "title": "Lesion Type",
+            "default": "TARGET"
+          },
+          "longest_diameter_mm": {
+            "type": "number",
+            "title": "Longest Diameter Mm"
+          },
+          "is_lymph_node": {
+            "type": "boolean",
+            "title": "Is Lymph Node",
+            "default": false
+          },
+          "short_axis_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Axis Mm"
+          },
+          "sop_instance_uid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sop Instance Uid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lesion_id",
+          "organ_site",
+          "longest_diameter_mm"
+        ],
+        "title": "RECISTLesionInputDto",
+        "description": "Input representation of a target lesion for RECIST derivation."
+      },
+      "SDTMDatasetExportResponseDto": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "timepoint_name": {
+            "type": "string",
+            "title": "Timepoint Name"
+          },
+          "tu_records": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Tu Records"
+          },
+          "tr_records": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Tr Records"
+          },
+          "rs_records": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Rs Records"
+          },
+          "total_records": {
+            "type": "integer",
+            "title": "Total Records",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "subject_id",
+          "timepoint_name"
+        ],
+        "title": "SDTMDatasetExportResponseDto",
+        "description": "CDISC SDTM TU, TR, RS dataset package."
       },
       "SeriesEnvelopeSummaryDto": {
         "properties": {
@@ -1041,6 +3481,80 @@
         ],
         "title": "SeriesEnvelopeSummaryDto",
         "description": "Summary of a stored de-identified series envelope."
+      },
+      "StepUpAdjudicationSignOffDto": {
+        "properties": {
+          "signer_id": {
+            "type": "string",
+            "title": "Signer Id",
+            "description": "Adjudicator User ID"
+          },
+          "signer_name": {
+            "type": "string",
+            "title": "Signer Name",
+            "description": "Full Legal Name of Adjudicator"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password",
+            "description": "Step-up credential / authentication secret"
+          },
+          "step_up_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Up Token",
+            "description": "Cryptographic step-up token"
+          },
+          "signing_reason": {
+            "type": "string",
+            "title": "Signing Reason",
+            "description": "21 CFR Part 11 signature reason (e.g. ADJUDICATION_SIGN_OFF, APPROVAL)",
+            "default": "ADJUDICATION_SIGN_OFF"
+          },
+          "binding_reader": {
+            "type": "string",
+            "title": "Binding Reader",
+            "description": "Source of binding measurements: READER_1, READER_2, or ADJUDICATOR",
+            "default": "ADJUDICATOR"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale",
+            "description": "Clinical justification for tie-breaker determination"
+          },
+          "adjudicator_assessment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubmitReaderAssessmentDto"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional independent adjudicator measurement set"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signer_id",
+          "signer_name",
+          "rationale"
+        ],
+        "title": "StepUpAdjudicationSignOffDto",
+        "description": "21 CFR Part 11 step-up electronic signature sign-off payload for Adjudication Chair."
       },
       "StudyEnvelopeDetailDto": {
         "properties": {
@@ -1277,6 +3791,405 @@
         ],
         "title": "StudyEnvelopeSummaryDto",
         "description": "Summary of a stored de-identified study envelope."
+      },
+      "SubjectTimepointEvaluateRequestDto": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "timepoint_name": {
+            "type": "string",
+            "title": "Timepoint Name"
+          },
+          "assessment_criteria": {
+            "type": "string",
+            "title": "Assessment Criteria",
+            "default": "RECIST_1_1"
+          },
+          "non_target_status": {
+            "type": "string",
+            "title": "Non Target Status",
+            "default": "NON_CR_NON_PD"
+          },
+          "new_lesions_present": {
+            "type": "boolean",
+            "title": "New Lesions Present",
+            "default": false
+          },
+          "new_lesions_count": {
+            "type": "integer",
+            "title": "New Lesions Count",
+            "default": 0
+          },
+          "is_baseline": {
+            "type": "boolean",
+            "title": "Is Baseline",
+            "default": false
+          },
+          "digital_signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Digital Signature"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "timepoint_name"
+        ],
+        "title": "SubjectTimepointEvaluateRequestDto",
+        "description": "Request to compute, lock, and persist a timepoint evaluation for a subject."
+      },
+      "SubjectTimepointsTrajectoryResponseDto": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "trajectory": {
+            "items": {
+              "$ref": "#/components/schemas/TimepointTrajectorySummaryDto"
+            },
+            "type": "array",
+            "title": "Trajectory"
+          },
+          "active_annotations_count": {
+            "type": "integer",
+            "title": "Active Annotations Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_id"
+        ],
+        "title": "SubjectTimepointsTrajectoryResponseDto",
+        "description": "Full chronological trajectory of oncologic measurements for a subject."
+      },
+      "SubmitReaderAssessmentDto": {
+        "properties": {
+          "reader_id": {
+            "type": "string",
+            "title": "Reader Id",
+            "description": "Radiologist User ID"
+          },
+          "reader_role": {
+            "type": "string",
+            "title": "Reader Role",
+            "description": "READER_1, READER_2, or ADJUDICATOR"
+          },
+          "reader_name": {
+            "type": "string",
+            "title": "Reader Name",
+            "description": "Radiologist Display Name",
+            "default": "Reader"
+          },
+          "target_lesions": {
+            "items": {
+              "$ref": "#/components/schemas/LesionMeasurementDto"
+            },
+            "type": "array",
+            "title": "Target Lesions"
+          },
+          "non_target_status": {
+            "type": "string",
+            "title": "Non Target Status",
+            "description": "CR, NON_CR_NON_PD, PD, NE",
+            "default": "NON_CR_NON_PD"
+          },
+          "new_lesions_present": {
+            "type": "boolean",
+            "title": "New Lesions Present",
+            "default": false
+          },
+          "new_lesions_count": {
+            "type": "integer",
+            "title": "New Lesions Count",
+            "default": 0
+          },
+          "sum_longest_diameters_mm": {
+            "type": "number",
+            "title": "Sum Longest Diameters Mm",
+            "default": 0.0
+          },
+          "baseline_sld_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Sld Mm"
+          },
+          "nadir_sld_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nadir Sld Mm"
+          },
+          "overall_response": {
+            "type": "string",
+            "title": "Overall Response",
+            "description": "CR, PR, SD, PD, NE"
+          },
+          "assessment_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessment Notes"
+          },
+          "digital_signature": {
+            "type": "string",
+            "title": "Digital Signature",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "reader_id",
+          "reader_role",
+          "overall_response"
+        ],
+        "title": "SubmitReaderAssessmentDto",
+        "description": "Blinded reader submission payload."
+      },
+      "TimepointTrajectorySummaryDto": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "timepoint_name": {
+            "type": "string",
+            "title": "Timepoint Name"
+          },
+          "assessment_criteria": {
+            "type": "string",
+            "title": "Assessment Criteria"
+          },
+          "baseline_sld_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Sld Mm"
+          },
+          "nadir_sld_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nadir Sld Mm"
+          },
+          "current_sld_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Sld Mm"
+          },
+          "pct_change_baseline": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Change Baseline"
+          },
+          "pct_change_nadir": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Change Nadir"
+          },
+          "baseline_spd_mm2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Spd Mm2"
+          },
+          "nadir_spd_mm2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nadir Spd Mm2"
+          },
+          "current_spd_mm2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Spd Mm2"
+          },
+          "pct_change_spd_baseline": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Change Spd Baseline"
+          },
+          "pct_change_spd_nadir": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Change Spd Nadir"
+          },
+          "target_response": {
+            "type": "string",
+            "title": "Target Response"
+          },
+          "non_target_status": {
+            "type": "string",
+            "title": "Non Target Status"
+          },
+          "new_lesions_present": {
+            "type": "boolean",
+            "title": "New Lesions Present"
+          },
+          "new_lesions_count": {
+            "type": "integer",
+            "title": "New Lesions Count"
+          },
+          "max_deauville_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Deauville Score"
+          },
+          "overall_response": {
+            "type": "string",
+            "title": "Overall Response"
+          },
+          "is_locked": {
+            "type": "boolean",
+            "title": "Is Locked"
+          },
+          "locked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked At"
+          },
+          "reader_id": {
+            "type": "string",
+            "title": "Reader Id"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "timepoint_name",
+          "assessment_criteria",
+          "target_response",
+          "non_target_status",
+          "new_lesions_present",
+          "new_lesions_count",
+          "overall_response",
+          "is_locked",
+          "reader_id"
+        ],
+        "title": "TimepointTrajectorySummaryDto",
+        "description": "Chronological timepoint summary in a subject's oncology tumor trajectory."
       },
       "ValidationError": {
         "properties": {

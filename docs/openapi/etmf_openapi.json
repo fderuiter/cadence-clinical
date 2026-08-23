@@ -5245,7 +5245,9 @@
           "PROTOCOL_APPROVAL",
           "REGULATORY_FORM_SIGNATURE",
           "TRAINING_ACKNOWLEDGEMENT",
-          "SITE_VISIT_SIGN_OFF"
+          "SITE_VISIT_SIGN_OFF",
+          "ADJUDICATION_SIGN_OFF",
+          "ENDPOINT_ADJUDICATION"
         ],
         "title": "SigningReason",
         "description": "Controlled reasons for creating an electronic signature in compliance with 21 CFR Part 11."

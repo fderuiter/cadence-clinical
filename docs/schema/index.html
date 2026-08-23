@@ -3806,6 +3806,145 @@
           ]
         },
         {
+          "id": "execution_packing_manifests",
+          "table_name": "packing_manifests",
+          "class_name": "PackingManifest",
+          "description": "GxP packing manifest binding serialized blinded kits and temperature loggers to a transfer order.",
+          "service": "execution",
+          "gxp": true,
+          "immutable": false,
+          "columns": [
+            {
+              "name": "study_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "transfer_order_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "manifest_number",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "serialized_kit_numbers",
+              "type": "JSON",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "lot_number",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "expiration_date",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "container_serial_number",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "data_logger_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "tamper_seal_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "packed_by",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "packed_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "verified_by",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "verified_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "id",
+              "type": "VARCHAR(36)",
+              "primary_key": true,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "version",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "is_deleted",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            }
+          ]
+        },
+        {
           "id": "execution_pending_predecessor_checks",
           "table_name": "pending_predecessor_checks",
           "class_name": "PendingPredecessorCheck",
@@ -3883,6 +4022,169 @@
               "type": "VARCHAR(100)",
               "primary_key": false,
               "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "id",
+              "type": "VARCHAR(36)",
+              "primary_key": true,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "version",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "is_deleted",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            }
+          ]
+        },
+        {
+          "id": "execution_predictive_resupply_forecasts",
+          "table_name": "predictive_resupply_forecasts",
+          "class_name": "PredictiveResupplyForecast",
+          "description": "Persisted snapshot of a predictive site kit demand and resupply forecast.",
+          "service": "execution",
+          "gxp": true,
+          "immutable": false,
+          "columns": [
+            {
+              "name": "study_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "site_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "kit_type",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "forecast_generated_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "horizon_days",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "enrollment_velocity_weekly",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "active_subjects_count",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "screening_pipeline_count",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "projected_demand_qty",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "current_on_hand_qty",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "in_transit_qty",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "projected_runout_date",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "days_of_supply_remaining",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "recommended_order_qty",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "stockout_risk_level",
+              "type": "VARCHAR(50)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "forecast_details",
+              "type": "JSON",
+              "primary_key": false,
+              "nullable": true,
               "foreign_keys": [],
               "gxp_highlight": false
             },
@@ -4997,6 +5299,260 @@
           ]
         },
         {
+          "id": "execution_supply_nodes",
+          "table_name": "supply_nodes",
+          "class_name": "SupplyNode",
+          "description": "Represents a node in the multi-echelon clinical supply hierarchy.\nHierarchy tiers: PRIMARY_MANUFACTURER -> CENTRAL_DEPOT -> REGIONAL_DEPOT -> CLINICAL_SITE.",
+          "service": "execution",
+          "gxp": true,
+          "immutable": false,
+          "columns": [
+            {
+              "name": "study_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "node_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "node_type",
+              "type": "VARCHAR(50)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "name",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "country",
+              "type": "VARCHAR(100)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "address",
+              "type": "VARCHAR(500)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "parent_node_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "storage_capacity",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "current_utilization",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "lead_time_days",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "temperature_conditions",
+              "type": "JSON",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "is_active",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "id",
+              "type": "VARCHAR(36)",
+              "primary_key": true,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "version",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "is_deleted",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            }
+          ]
+        },
+        {
+          "id": "execution_supply_node_inventories",
+          "table_name": "supply_node_inventories",
+          "class_name": "SupplyNodeInventory",
+          "description": "Tracks inventory levels, allocations, safety stock, and storage bounds per supply node.",
+          "service": "execution",
+          "gxp": true,
+          "immutable": false,
+          "columns": [
+            {
+              "name": "study_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "node_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "kit_type",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "lot_number",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "on_hand_qty",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "reserved_qty",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "in_transit_qty",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "safety_stock_threshold",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "reorder_point",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "max_capacity",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "resupply_signal",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "id",
+              "type": "VARCHAR(36)",
+              "primary_key": true,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "version",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "is_deleted",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            }
+          ]
+        },
+        {
           "id": "execution_synced_batch_idempotency_keys",
           "table_name": "synced_batch_idempotency_keys",
           "class_name": "SyncedBatchIdempotencyKey",
@@ -5107,6 +5663,209 @@
             {
               "name": "trial_random_seed",
               "type": "INTEGER",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "id",
+              "type": "VARCHAR(36)",
+              "primary_key": true,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "version",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "is_deleted",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            }
+          ]
+        },
+        {
+          "id": "execution_transfer_orders",
+          "table_name": "transfer_orders",
+          "class_name": "TransferOrder",
+          "description": "Represents a multi-echelon stock movement order between supply nodes.",
+          "service": "execution",
+          "gxp": true,
+          "immutable": false,
+          "columns": [
+            {
+              "name": "study_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "transfer_order_number",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "source_node_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "destination_node_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "kit_type",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "quantity",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "priority",
+              "type": "VARCHAR(50)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR(50)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "temperature_condition",
+              "type": "VARCHAR(100)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "carrier",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "tracking_number",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "estimated_delivery_date",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "requested_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "requested_by",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "approved_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "approved_by",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "shipped_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "shipped_by",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "delivered_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "delivered_by",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "rejection_reason",
+              "type": "VARCHAR(500)",
               "primary_key": false,
               "nullable": true,
               "foreign_keys": [],

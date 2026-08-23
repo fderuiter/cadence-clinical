@@ -1059,6 +1059,47 @@ export interface MigrationRule {
   is_deleted: boolean;
 }
 
+export interface PackingManifest {
+  study_id: string;
+  transfer_order_id: string;
+  manifest_number: string;
+  serialized_kit_numbers: Record<string, any>;
+  lot_number: string;
+  expiration_date?: string | null;
+  container_serial_number?: string | null;
+  data_logger_id?: string | null;
+  tamper_seal_id?: string | null;
+  packed_by: string;
+  packed_at: string;
+  verified_by?: string | null;
+  verified_at?: string | null;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
+export interface PredictiveResupplyForecast {
+  study_id: string;
+  site_id: string;
+  kit_type: string;
+  forecast_generated_at: string;
+  horizon_days: number;
+  enrollment_velocity_weekly: number;
+  active_subjects_count: number;
+  screening_pipeline_count: number;
+  projected_demand_qty: number;
+  current_on_hand_qty: number;
+  in_transit_qty: number;
+  projected_runout_date?: string | null;
+  days_of_supply_remaining: number;
+  recommended_order_qty: number;
+  stockout_risk_level: string;
+  forecast_details?: Record<string, any> | null;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
 export interface RandomizationConfig {
   study_id: string;
   algorithm_type: string;
@@ -1210,6 +1251,68 @@ export interface SubjectRandomization {
   encrypted_allocation: string;
   kit_reference?: string | null;
   randomized_at: string;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
+export interface SupplyNodeInventory {
+  study_id: string;
+  node_id: string;
+  kit_type: string;
+  lot_number?: string | null;
+  on_hand_qty: number;
+  reserved_qty: number;
+  in_transit_qty: number;
+  safety_stock_threshold: number;
+  reorder_point: number;
+  max_capacity: number;
+  resupply_signal: boolean;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
+export interface SupplyNode {
+  study_id: string;
+  node_id: string;
+  node_type: string;
+  name: string;
+  country: string;
+  address?: string | null;
+  parent_node_id?: string | null;
+  storage_capacity: number;
+  current_utilization: number;
+  lead_time_days: number;
+  temperature_conditions?: Record<string, any> | null;
+  is_active: boolean;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
+export interface TransferOrder {
+  study_id: string;
+  transfer_order_number: string;
+  source_node_id: string;
+  destination_node_id: string;
+  kit_type: string;
+  quantity: number;
+  priority: string;
+  status: string;
+  temperature_condition: string;
+  carrier?: string | null;
+  tracking_number?: string | null;
+  estimated_delivery_date?: string | null;
+  requested_at: string;
+  requested_by?: string | null;
+  approved_at?: string | null;
+  approved_by?: string | null;
+  shipped_at?: string | null;
+  shipped_by?: string | null;
+  delivered_at?: string | null;
+  delivered_by?: string | null;
+  rejection_reason?: string | null;
   id: string;
   version: number;
   is_deleted: boolean;

@@ -95,6 +95,7 @@ from apps.execution.routers.locks import router as locks_router
 from apps.execution.routers.offline import router as offline_router
 from apps.execution.routers.queries import router as queries_router
 from apps.execution.routers.randomization import router as randomization_router
+from apps.execution.routers.rtsm import router as rtsm_router
 from apps.execution.routers.safety import router as safety_router
 from apps.execution.routers.sdv import router as sdv_router
 from apps.execution.routers.signatures import router as signatures_router
@@ -345,6 +346,7 @@ app.include_router(offline_router)
 app.include_router(documents_router)
 app.include_router(sdv_router)
 app.include_router(randomization_router)
+app.include_router(rtsm_router)
 app.include_router(unblinding_router)
 app.include_router(queries_router)
 app.include_router(dictionaries_router)

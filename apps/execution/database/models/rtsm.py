@@ -4,6 +4,7 @@ from sqlalchemy import (
     JSON,
     Boolean,
     DateTime,
+    Float,
     Index,
     Integer,
     String,
@@ -178,3 +179,180 @@ class ResupplyEvent(AuditedModel):
     triggered_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
+
+
+class SupplyNode(AuditedModel):
+    """Represents a node in the multi-echelon clinical supply hierarchy.
+
+    Hierarchy tiers: PRIMARY_MANUFACTURER -> CENTRAL_DEPOT -> REGIONAL_DEPOT -> CLINICAL_SITE.
+    """
+
+    __tablename__ = "supply_nodes"
+    __table_args__ = (
+        UniqueConstraint("study_id", "node_id", name="uq_supply_nodes_study_node"),
+    )
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    node_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    node_type: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # PRIMARY_MANUFACTURER, CENTRAL_DEPOT, REGIONAL_DEPOT, CLINICAL_SITE
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    country: Mapped[str] = mapped_column(String(100), nullable=False)
+    address: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    parent_node_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    storage_capacity: Mapped[int] = mapped_column(Integer, default=1000, nullable=False)
+    current_utilization: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    lead_time_days: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
+    temperature_conditions: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class SupplyNodeInventory(AuditedModel):
+    """Tracks inventory levels, allocations, safety stock, and storage bounds per supply node."""
+
+    __tablename__ = "supply_node_inventories"
+    __table_args__ = (
+        UniqueConstraint(
+            "study_id", "node_id", "kit_type", name="uq_node_inv_study_node_kit"
+        ),
+    )
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    node_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    kit_type: Mapped[str] = mapped_column(String(255), nullable=False)
+    lot_number: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    on_hand_qty: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    reserved_qty: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    in_transit_qty: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    safety_stock_threshold: Mapped[int] = mapped_column(
+        Integer, default=10, nullable=False
+    )
+    reorder_point: Mapped[int] = mapped_column(Integer, default=20, nullable=False)
+    max_capacity: Mapped[int] = mapped_column(Integer, default=500, nullable=False)
+    resupply_signal: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+
+
+class TransferOrder(AuditedModel):
+    """Represents a multi-echelon stock movement order between supply nodes."""
+
+    __tablename__ = "transfer_orders"
+    __table_args__ = (
+        UniqueConstraint(
+            "study_id", "transfer_order_number", name="uq_transfer_orders_study_num"
+        ),
+    )
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    transfer_order_number: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
+    source_node_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    destination_node_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
+    kit_type: Mapped[str] = mapped_column(String(255), nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    priority: Mapped[str] = mapped_column(
+        String(50), default="ROUTINE", nullable=False
+    )  # ROUTINE, EXPEDITED, EMERGENCY
+    status: Mapped[str] = mapped_column(
+        String(50), default="REQUESTED", nullable=False
+    )  # DRAFT, REQUESTED, APPROVED, PACKING, SHIPPED, DELIVERED, CANCELLED, REJECTED
+    temperature_condition: Mapped[str] = mapped_column(
+        String(100), default="CONTROLLED_ROOM_TEMP", nullable=False
+    )
+    carrier: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    tracking_number: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    estimated_delivery_date: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    requested_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    approved_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    shipped_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    shipped_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    delivered_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    rejection_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+
+class PackingManifest(AuditedModel):
+    """GxP packing manifest binding serialized blinded kits and temperature loggers to a transfer order."""
+
+    __tablename__ = "packing_manifests"
+    __table_args__ = (
+        UniqueConstraint("transfer_order_id", name="uq_packing_manifest_order"),
+    )
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    transfer_order_id: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
+    manifest_number: Mapped[str] = mapped_column(
+        String(255), nullable=False, unique=True
+    )
+    serialized_kit_numbers: Mapped[list] = mapped_column(JSON, nullable=False)
+    lot_number: Mapped[str] = mapped_column(String(255), nullable=False)
+    expiration_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    container_serial_number: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    data_logger_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    tamper_seal_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    packed_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    packed_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    verified_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class PredictiveResupplyForecast(AuditedModel):
+    """Persisted snapshot of a predictive site kit demand and resupply forecast."""
+
+    __tablename__ = "predictive_resupply_forecasts"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    kit_type: Mapped[str] = mapped_column(
+        String(255), default="DEFAULT", nullable=False
+    )
+    forecast_generated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    horizon_days: Mapped[int] = mapped_column(Integer, default=60, nullable=False)
+    enrollment_velocity_weekly: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    active_subjects_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    screening_pipeline_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    projected_demand_qty: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    current_on_hand_qty: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    in_transit_qty: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    projected_runout_date: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
+    days_of_supply_remaining: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
+    recommended_order_qty: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    stockout_risk_level: Mapped[str] = mapped_column(
+        String(50), default="LOW", nullable=False
+    )  # LOW, MEDIUM, HIGH, CRITICAL
+    forecast_details: Mapped[dict | None] = mapped_column(JSON, nullable=True)
