@@ -19,7 +19,15 @@ from apps.execution.database.models import (
     ClinicalSubject,
     ClinicalVisit,
 )
+from apps.execution.greenlight_gating import (
+    GreenlightVerificationClient,
+    set_greenlight_verification_client,
+)
 from apps.execution.main import app
+from apps.execution.site_execution_gatekeeper import (
+    SiteExecutionGatekeeper,
+    set_site_execution_gatekeeper,
+)
 from apps.execution.tests.test_lock_router import _make_auth_headers
 from apps.execution.training_gating import (
     ITrainingVerificationClient,
@@ -77,13 +85,24 @@ async def setup_test_db() -> AsyncGenerator[None]:
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(ExecutionBase.metadata.create_all)
 
+    fake_training_client.qualified_users.clear()
+    fake_training_client.pending_curricula_map.clear()
     set_training_verification_client(fake_training_client)
+    set_greenlight_verification_client(GreenlightVerificationClient())
+    set_site_execution_gatekeeper(
+        SiteExecutionGatekeeper(
+            training_client=fake_training_client,
+            greenlight_client=GreenlightVerificationClient(),
+        )
+    )
 
     yield
 
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(ExecutionBase.metadata.drop_all)
     await db_manager.close()
+    set_greenlight_verification_client(GreenlightVerificationClient())
+    set_site_execution_gatekeeper(SiteExecutionGatekeeper())
 
 
 @pytest.mark.asyncio
@@ -194,8 +213,14 @@ async def test_edc_write_gating_blocks_unqualified_users():
     )
     assert resp_form.status_code == 403
     err_body = resp_form.json()
-    assert err_body["detail"]["error"] == "TRAINING_REQUIRED"
-    assert "TrainingRequiredError" in err_body["detail"]["message"]
+    assert err_body["detail"]["error"] in (
+        "TRAINING_REQUIRED",
+        "SITE_NOT_ELIGIBLE_FOR_MUTATION",
+    )
+    if err_body["detail"]["error"] == "SITE_NOT_ELIGIBLE_FOR_MUTATION":
+        assert "TRAINING_REQUIRED" in err_body["detail"]["rejection_reasons"]
+    else:
+        assert "TrainingRequiredError" in err_body["detail"]["message"]
 
     # 4. Attempt Observation creation while training is incomplete -> HTTP 403 FORBIDDEN
     resp_obs = client.post(
@@ -213,7 +238,13 @@ async def test_edc_write_gating_blocks_unqualified_users():
         headers=headers,
     )
     assert resp_obs.status_code == 403
-    assert resp_obs.json()["detail"]["error"] == "TRAINING_REQUIRED"
+    obs_err = resp_obs.json()["detail"]
+    assert obs_err["error"] in (
+        "TRAINING_REQUIRED",
+        "SITE_NOT_ELIGIBLE_FOR_MUTATION",
+    )
+    if obs_err["error"] == "SITE_NOT_ELIGIBLE_FOR_MUTATION":
+        assert "TRAINING_REQUIRED" in obs_err["rejection_reasons"]
 
 
 @pytest.mark.asyncio

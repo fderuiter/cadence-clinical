@@ -25,7 +25,9 @@ from apps.execution.domain.exceptions import (
     ExecutionStaffNotFoundError,
     ExecutionValidationError,
 )
-from apps.execution.services.doa_service import DOAService
+from apps.execution.services.doa_service import (
+    get_global_doa_service,
+)
 from packages.security.middleware import get_current_user
 
 
@@ -98,7 +100,7 @@ class DOADelegationRecordResponse(BaseModel):
 
 router = APIRouter(prefix="/api/v1/execution/doa", tags=["DOA"])
 
-_DOA_SERVICE = DOAService()
+_DOA_SERVICE = get_global_doa_service()
 
 
 async def _run_with_repo(repo, func):

@@ -648,14 +648,18 @@ async def create_transfer_order_endpoint(
             detail="Forbidden: Access denied to study or destination node.",
         )
 
-    # Enforce country-aware greenlight site activation gate on destination site (PRD-SSU-003, ADR-2202)
-    from apps.execution.greenlight_gating import enforce_site_greenlight_gate
+    # Enforce sovereign site execution gate on destination site (PRD-SYS-121, PRD-SSU-003, ADR-2202)
+    from apps.execution.site_execution_gatekeeper import (
+        require_site_mutation_authorization,
+    )
 
     if payload.study_id and payload.destination_node_id:
-        await enforce_site_greenlight_gate(
-            study_id=payload.study_id,
+        await require_site_mutation_authorization(
             site_id=payload.destination_node_id,
-            greenlight_token=request.headers.get("X-Site-Greenlight-Token"),
+            user_id=principal.user_id,
+            operation_type="TRANSFER_ORDER",
+            study_id=payload.study_id,
+            token=request.headers.get("X-Site-Greenlight-Token"),
         )
 
     try:

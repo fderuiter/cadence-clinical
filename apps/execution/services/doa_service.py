@@ -120,3 +120,17 @@ class DOAService:
             for rec in self._store.values()
             if rec.study_id == study_id and rec.site_id == site_id
         ]
+
+
+_GLOBAL_DOA_SERVICE: DOAService = DOAService()
+
+
+def get_global_doa_service() -> DOAService:
+    """Retrieve the global default DOAService instance."""
+    return _GLOBAL_DOA_SERVICE
+
+
+def set_global_doa_service(service: DOAService) -> None:
+    """Set the global default DOAService instance (useful for testing)."""
+    global _GLOBAL_DOA_SERVICE
+    _GLOBAL_DOA_SERVICE = service

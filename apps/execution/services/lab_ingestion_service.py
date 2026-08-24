@@ -32,33 +32,10 @@ from typing import Any
 
 import defusedxml.ElementTree as ET
 from pydantic import BaseModel, Field
-from sqlalchemy import select
 
 from apps.execution.database.context import audit_context
-from apps.execution.database.models import (
-    ClinicalObservation,
-    ClinicalQuery,
-    ClinicalSubject,
-    FormSubmission,
-    LabTestMaster,
-    LocalLabCertification,
-    StagedAdverseEventReview,
-    SubjectConsent,
-)
-from apps.execution.demographics import get_safe_demographics
-from apps.execution.lab_range_cache import get_active_lab_ranges, lab_range_cache
-from apps.execution.lab_ranges import (
-    convert_lab_unit,
-    evaluate_lab_value,
-    resolve_loinc_mapping,
-    select_reference_range,
-)
-from apps.execution.notification_events import dispatch_critical_lab_alerts
-from apps.execution.services.lab_toxicity_engine import (
-    CTCAEGrade,
-    LabToxicityEngine,
-)
-from apps.execution.ucum import get_normalized_representation
+from apps.execution.domain.lab_assessment_models import LabAssessmentContext
+from apps.execution.services.lab_assessment_engine import LabAssessmentEngine
 
 logger = logging.getLogger(__name__)
 
@@ -1232,487 +1209,53 @@ class LabIngestionService:
             "Grade 4": 0,
         }
         all_errors = list(parse_errors)
-
         with audit_context(user_id, change_reason):
             for idx, raw_rec in enumerate(raw_records, start=1):
                 try:
-                    effective_study_id = raw_rec.study_id or study_id
-                    obs_date = raw_rec.observation_date or datetime.now(UTC).replace(
-                        tzinfo=None
+                    assessment = await LabAssessmentEngine.evaluate_laboratory_result(
+                        observation=raw_rec,
+                        context=LabAssessmentContext(
+                            session=session,
+                            study_id=raw_rec.study_id or study_id,
+                            site_id=raw_rec.site_id or site_id,
+                            grading_scale=grading_scale,
+                            co_analytes=raw_rec.co_analytes,
+                            user_id=user_id,
+                            change_reason=change_reason,
+                            background_tasks=background_tasks,
+                            persist_records=True,
+                        ),
                     )
 
-                    # Resolve subject from database
-                    subj_db = None
-                    if effective_study_id:
-                        stmt_subj = select(ClinicalSubject).where(
-                            ClinicalSubject.subject_id == raw_rec.subject_id,
-                            ClinicalSubject.study_id == effective_study_id,
-                            ClinicalSubject.is_deleted.is_(False),
-                        )
-                    else:
-                        stmt_subj = select(ClinicalSubject).where(
-                            ClinicalSubject.subject_id == raw_rec.subject_id,
-                            ClinicalSubject.is_deleted.is_(False),
-                        )
-                    res_subj = await session.execute(stmt_subj)
-                    subj_db = res_subj.scalars().first()
-
-                    if subj_db and not effective_study_id:
-                        effective_study_id = subj_db.study_id
-
-                    effective_study_id = effective_study_id or "STUDY-DEFAULT"
-                    effective_site_id = (
-                        raw_rec.site_id
-                        or (subj_db.site_id if subj_db else None)
-                        or site_id
-                    )
-
-                    # Demographics extraction (Age, Sex, Ethnicity)
-                    gender = "U"
-                    age = None
-                    ethnicity = None
-                    if subj_db:
-                        demo = get_safe_demographics(
-                            subj_db, obs_date, preserve_custom=True
-                        )
-                        gender = demo.get("gender", "U")
-                        age = demo.get("age")
-                        ethnicity = demo.get("ethnicity")
-
-                    # Local lab certification & uncalibrated range safeguard
-                    is_uncalibrated_safeguard = False
-                    safeguard_message = None
-                    if raw_rec.lab_source == "LOCAL" and effective_site_id:
-                        stmt_cert = select(LocalLabCertification).where(
-                            LocalLabCertification.site_id == effective_site_id,
-                            LocalLabCertification.study_id == effective_study_id,
-                            LocalLabCertification.is_deleted.is_(False),
-                        )
-                        res_cert = await session.execute(stmt_cert)
-                        certs = res_cert.scalars().all()
-
-                        valid_cert = None
-                        for c in certs:
-                            if c.status == "ACTIVE" and c.is_accredited:
-                                if c.effective_date <= obs_date <= c.expiration_date:
-                                    valid_cert = c
-                                    break
-
-                        if not valid_cert:
-                            is_uncalibrated_safeguard = True
-                            uncalibrated_safeguards_count += 1
-                            safeguard_message = (
-                                f"Local laboratory certification missing, inactive, or expired "
-                                f"for site {effective_site_id} as of observation date {obs_date}."
-                            )
-
-                    # Catalog & LOINC normalization lookup
-                    stmt_master = select(LabTestMaster).where(
-                        LabTestMaster.study_id == effective_study_id,
-                        LabTestMaster.test_code == raw_rec.test_code,
-                        LabTestMaster.is_deleted.is_(False),
-                    )
-                    res_master = await session.execute(stmt_master)
-                    master = res_master.scalars().first()
-
-                    test_name = raw_rec.test_name
-                    target_unit = None
-                    if master:
-                        if not test_name or test_name == raw_rec.test_code:
-                            test_name = master.test_name
-                        target_unit = master.normalized_unit
-                    else:
-                        loinc_info = resolve_loinc_mapping(raw_rec.test_code)
-                        if loinc_info and (
-                            not test_name or test_name == raw_rec.test_code
-                        ):
-                            test_name = loinc_info.get("test_name")
-
-                    test_name = test_name or raw_rec.test_code
-
-                    # Unit conversion and normalization
-                    norm_val = raw_rec.value
-                    norm_unit = raw_rec.unit
-
-                    if raw_rec.value is not None and raw_rec.unit:
-                        if target_unit and target_unit != raw_rec.unit:
-                            try:
-                                converted_val = await convert_lab_unit(
-                                    session=session,
-                                    test_code=raw_rec.test_code,
-                                    from_unit=raw_rec.unit,
-                                    to_unit=target_unit,
-                                    value=raw_rec.value,
-                                )
-                                norm_val = converted_val
-                                norm_unit = target_unit
-                            except Exception as conv_err:
-                                logger.warning(
-                                    f"Catalog unit conversion failed ({conv_err}); falling back to standard UCUM"
-                                )
-                                norm_val, norm_unit = get_normalized_representation(
-                                    raw_rec.value, raw_rec.unit
-                                )
-                        else:
-                            norm_val, norm_unit = get_normalized_representation(
-                                raw_rec.value, raw_rec.unit
-                            )
-
-                    # Reference Range Selection & Evaluation
-                    ranges = await get_active_lab_ranges(
-                        lab_range_cache,
-                        session,
-                        effective_study_id,
-                        raw_rec.test_code,
-                    )
-
-                    matched_range = select_reference_range(
-                        ranges=ranges,
-                        study_id=effective_study_id,
-                        test_code=raw_rec.test_code,
-                        normalized_unit=norm_unit or "",
-                        lab_source=raw_rec.lab_source or "CENTRAL",
-                        sex=gender,
-                        age=age,
-                        site_id=effective_site_id,
-                        ethnicity=ethnicity,
-                    )
-
-                    ref_low = raw_rec.reference_range_low
-                    ref_high = raw_rec.reference_range_high
-
-                    if matched_range:
-                        indicator, out_of_range, matched_bounds = evaluate_lab_value(
-                            norm_val, matched_range
-                        )
-                        ref_low = getattr(matched_range, "low_bound", None)
-                        ref_high = getattr(matched_range, "high_bound", None)
-                    else:
-                        if (
-                            raw_rec.reference_range_low is not None
-                            or raw_rec.reference_range_high is not None
-                            or raw_rec.critical_low is not None
-                            or raw_rec.critical_high is not None
-                        ):
-                            ad_hoc_range = {
-                                "low_bound": raw_rec.reference_range_low,
-                                "high_bound": raw_rec.reference_range_high,
-                                "critical_low": raw_rec.critical_low,
-                                "critical_high": raw_rec.critical_high,
-                            }
-                            indicator, out_of_range, matched_bounds = (
-                                evaluate_lab_value(norm_val, ad_hoc_range)
-                            )
-                        else:
-                            indicator = None
-                            out_of_range = False
-                            matched_bounds = None
-
-                        if raw_rec.raw_abnormal_flag:
-                            flag_u = raw_rec.raw_abnormal_flag.upper()
-                            if flag_u in ("LL", "CRIT", "PANIC", "CRITICAL_LOW"):
-                                indicator = "LOW LOW"
-                                out_of_range = True
-                            elif flag_u in ("HH", "CRITICAL_HIGH"):
-                                indicator = "HIGH HIGH"
-                                out_of_range = True
-                            elif flag_u in ("L", "LOW") and not indicator:
-                                indicator = "LOW"
-                                out_of_range = True
-                            elif flag_u in ("H", "HIGH") and not indicator:
-                                indicator = "HIGH"
-                                out_of_range = True
-                            elif flag_u in ("A", "ABNORMAL", "AA") and not indicator:
-                                indicator = "ABNORMAL"
-                                out_of_range = True
-
-                    # Protocol consent version stamping
-                    protocol_version_tag = None
-                    protocol_version_index = None
-                    stmt_consent = (
-                        select(SubjectConsent)
-                        .where(
-                            SubjectConsent.subject_id == raw_rec.subject_id,
-                            SubjectConsent.study_id == effective_study_id,
-                            SubjectConsent.icf_signed.is_(True),
-                        )
-                        .order_by(SubjectConsent.version_index.desc())
-                    )
-                    res_consent = await session.execute(stmt_consent)
-                    active_consent = res_consent.scalars().first()
-                    if active_consent:
-                        protocol_version_tag = active_consent.version_tag
-                        protocol_version_index = active_consent.version_index
-
-                    # Baseline observation lookup for acute delta checks
-                    stmt_baseline = (
-                        select(ClinicalObservation)
-                        .where(
-                            ClinicalObservation.subject_id == raw_rec.subject_id,
-                            ClinicalObservation.study_id == effective_study_id,
-                            ClinicalObservation.test_code == raw_rec.test_code,
-                            ClinicalObservation.is_deleted.is_(False),
-                        )
-                        .order_by(ClinicalObservation.observation_date.asc())
-                    )
-                    res_baseline = await session.execute(stmt_baseline)
-                    first_obs = res_baseline.scalars().first()
-                    baseline_val = first_obs.normalized_value if first_obs else None
-
-                    # Automated Toxicity Grading (CTCAE v5.0 / DAIDS)
-                    tox_assessment = LabToxicityEngine.evaluate_observation(
-                        test_code=raw_rec.test_code,
-                        test_name=test_name,
-                        value=norm_val or 0.0,
-                        unit=norm_unit or raw_rec.unit or "",
-                        ref_low=ref_low,
-                        ref_high=ref_high,
-                        baseline_value=baseline_val,
-                        grading_scale=grading_scale,
-                        alt_co_analyte=raw_rec.co_analytes.get("ALT"),
-                        ast_co_analyte=raw_rec.co_analytes.get("AST"),
-                        bili_co_analyte=raw_rec.co_analytes.get("BILI")
-                        or raw_rec.co_analytes.get("TBIL"),
-                        alkp_co_analyte=raw_rec.co_analytes.get("ALKP")
-                        or raw_rec.co_analytes.get("ALP"),
-                    )
-
-                    grade_key = f"Grade {int(tox_assessment.ctcae_grade)}"
+                    grade_key = f"Grade {assessment.ctcae_grade}"
                     toxicity_counts[grade_key] = toxicity_counts.get(grade_key, 0) + 1
 
-                    # Persist ClinicalObservation
-                    obs = ClinicalObservation(
-                        subject_id=raw_rec.subject_id,
-                        study_id=effective_study_id,
-                        site_id=effective_site_id,
-                        visit_id=raw_rec.visit_id,
-                        domain="LB",
-                        observation_date=obs_date,
-                        test_code=raw_rec.test_code,
-                        test_name=test_name,
-                        value=raw_rec.value,
-                        value_string=raw_rec.value_string,
-                        unit=raw_rec.unit,
-                        normalized_value=norm_val,
-                        normalized_unit=norm_unit,
-                        is_outlier=out_of_range
-                        or tox_assessment.ctcae_grade >= CTCAEGrade.GRADE_3,
-                        lab_source=raw_rec.lab_source or "CENTRAL",
-                        lab_site_id=effective_site_id,
-                        lab_indicator=indicator,
-                        lab_out_of_range=out_of_range,
-                        matched_normal_bounds=matched_bounds,
-                        reference_range_low=ref_low,
-                        reference_range_high=ref_high,
-                        protocol_version_tag=protocol_version_tag,
-                        protocol_version_index=protocol_version_index,
-                        additional_properties={
-                            "ctcae_grade": int(tox_assessment.ctcae_grade),
-                            "toxicity_description": tox_assessment.toxicity_description,
-                            "grading_scale": tox_assessment.grading_scale,
-                            "is_hys_law_warning": tox_assessment.is_hys_law_warning,
-                            "is_delta_check_alert": tox_assessment.is_delta_check_alert,
-                            "delta_percentage": tox_assessment.delta_percentage,
-                            "uncalibrated_safeguard_triggered": is_uncalibrated_safeguard,
-                        },
-                    )
-                    session.add(obs)
-                    await session.flush()
+                    if assessment.uncalibrated_safeguard_triggered:
+                        uncalibrated_safeguards_count += 1
 
-                    # Uncalibrated local lab safeguard query
-                    if is_uncalibrated_safeguard and safeguard_message:
-                        query_safeguard = ClinicalQuery(
-                            id=str(uuid.uuid4()),
-                            study_id=effective_study_id,
-                            site_id=effective_site_id,
-                            subject_id=raw_rec.subject_id,
-                            visit_id=raw_rec.visit_id,
-                            domain="LB",
-                            test_code=raw_rec.test_code,
-                            observation_id=obs.id,
-                            status="OPEN",
-                            priority="HIGH",
-                            query_type="UNCALIBRATED_LOCAL_LAB_WARNING",
-                            origin="SYSTEM_LAB_INGESTION",
-                            explanation="Uncalibrated or expired local lab certification safeguard",
-                            message=safeguard_message,
-                            created_by=user_id,
-                            created_at=datetime.now(UTC).replace(tzinfo=None),
-                        )
-                        session.add(query_safeguard)
-                        queries_raised_count += 1
-
-                    is_critical_ind = indicator in ("LOW LOW", "HIGH HIGH")
-                    is_out_range = out_of_range or indicator in (
+                    if assessment.out_of_range or assessment.indicator in (
                         "LOW",
                         "HIGH",
                         "LOW LOW",
                         "HIGH HIGH",
-                    )
-
-                    if is_out_range:
+                        "ABNORMAL",
+                    ):
                         out_of_range_count += 1
 
-                    if is_critical_ind:
+                    if (
+                        assessment.indicator
+                        in (
+                            "LOW LOW",
+                            "HIGH HIGH",
+                        )
+                        or assessment.is_critical_ae_trigger
+                    ):
                         critical_alerts_count += 1
 
-                    # Grade 3/4 AE Trigger Workflow
-                    if tox_assessment.is_critical_ae_trigger:
-                        ae_term = test_name + (
-                            " (Hy's Law DILI Alert)"
-                            if tox_assessment.is_hys_law_warning
-                            else f" Abnormality (Grade {int(tox_assessment.ctcae_grade)})"
-                        )
-                        ae_payload = {
-                            "aeterm": ae_term,
-                            "aestdat": obs_date.isoformat(),
-                            "aetoxgr": f"Grade {int(tox_assessment.ctcae_grade)}",
-                            "aetoxscale": tox_assessment.grading_scale,
-                            "aeser": "Y"
-                            if tox_assessment.ctcae_grade >= CTCAEGrade.GRADE_4
-                            or tox_assessment.is_hys_law_warning
-                            else "N",
-                            "lab_test_code": raw_rec.test_code,
-                            "lab_test_name": test_name,
-                            "lab_value": raw_rec.value,
-                            "lab_unit": raw_rec.unit,
-                            "observation_id": obs.id,
-                            "is_auto_drafted": True,
-                            "staging_status": "STAGED_FOR_INVESTIGATOR_REVIEW",
-                            "clinical_significance": "POTENTIAL_LAB_ABNORMALITY_AE",
-                            "hys_law_dili_flag": tox_assessment.is_hys_law_warning,
-                            "delta_check_alert": tox_assessment.is_delta_check_alert,
-                        }
-                        form_sub = FormSubmission(
-                            study_id=effective_study_id,
-                            site_id=effective_site_id,
-                            subject_id=raw_rec.subject_id,
-                            visit_id=raw_rec.visit_id,
-                            form_id="AE",
-                            status="DRAFT",
-                            payload=ae_payload,
-                            protocol_version=protocol_version_tag,
-                        )
-                        session.add(form_sub)
-                        await session.flush()
-
-                        staged_review = StagedAdverseEventReview(
-                            study_id=effective_study_id,
-                            site_id=effective_site_id,
-                            subject_id=raw_rec.subject_id,
-                            visit_id=raw_rec.visit_id,
-                            observation_id=obs.id,
-                            form_submission_id=form_sub.id,
-                            test_code=raw_rec.test_code,
-                            test_name=test_name,
-                            lab_value=raw_rec.value or 0.0,
-                            unit=raw_rec.unit or "",
-                            ctcae_grade=int(tox_assessment.ctcae_grade),
-                            grading_scale=tox_assessment.grading_scale,
-                            toxicity_term=ae_term,
-                            clinical_description=tox_assessment.toxicity_description,
-                            is_hys_law_warning=tox_assessment.is_hys_law_warning,
-                            is_delta_check_alert=tox_assessment.is_delta_check_alert,
-                            delta_percentage=tox_assessment.delta_percentage,
-                            review_status="STAGED_FOR_INVESTIGATOR_REVIEW",
-                            reason_for_change=change_reason,
-                            created_by=user_id,
-                        )
-                        session.add(staged_review)
-
-                        # Auto-query escalation for AE trigger
-                        ae_qtype = (
-                            "POTENTIAL_SAE_CRITICAL"
-                            if is_critical_ind
-                            else "GRADE_3_4_AE_TRIGGER"
-                        )
-                        ae_qexpl = (
-                            "Potential SAE critical threshold alert staged for Investigator review"
-                            if is_critical_ind
-                            else "Automated CTCAE Grade 3/4 AE Trigger staged for Investigator review"
-                        )
-                        query_ae = ClinicalQuery(
-                            id=str(uuid.uuid4()),
-                            study_id=effective_study_id,
-                            site_id=effective_site_id,
-                            subject_id=raw_rec.subject_id,
-                            visit_id=raw_rec.visit_id,
-                            domain="LB",
-                            test_code=raw_rec.test_code,
-                            observation_id=obs.id,
-                            status="OPEN",
-                            priority="CRITICAL",
-                            query_type=ae_qtype,
-                            origin="SYSTEM_TOXICITY_TRIGGER",
-                            explanation=ae_qexpl,
-                            message=(
-                                f"Grade {int(tox_assessment.ctcae_grade)} Laboratory Toxicity Trigger for {test_name}: "
-                                f"Value {raw_rec.value} {raw_rec.unit or ''}. {tox_assessment.toxicity_description}. "
-                                f"Staged AE eCRF draft auto-created for Investigator review."
-                            ),
-                            created_by=user_id,
-                            created_at=datetime.now(UTC).replace(tzinfo=None),
-                        )
-                        session.add(query_ae)
-                        staged_review.query_id = query_ae.id
-
+                    if assessment.is_critical_ae_trigger:
                         staged_aes_count += 1
-                        queries_raised_count += 1
-                        if not is_critical_ind:
-                            critical_alerts_count += 1
 
-                        if background_tasks is not None:
-                            dispatch_critical_lab_alerts(
-                                background_tasks,
-                                obs,
-                                f"GRADE_{int(tox_assessment.ctcae_grade)}_AE_TRIGGER",
-                                user_id,
-                                change_reason,
-                            )
-                    elif is_out_range:
-                        query_type = (
-                            "POTENTIAL_SAE_CRITICAL"
-                            if is_critical_ind
-                            else "OUT_OF_RANGE_WARNING"
-                        )
-                        priority = "CRITICAL" if is_critical_ind else "HIGH"
-
-                        query_msg = (
-                            f"Laboratory observation for test {raw_rec.test_code} ({test_name}) "
-                            f"with value {raw_rec.value} {raw_rec.unit or ''} is out of normal "
-                            f"reference range [{matched_bounds or 'N/A'}]. Evaluated indicator: {indicator}."
-                        )
-
-                        query = ClinicalQuery(
-                            id=str(uuid.uuid4()),
-                            study_id=effective_study_id,
-                            site_id=effective_site_id,
-                            subject_id=raw_rec.subject_id,
-                            visit_id=raw_rec.visit_id,
-                            domain="LB",
-                            test_code=raw_rec.test_code,
-                            observation_id=obs.id,
-                            status="OPEN",
-                            priority=priority,
-                            query_type=query_type,
-                            origin="SYSTEM_LAB_INGESTION",
-                            explanation="Automated discrepancy query generated during lab batch ingestion",
-                            message=query_msg,
-                            created_by=user_id,
-                            created_at=datetime.now(UTC).replace(tzinfo=None),
-                        )
-                        session.add(query)
-                        queries_raised_count += 1
-
-                        if is_critical_ind and background_tasks is not None:
-                            dispatch_critical_lab_alerts(
-                                background_tasks,
-                                obs,
-                                indicator or "CRITICAL",
-                                user_id,
-                                change_reason,
-                            )
-
+                    queries_raised_count += len(assessment.queries_raised)
                     ingested_count += 1
 
                 except Exception as row_exc:

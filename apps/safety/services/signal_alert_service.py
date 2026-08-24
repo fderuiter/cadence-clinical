@@ -3,8 +3,6 @@
 Requirements: PRD-PVG-003, PRD-PVG-004, PRD-PVG-008, ADR-2199
 """
 
-import hashlib
-import json
 import logging
 import uuid
 from datetime import UTC, datetime
@@ -17,7 +15,6 @@ from apps.safety.domain.periodic_report_models import (
     PeriodicReportResponseDTO,
     PeriodicReportSignResponse,
     PeriodicReportStatus,
-    QPPVSignoffManifest,
 )
 from apps.safety.domain.signal_models import (
     SafetySignalAlertReviewRequest,
@@ -581,43 +578,29 @@ class SafetySignalAlertService:
                     f"User '{user_id}' with roles {user_roles} is not authorized to sign periodic safety reports."
                 )
 
-        now_dt = datetime.now(UTC)
-        manifest_id = f"sig_rep_{uuid.uuid4().hex[:12]}"
         report_payload = dict(report.report_payload or {})
         snapshot_data = report_payload.get("snapshot") or {}
         snapshot_hash = str(snapshot_data.get("snapshot_hash", ""))
 
-        payload_to_sign = {
-            "report_id": report.id,
-            "report_type": report.report_type,
-            "study_id": report.study_id,
-            "compound_name": report.compound_name,
-            "signer": user_id,
-            "snapshot_hash": snapshot_hash,
-            "timestamp": now_dt.isoformat(),
-            "meaning": meaning_of_signature,
-        }
-        sig_token = generate_canonical_signature(
-            payload_to_sign, signature_secret.encode("utf-8")
+        now_dt = datetime.now(UTC)
+        from apps.safety.services.regulatory_audit_ledger import (
+            RegulatoryAuditLedger,
         )
 
-        qppv_manifest = QPPVSignoffManifest(
-            qppv_user_id=user_id,
-            qppv_name=user_id,
-            qppv_role="Qualified Person for Pharmacovigilance (QPPV)"
-            if "qppv" in [r.lower() for r in (user_roles or [])]
-            else "Authorized Safety Physician",
+        qppv_manifest = RegulatoryAuditLedger.seal_qppv_signoff(
+            compound_name=report.compound_name,
             meaning_of_signature=meaning_of_signature,
-            signed_at=now_dt.isoformat(),
-            manifest_id=manifest_id,
+            report_id=report.id,
+            report_payload=report_payload,
+            report_type=report.report_type,
+            signature_secret=signature_secret,
             snapshot_hash=snapshot_hash,
-            report_hash=hashlib.sha256(
-                json.dumps(report_payload, sort_keys=True, default=str).encode("utf-8")
-            ).hexdigest(),
-            signature_token=sig_token,
-            verification_status="VALID",
+            study_id=report.study_id,
+            user_id=user_id,
+            user_roles=user_roles,
         )
 
+        manifest_id = qppv_manifest.manifest_id
         report_payload["qppv_signoff"] = qppv_manifest.model_dump()
         report.report_payload = report_payload
 

@@ -4,11 +4,9 @@ Requirements: PRD-PVG-004, PRD-PVG-008, PRD-AGG-001, PRD-SYS-125, ADR-2199
 (ICH E2F DSUR, ICH E2C(R2) PSUR / PBRER Guidelines, 21 CFR Part 11)
 """
 
-import hashlib
-import json
 import statistics
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from apps.safety.domain.periodic_report_models import (
@@ -22,6 +20,9 @@ from apps.safety.domain.periodic_report_models import (
     RegulatorySnapshot,
     SubjectExposureMetrics,
     SubjectExposureRecord,
+)
+from apps.safety.services.regulatory_audit_ledger import (
+    RegulatoryAuditLedger,
 )
 from apps.safety.services.signal_detection_engine import (
     SafetySignalDetectionEngine,
@@ -280,7 +281,11 @@ class SubjectExposureCalculator:
 
 
 class RegulatorySnapshotManager:
-    """Manages cryptographically sealed point-in-time regulatory snapshots."""
+    """Manages cryptographically sealed point-in-time regulatory snapshots.
+
+    Delegates core snapshot calculation, canonical manifest generation, and
+    bitwise reproducibility verification to the unified RegulatoryAuditLedger.
+    """
 
     @classmethod
     def create_snapshot(
@@ -296,46 +301,16 @@ class RegulatorySnapshotManager:
         lock_reason: str = "Annual Periodic Regulatory Reporting Snapshot Lock",
     ) -> RegulatorySnapshot:
         """Constructs an immutable, SHA-256 sealed dataset snapshot."""
-        cases = raw_cases or []
-        subjects = subjects_data or []
-        now_dt = datetime.now(UTC).isoformat()
-        snapshot_id = f"snap_{uuid.uuid4().hex[:12]}"
-
-        # Canonical normalization for cryptographic digest
-        canonical_manifest = {
-            "study_id": study_id,
-            "compound_name": compound_name,
-            "reporting_period_start": reporting_period_start,
-            "reporting_period_end": reporting_period_end,
-            "dibd_anniversary": dibd_anniversary,
-            "cases_count": len(cases),
-            "subjects_count": len(subjects),
-            "cases": sorted(cases, key=lambda c: str(c.get("case_id", ""))),
-            "subjects": sorted(subjects, key=lambda s: str(s.get("subject_id", ""))),
-        }
-
-        canonical_json = json.dumps(canonical_manifest, sort_keys=True, default=str)
-        snapshot_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
-
-        return RegulatorySnapshot(
-            snapshot_id=snapshot_id,
-            study_id=study_id,
+        return RegulatoryAuditLedger.create_snapshot(
             compound_name=compound_name,
-            reporting_period_start=reporting_period_start,
-            reporting_period_end=reporting_period_end,
             dibd_anniversary=dibd_anniversary,
-            snapshot_hash=snapshot_hash,
-            total_cases_frozen=len(cases),
-            total_subjects_frozen=len(subjects),
-            is_locked=True,
-            locked_at=now_dt,
-            locked_by=user_id,
             lock_reason=lock_reason,
-            dataset_manifest={
-                "cases_count": len(cases),
-                "subjects_count": len(subjects),
-                "hash": snapshot_hash,
-            },
+            raw_cases=raw_cases,
+            reporting_period_end=reporting_period_end,
+            reporting_period_start=reporting_period_start,
+            study_id=study_id,
+            subjects_data=subjects_data,
+            user_id=user_id,
         )
 
     @classmethod
@@ -351,21 +326,16 @@ class RegulatorySnapshotManager:
         dibd: str | None = None,
     ) -> bool:
         """Verifies bitwise integrity of a frozen regulatory snapshot."""
-        canonical_manifest = {
-            "study_id": study_id,
-            "compound_name": compound_name,
-            "reporting_period_start": period_start,
-            "reporting_period_end": period_end,
-            "dibd_anniversary": dibd,
-            "cases_count": len(cases),
-            "subjects_count": len(subjects),
-            "cases": sorted(cases, key=lambda c: str(c.get("case_id", ""))),
-            "subjects": sorted(subjects, key=lambda s: str(s.get("subject_id", ""))),
-        }
-        computed = hashlib.sha256(
-            json.dumps(canonical_manifest, sort_keys=True, default=str).encode("utf-8")
-        ).hexdigest()
-        return computed == expected_hash
+        return RegulatoryAuditLedger.verify_snapshot(
+            cases=cases,
+            compound_name=compound_name,
+            dibd=dibd,
+            expected_hash=expected_hash,
+            period_end=period_end,
+            period_start=period_start,
+            study_id=study_id,
+            subjects=subjects,
+        )
 
 
 # =========================================================================

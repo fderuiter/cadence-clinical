@@ -9,12 +9,27 @@ Requirements:
 import pytest
 
 from apps.execution.greenlight_gating import (
+    GreenlightVerificationClient,
     IGreenlightVerificationClient,
     SiteNotGreenlightedError,
     enforce_site_greenlight_gate,
     set_greenlight_verification_client,
 )
+from apps.execution.site_execution_gatekeeper import (
+    SiteExecutionGatekeeper,
+    set_site_execution_gatekeeper,
+)
 from packages.security.signing import generate_greenlight_token
+
+
+@pytest.fixture(autouse=True)
+def reset_gatekeeper_clients():
+    """Ensure gatekeeper and greenlight verification clients are reset before and after each test."""
+    set_greenlight_verification_client(GreenlightVerificationClient())
+    set_site_execution_gatekeeper(SiteExecutionGatekeeper())
+    yield
+    set_greenlight_verification_client(GreenlightVerificationClient())
+    set_site_execution_gatekeeper(SiteExecutionGatekeeper())
 
 
 @pytest.mark.asyncio

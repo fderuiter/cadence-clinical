@@ -55,14 +55,18 @@ async def randomize_subject_endpoint(
         raise HTTPException(status_code=404, detail="Subject not found")
     study_id = subject.study_id
 
-    # Enforce country-aware greenlight site activation gate (PRD-SSU-003, ADR-2202)
-    from apps.execution.greenlight_gating import enforce_site_greenlight_gate
+    # Enforce sovereign site execution gate (PRD-SYS-121, PRD-SSU-003, ADR-2202)
+    from apps.execution.site_execution_gatekeeper import (
+        require_site_mutation_authorization,
+    )
 
     if study_id and subject.site_id:
-        await enforce_site_greenlight_gate(
-            study_id=study_id,
+        await require_site_mutation_authorization(
             site_id=subject.site_id,
-            greenlight_token=request.headers.get("X-Site-Greenlight-Token"),
+            user_id=principal.user_id,
+            operation_type="RANDOMIZATION",
+            study_id=study_id,
+            token=request.headers.get("X-Site-Greenlight-Token"),
         )
 
     # Execute randomization via service

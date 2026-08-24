@@ -400,3 +400,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-23: Automated Aggregate Safety Compiler (DSUR / PSUR / PBRER) and Exposure Calculator](2026-08-23-automated-aggregate-safety-compiler-and-exposure-calculator.md)
 - [2026-08-23: Clinical Endpoint Adjudication Committee (CEC) Dossier & 2+1 Blinded Review Suite](2026-08-23-clinical-endpoint-adjudication-committee-cec-dossier-and-2plus1-blinded-review-suite.md)
 - [2026-08-24: Antigravity GxP Lifecycle Hooks and AI Coding Guardrails](2026-08-24-antigravity-gxp-lifecycle-hooks-and-agent-guardrails.md)
+- [2026-08-24: Domain-Specific MCP Tool Extensions, Graph Introspection, and Autonomous Agent Sidecars](2026-08-24-domain-mcp-tools-graph-introspection-and-agent-sidecars.md)

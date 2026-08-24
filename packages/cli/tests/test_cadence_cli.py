@@ -11,8 +11,19 @@ from packages.cli.main import app
 runner = CliRunner()
 
 
+def _parse_json_output(output: str) -> dict:
+    """Safely extracts and parses JSON payload even when monitor lines precede it."""
+    idx = output.find("{")
+    if idx != -1:
+        return json.loads(output[idx:])
+    return json.loads(output)
+
+
 def test_cli_help():
-    """Verify that root CLI help outputs commands properly."""
+    """Verify that root CLI help outputs commands properly.
+
+    @req:PRD-SYS-001
+    """
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "Cadence Clinical" in result.output
@@ -28,13 +39,16 @@ def test_cli_help():
 
 
 def test_cli_cdisc_export_json(tmp_path: Path):
-    """Verify cadence cdisc export --json outputs structured USDM document."""
+    """Verify cadence cdisc export --json outputs structured USDM document.
+
+    @req:PRD-SYS-001
+    """
     out_file = tmp_path / "cdisc_export_test.json"
     result = runner.invoke(
         app, ["--json", "cdisc", "export", "--output", str(out_file)]
     )
     assert result.exit_code == 0
-    data = json.loads(result.output)
+    data = _parse_json_output(result.output)
     assert data["command"] == "cdisc export"
     assert data["success"] is True
     assert data["usdm_version"] == "3.0"
@@ -43,13 +57,16 @@ def test_cli_cdisc_export_json(tmp_path: Path):
 
 
 def test_cli_gxp_export_cdisc_json(tmp_path: Path):
-    """Verify cadence gxp export-cdisc --json outputs structured USDM document."""
+    """Verify cadence gxp export-cdisc --json outputs structured USDM document.
+
+    @req:PRD-SYS-001
+    """
     out_file = tmp_path / "gxp_export_test.json"
     result = runner.invoke(
         app, ["--json", "gxp", "export-cdisc", "--output", str(out_file)]
     )
     assert result.exit_code == 0
-    data = json.loads(result.output)
+    data = _parse_json_output(result.output)
     assert data["command"] == "gxp export-cdisc"
     assert data["success"] is True
     assert data["usdm_version"] == "3.0"
@@ -58,10 +75,13 @@ def test_cli_gxp_export_cdisc_json(tmp_path: Path):
 
 
 def test_cli_doctor_json():
-    """Verify doctor command runs and produces valid JSON."""
+    """Verify doctor command runs and produces valid JSON.
+
+    @req:PRD-SYS-001
+    """
     result = runner.invoke(app, ["--json", "doctor"])
     assert result.exit_code == 0
-    data = json.loads(result.output)
+    data = _parse_json_output(result.output)
     assert "status" in data
     assert "python" in data
     assert "binaries" in data
@@ -70,24 +90,33 @@ def test_cli_doctor_json():
 
 
 def test_cli_doctor_auto_fix_json():
-    """Verify doctor --auto-fix remediates environment and emits JSON."""
+    """Verify doctor --auto-fix remediates environment and emits JSON.
+
+    @req:PRD-SYS-001
+    """
     result = runner.invoke(app, ["--json", "doctor", "--auto-fix"])
     assert result.exit_code == 0
-    data = json.loads(result.output)
+    data = _parse_json_output(result.output)
     assert "auto_healed" in data
 
 
 def test_cli_dev_json():
-    """Verify dev command json output returns service manifest."""
+    """Verify dev command json output returns service manifest.
+
+    @req:PRD-SYS-001
+    """
     result = runner.invoke(app, ["--json", "dev", "gateway", "execution"])
     assert result.exit_code == 0
-    data = json.loads(result.output)
+    data = _parse_json_output(result.output)
     assert data["status"] == "ready"
     assert len(data["services"]) == 2
 
 
 def test_cli_dev_port_collision_fallback():
-    """Verify dev command automatically assigns fallback offset ports when default ports are occupied."""
+    """Verify dev command automatically assigns fallback offset ports when default ports are occupied.
+
+    @req:PRD-SYS-001
+    """
     import socket
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -96,7 +125,7 @@ def test_cli_dev_port_collision_fallback():
     try:
         result = runner.invoke(app, ["--json", "dev", "gateway"])
         assert result.exit_code == 0
-        data = json.loads(result.output)
+        data = _parse_json_output(result.output)
         assert data["services"][0]["name"] == "gateway"
         assert data["services"][0]["default_port"] == 8000
         assert data["services"][0]["assigned_port"] > 8000
@@ -107,40 +136,52 @@ def test_cli_dev_port_collision_fallback():
 
 
 def test_cli_db_status_json():
-    """Verify db status command produces valid JSON."""
+    """Verify db status command produces valid JSON.
+
+    @req:PRD-SYS-001
+    """
     result = runner.invoke(app, ["--json", "db", "status"])
     assert result.exit_code == 0
-    data = json.loads(result.output)
+    data = _parse_json_output(result.output)
     assert "databases" in data
     assert "snapshots" in data
 
 
 def test_cli_db_snapshot_and_restore():
-    """Verify snapshot and restore command workflow."""
+    """Verify snapshot and restore command workflow.
+
+    @req:PRD-SYS-001
+    """
     result = runner.invoke(app, ["--json", "db", "snapshot", "test-snapshot-unit"])
     assert result.exit_code == 0
-    data = json.loads(result.output)
+    data = _parse_json_output(result.output)
     assert data["success"] is True
 
     result_restore = runner.invoke(
         app, ["--json", "db", "restore", "test-snapshot-unit"]
     )
     assert result_restore.exit_code == 0
-    data_restore = json.loads(result_restore.output)
+    data_restore = _parse_json_output(result_restore.output)
     assert data_restore["success"] is True
 
 
 def test_cli_db_seed_json():
-    """Verify db seed command produces structured report."""
+    """Verify db seed command produces structured report.
+
+    @req:PRD-SYS-001
+    """
     result = runner.invoke(app, ["--json", "db", "seed", "--tier", "subjects"])
     assert result.exit_code == 0
-    data = json.loads(result.output)
+    data = _parse_json_output(result.output)
     assert data["success"] is True
     assert "seeded_entities" in data
 
 
 def test_find_target_test_file_resolution(tmp_path: Path):
-    """Verify smart test file resolver maps source changes to test files."""
+    """Verify smart test file resolver maps source changes to test files.
+
+    @req:PRD-SYS-001
+    """
     repo = tmp_path
     app_dir = repo / "apps" / "execution"
     test_dir = app_dir / "tests"

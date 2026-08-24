@@ -64,6 +64,7 @@ def _make_site_auth_headers(
     roles: str = "crc",
     change_reason: str = "Clinical execution e2e gatekeeper validation",
     site_id: str | None = None,
+    study_id: str | None = None,
 ) -> dict[str, str]:
     timestamp = str(time.time())
     secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(
@@ -89,6 +90,9 @@ def _make_site_auth_headers(
     }
     if site_id:
         headers["X-Site-Id"] = site_id
+        headers["X-Assigned-Sites"] = site_id
+    if study_id:
+        headers["X-Assigned-Studies"] = study_id
     return headers
 
 
@@ -710,9 +714,8 @@ async def test_fastapi_endpoints_integrate_with_consolidated_gatekeeper() -> Non
         roles="cra",
         change_reason="CRA Transfer order creation",
         site_id=site_id,
+        study_id=study_id,
     )
-    cra_headers["X-Assigned-Studies"] = study_id
-    cra_headers["X-Assigned-Sites"] = site_id
 
     resp_to = client.post(
         "/api/v1/execution/rtsm/transfer-orders",

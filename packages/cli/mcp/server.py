@@ -13,11 +13,19 @@ import sys
 from typing import Any
 
 from packages.tooling_core.contracts import (
+    ClinicalEventStreamRequest,
     FastTestRequest,
+    SdtmPipelineValidateRequest,
+    SyntheticPatientGenerateRequest,
+    UsdmGraphInspectRequest,
     ZoomInspectRequest,
 )
 from packages.tooling_core.handlers import (
+    handle_clinical_event_stream,
     handle_fast_tests,
+    handle_sdtm_pipeline_validate,
+    handle_synthetic_patient_generate,
+    handle_usdm_graph_inspect,
     handle_zoom_inspect,
 )
 
@@ -138,6 +146,108 @@ class CadenceMcpServer:
             },
         },
         {
+            "name": "usdm_graph_inspect",
+            "description": "Inspects CDISC USDM v3/v4 protocol graph metadata from Neo4j (Study, StudyArm, StudyEpoch, Activity, ScheduleTimeline) with depth and entity filtering.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "protocol_id": {
+                        "type": "string",
+                        "description": "Optional study protocol identifier",
+                    },
+                    "entity_type": {
+                        "type": "string",
+                        "description": "Optional entity label filter (Study, StudyArm, StudyEpoch, Activity, ScheduleTimeline)",
+                    },
+                    "depth": {
+                        "type": "integer",
+                        "description": "Traversal depth limit from root study node",
+                        "default": 2,
+                    },
+                    "summary": {
+                        "type": "boolean",
+                        "description": "Return concise entity counts and structure summary",
+                        "default": True,
+                    },
+                },
+            },
+        },
+        {
+            "name": "sdtm_pipeline_validate",
+            "description": "Validates eCRF-to-SDTM domain mapping rules against CDISC Conformance Rules.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "domain": {
+                        "type": "string",
+                        "description": "Optional SDTM domain code filter (DM, AE, LB, VS, CM)",
+                    },
+                    "strict_cdisc": {
+                        "type": "boolean",
+                        "description": "Enforce strict CDISC Conformance Rules",
+                        "default": True,
+                    },
+                    "summary": {
+                        "type": "boolean",
+                        "description": "Return concise conformance metric summary",
+                        "default": True,
+                    },
+                },
+            },
+        },
+        {
+            "name": "clinical_event_stream",
+            "description": "Inspects and optionally replays reactive outbox clinical events across decoupled microservice boundaries.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "event_type": {
+                        "type": "string",
+                        "description": "Optional clinical event filter (SubjectStateChanged, FormSubmitted, LabValueIngested, PaymentTriggered)",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of recent events to retrieve",
+                        "default": 20,
+                    },
+                    "replay": {
+                        "type": "boolean",
+                        "description": "Replay queried events through registered mock listeners",
+                        "default": False,
+                    },
+                },
+            },
+        },
+        {
+            "name": "synthetic_patient_generate",
+            "description": "Generates GxP-compliant synthetic clinical trial participants with longitudinal activities and lab profiles.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "protocol_id": {
+                        "type": "string",
+                        "description": "Study protocol context for participant schedule",
+                        "default": "default",
+                    },
+                    "scenario": {
+                        "type": "string",
+                        "description": "Clinical scenario (standard, oncology_dlt, gene_therapy_coc, cardiac_cec)",
+                        "default": "standard",
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "Number of synthetic subjects to synthesize",
+                        "default": 1,
+                    },
+                    "dry_run": {
+                        "type": "boolean",
+                        "description": "Simulate generation without writing to database fixtures",
+                        "default": False,
+                    },
+                },
+            },
+        },
+        {
             "name": "inspect_zoom_target",
             "description": "Progressively inspects granular logs, error traces, or test outputs for a given zoom token.",
             "inputSchema": {
@@ -230,6 +340,22 @@ class CadenceMcpServer:
         elif tool_name == "run_fast_tests":
             fast_req = FastTestRequest(**args)
             envelope = handle_fast_tests(fast_req)
+            payload = envelope.model_dump()
+        elif tool_name == "usdm_graph_inspect":
+            usdm_req = UsdmGraphInspectRequest(**args)
+            envelope = handle_usdm_graph_inspect(usdm_req)
+            payload = envelope.model_dump()
+        elif tool_name == "clinical_event_stream":
+            evt_req = ClinicalEventStreamRequest(**args)
+            envelope = handle_clinical_event_stream(evt_req)
+            payload = envelope.model_dump()
+        elif tool_name == "sdtm_pipeline_validate":
+            sdtm_req = SdtmPipelineValidateRequest(**args)
+            envelope = handle_sdtm_pipeline_validate(sdtm_req)
+            payload = envelope.model_dump()
+        elif tool_name == "synthetic_patient_generate":
+            synth_req = SyntheticPatientGenerateRequest(**args)
+            envelope = handle_synthetic_patient_generate(synth_req)
             payload = envelope.model_dump()
         elif tool_name == "doctor_diagnose":
             payload = {

@@ -103,3 +103,87 @@ class ZoomInspectResponse(BaseModel):
     total_lines: int
     lines: list[str] = Field(default_factory=list)
     has_more: bool = False
+
+
+class UsdmGraphInspectRequest(BaseModel):
+    protocol_id: str | None = Field(
+        None, description="Optional study protocol identifier"
+    )
+    entity_type: str | None = Field(
+        None,
+        description="Optional entity label filter (Study, StudyArm, StudyEpoch, Activity, ScheduleTimeline)",
+    )
+    depth: int = Field(2, description="Traversal depth limit from root study node")
+    summary: bool = Field(
+        True, description="Return concise entity counts and structure summary"
+    )
+
+
+class UsdmGraphInspectResponse(BaseModel):
+    protocol_id: str
+    node_count: int
+    relationship_count: int
+    entities: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
+    depth: int
+    duration_seconds: float
+
+
+class SdtmPipelineValidateRequest(BaseModel):
+    domain: str | None = Field(
+        None, description="Optional SDTM domain code filter (DM, AE, LB, VS, CM)"
+    )
+    strict_cdisc: bool = Field(
+        True, description="Enforce strict CDISC Conformance Rules"
+    )
+    summary: bool = Field(True, description="Return concise conformance metric summary")
+
+
+class SdtmPipelineValidateResponse(BaseModel):
+    domains_evaluated: list[str] = Field(default_factory=list)
+    valid_count: int = 0
+    warning_count: int = 0
+    error_count: int = 0
+    violations: list[dict[str, Any]] = Field(default_factory=list)
+    duration_seconds: float
+
+
+class ClinicalEventStreamRequest(BaseModel):
+    event_type: str | None = Field(
+        None,
+        description="Optional clinical event filter (SubjectStateChanged, FormSubmitted, LabValueIngested, PaymentTriggered)",
+    )
+    limit: int = Field(20, description="Maximum number of recent events to retrieve")
+    replay: bool = Field(
+        False, description="Replay queried events through registered mock listeners"
+    )
+
+
+class ClinicalEventStreamResponse(BaseModel):
+    total_events: int
+    returned_events: int
+    events: list[dict[str, Any]] = Field(default_factory=list)
+    replayed_count: int = 0
+    duration_seconds: float
+
+
+class SyntheticPatientGenerateRequest(BaseModel):
+    protocol_id: str = Field(
+        "default", description="Study protocol context for participant schedule"
+    )
+    scenario: str = Field(
+        "standard",
+        description="Clinical scenario (standard, oncology_dlt, gene_therapy_coc, cardiac_cec)",
+    )
+    count: int = Field(1, description="Number of synthetic subjects to synthesize")
+    dry_run: bool = Field(
+        False, description="Simulate generation without writing to database fixtures"
+    )
+
+
+class SyntheticPatientGenerateResponse(BaseModel):
+    protocol_id: str
+    scenario: str
+    generated_count: int
+    subjects: list[dict[str, Any]] = Field(default_factory=list)
+    is_synthetic: bool = True
+    duration_seconds: float

@@ -123,3 +123,108 @@ def test_mcp_server_tool_call_invalid_tool():
     res = server.handle_message(req)
     assert "error" in res
     assert res["error"]["code"] == -32601
+
+
+def test_mcp_server_usdm_graph_inspect():
+    """Verify usdm_graph_inspect tool call returns USDM protocol graph entities.
+
+    @req:PRD-SYS-054
+    """
+    server = CadenceMcpServer()
+    req = {
+        "jsonrpc": "2.0",
+        "id": 6,
+        "method": "tools/call",
+        "params": {
+            "name": "usdm_graph_inspect",
+            "arguments": {
+                "protocol_id": "CADENCE-101",
+                "entity_type": "Activity",
+                "depth": 2,
+            },
+        },
+    }
+    res = server.handle_message(req)
+    assert res["id"] == 6
+    payload = json.loads(res["result"]["content"][0]["text"])
+    assert payload["success"] is True
+    assert payload["data"]["protocol_id"] == "CADENCE-101"
+    assert "Activity" in payload["data"]["entities"]
+    assert payload["zoom_token"] is not None
+
+
+def test_mcp_server_clinical_event_stream():
+    """Verify clinical_event_stream tool call returns and replays outbox events.
+
+    @req:PRD-SYS-054
+    """
+    server = CadenceMcpServer()
+    req = {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "method": "tools/call",
+        "params": {
+            "name": "clinical_event_stream",
+            "arguments": {
+                "event_type": "SubjectStateChanged",
+                "limit": 5,
+                "replay": True,
+            },
+        },
+    }
+    res = server.handle_message(req)
+    assert res["id"] == 7
+    payload = json.loads(res["result"]["content"][0]["text"])
+    assert payload["success"] is True
+    assert payload["data"]["replayed_count"] >= 1
+    assert payload["data"]["events"][0]["event_type"] == "SubjectStateChanged"
+
+
+def test_mcp_server_sdtm_pipeline_validate():
+    """Verify sdtm_pipeline_validate tool call validates SDTM domain mapping rules.
+
+    @req:PRD-SYS-054
+    """
+    server = CadenceMcpServer()
+    req = {
+        "jsonrpc": "2.0",
+        "id": 8,
+        "method": "tools/call",
+        "params": {
+            "name": "sdtm_pipeline_validate",
+            "arguments": {"domain": "LB", "strict_cdisc": True},
+        },
+    }
+    res = server.handle_message(req)
+    assert res["id"] == 8
+    payload = json.loads(res["result"]["content"][0]["text"])
+    assert payload["success"] is True
+    assert "LB" in payload["data"]["domains_evaluated"]
+
+
+def test_mcp_server_synthetic_patient_generate():
+    """Verify synthetic_patient_generate tool call creates synthetic trial participants.
+
+    @req:PRD-SYS-054
+    """
+    server = CadenceMcpServer()
+    req = {
+        "jsonrpc": "2.0",
+        "id": 9,
+        "method": "tools/call",
+        "params": {
+            "name": "synthetic_patient_generate",
+            "arguments": {
+                "protocol_id": "CADENCE-202",
+                "scenario": "oncology_dlt",
+                "count": 3,
+                "dry_run": True,
+            },
+        },
+    }
+    res = server.handle_message(req)
+    assert res["id"] == 9
+    payload = json.loads(res["result"]["content"][0]["text"])
+    assert payload["success"] is True
+    assert payload["data"]["generated_count"] == 3
+    assert payload["data"]["is_synthetic"] is True

@@ -1,12 +1,9 @@
 """Native Asynchronous S/MIME AS2 Transmission Gateway & E2B(R3) MDN Parser.
 
-Requirements: PRD-PVG-002, PRD-SYS-001 (21 CFR Part 11, RFC 4130)
+Requirements: PRD-PVG-002, PRD-SYS-001, ADR-2199 (21 CFR Part 11, RFC 4130)
 """
 
-import base64
-import hashlib
 import re
-import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
 
@@ -50,7 +47,11 @@ class AS2MDNReceipt(BaseModel):
 
 
 class AS2GatewayService:
-    """High-performance AS2 messaging gateway supporting RFC 4130 and E2B(R3) transmission."""
+    """High-performance AS2 messaging gateway supporting RFC 4130 and E2B(R3) transmission.
+
+    Delegates cryptographic MIC calculations, envelope sealing, and MDN verification
+    to the centralized RegulatoryAuditLedger.
+    """
 
     @classmethod
     def calculate_mic(cls, payload: str | bytes) -> str:
@@ -62,11 +63,11 @@ class AS2GatewayService:
         Returns:
             Base64 encoded SHA-256 digest string followed by algorithm tag (e.g. '... , sha-256').
         """
-        raw_bytes = payload.encode("utf-8") if isinstance(payload, str) else payload
+        from apps.safety.services.regulatory_audit_ledger import (
+            RegulatoryAuditLedger,
+        )
 
-        digest = hashlib.sha256(raw_bytes).digest()
-        b64_digest = base64.b64encode(digest).decode("ascii")
-        return f"{b64_digest}, sha-256"
+        return RegulatoryAuditLedger.calculate_as2_mic(payload)
 
     @classmethod
     def create_outbound_envelope(
@@ -87,29 +88,15 @@ class AS2GatewayService:
         Returns:
             AS2TransmissionEnvelope with formatted HTTP MIME headers.
         """
-        msg_id = custom_message_id or f"<{uuid.uuid4()}@{as2_from.lower()}.ccrsoft.com>"
-        mic = cls.calculate_mic(xml_payload)
-        now_date = datetime.now(UTC).strftime("%a, %d %b %Y %H:%M:%S GMT")
+        from apps.safety.services.regulatory_audit_ledger import (
+            RegulatoryAuditLedger,
+        )
 
-        headers = {
-            "AS2-Version": "1.2",
-            "AS2-From": as2_from,
-            "AS2-To": as2_to,
-            "Message-ID": msg_id,
-            "Date": now_date,
-            "Content-Type": "application/xml; charset=UTF-8",
-            "Disposition-Notification-To": f"as2-mdn@{as2_from.lower()}.ccrsoft.com",
-            "Disposition-Notification-Options": "signed-receipt-protocol=optional, pkcs7-signature; signed-receipt-micalg=optional, sha-256",
-        }
-
-        return AS2TransmissionEnvelope(
-            message_id=msg_id,
+        return RegulatoryAuditLedger.seal_outbound_as2_envelope(
             as2_from=as2_from,
             as2_to=as2_to,
-            payload_content_type="application/xml",
-            content_mic_sha256=mic,
-            headers=headers,
-            raw_payload=xml_payload,
+            custom_message_id=custom_message_id,
+            xml_payload=xml_payload,
         )
 
     @classmethod
@@ -127,80 +114,13 @@ class AS2GatewayService:
         Returns:
             AS2MDNReceipt with verified disposition status.
         """
-        mdn_id_match = re.search(
-            r"Message-ID:\s*([^\r\n]+)", raw_mdn_text, re.IGNORECASE
-        )
-        mdn_id = (
-            mdn_id_match.group(1).strip() if mdn_id_match else f"<mdn_{uuid.uuid4()}>"
+        from apps.safety.services.regulatory_audit_ledger import (
+            RegulatoryAuditLedger,
         )
 
-        orig_id_match = re.search(
-            r"Original-Message-ID:\s*([^\r\n]+)", raw_mdn_text, re.IGNORECASE
-        )
-        orig_id = (
-            orig_id_match.group(1).strip()
-            if orig_id_match
-            else (
-                expected_outbound_envelope.message_id
-                if expected_outbound_envelope
-                else ""
-            )
-        )
-
-        ua_match = re.search(r"Reporting-UA:\s*([^\r\n]+)", raw_mdn_text, re.IGNORECASE)
-        reporting_ua = ua_match.group(1).strip() if ua_match else None
-
-        disp_match = re.search(
-            r"Disposition:\s*([^\r\n]+)", raw_mdn_text, re.IGNORECASE
-        )
-        raw_disp = (
-            disp_match.group(1).strip()
-            if disp_match
-            else "automatic-action/MDN-sent-automatically; processed"
-        )
-
-        mic_match = re.search(
-            r"Received-Content-MIC:\s*([^\r\n]+)", raw_mdn_text, re.IGNORECASE
-        )
-        received_mic = mic_match.group(1).strip() if mic_match else None
-
-        # Determine disposition
-        if "processed" in raw_disp.lower() and "error" not in raw_disp.lower():
-            status = AS2DispositionStatus.PROCESSED
-        elif "warning" in raw_disp.lower():
-            status = AS2DispositionStatus.WARNING
-        else:
-            status = AS2DispositionStatus.FAILED
-
-        # Verify MIC against original transmission
-        is_verified = False
-        error = None
-
-        if expected_outbound_envelope:
-            expected_mic_norm = cls._normalize_mic(
-                expected_outbound_envelope.content_mic_sha256
-            )
-            if received_mic:
-                received_mic_norm = cls._normalize_mic(received_mic)
-                if expected_mic_norm == received_mic_norm:
-                    is_verified = True
-                else:
-                    status = AS2DispositionStatus.TAMPERED
-                    error = f"MIC mismatch: expected '{expected_mic_norm}', received '{received_mic_norm}'"
-            else:
-                error = "MDN does not contain Received-Content-MIC"
-        else:
-            is_verified = True
-
-        return AS2MDNReceipt(
-            mdn_message_id=mdn_id,
-            original_message_id=orig_id,
-            reporting_ua=reporting_ua,
-            disposition_raw=raw_disp,
-            disposition_status=status,
-            received_mic=received_mic,
-            is_mic_verified=is_verified,
-            verification_error=error,
+        return RegulatoryAuditLedger.verify_as2_mdn_receipt(
+            expected_outbound_envelope=expected_outbound_envelope,
+            raw_mdn_text=raw_mdn_text,
         )
 
     @staticmethod

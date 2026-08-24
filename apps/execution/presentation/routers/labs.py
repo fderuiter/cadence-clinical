@@ -54,17 +54,10 @@ from apps.execution.domain.lab_transport_models import (
     StagedAdverseEventActionResponse,
     StagedAdverseEventReviewResponse,
 )
-from apps.execution.lab_ranges import (
-    convert_lab_unit,
-    get_loinc_catalog,
-    resolve_loinc_mapping,
-)
+from apps.execution.services.lab_assessment_engine import LabAssessmentEngine
 from apps.execution.services.lab_ingestion_service import (
     LabBatchIngestResult,
     LabIngestionService,
-)
-from apps.execution.services.lab_toxicity_engine import (
-    LabToxicityEngine,
 )
 from packages.security import (
     ROLE_CRA,
@@ -401,60 +394,11 @@ async def verify_local_lab_certification_endpoint(
 ) -> LocalLabCertificationVerifyResponse:
     """Verify if a site has active, unexpired local lab certification for an observation date."""
     obs_date = payload.observation_date or datetime.now(UTC).replace(tzinfo=None)
-    stmt = select(LocalLabCertification).where(
-        LocalLabCertification.study_id == payload.study_id,
-        LocalLabCertification.site_id == payload.site_id,
-        LocalLabCertification.is_deleted.is_(False),
-    )
-    res = await session.execute(stmt)
-    certs = res.scalars().all()
-
-    if not certs:
-        return LocalLabCertificationVerifyResponse(
-            is_valid=False,
-            status="MISSING",
-            site_id=payload.site_id,
-            study_id=payload.study_id,
-            uncalibrated_safeguard_triggered=True,
-            message=f"No local lab certification registered for site {payload.site_id}.",
-        )
-
-    active_cert = None
-    for c in certs:
-        if c.status == "ACTIVE" and c.is_accredited:
-            if c.effective_date <= obs_date <= c.expiration_date:
-                active_cert = c
-                break
-
-    if active_cert:
-        days_left = (active_cert.expiration_date - obs_date).days
-        return LocalLabCertificationVerifyResponse(
-            is_valid=True,
-            status="ACTIVE",
-            site_id=payload.site_id,
-            study_id=payload.study_id,
-            certification_number=active_cert.certification_number,
-            accreditation_body=active_cert.accreditation_body,
-            expiration_date=active_cert.expiration_date,
-            days_until_expiration=days_left,
-            uncalibrated_safeguard_triggered=False,
-            message=f"Certification is valid ({active_cert.accreditation_body} #{active_cert.certification_number}). {days_left} days until expiration.",
-        )
-
-    # Check if expired
-    most_recent = sorted(certs, key=lambda x: x.expiration_date, reverse=True)[0]
-    days_expired = (obs_date - most_recent.expiration_date).days
-    return LocalLabCertificationVerifyResponse(
-        is_valid=False,
-        status="EXPIRED" if days_expired > 0 else most_recent.status,
-        site_id=payload.site_id,
+    return await LabAssessmentEngine.verify_local_lab_certification(
         study_id=payload.study_id,
-        certification_number=most_recent.certification_number,
-        accreditation_body=most_recent.accreditation_body,
-        expiration_date=most_recent.expiration_date,
-        days_until_expiration=-days_expired if days_expired > 0 else 0,
-        uncalibrated_safeguard_triggered=True,
-        message=f"Local lab certification expired on {most_recent.expiration_date.strftime('%Y-%m-%d')}. Uncalibrated range safeguard active.",
+        site_id=payload.site_id,
+        obs_date=obs_date,
+        session=session,
     )
 
 
@@ -656,7 +600,7 @@ async def evaluate_toxicity_realtime(
     roles: list[str] = Depends(get_normalized_roles),
 ) -> LabToxicityEvaluateResponse:
     """Evaluate and simulate CTCAE v5.0 / DAIDS v2.1 toxicity grading in real time."""
-    assessment = LabToxicityEngine.evaluate_observation(
+    assessment = LabAssessmentEngine.evaluate_toxicity(
         test_code=payload.test_code,
         test_name=payload.test_name or payload.test_code,
         value=payload.value,
@@ -699,7 +643,7 @@ async def get_loinc_catalog_endpoint(
     roles: list[str] = Depends(get_normalized_roles),
 ) -> LoincCatalogResponse:
     """Retrieve standardized LOINC catalog mappings."""
-    items_raw = get_loinc_catalog()
+    items_raw = LabAssessmentEngine.get_loinc_catalog()
     items = [LoincMappingItem(**item) for item in items_raw]
     return LoincCatalogResponse(total_count=len(items), items=items)
 
@@ -714,7 +658,7 @@ async def convert_unit_endpoint(
     session: AsyncSession = Depends(get_execution_db_session),
 ) -> LoincConvertResponse:
     """Convert laboratory measurement between conventional and SI units."""
-    converted = await convert_lab_unit(
+    converted = await LabAssessmentEngine.convert_unit(
         session=session,
         test_code=payload.test_code,
         from_unit=payload.from_unit,
@@ -722,7 +666,7 @@ async def convert_unit_endpoint(
         value=payload.value,
     )
 
-    loinc_entry = resolve_loinc_mapping(payload.test_code)
+    loinc_entry = LabAssessmentEngine.resolve_loinc_mapping(payload.test_code)
     loinc_code = loinc_entry.get("loinc_code") if loinc_entry else None
 
     factor = (converted / payload.value) if payload.value != 0 else 1.0

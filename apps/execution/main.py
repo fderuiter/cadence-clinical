@@ -79,7 +79,6 @@ from apps.execution.exceptions import (
     InvalidCodingActionError,
     SubjectEligibilityError,
 )
-from apps.execution.greenlight_gating import enforce_site_greenlight_gate
 from apps.execution.lab_range_cache import get_active_lab_ranges, lab_range_cache
 from apps.execution.outliers import recalculate_cohort_outliers
 from apps.execution.routers.amendments import router as amendments_router
@@ -111,11 +110,13 @@ from apps.execution.rtsm_supply import (
     SiteInventoryNotFoundError,
     dispense_kit_transaction,
 )
+from apps.execution.site_execution_gatekeeper import (
+    require_site_mutation_authorization,
+)
 from apps.execution.subject_lifecycle import (
     InvalidStateTransitionError,
     LockedFactorMutationError,
 )
-from apps.execution.training_gating import enforce_training_qualification_gate
 from apps.execution.translator import process_translation
 from apps.execution.trial_lock import TrialLockManager
 from apps.execution.ucum import convert_unit, get_normalized_representation
@@ -992,11 +993,14 @@ async def create_subject(
     roles: list[str] = Depends(verify_not_auditor),
 ) -> SubjectResponse:
     """Create a new clinical subject pseudonymously."""
-    # Enforce country-aware greenlight site activation gate (PRD-SSU-003, ADR-2202)
+    # Enforce sovereign site execution gate (PRD-SYS-121, PRD-SSU-003, ADR-2202)
     if payload.study_id and payload.site_id:
-        await enforce_site_greenlight_gate(
-            study_id=payload.study_id,
+        u_id = current_user_id.get() or "system"
+        await require_site_mutation_authorization(
             site_id=payload.site_id,
+            user_id=u_id,
+            operation_type="SUBJECT_CREATION",
+            study_id=payload.study_id,
         )
 
     encrypted_demo = None
@@ -1902,24 +1906,19 @@ async def create_observation(
                 )
             study_id = subj_db.study_id
 
-        # Enforce training qualification gating (PRD-TRN-002)
+        # Enforce sovereign site execution gate (PRD-SYS-121, PRD-SSU-003, PRD-TRN-002, ADR-2202)
         u_id = current_user_id.get() or "system"
         proto_tag = getattr(subj_db, "active_protocol_version", None) or "1.0.0"
         s_id = getattr(payload, "site_id", None) or (
             getattr(subj_db, "site_id", None) if subj_db else None
         )
-        await enforce_training_qualification_gate(
-            user_id=u_id,
-            study_id=study_id,
-            protocol_version=proto_tag,
-            site_id=s_id,
-        )
-
-        # Enforce country-aware greenlight site activation gate (PRD-SSU-003, ADR-2202)
-        if study_id and s_id:
-            await enforce_site_greenlight_gate(
-                study_id=study_id,
+        if s_id:
+            await require_site_mutation_authorization(
                 site_id=s_id,
+                user_id=u_id,
+                operation_type="OBSERVATION_CREATION",
+                study_id=study_id,
+                protocol_version=proto_tag,
             )
 
         obs_date = payload.observation_date or datetime.now()
@@ -3108,15 +3107,17 @@ async def create_form_submission(
 ) -> FormSubmissionResponse:
     """Create a new FormSubmission in DRAFT status."""
     async with db_manager.get_session_maker()() as session:
-        # Enforce training qualification gating (PRD-TRN-002)
+        # Enforce sovereign site execution gate (PRD-SYS-121, PRD-SSU-003, PRD-TRN-002, ADR-2202)
         u_id = current_user_id.get() or "system"
         proto_tag = payload.protocol_version or "1.0.0"
-        await enforce_training_qualification_gate(
-            user_id=u_id,
-            study_id=payload.study_id,
-            protocol_version=proto_tag,
-            site_id=payload.site_id,
-        )
+        if payload.site_id:
+            await require_site_mutation_authorization(
+                site_id=payload.site_id,
+                user_id=u_id,
+                operation_type="FORM_SUBMISSION",
+                study_id=payload.study_id,
+                protocol_version=proto_tag,
+            )
 
         sub = FormSubmission(
             study_id=payload.study_id,
@@ -3372,15 +3373,17 @@ async def approve_form_submission(
                 detail=f"PI approval must only be possible from COMPLETED status. Current: {sub.status}",
             )
 
-        # Enforce training qualification gating for PI approval (PRD-TRN-002)
+        # Enforce sovereign site execution gate for PI approval (PRD-SYS-121, PRD-TRN-002, ADR-2202)
         u_id = current_user_id.get() or "system"
-        await enforce_training_qualification_gate(
-            user_id=u_id,
-            study_id=sub.study_id,
-            protocol_version=sub.protocol_version or "1.0.0",
-            site_id=sub.site_id,
-            user_role="Principal Investigator",
-        )
+        if sub.site_id:
+            await require_site_mutation_authorization(
+                site_id=sub.site_id,
+                user_id=u_id,
+                operation_type="PI_SIGNOFF",
+                study_id=sub.study_id,
+                protocol_version=sub.protocol_version or "1.0.0",
+                user_role="Principal Investigator",
+            )
 
         sub.status = "APPROVED"
 

@@ -7,11 +7,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3679
-- **Passed:** 3649 🟢
+- **Total Automated Test Cases Run:** 3687
+- **Passed:** 3657 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 30 ⚪
-- **Overall Operational Pass Rate:** 99.18%
+- **Overall Operational Pass Rate:** 99.19%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -2956,27 +2956,31 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_form_submission_persists_observations_with_part11_audit_fields` | `apps.web.tests.test_ecrf_renderer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_reconsent_gating_blocks_data_entry_and_unlocks_on_reconsent` | `apps.web.tests.test_ecrf_renderer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_subject_enrollment_modal_and_consent_assignment` | `apps.web.tests.test_ecrf_renderer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_cli_cdisc_export_json` | `packages.cli.tests.test_cadence_cli` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_cli_db_seed_json` | `packages.cli.tests.test_cadence_cli` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_cli_db_snapshot_and_restore` | `packages.cli.tests.test_cadence_cli` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_cli_db_status_json` | `packages.cli.tests.test_cadence_cli` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_cli_dev_json` | `packages.cli.tests.test_cadence_cli` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_cli_dev_port_collision_fallback` | `packages.cli.tests.test_cadence_cli` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_cli_doctor_auto_fix_json` | `packages.cli.tests.test_cadence_cli` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_cli_doctor_json` | `packages.cli.tests.test_cadence_cli` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_cli_gxp_export_cdisc_json` | `packages.cli.tests.test_cadence_cli` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_cli_help` | `packages.cli.tests.test_cadence_cli` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_find_target_test_file_resolution` | `packages.cli.tests.test_cadence_cli` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cli_cdisc_export_json` | `packages.cli.tests.test_cadence_cli` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_cli_db_seed_json` | `packages.cli.tests.test_cadence_cli` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_cli_db_snapshot_and_restore` | `packages.cli.tests.test_cadence_cli` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_cli_db_status_json` | `packages.cli.tests.test_cadence_cli` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_cli_dev_json` | `packages.cli.tests.test_cadence_cli` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_cli_dev_port_collision_fallback` | `packages.cli.tests.test_cadence_cli` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_cli_doctor_auto_fix_json` | `packages.cli.tests.test_cadence_cli` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_cli_doctor_json` | `packages.cli.tests.test_cadence_cli` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_cli_gxp_export_cdisc_json` | `packages.cli.tests.test_cadence_cli` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_cli_help` | `packages.cli.tests.test_cadence_cli` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_find_target_test_file_resolution` | `packages.cli.tests.test_cadence_cli` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_cli_db_seed_full_cadence_101_json` | `packages.cli.tests.test_db_seed` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_db_seed_sqlite_content` | `packages.cli.tests.test_db_seed` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_db_seed_tier_filtering` | `packages.cli.tests.test_db_seed` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_format_file_link` | `packages.cli.tests.test_formatting` | PRD-SYS-049 | 🟢 PASSED | < 1s |
 | `test_terminal_document_builder_structured_dict` | `packages.cli.tests.test_formatting` | PRD-SYS-049 | 🟢 PASSED | < 1s |
 | `test_terminal_document_render_output` | `packages.cli.tests.test_formatting` | PRD-SYS-049 | 🟢 PASSED | < 1s |
+| `test_mcp_server_clinical_event_stream` | `packages.cli.tests.test_mcp_server` | PRD-SYS-054 | 🟢 PASSED | < 1s |
 | `test_mcp_server_initialize` | `packages.cli.tests.test_mcp_server` | PRD-SYS-049 | 🟢 PASSED | < 1s |
+| `test_mcp_server_sdtm_pipeline_validate` | `packages.cli.tests.test_mcp_server` | PRD-SYS-054 | 🟢 PASSED | < 1s |
+| `test_mcp_server_synthetic_patient_generate` | `packages.cli.tests.test_mcp_server` | PRD-SYS-054 | 🟢 PASSED | < 1s |
 | `test_mcp_server_tool_call_doctor` | `packages.cli.tests.test_mcp_server` | PRD-SYS-049 | 🟢 PASSED | < 1s |
 | `test_mcp_server_tool_call_invalid_tool` | `packages.cli.tests.test_mcp_server` | PRD-SYS-049 | 🟢 PASSED | < 1s |
 | `test_mcp_server_tools_list` | `packages.cli.tests.test_mcp_server` | PRD-SYS-049 | 🟢 PASSED | < 1s |
+| `test_mcp_server_usdm_graph_inspect` | `packages.cli.tests.test_mcp_server` | PRD-SYS-054 | 🟢 PASSED | < 1s |
 | `test_mcp_server_zoom_inspection` | `packages.cli.tests.test_mcp_server` | PRD-SYS-049 | 🟢 PASSED | < 1s |
 | `test_extract_ports_from_command` | `packages.cli.tests.test_ports` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_get_discovered_service_ports` | `packages.cli.tests.test_ports` | PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -3454,6 +3458,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_in_memory_repository` | `packages.testing.tests.test_testing_package` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_security_helpers` | `packages.testing.tests.test_testing_package` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_command_envelope_serialization` | `packages.tooling_core.tests.test_tooling_core` | PRD-SYS-049 | 🟢 PASSED | < 1s |
+| `test_handle_clinical_event_stream_replay_and_filter` | `packages.tooling_core.tests.test_tooling_core` | PRD-SYS-054 | 🟢 PASSED | < 1s |
+| `test_handle_sdtm_pipeline_validate_rules` | `packages.tooling_core.tests.test_tooling_core` | PRD-SYS-054 | 🟢 PASSED | < 1s |
+| `test_handle_synthetic_patient_generate_determinism` | `packages.tooling_core.tests.test_tooling_core` | PRD-SYS-054 | 🟢 PASSED | < 1s |
+| `test_handle_usdm_graph_inspect_depth_and_filtering` | `packages.tooling_core.tests.test_tooling_core` | PRD-SYS-054 | 🟢 PASSED | < 1s |
 | `test_zoom_inspect_handler` | `packages.tooling_core.tests.test_tooling_core` | PRD-SYS-049 | 🟢 PASSED | < 1s |
 | `test_cross_service_import_isolation` | `scripts.test_m4_challenger2_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_protocol_version_ref_invalid_status` | `scripts.test_m4_challenger2_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3971,28 +3979,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** deaa606c82019576efa9123af5542d9ca4d48912639304ee2b467429f20ef8b4
+- **Cryptographic Hash (SHA-256):** 98fb8dd60b74b9e150d6e5958357f09d555eb1e2e996151a8cab69f182210b2a
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUeGvy0fyQ9lZYDcO8OGOfMoo3tt8wDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUA43NFEW1RFKBip80VJkDXQE18X8wDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MzAxNTk1NFoXDTI3MDgyNDAxNTk1NFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MzAyMjY0NFoXDTI3MDgyNDAyMjY0NFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0xz0
-6p24bEojiiKY+ir1Y+Yp5IAN6hE98JFopCJ+ymClEH48KvrpbW3CNulmh7KJ49qL
-riORk7iePEyPOCyRhJvgkAcMjfo3FdjdTGxCvoTYAvYty89bjsi827NKfaMh/tp/
-0YEPwhpn81bf8KdnhdC0S1119gyA74YR9xT3XJvFN5Ikkpo3lgCzy3jA+PjTx1SQ
-vvgIUEzES2kc/DOVLQ6hfxH3RLeEBTfNNSeV4m6PEg6BVCB4/UJ1KzzJubILbtxM
-SkexMjGdH08w7xPdRjLd5JGbHLRW+FUxdXczGz6vxWX5WFZAE7XSdRxVRJg0j3Eq
-R3AHB7ja2PBDD5ra7QIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBmqhidC4I411Eb
-DNlyQrs3sj7C4qNrgA1+AH4uQ9ZSXLpstAHmbFr1S5C11zzGHwe3yqf459OqrArs
-oPcrq7Xqfe/LXE1jVpqkr0c8ELz9wslxudY0A0IAmAjLkJ3aeu1x/MoFH/jYsCxU
-YN+BWfosGEqXLROY9pRmwxHLMW3KsV0zBMzVFUpuW5HdytAJP1kM9OxrQpP6prrG
-VW7blfOK9zAq0qPDI2yIsgUgP/6BSUrqXBu7bnZcJVyWtAfSm6jhhYVhpEn51Eh7
-43wa5AdfwNUIY4IQF4q2kFjtzUPQz4j9Wz9pJXwPD2fwAWLfAyI/YoYYH/mMyVcU
-ReD2n8yT
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu3Rl
+TthbPFBNNydOoQ4WF+svH6SUWBrO6zpDx0lRjJDbhHPkQtN6lijkapu8PU6eqEAx
+29vl/XbHTSAsxT/LlC/FXvmDzxMnY/QaTUY7SCvid6FCQKbJzDybiwTPkC3POTwx
+2MYojfsYqCOOVzGMhuRJkfQbma1kbVd0V/n2ZQTiIdh3o1RW/HSIOLKGq26sg4at
+aqed9m0tb5R12OdZNCJcEnPsHfQpd7vu804Zqjtrm+RF4tjVCSR+k8TiSa8qDDOT
+4PRs/hHvfEGtUHlNOd9aboet34cScLjgSMvk1KmvHmjKD4028RQtLkRmY6ZlVgwE
+KbWfDr18evVvxSjCKQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQA3onv68tcvM9l7
+30g+p2aVpX7oDt/ALbJNbdTUoQ/xFLCOlhwIOK3E/pA4BNenGT7aVznwCXmOmQW4
+M9eh0nxhL1F6z6fBlLk2u8lztk53gvC+qPcVm5EGPEiafGO/hWa6KgiwFS21hZgf
+wJ5HABdf/hPh5hb0owM+7yuzsoiQpXNOn7pbMXfcYz/PhvEjuwgLHPN8eeim4Qcz
+8XWzLPHgSHRG+z6iOWh/mBvCrwnKdiM+JCGYv4d/K9Y/tV4UWpyfemV8NArX9rb5
+XjxIHfeqFyGlsS3wbmgFaEpf+TPjaf0oz5iu/wf6FtRLa7lnu77WH0OreQ2o9oAB
+v1TS/Esl
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-KS9DZGdDM0nP2wyTUhRKB5hE3DqPJVTnIl+ANeBmI0DAsirQCGpubcB12fqy1xXAxH20X1l8gwT30fKTEuI9Rx6nEA1uNaktAPqEXjdwbmUtX3c1icKF5UncoszdGNpqIZqoO3HmfxjJzLsqW5pZYqcUIk/Rb91/r/ie9tshmifQXg8wLbk6onJIKHibab6GXZmuuxFFIeVYxPYsq8Fsm8j6JHRf6fT06LO7Lwws11I541Wq6ApRYK0ZLIKWLAGvXAxS9g9Gj71ZW4HiThT0bo8+wU+kX/p2C/DQOLYU9h1InVz4KOBgTlYIDh+0QJZD+55rRHk78FAsDMMcXY9q/w==
+ZaPyTxcLiuudQkPthrCf5J3eaQKICrjnzY9y6Hg8LRQJ5Qge9BZVhF6sjGbndyDNhh8rYcGvqT2bhDDtNx9fUvGFheC/8Ya0e92vfM1B8A0BxYlaxnQ+lltIt+cZlMFhXT2489cVfv+dliDY2Ud6RzajCTpc1plNT5o3afhz+9g3j130/iUu0UCfeMxukmgFAfl+h673C2vEMeJ2mOzLheNu4V2mIui2BUaFbqzKMWTwqgU/KSr1AhVHlIcN//87MzHZu1zMJG7ed4ycP4UOnnE/RuHAxCELd2bhd+1mcZlAD4GN3n0dNdK4NSohoNixEImhgfSZ99bEi44bTZZY5g==
 -----END SIGNATURE-----
