@@ -8,7 +8,7 @@ Validates:
 - Decentralized in-home healthcare nurse visit scheduling and mobile eCRF data entry with offline cache sync
 - REST API endpoint contracts and gateway security
 
-Requirements: PRD-DCT-003, PRD-DCT-004, PRD-DCT-005, PRD-DCT-006, ADR-2199, 21 CFR Part 11
+Requirements: PRD-SYS-180, PRD-SYS-181, PRD-DCT-003, PRD-DCT-004, PRD-DCT-005, PRD-DCT-006, ADR-2199, 21 CFR Part 11
 """
 
 from __future__ import annotations
@@ -83,6 +83,7 @@ def get_auth_headers(
 class TestTelehealthRoomSecurityAndSignaling:
     """Test WebRTC session authorization, room tokens, DTLS fingerprints, and GxP recording seals.
 
+    @req:PRD-SYS-180
     @req:PRD-DCT-005
     @req:ADR-2199
     """
@@ -90,6 +91,7 @@ class TestTelehealthRoomSecurityAndSignaling:
     def test_room_token_generation_and_verification(self) -> None:
         """Verify generation and cryptographic verification of room authorization tokens.
 
+        @req:PRD-SYS-180
         @req:PRD-DCT-005
         @req:ADR-2199
         """
@@ -122,6 +124,7 @@ class TestTelehealthRoomSecurityAndSignaling:
     def test_room_token_role_permissions(self) -> None:
         """Verify subject and LAR tokens have restricted capabilities (no admit/record).
 
+        @req:PRD-SYS-180
         @req:PRD-DCT-005
         @req:ADR-2199
         """
@@ -146,6 +149,7 @@ class TestTelehealthRoomSecurityAndSignaling:
     def test_room_token_rejection_on_tamper_or_expiration(self) -> None:
         """Verify tampered or expired room tokens are rejected.
 
+        @req:PRD-SYS-180
         @req:PRD-DCT-005
         @req:ADR-2199
         """
@@ -174,6 +178,7 @@ class TestTelehealthRoomSecurityAndSignaling:
     def test_webrtc_dtls_fingerprint_validation(self) -> None:
         """Verify DTLS-SRTP SHA-256 fingerprint syntax validation.
 
+        @req:PRD-SYS-180
         @req:PRD-DCT-005
         @req:ADR-2199
         """
@@ -187,6 +192,7 @@ class TestTelehealthRoomSecurityAndSignaling:
     def test_gxp_recording_seal_generation_and_verification(self) -> None:
         """Verify GxP recording SHA-256 digital seal creation and verification (21 CFR Part 11).
 
+        @req:PRD-SYS-180
         @req:PRD-DCT-005
         @req:ADR-2199
         """
@@ -241,6 +247,7 @@ class TestTelehealthRoomSecurityAndSignaling:
 class TestTieredPediatricAssentAndLAR:
     """Test age-appropriate pediatric assent tiers, comprehension scoring, and LAR dual-consent manifests.
 
+    @req:PRD-SYS-180
     @req:PRD-DCT-006
     @req:ADR-2199
     """
@@ -248,6 +255,7 @@ class TestTieredPediatricAssentAndLAR:
     def test_determine_pediatric_tier(self) -> None:
         """Verify age classification into appropriate assent and LAR tiers.
 
+        @req:PRD-SYS-180
         @req:PRD-DCT-006
         @req:ADR-2199
         """
@@ -259,6 +267,7 @@ class TestTieredPediatricAssentAndLAR:
     def test_comprehension_scoring(self) -> None:
         """Verify 80% passing threshold for pediatric multimedia quiz.
 
+        @req:PRD-SYS-180
         @req:PRD-DCT-006
         @req:ADR-2199
         """
@@ -289,6 +298,7 @@ class TestTieredPediatricAssentAndLAR:
     def test_child_assent_with_lar_parent_signature(self) -> None:
         """Verify child (7-11) assent with mandatory parent/LAR signature and cryptographic seal.
 
+        @req:PRD-SYS-180
         @req:PRD-DCT-006
         @req:ADR-2199
         """
@@ -315,6 +325,7 @@ class TestTieredPediatricAssentAndLAR:
     def test_pediatric_assent_rejects_missing_lar(self) -> None:
         """Verify pediatric assent throws error if LAR parent/guardian signature is absent.
 
+        @req:PRD-SYS-180
         @req:PRD-DCT-006
         @req:ADR-2199
         """
@@ -343,6 +354,7 @@ class TestTieredPediatricAssentAndLAR:
 class TestDTPLogisticsAndColdChain:
     """Test DTP courier dispatch, Arrhenius MKT calculations, cold chain excursions, and custody handoffs.
 
+    @req:PRD-SYS-181
     @req:PRD-DCT-003
     @req:ADR-2199
     """
@@ -350,6 +362,7 @@ class TestDTPLogisticsAndColdChain:
     def test_temperature_thresholds(self) -> None:
         """Verify temperature ranges across storage condition profiles.
 
+        @req:PRD-SYS-181
         @req:PRD-DCT-003
         @req:ADR-2199
         """
@@ -364,6 +377,7 @@ class TestDTPLogisticsAndColdChain:
     def test_mean_kinetic_temperature_calculation(self) -> None:
         """Verify USP <1079> Arrhenius MKT calculation.
 
+        @req:PRD-SYS-181
         @req:PRD-DCT-003
         @req:ADR-2199
         """
@@ -384,6 +398,7 @@ class TestDTPLogisticsAndColdChain:
     def test_temperature_excursion_evaluation(self) -> None:
         """Verify detection of refrigerated cold-chain excursions and quarantine flagging.
 
+        @req:PRD-SYS-181
         @req:PRD-DCT-003
         @req:ADR-2199
         """
@@ -415,6 +430,7 @@ class TestDTPLogisticsAndColdChain:
     def test_chain_of_custody_handoff_creation(self) -> None:
         """Verify immutable Chain of Custody handoff creation with digital signature.
 
+        @req:PRD-SYS-181
         @req:PRD-DCT-003
         @req:ADR-2199
         """
@@ -439,6 +455,7 @@ class TestDTPLogisticsAndColdChain:
 class TestInHomeVisitsAndOfflineSync:
     """Test in-home healthcare nurse visit scheduling and offline mobile eCRF reconciliation.
 
+    @req:PRD-SYS-181
     @req:PRD-DCT-004
     @req:ADR-2199
     """
@@ -446,6 +463,7 @@ class TestInHomeVisitsAndOfflineSync:
     def test_mobile_ecrf_offline_reconciliation(self) -> None:
         """Verify optimistic offline cache reconciliation and audit tracking.
 
+        @req:PRD-SYS-181
         @req:PRD-DCT-004
         @req:ADR-2199
         """
@@ -478,6 +496,8 @@ class TestInHomeVisitsAndOfflineSync:
 class TestDCTRestApiIntegration:
     """Integration test suite exercising full FastAPI HTTP endpoints and database transactions.
 
+    @req:PRD-SYS-180
+    @req:PRD-SYS-181
     @req:PRD-DCT-003
     @req:PRD-DCT-004
     @req:PRD-DCT-005
@@ -488,6 +508,7 @@ class TestDCTRestApiIntegration:
     def test_telehealth_consultation_lifecycle(self) -> None:
         """Test full telehealth video consultation: schedule, token, signaling, co-viewing, and GxP recording.
 
+        @req:PRD-SYS-180
         @req:PRD-DCT-005
         @req:ADR-2199
         """
@@ -594,6 +615,7 @@ class TestDCTRestApiIntegration:
     def test_pediatric_assent_and_lar_endpoint_flow(self) -> None:
         """Test submitting tiered pediatric assent and verifying cryptographic bundle seal.
 
+        @req:PRD-SYS-180
         @req:PRD-DCT-006
         @req:ADR-2199
         """
@@ -639,6 +661,7 @@ class TestDCTRestApiIntegration:
     def test_dtp_shipment_cold_chain_and_delivery_lifecycle(self) -> None:
         """Test Direct-to-Patient drug shipment creation, temperature ingestion, CoC handoff, and delivery sign-off.
 
+        @req:PRD-SYS-181
         @req:PRD-DCT-003
         @req:ADR-2199
         """
@@ -740,6 +763,7 @@ class TestDCTRestApiIntegration:
     def test_in_home_nurse_visit_and_offline_ecrf_sync_lifecycle(self) -> None:
         """Test decentralized visiting nurse scheduling, procedure tracking, and offline eCRF sync.
 
+        @req:PRD-SYS-181
         @req:PRD-DCT-004
         @req:ADR-2199
         """

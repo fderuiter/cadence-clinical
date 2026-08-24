@@ -6,7 +6,10 @@ from apps.econsent.domain.cdisc_odm import generate_econsent_cdisc_odm_xml
 
 
 def test_cdisc_odm_generation_structure():
-    """Verify CDISC ODM XML elements, metadata version, clinical data, and signature audit items."""
+    """Verify CDISC ODM XML elements, metadata version, clinical data, and signature audit items.
+
+    @req:PRD-SYS-177
+    """
     signatures = [
         {
             "role": "SUBJECT",

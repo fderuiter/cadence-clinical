@@ -64,6 +64,7 @@ def test_econsent_health_check():
     """
     Verify health check of independent eConsent service is publicly accessible
     and bypasses GatewayAuthMiddleware checks.
+    @req:PRD-SYS-177
     """
     client = TestClient(app)
     response = client.get("/health")
@@ -77,6 +78,7 @@ def test_econsent_health_check():
 async def test_econsent_database_schema_creation():
     """
     Verify that eConsent tables are properly created and can be queried.
+    @req:PRD-SYS-177
     """
     async with db_manager.get_session_maker()() as session:
         docs_res = await session.execute(select(ConsentDocument))
@@ -89,6 +91,7 @@ async def test_econsent_database_schema_creation():
 def test_uninitialized_database_manager_econsent():
     """
     Ensure the eConsent database manager raises an exception when accessed before initialization.
+    @req:PRD-SYS-177
     """
     mgr = RelationalDatabaseManager(service_name="eConsent")
     with pytest.raises(Exception) as exc_info:
@@ -100,6 +103,7 @@ def test_uninitialized_database_manager_econsent():
 async def test_database_url_override_and_init(monkeypatch):
     """
     Verify that database lifecycle supports ECONSENT_DATABASE_URL override.
+    @req:PRD-SYS-177
     """
     monkeypatch.setenv("ECONSENT_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
     mgr = RelationalDatabaseManager(service_name="eConsent")
@@ -114,6 +118,7 @@ def test_shared_audit_fields_validation():
     """
     Verify that AuditFields can be successfully instantiated with valid fields,
     and validates reason_for_change appropriately.
+    @req:PRD-SYS-177
     """
     # Happy Path
     audit = AuditFields(
@@ -142,6 +147,7 @@ def test_shared_audit_fields_validation():
 def test_econsent_pydantic_schemas():
     """
     Verify that eConsent API schemas inherit from and enforce the shared AuditFields base.
+    @req:PRD-SYS-177
     """
     # 1. Test ConsentDocumentCreate validation
     with pytest.raises(ValidationError) as excinfo:
@@ -171,6 +177,7 @@ def test_econsent_pydantic_schemas():
 def test_gateway_auth_middleware_denials():
     """
     Verify that GatewayAuthMiddleware blocks requests with missing or invalid headers.
+    @req:PRD-SYS-177
     """
     client = TestClient(app)
 
@@ -203,6 +210,7 @@ def test_econsent_document_lifecycle_and_audit_context():
     Verify that calling eConsent document endpoints with valid gateway signatures
     successfully populates the request audit context, saves documents with exact audit fields,
     and appends correct Part 11 entries to the immutable ConsentAuditLog.
+    @req:PRD-SYS-177
     """
     client = TestClient(app)
 
@@ -300,6 +308,7 @@ def test_econsent_document_lifecycle_and_audit_context():
 def test_econsent_get_not_found():
     """
     Verify 404 behavior for non-existent eConsent documents.
+    @req:PRD-SYS-177
     """
     client = TestClient(app)
     headers = get_auth_headers()
@@ -315,6 +324,7 @@ async def test_clause_lifecycle_and_versioning_audit():
     """
     Test versioned ICF clause creation, update, listing, retrieval,
     and verify that edits never mutate historical versions.
+    @req:PRD-SYS-177
     """
     client = TestClient(app)
 
@@ -444,6 +454,7 @@ async def test_template_lifecycle_and_validation():
     """
     Test versioned ConsentTemplate creation, update, composition, and publish workflows,
     including validation of referenced clauses and workflow steps.
+    @req:PRD-SYS-177
     """
     client = TestClient(app)
 
@@ -648,6 +659,7 @@ def test_authoring_mutations_rejected_for_auditors():
     """
     Test that write operations are rejected with HTTP 403 when the user has
     auditor, inspector, or regulatory_inspector roles.
+    @req:PRD-SYS-177
     """
     client = TestClient(app)
 

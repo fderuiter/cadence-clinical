@@ -1197,6 +1197,15 @@ To provide automated statistical surveillance across clinical sites under ICH E6
 #### PRD-SYS-176: TransCelerate RACT Dynamic Risk Scoring & Automated KRI Surveillance
 - The platform must implement dynamic TransCelerate RACT protocol risk scoring across all 6 risk categories, automated Key Risk Indicator (KRI) breach thresholds, weighted Site Risk Index (SRI) percentile ranking, and 1-click inspection-ready dossier compilation with cryptographic audit trails.
 
+#### PRD-SYS-177: Dynamic Multilingual Informed Consent Form (ICF) Builder & Tiered Modules
+- The eConsent subsystem (`apps/econsent`) must provide a multilingual dynamic Informed Consent Form (ICF) authoring and composition engine supporting modular reusable clauses, ISO 639-1 localized translation workflows, adaptive comprehension check quizzes with configurable passing score thresholds, and tiered optional consent modules (e.g. pharmacogenomics, future biomedical data sharing, re-contact permissions) with 21 CFR Part 11 compliant electronic signatures and CDISC ODM XML export.
+
+#### PRD-SYS-178: Automated Minor Age-of-Majority Milestone Detection & Adult Re-Consent Engine
+- The system must track minor subject birth dates against jurisdiction-specific legal age rules (e.g. 18 / 19 / 21 years), detect impending and reached age-of-majority milestones, and automatically generate and dispatch mandatory adult re-consent workflows transitioning subjects from pediatric assent and Legally Authorized Representative (LAR) parental representation to direct legal adult participant self-consent with 21 CFR Part 11 electronic signatures and immutable audit trails.
+
+#### PRD-SYS-179: Automated Protocol Amendment Re-Consent Distribution, Differential Redlines & Execution Gating
+- Upon protocol amendment or substantive ICF revisions, the system must automatically generate differential clause-level redlines (insertions, deletions, modifications), broadcast re-consent requirements to all active cohort participants, dispatch multi-channel notifications, and enforce programmatic execution gating on subsequent clinical visits until re-consent completion or verified paper override.
+
 ---
 
 ## 13. Clinical Data Repository (CDR) & Validated Statistical Computing Environment (SCE)
@@ -1280,6 +1289,18 @@ To support hybrid and decentralized clinical trials via universal BYOD / PWA pat
 
 #### PRD-DCT-006: Tiered Pediatric Assent & Legally Authorized Representative (LAR) Consent
 - The eConsent subsystem (`apps/econsent`) must support multi-tier consent workflows: age-appropriate multimedia pediatric assent (e.g. animated comprehension videos for ages 7-11, simplified text for ages 12-17) paired with simultaneous parent/guardian Legally Authorized Representative (LAR) electronic signatures.
+
+#### PRD-SYS-180: GxP-Compliant WebRTC Telehealth Video Consultations & Encrypted Recording Archival
+- The platform (`apps/interop`) must orchestrate end-to-end encrypted WebRTC telehealth consultations between clinical investigators and study subjects.
+- Enforce short-lived HMAC-SHA256 room authorization tokens with role-based capability gating (`can_present`, `can_annotate`, `can_sign`, `can_record`, `can_admit`) and DTLS-SRTP fingerprint validation.
+- Telehealth sessions must support synchronized interactive co-viewing of informed consent materials with presenter control locking.
+- Archiving sessions must apply a 21 CFR Part 11 SHA-256 recording digital seal with attributable certification statements and immutable audit trails.
+
+#### PRD-SYS-181: Direct-to-Patient (DTP) Clinical Supply Tracer & Cold-Chain IoT Ingestion
+- The logistics tracer (`apps/interop`) must coordinate Direct-to-Patient (DTP) investigational product shipments across multi-zone temperature envelopes (cryogenic, ultra-cold, frozen, refrigerated, controlled ambient).
+- Real-time continuous IoT data logger ingestion must calculate Arrhenius Mean Kinetic Temperature (MKT) per USP <1079> / PDA TR 39 and evaluate temperature excursion severity.
+- Automated quarantine workflows must place shipments in `TEMP_EXCURSION_HOLD` upon critical excursion violations.
+- Shipments must enforce immutable Chain of Custody (CoC) handoff verification and recipient electronic signature delivery confirmation.
 
 ---
 
@@ -1424,6 +1445,11 @@ To automate patient stipend and travel reimbursement disbursements and facilitat
 
 #### PRD-PAT-003: Plain-Language Lay Summary Portal
 - The Subject Portal must provide a secure channel for delivering IRB/Ethics Committee approved Plain Language Summaries of trial results to consented trial participants per EU CTR Regulation No 536/2014 Article 37.
+
+#### PRD-SYS-182: Participant Wallet & Automated Stipend Micro-Ledger Tracer
+- The system must provide an automated participant stipend micro-ledger calculating visit completion milestones, mobile travel expense receipts (OCR parsing & receipt verification), and meal allowance disbursements.
+- The engine must monitor IRS Form 1099 tax reporting thresholds ($600.00 annual taxable stipend cap), providing early approaching warnings and triggering automated W-9 certification workflows.
+- The wallet must support automated reloadable debit card issuing, real-time balance inquiries, instant ACH payouts, and strict enforcement of IRB/ethics anti-coercion stipend caps per 45 CFR 46 and 21 CFR 50.
 
 ---
 

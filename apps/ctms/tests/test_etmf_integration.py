@@ -1,11 +1,10 @@
 import os
 import time
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import event
-
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from apps.ctms.adapters.database import db_manager
 from apps.ctms.adapters.models import Base
@@ -84,8 +83,12 @@ def test_etmf_artifact_synchronization():
     mock_resp.json.return_value = {"id": "mock-etmf-doc-123", "status": "SYNCED"}
     mock_resp.raise_for_status = lambda: None
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_resp):
-        res_sync = client.post("/api/v1/ctms/etmf-sync", json=sync_payload, headers=headers)
+    with patch(
+        "httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_resp
+    ):
+        res_sync = client.post(
+            "/api/v1/ctms/etmf-sync", json=sync_payload, headers=headers
+        )
     assert res_sync.status_code == 201
     sync_data = res_sync.json()
     assert sync_data["sync_status"] == "SYNCED"

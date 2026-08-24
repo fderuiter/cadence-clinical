@@ -52,7 +52,10 @@ def get_auth_headers(
 
 @pytest.mark.asyncio
 async def test_subject_consent_withdrawal_lifecycle() -> None:
-    """Test withdrawing subject consent and verifying active records transition to WITHDRAWN."""
+    """Test withdrawing subject consent and verifying active records transition to WITHDRAWN.
+
+    @req:PRD-SYS-177
+    """
     async with db_manager.get_session_maker()() as session:
         consent = SubjectConsent(
             subject_pseudonym="SUBJ-WITHDRAW-007",

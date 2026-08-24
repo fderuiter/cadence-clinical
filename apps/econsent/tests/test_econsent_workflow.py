@@ -43,6 +43,7 @@ async def test_econsent_signature_audit_compliance(db_session) -> None:
     """Validate eConsent signature capture records GxP 21 CFR Part 11 compliant audit trail.
 
     Requirements: PRD-SYS-001
+    @req:PRD-SYS-177
     """
     # Create candidate ConsentFormRecord for ICF Version 2.0
     candidate = ConsentFormRecord(
@@ -73,6 +74,7 @@ async def test_econsent_signature_capture_success(db_session) -> None:
     """Validate complete successful eConsent signing capture and database presence.
 
     Requirements: PRD-SYS-001
+    @req:PRD-SYS-177
     """
     # Create candidate ConsentFormRecord
     candidate = ConsentFormRecord(
@@ -133,6 +135,7 @@ async def test_protocol_amendment_triggers_reconsent(db_session) -> None:
     """Validate that protocol amendment updates the subject status automatically to RECONSENT_REQUIRED.
 
     Requirements: PRD-SYS-001
+    @req:PRD-SYS-179
     """
     # Create candidate clinical subject and transition legally to ACTIVE
     subject = ClinicalSubject(
@@ -194,6 +197,7 @@ async def test_consent_record_immutability(db_session) -> None:
     """Validate Part 11 compliance prevents editing or deleting signed consent records.
 
     Requirements: PRD-SYS-001
+    @req:PRD-SYS-177
     """
     # Create and sign record
     candidate = ConsentFormRecord(

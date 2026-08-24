@@ -61,6 +61,7 @@ async def test_icf_sign_and_archival_queueing():
     """
     Verify that signing an ICF template version successfully saves ConsentSignature
     and queues a PENDING EtmfArchivalDelivery row along with correct audit entries.
+    @req:PRD-SYS-177
     """
     client = TestClient(app)
 
@@ -145,6 +146,7 @@ async def test_poll_and_dispatch_success():
     """
     Verify that poll_and_dispatch successfully forwards ICF to eTMF, updates status
     to SUCCESS, populates etmf_document_id, and registers correct audit logs.
+    @req:PRD-SYS-177
     """
     async with db_manager.get_session_maker()() as session:
         delivery = EtmfArchivalDelivery(
@@ -199,6 +201,7 @@ async def test_poll_and_dispatch_failure_and_retry_backoff():
     """
     Verify that poll_and_dispatch handles transient failures, schedules retry with
     exponential backoff, and flags retry_eligible=False when cap is reached.
+    @req:PRD-SYS-177
     """
     async with db_manager.get_session_maker()() as session:
         delivery = EtmfArchivalDelivery(
@@ -264,6 +267,7 @@ async def test_archival_status_endpoints():
     """
     Verify GET /api/v1/econsent/archival-status retrieves status correctly via path
     or via template_id/version_index/subject_pseudonym query parameters.
+    @req:PRD-SYS-177
     """
     async with db_manager.get_session_maker()() as session:
         delivery = EtmfArchivalDelivery(

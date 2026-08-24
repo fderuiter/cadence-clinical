@@ -101,6 +101,7 @@ async def test_happy_path_capture_and_status() -> None:
     """
     Test successful subject consent capture with valid template, passing comprehension checks,
     and valid step-up token. Verify signature manifest integrity and audit trail creation.
+    @req:PRD-SYS-177
     """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
@@ -203,6 +204,7 @@ async def test_capture_rejections() -> None:
     - Template not published
     - Comprehension result missing/incomplete
     - Step-up token missing, expired, wrong-user, or wrong-action.
+    @req:PRD-SYS-177
     """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
@@ -359,6 +361,7 @@ async def test_capture_rejections() -> None:
 async def test_signature_tamper_detection() -> None:
     """
     Test that the cryptographic HMAC signature verifies only for the original payload and fails after tampering.
+    @req:PRD-SYS-177
     """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
@@ -471,6 +474,7 @@ async def test_signature_tamper_detection() -> None:
 async def test_append_only_audit_history() -> None:
     """
     Assert append-only model constraint: multiple captures produce new rows while prior rows remain unchanged.
+    @req:PRD-SYS-177
     """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
@@ -564,6 +568,7 @@ async def test_execution_consumption_integration(monkeypatch) -> None:
     """
     Test that Execution service client can fetch consent status, and that
     record_subject_consent validates ICF signatures correctly via eConsent.
+    @req:PRD-SYS-177
     """
     # 1. Mock eConsent server response inside econsent_client
     mock_status_response = {

@@ -8,7 +8,10 @@ from apps.econsent.infrastructure.cache import ApprovedTranslationCache
 
 
 def test_redis_unconfigured_graceful_fallback():
-    """Verify that if REDIS_HOST is unconfigured, cache initializes and acts as local in-memory cache."""
+    """Verify that if REDIS_HOST is unconfigured, cache initializes and acts as local in-memory cache.
+
+    @req:PRD-SYS-177
+    """
     with patch.dict(os.environ, {}, clear=True):
         cache = ApprovedTranslationCache()
         assert cache.redis_host is None
@@ -27,7 +30,10 @@ def test_redis_unconfigured_graceful_fallback():
 
 
 def test_redis_unreachable_graceful_fallback():
-    """Verify that if REDIS_HOST is configured but unreachable, initialization succeeds and doesn't crash."""
+    """Verify that if REDIS_HOST is configured but unreachable, initialization succeeds and doesn't crash.
+
+    @req:PRD-SYS-177
+    """
     with patch.dict(
         os.environ,
         {"REDIS_HOST": "unreachable.redis.local", "REDIS_PORT": "6379"},
@@ -49,7 +55,10 @@ def test_redis_unreachable_graceful_fallback():
 
 
 def test_redis_publish_on_invalidate_and_clear():
-    """Verify that calling invalidate or clear on cache publishes lightweight payloads to Redis."""
+    """Verify that calling invalidate or clear on cache publishes lightweight payloads to Redis.
+
+    @req:PRD-SYS-177
+    """
     with patch.dict(
         os.environ,
         {"REDIS_HOST": "mock.redis.local", "REDIS_CHANNEL": "test_channel"},
@@ -117,7 +126,10 @@ def test_redis_publish_on_invalidate_and_clear():
 
 
 def test_redis_subscriber_receives_and_evicts_cache():
-    """Verify that background subscriber thread receives messages and evicts entries locally without loop republishes."""
+    """Verify that background subscriber thread receives messages and evicts entries locally without loop republishes.
+
+    @req:PRD-SYS-177
+    """
     with patch.dict(
         os.environ,
         {"REDIS_HOST": "mock.redis.local", "REDIS_CHANNEL": "test_channel"},
@@ -194,6 +206,10 @@ def test_redis_subscriber_receives_and_evicts_cache():
 
 
 def test_cache_ttl_and_env_initialization():
+    """Test test cache ttl and env initialization.
+
+    @req:PRD-SYS-177
+    """
     # Test ttl initialization with explicit parameter
     cache = ApprovedTranslationCache(ttl=120)
     assert cache.ttl == 120.0
@@ -205,6 +221,10 @@ def test_cache_ttl_and_env_initialization():
 
 
 def test_cache_max_size_eviction():
+    """Test test cache max size eviction.
+
+    @req:PRD-SYS-177
+    """
     # Test max size reached evicts the oldest key
     cache = ApprovedTranslationCache(max_size=2)
     cache.set_cached("t1", 1, "en", {"data": "1"})
@@ -219,6 +239,10 @@ def test_cache_max_size_eviction():
 
 
 def test_cache_entry_expiration():
+    """Test test cache entry expiration.
+
+    @req:PRD-SYS-177
+    """
     cache = ApprovedTranslationCache(ttl=0.01)
     cache.set_cached("t1", 1, "en", {"data": "1"})
     import time
@@ -230,6 +254,10 @@ def test_cache_entry_expiration():
 
 
 def test_redis_publish_error_handling():
+    """Test test redis publish error handling.
+
+    @req:PRD-SYS-177
+    """
     # Test exception in _publish_message doesn't crash
     with patch.dict(os.environ, {"REDIS_HOST": "mock.redis.local"}):
         mock_pub_client = MagicMock()
@@ -247,6 +275,10 @@ def test_redis_publish_error_handling():
 
 
 def test_redis_subscriber_invalidate_template():
+    """Test test redis subscriber invalidate template.
+
+    @req:PRD-SYS-177
+    """
     with patch.dict(
         os.environ,
         {"REDIS_HOST": "mock.redis.local", "REDIS_CHANNEL": "test_channel"},
@@ -308,6 +340,10 @@ def test_redis_subscriber_invalidate_template():
 
 @pytest.mark.asyncio
 async def test_get_approved_template_translation_helper():
+    """Test test get approved template translation helper.
+
+    @req:PRD-SYS-177
+    """
     from apps.econsent.infrastructure.cache import (
         get_approved_template_translation,
     )

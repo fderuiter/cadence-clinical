@@ -24,6 +24,7 @@ async def setup_comprehension_db():
 def test_create_and_retrieve_comprehension_check():
     """
     Test creating and retrieving comprehension checks for a template version.
+    @req:PRD-SYS-177
     """
     client = TestClient(app)
 
@@ -87,6 +88,7 @@ def test_create_and_retrieve_comprehension_check():
 def test_submit_answers_and_evaluation_boundaries():
     """
     Test submitting answers and evaluating them based on different threshold policy boundaries.
+    @req:PRD-SYS-177
     """
     client = TestClient(app)
     headers = get_auth_headers(user_id="designer_user", roles="Grants Manager")
@@ -192,6 +194,7 @@ def test_signature_blocks_if_comprehension_checks_fail_or_incomplete():
     """
     Verify that subject signing is strictly blocked unless they have successfully passed the comprehension check
     defined for the exact template version.
+    @req:PRD-SYS-177
     """
     client = TestClient(app)
     headers = get_auth_headers(user_id="designer_user", roles="Grants Manager")
@@ -291,6 +294,7 @@ def test_template_version_separation():
     """
     Verify that comprehension results are strictly bound to the exact template version.
     Passing checks on version 1 should not allow signing version 2.
+    @req:PRD-SYS-177
     """
     client = TestClient(app)
     headers = get_auth_headers(user_id="designer_user", roles="Grants Manager")
@@ -391,6 +395,7 @@ def test_auditor_restrictions_on_checks():
     """
     Ensure users with auditor/inspector/regulatory_inspector roles cannot create or configure
     comprehension check definitions, returning HTTP 403.
+    @req:PRD-SYS-177
     """
     client = TestClient(app)
 

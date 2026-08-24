@@ -49,7 +49,10 @@ def get_auth_headers(
 
 @pytest.mark.asyncio
 async def test_reconsent_trigger_and_pending_queries() -> None:
-    """Test creating an amendment re-consent trigger and querying pending requirements."""
+    """Test creating an amendment re-consent trigger and querying pending requirements.
+
+    @req:PRD-SYS-179
+    """
     async with db_manager.get_session_maker()() as session:
         # Seed 2 active subjects under study
         for sid in ("SUBJ-001", "SUBJ-002"):

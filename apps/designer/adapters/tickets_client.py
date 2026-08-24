@@ -78,9 +78,7 @@ class DesignerTicketsClient:
             data = res.json()
             return DispatchedTicketInfo(
                 ticket_id=data.get("id", str(uuid.uuid4())),
-                reference=data.get(
-                    "reference", f"TKT-{uuid.uuid4().hex[:5].upper()}"
-                ),
+                reference=data.get("reference", f"TKT-{uuid.uuid4().hex[:5].upper()}"),
                 domain_queue=blueprint.domain_queue,
                 title=blueprint.title,
                 priority=blueprint.priority,

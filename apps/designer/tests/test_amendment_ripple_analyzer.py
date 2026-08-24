@@ -8,7 +8,7 @@ import hmac
 import json
 import time
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -545,7 +545,9 @@ async def test_designer_amendments_api_endpoints(
         # 2. Test POST /api/v1/designer/amendments/dispatch-tickets
         from apps.designer.domain.cdisc.ripple_models import DispatchedTicketInfo
 
-        async def mock_dispatch(self, blueprint, study_id, user_id="service_designer", change_reason=""):
+        async def mock_dispatch(
+            self, blueprint, study_id, user_id="service_designer", change_reason=""
+        ):
             return DispatchedTicketInfo(
                 ticket_id="tkt-123",
                 reference="TKT-12345",

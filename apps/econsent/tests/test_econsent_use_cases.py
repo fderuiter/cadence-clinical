@@ -35,7 +35,10 @@ async def setup_test_db():
 
 @pytest.mark.asyncio
 async def test_clause_service_lifecycle() -> None:
-    """Test clause creation, auto-increment update, and version lookup."""
+    """Test clause creation, auto-increment update, and version lookup.
+
+    @req:PRD-SYS-177
+    """
     async with db_manager.get_session_maker()() as session:
         c_repo = SQLConsentClauseRepository(session)
         a_repo = SQLConsentAuditRepository(session)
@@ -81,7 +84,10 @@ async def test_clause_service_lifecycle() -> None:
 
 @pytest.mark.asyncio
 async def test_template_authoring_and_composition() -> None:
-    """Test creating template, composing clauses, publishing, and version retrieval."""
+    """Test creating template, composing clauses, publishing, and version retrieval.
+
+    @req:PRD-SYS-177
+    """
     async with db_manager.get_session_maker()() as session:
         c_repo = SQLConsentClauseRepository(session)
         a_repo = SQLConsentAuditRepository(session)
@@ -128,7 +134,10 @@ async def test_template_authoring_and_composition() -> None:
 
 @pytest.mark.asyncio
 async def test_translation_service_workflow() -> None:
-    """Test translation creation and state transitions with invalid transition rejection."""
+    """Test translation creation and state transitions with invalid transition rejection.
+
+    @req:PRD-SYS-177
+    """
     async with db_manager.get_session_maker()() as session:
         tr_repo = SQLConsentTranslationRepository(session)
         a_repo = SQLConsentAuditRepository(session)

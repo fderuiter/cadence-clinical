@@ -1,4 +1,6 @@
-"""FastAPI sub-router for eConsent re-consent triggers and cohort tracking."""
+"""FastAPI sub-router for eConsent re-consent triggers, cohort tracking, and minor age-of-majority milestones."""
+
+from datetime import date
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,8 +14,12 @@ from apps.econsent.adapters.repositories import (
 )
 from apps.econsent.application.use_cases import ReconsentService
 from apps.econsent.presentation.dtos import (
+    MinorMilestoneEvaluationRequest,
+    MinorMilestoneEvaluationResponse,
+    MinorMilestoneResultDTO,
     ReconsentRequirementResponse,
     ReconsentTriggerRequest,
+    TriggerMajorityReconsentRequest,
 )
 from packages.database import DatabaseSessionDependency
 
@@ -161,3 +167,163 @@ async def complete_reconsent(
         created_by=r.created_by,
         reason_for_change=r.reason_for_change,
     )
+
+
+@router.post(
+    "/minor-milestones/evaluate",
+    response_model=MinorMilestoneEvaluationResponse,
+)
+async def evaluate_minor_milestones(
+    payload: MinorMilestoneEvaluationRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> MinorMilestoneEvaluationResponse:
+    """Evaluates minor subjects against jurisdiction legal age of majority rules."""
+    reconsent_repo = SQLReconsentRepository(session)
+    consent_repo = SQLSubjectConsentRepository(session)
+    audit_repo = SQLConsentAuditRepository(session)
+    svc = ReconsentService(reconsent_repo, consent_repo, audit_repo)
+
+    raw_subjects = [s.model_dump() for s in payload.subjects]
+    results = await svc.evaluate_minor_milestones(
+        subjects=raw_subjects,
+        as_of_date=payload.as_of_date,
+        lead_time_days=payload.lead_time_days,
+    )
+
+    dto_results = [
+        MinorMilestoneResultDTO(
+            subject_pseudonym=r.subject_pseudonym,
+            date_of_birth=r.date_of_birth,
+            jurisdiction=r.jurisdiction,
+            current_age_years=r.current_age_years,
+            exact_age=r.exact_age,
+            legal_age_threshold=r.legal_age_threshold,
+            majority_reached_date=r.majority_reached_date,
+            has_reached_majority=r.has_reached_majority,
+            is_transition_due=r.is_transition_due,
+            days_until_majority=r.days_until_majority,
+            requires_adult_reconsent=r.requires_adult_reconsent,
+            milestone_status=r.milestone_status,
+        )
+        for r in results
+    ]
+
+    majority_count = sum(1 for r in results if r.has_reached_majority)
+    approaching_count = sum(
+        1 for r in results if r.milestone_status == "APPROACHING_MAJORITY"
+    )
+    eval_date = payload.as_of_date or date.today().isoformat()
+
+    return MinorMilestoneEvaluationResponse(
+        study_id=payload.study_id,
+        evaluation_date=eval_date,
+        total_evaluated=len(results),
+        majority_reached_count=majority_count,
+        approaching_count=approaching_count,
+        results=dto_results,
+    )
+
+
+@router.post(
+    "/minor-milestones/trigger",
+    response_model=list[ReconsentRequirementResponse],
+    status_code=201,
+)
+async def trigger_majority_reconsent(
+    request: Request,
+    payload: TriggerMajorityReconsentRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[ReconsentRequirementResponse]:
+    """Generates mandatory adult re-consent tasks for minor subjects who turned legal age."""
+    user_id = getattr(request.state, "user_id", "site_investigator")
+    change_reason = getattr(request.state, "change_reason", payload.reason_for_change)
+
+    reconsent_repo = SQLReconsentRepository(session)
+    consent_repo = SQLSubjectConsentRepository(session)
+    audit_repo = SQLConsentAuditRepository(session)
+    svc = ReconsentService(
+        reconsent_repo,
+        consent_repo,
+        audit_repo,
+        notification_dispatcher=publish_notification,
+    )
+
+    raw_subjects = [s.model_dump() for s in payload.subjects]
+    requirements = await svc.trigger_majority_reconsent_for_subjects(
+        study_id=payload.study_id,
+        site_id=payload.site_id,
+        template_id=payload.template_id,
+        adult_version_index=payload.adult_version_index,
+        subjects=raw_subjects,
+        lead_time_days=payload.lead_time_days,
+        created_by=user_id,
+        reason_for_change=change_reason,
+    )
+
+    return [
+        ReconsentRequirementResponse(
+            id=r.id,
+            study_id=r.study_id,
+            site_id=r.site_id,
+            template_id=r.template_id,
+            prior_version_index=r.prior_version_index,
+            new_version_index=r.new_version_index,
+            subject_pseudonym=r.subject_pseudonym,
+            status=r.status,
+            change_summary=r.change_summary,
+            substantive_changes=r.substantive_changes,
+            deadline_at=r.deadline_at,
+            completed_consent_id=r.completed_consent_id,
+            created_at=r.created_at,
+            created_by=r.created_by,
+            reason_for_change=r.reason_for_change,
+        )
+        for r in requirements
+    ]
+
+
+@router.get(
+    "/minor-milestones/pending/{study_id}",
+    response_model=list[ReconsentRequirementResponse],
+)
+async def get_pending_majority_reconsents(
+    study_id: str,
+    subject_pseudonym: str | None = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[ReconsentRequirementResponse]:
+    """Retrieves pending adult re-consent requirements resulting from age-of-majority transitions."""
+    reconsent_repo = SQLReconsentRepository(session)
+    consent_repo = SQLSubjectConsentRepository(session)
+    audit_repo = SQLConsentAuditRepository(session)
+    svc = ReconsentService(reconsent_repo, consent_repo, audit_repo)
+
+    requirements = await svc.get_pending_reconsents(
+        study_id=study_id, subject_pseudonym=subject_pseudonym
+    )
+    # Filter for majority milestone reasons
+    majority_reqs = [
+        r
+        for r in requirements
+        if "majority" in (r.reason_for_change or "").lower()
+        or "majority" in (r.change_summary or "").lower()
+    ]
+    return [
+        ReconsentRequirementResponse(
+            id=r.id,
+            study_id=r.study_id,
+            site_id=r.site_id,
+            template_id=r.template_id,
+            prior_version_index=r.prior_version_index,
+            new_version_index=r.new_version_index,
+            subject_pseudonym=r.subject_pseudonym,
+            status=r.status,
+            change_summary=r.change_summary,
+            substantive_changes=r.substantive_changes,
+            deadline_at=r.deadline_at,
+            completed_consent_id=r.completed_consent_id,
+            created_at=r.created_at,
+            created_by=r.created_by,
+            reason_for_change=r.reason_for_change,
+        )
+        for r in majority_reqs
+    ]

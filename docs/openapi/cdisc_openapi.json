@@ -14498,6 +14498,157 @@
         }
       }
     },
+    "/econsent/api/v1/econsent/reconsent/minor-milestones/evaluate": {
+      "post": {
+        "tags": [
+          "Re-Consent"
+        ],
+        "summary": "Evaluate Minor Milestones",
+        "description": "Evaluates minor subjects against jurisdiction legal age of majority rules.",
+        "operationId": "Econsent_evaluate_minor_milestones_api_v1_econsent_reconsent_minor_milestones_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Econsent_MinorMilestoneEvaluationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_MinorMilestoneEvaluationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/econsent/api/v1/econsent/reconsent/minor-milestones/trigger": {
+      "post": {
+        "tags": [
+          "Re-Consent"
+        ],
+        "summary": "Trigger Majority Reconsent",
+        "description": "Generates mandatory adult re-consent tasks for minor subjects who turned legal age.",
+        "operationId": "Econsent_trigger_majority_reconsent_api_v1_econsent_reconsent_minor_milestones_trigger_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Econsent_TriggerMajorityReconsentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Econsent_ReconsentRequirementResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Trigger Majority Reconsent Api V1 Econsent Reconsent Minor Milestones Trigger Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/econsent/api/v1/econsent/reconsent/minor-milestones/pending/{study_id}": {
+      "get": {
+        "tags": [
+          "Re-Consent"
+        ],
+        "summary": "Get Pending Majority Reconsents",
+        "description": "Retrieves pending adult re-consent requirements resulting from age-of-majority transitions.",
+        "operationId": "Econsent_get_pending_majority_reconsents_api_v1_econsent_reconsent_minor_milestones_pending__study_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "subject_pseudonym",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Pseudonym"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Econsent_ReconsentRequirementResponse"
+                  },
+                  "title": "Response Get Pending Majority Reconsents Api V1 Econsent Reconsent Minor Milestones Pending  Study Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/econsent/api/v1/econsent/withdrawal": {
       "post": {
         "tags": [
@@ -45423,6 +45574,251 @@
         }
       }
     },
+    "/payments/api/v1/payments/participant/wallets/{wallet_id}/issue-card": {
+      "post": {
+        "tags": [
+          "Participant Compensation"
+        ],
+        "summary": "Issue Participant Reloadable Card",
+        "description": "Provisions an automated reloadable debit card linked to the participant wallet.",
+        "operationId": "Payments_issue_participant_reloadable_card_api_v1_payments_participant_wallets__wallet_id__issue_card_post",
+        "parameters": [
+          {
+            "name": "wallet_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Wallet Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_IssueReloadableCardRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payments_IssueReloadableCardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payments_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payments/api/v1/payments/participant/wallets/{wallet_id}/balance": {
+      "get": {
+        "tags": [
+          "Participant Compensation"
+        ],
+        "summary": "Get Participant Balance Inquiry",
+        "description": "Performs real-time multi-channel balance inquiry.",
+        "operationId": "Payments_get_participant_balance_inquiry_api_v1_payments_participant_wallets__wallet_id__balance_get",
+        "parameters": [
+          {
+            "name": "wallet_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Wallet Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payments_BalanceInquiryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payments_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payments/api/v1/payments/participant/wallets/{wallet_id}/tax-1099-status": {
+      "get": {
+        "tags": [
+          "Participant Compensation"
+        ],
+        "summary": "Get Participant 1099 Tax Status",
+        "description": "Retrieves real-time IRS Form 1099 tax threshold analysis and W-9 validation state.",
+        "operationId": "Payments_get_participant_1099_tax_status_api_v1_payments_participant_wallets__wallet_id__tax_1099_status_get",
+        "parameters": [
+          {
+            "name": "wallet_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Wallet Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payments_Tax1099ThresholdResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payments_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payments/api/v1/payments/participant/wallets/{wallet_id}/submit-w9": {
+      "post": {
+        "tags": [
+          "Participant Compensation"
+        ],
+        "summary": "Submit Participant W9 Form",
+        "description": "Submits IRS Form W-9 certification for participant 1099 compliance.",
+        "operationId": "Payments_submit_participant_w9_form_api_v1_payments_participant_wallets__wallet_id__submit_w9_post",
+        "parameters": [
+          {
+            "name": "wallet_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Wallet Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_W9SubmitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payments_W9SubmitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payments_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payments/api/v1/payments/participant/wallets/{wallet_id}/verify-w9": {
+      "post": {
+        "tags": [
+          "Participant Compensation"
+        ],
+        "summary": "Verify Participant W9 Form",
+        "description": "Performs coordinator verification on submitted Form W-9.",
+        "operationId": "Payments_verify_participant_w9_form_api_v1_payments_participant_wallets__wallet_id__verify_w9_post",
+        "parameters": [
+          {
+            "name": "wallet_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Wallet Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_W9VerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payments_ParticipantWalletResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payments_HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/payments/api/v1/payments/participant/wallets/{wallet_id}/disburse": {
       "post": {
         "tags": [
@@ -69857,6 +70253,154 @@
         ],
         "title": "JargonSubstitutionDTO"
       },
+      "Econsent_MinorMilestoneEvaluationRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/Econsent_SubjectMilestoneInput"
+            },
+            "type": "array",
+            "title": "Subjects"
+          },
+          "as_of_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of Date",
+            "description": "Evaluation reference date (defaults to today)"
+          },
+          "lead_time_days": {
+            "type": "integer",
+            "title": "Lead Time Days",
+            "description": "Lead time window for approaching majority",
+            "default": 30
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "subjects"
+        ],
+        "title": "MinorMilestoneEvaluationRequest"
+      },
+      "Econsent_MinorMilestoneEvaluationResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "evaluation_date": {
+            "type": "string",
+            "title": "Evaluation Date"
+          },
+          "total_evaluated": {
+            "type": "integer",
+            "title": "Total Evaluated"
+          },
+          "majority_reached_count": {
+            "type": "integer",
+            "title": "Majority Reached Count"
+          },
+          "approaching_count": {
+            "type": "integer",
+            "title": "Approaching Count"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/Econsent_MinorMilestoneResultDTO"
+            },
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "evaluation_date",
+          "total_evaluated",
+          "majority_reached_count",
+          "approaching_count",
+          "results"
+        ],
+        "title": "MinorMilestoneEvaluationResponse"
+      },
+      "Econsent_MinorMilestoneResultDTO": {
+        "properties": {
+          "subject_pseudonym": {
+            "type": "string",
+            "title": "Subject Pseudonym"
+          },
+          "date_of_birth": {
+            "type": "string",
+            "title": "Date Of Birth"
+          },
+          "jurisdiction": {
+            "type": "string",
+            "title": "Jurisdiction"
+          },
+          "current_age_years": {
+            "type": "integer",
+            "title": "Current Age Years"
+          },
+          "exact_age": {
+            "type": "number",
+            "title": "Exact Age"
+          },
+          "legal_age_threshold": {
+            "type": "integer",
+            "title": "Legal Age Threshold"
+          },
+          "majority_reached_date": {
+            "type": "string",
+            "title": "Majority Reached Date"
+          },
+          "has_reached_majority": {
+            "type": "boolean",
+            "title": "Has Reached Majority"
+          },
+          "is_transition_due": {
+            "type": "boolean",
+            "title": "Is Transition Due"
+          },
+          "days_until_majority": {
+            "type": "integer",
+            "title": "Days Until Majority"
+          },
+          "requires_adult_reconsent": {
+            "type": "boolean",
+            "title": "Requires Adult Reconsent"
+          },
+          "milestone_status": {
+            "type": "string",
+            "title": "Milestone Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_pseudonym",
+          "date_of_birth",
+          "jurisdiction",
+          "current_age_years",
+          "exact_age",
+          "legal_age_threshold",
+          "majority_reached_date",
+          "has_reached_majority",
+          "is_transition_due",
+          "days_until_majority",
+          "requires_adult_reconsent",
+          "milestone_status"
+        ],
+        "title": "MinorMilestoneResultDTO"
+      },
       "Econsent_ReadabilityAnalysisRequest": {
         "properties": {
           "text": {
@@ -70459,6 +71003,62 @@
         ],
         "title": "SubjectConsentStatusResponse"
       },
+      "Econsent_SubjectMilestoneInput": {
+        "properties": {
+          "subject_pseudonym": {
+            "type": "string",
+            "title": "Subject Pseudonym"
+          },
+          "date_of_birth": {
+            "type": "string",
+            "title": "Date Of Birth",
+            "description": "Subject DOB in ISO format YYYY-MM-DD"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction",
+            "description": "ISO country or state code",
+            "default": "DEFAULT"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "current_consent_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Consent Role",
+            "description": "MINOR_ASSENT, LAR, SUBJECT",
+            "default": "MINOR_ASSENT"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_pseudonym",
+          "date_of_birth"
+        ],
+        "title": "SubjectMilestoneInput"
+      },
       "Econsent_TemplateDiffResponse": {
         "properties": {
           "template_id": {
@@ -70542,6 +71142,61 @@
           "reason_for_change"
         ],
         "title": "TranslationTransitionRequest"
+      },
+      "Econsent_TriggerMajorityReconsentRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "template_id": {
+            "type": "string",
+            "title": "Template Id"
+          },
+          "adult_version_index": {
+            "type": "integer",
+            "title": "Adult Version Index",
+            "description": "Adult consent template version",
+            "default": 1
+          },
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/Econsent_SubjectMilestoneInput"
+            },
+            "type": "array",
+            "title": "Subjects"
+          },
+          "lead_time_days": {
+            "type": "integer",
+            "title": "Lead Time Days",
+            "description": "Lead time days (0 = only subjects who reached legal majority)",
+            "default": 0
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "GxP change reason",
+            "default": "Participant reached legal age of majority - Adult re-consent required"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "template_id",
+          "subjects"
+        ],
+        "title": "TriggerMajorityReconsentRequest"
       },
       "Econsent_ValidationError": {
         "properties": {
@@ -111991,6 +112646,119 @@
         ],
         "title": "ValidationError"
       },
+      "Payments_BalanceInquiryResponse": {
+        "properties": {
+          "wallet_id": {
+            "type": "string",
+            "title": "Wallet Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "current_balance": {
+            "type": "number",
+            "title": "Current Balance"
+          },
+          "available_balance": {
+            "type": "number",
+            "title": "Available Balance"
+          },
+          "pending_claims_total": {
+            "type": "number",
+            "title": "Pending Claims Total"
+          },
+          "lifetime_stipends": {
+            "type": "number",
+            "title": "Lifetime Stipends"
+          },
+          "lifetime_reimbursements": {
+            "type": "number",
+            "title": "Lifetime Reimbursements"
+          },
+          "lifetime_disbursements": {
+            "type": "number",
+            "title": "Lifetime Disbursements"
+          },
+          "taxable_ytd": {
+            "type": "number",
+            "title": "Taxable Ytd"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "virtual_card_mask": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Virtual Card Mask"
+          },
+          "card_status": {
+            "type": "string",
+            "title": "Card Status"
+          },
+          "card_type": {
+            "type": "string",
+            "title": "Card Type"
+          },
+          "ach_account_mask": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ach Account Mask"
+          },
+          "is_1099_threshold_exceeded": {
+            "type": "boolean",
+            "title": "Is 1099 Threshold Exceeded"
+          },
+          "w9_status": {
+            "type": "string",
+            "title": "W9 Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "wallet_id",
+          "subject_id",
+          "study_id",
+          "site_id",
+          "current_balance",
+          "available_balance",
+          "pending_claims_total",
+          "lifetime_stipends",
+          "lifetime_reimbursements",
+          "lifetime_disbursements",
+          "taxable_ytd",
+          "currency",
+          "virtual_card_mask",
+          "card_status",
+          "card_type",
+          "ach_account_mask",
+          "is_1099_threshold_exceeded",
+          "w9_status"
+        ],
+        "title": "BalanceInquiryResponse",
+        "description": "Real-time multi-channel balance inquiry response."
+      },
       "Payments_BatchEventIngestDto": {
         "properties": {
           "ecrf_submissions": {
@@ -112862,6 +113630,22 @@
             "type": "string",
             "title": "Currency"
           },
+          "is_meal_allowance": {
+            "type": "boolean",
+            "title": "Is Meal Allowance",
+            "default": false
+          },
+          "per_diem_cap": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Per Diem Cap"
+          },
           "receipt_image_name": {
             "anyOf": [
               {
@@ -113103,6 +113887,25 @@
             "title": "Currency",
             "description": "Currency ISO code",
             "default": "USD"
+          },
+          "is_meal_allowance": {
+            "type": "boolean",
+            "title": "Is Meal Allowance",
+            "description": "Whether claim is a per diem meal allowance",
+            "default": false
+          },
+          "per_diem_cap": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Per Diem Cap",
+            "description": "Optional per diem meal cap limit"
           },
           "receipt_image_name": {
             "anyOf": [
@@ -113773,6 +114576,99 @@
         "title": "InvoiceLineItemResponse",
         "description": "Response model for an itemized procedure line item on an invoice."
       },
+      "Payments_IssueReloadableCardRequest": {
+        "properties": {
+          "cardholder_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cardholder Name",
+            "description": "Name on card"
+          },
+          "card_type": {
+            "type": "string",
+            "title": "Card Type",
+            "description": "Card type (RELOADABLE_DEBIT, VIRTUAL)",
+            "default": "RELOADABLE_DEBIT"
+          },
+          "initial_load": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Initial Load",
+            "description": "Initial funds loaded onto the card",
+            "default": 0.0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "IssueReloadableCardRequest",
+        "description": "Request payload for automated reloadable debit card issuing."
+      },
+      "Payments_IssueReloadableCardResponse": {
+        "properties": {
+          "wallet_id": {
+            "type": "string",
+            "title": "Wallet Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "card_token": {
+            "type": "string",
+            "title": "Card Token"
+          },
+          "card_mask": {
+            "type": "string",
+            "title": "Card Mask"
+          },
+          "card_expiry": {
+            "type": "string",
+            "title": "Card Expiry"
+          },
+          "card_type": {
+            "type": "string",
+            "title": "Card Type"
+          },
+          "card_status": {
+            "type": "string",
+            "title": "Card Status"
+          },
+          "cardholder_name": {
+            "type": "string",
+            "title": "Cardholder Name"
+          },
+          "current_balance": {
+            "type": "number",
+            "title": "Current Balance"
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Issued At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "wallet_id",
+          "subject_id",
+          "card_token",
+          "card_mask",
+          "card_expiry",
+          "card_type",
+          "card_status",
+          "cardholder_name",
+          "current_balance",
+          "issued_at"
+        ],
+        "title": "IssueReloadableCardResponse",
+        "description": "Response payload for issued reloadable debit card."
+      },
       "Payments_LaySummaryCreate": {
         "properties": {
           "study_id": {
@@ -114254,6 +115150,37 @@
             "title": "Taxable",
             "description": "Whether stipend is taxable",
             "default": false
+          },
+          "anti_coercion_cap": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anti Coercion Cap",
+            "description": "Ethics/IRB anti-coercion cap limit"
+          },
+          "is_milestone": {
+            "type": "boolean",
+            "title": "Is Milestone",
+            "description": "Whether visit is a major study milestone",
+            "default": false
+          },
+          "milestone_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Milestone Code",
+            "description": "Milestone code (e.g. MILESTONE_SCREENING)"
           }
         },
         "additionalProperties": false,
@@ -114311,6 +115238,33 @@
           "taxable": {
             "type": "boolean",
             "title": "Taxable"
+          },
+          "anti_coercion_cap": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anti Coercion Cap"
+          },
+          "is_milestone": {
+            "type": "boolean",
+            "title": "Is Milestone",
+            "default": false
+          },
+          "milestone_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Milestone Code"
           },
           "is_active": {
             "type": "boolean",
@@ -114442,6 +115396,12 @@
             "description": "Currency ISO code",
             "default": "USD"
           },
+          "card_type": {
+            "type": "string",
+            "title": "Card Type",
+            "description": "Card type (RELOADABLE_DEBIT, VIRTUAL)",
+            "default": "RELOADABLE_DEBIT"
+          },
           "virtual_card_token": {
             "anyOf": [
               {
@@ -114477,6 +115437,19 @@
             ],
             "title": "Virtual Card Expiry",
             "description": "Virtual card expiry MM/YY"
+          },
+          "anti_coercion_cap": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anti Coercion Cap",
+            "description": "Ethics/IRB anti-coercion cap limit"
           },
           "ach_routing_number": {
             "anyOf": [
@@ -114560,6 +115533,17 @@
             ],
             "title": "Virtual Card Expiry"
           },
+          "card_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Status"
+          },
           "ach_routing_number": {
             "anyOf": [
               {
@@ -114641,6 +115625,66 @@
             "type": "string",
             "title": "Status"
           },
+          "taxable_ytd": {
+            "type": "number",
+            "title": "Taxable Ytd",
+            "default": 0.0
+          },
+          "is_1099_threshold_exceeded": {
+            "type": "boolean",
+            "title": "Is 1099 Threshold Exceeded",
+            "default": false
+          },
+          "w9_status": {
+            "type": "string",
+            "title": "W9 Status",
+            "default": "NOT_REQUIRED"
+          },
+          "w9_submitted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "W9 Submitted At"
+          },
+          "w9_verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "W9 Verified At"
+          },
+          "tax_id_last_four": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Id Last Four"
+          },
+          "card_type": {
+            "type": "string",
+            "title": "Card Type",
+            "default": "RELOADABLE_DEBIT"
+          },
+          "card_status": {
+            "type": "string",
+            "title": "Card Status",
+            "default": "ACTIVE"
+          },
           "virtual_card_token": {
             "anyOf": [
               {
@@ -114673,6 +115717,17 @@
               }
             ],
             "title": "Virtual Card Expiry"
+          },
+          "anti_coercion_cap": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anti Coercion Cap"
           },
           "ach_routing_number": {
             "anyOf": [
@@ -114753,12 +115808,6 @@
           "lifetime_disbursements",
           "currency",
           "status",
-          "virtual_card_token",
-          "virtual_card_mask",
-          "virtual_card_expiry",
-          "ach_routing_number",
-          "ach_account_mask",
-          "ach_account_holder",
           "created_at",
           "created_by",
           "updated_at",
@@ -116126,6 +117175,70 @@
         "title": "SplitPayeeConfigResponse",
         "description": "Response payload for split payee configuration."
       },
+      "Payments_Tax1099ThresholdResponse": {
+        "properties": {
+          "wallet_id": {
+            "type": "string",
+            "title": "Wallet Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "taxable_ytd": {
+            "type": "number",
+            "title": "Taxable Ytd"
+          },
+          "threshold_limit": {
+            "type": "number",
+            "title": "Threshold Limit",
+            "default": 600.0
+          },
+          "threshold_percentage": {
+            "type": "number",
+            "title": "Threshold Percentage"
+          },
+          "is_threshold_exceeded": {
+            "type": "boolean",
+            "title": "Is Threshold Exceeded"
+          },
+          "w9_status": {
+            "type": "string",
+            "title": "W9 Status"
+          },
+          "w9_required": {
+            "type": "boolean",
+            "title": "W9 Required"
+          },
+          "warning_level": {
+            "type": "string",
+            "title": "Warning Level"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "USD"
+          }
+        },
+        "type": "object",
+        "required": [
+          "wallet_id",
+          "subject_id",
+          "study_id",
+          "taxable_ytd",
+          "threshold_percentage",
+          "is_threshold_exceeded",
+          "w9_status",
+          "w9_required",
+          "warning_level"
+        ],
+        "title": "Tax1099ThresholdResponse",
+        "description": "Real-time IRS Form 1099 tax threshold analysis and W-9 validation state."
+      },
       "Payments_ValidationError": {
         "properties": {
           "loc": {
@@ -116223,6 +117336,108 @@
         ],
         "title": "VisitVerificationEventDto",
         "description": "Inbound EDC visit verification trigger event to credit participant stipend."
+      },
+      "Payments_W9SubmitRequest": {
+        "properties": {
+          "tax_id_last_four": {
+            "type": "string",
+            "maxLength": 4,
+            "minLength": 4,
+            "title": "Tax Id Last Four",
+            "description": "Last 4 digits of SSN/ITIN"
+          },
+          "full_legal_name": {
+            "type": "string",
+            "title": "Full Legal Name",
+            "description": "Full legal taxpayer name"
+          },
+          "certify_accurate": {
+            "type": "boolean",
+            "title": "Certify Accurate",
+            "description": "Taxpayer certification of accurate TIN",
+            "default": true
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address",
+            "description": "Taxpayer mailing address"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tax_id_last_four",
+          "full_legal_name"
+        ],
+        "title": "W9SubmitRequest",
+        "description": "Request payload for IRS Form W-9 certification submission."
+      },
+      "Payments_W9SubmitResponse": {
+        "properties": {
+          "wallet_id": {
+            "type": "string",
+            "title": "Wallet Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "w9_status": {
+            "type": "string",
+            "title": "W9 Status"
+          },
+          "tax_id_last_four": {
+            "type": "string",
+            "title": "Tax Id Last Four"
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Submitted At"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "wallet_id",
+          "subject_id",
+          "w9_status",
+          "tax_id_last_four",
+          "submitted_at",
+          "message"
+        ],
+        "title": "W9SubmitResponse",
+        "description": "Response acknowledging W-9 certification submission."
+      },
+      "Payments_W9VerifyRequest": {
+        "properties": {
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Coordinator W-9 verification notes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "W9VerifyRequest",
+        "description": "Request payload for coordinator verification of submitted W-9 form."
       },
       "Quality_ActionItemStatus": {
         "type": "string",

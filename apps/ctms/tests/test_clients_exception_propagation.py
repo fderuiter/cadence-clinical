@@ -4,6 +4,7 @@ Requirements: Ensure exception handlers do not swallow errors or produce synthet
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import httpx
 import pytest
 
@@ -21,7 +22,9 @@ async def test_etmf_client_propagates_5xx_error():
         response=mock_resp,
     )
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_resp):
+    with patch(
+        "httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_resp
+    ):
         with pytest.raises(httpx.HTTPStatusError) as exc_info:
             await client.push_document(
                 study_id="STUDY-101",
@@ -42,7 +45,11 @@ async def test_etmf_client_propagates_5xx_error():
 async def test_etmf_client_propagates_network_error():
     client = ETMFClient(base_url="http://mock-etmf")
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, side_effect=httpx.ConnectError("Connection refused")):
+    with patch(
+        "httpx.AsyncClient.post",
+        new_callable=AsyncMock,
+        side_effect=httpx.ConnectError("Connection refused"),
+    ):
         with pytest.raises(httpx.ConnectError):
             await client.push_document(
                 study_id="STUDY-101",
@@ -69,7 +76,9 @@ async def test_quality_client_propagates_5xx_error():
         response=mock_resp,
     )
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_resp):
+    with patch(
+        "httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_resp
+    ):
         with pytest.raises(httpx.HTTPStatusError) as exc_info:
             await client.create_capa_from_deviation(
                 study_id="STUDY-101",
@@ -90,7 +99,11 @@ async def test_quality_client_propagates_5xx_error():
 async def test_quality_client_propagates_network_error():
     client = QualityClient(base_url="http://mock-quality")
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, side_effect=httpx.ConnectTimeout("Timeout")):
+    with patch(
+        "httpx.AsyncClient.post",
+        new_callable=AsyncMock,
+        side_effect=httpx.ConnectTimeout("Timeout"),
+    ):
         with pytest.raises(httpx.ConnectTimeout):
             await client.create_capa_from_deviation(
                 study_id="STUDY-101",
@@ -117,7 +130,9 @@ async def test_safety_client_propagates_5xx_error():
         response=mock_resp,
     )
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_resp):
+    with patch(
+        "httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_resp
+    ):
         with pytest.raises(httpx.HTTPStatusError) as exc_info:
             await client.notify_deviation_event(
                 study_id="STUDY-101",
@@ -134,7 +149,11 @@ async def test_safety_client_propagates_5xx_error():
 async def test_safety_client_propagates_network_error():
     client = SafetyClient(base_url="http://mock-safety")
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, side_effect=httpx.ConnectError("Network down")):
+    with patch(
+        "httpx.AsyncClient.post",
+        new_callable=AsyncMock,
+        side_effect=httpx.ConnectError("Network down"),
+    ):
         with pytest.raises(httpx.ConnectError):
             await client.notify_deviation_event(
                 study_id="STUDY-101",

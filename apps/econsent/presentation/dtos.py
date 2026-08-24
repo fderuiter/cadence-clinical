@@ -515,6 +515,67 @@ class ReconsentRequirementResponse(AuditFields):
     completed_consent_id: str | None
 
 
+# --- Minor Age of Majority Milestone DTOs ---
+class SubjectMilestoneInput(BaseModel):
+    subject_pseudonym: str
+    date_of_birth: str = Field(..., description="Subject DOB in ISO format YYYY-MM-DD")
+    jurisdiction: str | None = Field("DEFAULT", description="ISO country or state code")
+    site_id: str | None = None
+    current_consent_role: str | None = Field(
+        "MINOR_ASSENT", description="MINOR_ASSENT, LAR, SUBJECT"
+    )
+
+
+class MinorMilestoneEvaluationRequest(BaseModel):
+    study_id: str
+    subjects: list[SubjectMilestoneInput]
+    as_of_date: str | None = Field(
+        None, description="Evaluation reference date (defaults to today)"
+    )
+    lead_time_days: int = Field(
+        30, description="Lead time window for approaching majority"
+    )
+
+
+class MinorMilestoneResultDTO(BaseModel):
+    subject_pseudonym: str
+    date_of_birth: str
+    jurisdiction: str
+    current_age_years: int
+    exact_age: float
+    legal_age_threshold: int
+    majority_reached_date: str
+    has_reached_majority: bool
+    is_transition_due: bool
+    days_until_majority: int
+    requires_adult_reconsent: bool
+    milestone_status: str
+
+
+class MinorMilestoneEvaluationResponse(BaseModel):
+    study_id: str
+    evaluation_date: str
+    total_evaluated: int
+    majority_reached_count: int
+    approaching_count: int
+    results: list[MinorMilestoneResultDTO]
+
+
+class TriggerMajorityReconsentRequest(BaseModel):
+    study_id: str
+    site_id: str | None = None
+    template_id: str
+    adult_version_index: int = Field(1, description="Adult consent template version")
+    subjects: list[SubjectMilestoneInput]
+    lead_time_days: int = Field(
+        0, description="Lead time days (0 = only subjects who reached legal majority)"
+    )
+    reason_for_change: str = Field(
+        "Participant reached legal age of majority - Adult re-consent required",
+        description="GxP change reason",
+    )
+
+
 # --- Consent Withdrawal DTOs ---
 class ConsentWithdrawalRequest(BaseModel):
     study_id: str

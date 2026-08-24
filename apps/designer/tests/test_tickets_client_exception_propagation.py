@@ -4,6 +4,7 @@ Requirements: Ensure exception handlers do not swallow errors or produce synthet
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import httpx
 import pytest
 
@@ -36,7 +37,9 @@ async def test_tickets_client_propagates_5xx_error():
         response=mock_resp,
     )
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_resp):
+    with patch(
+        "httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_resp
+    ):
         with pytest.raises(httpx.HTTPStatusError) as exc_info:
             await client.dispatch_ticket(
                 blueprint=blueprint,
@@ -61,7 +64,11 @@ async def test_tickets_client_propagates_network_error():
         assignee_role="RTSM Lead",
     )
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, side_effect=httpx.ConnectError("Service offline")):
+    with patch(
+        "httpx.AsyncClient.post",
+        new_callable=AsyncMock,
+        side_effect=httpx.ConnectError("Service offline"),
+    ):
         with pytest.raises(httpx.ConnectError):
             await client.dispatch_ticket(
                 blueprint=blueprint,

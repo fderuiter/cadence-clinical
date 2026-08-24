@@ -56,7 +56,10 @@ def get_auth_headers(
 
 @pytest.mark.asyncio
 async def test_audit_logs_endpoint() -> None:
-    """Test querying 21 CFR Part 11 audit logs via the audit sub-router."""
+    """Test querying 21 CFR Part 11 audit logs via the audit sub-router.
+
+    @req:PRD-SYS-177
+    """
     async with db_manager.get_session_maker()() as session:
         log1 = ConsentAuditLog(
             actor_id="user.crc",
@@ -96,7 +99,10 @@ async def test_audit_logs_endpoint() -> None:
 
 @pytest.mark.asyncio
 async def test_granular_options_router() -> None:
-    """Test POST and GET on /api/v1/econsent/options."""
+    """Test POST and GET on /api/v1/econsent/options.
+
+    @req:PRD-SYS-177
+    """
     client = TestClient(app)
     headers = get_auth_headers()
     payload = {
@@ -126,7 +132,10 @@ async def test_granular_options_router() -> None:
 
 @pytest.mark.asyncio
 async def test_export_and_diff_endpoints() -> None:
-    """Test CDISC ODM XML export, verifiable HTML certificate, and template version diff endpoints."""
+    """Test CDISC ODM XML export, verifiable HTML certificate, and template version diff endpoints.
+
+    @req:PRD-SYS-177
+    """
     async with db_manager.get_session_maker()() as session:
         c1 = ConsentClause(
             clause_id="c-diff-1",

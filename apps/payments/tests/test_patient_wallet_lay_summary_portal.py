@@ -18,6 +18,7 @@ from apps.payments.tests.conftest import get_auth_headers
 async def test_participant_wallet_provisioning_and_payout_methods(client: AsyncClient):
     """Test participant financial wallet provisioning, query, and updating payout preferences.
 
+    @req:PRD-SYS-182
     @req:PRD-SYS-127
     @req:PRD-PAT-001
     @req:ADR-2199
@@ -87,6 +88,7 @@ async def test_participant_wallet_provisioning_and_payout_methods(client: AsyncC
 async def test_soa_stipend_rule_and_visit_verification_trigger(client: AsyncClient):
     """Test SoA protocol stipend rule setup and automatic wallet crediting upon verified visit.
 
+    @req:PRD-SYS-182
     @req:PRD-SYS-127
     @req:PRD-PAT-001
     @req:ADR-2199
@@ -180,6 +182,7 @@ async def test_soa_stipend_rule_and_visit_verification_trigger(client: AsyncClie
 async def test_receipt_ocr_and_travel_expense_approval_workflow(client: AsyncClient):
     """Test receipt OCR extraction, claim submission, 1-click coordinator approval, and rejection.
 
+    @req:PRD-SYS-182
     @req:PRD-SYS-127
     @req:PRD-PAT-002
     @req:ADR-2199
@@ -297,6 +300,7 @@ async def test_receipt_ocr_and_travel_expense_approval_workflow(client: AsyncCli
 async def test_automated_digital_disbursements(client: AsyncClient):
     """Test Virtual Card and Direct ACH digital payout dispatch and ledger transactions.
 
+    @req:PRD-SYS-182
     @req:PRD-SYS-127
     @req:PRD-PAT-001
     @req:PRD-PAT-002
@@ -394,6 +398,7 @@ async def test_automated_digital_disbursements(client: AsyncClient):
 async def test_eu_ctr_lay_summary_portal_and_confirmation_receipt(client: AsyncClient):
     """Test EU CTR Regulation No 536/2014 Article 37 Plain Language Lay Summary publishing and SHA-256 receipt seals.
 
+    @req:PRD-SYS-182
     @req:PRD-SYS-127
     @req:PRD-PAT-003
     @req:ADR-2199
@@ -476,3 +481,380 @@ async def test_eu_ctr_lay_summary_portal_and_confirmation_receipt(client: AsyncC
     receipts = receipts_list_res.json()
     assert len(receipts) >= 1
     assert any(r["id"] == receipt["id"] for r in receipts)
+
+
+@pytest.mark.asyncio
+async def test_irs_1099_tax_threshold_monitoring_and_w9_validation_triggers(
+    client: AsyncClient,
+):
+    """Test IRS Form 1099 $600 threshold calculation, approaching warnings, and W-9 validation triggers.
+
+    @req:PRD-SYS-182
+    @req:PRD-SYS-127
+    @req:ADR-2199
+    """
+    admin_headers = get_auth_headers(roles="Grants Manager", user_id="grants_lead_01")
+    subject_headers = get_auth_headers(roles="Subject", user_id="subject_tax_01")
+    crc_headers = get_auth_headers(roles="CRC", user_id="crc_coordinator_mary")
+    study_id = "STUDY-TAX-1099"
+    site_id = "SITE-TAX-01"
+    subject_id = "SUBJ-TAX-001"
+
+    # 1. Configure taxable stipend rule ($350 per visit)
+    await client.post(
+        "/api/v1/payments/participant/stipend-rules",
+        json={
+            "study_id": study_id,
+            "visit_code": "TAX_VISIT_1",
+            "visit_name": "Taxable Intensive Visit 1",
+            "amount": 350.0,
+            "currency": "USD",
+            "taxable": True,
+        },
+        headers=admin_headers,
+    )
+    await client.post(
+        "/api/v1/payments/participant/stipend-rules",
+        json={
+            "study_id": study_id,
+            "visit_code": "TAX_VISIT_2",
+            "visit_name": "Taxable Intensive Visit 2",
+            "amount": 350.0,
+            "currency": "USD",
+            "taxable": True,
+        },
+        headers=admin_headers,
+    )
+
+    # 2. Credit Visit 1 ($350) -> Below $600 threshold
+    v1_res = await client.post(
+        "/api/v1/payments/participant/events/visit-verified",
+        json={
+            "study_id": study_id,
+            "site_id": site_id,
+            "subject_id": subject_id,
+            "visit_code": "TAX_VISIT_1",
+            "event_id": "EVT-TAX-01",
+        },
+        headers=admin_headers,
+    )
+    assert v1_res.status_code == 200
+    v1_data = v1_res.json()
+    wallet_id = v1_data["wallet_id"]
+    assert v1_data["taxable_ytd"] == 350.0
+    assert v1_data["is_1099_threshold_exceeded"] is False
+    assert v1_data["w9_status"] == "NOT_REQUIRED"
+
+    # Check tax status endpoint
+    tax_status_1 = await client.get(
+        f"/api/v1/payments/participant/wallets/{wallet_id}/tax-1099-status",
+        headers=subject_headers,
+    )
+    assert tax_status_1.status_code == 200
+    ts1 = tax_status_1.json()
+    assert ts1["taxable_ytd"] == 350.0
+    assert ts1["threshold_percentage"] == round((350.0 / 600.0) * 100, 1)
+    assert ts1["is_threshold_exceeded"] is False
+    assert ts1["warning_level"] == "NORMAL"
+    assert ts1["w9_required"] is False
+
+    # 3. Credit Visit 2 ($350) -> Total Taxable YTD = $700.00 (Exceeds $600 cap!)
+    v2_res = await client.post(
+        "/api/v1/payments/participant/events/visit-verified",
+        json={
+            "study_id": study_id,
+            "site_id": site_id,
+            "subject_id": subject_id,
+            "visit_code": "TAX_VISIT_2",
+            "event_id": "EVT-TAX-02",
+        },
+        headers=admin_headers,
+    )
+    assert v2_res.status_code == 200
+    v2_data = v2_res.json()
+    assert v2_data["taxable_ytd"] == 700.0
+    assert v2_data["is_1099_threshold_exceeded"] is True
+    assert v2_data["w9_status"] == "REQUIRED"
+
+    # Check updated tax status
+    tax_status_2 = await client.get(
+        f"/api/v1/payments/participant/wallets/{wallet_id}/tax-1099-status",
+        headers=subject_headers,
+    )
+    assert tax_status_2.status_code == 200
+    ts2 = tax_status_2.json()
+    assert ts2["taxable_ytd"] == 700.0
+    assert ts2["threshold_percentage"] == 100.0
+    assert ts2["is_threshold_exceeded"] is True
+    assert ts2["warning_level"] == "EXCEEDED"
+    assert ts2["w9_required"] is True
+    assert ts2["w9_status"] == "REQUIRED"
+
+    # 4. Participant Submits Form W-9 Certification
+    w9_res = await client.post(
+        f"/api/v1/payments/participant/wallets/{wallet_id}/submit-w9",
+        json={
+            "tax_id_last_four": "9876",
+            "full_legal_name": "John Doe Taxpayer",
+            "certify_accurate": True,
+            "address": "123 Clinical Way, Boston MA 02115",
+        },
+        headers=subject_headers,
+    )
+    assert w9_res.status_code == 200
+    w9_data = w9_res.json()
+    assert w9_data["w9_status"] == "SUBMITTED"
+    assert w9_data["tax_id_last_four"] == "9876"
+
+    # 5. Coordinator Verifies Submitted W-9
+    verify_w9_res = await client.post(
+        f"/api/v1/payments/participant/wallets/{wallet_id}/verify-w9",
+        json={"notes": "TIN validated against IRS TIN matching service."},
+        headers=crc_headers,
+    )
+    assert verify_w9_res.status_code == 200
+    verified_wallet = verify_w9_res.json()
+    assert verified_wallet["w9_status"] == "VERIFIED"
+    assert verified_wallet["tax_id_last_four"] == "9876"
+    assert verified_wallet["w9_verified_at"] is not None
+
+
+@pytest.mark.asyncio
+async def test_reloadable_debit_card_issuing_and_realtime_balance_inquiry(
+    client: AsyncClient,
+):
+    """Test automated reloadable debit card issuing and real-time multi-channel balance inquiries.
+
+    @req:PRD-SYS-182
+    @req:PRD-PAT-001
+    @req:ADR-2199
+    """
+    subject_headers = get_auth_headers(roles="Subject", user_id="subject_card_01")
+    admin_headers = get_auth_headers(roles="Grants Manager", user_id="grants_lead_01")
+    study_id = "STUDY-CARD-01"
+    site_id = "SITE-CARD-101"
+    subject_id = "SUBJ-CARD-001"
+
+    # 1. Provision wallet
+    w_res = await client.post(
+        "/api/v1/payments/participant/wallets",
+        json={
+            "subject_id": subject_id,
+            "study_id": study_id,
+            "site_id": site_id,
+            "currency": "USD",
+        },
+        headers=subject_headers,
+    )
+    assert w_res.status_code == 201
+    wallet_id = w_res.json()["id"]
+
+    # 2. Issue Automated Reloadable Debit Card
+    card_res = await client.post(
+        f"/api/v1/payments/participant/wallets/{wallet_id}/issue-card",
+        json={
+            "cardholder_name": "Alex Morgan",
+            "card_type": "RELOADABLE_DEBIT",
+            "initial_load": 0.0,
+        },
+        headers=subject_headers,
+    )
+    assert card_res.status_code == 201
+    card = card_res.json()
+    assert card["card_type"] == "RELOADABLE_DEBIT"
+    assert card["card_status"] == "ACTIVE"
+    assert "CARDTOK-" in card["card_token"]
+    assert "****-****-****-" in card["card_mask"]
+    assert card["cardholder_name"] == "Alex Morgan"
+
+    # 3. Credit stipend and check real-time balance inquiry
+    await client.post(
+        "/api/v1/payments/participant/stipend-rules",
+        json={
+            "study_id": study_id,
+            "visit_code": "V_CARD_CHECK",
+            "visit_name": "Debit Card Balance Check Visit",
+            "amount": 125.0,
+        },
+        headers=admin_headers,
+    )
+    await client.post(
+        "/api/v1/payments/participant/events/visit-verified",
+        json={
+            "study_id": study_id,
+            "site_id": site_id,
+            "subject_id": subject_id,
+            "visit_code": "V_CARD_CHECK",
+            "event_id": "EVT-CARD-01",
+        },
+        headers=admin_headers,
+    )
+
+    # 4. Perform Real-time Balance Inquiry
+    bal_res = await client.get(
+        f"/api/v1/payments/participant/wallets/{wallet_id}/balance",
+        headers=subject_headers,
+    )
+    assert bal_res.status_code == 200
+    bal = bal_res.json()
+    assert bal["current_balance"] == 125.0
+    assert bal["available_balance"] == 125.0
+    assert bal["lifetime_stipends"] == 125.0
+    assert bal["virtual_card_mask"] == card["card_mask"]
+    assert bal["card_status"] == "ACTIVE"
+    assert bal["card_type"] == "RELOADABLE_DEBIT"
+
+
+@pytest.mark.asyncio
+async def test_irb_ethics_anti_coercion_stipend_caps(client: AsyncClient):
+    """Test enforcement of IRB/ethics anti-coercion stipend caps per 45 CFR 46 and 21 CFR 50.
+
+    @req:PRD-SYS-182
+    @req:PRD-PAT-001
+    @req:ADR-2199
+    """
+    admin_headers = get_auth_headers(roles="Grants Manager", user_id="grants_lead_01")
+    study_id = "STUDY-ETHICS-01"
+    site_id = "SITE-ETHICS-101"
+    subject_id = "SUBJ-ETHICS-001"
+
+    # 1. Attempt to create stipend rule exceeding anti-coercion cap ($500 cap, requesting $750)
+    invalid_rule_res = await client.post(
+        "/api/v1/payments/participant/stipend-rules",
+        json={
+            "study_id": study_id,
+            "visit_code": "V_HIGH_COMP",
+            "visit_name": "High Compensation Visit",
+            "amount": 750.0,
+            "anti_coercion_cap": 500.0,
+        },
+        headers=admin_headers,
+    )
+    assert invalid_rule_res.status_code == 400
+    assert "exceeds IRB/ethics anti-coercion cap" in invalid_rule_res.json()["detail"]
+
+    # 2. Create valid stipend rule within anti-coercion cap ($150 with $200 cap)
+    valid_rule_res = await client.post(
+        "/api/v1/payments/participant/stipend-rules",
+        json={
+            "study_id": study_id,
+            "visit_code": "V_COMPLIANT_COMP",
+            "visit_name": "Compliant Visit",
+            "amount": 150.0,
+            "anti_coercion_cap": 200.0,
+            "is_milestone": True,
+            "milestone_code": "MILESTONE_PRIMARY_COMPLETION",
+        },
+        headers=admin_headers,
+    )
+    assert valid_rule_res.status_code == 201
+    rule = valid_rule_res.json()
+    assert rule["amount"] == 150.0
+    assert rule["anti_coercion_cap"] == 200.0
+    assert rule["is_milestone"] is True
+
+    # 3. Trigger milestone visit completion
+    v_res = await client.post(
+        "/api/v1/payments/participant/events/visit-verified",
+        json={
+            "study_id": study_id,
+            "site_id": site_id,
+            "subject_id": subject_id,
+            "visit_code": "V_COMPLIANT_COMP",
+            "event_id": "EVT-MILESTONE-01",
+        },
+        headers=admin_headers,
+    )
+    assert v_res.status_code == 200
+    assert v_res.json()["status"] == "CREDITED"
+    assert v_res.json()["amount"] == 150.0
+
+
+@pytest.mark.asyncio
+async def test_meal_allowance_and_per_diem_disbursements(client: AsyncClient):
+    """Test mobile meal allowance expense claim receipt verification, tax deduction over $75, and instant payout.
+
+    @req:PRD-SYS-182
+    @req:PRD-PAT-002
+    @req:ADR-2199
+    """
+    subject_headers = get_auth_headers(roles="Subject", user_id="subject_meal_01")
+    crc_headers = get_auth_headers(roles="CRC", user_id="crc_coordinator_sam")
+    study_id = "STUDY-MEAL-01"
+    site_id = "SITE-MEAL-101"
+    subject_id = "SUBJ-MEAL-001"
+
+    # 1. OCR extract meal receipt above $75.00 daily allowance cap ($95.00 meal)
+    receipt_text = (
+        "HOSPITAL PLAZA CAFE\n"
+        "Date: 2026-08-24\n"
+        "Total: $95.00\n"
+        "Dinner during extended observation\n"
+    )
+    ocr_res = await client.post(
+        "/api/v1/payments/participant/expenses/ocr-extract",
+        json={"raw_text": receipt_text, "category_hint": "MEAL"},
+        headers=subject_headers,
+    )
+    assert ocr_res.status_code == 200
+    ocr = ocr_res.json()
+    assert ocr["gross_amount"] == 95.0
+    assert ocr["category"] == "MEAL"
+    # Tax on excess ($95 - $75 = $20 excess * 15% = $3.00)
+    assert ocr["tax_deduction"] == 3.00
+    assert ocr["net_amount"] == 92.00
+
+    # 2. Submit meal allowance claim
+    claim_res = await client.post(
+        "/api/v1/payments/participant/expenses",
+        json={
+            "subject_id": subject_id,
+            "study_id": study_id,
+            "site_id": site_id,
+            "expense_date": "2026-08-24",
+            "category": "MEAL",
+            "merchant_name": ocr["merchant_name"],
+            "gross_amount": ocr["gross_amount"],
+            "tax_deduction": ocr["tax_deduction"],
+            "net_amount": ocr["net_amount"],
+            "is_meal_allowance": True,
+            "per_diem_cap": 75.0,
+            "receipt_image_name": "dinner_receipt.jpg",
+            "receipt_ocr_data": ocr,
+        },
+        headers=subject_headers,
+    )
+    assert claim_res.status_code == 201
+    claim = claim_res.json()
+    claim_id = claim["id"]
+    wallet_id = claim["wallet_id"]
+    assert claim["is_meal_allowance"] is True
+    assert claim["net_amount"] == 92.00
+
+    # 3. Coordinator approves meal claim
+    review_res = await client.post(
+        f"/api/v1/payments/participant/expenses/{claim_id}/review",
+        json={
+            "status": "APPROVED",
+            "review_notes": "Meal receipt verified for extended visit.",
+        },
+        headers=crc_headers,
+    )
+    assert review_res.status_code == 200
+
+    # 4. Verify wallet balance credited with net reimbursement ($92.00)
+    w_res = await client.get(
+        f"/api/v1/payments/participant/wallets/{wallet_id}",
+        headers=subject_headers,
+    )
+    assert w_res.json()["current_balance"] == 92.00
+
+    # 5. Instant ACH disbursement
+    disb_res = await client.post(
+        f"/api/v1/payments/participant/wallets/{wallet_id}/disburse",
+        json={"disbursement_type": "DIRECT_ACH", "amount": 92.00},
+        headers=subject_headers,
+    )
+    assert disb_res.status_code == 201
+    assert disb_res.json()["status"] == "DISPATCHED"
+    assert disb_res.json()["amount"] == 92.00

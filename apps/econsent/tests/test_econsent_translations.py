@@ -53,7 +53,10 @@ def get_auth_headers(
 
 
 def test_language_code_validation():
-    """Verify standard language validation using the local econsent language helpers."""
+    """Verify standard language validation using the local econsent language helpers.
+
+    @req:PRD-SYS-177
+    """
     # Valid
     assert validate_language_code("es") == "es"
     assert validate_language_code("ES") == "es"
@@ -71,7 +74,10 @@ def test_language_code_validation():
 
 @pytest.mark.asyncio
 async def test_translation_crud_and_validation():
-    """Verify submitting translations, versioning, and validation on source existence."""
+    """Verify submitting translations, versioning, and validation on source existence.
+
+    @req:PRD-SYS-177
+    """
     client = TestClient(app)
 
     # 1. Create source clause
@@ -158,7 +164,10 @@ async def test_translation_crud_and_validation():
 
 @pytest.mark.asyncio
 async def test_translation_status_workflow_and_rbac():
-    """Verify DRAFT -> IN_REVIEW -> APPROVED transitions, role permissions, and invalid rejections."""
+    """Verify DRAFT -> IN_REVIEW -> APPROVED transitions, role permissions, and invalid rejections.
+
+    @req:PRD-SYS-177
+    """
     client = TestClient(app)
 
     # Setup clause

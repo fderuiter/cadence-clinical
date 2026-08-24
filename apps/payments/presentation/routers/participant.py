@@ -25,11 +25,14 @@ from apps.payments.infrastructure.models import (
     ParticipantWalletModel,
 )
 from apps.payments.presentation.dtos import (
+    BalanceInquiryResponse,
     DisbursementRequest,
     DisbursementResponse,
     ExpenseClaimResponse,
     ExpenseClaimReviewRequest,
     ExpenseClaimSubmitRequest,
+    IssueReloadableCardRequest,
+    IssueReloadableCardResponse,
     LaySummaryCreate,
     LaySummaryPublishRequest,
     LaySummaryReceiptConfirmRequest,
@@ -43,7 +46,11 @@ from apps.payments.presentation.dtos import (
     ParticipantWalletResponse,
     ReceiptOcrExtractRequest,
     ReceiptOcrExtractResponse,
+    Tax1099ThresholdResponse,
     VisitVerificationEventDto,
+    W9SubmitRequest,
+    W9SubmitResponse,
+    W9VerifyRequest,
 )
 from apps.payments.presentation.routers.site_ledger import (
     check_financial_write_access,
@@ -51,7 +58,7 @@ from apps.payments.presentation.routers.site_ledger import (
 from apps.payments.services.participant_compensation_service import (
     ParticipantCompensationService,
 )
-from packages.security.rbac import Principal, get_principal
+from packages.security.rbac import Principal, get_principal, has_permission
 
 router = APIRouter(tags=["Participant Compensation"])
 
@@ -82,9 +89,18 @@ def map_wallet_response(
         lifetime_disbursements=entity.lifetime_disbursements,
         currency=entity.currency,
         status=entity.status,
+        taxable_ytd=entity.taxable_ytd,
+        is_1099_threshold_exceeded=entity.is_1099_threshold_exceeded,
+        w9_status=entity.w9_status,
+        w9_submitted_at=entity.w9_submitted_at,
+        w9_verified_at=entity.w9_verified_at,
+        tax_id_last_four=entity.tax_id_last_four,
+        card_type=entity.card_type,
+        card_status=entity.card_status,
         virtual_card_token=entity.virtual_card_token,
         virtual_card_mask=entity.virtual_card_mask,
         virtual_card_expiry=entity.virtual_card_expiry,
+        anti_coercion_cap=entity.anti_coercion_cap,
         ach_routing_number=entity.ach_routing_number,
         ach_account_mask=entity.ach_account_mask,
         ach_account_holder=entity.ach_account_holder,
@@ -111,6 +127,9 @@ def map_stipend_rule_response(
         currency=entity.currency,
         requires_verification=entity.requires_verification,
         taxable=entity.taxable,
+        anti_coercion_cap=entity.anti_coercion_cap,
+        is_milestone=entity.is_milestone,
+        milestone_code=entity.milestone_code,
         is_active=entity.is_active,
         created_at=entity.created_at,
         created_by=entity.created_by,
@@ -134,6 +153,8 @@ def map_expense_claim_response(
         tax_deduction=entity.tax_deduction,
         net_amount=entity.net_amount,
         currency=entity.currency,
+        is_meal_allowance=entity.is_meal_allowance,
+        per_diem_cap=entity.per_diem_cap,
         receipt_image_name=entity.receipt_image_name,
         receipt_ocr_data=entity.receipt_ocr_data,
         status=entity.status,
@@ -345,12 +366,155 @@ async def update_participant_wallet_payout_methods(
             virtual_card_token=payload.virtual_card_token,
             virtual_card_mask=payload.virtual_card_mask,
             virtual_card_expiry=payload.virtual_card_expiry,
+            card_status=payload.card_status,
             ach_routing_number=payload.ach_routing_number,
             ach_account_mask=payload.ach_account_mask,
             ach_account_holder=payload.ach_account_holder,
             user_id=principal.user_id,
             user_roles=",".join(principal.raw_roles),
             reason_for_change=principal.change_reason or "Updated Payout Methods",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return map_wallet_response(wallet)
+
+
+@router.post(
+    "/participant/wallets/{wallet_id}/issue-card",
+    response_model=IssueReloadableCardResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def issue_participant_reloadable_card(
+    wallet_id: str,
+    payload: IssueReloadableCardRequest,
+    service: ParticipantCompensationService = Depends(
+        get_participant_compensation_service
+    ),
+    principal: Principal = Depends(get_principal),
+) -> IssueReloadableCardResponse:
+    """Provisions an automated reloadable debit card linked to the participant wallet."""
+    try:
+        res = await service.issue_reloadable_debit_card(
+            wallet_id=wallet_id,
+            cardholder_name=payload.cardholder_name,
+            card_type=payload.card_type,
+            initial_load=payload.initial_load,
+            user_id=principal.user_id,
+            user_roles=",".join(principal.raw_roles),
+            reason_for_change=principal.change_reason or "Automated Debit Card Issuing",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return IssueReloadableCardResponse(**res)
+
+
+@router.get(
+    "/participant/wallets/{wallet_id}/balance",
+    response_model=BalanceInquiryResponse,
+)
+async def get_participant_balance_inquiry(
+    wallet_id: str,
+    service: ParticipantCompensationService = Depends(
+        get_participant_compensation_service
+    ),
+    principal: Principal = Depends(get_principal),
+) -> BalanceInquiryResponse:
+    """Performs real-time multi-channel balance inquiry."""
+    try:
+        res = await service.get_balance_inquiry(wallet_id=wallet_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    return BalanceInquiryResponse(**res)
+
+
+@router.get(
+    "/participant/wallets/{wallet_id}/tax-1099-status",
+    response_model=Tax1099ThresholdResponse,
+)
+async def get_participant_1099_tax_status(
+    wallet_id: str,
+    service: ParticipantCompensationService = Depends(
+        get_participant_compensation_service
+    ),
+    principal: Principal = Depends(get_principal),
+) -> Tax1099ThresholdResponse:
+    """Retrieves real-time IRS Form 1099 tax threshold analysis and W-9 validation state."""
+    try:
+        res = await service.get_1099_tax_status(wallet_id=wallet_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    return Tax1099ThresholdResponse(**res)
+
+
+@router.post(
+    "/participant/wallets/{wallet_id}/submit-w9",
+    response_model=W9SubmitResponse,
+)
+async def submit_participant_w9_form(
+    wallet_id: str,
+    payload: W9SubmitRequest,
+    service: ParticipantCompensationService = Depends(
+        get_participant_compensation_service
+    ),
+    principal: Principal = Depends(get_principal),
+) -> W9SubmitResponse:
+    """Submits IRS Form W-9 certification for participant 1099 compliance."""
+    try:
+        res = await service.submit_w9_form(
+            wallet_id=wallet_id,
+            tax_id_last_four=payload.tax_id_last_four,
+            full_legal_name=payload.full_legal_name,
+            certify_accurate=payload.certify_accurate,
+            address=payload.address,
+            user_id=principal.user_id,
+            user_roles=",".join(principal.raw_roles),
+            reason_for_change=principal.change_reason
+            or "Submitted Form W-9 Certification",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return W9SubmitResponse(**res)
+
+
+def check_coordinator_or_financial_write_access(principal: Principal) -> None:
+    """Validates that user has coordinator or financial authority to verify participant documents."""
+    if not (
+        has_permission(principal, "ctms_financial:write")
+        or has_permission(principal, "payments:write")
+        or has_permission(principal, "ctms_study:create")
+        or has_permission(principal, "edc_data:write")
+        or any(
+            r in ["CRC", "Coordinator", "Grants Manager", "Admin", "Investigator"]
+            for r in principal.raw_roles
+        )
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: User lacks coordinator/financial authority.",
+        )
+
+
+@router.post(
+    "/participant/wallets/{wallet_id}/verify-w9",
+    response_model=ParticipantWalletResponse,
+)
+async def verify_participant_w9_form(
+    wallet_id: str,
+    payload: W9VerifyRequest,
+    service: ParticipantCompensationService = Depends(
+        get_participant_compensation_service
+    ),
+    principal: Principal = Depends(get_principal),
+) -> ParticipantWalletResponse:
+    """Performs coordinator verification on submitted Form W-9."""
+    check_coordinator_or_financial_write_access(principal)
+    try:
+        wallet = await service.verify_w9_form(
+            wallet_id=wallet_id,
+            verified_by=principal.user_id,
+            reviewer_roles=",".join(principal.raw_roles),
+            notes=payload.notes,
+            reason_for_change=principal.change_reason or "Verified Form W-9",
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -441,19 +605,25 @@ async def create_participant_stipend_rule(
 ) -> ParticipantStipendRuleResponse:
     """Configures participant visit compensation rules linked to the Schedule of Activities."""
     check_financial_write_access(principal)
-    rule = await service.create_stipend_rule(
-        study_id=payload.study_id,
-        visit_code=payload.visit_code,
-        visit_name=payload.visit_name,
-        amount=payload.amount,
-        currency=payload.currency,
-        procedure_code=payload.procedure_code,
-        requires_verification=payload.requires_verification,
-        taxable=payload.taxable,
-        user_id=principal.user_id,
-        user_roles=",".join(principal.raw_roles),
-        reason_for_change=principal.change_reason or "Configured SoA Stipend Rule",
-    )
+    try:
+        rule = await service.create_stipend_rule(
+            study_id=payload.study_id,
+            visit_code=payload.visit_code,
+            visit_name=payload.visit_name,
+            amount=payload.amount,
+            currency=payload.currency,
+            procedure_code=payload.procedure_code,
+            requires_verification=payload.requires_verification,
+            taxable=payload.taxable,
+            anti_coercion_cap=payload.anti_coercion_cap,
+            is_milestone=payload.is_milestone,
+            milestone_code=payload.milestone_code,
+            user_id=principal.user_id,
+            user_roles=",".join(principal.raw_roles),
+            reason_for_change=principal.change_reason or "Configured SoA Stipend Rule",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     return map_stipend_rule_response(rule)
 
 

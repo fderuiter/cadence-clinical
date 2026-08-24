@@ -725,10 +725,33 @@ class ParticipantWalletModel(Base):
         String(50), default="ACTIVE", nullable=False, index=True
     )
 
-    # Virtual Debit Card Details
+    # IRS Form 1099 Tax Threshold Monitoring & W-9 Validation
+    taxable_ytd: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    is_1099_threshold_exceeded: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    w9_status: Mapped[str] = mapped_column(
+        String(50), default="NOT_REQUIRED", nullable=False, index=True
+    )
+    w9_submitted_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    w9_verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    tax_id_last_four: Mapped[str | None] = mapped_column(String(4), nullable=True)
+
+    # Reloadable Debit Card & Digital Disbursement Credentials
+    card_type: Mapped[str] = mapped_column(
+        String(50), default="RELOADABLE_DEBIT", nullable=False
+    )
+    card_status: Mapped[str] = mapped_column(
+        String(50), default="ACTIVE", nullable=False
+    )
     virtual_card_token: Mapped[str | None] = mapped_column(String(100), nullable=True)
     virtual_card_mask: Mapped[str | None] = mapped_column(String(50), nullable=True)
     virtual_card_expiry: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    # IRB/Ethics Anti-Coercion Stipend Cap Override
+    anti_coercion_cap: Mapped[float | None] = mapped_column(
+        Float, default=None, nullable=True
+    )
 
     # Direct ACH Bank Details
     ach_routing_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -787,6 +810,11 @@ class ParticipantStipendRuleModel(Base):
         Boolean, default=True, nullable=False
     )
     taxable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    anti_coercion_cap: Mapped[float | None] = mapped_column(
+        Float, default=None, nullable=True
+    )
+    is_milestone: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    milestone_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # 21 CFR Part 11 GxP Audit Columns
@@ -829,6 +857,12 @@ class ParticipantExpenseClaimModel(Base):
     tax_deduction: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     net_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
+    is_meal_allowance: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    per_diem_cap: Mapped[float | None] = mapped_column(
+        Float, default=None, nullable=True
+    )
 
     receipt_image_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     receipt_image_base64: Mapped[str | None] = mapped_column(String, nullable=True)

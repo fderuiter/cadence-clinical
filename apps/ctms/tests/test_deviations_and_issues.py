@@ -1,12 +1,11 @@
 import os
 import time
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from jose import jwt
 from sqlalchemy import event
-
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from apps.ctms.adapters.database import db_manager
 from apps.ctms.adapters.models import Base
@@ -127,7 +126,9 @@ def test_protocol_deviation_lifecycle_and_capa_escalation():
     mock_resp.json.return_value = {"id": "mock-capa-id-123", "status": "ESCALATED"}
     mock_resp.raise_for_status = lambda: None
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_resp):
+    with patch(
+        "httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_resp
+    ):
         res_capa = client.post(
             f"/api/v1/ctms/deviations/{dev_id}/escalate-capa", headers=headers
         )

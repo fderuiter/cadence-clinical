@@ -49,9 +49,11 @@ class ParticipantCompensationService:
         study_id: str,
         site_id: str,
         currency: str = "USD",
+        card_type: str = "RELOADABLE_DEBIT",
         virtual_card_token: str | None = None,
         virtual_card_mask: str | None = None,
         virtual_card_expiry: str | None = None,
+        anti_coercion_cap: float | None = None,
         ach_routing_number: str | None = None,
         ach_account_mask: str | None = None,
         ach_account_holder: str | None = None,
@@ -74,10 +76,16 @@ class ParticipantCompensationService:
             lifetime_disbursements=0.0,
             currency=currency,
             status="ACTIVE",
+            taxable_ytd=0.0,
+            is_1099_threshold_exceeded=False,
+            w9_status="NOT_REQUIRED",
+            card_type=card_type,
+            card_status="ACTIVE",
             virtual_card_token=virtual_card_token
             or f"VTOK-{uuid.uuid4().hex[:8].upper()}",
             virtual_card_mask=virtual_card_mask or "****-****-****-4821",
             virtual_card_expiry=virtual_card_expiry or "12/29",
+            anti_coercion_cap=anti_coercion_cap,
             ach_routing_number=ach_routing_number,
             ach_account_mask=ach_account_mask or "ACH-***4321",
             ach_account_holder=ach_account_holder or f"Participant {subject_id}",
@@ -102,6 +110,7 @@ class ParticipantCompensationService:
                 "study_id": new_wallet.study_id,
                 "currency": new_wallet.currency,
                 "balance": new_wallet.current_balance,
+                "card_type": new_wallet.card_type,
             },
             details=f"Provisioned new participant wallet for subject {subject_id} in study {study_id}.",
             version_index=1,
@@ -164,6 +173,7 @@ class ParticipantCompensationService:
         virtual_card_token: str | None = None,
         virtual_card_mask: str | None = None,
         virtual_card_expiry: str | None = None,
+        card_status: str | None = None,
         ach_routing_number: str | None = None,
         ach_account_mask: str | None = None,
         ach_account_holder: str | None = None,
@@ -187,6 +197,8 @@ class ParticipantCompensationService:
             wallet.virtual_card_mask = virtual_card_mask
         if virtual_card_expiry is not None:
             wallet.virtual_card_expiry = virtual_card_expiry
+        if card_status is not None:
+            wallet.card_status = card_status
         if ach_routing_number is not None:
             wallet.ach_routing_number = ach_routing_number
         if ach_account_mask is not None:
@@ -220,6 +232,239 @@ class ParticipantCompensationService:
         )
         return wallet
 
+    async def issue_reloadable_debit_card(
+        self,
+        wallet_id: str,
+        cardholder_name: str | None = None,
+        card_type: str = "RELOADABLE_DEBIT",
+        initial_load: float = 0.0,
+        user_id: str = "system",
+        user_roles: str = "Subject",
+        reason_for_change: str | None = None,
+    ) -> dict[str, Any]:
+        """Provisions an automated reloadable debit card linked to the participant wallet."""
+        wallet = await self.get_wallet_by_id(wallet_id)
+        if not wallet:
+            raise ValueError(f"Participant wallet '{wallet_id}' not found.")
+
+        card_token = f"CARDTOK-{uuid.uuid4().hex[:12].upper()}"
+        last_four = f"{uuid.uuid4().int % 9000 + 1000}"
+        card_mask = f"****-****-****-{last_four}"
+        now = datetime.now(UTC)
+        exp_year = (now.year + 3) % 100
+        card_expiry = f"{now.month:02d}/{exp_year:02d}"
+        holder = (
+            cardholder_name
+            or wallet.ach_account_holder
+            or f"Participant {wallet.subject_id}"
+        )
+
+        wallet.card_type = card_type
+        wallet.card_status = "ACTIVE"
+        wallet.virtual_card_token = card_token
+        wallet.virtual_card_mask = card_mask
+        wallet.virtual_card_expiry = card_expiry
+        wallet.version_index += 1
+        self.session.add(wallet)
+        await self.session.commit()
+        await self.session.refresh(wallet)
+
+        await record_payment_audit_log(
+            session=self.session,
+            entity_type="PARTICIPANT_WALLET",
+            entity_id=wallet.id,
+            action=AuditAction.RELOADABLE_CARD_ISSUED.value,
+            user_id=user_id,
+            user_roles=user_roles,
+            previous_state={"card_status": "NONE"},
+            new_state={
+                "card_token": card_token,
+                "card_mask": card_mask,
+                "card_type": card_type,
+                "card_status": "ACTIVE",
+            },
+            details=f"Issued automated reloadable debit card ({card_mask}) for subject {wallet.subject_id}.",
+            reason_for_change=reason_for_change
+            or "Automated Reloadable Debit Card Issuing",
+            version_index=wallet.version_index,
+        )
+
+        return {
+            "wallet_id": wallet.id,
+            "subject_id": wallet.subject_id,
+            "card_token": card_token,
+            "card_mask": card_mask,
+            "card_expiry": card_expiry,
+            "card_type": card_type,
+            "card_status": "ACTIVE",
+            "cardholder_name": holder,
+            "current_balance": wallet.current_balance,
+            "issued_at": now,
+        }
+
+    async def get_balance_inquiry(self, wallet_id: str) -> dict[str, Any]:
+        """Provides real-time multi-channel balance inquiries for mobile app, web, and debit card networks."""
+        wallet = await self.get_wallet_by_id(wallet_id)
+        if not wallet:
+            raise ValueError(f"Participant wallet '{wallet_id}' not found.")
+
+        pending_total = sum(
+            c.net_amount
+            for c in (wallet.expense_claims or [])
+            if c.status == "PENDING_REVIEW"
+        )
+        return {
+            "wallet_id": wallet.id,
+            "subject_id": wallet.subject_id,
+            "study_id": wallet.study_id,
+            "site_id": wallet.site_id,
+            "current_balance": wallet.current_balance,
+            "available_balance": wallet.current_balance,
+            "pending_claims_total": round(pending_total, 2),
+            "lifetime_stipends": wallet.lifetime_stipends,
+            "lifetime_reimbursements": wallet.lifetime_reimbursements,
+            "lifetime_disbursements": wallet.lifetime_disbursements,
+            "taxable_ytd": wallet.taxable_ytd,
+            "currency": wallet.currency,
+            "virtual_card_mask": wallet.virtual_card_mask,
+            "card_status": wallet.card_status,
+            "card_type": wallet.card_type,
+            "ach_account_mask": wallet.ach_account_mask,
+            "is_1099_threshold_exceeded": wallet.is_1099_threshold_exceeded,
+            "w9_status": wallet.w9_status,
+        }
+
+    async def get_1099_tax_status(self, wallet_id: str) -> dict[str, Any]:
+        """Monitors IRS Form 1099 reporting threshold ($600 annual cap) and W-9 validation triggers."""
+        wallet = await self.get_wallet_by_id(wallet_id)
+        if not wallet:
+            raise ValueError(f"Participant wallet '{wallet_id}' not found.")
+
+        taxable_ytd = wallet.taxable_ytd
+        limit = 600.0
+        pct = round(min(100.0, (taxable_ytd / limit) * 100.0), 1) if limit > 0 else 0.0
+        is_exceeded = taxable_ytd >= limit or wallet.is_1099_threshold_exceeded
+
+        if taxable_ytd >= limit:
+            warning_level = "EXCEEDED"
+        elif taxable_ytd >= 500.0:
+            warning_level = "APPROACHING"
+        else:
+            warning_level = "NORMAL"
+
+        w9_required = is_exceeded and wallet.w9_status in ("REQUIRED", "NOT_REQUIRED")
+
+        return {
+            "wallet_id": wallet.id,
+            "subject_id": wallet.subject_id,
+            "study_id": wallet.study_id,
+            "taxable_ytd": taxable_ytd,
+            "threshold_limit": limit,
+            "threshold_percentage": pct,
+            "is_threshold_exceeded": is_exceeded,
+            "w9_status": wallet.w9_status,
+            "w9_required": w9_required,
+            "warning_level": warning_level,
+            "currency": wallet.currency,
+        }
+
+    async def submit_w9_form(
+        self,
+        wallet_id: str,
+        tax_id_last_four: str,
+        full_legal_name: str,
+        certify_accurate: bool = True,
+        address: str | None = None,
+        user_id: str = "system",
+        user_roles: str = "Subject",
+        reason_for_change: str | None = None,
+    ) -> dict[str, Any]:
+        """Submits IRS Form W-9 certification when participant reaches or approaches $600 threshold."""
+        wallet = await self.get_wallet_by_id(wallet_id)
+        if not wallet:
+            raise ValueError(f"Participant wallet '{wallet_id}' not found.")
+
+        if not certify_accurate:
+            raise ValueError(
+                "Taxpayer certification must be acknowledged to submit Form W-9."
+            )
+
+        wallet.tax_id_last_four = tax_id_last_four
+        wallet.w9_status = "SUBMITTED"
+        now = datetime.now(UTC)
+        wallet.w9_submitted_at = now
+        wallet.version_index += 1
+        wallet.reason_for_change = (
+            reason_for_change or "Submitted IRS Form W-9 Certification"
+        )
+        self.session.add(wallet)
+        await self.session.commit()
+        await self.session.refresh(wallet)
+
+        await record_payment_audit_log(
+            session=self.session,
+            entity_type="PARTICIPANT_WALLET",
+            entity_id=wallet.id,
+            action=AuditAction.W9_FORM_SUBMITTED.value,
+            user_id=user_id,
+            user_roles=user_roles,
+            previous_state={"w9_status": "REQUIRED"},
+            new_state={
+                "w9_status": "SUBMITTED",
+                "tax_id_last_four": f"***-**-{tax_id_last_four}",
+                "legal_name": full_legal_name,
+            },
+            details=f"Subject {wallet.subject_id} submitted IRS Form W-9 certification (TIN ending in {tax_id_last_four}).",
+            reason_for_change=reason_for_change or "IRS Form W-9 Submission",
+            version_index=wallet.version_index,
+        )
+
+        return {
+            "wallet_id": wallet.id,
+            "subject_id": wallet.subject_id,
+            "w9_status": "SUBMITTED",
+            "tax_id_last_four": tax_id_last_four,
+            "submitted_at": now,
+            "message": "Form W-9 submitted successfully and pending coordinator verification.",
+        }
+
+    async def verify_w9_form(
+        self,
+        wallet_id: str,
+        verified_by: str,
+        reviewer_roles: str = "CRC",
+        notes: str | None = None,
+        reason_for_change: str | None = None,
+    ) -> ParticipantWalletModel:
+        """Processes coordinator verification of submitted Form W-9."""
+        wallet = await self.get_wallet_by_id(wallet_id)
+        if not wallet:
+            raise ValueError(f"Participant wallet '{wallet_id}' not found.")
+
+        wallet.w9_status = "VERIFIED"
+        now = datetime.now(UTC)
+        wallet.w9_verified_at = now
+        wallet.version_index += 1
+        wallet.reason_for_change = reason_for_change or "Verified IRS Form W-9"
+        self.session.add(wallet)
+        await self.session.commit()
+        await self.session.refresh(wallet)
+
+        await record_payment_audit_log(
+            session=self.session,
+            entity_type="PARTICIPANT_WALLET",
+            entity_id=wallet.id,
+            action=AuditAction.W9_FORM_VERIFIED.value,
+            user_id=verified_by,
+            user_roles=reviewer_roles,
+            previous_state={"w9_status": "SUBMITTED"},
+            new_state={"w9_status": "VERIFIED", "verified_at": now.isoformat()},
+            details=f"Coordinator {verified_by} verified Form W-9 for subject {wallet.subject_id} (Notes: {notes or 'None'}).",
+            reason_for_change=reason_for_change or "Verified Form W-9",
+            version_index=wallet.version_index,
+        )
+        return wallet
+
     # ==========================================
     # 2. SoA Protocol Stipend Rules & Visit Triggers
     # ==========================================
@@ -234,11 +479,19 @@ class ParticipantCompensationService:
         procedure_code: str | None = None,
         requires_verification: bool = True,
         taxable: bool = False,
+        anti_coercion_cap: float | None = None,
+        is_milestone: bool = False,
+        milestone_code: str | None = None,
         user_id: str = "system",
         user_roles: str = "Grants Manager",
         reason_for_change: str | None = None,
     ) -> ParticipantStipendRuleModel:
         """Creates or updates an SoA-linked participant visit stipend compensation rule."""
+        if anti_coercion_cap is not None and amount > anti_coercion_cap:
+            raise ValueError(
+                f"Stipend amount ${amount:.2f} exceeds IRB/ethics anti-coercion cap of ${anti_coercion_cap:.2f} (PRD-SYS-182/45 CFR 46)."
+            )
+
         stmt = select(ParticipantStipendRuleModel).where(
             ParticipantStipendRuleModel.study_id == study_id,
             ParticipantStipendRuleModel.visit_code == visit_code,
@@ -254,6 +507,9 @@ class ParticipantCompensationService:
             existing.procedure_code = procedure_code
             existing.requires_verification = requires_verification
             existing.taxable = taxable
+            existing.anti_coercion_cap = anti_coercion_cap
+            existing.is_milestone = is_milestone
+            existing.milestone_code = milestone_code
             existing.version_index += 1
             existing.reason_for_change = (
                 reason_for_change or "Updated visit compensation amount"
@@ -273,6 +529,9 @@ class ParticipantCompensationService:
                 currency=currency,
                 requires_verification=requires_verification,
                 taxable=taxable,
+                anti_coercion_cap=anti_coercion_cap,
+                is_milestone=is_milestone,
+                milestone_code=milestone_code,
                 is_active=True,
                 created_by=user_id,
                 reason_for_change=reason_for_change,
@@ -296,6 +555,7 @@ class ParticipantCompensationService:
                 "study_id": saved.study_id,
                 "visit_code": saved.visit_code,
                 "amount": saved.amount,
+                "anti_coercion_cap": saved.anti_coercion_cap,
             },
             details=f"Configured SoA stipend rule for visit {visit_code} (${amount:.2f} {currency}).",
             reason_for_change=reason_for_change,
@@ -364,6 +624,24 @@ class ParticipantCompensationService:
                 "event_id": event_id,
             }
 
+        # Check IRB Anti-Coercion Stipend Cap
+        if rule.anti_coercion_cap is not None and rule.amount > rule.anti_coercion_cap:
+            await record_payment_audit_log(
+                session=self.session,
+                entity_type="PARTICIPANT_WALLET",
+                entity_id=study_id,
+                action=AuditAction.ANTI_COERCION_CAP_EXCEEDED.value,
+                user_id=verified_by,
+                user_roles=user_roles,
+                previous_state=None,
+                new_state={"amount": rule.amount, "cap": rule.anti_coercion_cap},
+                details=f"Visit {visit_code} stipend ${rule.amount:.2f} exceeds IRB anti-coercion cap ${rule.anti_coercion_cap:.2f}.",
+                version_index=1,
+            )
+            raise ValueError(
+                f"Stipend amount ${rule.amount:.2f} exceeds IRB/ethics anti-coercion cap of ${rule.anti_coercion_cap:.2f} (PRD-SYS-182/45 CFR 46)."
+            )
+
         wallet = await self.get_or_create_wallet(
             subject_id=subject_id,
             study_id=study_id,
@@ -373,23 +651,66 @@ class ParticipantCompensationService:
             user_roles=user_roles,
         )
 
+        # Check wallet level anti-coercion cap if configured
+        if (
+            wallet.anti_coercion_cap is not None
+            and rule.amount > wallet.anti_coercion_cap
+        ):
+            raise ValueError(
+                f"Stipend amount ${rule.amount:.2f} exceeds wallet IRB anti-coercion cap of ${wallet.anti_coercion_cap:.2f}."
+            )
+
         stipend_amount = rule.amount
         new_balance = round(wallet.current_balance + stipend_amount, 2)
         wallet.current_balance = new_balance
         wallet.lifetime_stipends = round(wallet.lifetime_stipends + stipend_amount, 2)
+
+        # IRS 1099 Tax Threshold Monitoring ($600 annual cap)
+        if rule.taxable:
+            wallet.taxable_ytd = round(wallet.taxable_ytd + stipend_amount, 2)
+            if wallet.taxable_ytd >= 600.0:
+                wallet.is_1099_threshold_exceeded = True
+                if wallet.w9_status == "NOT_REQUIRED":
+                    wallet.w9_status = "REQUIRED"
+                await record_payment_audit_log(
+                    session=self.session,
+                    entity_type="PARTICIPANT_WALLET",
+                    entity_id=wallet.id,
+                    action=AuditAction.IRS_1099_THRESHOLD_EXCEEDED.value,
+                    user_id=verified_by,
+                    user_roles=user_roles,
+                    previous_state={
+                        "taxable_ytd": round(wallet.taxable_ytd - stipend_amount, 2)
+                    },
+                    new_state={
+                        "taxable_ytd": wallet.taxable_ytd,
+                        "threshold": 600.0,
+                        "w9_status": wallet.w9_status,
+                    },
+                    details=f"Subject {subject_id} exceeded IRS Form 1099 tax reporting threshold ($600.00). YTD Taxable: ${wallet.taxable_ytd:.2f}.",
+                    version_index=wallet.version_index + 1,
+                )
+
         wallet.version_index += 1
         self.session.add(wallet)
+
+        tx_type = "MILESTONE_CREDIT" if rule.is_milestone else "STIPEND_CREDIT"
+        tx_desc = (
+            f"Milestone Stipend: {rule.visit_name} ({rule.milestone_code or visit_code})"
+            if rule.is_milestone
+            else f"Protocol Visit Stipend: {rule.visit_name} ({visit_code})"
+        )
 
         tx = ParticipantTransactionModel(
             id=str(uuid.uuid4()),
             wallet_id=wallet.id,
             subject_id=subject_id,
             study_id=study_id,
-            transaction_type="STIPEND_CREDIT",
+            transaction_type=tx_type,
             amount=stipend_amount,
             balance_after=new_balance,
             reference_id=event_id,
-            description=f"Protocol Visit Stipend: {rule.visit_name} ({visit_code})",
+            description=tx_desc,
             created_by=verified_by,
             version_index=1,
         )
@@ -405,7 +726,11 @@ class ParticipantCompensationService:
             user_id=verified_by,
             user_roles=user_roles,
             previous_state={"balance": round(new_balance - stipend_amount, 2)},
-            new_state={"balance": new_balance, "credited_amount": stipend_amount},
+            new_state={
+                "balance": new_balance,
+                "credited_amount": stipend_amount,
+                "taxable_ytd": wallet.taxable_ytd,
+            },
             details=(
                 f"Automatically credited ${stipend_amount:.2f} stipend to participant {subject_id} "
                 f"for verified visit {visit_code} (EDC Event: {event_id})."
@@ -422,6 +747,9 @@ class ParticipantCompensationService:
             "visit_code": visit_code,
             "amount": stipend_amount,
             "current_balance": new_balance,
+            "taxable_ytd": wallet.taxable_ytd,
+            "is_1099_threshold_exceeded": wallet.is_1099_threshold_exceeded,
+            "w9_status": wallet.w9_status,
             "transaction_id": tx.id,
             "event_id": event_id,
         }
@@ -494,55 +822,32 @@ class ParticipantCompensationService:
         )
         category = category_hint or "TRANSIT"
 
-        if (
-            "shell" in text_lower
-            or "chevron" in text_lower
-            or "bp" in text_lower
-            or "fuel" in text_lower
-            or "gas" in text_lower
-            or "mileage" in text_lower
-        ):
+        if re.search(r"\b(shell|chevron|bp|fuel|gas|mileage)\b", text_lower):
             category = "MILEAGE"
             if not (3 < len(first_line) < 40):
                 merchant_name = "Shell Service Station"
             detected_keywords.append("gas/fuel")
-        elif "parking" in text_lower or "garage" in text_lower or "valet" in text_lower:
+        elif re.search(r"\b(parking|garage|valet)\b", text_lower):
             category = "PARKING"
             if not (3 < len(first_line) < 40):
                 merchant_name = "Medical Center Parking Garage"
             detected_keywords.append("parking")
-        elif (
-            "hotel" in text_lower
-            or "inn" in text_lower
-            or "marriott" in text_lower
-            or "hilton" in text_lower
-            or "lodging" in text_lower
-        ):
-            category = "LODGING"
-            if not (3 < len(first_line) < 40):
-                merchant_name = "Hilton Garden Inn"
-            detected_keywords.append("lodging")
-        elif (
-            "cafe" in text_lower
-            or "restaurant" in text_lower
-            or "starbucks" in text_lower
-            or "diner" in text_lower
-            or "meal" in text_lower
-            or "food" in text_lower
+        elif re.search(
+            r"\b(cafe|restaurant|starbucks|diner|meal|food|dinner|lunch|breakfast)\b",
+            text_lower,
         ):
             category = "MEAL"
             if not (3 < len(first_line) < 40):
                 merchant_name = "Hospital Plaza Cafe"
             detected_keywords.append("meal")
-        elif (
-            "uber" in text_lower
-            or "lyft" in text_lower
-            or "taxi" in text_lower
-            or "transit" in text_lower
-            or "metro" in text_lower
-            or "cab" in text_lower
-            or "train" in text_lower
+        elif re.search(
+            r"\b(hotel|inn|marriott|hilton|lodging|motel|suites)\b", text_lower
         ):
+            category = "LODGING"
+            if not (3 < len(first_line) < 40):
+                merchant_name = "Hilton Garden Inn"
+            detected_keywords.append("lodging")
+        elif re.search(r"\b(uber|lyft|taxi|transit|metro|cab|train|bus)\b", text_lower):
             category = "TRANSIT"
             if not (3 < len(first_line) < 40):
                 merchant_name = "Metro Transit Authority"
@@ -580,6 +885,8 @@ class ParticipantCompensationService:
         tax_deduction: float = 0.0,
         net_amount: float | None = None,
         currency: str = "USD",
+        is_meal_allowance: bool = False,
+        per_diem_cap: float | None = None,
         wallet_id: str | None = None,
         receipt_image_name: str | None = None,
         receipt_image_base64: str | None = None,
@@ -600,10 +907,21 @@ class ParticipantCompensationService:
             )
             wallet_id = wallet.id
 
+        # If meal allowance and per_diem_cap is provided, check or deduct if gross exceeds cap
+        meal_flag = is_meal_allowance or category == "MEAL"
+        effective_tax = tax_deduction
+        if (
+            meal_flag
+            and per_diem_cap is not None
+            and gross_amount > per_diem_cap
+            and tax_deduction == 0.0
+        ):
+            effective_tax = round((gross_amount - per_diem_cap) * 0.15, 2)
+
         calculated_net = (
             net_amount
             if net_amount is not None
-            else round(gross_amount - tax_deduction, 2)
+            else round(gross_amount - effective_tax, 2)
         )
 
         claim = ParticipantExpenseClaimModel(
@@ -616,9 +934,11 @@ class ParticipantCompensationService:
             category=category,
             merchant_name=merchant_name,
             gross_amount=gross_amount,
-            tax_deduction=tax_deduction,
+            tax_deduction=effective_tax,
             net_amount=calculated_net,
             currency=currency,
+            is_meal_allowance=meal_flag,
+            per_diem_cap=per_diem_cap,
             receipt_image_name=receipt_image_name or "receipt_upload.jpg",
             receipt_image_base64=receipt_image_base64,
             receipt_ocr_data=receipt_ocr_data or {},

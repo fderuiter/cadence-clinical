@@ -1,11 +1,10 @@
 import os
 import time
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import event
-
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from apps.ctms.adapters.database import db_manager
 from apps.ctms.adapters.models import Base
@@ -174,9 +173,13 @@ def test_ip_shipment_receipt_dispensation_and_reconciliation():
     mock_resp.json.return_value = {"id": "mock-etmf-doc-dest-123", "status": "SYNCED"}
     mock_resp.raise_for_status = lambda: None
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_resp):
+    with patch(
+        "httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_resp
+    ):
         res_dest = client.post(
-            "/api/v1/ctms/ip/destruction-certificates", json=dest_payload, headers=headers
+            "/api/v1/ctms/ip/destruction-certificates",
+            json=dest_payload,
+            headers=headers,
         )
     assert res_dest.status_code == 201
     assert res_dest.json()["certificate_number"].startswith("COD-")

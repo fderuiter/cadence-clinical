@@ -48,6 +48,7 @@ async def test_successful_signature_capture(db_session: AsyncSession):
     """Verify that a valid signature capture creates a signed PDF and updates DB state to SIGNED.
 
     Requirements: PRD-SYS-001
+    @req:PRD-SYS-177
     """
     # 1. Seed a passing comprehension quiz result
     quiz = ComprehensionQuizResult(
@@ -117,6 +118,7 @@ async def test_failed_comprehension_quiz_blocks_signature(db_session: AsyncSessi
     """Verify that a failed comprehension quiz blocks signature submission.
 
     Requirements: PRD-SYS-001
+    @req:PRD-SYS-177
     """
     # Seed a failed comprehension quiz (score < 80%)
     quiz = ComprehensionQuizResult(
@@ -149,6 +151,7 @@ async def test_incomplete_comprehension_quiz_blocks_signature(db_session: AsyncS
     """Verify that an incomplete/missing comprehension quiz blocks signature submission.
 
     Requirements: PRD-SYS-001
+    @req:PRD-SYS-177
     """
     # No quiz seeded in DB at all!
     payload = EConsentSignRequest(
@@ -172,6 +175,7 @@ async def test_invalid_otp_auth_code_blocks_signature(db_session: AsyncSession):
     """Verify that an invalid OTP authentication code blocks signature submission.
 
     Requirements: PRD-SYS-001
+    @req:PRD-SYS-177
     """
     # Seed a passing comprehension quiz result
     quiz = ComprehensionQuizResult(
@@ -202,6 +206,7 @@ async def test_workflow_engine_legacy_signature_capture(db_session: AsyncSession
     """Verify that EConsentWorkflowEngine successfully executes raw signature capture.
 
     Requirements: PRD-SYS-001
+    @req:PRD-SYS-177
     """
     engine = EConsentWorkflowEngine(db_session)
     signature = await engine.execute_signature_capture(

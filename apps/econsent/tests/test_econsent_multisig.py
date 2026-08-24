@@ -40,7 +40,10 @@ async def setup_test_db():
 
 @pytest.mark.asyncio
 async def test_multisig_subject_lar_and_investigator_workflow() -> None:
-    """Test full multi-party signing cycle with Subject, LAR, and Investigator."""
+    """Test full multi-party signing cycle with Subject, LAR, and Investigator.
+
+    @req:PRD-SYS-178
+    """
     async with db_manager.get_session_maker()() as session:
         clause = ConsentClause(
             clause_id="clause-multi-01",

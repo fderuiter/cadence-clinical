@@ -201,6 +201,7 @@ async def test_billing_and_erp_gateway_direct(db_session: AsyncSession):
 async def test_participant_compensation_service_direct(db_session: AsyncSession):
     """Directly test ParticipantCompensationService for wallets, OCR, and lay summaries.
 
+    @req:PRD-SYS-182
     @req:PRD-SYS-161
     @req:ADR-2199
     @req:PRD-PAY-002

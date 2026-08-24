@@ -11,7 +11,10 @@ from apps.econsent.domain.diff_engine import (
 
 
 def test_text_diff_computation():
-    """Verify unified diff formatting between old and new text blocks."""
+    """Verify unified diff formatting between old and new text blocks.
+
+    @req:PRD-SYS-179
+    """
     old_text = "The dose is 10mg once daily."
     new_text = "The dose is 20mg twice daily with meals."
     diff = compute_text_diff(old_text, new_text)
@@ -23,7 +26,10 @@ def test_text_diff_computation():
 
 
 def test_substantive_change_detection():
-    """Verify identification of safety, risk, dose, and procedure keyword shifts."""
+    """Verify identification of safety, risk, dose, and procedure keyword shifts.
+
+    @req:PRD-SYS-179
+    """
     # Substantive: addition of safety risk
     assert is_text_change_substantive(
         "Treatment is administered weekly.",
@@ -44,7 +50,10 @@ def test_substantive_change_detection():
 
 
 def test_compare_templates_delta_report():
-    """Verify full comparison between template v1 and template v2."""
+    """Verify full comparison between template v1 and template v2.
+
+    @req:PRD-SYS-179
+    """
     base_clauses = [
         {
             "clause_id": "c1",

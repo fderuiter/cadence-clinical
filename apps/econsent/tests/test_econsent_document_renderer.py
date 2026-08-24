@@ -6,7 +6,10 @@ from apps.econsent.adapters.document_renderer import (
 
 
 def test_render_verifiable_consent_html():
-    """Verify HTML generation contains 21 CFR Part 11 seals, clauses, granular choices, and signatures."""
+    """Verify HTML generation contains 21 CFR Part 11 seals, clauses, granular choices, and signatures.
+
+    @req:PRD-SYS-177
+    """
     clauses = [
         {
             "title": "Purpose of Study",

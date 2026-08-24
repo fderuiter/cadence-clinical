@@ -45,6 +45,10 @@ from apps.econsent.domain.exceptions import (
     TemplateNotFoundError,
     TranslationNotFoundError,
 )
+from apps.econsent.domain.majority_engine import (
+    MajorityMilestoneResult,
+    batch_evaluate_minor_cohort,
+)
 from apps.econsent.domain.ports import (
     IComprehensionRepository,
     IConsentAuditRepository,
@@ -925,6 +929,111 @@ class ReconsentService:
             )
 
         return saved
+
+    async def evaluate_minor_milestones(
+        self,
+        subjects: list[dict[str, Any]],
+        as_of_date: Any | None = None,
+        lead_time_days: int = 30,
+    ) -> list[MajorityMilestoneResult]:
+        """Evaluates age-of-majority milestone status for a minor cohort."""
+        return batch_evaluate_minor_cohort(
+            subjects=subjects,
+            as_of_date=as_of_date,
+            lead_time_days=lead_time_days,
+        )
+
+    async def trigger_majority_reconsent_for_subjects(
+        self,
+        study_id: str,
+        site_id: str | None,
+        template_id: str,
+        adult_version_index: int,
+        subjects: list[dict[str, Any]],
+        lead_time_days: int = 0,
+        created_by: str = "system",
+        reason_for_change: str = "Age of majority reached - Adult re-consent required",
+    ) -> list[ReconsentRequirementEntity]:
+        """Automatically generates adult re-consent requirements for minor subjects attaining legal age."""
+        milestone_results = batch_evaluate_minor_cohort(
+            subjects=subjects,
+            lead_time_days=lead_time_days,
+        )
+        requirements: list[ReconsentRequirementEntity] = []
+        now = datetime.now(UTC)
+
+        for m in milestone_results:
+            if m.has_reached_majority or (lead_time_days > 0 and m.is_transition_due):
+                req = ReconsentRequirementEntity(
+                    id=str(uuid.uuid4()),
+                    study_id=study_id,
+                    site_id=site_id,
+                    template_id=template_id,
+                    prior_version_index=1,
+                    new_version_index=adult_version_index,
+                    subject_pseudonym=m.subject_pseudonym,
+                    status="PENDING",
+                    change_summary=(
+                        f"Participant '{m.subject_pseudonym}' reached legal age of majority "
+                        f"({m.legal_age_threshold} in jurisdiction '{m.jurisdiction}'). "
+                        "Direct adult self-consent is required to continue study participation."
+                    ),
+                    substantive_changes=[
+                        {
+                            "clause": "Legal Majority & Direct Self-Consent",
+                            "change": (
+                                f"Attained legal majority on {m.majority_reached_date}. "
+                                "Replaces minor pediatric assent and LAR parental signature with independent subject signature."
+                            ),
+                        }
+                    ],
+                    deadline_at=None,
+                    completed_consent_id=None,
+                    created_at=now,
+                    created_by=created_by,
+                    reason_for_change=reason_for_change,
+                )
+                saved_req = await self.reconsent_repo.save(req)
+                requirements.append(saved_req)
+
+        if requirements and self.audit_repo:
+            await self.audit_repo.save(
+                ConsentAuditLogEntity(
+                    id=str(uuid.uuid4()),
+                    timestamp=now,
+                    actor_id=created_by,
+                    actor_role="site_investigator",
+                    action="TRIGGER_MAJORITY_RECONSENT",
+                    document_id=f"{template_id}:v{adult_version_index}",
+                    details=(
+                        f"Generated age-of-majority adult re-consent requirements for "
+                        f"{len(requirements)} subjects in study '{study_id}'."
+                    ),
+                    reason_for_change=reason_for_change,
+                )
+            )
+
+        if requirements and self.notification_dispatcher:
+            try:
+                for req in requirements:
+                    await self.notification_dispatcher(
+                        {
+                            "recipient_user_id": req.subject_pseudonym,
+                            "category": "ALERTS",
+                            "priority": "HIGH",
+                            "channels": "IN_APP,EMAIL",
+                            "message_content": (
+                                f"ACTION REQUIRED: Adult re-consent required for study {study_id} "
+                                f"following legal age of majority milestone."
+                            ),
+                            "related_entity_id": req.id,
+                            "related_entity_type": "MAJORITY_RECONSENT_REQUIRED",
+                        }
+                    )
+            except Exception:
+                pass
+
+        return requirements
 
 
 # =========================================================================

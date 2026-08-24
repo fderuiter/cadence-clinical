@@ -713,6 +713,9 @@ class ParticipantWalletCreate(BaseModel):
     study_id: str = Field(..., description="Study Protocol ID")
     site_id: str = Field(..., description="Site ID")
     currency: str = Field(default="USD", description="Currency ISO code")
+    card_type: str = Field(
+        default="RELOADABLE_DEBIT", description="Card type (RELOADABLE_DEBIT, VIRTUAL)"
+    )
     virtual_card_token: str | None = Field(
         default=None, description="Virtual card token"
     )
@@ -721,6 +724,9 @@ class ParticipantWalletCreate(BaseModel):
     )
     virtual_card_expiry: str | None = Field(
         default=None, description="Virtual card expiry MM/YY"
+    )
+    anti_coercion_cap: float | None = Field(
+        default=None, ge=0.0, description="Ethics/IRB anti-coercion cap limit"
     )
     ach_routing_number: str | None = Field(
         default=None, description="Bank routing transit number"
@@ -741,6 +747,7 @@ class ParticipantWalletPayoutMethodsUpdate(BaseModel):
     virtual_card_token: str | None = Field(default=None)
     virtual_card_mask: str | None = Field(default=None)
     virtual_card_expiry: str | None = Field(default=None)
+    card_status: str | None = Field(default=None)
     ach_routing_number: str | None = Field(default=None)
     ach_account_mask: str | None = Field(default=None)
     ach_account_holder: str | None = Field(default=None)
@@ -761,12 +768,21 @@ class ParticipantWalletResponse(BaseModel):
     lifetime_disbursements: float
     currency: str
     status: str
-    virtual_card_token: str | None
-    virtual_card_mask: str | None
-    virtual_card_expiry: str | None
-    ach_routing_number: str | None
-    ach_account_mask: str | None
-    ach_account_holder: str | None
+    taxable_ytd: float = 0.0
+    is_1099_threshold_exceeded: bool = False
+    w9_status: str = "NOT_REQUIRED"
+    w9_submitted_at: datetime | None = None
+    w9_verified_at: datetime | None = None
+    tax_id_last_four: str | None = None
+    card_type: str = "RELOADABLE_DEBIT"
+    card_status: str = "ACTIVE"
+    virtual_card_token: str | None = None
+    virtual_card_mask: str | None = None
+    virtual_card_expiry: str | None = None
+    anti_coercion_cap: float | None = None
+    ach_routing_number: str | None = None
+    ach_account_mask: str | None = None
+    ach_account_holder: str | None = None
     created_at: datetime
     created_by: str
     updated_at: datetime
@@ -774,6 +790,118 @@ class ParticipantWalletResponse(BaseModel):
     pending_claims_count: int = 0
     total_claims_count: int = 0
     disbursements_count: int = 0
+
+
+class IssueReloadableCardRequest(BaseModel):
+    """Request payload for automated reloadable debit card issuing."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    cardholder_name: str | None = Field(default=None, description="Name on card")
+    card_type: str = Field(
+        default="RELOADABLE_DEBIT", description="Card type (RELOADABLE_DEBIT, VIRTUAL)"
+    )
+    initial_load: float = Field(
+        default=0.0, ge=0.0, description="Initial funds loaded onto the card"
+    )
+
+
+class IssueReloadableCardResponse(BaseModel):
+    """Response payload for issued reloadable debit card."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    wallet_id: str
+    subject_id: str
+    card_token: str
+    card_mask: str
+    card_expiry: str
+    card_type: str
+    card_status: str
+    cardholder_name: str
+    current_balance: float
+    issued_at: datetime
+
+
+class W9SubmitRequest(BaseModel):
+    """Request payload for IRS Form W-9 certification submission."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    tax_id_last_four: str = Field(
+        ..., min_length=4, max_length=4, description="Last 4 digits of SSN/ITIN"
+    )
+    full_legal_name: str = Field(..., description="Full legal taxpayer name")
+    certify_accurate: bool = Field(
+        default=True, description="Taxpayer certification of accurate TIN"
+    )
+    address: str | None = Field(default=None, description="Taxpayer mailing address")
+
+
+class W9SubmitResponse(BaseModel):
+    """Response acknowledging W-9 certification submission."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    wallet_id: str
+    subject_id: str
+    w9_status: str
+    tax_id_last_four: str
+    submitted_at: datetime
+    message: str
+
+
+class W9VerifyRequest(BaseModel):
+    """Request payload for coordinator verification of submitted W-9 form."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    notes: str | None = Field(
+        default=None, description="Coordinator W-9 verification notes"
+    )
+
+
+class Tax1099ThresholdResponse(BaseModel):
+    """Real-time IRS Form 1099 tax threshold analysis and W-9 validation state."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    wallet_id: str
+    subject_id: str
+    study_id: str
+    taxable_ytd: float
+    threshold_limit: float = 600.0
+    threshold_percentage: float
+    is_threshold_exceeded: bool
+    w9_status: str
+    w9_required: bool
+    warning_level: str  # NORMAL, APPROACHING, EXCEEDED
+    currency: str = "USD"
+
+
+class BalanceInquiryResponse(BaseModel):
+    """Real-time multi-channel balance inquiry response."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    wallet_id: str
+    subject_id: str
+    study_id: str
+    site_id: str
+    current_balance: float
+    available_balance: float
+    pending_claims_total: float
+    lifetime_stipends: float
+    lifetime_reimbursements: float
+    lifetime_disbursements: float
+    taxable_ytd: float
+    currency: str
+    virtual_card_mask: str | None
+    card_status: str
+    card_type: str
+    ach_account_mask: str | None
+    is_1099_threshold_exceeded: bool
+    w9_status: str
 
 
 # ==========================================
@@ -799,6 +927,15 @@ class ParticipantStipendRuleCreate(BaseModel):
         description="Whether clinic visit completion must be verified in EDC",
     )
     taxable: bool = Field(default=False, description="Whether stipend is taxable")
+    anti_coercion_cap: float | None = Field(
+        default=None, ge=0.0, description="Ethics/IRB anti-coercion cap limit"
+    )
+    is_milestone: bool = Field(
+        default=False, description="Whether visit is a major study milestone"
+    )
+    milestone_code: str | None = Field(
+        default=None, description="Milestone code (e.g. MILESTONE_SCREENING)"
+    )
 
 
 class ParticipantStipendRuleResponse(BaseModel):
@@ -815,6 +952,9 @@ class ParticipantStipendRuleResponse(BaseModel):
     currency: str
     requires_verification: bool
     taxable: bool
+    anti_coercion_cap: float | None = None
+    is_milestone: bool = False
+    milestone_code: str | None = None
     is_active: bool
     created_at: datetime
     created_by: str
@@ -901,6 +1041,12 @@ class ExpenseClaimSubmitRequest(BaseModel):
         default=None, description="Net reimbursement amount (calculated if omitted)"
     )
     currency: str = Field(default="USD", description="Currency ISO code")
+    is_meal_allowance: bool = Field(
+        default=False, description="Whether claim is a per diem meal allowance"
+    )
+    per_diem_cap: float | None = Field(
+        default=None, ge=0.0, description="Optional per diem meal cap limit"
+    )
     receipt_image_name: str | None = Field(
         default=None, description="Original receipt filename"
     )
@@ -949,6 +1095,8 @@ class ExpenseClaimResponse(BaseModel):
     tax_deduction: float
     net_amount: float
     currency: str
+    is_meal_allowance: bool = False
+    per_diem_cap: float | None = None
     receipt_image_name: str | None
     receipt_ocr_data: dict[str, Any] | None
     status: str

@@ -41,7 +41,10 @@ async def setup_test_db():
 
 @pytest.mark.asyncio
 async def test_granular_options_lifecycle_and_subject_selection() -> None:
-    """Test configuring granular options and recording subject choices during consent."""
+    """Test configuring granular options and recording subject choices during consent.
+
+    @req:PRD-SYS-177
+    """
     async with db_manager.get_session_maker()() as session:
         clause = ConsentClause(
             clause_id="clause-genomics-01",
