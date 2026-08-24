@@ -7,11 +7,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3627
-- **Passed:** 3597 🟢
+- **Total Automated Test Cases Run:** 3639
+- **Passed:** 3609 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 30 ⚪
-- **Overall Operational Pass Rate:** 99.17%
+- **Overall Operational Pass Rate:** 99.18%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -3428,6 +3428,18 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_interop_epro_transport_dto_serialization` | `scripts.test_m4_challenger2_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_interop_expression_node_dto_validation` | `scripts.test_m4_challenger2_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_interop_field_reference_dto` | `scripts.test_m4_challenger2_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_evaluate_command_safety_allowed_commands` | `scripts.tests.test_antigravity_gxp_hooks` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `test_evaluate_command_safety_prohibited_git_commands` | `scripts.tests.test_antigravity_gxp_hooks` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `test_evaluate_command_safety_prohibited_system_commands` | `scripts.tests.test_antigravity_gxp_hooks` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `test_evaluate_file_mutation_safety_allowed_files` | `scripts.tests.test_antigravity_gxp_hooks` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `test_evaluate_file_mutation_safety_locked_gxp_docs` | `scripts.tests.test_antigravity_gxp_hooks` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `test_handle_pre_tool_payload_file_write` | `scripts.tests.test_antigravity_gxp_hooks` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `test_handle_pre_tool_payload_run_command` | `scripts.tests.test_antigravity_gxp_hooks` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `test_hooks_json_configuration_integrity` | `scripts.tests.test_antigravity_gxp_hooks` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `test_post_write_check_contract` | `scripts.tests.test_antigravity_gxp_hooks` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `test_pre_invocation_reminder_contract` | `scripts.tests.test_antigravity_gxp_hooks` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `test_stop_sentinel_contract` | `scripts.tests.test_antigravity_gxp_hooks` | PRD-SYS-053 | 🟢 PASSED | < 1s |
+| `test_subprocess_stdin_stdout_pipeline` | `scripts.tests.test_antigravity_gxp_hooks` | PRD-SYS-053 | 🟢 PASSED | < 1s |
 | `test_api_parameters_parity` | `scripts.tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_paths_and_methods_parity` | `scripts.tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_request_bodies_parity` | `scripts.tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3919,28 +3931,28 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** fred
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 3f8bcd04c0d4fd7c052b42b074dfd2884c05b8222b179ce6eb28451155029d71
+- **Cryptographic Hash (SHA-256):** 5acddd2fa20064674670c6b589fd5091592df8c838f9edaa11c147f5f164e9ab
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUR5v773wPVGctnfhfygC8BAH2WMcwDQYJKoZIhvcNAQEL
+MIIDMjCCAhqgAwIBAgIUIAVXgUMqdK26TdPh/4rrPSAlH1kwDQYJKoZIhvcNAQEL
 BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
 ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MjIzNDQxM1oXDTI3MDgyMzIzNDQxM1owUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
+MzAxMzEwNFoXDTI3MDgyNDAxMzEwNFowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
 VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0vt/
-dobAB3i0lelLNJfvSTJerR96DulHSVHtovbMmfJKG5HZKNMW87QLBfCsEYZXxEVf
-6s19nf9hGOTPHBR6LFwUECfGv9bnFB3Hbk2dV5McznoAUMa9uIX1xNfWhh5/jxZp
-LYDkp13kpSObeU4ho+iMS2rCYPlQjsyl0OJl77P33ioVQrpaTFQlspxBpZnUiDcE
-9Y7Q1HmNci8zjN7pVhMxFJCFYXSLa2qkNmu9qavvoLVLIvNt4vJCHw/wxFJ+f2o6
-qlhoNmkULwG20KDIxR+9i+SQh+0+V9Z5wXAfwzg7+2CC6Uc95ioZQCMYn0Wj16tn
-drcQ+Mxk1CEyDaR7RwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAzr9AB4mubYdkg
-62n6plxnRKDVGRGh2hN9tTI5Xq4hhBlEultwnT5eq2CWPL59CZR/ET1vRvwMwkU6
-7w+0gu90iBw3wqQWrWiybyMxVDXyzNQjH/F5OTk4sni9HsnXpK0TtQdpVH1Lt78W
-qoI7B8C95vku0iVM7H+Wpbuo1JMGVcCVa4k9YsSSK97Rw7cr33SJOt3DKHOpj61v
-usZxkxiCc9LyP7SJQ5mFHTESIAIab9vhIQmLZ5Pd0VkmhJolH+rHBrvR0zsBH5AH
-sRPBcl4m234EVT25UnCDxvIFQkWpwRkzMljT2+8YWV0rFxvFgkd14gTtC3vzh1qW
-QswOarmQ
+Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsmWr
+IEZFcK/FYDATmPSdQn4NIMmyHd2doz6BUSZMo8vkLKHG5Z5HTemjfOfZKRCZKVII
+c1lrPQcXf5/mn5+QI3QIcF9AyBmN9ghj1E8I2a5mufLLD4fs85c+V/cvrINTdabw
+NMfYKqyo/aBxxiswCpiMdQOsBbAy0atLJHUFvcZjTiNP1faMKNx2bKCE9esMKKZI
+9ZO6HUPzwo/r0KFdmrEfUNgU/jjUj0AW6NlhM5QJi7yDrOYhQEJ4kZ/yOUa5ZWg0
+nNA32cT/kWmso2A9tgUHSlpbpspfBHNLi25Q2wMgkVAA7jnzcUZXl00tKIbiB1Oi
+RcSivr4FJ78kt59MdwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBpnHjRP6hHPOXf
+8nUjOnwToEgeW6i4fHZd2bYmNtn/Ieum2NmHjYVOSjzVMnYu+tIrLOPXuRfgO7mk
+MyeKkT9hbtFeBx4SioZfqEyTNJVBFXxtQCPTgZREOllAFq2jB+WBwJvSLaXGrWIr
+uoD97zJFKWIys3KvQJMEm+KxXmZQTIC80z0g4rDzfrD5kFFL1fCbCP+Jdf78vd0R
+1hKbqkNhx1XM1B0v3BZJySu7ZrB1FPpmwwVvobwzNJ1NjucuDnP2adZiwFqzzs8X
+94egOMwoNEGwyrBD41g1ffWFr3C5HEVoEqHXqdJ2H0EMLbakcC9t3WwqnZvs7x8N
+6lN1SVPc
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-fhpbxhQFV9dSQS9hZGY0yNX+kb1TuWEWDPaWCsxDB4SDUpCn4DTsKR0Oa9gsmcTfmL7JVbT8X9q+QJnvr1rseofmhCpGxVTNWdV354x+tpLmtYzNoTx53t/0jdaW1tzbQW1UfMEJ6trH0weyijDdR9XVF+/uXfe+hOzYXEcrbe9CiICPFbmIsir9r8kpOm0j56l7saqX+esU2odAfeeXRE9C21W/IsOKvJ10FM0oqeJ0BK5dbg+np1QAwm3htYrSSeU2VeSV+Cn65U2wj559TToqUgm4P/rZwYl/lM7XzLN/YZby8AzAR2BwmkFI9hxuNaLONNXnIMKBXCSyc6a4uQ==
+LuZuu7orcfzBu3b8W9qQPR7HJqHX4yIvpGH/XsDe28MJ1W84bxfw8aNEKln0H8NnztGFxNnshGrcT6DnURih9HXWAgrD1g80jJK5pwHfRKcJPVHI6nYBtNcp15Pa9oKT/AbptrZeSM0if53gMswqSn6jZOFExYMpFBQqffyFq00ua1nbEFMSD0RLjQNv/XBGP4xBRodqSgS9R82rJoZ2WBfj822f/TQs9MALl7hzaApssB0xGVuGyRn6QydzG8d4ERY0gFkI0kEWF1BzdpOxAg9c4TuN9u+dupiX348Wc2tQHzLsBUHrRkt1fm+u6j6WJe2Efh0/JKEntIe0OjOezg==
 -----END SIGNATURE-----

@@ -69,6 +69,56 @@ def _auto_heal_databases(repo_root: Path) -> list[str]:
     if hook_ok:
         actions.append(hook_msg)
 
+    # Verify Antigravity GxP lifecycle hooks configuration
+    hooks_path = repo_root / ".agents" / "hooks.json"
+    if not hooks_path.exists():
+        hooks_path.parent.mkdir(parents=True, exist_ok=True)
+        hooks_content = """{
+  "gxp-guardrails": {
+    "enabled": true,
+    "PreToolUse": [
+      {
+        "matcher": "run_command|write_to_file|replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python scripts/hooks/pre_tool_guardrail.py",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python scripts/hooks/post_write_check.py",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "python scripts/hooks/pre_invocation_reminder.py",
+        "timeout": 10
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python scripts/hooks/stop_sentinel.py",
+        "timeout": 30
+      }
+    ]
+  }
+}"""
+        hooks_path.write_text(hooks_content)
+        actions.append("Initialized Antigravity lifecycle hooks: .agents/hooks.json")
+
     return actions
 
 
