@@ -88,6 +88,7 @@ def get_gateway_headers(
 def test_predictive_forecast_pure_calculation():
     """Test pure-Python simulation of visit demand, screening conversion, and lead time buffer.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-001
     """
     input_params = PredictiveForecastInput(
@@ -152,6 +153,7 @@ def test_predictive_forecast_pure_calculation():
 def test_forecast_storage_capacity_bounding():
     """Verify that recommended order quantities are strictly bounded by site storage capacity.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-001
     """
     input_params = PredictiveForecastInput(
@@ -183,6 +185,7 @@ def test_forecast_storage_capacity_bounding():
 async def test_predictive_forecast_endpoint_and_persistence():
     """Verify predictive forecast endpoint queries active subjects, computes timeline, and saves record.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-001
     """
     # Seed site node and active subjects

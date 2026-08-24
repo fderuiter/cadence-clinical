@@ -114,7 +114,10 @@ async def seed_randomization_data():
 
 @pytest.mark.asyncio
 async def test_concurrent_randomization_unique_and_monotonic():
-    """Verify that concurrent randomizations obtain unique and monotonic block positions."""
+    """Verify that concurrent randomizations obtain unique and monotonic block positions.
+
+    @req:PRD-SYS-184
+    """
     await seed_randomization_data()
 
     # We will randomize subjects 2, 3, 4, 5 concurrently (all are ENROLLED)
@@ -180,7 +183,10 @@ async def test_concurrent_randomization_unique_and_monotonic():
 
 @pytest.mark.asyncio
 async def test_forced_failure_rolls_back_atomically():
-    """Verify that a forced failure rolls back both SubjectRandomization insert and StratumState block_index advancement."""
+    """Verify that a forced failure rolls back both SubjectRandomization insert and StratumState block_index advancement.
+
+    @req:PRD-SYS-184
+    """
     await seed_randomization_data()
 
     # Let's verify initial state of StratumState

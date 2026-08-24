@@ -55,7 +55,10 @@ async def setup_db():
 
 @pytest.mark.asyncio
 async def test_supply_entities_audit_trail_and_soft_delete():
-    """Verify that all new supply entities participate in GxP auditing and support soft deletes."""
+    """Verify that all new supply entities participate in GxP auditing and support soft deletes.
+
+    @req:PRD-SYS-184
+    """
     current_user_id.set("user_supply_mgr")
     current_change_reason.set("Configure initial supply-domain catalog and inventory")
 
@@ -242,7 +245,10 @@ async def test_supply_entities_audit_trail_and_soft_delete():
 
 
 def test_evaluate_resupply_boundaries():
-    """Verify that evaluate_resupply correctly signals at, below, and above threshold."""
+    """Verify that evaluate_resupply correctly signals at, below, and above threshold.
+
+    @req:PRD-SYS-184
+    """
     # At threshold
     assert evaluate_resupply(5, 5) is True
     assert evaluate_resupply(0, 0) is True
@@ -282,7 +288,10 @@ def get_gateway_headers(
 
 @pytest.mark.asyncio
 async def test_successful_dispensation_endpoint():
-    """Verify successful kit dispensation decrements inventory, creates a KitDispensation, and commits atomically."""
+    """Verify successful kit dispensation decrements inventory, creates a KitDispensation, and commits atomically.
+
+    @req:PRD-SYS-184
+    """
     # Setup initial inventory Catalog
     async with db_manager.get_session_maker()() as session:
         kit = IPKit(
@@ -341,7 +350,10 @@ async def test_successful_dispensation_endpoint():
 
 @pytest.mark.asyncio
 async def test_insufficient_stock_rejection_and_rollback():
-    """Verify that insufficient stock is rejected, inventory remains unchanged, and transaction rolls back."""
+    """Verify that insufficient stock is rejected, inventory remains unchanged, and transaction rolls back.
+
+    @req:PRD-SYS-184
+    """
     # Setup initial inventory Catalog
     async with db_manager.get_session_maker()() as session:
         kit = IPKit(
@@ -393,7 +405,10 @@ async def test_insufficient_stock_rejection_and_rollback():
 
 @pytest.mark.asyncio
 async def test_invalid_site_kit_relationship_rejection():
-    """Verify that dispensation fails with 404 when no such site/kit relationship exists in inventory."""
+    """Verify that dispensation fails with 404 when no such site/kit relationship exists in inventory.
+
+    @req:PRD-SYS-184
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -415,7 +430,10 @@ async def test_invalid_site_kit_relationship_rejection():
 
 @pytest.mark.asyncio
 async def test_resupply_threshold_breach_and_deduplication():
-    """Verify that crossing threshold creates ResupplyEvent and notification, while sub-threshold writes dedup."""
+    """Verify that crossing threshold creates ResupplyEvent and notification, while sub-threshold writes dedup.
+
+    @req:PRD-SYS-184
+    """
     # Setup initial inventory
     async with db_manager.get_session_maker()() as session:
         kit = IPKit(study_id="STUDY_XYZ", kit_number="KIT-200", kit_type="A")
@@ -503,7 +521,10 @@ async def test_resupply_threshold_breach_and_deduplication():
 
 @pytest.mark.asyncio
 async def test_locked_site_rejection():
-    """Verify that locked site raises HTTP 423 and blocks any supply mutations."""
+    """Verify that locked site raises HTTP 423 and blocks any supply mutations.
+
+    @req:PRD-SYS-184
+    """
     # Setup initial inventory
     async with db_manager.get_session_maker()() as session:
         kit = IPKit(study_id="STUDY_XYZ", kit_number="KIT-300", kit_type="A")
@@ -556,7 +577,10 @@ async def test_locked_site_rejection():
 
 @pytest.mark.asyncio
 async def test_site_inventory_unique_constraint():
-    """Verify that inventory is uniquely identified for a relevant site and kit."""
+    """Verify that inventory is uniquely identified for a relevant site and kit.
+
+    @req:PRD-SYS-184
+    """
 
     @transactional(lambda: db_manager.get_session_maker()())
     async def configure_inventories():
@@ -586,7 +610,10 @@ async def test_site_inventory_unique_constraint():
 
 @pytest.mark.asyncio
 async def test_hard_delete_prevented_for_supply_entities():
-    """Verify that hard deletions are strictly prevented on all new supply entities."""
+    """Verify that hard deletions are strictly prevented on all new supply entities.
+
+    @req:PRD-SYS-184
+    """
 
     # Setup record first
     @transactional(lambda: db_manager.get_session_maker()())
@@ -613,7 +640,10 @@ async def test_hard_delete_prevented_for_supply_entities():
 
 @pytest.mark.asyncio
 async def test_trial_locking_conformity():
-    """Verify that all new supply entities conform to global, site, visit, and subject locks."""
+    """Verify that all new supply entities conform to global, site, visit, and subject locks.
+
+    @req:PRD-SYS-184
+    """
     # 1. Trial lock
     TrialLockManager.lock_trial()
 

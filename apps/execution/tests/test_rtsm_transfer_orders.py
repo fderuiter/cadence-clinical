@@ -99,6 +99,7 @@ def get_gateway_headers(
 async def test_full_transfer_order_and_manifest_lifecycle():
     """Verify complete lifecycle: Create -> Approve -> Manifest -> Ship -> Deliver.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-001
     """
     study_id = "STUDY-TO-100"
@@ -291,6 +292,7 @@ async def test_full_transfer_order_and_manifest_lifecycle():
 async def test_locked_destination_blocks_transfer_order():
     """Verify that locked destination site blocks transfer order creation with HTTP 423.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-001
     """
     study_id = "STUDY-LOCK"
@@ -349,6 +351,7 @@ async def test_locked_destination_blocks_transfer_order():
 async def test_storage_capacity_exceeded_rejection():
     """Verify that orders exceeding destination storage capacity are rejected with HTTP 400.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-001
     """
     study_id = "STUDY-CAP"

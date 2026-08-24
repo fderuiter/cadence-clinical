@@ -122,6 +122,7 @@ def get_gateway_headers(
 def test_arrhenius_mkt_uniform_temperature():
     """Verify MKT of a constant isothermal temperature profile equals that temperature.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-002
     @req:ADR-2199
     """
@@ -133,6 +134,7 @@ def test_arrhenius_mkt_uniform_temperature():
 def test_arrhenius_mkt_fluctuating_temperature_non_linear():
     """Verify Arrhenius kinetic rate acceleration yields MKT > arithmetic mean for fluctuating temperatures.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-002
     @req:ADR-2199
     """
@@ -150,6 +152,7 @@ def test_arrhenius_mkt_fluctuating_temperature_non_linear():
 def test_arrhenius_mkt_spike_sensitivity():
     """Verify high temperature spikes disproportionately accelerate thermal kinetic degradation.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-002
     @req:ADR-2199
     """
@@ -166,6 +169,7 @@ def test_arrhenius_mkt_spike_sensitivity():
 def test_arrhenius_mkt_boundary_and_singularity_rejection():
     """Verify edge cases: single temperature, empty input, and physical impossible temperatures.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-002
     @req:ADR-2199
     """
@@ -189,6 +193,7 @@ def test_arrhenius_mkt_boundary_and_singularity_rejection():
 def test_parse_logger_csv_standard_and_semicolon():
     """Verify CSV parser correctly extracts timestamps and temperatures across standard delimiters.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-002
     @req:ADR-2199
     """
@@ -216,6 +221,7 @@ def test_parse_logger_csv_standard_and_semicolon():
 def test_parse_logger_xml_sensitech_and_temptale():
     """Verify XML parser extracts readings from standard medical temperature logger formats.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-002
     @req:ADR-2199
     """
@@ -242,6 +248,7 @@ def test_parse_logger_xml_sensitech_and_temptale():
 def test_parse_logger_json_payload():
     """Verify JSON parser handles arrays and nested data structures.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-002
     @req:ADR-2199
     """
@@ -261,6 +268,7 @@ def test_parse_logger_json_payload():
 def test_parse_logger_corrupt_file_raises():
     """Verify malformed logger contents raise InvalidLoggerFileError.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-002
     @req:ADR-2199
     """
@@ -282,6 +290,7 @@ def test_parse_logger_corrupt_file_raises():
 def test_stability_budget_evaluation_compliant():
     """Verify temperature series strictly within bounds evaluates to COMPLIANT.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-002
     @req:ADR-2199
     """
@@ -319,6 +328,7 @@ def test_stability_budget_evaluation_compliant():
 def test_stability_budget_evaluation_acceptable_excursion():
     """Verify minor excursion within cumulative allowable budget evaluates to EXCURSION_ACCEPTABLE.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-002
     @req:ADR-2199
     """
@@ -364,6 +374,7 @@ def test_stability_budget_evaluation_acceptable_excursion():
 def test_stability_budget_evaluation_breach_and_hard_boundary():
     """Verify critical heat / freezing excursion triggers EXCURSION_BREACH and quarantine flag.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-002
     @req:ADR-2199
     """
@@ -412,6 +423,7 @@ def test_stability_budget_evaluation_breach_and_hard_boundary():
 async def test_shipment_temperature_excursion_quarantines_kits_and_outbox():
     """Verify shipment data logger breach automatically transitions kits to QUARANTINED and emits outbox event.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-002
     @req:ADR-2199
     """
@@ -538,6 +550,7 @@ async def test_shipment_temperature_excursion_quarantines_kits_and_outbox():
 async def test_dispensation_gating_blocks_quarantined_and_expired_kits():
     """Verify RTSM/EDC dispensation endpoint rejects QUARANTINED and EXPIRED kits with HTTP 422.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-002
     @req:ADR-2199
     """
@@ -668,6 +681,7 @@ async def test_dispensation_gating_blocks_quarantined_and_expired_kits():
 async def test_manual_quarantine_and_qa_disposition_release_workflow():
     """Verify manual quarantine placement and QA disposition release workflows.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-002
     @req:ADR-2199
     """
@@ -753,6 +767,7 @@ async def test_manual_quarantine_and_qa_disposition_release_workflow():
 async def test_lot_expiry_extension_and_relabeling_task_lifecycle():
     """Verify lot expiry extension updates kits across facilities and generates verifiable re-labeling tasks.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-003
     @req:ADR-2199
     """

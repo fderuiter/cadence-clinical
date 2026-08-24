@@ -111,6 +111,7 @@ def get_gateway_headers(
 class TestISBT128AndCryptoBarcodes:
     """Unit tests for ISBT 128 Donation Identification Numbers and cryptographic barcodes.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-005
     @req:ADR-2199
     """
@@ -118,6 +119,7 @@ class TestISBT128AndCryptoBarcodes:
     def test_generate_isbt128_din_structure_and_checksum(self):
         """Validates format and ISO 7064 Mod 37-2 checksum of generated DINs.
 
+        @req:PRD-SYS-184
         @req:PRD-SCM-005
         @req:ADR-2199
         """
@@ -129,6 +131,7 @@ class TestISBT128AndCryptoBarcodes:
     def test_validate_isbt128_din_detects_tampering(self):
         """Validates that modified or invalid DIN check characters fail validation.
 
+        @req:PRD-SYS-184
         @req:PRD-SCM-005
         @req:ADR-2199
         """
@@ -154,6 +157,7 @@ class TestISBT128AndCryptoBarcodes:
     def test_generate_and_verify_crypto_barcode(self):
         """Verifies generation of HMAC-SHA256 tamper-evident 2D barcode payload.
 
+        @req:PRD-SYS-184
         @req:PRD-SCM-005
         @req:ADR-2199
         """
@@ -193,6 +197,7 @@ class TestISBT128AndCryptoBarcodes:
     def test_verify_crypto_barcode_detects_tampered_payload(self):
         """Verifies that altering any field in the payload fails cryptographic verification.
 
+        @req:PRD-SYS-184
         @req:PRD-SCM-005
         @req:ADR-2199
         """
@@ -228,6 +233,7 @@ class TestISBT128AndCryptoBarcodes:
     def test_verify_crypto_barcode_mismatched_expectations(self):
         """Verifies that checking a valid barcode against the wrong expected subject or DIN fails.
 
+        @req:PRD-SYS-184
         @req:PRD-SCM-005
         @req:ADR-2199
         """
@@ -255,6 +261,7 @@ class TestISBT128AndCryptoBarcodes:
 class TestVeinToVeinLifecycleAndMilestones:
     """Integration tests for apheresis harvest, cryogenic milestones, and batch binding.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-005
     @req:ADR-2199
     """
@@ -263,6 +270,7 @@ class TestVeinToVeinLifecycleAndMilestones:
     async def test_apheresis_harvest_initialization_flow(self):
         """Tests full apheresis registration and initial barcode creation via REST API.
 
+        @req:PRD-SYS-184
         @req:PRD-SCM-005
         @req:ADR-2199
         """
@@ -335,6 +343,7 @@ class TestVeinToVeinLifecycleAndMilestones:
     async def test_cryogenic_transit_milestones_and_gps_tracking(self):
         """Tests logging GPS milestones and cryogenic transit temperature points.
 
+        @req:PRD-SYS-184
         @req:PRD-SCM-005
         @req:ADR-2199
         """
@@ -421,6 +430,7 @@ class TestVeinToVeinLifecycleAndMilestones:
     async def test_manufacturing_batch_binding(self):
         """Tests binding cell manufacturing batch records and regenerating cryptographic barcode.
 
+        @req:PRD-SYS-184
         @req:PRD-SCM-005
         @req:ADR-2199
         """
@@ -486,6 +496,7 @@ class TestVeinToVeinLifecycleAndMilestones:
 class TestBedsideDualVerificationAndInfusionGating:
     """Tests mandatory two-person bedside verification before unlocking the drug infusion eCRF.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-005
     @req:ADR-2199
     """
@@ -494,6 +505,7 @@ class TestBedsideDualVerificationAndInfusionGating:
     async def test_successful_bedside_dual_verification_and_infusion_unlock(self):
         """Tests that valid Nurse + PI dual e-signatures unlock drug infusion.
 
+        @req:PRD-SYS-184
         @req:PRD-SCM-005
         @req:ADR-2199
         """
@@ -602,6 +614,7 @@ class TestBedsideDualVerificationAndInfusionGating:
     async def test_bedside_dual_verification_rejects_identical_users(self):
         """Tests that two-person verification fails if primary and secondary verifiers are identical.
 
+        @req:PRD-SYS-184
         @req:PRD-SCM-005
         @req:ADR-2199
         """
@@ -652,6 +665,7 @@ class TestBedsideDualVerificationAndInfusionGating:
     async def test_bedside_dual_verification_rejects_wristband_mismatch(self):
         """Tests that scanning the wrong patient wristband immediately halts verification.
 
+        @req:PRD-SYS-184
         @req:PRD-SCM-005
         @req:ADR-2199
         """
@@ -702,6 +716,7 @@ class TestBedsideDualVerificationAndInfusionGating:
     async def test_infusion_blocked_without_unlock_token(self):
         """Tests that infusion is strictly gated and blocked without valid bedside unlock token.
 
+        @req:PRD-SYS-184
         @req:PRD-SCM-005
         @req:ADR-2199
         """
@@ -749,6 +764,7 @@ class TestBedsideDualVerificationAndInfusionGating:
 class TestReturnsReconciliationAndCertificatesOfDestruction:
     """Tests vial returns, adherence tracking, and formal Certificates of Destruction.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-006
     @req:ADR-2199
     """
@@ -757,6 +773,7 @@ class TestReturnsReconciliationAndCertificatesOfDestruction:
     async def test_vial_return_reconciliation_and_adherence(self):
         """Tests logging returned kit/vial accountability and calculating patient compliance.
 
+        @req:PRD-SYS-184
         @req:PRD-SCM-006
         @req:ADR-2199
         """
@@ -799,6 +816,7 @@ class TestReturnsReconciliationAndCertificatesOfDestruction:
     ):
         """Tests formal Certificate of Destruction generation with dual witness e-signatures.
 
+        @req:PRD-SYS-184
         @req:PRD-SCM-006
         @req:ADR-2199
         """
@@ -878,6 +896,7 @@ class TestReturnsReconciliationAndCertificatesOfDestruction:
     async def test_certificate_of_destruction_rejects_single_witness(self):
         """Tests that attempting destruction certificate generation with identical witnesses fails.
 
+        @req:PRD-SYS-184
         @req:PRD-SCM-006
         @req:ADR-2199
         """
@@ -922,6 +941,7 @@ class TestReturnsReconciliationAndCertificatesOfDestruction:
 class TestFullVeinToVeinTraceabilityAndPart11Audit:
     """Tests end-to-end Vein-to-Vein query endpoints and 21 CFR Part 11 audit trails.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-005
     @req:PRD-SCM-006
     @req:ADR-2199
@@ -931,6 +951,7 @@ class TestFullVeinToVeinTraceabilityAndPart11Audit:
     async def test_full_traceability_ledger_query(self):
         """Tests querying full vein-to-vein ledger for a subject.
 
+        @req:PRD-SYS-184
         @req:PRD-SCM-005
         @req:PRD-SCM-006
         @req:ADR-2199
@@ -1038,8 +1059,9 @@ class TestFullVeinToVeinTraceabilityAndPart11Audit:
     async def test_trial_locking_blocks_coc_mutations(self):
         """Tests that site-level trial lock prevents unauthorized COC modifications.
 
+            @req:PRD-SYS-184
         @req:PRD-SCM-005
-        @req:ADR-2199
+            @req:ADR-2199
         """
         study_id = "STUDY-CGT-LOCKED"
         site_id = "SITE-LOCKED-01"

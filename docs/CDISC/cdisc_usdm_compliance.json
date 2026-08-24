@@ -11422,6 +11422,1469 @@
               ]
             },
             {
+              "id": "bc_execution_ivd_assay_performance_runs",
+              "name": "ivd_assay_performance_runs",
+              "label": "Execution / EDC - IVDAssayPerformanceRun",
+              "conceptCode": "SCHEMA_EXECUTION_IVD_ASSAY_PERFORMANCE_RUNS",
+              "displayName": "ivd_assay_performance_runs (execution)",
+              "definition": "Represents statistical assay validation metrics for an IVD diagnostic device/assay.",
+              "cdashDomain": "execution",
+              "cdashVariable": "IVD_ASSAY_PERFORMANCE_RUNS",
+              "dataType": "Relational Table",
+              "properties": [
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_study_id",
+                  "name": "study_id",
+                  "label": "study_id (VARCHAR(255))",
+                  "cdashVariable": "STUDY_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_assay_name",
+                  "name": "assay_name",
+                  "label": "assay_name (VARCHAR(255))",
+                  "cdashVariable": "ASSAY_NAME",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_assay_lot_number",
+                  "name": "assay_lot_number",
+                  "label": "assay_lot_number (VARCHAR(255))",
+                  "cdashVariable": "ASSAY_LOT_NUMBER",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_device_udi_di",
+                  "name": "device_udi_di",
+                  "label": "device_udi_di (VARCHAR(255))",
+                  "cdashVariable": "DEVICE_UDI_DI",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_true_positives",
+                  "name": "true_positives",
+                  "label": "true_positives (INTEGER)",
+                  "cdashVariable": "TRUE_POSITIVES",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_false_positives",
+                  "name": "false_positives",
+                  "label": "false_positives (INTEGER)",
+                  "cdashVariable": "FALSE_POSITIVES",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_true_negatives",
+                  "name": "true_negatives",
+                  "label": "true_negatives (INTEGER)",
+                  "cdashVariable": "TRUE_NEGATIVES",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_false_negatives",
+                  "name": "false_negatives",
+                  "label": "false_negatives (INTEGER)",
+                  "cdashVariable": "FALSE_NEGATIVES",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_sensitivity_percent",
+                  "name": "sensitivity_percent",
+                  "label": "sensitivity_percent (FLOAT)",
+                  "cdashVariable": "SENSITIVITY_PERCENT",
+                  "dataType": "FLOAT",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_specificity_percent",
+                  "name": "specificity_percent",
+                  "label": "specificity_percent (FLOAT)",
+                  "cdashVariable": "SPECIFICITY_PERCENT",
+                  "dataType": "FLOAT",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_ppv_percent",
+                  "name": "ppv_percent",
+                  "label": "ppv_percent (FLOAT)",
+                  "cdashVariable": "PPV_PERCENT",
+                  "dataType": "FLOAT",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_npv_percent",
+                  "name": "npv_percent",
+                  "label": "npv_percent (FLOAT)",
+                  "cdashVariable": "NPV_PERCENT",
+                  "dataType": "FLOAT",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_accuracy_percent",
+                  "name": "accuracy_percent",
+                  "label": "accuracy_percent (FLOAT)",
+                  "cdashVariable": "ACCURACY_PERCENT",
+                  "dataType": "FLOAT",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_intra_assay_cv_percent",
+                  "name": "intra_assay_cv_percent",
+                  "label": "intra_assay_cv_percent (FLOAT)",
+                  "cdashVariable": "INTRA_ASSAY_CV_PERCENT",
+                  "dataType": "FLOAT",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_inter_assay_cv_percent",
+                  "name": "inter_assay_cv_percent",
+                  "label": "inter_assay_cv_percent (FLOAT)",
+                  "cdashVariable": "INTER_ASSAY_CV_PERCENT",
+                  "dataType": "FLOAT",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_limit_of_detection",
+                  "name": "limit_of_detection",
+                  "label": "limit_of_detection (FLOAT)",
+                  "cdashVariable": "LIMIT_OF_DETECTION",
+                  "dataType": "FLOAT",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_limit_of_quantitation",
+                  "name": "limit_of_quantitation",
+                  "label": "limit_of_quantitation (FLOAT)",
+                  "cdashVariable": "LIMIT_OF_QUANTITATION",
+                  "dataType": "FLOAT",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_linearity_r_squared",
+                  "name": "linearity_r_squared",
+                  "label": "linearity_r_squared (FLOAT)",
+                  "cdashVariable": "LINEARITY_R_SQUARED",
+                  "dataType": "FLOAT",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_status",
+                  "name": "status",
+                  "label": "status (VARCHAR(50))",
+                  "cdashVariable": "STATUS",
+                  "dataType": "VARCHAR(50)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_created_at",
+                  "name": "created_at",
+                  "label": "created_at (DATETIME)",
+                  "cdashVariable": "CREATED_AT",
+                  "dataType": "DATETIME",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_created_by",
+                  "name": "created_by",
+                  "label": "created_by (VARCHAR(255))",
+                  "cdashVariable": "CREATED_BY",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_id",
+                  "name": "id",
+                  "label": "id (VARCHAR(36))",
+                  "cdashVariable": "ID",
+                  "dataType": "VARCHAR(36)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": true,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_version",
+                  "name": "version",
+                  "label": "version (INTEGER)",
+                  "cdashVariable": "VERSION",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_assay_performance_runs_is_deleted",
+                  "name": "is_deleted",
+                  "label": "is_deleted (BOOLEAN)",
+                  "cdashVariable": "IS_DELETED",
+                  "dataType": "BOOLEAN",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                }
+              ]
+            },
+            {
+              "id": "bc_execution_ivd_specimen_custody_events",
+              "name": "ivd_specimen_custody_events",
+              "label": "Execution / EDC - IVDSpecimenCustodyEvent",
+              "conceptCode": "SCHEMA_EXECUTION_IVD_SPECIMEN_CUSTODY_EVENTS",
+              "displayName": "ivd_specimen_custody_events (execution)",
+              "definition": "Represents an auditable chain-of-custody transfer log for an IVD specimen.",
+              "cdashDomain": "execution",
+              "cdashVariable": "IVD_SPECIMEN_CUSTODY_EVENTS",
+              "dataType": "Relational Table",
+              "properties": [
+                {
+                  "id": "prop_execution_ivd_specimen_custody_events_specimen_identifier",
+                  "name": "specimen_identifier",
+                  "label": "specimen_identifier (VARCHAR(255))",
+                  "cdashVariable": "SPECIMEN_IDENTIFIER",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_custody_events_transfer_timestamp",
+                  "name": "transfer_timestamp",
+                  "label": "transfer_timestamp (DATETIME)",
+                  "cdashVariable": "TRANSFER_TIMESTAMP",
+                  "dataType": "DATETIME",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_custody_events_from_user_id",
+                  "name": "from_user_id",
+                  "label": "from_user_id (VARCHAR(255))",
+                  "cdashVariable": "FROM_USER_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_custody_events_to_user_id",
+                  "name": "to_user_id",
+                  "label": "to_user_id (VARCHAR(255))",
+                  "cdashVariable": "TO_USER_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_custody_events_from_location",
+                  "name": "from_location",
+                  "label": "from_location (VARCHAR(255))",
+                  "cdashVariable": "FROM_LOCATION",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_custody_events_to_location",
+                  "name": "to_location",
+                  "label": "to_location (VARCHAR(255))",
+                  "cdashVariable": "TO_LOCATION",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_custody_events_transport_condition",
+                  "name": "transport_condition",
+                  "label": "transport_condition (VARCHAR(100))",
+                  "cdashVariable": "TRANSPORT_CONDITION",
+                  "dataType": "VARCHAR(100)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_custody_events_temperature_at_transfer_celsius",
+                  "name": "temperature_at_transfer_celsius",
+                  "label": "temperature_at_transfer_celsius (FLOAT)",
+                  "cdashVariable": "TEMPERATURE_AT_TRANSFER_CELSIUS",
+                  "dataType": "FLOAT",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_custody_events_seal_intact",
+                  "name": "seal_intact",
+                  "label": "seal_intact (BOOLEAN)",
+                  "cdashVariable": "SEAL_INTACT",
+                  "dataType": "BOOLEAN",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_custody_events_signature_token",
+                  "name": "signature_token",
+                  "label": "signature_token (VARCHAR(512))",
+                  "cdashVariable": "SIGNATURE_TOKEN",
+                  "dataType": "VARCHAR(512)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_custody_events_created_at",
+                  "name": "created_at",
+                  "label": "created_at (DATETIME)",
+                  "cdashVariable": "CREATED_AT",
+                  "dataType": "DATETIME",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_custody_events_created_by",
+                  "name": "created_by",
+                  "label": "created_by (VARCHAR(255))",
+                  "cdashVariable": "CREATED_BY",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_custody_events_id",
+                  "name": "id",
+                  "label": "id (VARCHAR(36))",
+                  "cdashVariable": "ID",
+                  "dataType": "VARCHAR(36)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": true,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_custody_events_version",
+                  "name": "version",
+                  "label": "version (INTEGER)",
+                  "cdashVariable": "VERSION",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_custody_events_is_deleted",
+                  "name": "is_deleted",
+                  "label": "is_deleted (BOOLEAN)",
+                  "cdashVariable": "IS_DELETED",
+                  "dataType": "BOOLEAN",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                }
+              ]
+            },
+            {
+              "id": "bc_execution_ivd_specimen_freeze_thaw_events",
+              "name": "ivd_specimen_freeze_thaw_events",
+              "label": "Execution / EDC - IVDSpecimenFreezeThawEvent",
+              "conceptCode": "SCHEMA_EXECUTION_IVD_SPECIMEN_FREEZE_THAW_EVENTS",
+              "displayName": "ivd_specimen_freeze_thaw_events (execution)",
+              "definition": "Represents a discrete freeze-thaw thermal cycle log for an IVD specimen.",
+              "cdashDomain": "execution",
+              "cdashVariable": "IVD_SPECIMEN_FREEZE_THAW_EVENTS",
+              "dataType": "Relational Table",
+              "properties": [
+                {
+                  "id": "prop_execution_ivd_specimen_freeze_thaw_events_specimen_identifier",
+                  "name": "specimen_identifier",
+                  "label": "specimen_identifier (VARCHAR(255))",
+                  "cdashVariable": "SPECIMEN_IDENTIFIER",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_freeze_thaw_events_cycle_number",
+                  "name": "cycle_number",
+                  "label": "cycle_number (INTEGER)",
+                  "cdashVariable": "CYCLE_NUMBER",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_freeze_thaw_events_thaw_start_timestamp",
+                  "name": "thaw_start_timestamp",
+                  "label": "thaw_start_timestamp (DATETIME)",
+                  "cdashVariable": "THAW_START_TIMESTAMP",
+                  "dataType": "DATETIME",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_freeze_thaw_events_thaw_end_timestamp",
+                  "name": "thaw_end_timestamp",
+                  "label": "thaw_end_timestamp (DATETIME)",
+                  "cdashVariable": "THAW_END_TIMESTAMP",
+                  "dataType": "DATETIME",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_freeze_thaw_events_thaw_duration_minutes",
+                  "name": "thaw_duration_minutes",
+                  "label": "thaw_duration_minutes (FLOAT)",
+                  "cdashVariable": "THAW_DURATION_MINUTES",
+                  "dataType": "FLOAT",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_freeze_thaw_events_thaw_temperature_celsius",
+                  "name": "thaw_temperature_celsius",
+                  "label": "thaw_temperature_celsius (FLOAT)",
+                  "cdashVariable": "THAW_TEMPERATURE_CELSIUS",
+                  "dataType": "FLOAT",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_freeze_thaw_events_operator_user_id",
+                  "name": "operator_user_id",
+                  "label": "operator_user_id (VARCHAR(255))",
+                  "cdashVariable": "OPERATOR_USER_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_freeze_thaw_events_purpose",
+                  "name": "purpose",
+                  "label": "purpose (VARCHAR(500))",
+                  "cdashVariable": "PURPOSE",
+                  "dataType": "VARCHAR(500)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_freeze_thaw_events_is_excursion",
+                  "name": "is_excursion",
+                  "label": "is_excursion (BOOLEAN)",
+                  "cdashVariable": "IS_EXCURSION",
+                  "dataType": "BOOLEAN",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_freeze_thaw_events_created_at",
+                  "name": "created_at",
+                  "label": "created_at (DATETIME)",
+                  "cdashVariable": "CREATED_AT",
+                  "dataType": "DATETIME",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_freeze_thaw_events_created_by",
+                  "name": "created_by",
+                  "label": "created_by (VARCHAR(255))",
+                  "cdashVariable": "CREATED_BY",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_freeze_thaw_events_id",
+                  "name": "id",
+                  "label": "id (VARCHAR(36))",
+                  "cdashVariable": "ID",
+                  "dataType": "VARCHAR(36)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": true,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_freeze_thaw_events_version",
+                  "name": "version",
+                  "label": "version (INTEGER)",
+                  "cdashVariable": "VERSION",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_freeze_thaw_events_is_deleted",
+                  "name": "is_deleted",
+                  "label": "is_deleted (BOOLEAN)",
+                  "cdashVariable": "IS_DELETED",
+                  "dataType": "BOOLEAN",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                }
+              ]
+            },
+            {
+              "id": "bc_execution_ivd_specimen_records",
+              "name": "ivd_specimen_records",
+              "label": "Execution / EDC - IVDSpecimenRecord",
+              "conceptCode": "SCHEMA_EXECUTION_IVD_SPECIMEN_RECORDS",
+              "displayName": "ivd_specimen_records (execution)",
+              "definition": "Represents an In-Vitro Diagnostic (IVD) biospecimen with chain-of-custody,\nfreeze-thaw history, and sample integrity tracking.",
+              "cdashDomain": "execution",
+              "cdashVariable": "IVD_SPECIMEN_RECORDS",
+              "dataType": "Relational Table",
+              "properties": [
+                {
+                  "id": "prop_execution_ivd_specimen_records_study_id",
+                  "name": "study_id",
+                  "label": "study_id (VARCHAR(255))",
+                  "cdashVariable": "STUDY_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_site_id",
+                  "name": "site_id",
+                  "label": "site_id (VARCHAR(255))",
+                  "cdashVariable": "SITE_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_subject_id",
+                  "name": "subject_id",
+                  "label": "subject_id (VARCHAR(255))",
+                  "cdashVariable": "SUBJECT_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_specimen_identifier",
+                  "name": "specimen_identifier",
+                  "label": "specimen_identifier (VARCHAR(255))",
+                  "cdashVariable": "SPECIMEN_IDENTIFIER",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_specimen_type",
+                  "name": "specimen_type",
+                  "label": "specimen_type (VARCHAR(100))",
+                  "cdashVariable": "SPECIMEN_TYPE",
+                  "dataType": "VARCHAR(100)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_collection_date",
+                  "name": "collection_date",
+                  "label": "collection_date (DATETIME)",
+                  "cdashVariable": "COLLECTION_DATE",
+                  "dataType": "DATETIME",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_collector_user_id",
+                  "name": "collector_user_id",
+                  "label": "collector_user_id (VARCHAR(255))",
+                  "cdashVariable": "COLLECTOR_USER_ID",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_container_type",
+                  "name": "container_type",
+                  "label": "container_type (VARCHAR(100))",
+                  "cdashVariable": "CONTAINER_TYPE",
+                  "dataType": "VARCHAR(100)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_initial_volume_ul",
+                  "name": "initial_volume_ul",
+                  "label": "initial_volume_ul (FLOAT)",
+                  "cdashVariable": "INITIAL_VOLUME_UL",
+                  "dataType": "FLOAT",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_current_volume_ul",
+                  "name": "current_volume_ul",
+                  "label": "current_volume_ul (FLOAT)",
+                  "cdashVariable": "CURRENT_VOLUME_UL",
+                  "dataType": "FLOAT",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_storage_temperature_celsius",
+                  "name": "storage_temperature_celsius",
+                  "label": "storage_temperature_celsius (FLOAT)",
+                  "cdashVariable": "STORAGE_TEMPERATURE_CELSIUS",
+                  "dataType": "FLOAT",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_storage_location",
+                  "name": "storage_location",
+                  "label": "storage_location (VARCHAR(255))",
+                  "cdashVariable": "STORAGE_LOCATION",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_status",
+                  "name": "status",
+                  "label": "status (VARCHAR(50))",
+                  "cdashVariable": "STATUS",
+                  "dataType": "VARCHAR(50)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_is_quarantined",
+                  "name": "is_quarantined",
+                  "label": "is_quarantined (BOOLEAN)",
+                  "cdashVariable": "IS_QUARANTINED",
+                  "dataType": "BOOLEAN",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_quarantine_reason",
+                  "name": "quarantine_reason",
+                  "label": "quarantine_reason (VARCHAR(1000))",
+                  "cdashVariable": "QUARANTINE_REASON",
+                  "dataType": "VARCHAR(1000)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_freeze_thaw_count",
+                  "name": "freeze_thaw_count",
+                  "label": "freeze_thaw_count (INTEGER)",
+                  "cdashVariable": "FREEZE_THAW_COUNT",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_max_allowed_freeze_thaw",
+                  "name": "max_allowed_freeze_thaw",
+                  "label": "max_allowed_freeze_thaw (INTEGER)",
+                  "cdashVariable": "MAX_ALLOWED_FREEZE_THAW",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_hemolysis_index_mg_dl",
+                  "name": "hemolysis_index_mg_dl",
+                  "label": "hemolysis_index_mg_dl (FLOAT)",
+                  "cdashVariable": "HEMOLYSIS_INDEX_MG_DL",
+                  "dataType": "FLOAT",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_lipemia_index_mg_dl",
+                  "name": "lipemia_index_mg_dl",
+                  "label": "lipemia_index_mg_dl (FLOAT)",
+                  "cdashVariable": "LIPEMIA_INDEX_MG_DL",
+                  "dataType": "FLOAT",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_icterus_index_mg_dl",
+                  "name": "icterus_index_mg_dl",
+                  "label": "icterus_index_mg_dl (FLOAT)",
+                  "cdashVariable": "ICTERUS_INDEX_MG_DL",
+                  "dataType": "FLOAT",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_clot_detected",
+                  "name": "clot_detected",
+                  "label": "clot_detected (BOOLEAN)",
+                  "cdashVariable": "CLOT_DETECTED",
+                  "dataType": "BOOLEAN",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_temperature_excursion",
+                  "name": "temperature_excursion",
+                  "label": "temperature_excursion (BOOLEAN)",
+                  "cdashVariable": "TEMPERATURE_EXCURSION",
+                  "dataType": "BOOLEAN",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_integrity_status",
+                  "name": "integrity_status",
+                  "label": "integrity_status (VARCHAR(50))",
+                  "cdashVariable": "INTEGRITY_STATUS",
+                  "dataType": "VARCHAR(50)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_integrity_validated_at",
+                  "name": "integrity_validated_at",
+                  "label": "integrity_validated_at (DATETIME)",
+                  "cdashVariable": "INTEGRITY_VALIDATED_AT",
+                  "dataType": "DATETIME",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_integrity_validated_by",
+                  "name": "integrity_validated_by",
+                  "label": "integrity_validated_by (VARCHAR(255))",
+                  "cdashVariable": "INTEGRITY_VALIDATED_BY",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_created_at",
+                  "name": "created_at",
+                  "label": "created_at (DATETIME)",
+                  "cdashVariable": "CREATED_AT",
+                  "dataType": "DATETIME",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_created_by",
+                  "name": "created_by",
+                  "label": "created_by (VARCHAR(255))",
+                  "cdashVariable": "CREATED_BY",
+                  "dataType": "VARCHAR(255)",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_id",
+                  "name": "id",
+                  "label": "id (VARCHAR(36))",
+                  "cdashVariable": "ID",
+                  "dataType": "VARCHAR(36)",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": true,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_version",
+                  "name": "version",
+                  "label": "version (INTEGER)",
+                  "cdashVariable": "VERSION",
+                  "dataType": "INTEGER",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_execution_ivd_specimen_records_is_deleted",
+                  "name": "is_deleted",
+                  "label": "is_deleted (BOOLEAN)",
+                  "cdashVariable": "IS_DELETED",
+                  "dataType": "BOOLEAN",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "execution",
+                    "db_type": "PostgreSQL (SQLAlchemy)",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                }
+              ]
+            },
+            {
               "id": "bc_execution_integration_outbox",
               "name": "integration_outbox",
               "label": "Execution / EDC - IntegrationOutbox",
@@ -65413,6 +66876,1469 @@
           ]
         },
         {
+          "id": "bc_execution_ivd_assay_performance_runs",
+          "name": "ivd_assay_performance_runs",
+          "label": "Execution / EDC - IVDAssayPerformanceRun",
+          "conceptCode": "SCHEMA_EXECUTION_IVD_ASSAY_PERFORMANCE_RUNS",
+          "displayName": "ivd_assay_performance_runs (execution)",
+          "definition": "Represents statistical assay validation metrics for an IVD diagnostic device/assay.",
+          "cdashDomain": "execution",
+          "cdashVariable": "IVD_ASSAY_PERFORMANCE_RUNS",
+          "dataType": "Relational Table",
+          "properties": [
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_study_id",
+              "name": "study_id",
+              "label": "study_id (VARCHAR(255))",
+              "cdashVariable": "STUDY_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_assay_name",
+              "name": "assay_name",
+              "label": "assay_name (VARCHAR(255))",
+              "cdashVariable": "ASSAY_NAME",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_assay_lot_number",
+              "name": "assay_lot_number",
+              "label": "assay_lot_number (VARCHAR(255))",
+              "cdashVariable": "ASSAY_LOT_NUMBER",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_device_udi_di",
+              "name": "device_udi_di",
+              "label": "device_udi_di (VARCHAR(255))",
+              "cdashVariable": "DEVICE_UDI_DI",
+              "dataType": "VARCHAR(255)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_true_positives",
+              "name": "true_positives",
+              "label": "true_positives (INTEGER)",
+              "cdashVariable": "TRUE_POSITIVES",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_false_positives",
+              "name": "false_positives",
+              "label": "false_positives (INTEGER)",
+              "cdashVariable": "FALSE_POSITIVES",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_true_negatives",
+              "name": "true_negatives",
+              "label": "true_negatives (INTEGER)",
+              "cdashVariable": "TRUE_NEGATIVES",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_false_negatives",
+              "name": "false_negatives",
+              "label": "false_negatives (INTEGER)",
+              "cdashVariable": "FALSE_NEGATIVES",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_sensitivity_percent",
+              "name": "sensitivity_percent",
+              "label": "sensitivity_percent (FLOAT)",
+              "cdashVariable": "SENSITIVITY_PERCENT",
+              "dataType": "FLOAT",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_specificity_percent",
+              "name": "specificity_percent",
+              "label": "specificity_percent (FLOAT)",
+              "cdashVariable": "SPECIFICITY_PERCENT",
+              "dataType": "FLOAT",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_ppv_percent",
+              "name": "ppv_percent",
+              "label": "ppv_percent (FLOAT)",
+              "cdashVariable": "PPV_PERCENT",
+              "dataType": "FLOAT",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_npv_percent",
+              "name": "npv_percent",
+              "label": "npv_percent (FLOAT)",
+              "cdashVariable": "NPV_PERCENT",
+              "dataType": "FLOAT",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_accuracy_percent",
+              "name": "accuracy_percent",
+              "label": "accuracy_percent (FLOAT)",
+              "cdashVariable": "ACCURACY_PERCENT",
+              "dataType": "FLOAT",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_intra_assay_cv_percent",
+              "name": "intra_assay_cv_percent",
+              "label": "intra_assay_cv_percent (FLOAT)",
+              "cdashVariable": "INTRA_ASSAY_CV_PERCENT",
+              "dataType": "FLOAT",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_inter_assay_cv_percent",
+              "name": "inter_assay_cv_percent",
+              "label": "inter_assay_cv_percent (FLOAT)",
+              "cdashVariable": "INTER_ASSAY_CV_PERCENT",
+              "dataType": "FLOAT",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_limit_of_detection",
+              "name": "limit_of_detection",
+              "label": "limit_of_detection (FLOAT)",
+              "cdashVariable": "LIMIT_OF_DETECTION",
+              "dataType": "FLOAT",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_limit_of_quantitation",
+              "name": "limit_of_quantitation",
+              "label": "limit_of_quantitation (FLOAT)",
+              "cdashVariable": "LIMIT_OF_QUANTITATION",
+              "dataType": "FLOAT",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_linearity_r_squared",
+              "name": "linearity_r_squared",
+              "label": "linearity_r_squared (FLOAT)",
+              "cdashVariable": "LINEARITY_R_SQUARED",
+              "dataType": "FLOAT",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_status",
+              "name": "status",
+              "label": "status (VARCHAR(50))",
+              "cdashVariable": "STATUS",
+              "dataType": "VARCHAR(50)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_created_at",
+              "name": "created_at",
+              "label": "created_at (DATETIME)",
+              "cdashVariable": "CREATED_AT",
+              "dataType": "DATETIME",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_created_by",
+              "name": "created_by",
+              "label": "created_by (VARCHAR(255))",
+              "cdashVariable": "CREATED_BY",
+              "dataType": "VARCHAR(255)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_id",
+              "name": "id",
+              "label": "id (VARCHAR(36))",
+              "cdashVariable": "ID",
+              "dataType": "VARCHAR(36)",
+              "mandatory": true,
+              "config": {
+                "primary_key": true,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_version",
+              "name": "version",
+              "label": "version (INTEGER)",
+              "cdashVariable": "VERSION",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_assay_performance_runs_is_deleted",
+              "name": "is_deleted",
+              "label": "is_deleted (BOOLEAN)",
+              "cdashVariable": "IS_DELETED",
+              "dataType": "BOOLEAN",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "bc_execution_ivd_specimen_custody_events",
+          "name": "ivd_specimen_custody_events",
+          "label": "Execution / EDC - IVDSpecimenCustodyEvent",
+          "conceptCode": "SCHEMA_EXECUTION_IVD_SPECIMEN_CUSTODY_EVENTS",
+          "displayName": "ivd_specimen_custody_events (execution)",
+          "definition": "Represents an auditable chain-of-custody transfer log for an IVD specimen.",
+          "cdashDomain": "execution",
+          "cdashVariable": "IVD_SPECIMEN_CUSTODY_EVENTS",
+          "dataType": "Relational Table",
+          "properties": [
+            {
+              "id": "prop_execution_ivd_specimen_custody_events_specimen_identifier",
+              "name": "specimen_identifier",
+              "label": "specimen_identifier (VARCHAR(255))",
+              "cdashVariable": "SPECIMEN_IDENTIFIER",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_custody_events_transfer_timestamp",
+              "name": "transfer_timestamp",
+              "label": "transfer_timestamp (DATETIME)",
+              "cdashVariable": "TRANSFER_TIMESTAMP",
+              "dataType": "DATETIME",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_custody_events_from_user_id",
+              "name": "from_user_id",
+              "label": "from_user_id (VARCHAR(255))",
+              "cdashVariable": "FROM_USER_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_custody_events_to_user_id",
+              "name": "to_user_id",
+              "label": "to_user_id (VARCHAR(255))",
+              "cdashVariable": "TO_USER_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_custody_events_from_location",
+              "name": "from_location",
+              "label": "from_location (VARCHAR(255))",
+              "cdashVariable": "FROM_LOCATION",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_custody_events_to_location",
+              "name": "to_location",
+              "label": "to_location (VARCHAR(255))",
+              "cdashVariable": "TO_LOCATION",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_custody_events_transport_condition",
+              "name": "transport_condition",
+              "label": "transport_condition (VARCHAR(100))",
+              "cdashVariable": "TRANSPORT_CONDITION",
+              "dataType": "VARCHAR(100)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_custody_events_temperature_at_transfer_celsius",
+              "name": "temperature_at_transfer_celsius",
+              "label": "temperature_at_transfer_celsius (FLOAT)",
+              "cdashVariable": "TEMPERATURE_AT_TRANSFER_CELSIUS",
+              "dataType": "FLOAT",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_custody_events_seal_intact",
+              "name": "seal_intact",
+              "label": "seal_intact (BOOLEAN)",
+              "cdashVariable": "SEAL_INTACT",
+              "dataType": "BOOLEAN",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_custody_events_signature_token",
+              "name": "signature_token",
+              "label": "signature_token (VARCHAR(512))",
+              "cdashVariable": "SIGNATURE_TOKEN",
+              "dataType": "VARCHAR(512)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_custody_events_created_at",
+              "name": "created_at",
+              "label": "created_at (DATETIME)",
+              "cdashVariable": "CREATED_AT",
+              "dataType": "DATETIME",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_custody_events_created_by",
+              "name": "created_by",
+              "label": "created_by (VARCHAR(255))",
+              "cdashVariable": "CREATED_BY",
+              "dataType": "VARCHAR(255)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_custody_events_id",
+              "name": "id",
+              "label": "id (VARCHAR(36))",
+              "cdashVariable": "ID",
+              "dataType": "VARCHAR(36)",
+              "mandatory": true,
+              "config": {
+                "primary_key": true,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_custody_events_version",
+              "name": "version",
+              "label": "version (INTEGER)",
+              "cdashVariable": "VERSION",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_custody_events_is_deleted",
+              "name": "is_deleted",
+              "label": "is_deleted (BOOLEAN)",
+              "cdashVariable": "IS_DELETED",
+              "dataType": "BOOLEAN",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "bc_execution_ivd_specimen_freeze_thaw_events",
+          "name": "ivd_specimen_freeze_thaw_events",
+          "label": "Execution / EDC - IVDSpecimenFreezeThawEvent",
+          "conceptCode": "SCHEMA_EXECUTION_IVD_SPECIMEN_FREEZE_THAW_EVENTS",
+          "displayName": "ivd_specimen_freeze_thaw_events (execution)",
+          "definition": "Represents a discrete freeze-thaw thermal cycle log for an IVD specimen.",
+          "cdashDomain": "execution",
+          "cdashVariable": "IVD_SPECIMEN_FREEZE_THAW_EVENTS",
+          "dataType": "Relational Table",
+          "properties": [
+            {
+              "id": "prop_execution_ivd_specimen_freeze_thaw_events_specimen_identifier",
+              "name": "specimen_identifier",
+              "label": "specimen_identifier (VARCHAR(255))",
+              "cdashVariable": "SPECIMEN_IDENTIFIER",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_freeze_thaw_events_cycle_number",
+              "name": "cycle_number",
+              "label": "cycle_number (INTEGER)",
+              "cdashVariable": "CYCLE_NUMBER",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_freeze_thaw_events_thaw_start_timestamp",
+              "name": "thaw_start_timestamp",
+              "label": "thaw_start_timestamp (DATETIME)",
+              "cdashVariable": "THAW_START_TIMESTAMP",
+              "dataType": "DATETIME",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_freeze_thaw_events_thaw_end_timestamp",
+              "name": "thaw_end_timestamp",
+              "label": "thaw_end_timestamp (DATETIME)",
+              "cdashVariable": "THAW_END_TIMESTAMP",
+              "dataType": "DATETIME",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_freeze_thaw_events_thaw_duration_minutes",
+              "name": "thaw_duration_minutes",
+              "label": "thaw_duration_minutes (FLOAT)",
+              "cdashVariable": "THAW_DURATION_MINUTES",
+              "dataType": "FLOAT",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_freeze_thaw_events_thaw_temperature_celsius",
+              "name": "thaw_temperature_celsius",
+              "label": "thaw_temperature_celsius (FLOAT)",
+              "cdashVariable": "THAW_TEMPERATURE_CELSIUS",
+              "dataType": "FLOAT",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_freeze_thaw_events_operator_user_id",
+              "name": "operator_user_id",
+              "label": "operator_user_id (VARCHAR(255))",
+              "cdashVariable": "OPERATOR_USER_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_freeze_thaw_events_purpose",
+              "name": "purpose",
+              "label": "purpose (VARCHAR(500))",
+              "cdashVariable": "PURPOSE",
+              "dataType": "VARCHAR(500)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_freeze_thaw_events_is_excursion",
+              "name": "is_excursion",
+              "label": "is_excursion (BOOLEAN)",
+              "cdashVariable": "IS_EXCURSION",
+              "dataType": "BOOLEAN",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_freeze_thaw_events_created_at",
+              "name": "created_at",
+              "label": "created_at (DATETIME)",
+              "cdashVariable": "CREATED_AT",
+              "dataType": "DATETIME",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_freeze_thaw_events_created_by",
+              "name": "created_by",
+              "label": "created_by (VARCHAR(255))",
+              "cdashVariable": "CREATED_BY",
+              "dataType": "VARCHAR(255)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_freeze_thaw_events_id",
+              "name": "id",
+              "label": "id (VARCHAR(36))",
+              "cdashVariable": "ID",
+              "dataType": "VARCHAR(36)",
+              "mandatory": true,
+              "config": {
+                "primary_key": true,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_freeze_thaw_events_version",
+              "name": "version",
+              "label": "version (INTEGER)",
+              "cdashVariable": "VERSION",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_freeze_thaw_events_is_deleted",
+              "name": "is_deleted",
+              "label": "is_deleted (BOOLEAN)",
+              "cdashVariable": "IS_DELETED",
+              "dataType": "BOOLEAN",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            }
+          ]
+        },
+        {
+          "id": "bc_execution_ivd_specimen_records",
+          "name": "ivd_specimen_records",
+          "label": "Execution / EDC - IVDSpecimenRecord",
+          "conceptCode": "SCHEMA_EXECUTION_IVD_SPECIMEN_RECORDS",
+          "displayName": "ivd_specimen_records (execution)",
+          "definition": "Represents an In-Vitro Diagnostic (IVD) biospecimen with chain-of-custody,\nfreeze-thaw history, and sample integrity tracking.",
+          "cdashDomain": "execution",
+          "cdashVariable": "IVD_SPECIMEN_RECORDS",
+          "dataType": "Relational Table",
+          "properties": [
+            {
+              "id": "prop_execution_ivd_specimen_records_study_id",
+              "name": "study_id",
+              "label": "study_id (VARCHAR(255))",
+              "cdashVariable": "STUDY_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_site_id",
+              "name": "site_id",
+              "label": "site_id (VARCHAR(255))",
+              "cdashVariable": "SITE_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_subject_id",
+              "name": "subject_id",
+              "label": "subject_id (VARCHAR(255))",
+              "cdashVariable": "SUBJECT_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_specimen_identifier",
+              "name": "specimen_identifier",
+              "label": "specimen_identifier (VARCHAR(255))",
+              "cdashVariable": "SPECIMEN_IDENTIFIER",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_specimen_type",
+              "name": "specimen_type",
+              "label": "specimen_type (VARCHAR(100))",
+              "cdashVariable": "SPECIMEN_TYPE",
+              "dataType": "VARCHAR(100)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_collection_date",
+              "name": "collection_date",
+              "label": "collection_date (DATETIME)",
+              "cdashVariable": "COLLECTION_DATE",
+              "dataType": "DATETIME",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_collector_user_id",
+              "name": "collector_user_id",
+              "label": "collector_user_id (VARCHAR(255))",
+              "cdashVariable": "COLLECTOR_USER_ID",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_container_type",
+              "name": "container_type",
+              "label": "container_type (VARCHAR(100))",
+              "cdashVariable": "CONTAINER_TYPE",
+              "dataType": "VARCHAR(100)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_initial_volume_ul",
+              "name": "initial_volume_ul",
+              "label": "initial_volume_ul (FLOAT)",
+              "cdashVariable": "INITIAL_VOLUME_UL",
+              "dataType": "FLOAT",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_current_volume_ul",
+              "name": "current_volume_ul",
+              "label": "current_volume_ul (FLOAT)",
+              "cdashVariable": "CURRENT_VOLUME_UL",
+              "dataType": "FLOAT",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_storage_temperature_celsius",
+              "name": "storage_temperature_celsius",
+              "label": "storage_temperature_celsius (FLOAT)",
+              "cdashVariable": "STORAGE_TEMPERATURE_CELSIUS",
+              "dataType": "FLOAT",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_storage_location",
+              "name": "storage_location",
+              "label": "storage_location (VARCHAR(255))",
+              "cdashVariable": "STORAGE_LOCATION",
+              "dataType": "VARCHAR(255)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_status",
+              "name": "status",
+              "label": "status (VARCHAR(50))",
+              "cdashVariable": "STATUS",
+              "dataType": "VARCHAR(50)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_is_quarantined",
+              "name": "is_quarantined",
+              "label": "is_quarantined (BOOLEAN)",
+              "cdashVariable": "IS_QUARANTINED",
+              "dataType": "BOOLEAN",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_quarantine_reason",
+              "name": "quarantine_reason",
+              "label": "quarantine_reason (VARCHAR(1000))",
+              "cdashVariable": "QUARANTINE_REASON",
+              "dataType": "VARCHAR(1000)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_freeze_thaw_count",
+              "name": "freeze_thaw_count",
+              "label": "freeze_thaw_count (INTEGER)",
+              "cdashVariable": "FREEZE_THAW_COUNT",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_max_allowed_freeze_thaw",
+              "name": "max_allowed_freeze_thaw",
+              "label": "max_allowed_freeze_thaw (INTEGER)",
+              "cdashVariable": "MAX_ALLOWED_FREEZE_THAW",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_hemolysis_index_mg_dl",
+              "name": "hemolysis_index_mg_dl",
+              "label": "hemolysis_index_mg_dl (FLOAT)",
+              "cdashVariable": "HEMOLYSIS_INDEX_MG_DL",
+              "dataType": "FLOAT",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_lipemia_index_mg_dl",
+              "name": "lipemia_index_mg_dl",
+              "label": "lipemia_index_mg_dl (FLOAT)",
+              "cdashVariable": "LIPEMIA_INDEX_MG_DL",
+              "dataType": "FLOAT",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_icterus_index_mg_dl",
+              "name": "icterus_index_mg_dl",
+              "label": "icterus_index_mg_dl (FLOAT)",
+              "cdashVariable": "ICTERUS_INDEX_MG_DL",
+              "dataType": "FLOAT",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_clot_detected",
+              "name": "clot_detected",
+              "label": "clot_detected (BOOLEAN)",
+              "cdashVariable": "CLOT_DETECTED",
+              "dataType": "BOOLEAN",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_temperature_excursion",
+              "name": "temperature_excursion",
+              "label": "temperature_excursion (BOOLEAN)",
+              "cdashVariable": "TEMPERATURE_EXCURSION",
+              "dataType": "BOOLEAN",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_integrity_status",
+              "name": "integrity_status",
+              "label": "integrity_status (VARCHAR(50))",
+              "cdashVariable": "INTEGRITY_STATUS",
+              "dataType": "VARCHAR(50)",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_integrity_validated_at",
+              "name": "integrity_validated_at",
+              "label": "integrity_validated_at (DATETIME)",
+              "cdashVariable": "INTEGRITY_VALIDATED_AT",
+              "dataType": "DATETIME",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_integrity_validated_by",
+              "name": "integrity_validated_by",
+              "label": "integrity_validated_by (VARCHAR(255))",
+              "cdashVariable": "INTEGRITY_VALIDATED_BY",
+              "dataType": "VARCHAR(255)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_created_at",
+              "name": "created_at",
+              "label": "created_at (DATETIME)",
+              "cdashVariable": "CREATED_AT",
+              "dataType": "DATETIME",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_created_by",
+              "name": "created_by",
+              "label": "created_by (VARCHAR(255))",
+              "cdashVariable": "CREATED_BY",
+              "dataType": "VARCHAR(255)",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_id",
+              "name": "id",
+              "label": "id (VARCHAR(36))",
+              "cdashVariable": "ID",
+              "dataType": "VARCHAR(36)",
+              "mandatory": true,
+              "config": {
+                "primary_key": true,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_version",
+              "name": "version",
+              "label": "version (INTEGER)",
+              "cdashVariable": "VERSION",
+              "dataType": "INTEGER",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_execution_ivd_specimen_records_is_deleted",
+              "name": "is_deleted",
+              "label": "is_deleted (BOOLEAN)",
+              "cdashVariable": "IS_DELETED",
+              "dataType": "BOOLEAN",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "execution",
+                "db_type": "PostgreSQL (SQLAlchemy)",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            }
+          ]
+        },
+        {
           "id": "bc_execution_integration_outbox",
           "name": "integration_outbox",
           "label": "Execution / EDC - IntegrationOutbox",
@@ -119375,6 +122301,1469 @@
         },
         {
           "id": "prop_execution_ip_kits_is_deleted",
+          "name": "is_deleted",
+          "label": "is_deleted (BOOLEAN)",
+          "cdashVariable": "IS_DELETED",
+          "dataType": "BOOLEAN",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "bc_execution_ivd_assay_performance_runs",
+      "name": "ivd_assay_performance_runs",
+      "label": "Execution / EDC - IVDAssayPerformanceRun",
+      "conceptCode": "SCHEMA_EXECUTION_IVD_ASSAY_PERFORMANCE_RUNS",
+      "displayName": "ivd_assay_performance_runs (execution)",
+      "definition": "Represents statistical assay validation metrics for an IVD diagnostic device/assay.",
+      "cdashDomain": "execution",
+      "cdashVariable": "IVD_ASSAY_PERFORMANCE_RUNS",
+      "dataType": "Relational Table",
+      "properties": [
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_study_id",
+          "name": "study_id",
+          "label": "study_id (VARCHAR(255))",
+          "cdashVariable": "STUDY_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_assay_name",
+          "name": "assay_name",
+          "label": "assay_name (VARCHAR(255))",
+          "cdashVariable": "ASSAY_NAME",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_assay_lot_number",
+          "name": "assay_lot_number",
+          "label": "assay_lot_number (VARCHAR(255))",
+          "cdashVariable": "ASSAY_LOT_NUMBER",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_device_udi_di",
+          "name": "device_udi_di",
+          "label": "device_udi_di (VARCHAR(255))",
+          "cdashVariable": "DEVICE_UDI_DI",
+          "dataType": "VARCHAR(255)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_true_positives",
+          "name": "true_positives",
+          "label": "true_positives (INTEGER)",
+          "cdashVariable": "TRUE_POSITIVES",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_false_positives",
+          "name": "false_positives",
+          "label": "false_positives (INTEGER)",
+          "cdashVariable": "FALSE_POSITIVES",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_true_negatives",
+          "name": "true_negatives",
+          "label": "true_negatives (INTEGER)",
+          "cdashVariable": "TRUE_NEGATIVES",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_false_negatives",
+          "name": "false_negatives",
+          "label": "false_negatives (INTEGER)",
+          "cdashVariable": "FALSE_NEGATIVES",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_sensitivity_percent",
+          "name": "sensitivity_percent",
+          "label": "sensitivity_percent (FLOAT)",
+          "cdashVariable": "SENSITIVITY_PERCENT",
+          "dataType": "FLOAT",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_specificity_percent",
+          "name": "specificity_percent",
+          "label": "specificity_percent (FLOAT)",
+          "cdashVariable": "SPECIFICITY_PERCENT",
+          "dataType": "FLOAT",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_ppv_percent",
+          "name": "ppv_percent",
+          "label": "ppv_percent (FLOAT)",
+          "cdashVariable": "PPV_PERCENT",
+          "dataType": "FLOAT",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_npv_percent",
+          "name": "npv_percent",
+          "label": "npv_percent (FLOAT)",
+          "cdashVariable": "NPV_PERCENT",
+          "dataType": "FLOAT",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_accuracy_percent",
+          "name": "accuracy_percent",
+          "label": "accuracy_percent (FLOAT)",
+          "cdashVariable": "ACCURACY_PERCENT",
+          "dataType": "FLOAT",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_intra_assay_cv_percent",
+          "name": "intra_assay_cv_percent",
+          "label": "intra_assay_cv_percent (FLOAT)",
+          "cdashVariable": "INTRA_ASSAY_CV_PERCENT",
+          "dataType": "FLOAT",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_inter_assay_cv_percent",
+          "name": "inter_assay_cv_percent",
+          "label": "inter_assay_cv_percent (FLOAT)",
+          "cdashVariable": "INTER_ASSAY_CV_PERCENT",
+          "dataType": "FLOAT",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_limit_of_detection",
+          "name": "limit_of_detection",
+          "label": "limit_of_detection (FLOAT)",
+          "cdashVariable": "LIMIT_OF_DETECTION",
+          "dataType": "FLOAT",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_limit_of_quantitation",
+          "name": "limit_of_quantitation",
+          "label": "limit_of_quantitation (FLOAT)",
+          "cdashVariable": "LIMIT_OF_QUANTITATION",
+          "dataType": "FLOAT",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_linearity_r_squared",
+          "name": "linearity_r_squared",
+          "label": "linearity_r_squared (FLOAT)",
+          "cdashVariable": "LINEARITY_R_SQUARED",
+          "dataType": "FLOAT",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_status",
+          "name": "status",
+          "label": "status (VARCHAR(50))",
+          "cdashVariable": "STATUS",
+          "dataType": "VARCHAR(50)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_created_at",
+          "name": "created_at",
+          "label": "created_at (DATETIME)",
+          "cdashVariable": "CREATED_AT",
+          "dataType": "DATETIME",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_created_by",
+          "name": "created_by",
+          "label": "created_by (VARCHAR(255))",
+          "cdashVariable": "CREATED_BY",
+          "dataType": "VARCHAR(255)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_id",
+          "name": "id",
+          "label": "id (VARCHAR(36))",
+          "cdashVariable": "ID",
+          "dataType": "VARCHAR(36)",
+          "mandatory": true,
+          "config": {
+            "primary_key": true,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_version",
+          "name": "version",
+          "label": "version (INTEGER)",
+          "cdashVariable": "VERSION",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_assay_performance_runs_is_deleted",
+          "name": "is_deleted",
+          "label": "is_deleted (BOOLEAN)",
+          "cdashVariable": "IS_DELETED",
+          "dataType": "BOOLEAN",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "bc_execution_ivd_specimen_custody_events",
+      "name": "ivd_specimen_custody_events",
+      "label": "Execution / EDC - IVDSpecimenCustodyEvent",
+      "conceptCode": "SCHEMA_EXECUTION_IVD_SPECIMEN_CUSTODY_EVENTS",
+      "displayName": "ivd_specimen_custody_events (execution)",
+      "definition": "Represents an auditable chain-of-custody transfer log for an IVD specimen.",
+      "cdashDomain": "execution",
+      "cdashVariable": "IVD_SPECIMEN_CUSTODY_EVENTS",
+      "dataType": "Relational Table",
+      "properties": [
+        {
+          "id": "prop_execution_ivd_specimen_custody_events_specimen_identifier",
+          "name": "specimen_identifier",
+          "label": "specimen_identifier (VARCHAR(255))",
+          "cdashVariable": "SPECIMEN_IDENTIFIER",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_custody_events_transfer_timestamp",
+          "name": "transfer_timestamp",
+          "label": "transfer_timestamp (DATETIME)",
+          "cdashVariable": "TRANSFER_TIMESTAMP",
+          "dataType": "DATETIME",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_custody_events_from_user_id",
+          "name": "from_user_id",
+          "label": "from_user_id (VARCHAR(255))",
+          "cdashVariable": "FROM_USER_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_custody_events_to_user_id",
+          "name": "to_user_id",
+          "label": "to_user_id (VARCHAR(255))",
+          "cdashVariable": "TO_USER_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_custody_events_from_location",
+          "name": "from_location",
+          "label": "from_location (VARCHAR(255))",
+          "cdashVariable": "FROM_LOCATION",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_custody_events_to_location",
+          "name": "to_location",
+          "label": "to_location (VARCHAR(255))",
+          "cdashVariable": "TO_LOCATION",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_custody_events_transport_condition",
+          "name": "transport_condition",
+          "label": "transport_condition (VARCHAR(100))",
+          "cdashVariable": "TRANSPORT_CONDITION",
+          "dataType": "VARCHAR(100)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_custody_events_temperature_at_transfer_celsius",
+          "name": "temperature_at_transfer_celsius",
+          "label": "temperature_at_transfer_celsius (FLOAT)",
+          "cdashVariable": "TEMPERATURE_AT_TRANSFER_CELSIUS",
+          "dataType": "FLOAT",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_custody_events_seal_intact",
+          "name": "seal_intact",
+          "label": "seal_intact (BOOLEAN)",
+          "cdashVariable": "SEAL_INTACT",
+          "dataType": "BOOLEAN",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_custody_events_signature_token",
+          "name": "signature_token",
+          "label": "signature_token (VARCHAR(512))",
+          "cdashVariable": "SIGNATURE_TOKEN",
+          "dataType": "VARCHAR(512)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_custody_events_created_at",
+          "name": "created_at",
+          "label": "created_at (DATETIME)",
+          "cdashVariable": "CREATED_AT",
+          "dataType": "DATETIME",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_custody_events_created_by",
+          "name": "created_by",
+          "label": "created_by (VARCHAR(255))",
+          "cdashVariable": "CREATED_BY",
+          "dataType": "VARCHAR(255)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_custody_events_id",
+          "name": "id",
+          "label": "id (VARCHAR(36))",
+          "cdashVariable": "ID",
+          "dataType": "VARCHAR(36)",
+          "mandatory": true,
+          "config": {
+            "primary_key": true,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_custody_events_version",
+          "name": "version",
+          "label": "version (INTEGER)",
+          "cdashVariable": "VERSION",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_custody_events_is_deleted",
+          "name": "is_deleted",
+          "label": "is_deleted (BOOLEAN)",
+          "cdashVariable": "IS_DELETED",
+          "dataType": "BOOLEAN",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "bc_execution_ivd_specimen_freeze_thaw_events",
+      "name": "ivd_specimen_freeze_thaw_events",
+      "label": "Execution / EDC - IVDSpecimenFreezeThawEvent",
+      "conceptCode": "SCHEMA_EXECUTION_IVD_SPECIMEN_FREEZE_THAW_EVENTS",
+      "displayName": "ivd_specimen_freeze_thaw_events (execution)",
+      "definition": "Represents a discrete freeze-thaw thermal cycle log for an IVD specimen.",
+      "cdashDomain": "execution",
+      "cdashVariable": "IVD_SPECIMEN_FREEZE_THAW_EVENTS",
+      "dataType": "Relational Table",
+      "properties": [
+        {
+          "id": "prop_execution_ivd_specimen_freeze_thaw_events_specimen_identifier",
+          "name": "specimen_identifier",
+          "label": "specimen_identifier (VARCHAR(255))",
+          "cdashVariable": "SPECIMEN_IDENTIFIER",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_freeze_thaw_events_cycle_number",
+          "name": "cycle_number",
+          "label": "cycle_number (INTEGER)",
+          "cdashVariable": "CYCLE_NUMBER",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_freeze_thaw_events_thaw_start_timestamp",
+          "name": "thaw_start_timestamp",
+          "label": "thaw_start_timestamp (DATETIME)",
+          "cdashVariable": "THAW_START_TIMESTAMP",
+          "dataType": "DATETIME",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_freeze_thaw_events_thaw_end_timestamp",
+          "name": "thaw_end_timestamp",
+          "label": "thaw_end_timestamp (DATETIME)",
+          "cdashVariable": "THAW_END_TIMESTAMP",
+          "dataType": "DATETIME",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_freeze_thaw_events_thaw_duration_minutes",
+          "name": "thaw_duration_minutes",
+          "label": "thaw_duration_minutes (FLOAT)",
+          "cdashVariable": "THAW_DURATION_MINUTES",
+          "dataType": "FLOAT",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_freeze_thaw_events_thaw_temperature_celsius",
+          "name": "thaw_temperature_celsius",
+          "label": "thaw_temperature_celsius (FLOAT)",
+          "cdashVariable": "THAW_TEMPERATURE_CELSIUS",
+          "dataType": "FLOAT",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_freeze_thaw_events_operator_user_id",
+          "name": "operator_user_id",
+          "label": "operator_user_id (VARCHAR(255))",
+          "cdashVariable": "OPERATOR_USER_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_freeze_thaw_events_purpose",
+          "name": "purpose",
+          "label": "purpose (VARCHAR(500))",
+          "cdashVariable": "PURPOSE",
+          "dataType": "VARCHAR(500)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_freeze_thaw_events_is_excursion",
+          "name": "is_excursion",
+          "label": "is_excursion (BOOLEAN)",
+          "cdashVariable": "IS_EXCURSION",
+          "dataType": "BOOLEAN",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_freeze_thaw_events_created_at",
+          "name": "created_at",
+          "label": "created_at (DATETIME)",
+          "cdashVariable": "CREATED_AT",
+          "dataType": "DATETIME",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_freeze_thaw_events_created_by",
+          "name": "created_by",
+          "label": "created_by (VARCHAR(255))",
+          "cdashVariable": "CREATED_BY",
+          "dataType": "VARCHAR(255)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_freeze_thaw_events_id",
+          "name": "id",
+          "label": "id (VARCHAR(36))",
+          "cdashVariable": "ID",
+          "dataType": "VARCHAR(36)",
+          "mandatory": true,
+          "config": {
+            "primary_key": true,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_freeze_thaw_events_version",
+          "name": "version",
+          "label": "version (INTEGER)",
+          "cdashVariable": "VERSION",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_freeze_thaw_events_is_deleted",
+          "name": "is_deleted",
+          "label": "is_deleted (BOOLEAN)",
+          "cdashVariable": "IS_DELETED",
+          "dataType": "BOOLEAN",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "bc_execution_ivd_specimen_records",
+      "name": "ivd_specimen_records",
+      "label": "Execution / EDC - IVDSpecimenRecord",
+      "conceptCode": "SCHEMA_EXECUTION_IVD_SPECIMEN_RECORDS",
+      "displayName": "ivd_specimen_records (execution)",
+      "definition": "Represents an In-Vitro Diagnostic (IVD) biospecimen with chain-of-custody,\nfreeze-thaw history, and sample integrity tracking.",
+      "cdashDomain": "execution",
+      "cdashVariable": "IVD_SPECIMEN_RECORDS",
+      "dataType": "Relational Table",
+      "properties": [
+        {
+          "id": "prop_execution_ivd_specimen_records_study_id",
+          "name": "study_id",
+          "label": "study_id (VARCHAR(255))",
+          "cdashVariable": "STUDY_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_site_id",
+          "name": "site_id",
+          "label": "site_id (VARCHAR(255))",
+          "cdashVariable": "SITE_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_subject_id",
+          "name": "subject_id",
+          "label": "subject_id (VARCHAR(255))",
+          "cdashVariable": "SUBJECT_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_specimen_identifier",
+          "name": "specimen_identifier",
+          "label": "specimen_identifier (VARCHAR(255))",
+          "cdashVariable": "SPECIMEN_IDENTIFIER",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_specimen_type",
+          "name": "specimen_type",
+          "label": "specimen_type (VARCHAR(100))",
+          "cdashVariable": "SPECIMEN_TYPE",
+          "dataType": "VARCHAR(100)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_collection_date",
+          "name": "collection_date",
+          "label": "collection_date (DATETIME)",
+          "cdashVariable": "COLLECTION_DATE",
+          "dataType": "DATETIME",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_collector_user_id",
+          "name": "collector_user_id",
+          "label": "collector_user_id (VARCHAR(255))",
+          "cdashVariable": "COLLECTOR_USER_ID",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_container_type",
+          "name": "container_type",
+          "label": "container_type (VARCHAR(100))",
+          "cdashVariable": "CONTAINER_TYPE",
+          "dataType": "VARCHAR(100)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_initial_volume_ul",
+          "name": "initial_volume_ul",
+          "label": "initial_volume_ul (FLOAT)",
+          "cdashVariable": "INITIAL_VOLUME_UL",
+          "dataType": "FLOAT",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_current_volume_ul",
+          "name": "current_volume_ul",
+          "label": "current_volume_ul (FLOAT)",
+          "cdashVariable": "CURRENT_VOLUME_UL",
+          "dataType": "FLOAT",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_storage_temperature_celsius",
+          "name": "storage_temperature_celsius",
+          "label": "storage_temperature_celsius (FLOAT)",
+          "cdashVariable": "STORAGE_TEMPERATURE_CELSIUS",
+          "dataType": "FLOAT",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_storage_location",
+          "name": "storage_location",
+          "label": "storage_location (VARCHAR(255))",
+          "cdashVariable": "STORAGE_LOCATION",
+          "dataType": "VARCHAR(255)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_status",
+          "name": "status",
+          "label": "status (VARCHAR(50))",
+          "cdashVariable": "STATUS",
+          "dataType": "VARCHAR(50)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_is_quarantined",
+          "name": "is_quarantined",
+          "label": "is_quarantined (BOOLEAN)",
+          "cdashVariable": "IS_QUARANTINED",
+          "dataType": "BOOLEAN",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_quarantine_reason",
+          "name": "quarantine_reason",
+          "label": "quarantine_reason (VARCHAR(1000))",
+          "cdashVariable": "QUARANTINE_REASON",
+          "dataType": "VARCHAR(1000)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_freeze_thaw_count",
+          "name": "freeze_thaw_count",
+          "label": "freeze_thaw_count (INTEGER)",
+          "cdashVariable": "FREEZE_THAW_COUNT",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_max_allowed_freeze_thaw",
+          "name": "max_allowed_freeze_thaw",
+          "label": "max_allowed_freeze_thaw (INTEGER)",
+          "cdashVariable": "MAX_ALLOWED_FREEZE_THAW",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_hemolysis_index_mg_dl",
+          "name": "hemolysis_index_mg_dl",
+          "label": "hemolysis_index_mg_dl (FLOAT)",
+          "cdashVariable": "HEMOLYSIS_INDEX_MG_DL",
+          "dataType": "FLOAT",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_lipemia_index_mg_dl",
+          "name": "lipemia_index_mg_dl",
+          "label": "lipemia_index_mg_dl (FLOAT)",
+          "cdashVariable": "LIPEMIA_INDEX_MG_DL",
+          "dataType": "FLOAT",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_icterus_index_mg_dl",
+          "name": "icterus_index_mg_dl",
+          "label": "icterus_index_mg_dl (FLOAT)",
+          "cdashVariable": "ICTERUS_INDEX_MG_DL",
+          "dataType": "FLOAT",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_clot_detected",
+          "name": "clot_detected",
+          "label": "clot_detected (BOOLEAN)",
+          "cdashVariable": "CLOT_DETECTED",
+          "dataType": "BOOLEAN",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_temperature_excursion",
+          "name": "temperature_excursion",
+          "label": "temperature_excursion (BOOLEAN)",
+          "cdashVariable": "TEMPERATURE_EXCURSION",
+          "dataType": "BOOLEAN",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_integrity_status",
+          "name": "integrity_status",
+          "label": "integrity_status (VARCHAR(50))",
+          "cdashVariable": "INTEGRITY_STATUS",
+          "dataType": "VARCHAR(50)",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_integrity_validated_at",
+          "name": "integrity_validated_at",
+          "label": "integrity_validated_at (DATETIME)",
+          "cdashVariable": "INTEGRITY_VALIDATED_AT",
+          "dataType": "DATETIME",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_integrity_validated_by",
+          "name": "integrity_validated_by",
+          "label": "integrity_validated_by (VARCHAR(255))",
+          "cdashVariable": "INTEGRITY_VALIDATED_BY",
+          "dataType": "VARCHAR(255)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_created_at",
+          "name": "created_at",
+          "label": "created_at (DATETIME)",
+          "cdashVariable": "CREATED_AT",
+          "dataType": "DATETIME",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_created_by",
+          "name": "created_by",
+          "label": "created_by (VARCHAR(255))",
+          "cdashVariable": "CREATED_BY",
+          "dataType": "VARCHAR(255)",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_id",
+          "name": "id",
+          "label": "id (VARCHAR(36))",
+          "cdashVariable": "ID",
+          "dataType": "VARCHAR(36)",
+          "mandatory": true,
+          "config": {
+            "primary_key": true,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_version",
+          "name": "version",
+          "label": "version (INTEGER)",
+          "cdashVariable": "VERSION",
+          "dataType": "INTEGER",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "execution",
+            "db_type": "PostgreSQL (SQLAlchemy)",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_execution_ivd_specimen_records_is_deleted",
           "name": "is_deleted",
           "label": "is_deleted (BOOLEAN)",
           "cdashVariable": "IS_DELETED",

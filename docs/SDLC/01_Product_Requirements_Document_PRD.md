@@ -1451,6 +1451,15 @@ To automate patient stipend and travel reimbursement disbursements and facilitat
 - The engine must monitor IRS Form 1099 tax reporting thresholds ($600.00 annual taxable stipend cap), providing early approaching warnings and triggering automated W-9 certification workflows.
 - The wallet must support automated reloadable debit card issuing, real-time balance inquiries, instant ACH payouts, and strict enforcement of IRB/ethics anti-coercion stipend caps per 45 CFR 46 and 21 CFR 50.
 
+#### PRD-SYS-183: Greenlight Site Activation Multi-Factor Engine Tracer
+- The system must evaluate multi-factor startup criteria (ethics approval, budget execution, essential regulatory documents, pharmacy readiness, trained staff delegations) before un-gating site patient enrollment and dispensation.
+- Provide cryptographic bypass token generation, HMAC verification, dual-signature GxP overrides, and transactional outbox event propagation upon site greenlight approval.
+
+#### PRD-SYS-184: Next-Gen RTSM, Bayesian BOIN & Cold Chain MKT Tracer
+- The system must provide Pocock-Simon covariate-adaptive minimization with configurable variance weights, marginal imbalance metrics, and biased coin allocation probabilities.
+- Provide Bayesian Optimal Interval (BOIN) and Continual Reassessment Method (CRM) Phase I dose-escalation engines with configurable target DLT rates and dose transition decision boundaries (ESCALATE, STAY, DE_ESCALATE, STOP).
+- Provide real-time IP kit dispensing, expiry/quarantine inventory fencing, cold-chain Arrhenius Mean Kinetic Temperature (MKT) excursion holds, stability budget evaluations, and 21 CFR Part 11 emergency code-break unblinding audit ledgers.
+
 ---
 
 ## 23. Reactive Cross-App Clinical Event Spine & Outbox Architecture

@@ -1,8 +1,3 @@
-import hashlib
-import hmac
-import json
-import time
-
 import httpx
 import pytest
 from sqlalchemy import text
@@ -17,35 +12,24 @@ from apps.execution.tsdv import (
     is_field_required,
     is_subject_selected_for_sdv,
 )
+from packages.testing.security import create_test_auth_headers
 
 GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
 
 
 def get_v2_auth_headers(
     user_id: str = "test_user",
-    roles: str = "CRA",
-    change_reason: str = "test operation",
+    roles: str | list[str] = "CRA",
+    change_reason: str | None = "test operation",
+    studies: str = "*",
 ) -> dict[str, str]:
     """Generate Gateway signature version 2 authentication headers."""
-    timestamp = str(time.time())
-    payload = {
-        "change_reason": change_reason,
-        "roles": roles,
-        "timestamp": timestamp,
-        "user_id": user_id,
-    }
-    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-    signature = hmac.new(
-        GATEWAY_SECRET.encode(), serialized.encode(), hashlib.sha256
-    ).hexdigest()
-    return {
-        "X-User-Id": user_id,
-        "X-User-Roles": roles,
-        "X-Gateway-Timestamp": timestamp,
-        "X-Gateway-Signature": signature,
-        "X-Signature-Version": "2",
-        "X-Change-Reason": change_reason,
-    }
+    role_list = [roles] if isinstance(roles, str) else roles
+    return create_test_auth_headers(
+        user_id=user_id,
+        roles=role_list,
+        change_reason=change_reason,
+    )
 
 
 @pytest.fixture(autouse=True)

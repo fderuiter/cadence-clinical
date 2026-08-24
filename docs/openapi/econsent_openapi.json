@@ -1691,6 +1691,157 @@
         }
       }
     },
+    "/api/v1/econsent/reconsent/minor-milestones/evaluate": {
+      "post": {
+        "tags": [
+          "Re-Consent"
+        ],
+        "summary": "Evaluate Minor Milestones",
+        "description": "Evaluates minor subjects against jurisdiction legal age of majority rules.",
+        "operationId": "evaluate_minor_milestones_api_v1_econsent_reconsent_minor_milestones_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MinorMilestoneEvaluationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MinorMilestoneEvaluationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/reconsent/minor-milestones/trigger": {
+      "post": {
+        "tags": [
+          "Re-Consent"
+        ],
+        "summary": "Trigger Majority Reconsent",
+        "description": "Generates mandatory adult re-consent tasks for minor subjects who turned legal age.",
+        "operationId": "trigger_majority_reconsent_api_v1_econsent_reconsent_minor_milestones_trigger_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TriggerMajorityReconsentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReconsentRequirementResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Trigger Majority Reconsent Api V1 Econsent Reconsent Minor Milestones Trigger Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/reconsent/minor-milestones/pending/{study_id}": {
+      "get": {
+        "tags": [
+          "Re-Consent"
+        ],
+        "summary": "Get Pending Majority Reconsents",
+        "description": "Retrieves pending adult re-consent requirements resulting from age-of-majority transitions.",
+        "operationId": "get_pending_majority_reconsents_api_v1_econsent_reconsent_minor_milestones_pending__study_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "subject_pseudonym",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Pseudonym"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReconsentRequirementResponse"
+                  },
+                  "title": "Response Get Pending Majority Reconsents Api V1 Econsent Reconsent Minor Milestones Pending  Study Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/econsent/withdrawal": {
       "post": {
         "tags": [
@@ -4366,6 +4517,154 @@
         ],
         "title": "JargonSubstitutionDTO"
       },
+      "MinorMilestoneEvaluationRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/SubjectMilestoneInput"
+            },
+            "type": "array",
+            "title": "Subjects"
+          },
+          "as_of_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of Date",
+            "description": "Evaluation reference date (defaults to today)"
+          },
+          "lead_time_days": {
+            "type": "integer",
+            "title": "Lead Time Days",
+            "description": "Lead time window for approaching majority",
+            "default": 30
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "subjects"
+        ],
+        "title": "MinorMilestoneEvaluationRequest"
+      },
+      "MinorMilestoneEvaluationResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "evaluation_date": {
+            "type": "string",
+            "title": "Evaluation Date"
+          },
+          "total_evaluated": {
+            "type": "integer",
+            "title": "Total Evaluated"
+          },
+          "majority_reached_count": {
+            "type": "integer",
+            "title": "Majority Reached Count"
+          },
+          "approaching_count": {
+            "type": "integer",
+            "title": "Approaching Count"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/MinorMilestoneResultDTO"
+            },
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "evaluation_date",
+          "total_evaluated",
+          "majority_reached_count",
+          "approaching_count",
+          "results"
+        ],
+        "title": "MinorMilestoneEvaluationResponse"
+      },
+      "MinorMilestoneResultDTO": {
+        "properties": {
+          "subject_pseudonym": {
+            "type": "string",
+            "title": "Subject Pseudonym"
+          },
+          "date_of_birth": {
+            "type": "string",
+            "title": "Date Of Birth"
+          },
+          "jurisdiction": {
+            "type": "string",
+            "title": "Jurisdiction"
+          },
+          "current_age_years": {
+            "type": "integer",
+            "title": "Current Age Years"
+          },
+          "exact_age": {
+            "type": "number",
+            "title": "Exact Age"
+          },
+          "legal_age_threshold": {
+            "type": "integer",
+            "title": "Legal Age Threshold"
+          },
+          "majority_reached_date": {
+            "type": "string",
+            "title": "Majority Reached Date"
+          },
+          "has_reached_majority": {
+            "type": "boolean",
+            "title": "Has Reached Majority"
+          },
+          "is_transition_due": {
+            "type": "boolean",
+            "title": "Is Transition Due"
+          },
+          "days_until_majority": {
+            "type": "integer",
+            "title": "Days Until Majority"
+          },
+          "requires_adult_reconsent": {
+            "type": "boolean",
+            "title": "Requires Adult Reconsent"
+          },
+          "milestone_status": {
+            "type": "string",
+            "title": "Milestone Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_pseudonym",
+          "date_of_birth",
+          "jurisdiction",
+          "current_age_years",
+          "exact_age",
+          "legal_age_threshold",
+          "majority_reached_date",
+          "has_reached_majority",
+          "is_transition_due",
+          "days_until_majority",
+          "requires_adult_reconsent",
+          "milestone_status"
+        ],
+        "title": "MinorMilestoneResultDTO"
+      },
       "ReadabilityAnalysisRequest": {
         "properties": {
           "text": {
@@ -4968,6 +5267,62 @@
         ],
         "title": "SubjectConsentStatusResponse"
       },
+      "SubjectMilestoneInput": {
+        "properties": {
+          "subject_pseudonym": {
+            "type": "string",
+            "title": "Subject Pseudonym"
+          },
+          "date_of_birth": {
+            "type": "string",
+            "title": "Date Of Birth",
+            "description": "Subject DOB in ISO format YYYY-MM-DD"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction",
+            "description": "ISO country or state code",
+            "default": "DEFAULT"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "current_consent_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Consent Role",
+            "description": "MINOR_ASSENT, LAR, SUBJECT",
+            "default": "MINOR_ASSENT"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_pseudonym",
+          "date_of_birth"
+        ],
+        "title": "SubjectMilestoneInput"
+      },
       "TemplateDiffResponse": {
         "properties": {
           "template_id": {
@@ -5051,6 +5406,61 @@
           "reason_for_change"
         ],
         "title": "TranslationTransitionRequest"
+      },
+      "TriggerMajorityReconsentRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "template_id": {
+            "type": "string",
+            "title": "Template Id"
+          },
+          "adult_version_index": {
+            "type": "integer",
+            "title": "Adult Version Index",
+            "description": "Adult consent template version",
+            "default": 1
+          },
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/SubjectMilestoneInput"
+            },
+            "type": "array",
+            "title": "Subjects"
+          },
+          "lead_time_days": {
+            "type": "integer",
+            "title": "Lead Time Days",
+            "description": "Lead time days (0 = only subjects who reached legal majority)",
+            "default": 0
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "GxP change reason",
+            "default": "Participant reached legal age of majority - Adult re-consent required"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "template_id",
+          "subjects"
+        ],
+        "title": "TriggerMajorityReconsentRequest"
       },
       "ValidationError": {
         "properties": {

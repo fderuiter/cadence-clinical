@@ -44,6 +44,8 @@ def client():
 def test_open_device_safety_investigation_endpoint(client):
     """Tests opening a new Adverse Device Effect safety investigation case with vigilance countdown.
 
+    @req:PRD-SYS-187
+    @req:PRD-SYS-053
     @req:PRD-DEV-003
     @req:PRD-DEV-004
     @req:PRD-SYS-126
@@ -89,6 +91,8 @@ def test_open_device_safety_investigation_endpoint(client):
 def test_list_and_get_device_safety_investigations(client):
     """Tests listing and filtering device safety investigation cases.
 
+    @req:PRD-SYS-187
+    @req:PRD-SYS-053
     @req:PRD-DEV-003
     @req:PRD-DEV-004
     @req:PRD-SYS-126
@@ -149,6 +153,8 @@ def test_list_and_get_device_safety_investigations(client):
 def test_adjudicate_device_safety_investigation(client):
     """Tests Safety Physician formal adjudication with 21 CFR Part 11 electronic signature.
 
+    @req:PRD-SYS-187
+    @req:PRD-SYS-053
     @req:PRD-DEV-003
     @req:PRD-DEV-004
     @req:PRD-SYS-126
@@ -207,6 +213,8 @@ def test_adjudicate_device_safety_investigation(client):
 def test_generate_device_vigilance_mir_report(client):
     """Tests generating an EU MDR 2017/745 / EU IVDR 2017/746 Manufacturer Incident Report (MIR v7.2).
 
+    @req:PRD-SYS-187
+    @req:PRD-SYS-053
     @req:PRD-DEV-003
     @req:PRD-DEV-004
     @req:PRD-SYS-126

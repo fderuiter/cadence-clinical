@@ -10829,6 +10829,371 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/devices/gudid/lookup:
+    post:
+      tags:
+      - Medical Device & IVD Suite
+      summary: Lookup Gudid Endpoint
+      description: 'Queries device specifications from the FDA AccessGUDID reference registry.
+
+
+        @req:PRD-SYS-187, @req:PRD-DEV-001, @req:ADR-2209'
+      operationId: lookup_gudid_endpoint_api_v1_execution_devices_gudid_lookup_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GUDIDLookupRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GUDIDDeviceRecord'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/devices/verify-udi:
+    post:
+      tags:
+      - Medical Device & IVD Suite
+      summary: Verify Udi Endpoint
+      description: 'Validates physical/scanned UDI data (DI + PI lot, serial, expiration) against the FDA GUDID registry.
+
+
+        @req:PRD-SYS-187, @req:PRD-DEV-001, @req:ADR-2209'
+      operationId: verify_udi_endpoint_api_v1_execution_devices_verify_udi_post
+      parameters:
+      - name: raw_barcode
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional raw barcode string
+          title: Raw Barcode
+        description: Optional raw barcode string
+      - name: udi_di
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional Device Identifier
+          title: Udi Di
+        description: Optional Device Identifier
+      - name: lot_number
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional Lot/Batch number
+          title: Lot Number
+        description: Optional Lot/Batch number
+      - name: serial_number
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional Serial number
+          title: Serial Number
+        description: Optional Serial number
+      - name: expiration_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional Expiration Date
+          title: Expiration Date
+        description: Optional Expiration Date
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GUDIDVerificationResult'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/devices/ivd/specimens:
+    post:
+      tags:
+      - Medical Device & IVD Suite
+      summary: Register Specimen Endpoint
+      description: 'Registers an IVD clinical biospecimen collection in the specimen ledger.
+
+
+        @req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209'
+      operationId: register_specimen_endpoint_api_v1_execution_devices_ivd_specimens_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IVDSpecimenCreateRequest'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IVDSpecimenResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - Medical Device & IVD Suite
+      summary: List Specimens Endpoint
+      description: 'Lists IVD biospecimens matching query filters.
+
+
+        @req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209'
+      operationId: list_specimens_endpoint_api_v1_execution_devices_ivd_specimens_get
+      parameters:
+      - name: study_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional Study Identifier
+          title: Study Id
+        description: Optional Study Identifier
+      - name: site_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional Site Identifier
+          title: Site Id
+        description: Optional Site Identifier
+      - name: subject_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional Subject Identifier
+          title: Subject Id
+        description: Optional Subject Identifier
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional Status filter
+          title: Status
+        description: Optional Status filter
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IVDSpecimenResponse'
+                title: Response List Specimens Endpoint Api V1 Execution Devices Ivd Specimens Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/devices/ivd/specimens/{specimen_id}:
+    get:
+      tags:
+      - Medical Device & IVD Suite
+      summary: Get Specimen Endpoint
+      description: 'Retrieves a single IVD biospecimen record with complete audit logs and history.
+
+
+        @req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209'
+      operationId: get_specimen_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__get
+      parameters:
+      - name: specimen_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Specimen Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IVDSpecimenResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/devices/ivd/specimens/{specimen_id}/chain-of-custody:
+    post:
+      tags:
+      - Medical Device & IVD Suite
+      summary: Log Custody Endpoint
+      description: 'Logs an auditable chain-of-custody transfer event for an IVD specimen.
+
+
+        @req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209'
+      operationId: log_custody_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__chain_of_custody_post
+      parameters:
+      - name: specimen_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Specimen Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IVDSpecimenCustodyEventRequest'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IVDSpecimenCustodyEventResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/devices/ivd/specimens/{specimen_id}/freeze-thaw:
+    post:
+      tags:
+      - Medical Device & IVD Suite
+      summary: Log Freeze Thaw Endpoint
+      description: 'Logs a freeze-thaw thermal cycle with automated quarantine enforcement upon threshold breach.
+
+
+        @req:PRD-SYS-188, @req:PRD-DEV-003, @req:ADR-2209'
+      operationId: log_freeze_thaw_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__freeze_thaw_post
+      parameters:
+      - name: specimen_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Specimen Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IVDSpecimenFreezeThawEventRequest'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IVDSpecimenFreezeThawEventResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/devices/ivd/specimens/{specimen_id}/integrity-check:
+    post:
+      tags:
+      - Medical Device & IVD Suite
+      summary: Sample Integrity Check Endpoint
+      description: 'Assesses specimen integrity using Hemolysis, Lipemia, and Icterus (HIL) index validation.
+
+
+        @req:PRD-SYS-188, @req:PRD-DEV-002, @req:ADR-2209'
+      operationId: sample_integrity_check_endpoint_api_v1_execution_devices_ivd_specimens__specimen_id__integrity_check_post
+      parameters:
+      - name: specimen_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Specimen Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IVDSampleIntegrityCheckRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IVDSampleIntegrityCheckResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/execution/devices/ivd/assays/performance:
+    post:
+      tags:
+      - Medical Device & IVD Suite
+      summary: Compute Assay Performance Endpoint
+      description: 'Computes and seals diagnostic assay performance statistics (Sensitivity, Specificity, PPV, NPV, CV%, LOD/LOQ).
+
+
+        @req:PRD-SYS-188, @req:PRD-DEV-004, @req:ADR-2209'
+      operationId: compute_assay_performance_endpoint_api_v1_execution_devices_ivd_assays_performance_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IVDAssayPerformanceRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IVDAssayPerformanceResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /events/study-published:
     post:
       summary: Study Published
@@ -23885,6 +24250,152 @@ components:
       - COMPLETED
       - APPROVED
       title: FormSubmissionStatusEnum
+    GUDIDDeviceRecord:
+      properties:
+        primary_di:
+          type: string
+          title: Primary Di
+        brand_name:
+          type: string
+          title: Brand Name
+        version_model_number:
+          type: string
+          title: Version Model Number
+        device_description:
+          type: string
+          title: Device Description
+        commercial_distribution_status:
+          type: string
+          title: Commercial Distribution Status
+          default: In Commercial Distribution
+        device_count:
+          type: integer
+          title: Device Count
+          default: 1
+        fda_listing_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fda Listing Number
+        premarket_submission_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Premarket Submission Number
+        gmdn_code:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Gmdn Code
+        gmdn_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Gmdn Name
+        device_class:
+          type: string
+          title: Device Class
+          default: Class II
+        is_single_use:
+          type: boolean
+          title: Is Single Use
+          default: true
+        is_prescription_only:
+          type: boolean
+          title: Is Prescription Only
+          default: true
+        is_otc:
+          type: boolean
+          title: Is Otc
+          default: false
+        is_sterile:
+          type: boolean
+          title: Is Sterile
+          default: true
+        sterilization_methods:
+          items:
+            type: string
+          type: array
+          title: Sterilization Methods
+        mri_safety_status:
+          type: string
+          title: Mri Safety Status
+          default: MR Conditional
+        has_lot_number:
+          type: boolean
+          title: Has Lot Number
+          default: true
+        has_serial_number:
+          type: boolean
+          title: Has Serial Number
+          default: true
+        has_expiration_date:
+          type: boolean
+          title: Has Expiration Date
+          default: true
+        has_donation_id:
+          type: boolean
+          title: Has Donation Id
+          default: false
+      type: object
+      required:
+      - primary_di
+      - brand_name
+      - version_model_number
+      - device_description
+      title: GUDIDDeviceRecord
+      description: FDA AccessGUDID reference record attributes.
+    GUDIDLookupRequest:
+      properties:
+        udi_di:
+          type: string
+          minLength: 3
+          title: Udi Di
+          description: Device Identifier (GTIN / HIBCC DI)
+      type: object
+      required:
+      - udi_di
+      title: GUDIDLookupRequest
+      description: Request payload for looking up a device in the GUDID database.
+    GUDIDVerificationResult:
+      properties:
+        udi_di:
+          type: string
+          title: Udi Di
+        is_in_gudid:
+          type: boolean
+          title: Is In Gudid
+        is_checksum_valid:
+          type: boolean
+          title: Is Checksum Valid
+        is_verified:
+          type: boolean
+          title: Is Verified
+        gudid_record:
+          anyOf:
+          - $ref: '#/components/schemas/GUDIDDeviceRecord'
+          - type: 'null'
+        pi_validation:
+          additionalProperties:
+            type: boolean
+          type: object
+          title: Pi Validation
+        discrepancies:
+          items:
+            type: string
+          type: array
+          title: Discrepancies
+        verification_timestamp:
+          type: string
+          title: Verification Timestamp
+      type: object
+      required:
+      - udi_di
+      - is_in_gudid
+      - is_checksum_valid
+      - is_verified
+      title: GUDIDVerificationResult
+      description: Result of validating physical/scanned UDI data against the GUDID database.
     GenerateAuditorTokenRequest:
       properties:
         auditor_email:
@@ -24035,6 +24546,728 @@ components:
       - status
       title: IPKitResponse
       description: Response schema for an investigational product kit.
+    IVDAssayPerformanceRequest:
+      properties:
+        study_id:
+          type: string
+          minLength: 1
+          title: Study Id
+        assay_name:
+          type: string
+          minLength: 1
+          title: Assay Name
+        assay_lot_number:
+          type: string
+          minLength: 1
+          title: Assay Lot Number
+        device_udi_di:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Device Udi Di
+        true_positives:
+          type: integer
+          minimum: 0.0
+          title: True Positives
+        false_positives:
+          type: integer
+          minimum: 0.0
+          title: False Positives
+        true_negatives:
+          type: integer
+          minimum: 0.0
+          title: True Negatives
+        false_negatives:
+          type: integer
+          minimum: 0.0
+          title: False Negatives
+        replicate_measurements:
+          items:
+            type: number
+          type: array
+          title: Replicate Measurements
+        inter_assay_runs:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+          title: Inter Assay Runs
+        blank_measurements:
+          items:
+            type: number
+          type: array
+          title: Blank Measurements
+        low_standard_measurements:
+          items:
+            type: number
+          type: array
+          title: Low Standard Measurements
+        linearity_concentrations:
+          items:
+            type: number
+          type: array
+          title: Linearity Concentrations
+        linearity_signals:
+          items:
+            type: number
+          type: array
+          title: Linearity Signals
+        reason_for_change:
+          type: string
+          minLength: 5
+          title: Reason For Change
+          default: Compute and validate IVD assay performance metrics
+      type: object
+      required:
+      - study_id
+      - assay_name
+      - assay_lot_number
+      - true_positives
+      - false_positives
+      - true_negatives
+      - false_negatives
+      title: IVDAssayPerformanceRequest
+      description: Request payload for computing and recording IVD assay analytical and clinical performance.
+    IVDAssayPerformanceResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        study_id:
+          type: string
+          title: Study Id
+        assay_name:
+          type: string
+          title: Assay Name
+        assay_lot_number:
+          type: string
+          title: Assay Lot Number
+        device_udi_di:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Device Udi Di
+        true_positives:
+          type: integer
+          title: True Positives
+        false_positives:
+          type: integer
+          title: False Positives
+        true_negatives:
+          type: integer
+          title: True Negatives
+        false_negatives:
+          type: integer
+          title: False Negatives
+        sensitivity_percent:
+          type: number
+          title: Sensitivity Percent
+        specificity_percent:
+          type: number
+          title: Specificity Percent
+        ppv_percent:
+          type: number
+          title: Ppv Percent
+        npv_percent:
+          type: number
+          title: Npv Percent
+        accuracy_percent:
+          type: number
+          title: Accuracy Percent
+        cohens_kappa:
+          type: number
+          title: Cohens Kappa
+        intra_assay_cv_percent:
+          type: number
+          title: Intra Assay Cv Percent
+        inter_assay_cv_percent:
+          type: number
+          title: Inter Assay Cv Percent
+        limit_of_detection:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Limit Of Detection
+        limit_of_quantitation:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Limit Of Quantitation
+        linearity_r_squared:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Linearity R Squared
+        status:
+          type: string
+          title: Status
+        passes_acceptance_criteria:
+          type: boolean
+          title: Passes Acceptance Criteria
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        created_by:
+          type: string
+          title: Created By
+      type: object
+      required:
+      - id
+      - study_id
+      - assay_name
+      - assay_lot_number
+      - device_udi_di
+      - true_positives
+      - false_positives
+      - true_negatives
+      - false_negatives
+      - sensitivity_percent
+      - specificity_percent
+      - ppv_percent
+      - npv_percent
+      - accuracy_percent
+      - cohens_kappa
+      - intra_assay_cv_percent
+      - inter_assay_cv_percent
+      - limit_of_detection
+      - limit_of_quantitation
+      - linearity_r_squared
+      - status
+      - passes_acceptance_criteria
+      - created_at
+      - created_by
+      title: IVDAssayPerformanceResponse
+      description: Response model with computed IVD assay performance metrics.
+    IVDContainerType:
+      type: string
+      enum:
+      - EDTA_TUBE
+      - SST_TUBE
+      - CRYOBIO_VIAL
+      - HEPARIN_TUBE
+      - STERILE_CUP
+      - SWAB_TRANSPORT_MEDIA
+      title: IVDContainerType
+      description: Specimen collection and transport container formats.
+    IVDSampleIntegrityCheckRequest:
+      properties:
+        hemolysis_index_mg_dl:
+          type: number
+          minimum: 0.0
+          title: Hemolysis Index Mg Dl
+          default: 0.0
+        lipemia_index_mg_dl:
+          type: number
+          minimum: 0.0
+          title: Lipemia Index Mg Dl
+          default: 0.0
+        icterus_index_mg_dl:
+          type: number
+          minimum: 0.0
+          title: Icterus Index Mg Dl
+          default: 0.0
+        clot_detected:
+          type: boolean
+          title: Clot Detected
+          default: false
+        temperature_excursion:
+          type: boolean
+          title: Temperature Excursion
+          default: false
+        volume_adequate:
+          type: boolean
+          title: Volume Adequate
+          default: true
+        integrity_notes:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Integrity Notes
+        reason_for_change:
+          type: string
+          minLength: 5
+          title: Reason For Change
+          default: Assess IVD specimen sample integrity
+      type: object
+      title: IVDSampleIntegrityCheckRequest
+      description: Request payload for validating IVD sample integrity (HIL indices & volume).
+    IVDSampleIntegrityCheckResponse:
+      properties:
+        specimen_identifier:
+          type: string
+          title: Specimen Identifier
+        integrity_status:
+          type: string
+          title: Integrity Status
+        hemolysis_index_mg_dl:
+          type: number
+          title: Hemolysis Index Mg Dl
+        lipemia_index_mg_dl:
+          type: number
+          title: Lipemia Index Mg Dl
+        icterus_index_mg_dl:
+          type: number
+          title: Icterus Index Mg Dl
+        clot_detected:
+          type: boolean
+          title: Clot Detected
+        temperature_excursion:
+          type: boolean
+          title: Temperature Excursion
+        is_quarantined:
+          type: boolean
+          title: Is Quarantined
+        quarantine_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Quarantine Reason
+        validated_at:
+          type: string
+          format: date-time
+          title: Validated At
+        validated_by:
+          type: string
+          title: Validated By
+      type: object
+      required:
+      - specimen_identifier
+      - integrity_status
+      - hemolysis_index_mg_dl
+      - lipemia_index_mg_dl
+      - icterus_index_mg_dl
+      - clot_detected
+      - temperature_excursion
+      - is_quarantined
+      - quarantine_reason
+      - validated_at
+      - validated_by
+      title: IVDSampleIntegrityCheckResponse
+      description: Response model for sample integrity assessment.
+    IVDSpecimenCreateRequest:
+      properties:
+        study_id:
+          type: string
+          minLength: 1
+          title: Study Id
+        site_id:
+          type: string
+          minLength: 1
+          title: Site Id
+        subject_id:
+          type: string
+          minLength: 1
+          title: Subject Id
+        specimen_identifier:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Specimen Identifier
+        specimen_type:
+          $ref: '#/components/schemas/IVDSpecimenType'
+          default: SERUM
+        collection_date:
+          type: string
+          format: date-time
+          title: Collection Date
+        collector_user_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Collector User Id
+        container_type:
+          $ref: '#/components/schemas/IVDContainerType'
+          default: SST_TUBE
+        initial_volume_ul:
+          type: number
+          exclusiveMinimum: 0.0
+          title: Initial Volume Ul
+          default: 1000.0
+        storage_temperature_celsius:
+          type: number
+          title: Storage Temperature Celsius
+          default: -80.0
+        storage_location:
+          type: string
+          title: Storage Location
+          default: FREEZER_ULT_01_RACK_A
+        max_allowed_freeze_thaw:
+          type: integer
+          maximum: 10.0
+          minimum: 0.0
+          title: Max Allowed Freeze Thaw
+          default: 3
+        reason_for_change:
+          type: string
+          minLength: 5
+          title: Reason For Change
+          default: Log IVD biospecimen collection
+      type: object
+      required:
+      - study_id
+      - site_id
+      - subject_id
+      title: IVDSpecimenCreateRequest
+      description: Request payload for logging an IVD specimen collection.
+    IVDSpecimenCustodyEventRequest:
+      properties:
+        from_user_id:
+          type: string
+          minLength: 1
+          title: From User Id
+        to_user_id:
+          type: string
+          minLength: 1
+          title: To User Id
+        from_location:
+          type: string
+          minLength: 1
+          title: From Location
+        to_location:
+          type: string
+          minLength: 1
+          title: To Location
+        transport_condition:
+          type: string
+          title: Transport Condition
+          default: DRY_ICE_-80C
+        temperature_at_transfer_celsius:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Temperature At Transfer Celsius
+        seal_intact:
+          type: boolean
+          title: Seal Intact
+          default: true
+        signature_token:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Signature Token
+        reason_for_change:
+          type: string
+          minLength: 5
+          title: Reason For Change
+          default: IVD Specimen custody transfer
+      type: object
+      required:
+      - from_user_id
+      - to_user_id
+      - from_location
+      - to_location
+      title: IVDSpecimenCustodyEventRequest
+      description: Request payload for logging a chain-of-custody transfer event.
+    IVDSpecimenCustodyEventResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        specimen_identifier:
+          type: string
+          title: Specimen Identifier
+        transfer_timestamp:
+          type: string
+          format: date-time
+          title: Transfer Timestamp
+        from_user_id:
+          type: string
+          title: From User Id
+        to_user_id:
+          type: string
+          title: To User Id
+        from_location:
+          type: string
+          title: From Location
+        to_location:
+          type: string
+          title: To Location
+        transport_condition:
+          type: string
+          title: Transport Condition
+        temperature_at_transfer_celsius:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Temperature At Transfer Celsius
+        seal_intact:
+          type: boolean
+          title: Seal Intact
+        signature_token:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Signature Token
+      type: object
+      required:
+      - id
+      - specimen_identifier
+      - transfer_timestamp
+      - from_user_id
+      - to_user_id
+      - from_location
+      - to_location
+      - transport_condition
+      - temperature_at_transfer_celsius
+      - seal_intact
+      - signature_token
+      title: IVDSpecimenCustodyEventResponse
+      description: Response model for a chain-of-custody transfer event.
+    IVDSpecimenFreezeThawEventRequest:
+      properties:
+        thaw_start_timestamp:
+          type: string
+          format: date-time
+          title: Thaw Start Timestamp
+        thaw_end_timestamp:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Thaw End Timestamp
+        thaw_duration_minutes:
+          type: number
+          minimum: 0.0
+          title: Thaw Duration Minutes
+          default: 15.0
+        thaw_temperature_celsius:
+          type: number
+          title: Thaw Temperature Celsius
+          default: 22.0
+        operator_user_id:
+          type: string
+          minLength: 1
+          title: Operator User Id
+        purpose:
+          type: string
+          minLength: 3
+          title: Purpose
+        is_excursion:
+          type: boolean
+          title: Is Excursion
+          default: false
+        reason_for_change:
+          type: string
+          minLength: 5
+          title: Reason For Change
+          default: Record IVD specimen freeze-thaw cycle
+      type: object
+      required:
+      - operator_user_id
+      - purpose
+      title: IVDSpecimenFreezeThawEventRequest
+      description: Request payload for logging a freeze-thaw thermal cycle.
+    IVDSpecimenFreezeThawEventResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        specimen_identifier:
+          type: string
+          title: Specimen Identifier
+        cycle_number:
+          type: integer
+          title: Cycle Number
+        thaw_start_timestamp:
+          type: string
+          format: date-time
+          title: Thaw Start Timestamp
+        thaw_end_timestamp:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Thaw End Timestamp
+        thaw_duration_minutes:
+          type: number
+          title: Thaw Duration Minutes
+        thaw_temperature_celsius:
+          type: number
+          title: Thaw Temperature Celsius
+        operator_user_id:
+          type: string
+          title: Operator User Id
+        purpose:
+          type: string
+          title: Purpose
+        is_excursion:
+          type: boolean
+          title: Is Excursion
+      type: object
+      required:
+      - id
+      - specimen_identifier
+      - cycle_number
+      - thaw_start_timestamp
+      - thaw_end_timestamp
+      - thaw_duration_minutes
+      - thaw_temperature_celsius
+      - operator_user_id
+      - purpose
+      - is_excursion
+      title: IVDSpecimenFreezeThawEventResponse
+      description: Response model for a freeze-thaw event.
+    IVDSpecimenResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        study_id:
+          type: string
+          title: Study Id
+        site_id:
+          type: string
+          title: Site Id
+        subject_id:
+          type: string
+          title: Subject Id
+        specimen_identifier:
+          type: string
+          title: Specimen Identifier
+        specimen_type:
+          type: string
+          title: Specimen Type
+        collection_date:
+          type: string
+          format: date-time
+          title: Collection Date
+        collector_user_id:
+          type: string
+          title: Collector User Id
+        container_type:
+          type: string
+          title: Container Type
+        initial_volume_ul:
+          type: number
+          title: Initial Volume Ul
+        current_volume_ul:
+          type: number
+          title: Current Volume Ul
+        storage_temperature_celsius:
+          type: number
+          title: Storage Temperature Celsius
+        storage_location:
+          type: string
+          title: Storage Location
+        status:
+          type: string
+          title: Status
+        is_quarantined:
+          type: boolean
+          title: Is Quarantined
+        quarantine_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Quarantine Reason
+        freeze_thaw_count:
+          type: integer
+          title: Freeze Thaw Count
+        max_allowed_freeze_thaw:
+          type: integer
+          title: Max Allowed Freeze Thaw
+        hemolysis_index_mg_dl:
+          type: number
+          title: Hemolysis Index Mg Dl
+        lipemia_index_mg_dl:
+          type: number
+          title: Lipemia Index Mg Dl
+        icterus_index_mg_dl:
+          type: number
+          title: Icterus Index Mg Dl
+        clot_detected:
+          type: boolean
+          title: Clot Detected
+        temperature_excursion:
+          type: boolean
+          title: Temperature Excursion
+        integrity_status:
+          type: string
+          title: Integrity Status
+        integrity_validated_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Integrity Validated At
+        integrity_validated_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Integrity Validated By
+        custody_events:
+          items:
+            $ref: '#/components/schemas/IVDSpecimenCustodyEventResponse'
+          type: array
+          title: Custody Events
+        freeze_thaw_events:
+          items:
+            $ref: '#/components/schemas/IVDSpecimenFreezeThawEventResponse'
+          type: array
+          title: Freeze Thaw Events
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        created_by:
+          type: string
+          title: Created By
+        reason_for_change:
+          type: string
+          title: Reason For Change
+        version_index:
+          type: integer
+          title: Version Index
+      type: object
+      required:
+      - id
+      - study_id
+      - site_id
+      - subject_id
+      - specimen_identifier
+      - specimen_type
+      - collection_date
+      - collector_user_id
+      - container_type
+      - initial_volume_ul
+      - current_volume_ul
+      - storage_temperature_celsius
+      - storage_location
+      - status
+      - is_quarantined
+      - quarantine_reason
+      - freeze_thaw_count
+      - max_allowed_freeze_thaw
+      - hemolysis_index_mg_dl
+      - lipemia_index_mg_dl
+      - icterus_index_mg_dl
+      - clot_detected
+      - temperature_excursion
+      - integrity_status
+      - integrity_validated_at
+      - integrity_validated_by
+      - created_at
+      - created_by
+      - reason_for_change
+      - version_index
+      title: IVDSpecimenResponse
+      description: Detailed response model for an IVD biospecimen record.
+    IVDSpecimenType:
+      type: string
+      enum:
+      - WHOLE_BLOOD
+      - SERUM
+      - PLASMA
+      - URINE
+      - SALIVA
+      - CSF
+      - TISSUE_BIOPSY
+      - NASOPHARYNGEAL_SWAB
+      - CELL_CULTURE
+      title: IVDSpecimenType
+      description: Specimen biological matrix types for IVD investigations.
     ImpactAnalysisRequest:
       properties:
         dictionary_type:

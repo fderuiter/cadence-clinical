@@ -46,7 +46,10 @@ async def setup_db():
 
 
 def test_pure_python_transition_guard():
-    """Verify that only documented transitions are allowed by the pure-Python guard."""
+    """Verify that only documented transitions are allowed by the pure-Python guard.
+
+    @req:PRD-SYS-184
+    """
     # Screen fails and screen passes
     guard_subject_transition("SCREENING", "SCREEN_FAILED")
     guard_subject_transition("SCREENING", "ENROLLED")
@@ -91,7 +94,10 @@ def test_pure_python_transition_guard():
 
 @pytest.mark.asyncio
 async def test_subject_initial_state_and_persistence():
-    """Verify that a subject begins in pre-randomization state SCREENING and conforms to GxP persistence."""
+    """Verify that a subject begins in pre-randomization state SCREENING and conforms to GxP persistence.
+
+    @req:PRD-SYS-184
+    """
     current_user_id.set("investigator_1")
     current_change_reason.set("Enrolling new subject SUBJ-001")
 
@@ -124,7 +130,10 @@ async def test_subject_initial_state_and_persistence():
 
 @pytest.mark.asyncio
 async def test_subject_state_transitions():
-    """Verify allowed and forbidden state transitions persist to database, raising InvalidStateTransitionError when violating."""
+    """Verify allowed and forbidden state transitions persist to database, raising InvalidStateTransitionError when violating.
+
+    @req:PRD-SYS-184
+    """
     current_user_id.set("investigator_1")
     current_change_reason.set("Test subject transition paths")
 
@@ -175,7 +184,10 @@ async def test_subject_state_transitions():
 
 @pytest.mark.asyncio
 async def test_stratification_factors_locking():
-    """Verify that stratification factors are mutable in pre-randomization state but immutable post-randomization."""
+    """Verify that stratification factors are mutable in pre-randomization state but immutable post-randomization.
+
+    @req:PRD-SYS-184
+    """
     current_user_id.set("investigator_1")
     current_change_reason.set("Stratification factors test")
 
@@ -264,7 +276,10 @@ async def test_stratification_factors_locking():
 
 @pytest.mark.asyncio
 async def test_unblinding_and_withdrawal_behavior():
-    """Verify emergency unblinding and withdrawal transitions capture details and execute behavior correctly."""
+    """Verify emergency unblinding and withdrawal transitions capture details and execute behavior correctly.
+
+    @req:PRD-SYS-184
+    """
     current_user_id.set("investigator_1")
     current_change_reason.set("Test unblind and withdrawal workflow")
 

@@ -47,7 +47,10 @@ async def setup_db():
 
 @pytest.mark.asyncio
 async def test_randomization_entities_audit_trail_and_soft_delete():
-    """Verify that RandomizationConfig, StratumState, and SubjectRandomization participate in the GxP audit trail, version index, and soft deletion."""
+    """Verify that RandomizationConfig, StratumState, and SubjectRandomization participate in the GxP audit trail, version index, and soft deletion.
+
+    @req:PRD-SYS-184
+    """
     current_user_id.set("user_rtsm_mgr")
     current_change_reason.set("Configure RTSM for Study A")
 
@@ -206,7 +209,10 @@ async def test_randomization_entities_audit_trail_and_soft_delete():
 
 @pytest.mark.asyncio
 async def test_randomization_entities_hard_delete_prevented():
-    """Verify that hard deletes are strictly prevented for RandomizationConfig, StratumState, and SubjectRandomization."""
+    """Verify that hard deletes are strictly prevented for RandomizationConfig, StratumState, and SubjectRandomization.
+
+    @req:PRD-SYS-184
+    """
     # Configure first
     key_mgr = AllocationKeyManager()
     encrypted_alloc = key_mgr.encrypt({"allocation": "Arm A"})
@@ -241,7 +247,10 @@ async def test_randomization_entities_hard_delete_prevented():
 
 @pytest.mark.asyncio
 async def test_randomization_entities_trial_lock_conformity():
-    """Verify that RTSM models respect trial-level locks and block write mutations when locked."""
+    """Verify that RTSM models respect trial-level locks and block write mutations when locked.
+
+    @req:PRD-SYS-184
+    """
     key_mgr = AllocationKeyManager()
     encrypted_alloc = key_mgr.encrypt({"allocation": "Arm A"})
 

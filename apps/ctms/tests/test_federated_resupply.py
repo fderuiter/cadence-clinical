@@ -92,7 +92,10 @@ def get_auth_headers_v2(
 
 @pytest.mark.asyncio
 async def test_execution_list_resupply_events():
-    """Verify that execution listing returns events filtered by site access."""
+    """Verify that execution listing returns events filtered by site access.
+
+    @req:PRD-SYS-184
+    """
     # Seed execution database with some resupply events
     async with exec_db_manager.get_session_maker()() as session:
         event1 = ResupplyEvent(
@@ -144,7 +147,10 @@ async def test_execution_list_resupply_events():
 
 @pytest.mark.asyncio
 async def test_execution_approve_reject_resupply_events():
-    """Verify that execution approve and reject works correctly with permissions."""
+    """Verify that execution approve and reject works correctly with permissions.
+
+    @req:PRD-SYS-184
+    """
     async with exec_db_manager.get_session_maker()() as session:
         event = ResupplyEvent(
             study_id="STUDY_1",
@@ -215,7 +221,10 @@ async def test_execution_approve_reject_resupply_events():
 
 @pytest.mark.asyncio
 async def test_ctms_list_resupply_events_success():
-    """Verify that CTMS queries execution list and returns correctly."""
+    """Verify that CTMS queries execution list and returns correctly.
+
+    @req:PRD-SYS-184
+    """
     mock_events = [
         {
             "id": "event_1",
@@ -254,7 +263,10 @@ async def test_ctms_list_resupply_events_success():
 
 @pytest.mark.asyncio
 async def test_ctms_list_resupply_events_blocked_read_only():
-    """Verify that CTMS blocks unauthorized or read-only users."""
+    """Verify that CTMS blocks unauthorized or read-only users.
+
+    @req:PRD-SYS-184
+    """
     client = TestClient(ctms_app)
     headers = get_auth_headers_v2(roles="Auditor")  # Read-only role
     response = client.get(
@@ -266,7 +278,10 @@ async def test_ctms_list_resupply_events_blocked_read_only():
 
 @pytest.mark.asyncio
 async def test_ctms_approve_unreachable_downstream():
-    """Verify that CTMS returns clear error 502 if downstream execution is unreachable."""
+    """Verify that CTMS returns clear error 502 if downstream execution is unreachable.
+
+    @req:PRD-SYS-184
+    """
     # Mock the GatewayBaseClient.request to raise ConnectionError
     with patch(
         "packages.security.gateway_client.GatewayBaseClient.request",
@@ -288,7 +303,10 @@ async def test_ctms_approve_unreachable_downstream():
 
 @pytest.mark.asyncio
 async def test_ctms_approve_unassigned_site():
-    """Verify that CTMS blocks approval if user does not have access to the event's site."""
+    """Verify that CTMS blocks approval if user does not have access to the event's site.
+
+    @req:PRD-SYS-184
+    """
     mock_events = [
         {
             "id": "event_1",

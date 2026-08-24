@@ -75,7 +75,7 @@ class SmartClientAssertionPayload(BaseModel):
 
 
 class SmartTokenResponse(BaseModel):
-    """OAuth2 Access Token response returned by hospital SMART Backend Services endpoint."""
+    """OAuth2 Access Token response returned by hospital SMART authorization server or Backend Services endpoint."""
 
     access_token: str = Field(
         ..., description="Bearer access token for FHIR API requests"
@@ -83,6 +83,24 @@ class SmartTokenResponse(BaseModel):
     token_type: str = Field(default="Bearer", description="OAuth2 token type (Bearer)")
     expires_in: int = Field(..., description="Token validity lifetime in seconds")
     scope: str = Field(..., description="Authorized FHIR resource scopes granted")
+    patient: str | None = Field(
+        default=None, description="Patient context ID returned in SMART launch flow"
+    )
+    encounter: str | None = Field(
+        default=None, description="Encounter context ID returned in SMART launch flow"
+    )
+    tenant_id: str | None = Field(
+        default=None, description="EHR tenant identifier for multi-tenant scoping"
+    )
+    need_patient_banner: bool | None = Field(
+        default=None, description="Whether EHR launch requires patient banner UI"
+    )
+    smart_style_url: str | None = Field(
+        default=None, description="EHR branded CSS styling URL"
+    )
+    id_token: str | None = Field(
+        default=None, description="OpenID Connect identity token"
+    )
 
     model_config = ConfigDict(extra="ignore")
 

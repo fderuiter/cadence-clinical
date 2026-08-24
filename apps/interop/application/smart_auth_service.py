@@ -1,15 +1,20 @@
-"""SMART on FHIR Backend Services Authentication Service.
+"""SMART on FHIR Backend Services & App Launch Authentication Service.
 
-Implements asymmetric private key JWT OAuth2 client credentials authentication
-per HL7 SMART on FHIR Backend Services Authorization specification and RFC 7523.
+Implements asymmetric private key JWT OAuth2 client credentials authentication,
+SMART on FHIR App Launch flows (EHR & Standalone Launch), OAuth2 PKCE (RFC 7636),
+and multi-tenant EHR scoping per HL7 SMART specifications.
 
-Requirements: PRD-ESR-001, PRD-SYS-122, ADR-2199, FDA Electronic Source Data Guidance
+Requirements: PRD-ESR-001, PRD-SYS-122, PRD-SYS-185, PRD-SYS-186, ADR-2199, FDA Electronic Source Data Guidance
 """
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import secrets
 import threading
 import time
+import urllib.parse
 import uuid
 from typing import Any
 
@@ -355,6 +360,193 @@ class SmartAuthService:
             )
 
         return token_resp.access_token
+
+    @staticmethod
+    def generate_pkce_pair(length: int = 64) -> tuple[str, str]:
+        """Generate cryptographically secure PKCE code_verifier and S256 code_challenge per RFC 7636.
+
+        Args:
+            length: Length of verifier string (between 43 and 128 characters).
+
+        Returns:
+            Tuple of (code_verifier, code_challenge).
+        """
+        clamped_length = max(43, min(length, 128))
+        verifier = secrets.token_urlsafe(clamped_length)[:clamped_length]
+        digest = hashlib.sha256(verifier.encode("ascii")).digest()
+        challenge = base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
+        return verifier, challenge
+
+    def build_smart_launch_authorize_url(
+        self,
+        authorize_endpoint: str,
+        client_id: str,
+        redirect_uri: str,
+        scope: str,
+        state: str,
+        code_challenge: str,
+        launch_context: str | None = None,
+        aud: str | None = None,
+        code_challenge_method: str = "S256",
+    ) -> str:
+        """Construct SMART on FHIR authorization URL supporting EHR Launch & Standalone Launch flows.
+
+        Args:
+            authorize_endpoint: EHR OAuth2 authorization endpoint URL.
+            client_id: Registered client identifier.
+            redirect_uri: Callback redirect URI.
+            scope: Requested FHIR / SMART scopes (e.g. 'launch launch/patient openid fhirUser patient/*.read').
+            state: Cryptographic state nonce for CSRF defense.
+            code_challenge: Base64url-encoded SHA-256 PKCE code challenge.
+            launch_context: Optional launch token provided by EHR in EHR Launch flow.
+            aud: FHIR server base URL (required for Standalone Launch flow).
+            code_challenge_method: PKCE method ('S256').
+
+        Returns:
+            Fully constructed authorization redirect URL string.
+        """
+        params: dict[str, str] = {
+            "response_type": "code",
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+            "scope": scope,
+            "state": state,
+            "code_challenge": code_challenge,
+            "code_challenge_method": code_challenge_method,
+        }
+        if launch_context:
+            params["launch"] = launch_context
+        if aud:
+            params["aud"] = aud
+
+        query_str = urllib.parse.urlencode(params)
+        delimiter = "&" if "?" in authorize_endpoint else "?"
+        return f"{authorize_endpoint}{delimiter}{query_str}"
+
+    async def exchange_pkce_token(
+        self,
+        token_endpoint: str,
+        client_id: str,
+        code: str,
+        code_verifier: str,
+        redirect_uri: str,
+        client_assertion: str | None = None,
+        client: httpx.AsyncClient | None = None,
+    ) -> SmartTokenResponse:
+        """Exchange OAuth2 authorization code with PKCE verifier for SMART access token and launch context.
+
+        Args:
+            token_endpoint: EHR OAuth2 token endpoint URL.
+            client_id: Registered OAuth2 client identifier.
+            code: Authorization code received from authorization callback.
+            code_verifier: PKCE code verifier matching the initial code_challenge.
+            redirect_uri: Exact redirect URI used in the authorization request.
+            client_assertion: Optional asymmetric client assertion JWT (if confidential client).
+            client: Optional httpx async client.
+
+        Returns:
+            SmartTokenResponse with access token, scopes, and SMART launch context (patient, encounter, tenant_id).
+        """
+        form_data: dict[str, str] = {
+            "grant_type": "authorization_code",
+            "code": code,
+            "code_verifier": code_verifier,
+            "redirect_uri": redirect_uri,
+            "client_id": client_id,
+        }
+        if client_assertion:
+            form_data["client_assertion_type"] = (
+                "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+            )
+            form_data["client_assertion"] = client_assertion
+
+        async def _do_post(http_client: httpx.AsyncClient) -> SmartTokenResponse:
+            try:
+                response = await http_client.post(
+                    token_endpoint,
+                    data=form_data,
+                    headers={"Accept": "application/json"},
+                    timeout=15.0,
+                )
+            except httpx.RequestError as exc:
+                raise SmartAuthError(
+                    f"Network error contacting SMART token endpoint '{token_endpoint}': {exc}"
+                ) from exc
+
+            if response.status_code != 200:
+                error_detail = response.text
+                try:
+                    error_json = response.json()
+                    error_detail = (
+                        error_json.get("error_description")
+                        or error_json.get("error")
+                        or response.text
+                    )
+                except Exception:
+                    pass
+                raise SmartAuthError(
+                    f"SMART token endpoint returned HTTP {response.status_code}: {error_detail}",
+                    status_code=response.status_code,
+                )
+
+            data = response.json()
+            return SmartTokenResponse(
+                access_token=data["access_token"],
+                token_type=data.get("token_type", "Bearer"),
+                expires_in=data.get("expires_in", 3600),
+                scope=data.get("scope", "patient/*.read"),
+                patient=data.get("patient"),
+                encounter=data.get("encounter"),
+                tenant_id=data.get("tenant_id") or data.get("tenant"),
+                need_patient_banner=data.get("need_patient_banner"),
+                smart_style_url=data.get("smart_style_url"),
+                id_token=data.get("id_token"),
+            )
+
+        if client is not None:
+            return await _do_post(client)
+
+        async with httpx.AsyncClient() as default_client:
+            return await _do_post(default_client)
+
+    @staticmethod
+    def validate_ehr_tenant_scoping(
+        issuer_url: str,
+        allowed_tenants: list[str] | None = None,
+        required_tenant_id: str | None = None,
+    ) -> bool:
+        """Verify EHR tenant identifier or issuer URL against allowed tenant scopes.
+
+        Args:
+            issuer_url: Target EHR FHIR server URL or OAuth issuer.
+            allowed_tenants: Whitelist of allowed EHR tenant URLs or IDs.
+            required_tenant_id: Specific expected tenant ID for strict pinning.
+
+        Returns:
+            True if tenant validation passes, raises SmartAuthError otherwise.
+        """
+        if not issuer_url:
+            raise SmartAuthError(
+                "EHR issuer URL is missing for tenant scoping validation",
+                status_code=400,
+            )
+
+        norm_iss = issuer_url.strip().rstrip("/")
+        if allowed_tenants:
+            norm_allowed = [t.strip().rstrip("/") for t in allowed_tenants]
+            if norm_iss not in norm_allowed:
+                raise SmartAuthError(
+                    f"EHR issuer '{issuer_url}' not authorized in tenant whitelist: {allowed_tenants}",
+                    status_code=403,
+                )
+
+        if required_tenant_id and required_tenant_id not in norm_iss:
+            raise SmartAuthError(
+                f"EHR issuer '{issuer_url}' does not match required tenant ID '{required_tenant_id}'",
+                status_code=403,
+            )
+
+        return True
 
     def clear_cache(self) -> None:
         """Clear all cached access tokens and consumed JTIs."""

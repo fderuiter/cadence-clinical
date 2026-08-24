@@ -558,13 +558,18 @@ class RegulatoryAuditLedger:
         cls,
         classification: str,
         is_public_health_threat: bool = False,
+        is_remedial_action: bool = False,
+        is_5_day_expedited: bool = False,
+        regulatory_framework: str = "AUTO",
         now_ts: datetime | None = None,
     ) -> tuple[int, datetime]:
-        """Calculates statutory vigilance reporting deadlines per ISO 14155, EU MDR & EU IVDR.
+        """Calculates statutory vigilance reporting deadlines per FDA 21 CFR Part 803, ISO 14155, and EU MDR/IVDR.
 
-        - 2 calendar days: Public health threat
-        - 10 calendar days: SADE / USADE / Death / Serious deterioration
-        - 15 calendar days: ADE / General reportable incidents
+        - 2 calendar days: EU MDR / ISO 14155 serious public health threat
+        - 5 calendar days: FDA 21 CFR 803.53 expedited report (remedial action to prevent unreasonable risk of substantial harm)
+        - 10 calendar days: EU MDR / ISO 14155 SADE / USADE / Death / Serious deterioration
+        - 15 calendar days: EU MDR / ISO 14155 ADE / General reportable incidents
+        - 30 calendar days: FDA 21 CFR 803.50 / 803.52 baseline report for device malfunctions and serious injuries
 
         Returns:
             Tuple of (deadline_days: int, due_date: datetime).
@@ -574,8 +579,36 @@ class RegulatoryAuditLedger:
 
         if is_public_health_threat:
             days = 2
-        elif cls_upper in ("SADE", "USADE"):
+        elif (
+            is_5_day_expedited
+            or is_remedial_action
+            or cls_upper
+            in ("REMEDIAL_ACTION", "5_DAY", "EXPEDITED_5_DAY", "UNREASONABLE_RISK")
+            or (
+                regulatory_framework == "FDA_803"
+                and (is_remedial_action or is_5_day_expedited)
+            )
+        ):
+            days = 5
+        elif (
+            cls_upper
+            in ("SADE", "USADE", "DEATH", "SERIOUS_DETERIORATION", "SERIOUS_INJURY")
+            and regulatory_framework != "FDA_803"
+        ):
             days = 10
+        elif (
+            cls_upper
+            in (
+                "MALFUNCTION",
+                "USER_ERROR",
+                "DETERIORATION",
+                "ADVERSE_INCIDENT",
+                "30_DAY",
+            )
+            and (regulatory_framework == "FDA_803" or cls_upper == "30_DAY")
+            or regulatory_framework == "FDA_803"
+        ):
+            days = 30
         else:
             days = 15
 
@@ -748,5 +781,155 @@ class RegulatoryAuditLedger:
             "serial_number": serial_num,
             "udi_di": udi_di,
             "vigilance_deadline_days": vigilance_days,
+            "vigilance_due_date": vigilance_due,
+        }
+
+    @classmethod
+    def seal_fda_medwatch_3500a_report(
+        cls,
+        case_dict: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Constructs and seals an FDA 21 CFR Part 803 Form 3500A (MedWatch) Electronic Reporting payload.
+
+        Requirements: PRD-SYS-187, PRD-SYS-053, FDA 21 CFR Part 803, 21 CFR Part 11
+        """
+        case_num = str(case_dict.get("case_number", "DEV-UNKNOWN"))
+        dev_name = str(case_dict.get("device_name", "Investigational Medical Device"))
+        udi_di = str(case_dict.get("device_udi_di", ""))
+        lot_num = str(case_dict.get("lot_number", ""))
+        serial_num = case_dict.get("serial_number")
+        study_id = str(case_dict.get("study_id", ""))
+        site_id = str(case_dict.get("site_id", ""))
+        subj_id = case_dict.get("subject_id")
+        defic_id = str(case_dict.get("deficiency_id", ""))
+        cls_val = str(case_dict.get("classification", "MALFUNCTION")).upper()
+        caus_val = str(case_dict.get("causality", "POSSIBLE")).upper()
+        notes = case_dict.get("investigation_notes")
+        root_cause = case_dict.get("root_cause_summary")
+        capa_req = bool(case_dict.get("capa_required", False))
+        capa_ref = case_dict.get("capa_reference")
+        fsca_req = bool(case_dict.get("fsca_required", False))
+        status = str(case_dict.get("status", "OPEN"))
+        physician_id = case_dict.get("safety_physician_user_id")
+
+        is_5_day = (
+            cls_val
+            in ("REMEDIAL_ACTION", "5_DAY", "EXPEDITED_5_DAY", "UNREASONABLE_RISK")
+            or fsca_req
+            or bool(case_dict.get("is_5_day_expedited", False))
+        )
+        report_type_code = (
+            "5_DAY_EXPEDITED_REPORT" if is_5_day else "30_DAY_MDR_BASELINE"
+        )
+        deadline_days = 5 if is_5_day else 30
+
+        due_date_raw = case_dict.get("vigilance_due_date")
+        if due_date_raw:
+            vigilance_due = str(due_date_raw)
+        else:
+            vigilance_due = (
+                datetime.now(UTC) + timedelta(days=deadline_days)
+            ).isoformat()
+
+        incident_desc = (
+            root_cause
+            or notes
+            or f"Medical device incident involving {dev_name} (UDI: {udi_di}, Lot: {lot_num}). Defect: {cls_val}."
+        )
+
+        payload_json = {
+            "section_a_patient": {
+                "patient_identifier": subj_id or "ANONYMIZED_TRIAL_PARTICIPANT",
+                "study_id": study_id,
+                "site_id": site_id,
+            },
+            "section_b_adverse_event_product_problem": {
+                "report_type": report_type_code,
+                "event_type": cls_val,
+                "adverse_event_description": incident_desc,
+                "causality_to_device": caus_val,
+                "outcome_death": cls_val == "DEATH",
+                "outcome_life_threatening": cls_val in ("LIFE_THREATENING", "USADE"),
+                "outcome_hospitalization": cls_val in ("SERIOUS_INJURY", "SADE"),
+                "outcome_disability": cls_val == "PERMANENT_IMPAIRMENT",
+                "outcome_other_serious": cls_val
+                in ("DETERIORATION", "ADVERSE_INCIDENT"),
+                "outcome_malfunction": cls_val == "MALFUNCTION",
+            },
+            "section_d_suspect_medical_device": {
+                "brand_name": dev_name,
+                "common_device_name": dev_name,
+                "udi_di": udi_di,
+                "lot_number": lot_num,
+                "serial_number": serial_num or "",
+                "single_use_device": True,
+                "deficiency_id": defic_id,
+            },
+            "section_g_all_manufacturers": {
+                "fda_report_type": report_type_code,
+                "statutory_deadline_days": deadline_days,
+                "statutory_due_date": vigilance_due,
+                "remedial_action_conducted": fsca_req or capa_req,
+                "capa_reference": capa_ref,
+                "fda_defect_classification": cls_val,
+                "device_evaluation_status": status,
+                "safety_physician_reviewer": physician_id,
+            },
+            "cfr_reference": "21 CFR Part 803",
+            "form_version": "FDA_3500A_v1.0",
+        }
+
+        payload_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<MedWatch3500A version="1.0" xmlns="urn:fda:cdrh:emdr:3500a">
+  <Header>
+    <ReportNumber>MDR-{case_num}</ReportNumber>
+    <ReportType>{report_type_code}</ReportType>
+    <StatutoryDeadlineDays>{deadline_days}</StatutoryDeadlineDays>
+    <VigilanceDueDate>{vigilance_due}</VigilanceDueDate>
+    <CFRCitation>21 CFR Part 803</CFRCitation>
+  </Header>
+  <SectionA_Patient>
+    <PatientIdentifier>{subj_id or "ANONYMIZED_TRIAL_PARTICIPANT"}</PatientIdentifier>
+    <StudyIdentifier>{study_id}</StudyIdentifier>
+    <SiteIdentifier>{site_id}</SiteIdentifier>
+  </SectionA_Patient>
+  <SectionB_EventProblem>
+    <EventClassification>{cls_val}</EventClassification>
+    <Causality>{caus_val}</Causality>
+    <EventNarrative>{incident_desc}</EventNarrative>
+  </SectionB_EventProblem>
+  <SectionD_Device>
+    <BrandName>{dev_name}</BrandName>
+    <UDI_DI>{udi_di}</UDI_DI>
+    <LotNumber>{lot_num}</LotNumber>
+    <SerialNumber>{serial_num or ""}</SerialNumber>
+  </SectionD_Device>
+  <SectionG_Manufacturer>
+    <EvaluationStatus>{status}</EvaluationStatus>
+    <CAPAInitiated>{str(capa_req).lower()}</CAPAInitiated>
+    <CAPAReference>{capa_ref or ""}</CAPAReference>
+    <RemedialAction>{str(fsca_req).lower()}</RemedialAction>
+    <ReviewingPhysician>{physician_id or ""}</ReviewingPhysician>
+  </SectionG_Manufacturer>
+</MedWatch3500A>"""
+
+        xml_digest = cls.compute_canonical_digest(payload_xml)
+
+        return {
+            "case_number": case_num,
+            "classification": cls_val,
+            "defect_type": cls_val,
+            "device_name": dev_name,
+            "incident_summary": incident_desc,
+            "is_5_day_expedited": is_5_day,
+            "lot_number": lot_num,
+            "payload_digest": xml_digest,
+            "payload_json": payload_json,
+            "payload_xml": payload_xml,
+            "report_type": "FDA_3500A_MEDWATCH",
+            "reporting_authority": "FDA CDRH / Electronic Medical Device Reporting (eMDR)",
+            "serial_number": serial_num,
+            "udi_di": udi_di,
+            "vigilance_deadline_days": deadline_days,
             "vigilance_due_date": vigilance_due,
         }

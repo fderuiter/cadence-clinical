@@ -56,6 +56,7 @@ from apps.safety.presentation.dtos import (
     AS2OutboundTransmissionRequestDTO,
     AS2TransmissionAuditLogDTO,
     AS2TransmissionResponseDTO,
+    DeviceMedWatchReportResponseDTO,
     DeviceSafetyInvestigationAdjudicateDTO,
     DeviceSafetyInvestigationCreateDTO,
     DeviceSafetyInvestigationResponseDTO,
@@ -2510,6 +2511,26 @@ async def generate_device_vigilance_report_endpoint(
     Requirements: PRD-SYS-126, PRD-DEV-004, EU MDR 2017/745, EU IVDR 2017/746, ADR-2209
     """
     return await DeviceSafetyService.generate_vigilance_report(
+        investigation_id=investigation_id,
+        session=session,
+    )
+
+
+@router.post(
+    "/api/v1/safety/device-investigations/{investigation_id}/fda-medwatch-report",
+    response_model=DeviceMedWatchReportResponseDTO,
+    status_code=200,
+)
+async def generate_device_fda_medwatch_report_endpoint(
+    request: Request,
+    investigation_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> DeviceMedWatchReportResponseDTO:
+    """Generates an FDA 21 CFR Part 803 Form 3500A (MedWatch) Electronic Report.
+
+    Requirements: PRD-SYS-187, PRD-SYS-053, FDA 21 CFR Part 803, 21 CFR Part 11
+    """
+    return await DeviceSafetyService.generate_fda_medwatch_report(
         investigation_id=investigation_id,
         session=session,
     )

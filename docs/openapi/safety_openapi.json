@@ -2519,6 +2519,46 @@
           }
         }
       }
+    },
+    "/api/v1/safety/device-investigations/{investigation_id}/fda-medwatch-report": {
+      "post": {
+        "summary": "Generate Device Fda Medwatch Report Endpoint",
+        "description": "Generates an FDA 21 CFR Part 803 Form 3500A (MedWatch) Electronic Report.\n\nRequirements: PRD-SYS-187, PRD-SYS-053, FDA 21 CFR Part 803, 21 CFR Part 11",
+        "operationId": "generate_device_fda_medwatch_report_endpoint_api_v1_safety_device_investigations__investigation_id__fda_medwatch_report_post",
+        "parameters": [
+          {
+            "name": "investigation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Investigation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceMedWatchReportResponseDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3574,6 +3614,97 @@
         ],
         "title": "DSURSummaryTabulationRow",
         "description": "Interval summary tabulation row aggregated by SOC and PT with RSI comparison."
+      },
+      "DeviceMedWatchReportResponseDTO": {
+        "properties": {
+          "case_number": {
+            "type": "string",
+            "title": "Case Number"
+          },
+          "report_type": {
+            "type": "string",
+            "title": "Report Type",
+            "default": "FDA_3500A_MEDWATCH"
+          },
+          "reporting_authority": {
+            "type": "string",
+            "title": "Reporting Authority",
+            "default": "FDA CDRH / Electronic Medical Device Reporting (eMDR)"
+          },
+          "device_name": {
+            "type": "string",
+            "title": "Device Name"
+          },
+          "udi_di": {
+            "type": "string",
+            "title": "Udi Di"
+          },
+          "lot_number": {
+            "type": "string",
+            "title": "Lot Number"
+          },
+          "serial_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serial Number"
+          },
+          "classification": {
+            "type": "string",
+            "title": "Classification"
+          },
+          "defect_type": {
+            "type": "string",
+            "title": "Defect Type"
+          },
+          "is_5_day_expedited": {
+            "type": "boolean",
+            "title": "Is 5 Day Expedited"
+          },
+          "incident_summary": {
+            "type": "string",
+            "title": "Incident Summary"
+          },
+          "vigilance_deadline_days": {
+            "type": "integer",
+            "title": "Vigilance Deadline Days"
+          },
+          "vigilance_due_date": {
+            "type": "string",
+            "title": "Vigilance Due Date"
+          },
+          "payload_json": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload Json"
+          },
+          "payload_xml": {
+            "type": "string",
+            "title": "Payload Xml"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_number",
+          "device_name",
+          "udi_di",
+          "lot_number",
+          "classification",
+          "defect_type",
+          "is_5_day_expedited",
+          "incident_summary",
+          "vigilance_deadline_days",
+          "vigilance_due_date",
+          "payload_json",
+          "payload_xml"
+        ],
+        "title": "DeviceMedWatchReportResponseDTO",
+        "description": "Response schema for compiled FDA 21 CFR Part 803 Form 3500A MedWatch report."
       },
       "DeviceSafetyInvestigationAdjudicateDTO": {
         "properties": {

@@ -66,7 +66,10 @@ async def setup_test_db():
 
 @pytest.mark.asyncio
 async def test_subject_state_transition_endpoint() -> None:
-    """Verify subject state transition validation and endpoint responses."""
+    """Verify subject state transition validation and endpoint responses.
+
+    @req:PRD-SYS-184
+    """
     # 1. Create a subject via db
     headers = get_auth_headers(
         roles="site investigator", change_reason="Initial Screening"
@@ -121,6 +124,8 @@ async def test_subject_demographics_mutation_and_deletion_endpoints() -> None:
     """Verify that demographics and stratification factors can be mutated in pre-randomization state,
 
     but mutations/deletions are strictly rejected post-randomization.
+
+    @req:PRD-SYS-184
     """
     headers = get_auth_headers(
         roles="site investigator", change_reason="Baseline Updates"

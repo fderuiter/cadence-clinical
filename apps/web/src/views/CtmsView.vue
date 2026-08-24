@@ -284,6 +284,28 @@
       >
         🚀 Study Startup &amp; Greenlight
       </button>
+      <button
+        id="tab-rtsm"
+        class="tab-btn"
+        :class="{ active: activeTab === 'rtsm' }"
+        style="
+          padding: 8px 16px;
+          border: none;
+          background: none;
+          font-weight: 600;
+          cursor: pointer;
+          font-size: 16px;
+          border-bottom: 3px solid transparent;
+        "
+        :style="
+          activeTab === 'rtsm'
+            ? { borderBottomColor: '#0f4c81', color: '#0f4c81' }
+            : { color: '#64748b' }
+        "
+        @click="activeTab = 'rtsm'"
+      >
+        💊 RTSM &amp; Dose Escalation
+      </button>
     </div>
 
     <!-- Active Filter/Scope Info -->
@@ -2054,6 +2076,12 @@
     <div v-if="activeTab === 'startup'" style="margin-top: 20px">
       <SsuGreenlightConsole :study-id="studyId" :site-id="siteId" />
     </div>
+
+    <!-- RTSM & Dose Escalation Tab Content -->
+    <div v-if="activeTab === 'rtsm'" style="margin-top: 20px; display: flex; flex-direction: column; gap: 24px">
+      <AdaptiveDoseEscalationConsole :study-id="studyId" />
+      <CellGeneTherapyCocConsole />
+    </div>
   </div>
 </template>
 
@@ -2064,6 +2092,8 @@ import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import CraVerificationConsole from "../components/persona/CraVerificationConsole.vue";
 import SsuGreenlightConsole from "../components/clinical/SsuGreenlightConsole.vue";
+import AdaptiveDoseEscalationConsole from "../components/clinical/AdaptiveDoseEscalationConsole.vue";
+import CellGeneTherapyCocConsole from "../components/clinical/CellGeneTherapyCocConsole.vue";
 import apiClient from "../services/api";
 import { getBaseUrl } from "../api/apiClient";
 

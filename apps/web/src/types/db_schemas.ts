@@ -1387,6 +1387,101 @@ export interface IsfDocument {
   source_system: string;
 }
 
+export interface IvdAssayPerformanceRun {
+  study_id: string;
+  assay_name: string;
+  assay_lot_number: string;
+  device_udi_di?: string | null;
+  true_positives: number;
+  false_positives: number;
+  true_negatives: number;
+  false_negatives: number;
+  sensitivity_percent: number;
+  specificity_percent: number;
+  ppv_percent: number;
+  npv_percent: number;
+  accuracy_percent: number;
+  intra_assay_cv_percent: number;
+  inter_assay_cv_percent: number;
+  limit_of_detection?: number | null;
+  limit_of_quantitation?: number | null;
+  linearity_r_squared?: number | null;
+  status: string;
+  created_at: string;
+  created_by?: string | null;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
+export interface IvdSpecimenCustodyEvent {
+  specimen_identifier: string;
+  transfer_timestamp: string;
+  from_user_id: string;
+  to_user_id: string;
+  from_location: string;
+  to_location: string;
+  transport_condition: string;
+  temperature_at_transfer_celsius?: number | null;
+  seal_intact: boolean;
+  signature_token?: string | null;
+  created_at: string;
+  created_by?: string | null;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
+export interface IvdSpecimenFreezeThawEvent {
+  specimen_identifier: string;
+  cycle_number: number;
+  thaw_start_timestamp: string;
+  thaw_end_timestamp?: string | null;
+  thaw_duration_minutes: number;
+  thaw_temperature_celsius: number;
+  operator_user_id: string;
+  purpose: string;
+  is_excursion: boolean;
+  created_at: string;
+  created_by?: string | null;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
+export interface IvdSpecimenRecord {
+  study_id: string;
+  site_id: string;
+  subject_id: string;
+  specimen_identifier: string;
+  specimen_type: string;
+  collection_date: string;
+  collector_user_id: string;
+  container_type: string;
+  initial_volume_ul: number;
+  current_volume_ul: number;
+  storage_temperature_celsius: number;
+  storage_location: string;
+  status: string;
+  is_quarantined: boolean;
+  quarantine_reason?: string | null;
+  freeze_thaw_count: number;
+  max_allowed_freeze_thaw: number;
+  hemolysis_index_mg_dl: number;
+  lipemia_index_mg_dl: number;
+  icterus_index_mg_dl: number;
+  clot_detected: boolean;
+  temperature_excursion: boolean;
+  integrity_status: string;
+  integrity_validated_at?: string | null;
+  integrity_validated_by?: string | null;
+  created_at: string;
+  created_by?: string | null;
+  id: string;
+  version: number;
+  is_deleted: boolean;
+}
+
 export interface KitDispensation {
   study_id: string;
   subject_id: string;

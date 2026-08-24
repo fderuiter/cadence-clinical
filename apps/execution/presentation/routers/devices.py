@@ -41,10 +41,12 @@ from apps.execution.device_investigation import (
     _map_quarantine_to_response,
     dispense_device,
     initiate_device_quarantine,
+    lookup_gudid,
     parse_udi_barcode,
     register_device_inventory,
     release_device_quarantine,
     report_device_deficiency,
+    verify_udi_with_gudid,
 )
 from apps.execution.domain.device_models import (
     DeviceDeficiencyCreateRequest,
@@ -57,8 +59,30 @@ from apps.execution.domain.device_models import (
     DeviceQuarantineCreateRequest,
     DeviceQuarantineReleaseRequest,
     DeviceQuarantineResponse,
+    GUDIDDeviceRecord,
+    GUDIDLookupRequest,
+    GUDIDVerificationResult,
+    IVDAssayPerformanceRequest,
+    IVDAssayPerformanceResponse,
+    IVDSampleIntegrityCheckRequest,
+    IVDSampleIntegrityCheckResponse,
+    IVDSpecimenCreateRequest,
+    IVDSpecimenCustodyEventRequest,
+    IVDSpecimenCustodyEventResponse,
+    IVDSpecimenFreezeThawEventRequest,
+    IVDSpecimenFreezeThawEventResponse,
+    IVDSpecimenResponse,
     ParsedUDI,
     UDIParseRequest,
+)
+from apps.execution.ivd_specimen import (
+    compute_and_record_assay_performance,
+    get_ivd_specimen,
+    list_ivd_specimens,
+    log_specimen_custody_event,
+    log_specimen_freeze_thaw_event,
+    register_ivd_specimen,
+    validate_sample_integrity,
 )
 from packages.security.rbac import (
     ROLE_AUDITOR,
@@ -649,3 +673,355 @@ async def get_device_summary(
         sade_count=int(total_sade or 0),
         active_quarantines=int(active_quar or 0),
     )
+
+
+# =========================================================================
+# FDA GUDID & UDI Verification Endpoints
+# =========================================================================
+
+
+@router.post(
+    "/gudid/lookup",
+    response_model=GUDIDDeviceRecord,
+    status_code=200,
+)
+async def lookup_gudid_endpoint(
+    payload: GUDIDLookupRequest,
+    principal: Principal = Depends(get_principal),
+) -> GUDIDDeviceRecord:
+    """Queries device specifications from the FDA AccessGUDID reference registry.
+
+    @req:PRD-SYS-187, @req:PRD-DEV-001, @req:ADR-2209
+    """
+    record = lookup_gudid(payload.udi_di)
+    if not record:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Device Identifier '{payload.udi_di}' not found in FDA AccessGUDID registry.",
+        )
+    return record
+
+
+@router.post(
+    "/verify-udi",
+    response_model=GUDIDVerificationResult,
+    status_code=200,
+)
+async def verify_udi_endpoint(
+    request: Request,
+    raw_barcode: str | None = Query(None, description="Optional raw barcode string"),
+    udi_di: str | None = Query(None, description="Optional Device Identifier"),
+    lot_number: str | None = Query(None, description="Optional Lot/Batch number"),
+    serial_number: str | None = Query(None, description="Optional Serial number"),
+    expiration_date: str | None = Query(None, description="Optional Expiration Date"),
+    principal: Principal = Depends(get_principal),
+) -> GUDIDVerificationResult:
+    """Validates physical/scanned UDI data (DI + PI lot, serial, expiration) against the FDA GUDID registry.
+
+    @req:PRD-SYS-187, @req:PRD-DEV-001, @req:ADR-2209
+    """
+    return verify_udi_with_gudid(
+        raw_barcode=raw_barcode,
+        udi_di=udi_di,
+        lot_number=lot_number,
+        serial_number=serial_number,
+        expiration_date=expiration_date,
+    )
+
+
+# =========================================================================
+# IVD Specimen Suite Endpoints
+# =========================================================================
+
+
+@router.post(
+    "/ivd/specimens",
+    response_model=IVDSpecimenResponse,
+    status_code=201,
+)
+async def register_specimen_endpoint(
+    request: Request,
+    payload: IVDSpecimenCreateRequest,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_SPONSOR_ADMIN,
+            ROLE_DATA_MANAGER,
+            ROLE_CRA,
+            ROLE_CRC,
+            ROLE_SITE_INVESTIGATOR,
+            ROLE_PRINCIPAL_INVESTIGATOR,
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> IVDSpecimenResponse:
+    """Registers an IVD clinical biospecimen collection in the specimen ledger.
+
+    @req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209
+    """
+    if not can_access_study(principal, payload.study_id):
+        raise HTTPException(
+            status_code=403,
+            detail=f"User lacks access to study {payload.study_id}",
+        )
+
+    user_id, change_reason = _get_audit_meta(request, principal)
+
+    with audit_context(
+        user_id=user_id,
+        change_reason=payload.reason_for_change or change_reason,
+    ):
+        return await register_ivd_specimen(
+            session=session,
+            request=payload,
+            user_id=user_id,
+            change_reason=payload.reason_for_change or change_reason,
+        )
+
+
+@router.get(
+    "/ivd/specimens",
+    response_model=list[IVDSpecimenResponse],
+    status_code=200,
+)
+async def list_specimens_endpoint(
+    study_id: str | None = Query(None, description="Optional Study Identifier"),
+    site_id: str | None = Query(None, description="Optional Site Identifier"),
+    subject_id: str | None = Query(None, description="Optional Subject Identifier"),
+    status: str | None = Query(None, description="Optional Status filter"),
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_SPONSOR_ADMIN,
+            ROLE_DATA_MANAGER,
+            ROLE_CRA,
+            ROLE_CRC,
+            ROLE_SITE_INVESTIGATOR,
+            ROLE_PRINCIPAL_INVESTIGATOR,
+            ROLE_SPONSOR_DESIGNER,
+            ROLE_AUDITOR,
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> list[IVDSpecimenResponse]:
+    """Lists IVD biospecimens matching query filters.
+
+    @req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209
+    """
+    if study_id and not can_access_study(principal, study_id):
+        raise HTTPException(
+            status_code=403,
+            detail=f"User lacks access to study {study_id}",
+        )
+
+    return await list_ivd_specimens(
+        session=session,
+        study_id=study_id,
+        site_id=site_id,
+        subject_id=subject_id,
+        status=status,
+    )
+
+
+@router.get(
+    "/ivd/specimens/{specimen_id}",
+    response_model=IVDSpecimenResponse,
+    status_code=200,
+)
+async def get_specimen_endpoint(
+    specimen_id: str,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_SPONSOR_ADMIN,
+            ROLE_DATA_MANAGER,
+            ROLE_CRA,
+            ROLE_CRC,
+            ROLE_SITE_INVESTIGATOR,
+            ROLE_PRINCIPAL_INVESTIGATOR,
+            ROLE_SPONSOR_DESIGNER,
+            ROLE_AUDITOR,
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> IVDSpecimenResponse:
+    """Retrieves a single IVD biospecimen record with complete audit logs and history.
+
+    @req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209
+    """
+    specimen = await get_ivd_specimen(session=session, specimen_identifier=specimen_id)
+    if not can_access_study(principal, specimen.study_id):
+        raise HTTPException(
+            status_code=403,
+            detail=f"User lacks access to study {specimen.study_id}",
+        )
+    return specimen
+
+
+@router.post(
+    "/ivd/specimens/{specimen_id}/chain-of-custody",
+    response_model=IVDSpecimenCustodyEventResponse,
+    status_code=201,
+)
+async def log_custody_endpoint(
+    request: Request,
+    specimen_id: str,
+    payload: IVDSpecimenCustodyEventRequest,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_SPONSOR_ADMIN,
+            ROLE_DATA_MANAGER,
+            ROLE_CRA,
+            ROLE_CRC,
+            ROLE_SITE_INVESTIGATOR,
+            ROLE_PRINCIPAL_INVESTIGATOR,
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> IVDSpecimenCustodyEventResponse:
+    """Logs an auditable chain-of-custody transfer event for an IVD specimen.
+
+    @req:PRD-SYS-188, @req:PRD-DEV-001, @req:ADR-2209
+    """
+    user_id, change_reason = _get_audit_meta(request, principal)
+
+    with audit_context(
+        user_id=user_id,
+        change_reason=payload.reason_for_change or change_reason,
+    ):
+        return await log_specimen_custody_event(
+            session=session,
+            specimen_identifier=specimen_id,
+            request=payload,
+            user_id=user_id,
+            change_reason=payload.reason_for_change or change_reason,
+        )
+
+
+@router.post(
+    "/ivd/specimens/{specimen_id}/freeze-thaw",
+    response_model=IVDSpecimenFreezeThawEventResponse,
+    status_code=201,
+)
+async def log_freeze_thaw_endpoint(
+    request: Request,
+    specimen_id: str,
+    payload: IVDSpecimenFreezeThawEventRequest,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_SPONSOR_ADMIN,
+            ROLE_DATA_MANAGER,
+            ROLE_CRA,
+            ROLE_CRC,
+            ROLE_SITE_INVESTIGATOR,
+            ROLE_PRINCIPAL_INVESTIGATOR,
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> IVDSpecimenFreezeThawEventResponse:
+    """Logs a freeze-thaw thermal cycle with automated quarantine enforcement upon threshold breach.
+
+    @req:PRD-SYS-188, @req:PRD-DEV-003, @req:ADR-2209
+    """
+    user_id, change_reason = _get_audit_meta(request, principal)
+
+    with audit_context(
+        user_id=user_id,
+        change_reason=payload.reason_for_change or change_reason,
+    ):
+        return await log_specimen_freeze_thaw_event(
+            session=session,
+            specimen_identifier=specimen_id,
+            request=payload,
+            user_id=user_id,
+            change_reason=payload.reason_for_change or change_reason,
+        )
+
+
+@router.post(
+    "/ivd/specimens/{specimen_id}/integrity-check",
+    response_model=IVDSampleIntegrityCheckResponse,
+    status_code=200,
+)
+async def sample_integrity_check_endpoint(
+    request: Request,
+    specimen_id: str,
+    payload: IVDSampleIntegrityCheckRequest,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_SPONSOR_ADMIN,
+            ROLE_DATA_MANAGER,
+            ROLE_CRA,
+            ROLE_CRC,
+            ROLE_SITE_INVESTIGATOR,
+            ROLE_PRINCIPAL_INVESTIGATOR,
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> IVDSampleIntegrityCheckResponse:
+    """Assesses specimen integrity using Hemolysis, Lipemia, and Icterus (HIL) index validation.
+
+    @req:PRD-SYS-188, @req:PRD-DEV-002, @req:ADR-2209
+    """
+    user_id, change_reason = _get_audit_meta(request, principal)
+
+    with audit_context(
+        user_id=user_id,
+        change_reason=payload.reason_for_change or change_reason,
+    ):
+        return await validate_sample_integrity(
+            session=session,
+            specimen_identifier=specimen_id,
+            request=payload,
+            user_id=user_id,
+            change_reason=payload.reason_for_change or change_reason,
+        )
+
+
+@router.post(
+    "/ivd/assays/performance",
+    response_model=IVDAssayPerformanceResponse,
+    status_code=201,
+)
+async def compute_assay_performance_endpoint(
+    request: Request,
+    payload: IVDAssayPerformanceRequest,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_SPONSOR_ADMIN,
+            ROLE_DATA_MANAGER,
+            ROLE_CRA,
+            ROLE_CRC,
+            ROLE_SITE_INVESTIGATOR,
+            ROLE_PRINCIPAL_INVESTIGATOR,
+            ROLE_SPONSOR_DESIGNER,
+        )
+    ),
+    session: AsyncSession = Depends(get_execution_db_session),
+) -> IVDAssayPerformanceResponse:
+    """Computes and seals diagnostic assay performance statistics (Sensitivity, Specificity, PPV, NPV, CV%, LOD/LOQ).
+
+    @req:PRD-SYS-188, @req:PRD-DEV-004, @req:ADR-2209
+    """
+    if not can_access_study(principal, payload.study_id):
+        raise HTTPException(
+            status_code=403,
+            detail=f"User lacks access to study {payload.study_id}",
+        )
+
+    user_id, change_reason = _get_audit_meta(request, principal)
+
+    with audit_context(
+        user_id=user_id,
+        change_reason=payload.reason_for_change or change_reason,
+    ):
+        return await compute_and_record_assay_performance(
+            session=session,
+            request=payload,
+            user_id=user_id,
+            change_reason=payload.reason_for_change or change_reason,
+        )

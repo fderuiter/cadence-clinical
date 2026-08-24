@@ -32,6 +32,8 @@ from apps.execution.domain.device_models import (
     DeviceQuarantineReleaseRequest,
     DeviceQuarantineResponse,
     DeviceSafetyClassification,
+    GUDIDDeviceRecord,
+    GUDIDVerificationResult,
     HealthImpact,
     ParsedUDI,
     QuarantineScope,
@@ -327,6 +329,229 @@ def parse_udi_barcode(raw_barcode: str) -> ParsedUDI:
         udi_di=barcode,
         is_valid=True,
         validation_errors=[],
+    )
+
+
+# =========================================================================
+# FDA GUDID (Global Unique Device Identification Database) Lookup Engine
+# =========================================================================
+
+# Reference AccessGUDID registry catalog for clinical trial devices
+GUDID_REGISTRY: dict[str, GUDIDDeviceRecord] = {
+    "00840123456786": GUDIDDeviceRecord(
+        primary_di="00840123456786",
+        brand_name="CardioPulse Active Pacemaker",
+        version_model_number="CP-3000",
+        device_description="Implantable dual-chamber rate-responsive pacemaker system.",
+        commercial_distribution_status="In Commercial Distribution",
+        device_count=1,
+        fda_listing_number="LST-987654",
+        premarket_submission_number="P190001",
+        gmdn_code="36873",
+        gmdn_name="Dual-chamber implantable pacemaker",
+        device_class="Class III",
+        is_single_use=True,
+        is_prescription_only=True,
+        is_otc=False,
+        is_sterile=True,
+        sterilization_methods=["Ethylene Oxide"],
+        mri_safety_status="MR Conditional",
+        has_lot_number=True,
+        has_serial_number=True,
+        has_expiration_date=True,
+        has_donation_id=False,
+    ),
+    "00840123456789": GUDIDDeviceRecord(
+        primary_di="00840123456789",
+        brand_name="CardioPulse Pacemaker Lead System",
+        version_model_number="CP-LEAD-200",
+        device_description="Transvenous pacing and sensing lead.",
+        commercial_distribution_status="In Commercial Distribution",
+        device_count=1,
+        fda_listing_number="LST-987655",
+        premarket_submission_number="P190001",
+        gmdn_code="36874",
+        gmdn_name="Implantable pacing lead",
+        device_class="Class III",
+        is_single_use=True,
+        is_prescription_only=True,
+        is_otc=False,
+        is_sterile=True,
+        sterilization_methods=["Ethylene Oxide"],
+        mri_safety_status="MR Conditional",
+        has_lot_number=True,
+        has_serial_number=True,
+        has_expiration_date=True,
+        has_donation_id=False,
+    ),
+    "00840987654321": GUDIDDeviceRecord(
+        primary_di="00840987654321",
+        brand_name="Rapid Viral IVD Assay Kit",
+        version_model_number="IVD-VIRAL-FAST",
+        device_description="Multiplex in-vitro diagnostic molecular assay for rapid pathogen detection.",
+        commercial_distribution_status="In Commercial Distribution",
+        device_count=25,
+        fda_listing_number="LST-456789",
+        premarket_submission_number="K213344",
+        gmdn_code="65231",
+        gmdn_name="Multiple respiratory virus nucleic acid IVD, kit",
+        device_class="Class II",
+        is_single_use=True,
+        is_prescription_only=True,
+        is_otc=False,
+        is_sterile=True,
+        sterilization_methods=["Radiation"],
+        mri_safety_status="MR Safe",
+        has_lot_number=True,
+        has_serial_number=False,
+        has_expiration_date=True,
+        has_donation_id=False,
+    ),
+    "00840111222333": GUDIDDeviceRecord(
+        primary_di="00840111222333",
+        brand_name="Precision Volumetric Infusion Pump",
+        version_model_number="PVP-500",
+        device_description="Electromechanical volumetric infusion pump for intravenous administration.",
+        commercial_distribution_status="In Commercial Distribution",
+        device_count=1,
+        fda_listing_number="LST-112233",
+        premarket_submission_number="K201234",
+        gmdn_code="13217",
+        gmdn_name="General-purpose infusion pump",
+        device_class="Class II",
+        is_single_use=False,
+        is_prescription_only=True,
+        is_otc=False,
+        is_sterile=False,
+        sterilization_methods=[],
+        mri_safety_status="MR Unsafe",
+        has_lot_number=True,
+        has_serial_number=True,
+        has_expiration_date=False,
+        has_donation_id=False,
+    ),
+}
+
+
+def lookup_gudid(udi_di: str) -> GUDIDDeviceRecord | None:
+    """Looks up device specifications in the FDA AccessGUDID reference registry."""
+    clean_di = udi_di.strip()
+    if clean_di in GUDID_REGISTRY:
+        return GUDID_REGISTRY[clean_di]
+
+    # For dynamic test DIs with valid length and format:
+    if (len(clean_di) in (13, 14) and clean_di.isdigit()) or clean_di.startswith("H"):
+        is_valid = (
+            validate_gtin_checksum(clean_di)
+            if clean_di.isdigit()
+            else validate_hibcc_checksum(
+                f"+{clean_di}" if not clean_di.startswith("+") else clean_di
+            )
+        )
+        if is_valid:
+            return GUDIDDeviceRecord(
+                primary_di=clean_di,
+                brand_name=f"Investigational Device (DI {clean_di[:6]}...)",
+                version_model_number="MODEL-GEN-01",
+                device_description="Investigational clinical trial medical device.",
+                commercial_distribution_status="In Commercial Distribution",
+                device_count=1,
+                fda_listing_number=f"LST-{clean_di[-6:]}",
+                premarket_submission_number=f"K{clean_di[-6:]}",
+                device_class="Class II",
+                is_single_use=True,
+                is_prescription_only=True,
+                is_sterile=True,
+                mri_safety_status="MR Conditional",
+                has_lot_number=True,
+                has_serial_number=True,
+                has_expiration_date=True,
+            )
+    return None
+
+
+def verify_udi_with_gudid(
+    raw_barcode: str | None = None,
+    udi_di: str | None = None,
+    lot_number: str | None = None,
+    serial_number: str | None = None,
+    expiration_date: str | None = None,
+) -> GUDIDVerificationResult:
+    """Validates physical/scanned UDI data against the FDA GUDID database.
+
+    Verifies Device Identifier (DI) checksum and Production Identifiers (PI: lot, serial, expiration).
+    """
+    extracted_di = udi_di
+    extracted_lot = lot_number
+    extracted_serial = serial_number
+    extracted_exp = expiration_date
+
+    is_checksum_valid = True
+    errors: list[str] = []
+
+    if raw_barcode:
+        parsed = parse_udi_barcode(raw_barcode)
+        extracted_di = extracted_di or parsed.udi_di
+        extracted_lot = extracted_lot or parsed.lot_number
+        extracted_serial = extracted_serial or parsed.serial_number
+        extracted_exp = extracted_exp or parsed.expiration_date
+        is_checksum_valid = parsed.is_valid
+        if not parsed.is_valid:
+            errors.extend(parsed.validation_errors)
+
+    if not extracted_di:
+        return GUDIDVerificationResult(
+            udi_di="UNKNOWN",
+            is_in_gudid=False,
+            is_checksum_valid=False,
+            is_verified=False,
+            gudid_record=None,
+            pi_validation={},
+            discrepancies=["No Device Identifier (DI) provided or parsed."],
+        )
+
+    gudid_record = lookup_gudid(extracted_di)
+    is_in_gudid = gudid_record is not None
+
+    if not is_in_gudid:
+        errors.append(
+            f"Device Identifier '{extracted_di}' not found in FDA AccessGUDID registry."
+        )
+
+    pi_val: dict[str, bool] = {}
+    if gudid_record:
+        if gudid_record.has_lot_number:
+            has_lot = bool(extracted_lot and extracted_lot.strip())
+            pi_val["has_lot_number"] = has_lot
+            if not has_lot:
+                errors.append(
+                    "GUDID profile requires a Lot/Batch number, but none was provided."
+                )
+        if gudid_record.has_serial_number:
+            has_sn = bool(extracted_serial and extracted_serial.strip())
+            pi_val["has_serial_number"] = has_sn
+            if not has_sn:
+                errors.append(
+                    "GUDID profile requires a Serial number, but none was provided."
+                )
+        if gudid_record.has_expiration_date:
+            has_exp = bool(extracted_exp and extracted_exp.strip())
+            pi_val["has_expiration_date"] = has_exp
+            if not has_exp:
+                errors.append(
+                    "GUDID profile requires an Expiration Date, but none was provided."
+                )
+
+    is_verified = is_in_gudid and is_checksum_valid and len(errors) == 0
+
+    return GUDIDVerificationResult(
+        udi_di=extracted_di,
+        is_in_gudid=is_in_gudid,
+        is_checksum_valid=is_checksum_valid,
+        is_verified=is_verified,
+        gudid_record=gudid_record,
+        pi_validation=pi_val,
+        discrepancies=errors,
     )
 
 

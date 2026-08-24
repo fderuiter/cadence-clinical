@@ -63,6 +63,8 @@ def get_auth_headers(
 def test_deterministic_concept_maps_catalog_coverage():
     """Validate that pre-compiled ConceptMaps cover all standard CDASH domains.
 
+    @req:PRD-SYS-185
+    @req:PRD-SYS-186
     @req:PRD-CRF-007
     """
     assert len(ALL_CONCEPT_MAPS) >= 30
@@ -90,6 +92,8 @@ def test_deterministic_concept_maps_catalog_coverage():
 def test_lookup_concept_by_code_and_system():
     """Validate exact code and system lookup in pre-compiled ConceptMaps.
 
+    @req:PRD-SYS-185
+    @req:PRD-SYS-186
     @req:PRD-CRF-007
     """
     # LOINC Systolic BP
@@ -125,6 +129,8 @@ def test_lookup_concept_by_code_and_system():
 async def test_embedding_matcher_synonym_resolution():
     """Validate Tier 2 embedding cosine similarity matches colloquial clinical verbatims.
 
+    @req:PRD-SYS-185
+    @req:PRD-SYS-186
     @req:PRD-CRF-007
     @req:PRD-SYS-051
     """
@@ -181,6 +187,8 @@ async def test_embedding_matcher_synonym_resolution():
 async def test_embedding_matcher_low_confidence_rejection():
     """Validate that unclassifiable random text falls below minimum confidence.
 
+    @req:PRD-SYS-185
+    @req:PRD-SYS-186
     @req:PRD-CRF-007
     """
     matcher = EmbeddingMatcher()
@@ -201,6 +209,8 @@ async def test_embedding_matcher_low_confidence_rejection():
 async def test_llm_semantic_reasoner_local_extraction():
     """Validate Tier 3 extraction of clinical concepts from unstructured narrative text.
 
+    @req:PRD-SYS-185
+    @req:PRD-SYS-186
     @req:PRD-CRF-007
     @req:PRD-SYS-051
     """
@@ -238,6 +248,8 @@ async def test_llm_semantic_reasoner_local_extraction():
 async def test_llm_semantic_reasoner_phi_airgap_deidentification():
     """Validate that direct PHI (Patient names, SSNs) is sanitized prior to processing.
 
+    @req:PRD-SYS-185
+    @req:PRD-SYS-186
     @req:PRD-CRF-007
     @req:PRD-SYS-051
     """
@@ -258,6 +270,8 @@ async def test_llm_semantic_reasoner_phi_airgap_deidentification():
 async def test_semantic_mapper_service_hybrid_cascade():
     """Validate full 3-tier hybrid cascade on mixed structured and unstructured FHIR bundle.
 
+    @req:PRD-SYS-185
+    @req:PRD-SYS-186
     @req:PRD-CRF-007
     @req:PRD-SYS-051
     """
@@ -388,6 +402,8 @@ async def test_semantic_mapper_service_hybrid_cascade():
 async def test_api_fhir_semantic_map_endpoint_e2e():
     """Validate POST /api/v1/interop/fhir/semantic-map endpoint and GxP audit logging.
 
+    @req:PRD-SYS-185
+    @req:PRD-SYS-186
     @req:PRD-CRF-007
     @req:PRD-SYS-001
     """
@@ -475,6 +491,8 @@ async def test_api_fhir_semantic_map_endpoint_e2e():
 async def test_api_list_concept_maps_metadata_endpoint():
     """Validate GET /api/v1/interop/fhir/concept-maps endpoint returns catalog summaries.
 
+    @req:PRD-SYS-185
+    @req:PRD-SYS-186
     @req:PRD-CRF-007
     """
     client = TestClient(app)
@@ -510,6 +528,8 @@ async def test_api_list_concept_maps_metadata_endpoint():
 async def test_adversarial_empty_and_malformed_bundles():
     """Validate resilient handling of empty or malformed FHIR payloads.
 
+    @req:PRD-SYS-185
+    @req:PRD-SYS-186
     @req:PRD-CRF-007
     """
     matcher = EmbeddingMatcher()
@@ -547,6 +567,8 @@ async def test_adversarial_empty_and_malformed_bundles():
 async def test_confidence_gating_human_review_threshold():
     """Validate that items below human review threshold are explicitly flagged.
 
+    @req:PRD-SYS-185
+    @req:PRD-SYS-186
     @req:PRD-CRF-007
     """
     matcher = EmbeddingMatcher()

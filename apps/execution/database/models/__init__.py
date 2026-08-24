@@ -116,6 +116,10 @@ _submodule_mappings = {
     "InvestigationalDeviceInventory": "device",
     "DeviceDeficiencyReport": "device",
     "DeviceQuarantineRecord": "device",
+    "IVDSpecimenRecord": "device",
+    "IVDSpecimenFreezeThawEvent": "device",
+    "IVDSpecimenCustodyEvent": "device",
+    "IVDAssayPerformanceRun": "device",
 }
 
 

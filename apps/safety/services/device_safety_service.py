@@ -21,6 +21,7 @@ from apps.safety.infrastructure.models import (
     write_audit_log,
 )
 from apps.safety.presentation.dtos import (
+    DeviceMedWatchReportResponseDTO,
     DeviceSafetyInvestigationAdjudicateDTO,
     DeviceSafetyInvestigationCreateDTO,
     DeviceSafetyInvestigationResponseDTO,
@@ -34,7 +35,7 @@ from apps.safety.services.regulatory_audit_ledger import (
 class DeviceSafetyService:
     """Encapsulates Adverse Device Effect investigations, vigilance deadlines,
 
-    Safety Physician adjudication sealing, and EU MDR/IVDR vigilance reporting.
+    Safety Physician adjudication sealing, and EU MDR/IVDR & FDA 21 CFR Part 803 vigilance reporting.
     """
 
     @classmethod
@@ -333,6 +334,71 @@ class DeviceSafetyService:
             classification=report_data["classification"],
             device_name=report_data["device_name"],
             incident_summary=report_data["incident_summary"],
+            lot_number=report_data["lot_number"],
+            payload_json=report_data["payload_json"],
+            payload_xml=report_data["payload_xml"],
+            report_type=report_data["report_type"],
+            reporting_authority=report_data["reporting_authority"],
+            serial_number=report_data["serial_number"],
+            udi_di=report_data["udi_di"],
+            vigilance_deadline_days=report_data["vigilance_deadline_days"],
+            vigilance_due_date=report_data["vigilance_due_date"],
+        )
+
+    @classmethod
+    async def generate_fda_medwatch_report(
+        cls,
+        session: AsyncSession,
+        investigation_id: str,
+    ) -> DeviceMedWatchReportResponseDTO:
+        """Generates and seals an FDA 21 CFR Part 803 Form 3500A (MedWatch) Electronic Report."""
+        stmt = select(DeviceSafetyInvestigation).where(
+            DeviceSafetyInvestigation.id == investigation_id
+        )
+        res = await session.execute(stmt)
+        case = res.scalars().first()
+        if not case:
+            raise HTTPException(
+                detail=f"Device safety investigation '{investigation_id}' not found.",
+                status_code=404,
+            )
+
+        case_dict: dict[str, Any] = {
+            "adjudicated_at": (
+                case.adjudicated_at.isoformat() if case.adjudicated_at else None
+            ),
+            "capa_reference": case.capa_reference,
+            "capa_required": case.capa_required,
+            "case_number": case.case_number,
+            "causality": case.causality,
+            "classification": case.classification,
+            "deficiency_id": case.deficiency_id,
+            "device_name": case.device_name,
+            "device_udi_di": case.device_udi_di,
+            "fsca_required": case.fsca_required,
+            "investigation_notes": case.investigation_notes,
+            "is_usade": case.is_usade,
+            "lot_number": case.lot_number,
+            "root_cause_summary": case.root_cause_summary,
+            "safety_physician_user_id": case.safety_physician_user_id,
+            "serial_number": case.serial_number,
+            "site_id": case.site_id,
+            "status": case.status,
+            "study_id": case.study_id,
+            "subject_id": case.subject_id,
+            "vigilance_deadline_days": case.vigilance_deadline_days,
+            "vigilance_due_date": case.vigilance_due_date.isoformat(),
+        }
+
+        report_data = RegulatoryAuditLedger.seal_fda_medwatch_3500a_report(case_dict)
+
+        return DeviceMedWatchReportResponseDTO(
+            case_number=report_data["case_number"],
+            classification=report_data["classification"],
+            defect_type=report_data["defect_type"],
+            device_name=report_data["device_name"],
+            incident_summary=report_data["incident_summary"],
+            is_5_day_expedited=report_data["is_5_day_expedited"],
             lot_number=report_data["lot_number"],
             payload_json=report_data["payload_json"],
             payload_xml=report_data["payload_xml"],

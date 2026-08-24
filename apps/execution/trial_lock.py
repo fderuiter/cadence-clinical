@@ -321,6 +321,11 @@ class TrialLockManager:
         return cls._is_locked
 
     @classmethod
+    def is_study_locked(cls, study_id: str | None = None) -> bool:
+        """Returns True if the study/trial is currently locked."""
+        return cls._is_locked
+
+    @classmethod
     def reset(cls):
         """Resets lock (mostly for testing) (Task 1)."""
         cls._is_locked = False

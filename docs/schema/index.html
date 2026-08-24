@@ -5760,6 +5760,714 @@
           ]
         },
         {
+          "id": "execution_ivd_assay_performance_runs",
+          "table_name": "ivd_assay_performance_runs",
+          "class_name": "IVDAssayPerformanceRun",
+          "description": "Represents statistical assay validation metrics for an IVD diagnostic device/assay.",
+          "service": "execution",
+          "gxp": true,
+          "immutable": false,
+          "columns": [
+            {
+              "name": "study_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "assay_name",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "assay_lot_number",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "device_udi_di",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "true_positives",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "false_positives",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "true_negatives",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "false_negatives",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "sensitivity_percent",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "specificity_percent",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "ppv_percent",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "npv_percent",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "accuracy_percent",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "intra_assay_cv_percent",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "inter_assay_cv_percent",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "limit_of_detection",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "limit_of_quantitation",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "linearity_r_squared",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR(50)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "created_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "created_by",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "id",
+              "type": "VARCHAR(36)",
+              "primary_key": true,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "version",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "is_deleted",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            }
+          ]
+        },
+        {
+          "id": "execution_ivd_specimen_custody_events",
+          "table_name": "ivd_specimen_custody_events",
+          "class_name": "IVDSpecimenCustodyEvent",
+          "description": "Represents an auditable chain-of-custody transfer log for an IVD specimen.",
+          "service": "execution",
+          "gxp": true,
+          "immutable": false,
+          "columns": [
+            {
+              "name": "specimen_identifier",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "transfer_timestamp",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "from_user_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "to_user_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "from_location",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "to_location",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "transport_condition",
+              "type": "VARCHAR(100)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "temperature_at_transfer_celsius",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "seal_intact",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "signature_token",
+              "type": "VARCHAR(512)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "created_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "created_by",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "id",
+              "type": "VARCHAR(36)",
+              "primary_key": true,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "version",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "is_deleted",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            }
+          ]
+        },
+        {
+          "id": "execution_ivd_specimen_freeze_thaw_events",
+          "table_name": "ivd_specimen_freeze_thaw_events",
+          "class_name": "IVDSpecimenFreezeThawEvent",
+          "description": "Represents a discrete freeze-thaw thermal cycle log for an IVD specimen.",
+          "service": "execution",
+          "gxp": true,
+          "immutable": false,
+          "columns": [
+            {
+              "name": "specimen_identifier",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "cycle_number",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "thaw_start_timestamp",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "thaw_end_timestamp",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "thaw_duration_minutes",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "thaw_temperature_celsius",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "operator_user_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "purpose",
+              "type": "VARCHAR(500)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "is_excursion",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "created_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "created_by",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "id",
+              "type": "VARCHAR(36)",
+              "primary_key": true,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "version",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "is_deleted",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            }
+          ]
+        },
+        {
+          "id": "execution_ivd_specimen_records",
+          "table_name": "ivd_specimen_records",
+          "class_name": "IVDSpecimenRecord",
+          "description": "Represents an In-Vitro Diagnostic (IVD) biospecimen with chain-of-custody,\nfreeze-thaw history, and sample integrity tracking.",
+          "service": "execution",
+          "gxp": true,
+          "immutable": false,
+          "columns": [
+            {
+              "name": "study_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "site_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "subject_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "specimen_identifier",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "specimen_type",
+              "type": "VARCHAR(100)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "collection_date",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "collector_user_id",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "container_type",
+              "type": "VARCHAR(100)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "initial_volume_ul",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "current_volume_ul",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "storage_temperature_celsius",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "storage_location",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "status",
+              "type": "VARCHAR(50)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "is_quarantined",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "quarantine_reason",
+              "type": "VARCHAR(1000)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "freeze_thaw_count",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "max_allowed_freeze_thaw",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "hemolysis_index_mg_dl",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "lipemia_index_mg_dl",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "icterus_index_mg_dl",
+              "type": "FLOAT",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "clot_detected",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "temperature_excursion",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "integrity_status",
+              "type": "VARCHAR(50)",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "integrity_validated_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "integrity_validated_by",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "created_at",
+              "type": "DATETIME",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "created_by",
+              "type": "VARCHAR(255)",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "id",
+              "type": "VARCHAR(36)",
+              "primary_key": true,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "version",
+              "type": "INTEGER",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "is_deleted",
+              "type": "BOOLEAN",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            }
+          ]
+        },
+        {
           "id": "execution_integration_outbox",
           "table_name": "integration_outbox",
           "class_name": "IntegrationOutbox",

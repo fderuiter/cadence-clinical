@@ -20,7 +20,10 @@ from apps.execution.rtsm_allocation import (
 
 
 def test_randomization_config_validation():
-    """Verify that configuration validation accepts valid inputs and rejects invalid/malformed settings."""
+    """Verify that configuration validation accepts valid inputs and rejects invalid/malformed settings.
+
+    @req:PRD-SYS-184
+    """
     # 1. Valid Permuted Block Config
     config = RandomizationConfigSchema(
         algorithm_type="PERMUTED_BLOCK",
@@ -113,7 +116,10 @@ def test_randomization_config_validation():
 
 
 def test_canonical_stratum_key_generation():
-    """Verify that canonical stratum keys are stable and sorted alphabetically regardless of input order."""
+    """Verify that canonical stratum keys are stable and sorted alphabetically regardless of input order.
+
+    @req:PRD-SYS-184
+    """
     # 1. No active factors -> DEFAULT
     key = generate_canonical_stratum_key(None, None)
     assert key == "DEFAULT"
@@ -147,7 +153,10 @@ def test_canonical_stratum_key_generation():
 
 
 def test_block_allocation_mechanics():
-    """Verify block allocation honors arms, ratios, block definitions, and handles block regeneration."""
+    """Verify block allocation honors arms, ratios, block definitions, and handles block regeneration.
+
+    @req:PRD-SYS-184
+    """
     # Config: 1:1 ratio, block size 4
     config = RandomizationConfigSchema(
         algorithm_type="PERMUTED_BLOCK",
@@ -184,7 +193,10 @@ def test_block_allocation_mechanics():
 
 
 def test_block_allocation_uneven_ratios():
-    """Verify that block allocation correctly respects uneven allocation ratios and various block sizes."""
+    """Verify that block allocation correctly respects uneven allocation ratios and various block sizes.
+
+    @req:PRD-SYS-184
+    """
     config = RandomizationConfigSchema(
         algorithm_type="PERMUTED_BLOCK",
         arms_ratios={"Arm A": 2, "Arm B": 1},  # Sum = 3
@@ -202,7 +214,10 @@ def test_block_allocation_uneven_ratios():
 
 
 def test_stratified_block_isolation():
-    """Verify stratified block randomization maintains isolated block counts per stratum key."""
+    """Verify stratified block randomization maintains isolated block counts per stratum key.
+
+    @req:PRD-SYS-184
+    """
     config = RandomizationConfigSchema(
         algorithm_type="STRATIFIED_BLOCK",
         arms_ratios={"Arm A": 1, "Arm B": 1},
@@ -235,7 +250,10 @@ def test_stratified_block_isolation():
 
 
 def test_minimization_imbalance_and_biased_coin():
-    """Verify that Pocock-Simon minimization correctly calculates imbalances, applies weights, and uses biased coin."""
+    """Verify that Pocock-Simon minimization correctly calculates imbalances, applies weights, and uses biased coin.
+
+    @req:PRD-SYS-184
+    """
     # Stratification factors: gender and age_group. Equal weights.
     config = RandomizationConfigSchema(
         algorithm_type="MINIMIZATION",
@@ -285,7 +303,10 @@ def test_minimization_imbalance_and_biased_coin():
 
 
 def test_minimization_uneven_ratios_and_weights():
-    """Verify minimization handles uneven ratios and factor weights correctly."""
+    """Verify minimization handles uneven ratios and factor weights correctly.
+
+    @req:PRD-SYS-184
+    """
     # Config: 2:1 ratio for Arm A vs Arm B. Weights: gender is weighted heavily (10.0), age_group is (1.0).
     config = RandomizationConfigSchema(
         algorithm_type="MINIMIZATION",
@@ -332,7 +353,10 @@ def test_minimization_uneven_ratios_and_weights():
 
 
 def test_reproducibility_and_seeding():
-    """Verify that seeded allocations are deterministic across runs, while unseeded are secure and pseudo-random."""
+    """Verify that seeded allocations are deterministic across runs, while unseeded are secure and pseudo-random.
+
+    @req:PRD-SYS-184
+    """
     config_seeded1 = RandomizationConfigSchema(
         algorithm_type="PERMUTED_BLOCK",
         arms_ratios={"Arm A": 1, "Arm B": 1},

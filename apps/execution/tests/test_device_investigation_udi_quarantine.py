@@ -110,7 +110,11 @@ def mock_principal_crc():
 
 
 def test_gtin_modulo_10_checksum():
-    """Verifies GS1 Modulo 10 check digit algorithm for GTIN-14."""
+    """Verifies GS1 Modulo 10 check digit algorithm for GTIN-14.
+
+    @req:PRD-SYS-187
+    @req:PRD-SYS-053
+    """
     # Valid GTIN-14: 00840123456786 (calculated check digit is 6)
     assert validate_gtin_checksum("00840123456786") is True
     # Invalid check digit
@@ -120,7 +124,11 @@ def test_gtin_modulo_10_checksum():
 
 
 def test_hibcc_modulo_43_checksum():
-    """Verifies HIBCC Modulo 43 check character verification."""
+    """Verifies HIBCC Modulo 43 check character verification.
+
+    @req:PRD-SYS-187
+    @req:PRD-SYS-053
+    """
     assert (
         validate_hibcc_checksum("+H1231234560") is True
         or validate_hibcc_checksum("+H1231234560") is False
@@ -128,7 +136,11 @@ def test_hibcc_modulo_43_checksum():
 
 
 def test_parse_udi_gs1_128_parentheses():
-    """Parses GS1-128 barcode with standard Application Identifiers."""
+    """Parses GS1-128 barcode with standard Application Identifiers.
+
+    @req:PRD-SYS-187
+    @req:PRD-SYS-053
+    """
     raw = "(01)00840123456786(17)280630(10)LOT-ALPHA-99(21)SN-4410-001(8012)v2.4.0"
     parsed = parse_udi_barcode(raw)
 
@@ -142,7 +154,11 @@ def test_parse_udi_gs1_128_parentheses():
 
 
 def test_parse_udi_hibcc():
-    """Parses HIBCC primary and secondary structure."""
+    """Parses HIBCC primary and secondary structure.
+
+    @req:PRD-SYS-187
+    @req:PRD-SYS-053
+    """
     raw = "+H12345678901/$17281231LOT-HIBCC-99SN-HIBCC-001"
     parsed = parse_udi_barcode(raw)
 
@@ -154,7 +170,11 @@ def test_parse_udi_hibcc():
 
 
 def test_parse_udi_raw_fallback():
-    """Falls back gracefully for arbitrary raw UDI strings."""
+    """Falls back gracefully for arbitrary raw UDI strings.
+
+    @req:PRD-SYS-187
+    @req:PRD-SYS-053
+    """
     raw = "CUSTOM-IMPLANT-DEVICE-XYZ-999"
     parsed = parse_udi_barcode(raw)
 
@@ -170,7 +190,11 @@ def test_parse_udi_raw_fallback():
 
 @pytest.mark.asyncio
 async def test_register_device_inventory_single_and_batch():
-    """Tests intake of single and batch investigational devices in RTSM."""
+    """Tests intake of single and batch investigational devices in RTSM.
+
+    @req:PRD-SYS-187
+    @req:PRD-SYS-053
+    """
     async with db_manager.session_maker() as session:
         # 1. Single device intake
         req_single = DeviceInventoryCreateRequest(
@@ -232,7 +256,11 @@ async def test_register_device_inventory_single_and_batch():
 
 @pytest.mark.asyncio
 async def test_dispense_device_successful():
-    """Tests normal successful dispensation of an available investigational device."""
+    """Tests normal successful dispensation of an available investigational device.
+
+    @req:PRD-SYS-187
+    @req:PRD-SYS-053
+    """
     async with db_manager.session_maker() as session:
         # Register device
         req = DeviceInventoryCreateRequest(
@@ -273,7 +301,11 @@ async def test_dispense_device_successful():
 
 @pytest.mark.asyncio
 async def test_dispense_blocked_on_quarantined_device():
-    """Verifies that dispensation is programmatically blocked if the device is QUARANTINED."""
+    """Verifies that dispensation is programmatically blocked if the device is QUARANTINED.
+
+    @req:PRD-SYS-187
+    @req:PRD-SYS-053
+    """
     async with db_manager.session_maker() as session:
         # Register device
         req = DeviceInventoryCreateRequest(
@@ -316,7 +348,11 @@ async def test_dispense_blocked_on_quarantined_device():
 
 @pytest.mark.asyncio
 async def test_dispense_blocked_on_expired_device():
-    """Verifies that dispensation is programmatically blocked if device has expired."""
+    """Verifies that dispensation is programmatically blocked if device has expired.
+
+    @req:PRD-SYS-187
+    @req:PRD-SYS-053
+    """
     async with db_manager.session_maker() as session:
         # Register expired device
         past_exp = datetime.now(UTC) - timedelta(days=30)
@@ -364,6 +400,9 @@ async def test_report_deficiency_triggers_serial_quarantine_and_sade():
     2. Creates an active DeviceQuarantineRecord.
     3. Opens an Adverse Device Effect (SADE) safety case.
     4. Emits transactional Outbox events.
+
+    @req:PRD-SYS-187
+    @req:PRD-SYS-053
     """
     async with db_manager.session_maker() as session:
         # 1. Register device
@@ -447,7 +486,11 @@ async def test_report_deficiency_triggers_serial_quarantine_and_sade():
 
 @pytest.mark.asyncio
 async def test_report_deficiency_site_lot_quarantine():
-    """Tests that logging a deficiency with SITE_LOT scope quarantines all items in that lot at that site."""
+    """Tests that logging a deficiency with SITE_LOT scope quarantines all items in that lot at that site.
+
+    @req:PRD-SYS-187
+    @req:PRD-SYS-053
+    """
     async with db_manager.session_maker() as session:
         # Register 3 devices in LOT-SITE-99
         for i in range(3):
@@ -506,7 +549,11 @@ async def test_report_deficiency_site_lot_quarantine():
 
 @pytest.mark.asyncio
 async def test_manual_quarantine_and_part11_release():
-    """Tests manual quarantine initiation and subsequent 21 CFR Part 11 electronic signature release."""
+    """Tests manual quarantine initiation and subsequent 21 CFR Part 11 electronic signature release.
+
+    @req:PRD-SYS-187
+    @req:PRD-SYS-053
+    """
     async with db_manager.session_maker() as session:
         # Register device
         inv_req = DeviceInventoryCreateRequest(
@@ -577,7 +624,11 @@ async def test_manual_quarantine_and_part11_release():
 
 @pytest.mark.asyncio
 async def test_rest_api_device_endpoints(mock_principal_sponsor_admin):
-    """Integration test against FastAPI router endpoints for Medical Device suite."""
+    """Integration test against FastAPI router endpoints for Medical Device suite.
+
+    @req:PRD-SYS-187
+    @req:PRD-SYS-053
+    """
     app.dependency_overrides[get_principal] = lambda: mock_principal_sponsor_admin
     auth_headers = create_test_auth_headers(
         user_id="user_sponsor_admin_01",

@@ -59,7 +59,7 @@ def get_auth_headers(
 def test_ip_shipment_receipt_dispensation_and_reconciliation():
     """Validate IP lot shipment receipt, dispensation, compliance unit reconciliation, and destruction.
 
-    @req:PRD-CTMS-009, PRD-CTMS-004
+    @req:PRD-SYS-184, PRD-CTMS-009, PRD-CTMS-004
     """
     client = TestClient(app)
     headers = get_auth_headers(

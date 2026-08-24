@@ -63,6 +63,7 @@ __all__ = [
     "BenchmarkReferenceDataset",
     "DSURLineListingItem",
     "DSURSummaryTabulationRow",
+    "DeviceMedWatchReportResponseDTO",
     "DeviceSafetyInvestigationAdjudicateDTO",
     "DeviceSafetyInvestigationCreateDTO",
     "DeviceSafetyInvestigationResponseDTO",
@@ -476,6 +477,26 @@ class DeviceVigilanceReportResponseDTO(BaseModel):
     lot_number: str
     serial_number: str | None = None
     classification: str
+    incident_summary: str
+    vigilance_deadline_days: int
+    vigilance_due_date: str
+    payload_json: dict[str, Any]
+    payload_xml: str
+
+
+class DeviceMedWatchReportResponseDTO(BaseModel):
+    """Response schema for compiled FDA 21 CFR Part 803 Form 3500A MedWatch report."""
+
+    case_number: str
+    report_type: str = "FDA_3500A_MEDWATCH"
+    reporting_authority: str = "FDA CDRH / Electronic Medical Device Reporting (eMDR)"
+    device_name: str
+    udi_di: str
+    lot_number: str
+    serial_number: str | None = None
+    classification: str
+    defect_type: str
+    is_5_day_expedited: bool
     incident_summary: str
     vigilance_deadline_days: int
     vigilance_due_date: str

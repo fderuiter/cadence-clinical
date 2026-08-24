@@ -128,6 +128,7 @@ def get_gateway_headers(
 def test_three_plus_three_escalation_on_zero_dlts():
     """Verify 3+3 escalates to next higher dose when 0/3 DLTs observed.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-004
     @req:ADR-2199
     """
@@ -148,6 +149,7 @@ def test_three_plus_three_escalation_on_zero_dlts():
 def test_three_plus_three_expansion_on_one_dlt():
     """Verify 3+3 stays and expands cohort by 3 subjects when 1/3 DLTs observed.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-004
     @req:ADR-2199
     """
@@ -168,6 +170,7 @@ def test_three_plus_three_expansion_on_one_dlt():
 def test_three_plus_three_de_escalation_on_two_dlts():
     """Verify 3+3 de-escalates to lower dose when >= 2/3 DLTs observed.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-004
     @req:ADR-2199
     """
@@ -188,6 +191,7 @@ def test_three_plus_three_de_escalation_on_two_dlts():
 def test_three_plus_three_safety_halt_at_dose_level_one():
     """Verify 3+3 triggers STOP_SAFETY when >= 2/3 DLTs observed at lowest dose level 1.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-004
     @req:ADR-2199
     """
@@ -208,6 +212,7 @@ def test_three_plus_three_safety_halt_at_dose_level_one():
 def test_three_plus_three_six_subject_evaluation():
     """Verify 3+3 behavior on 6 subjects (1/6 escalate, >=2/6 de-escalate).
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-004
     @req:ADR-2199
     """
@@ -247,6 +252,7 @@ def test_boin_theoretical_boundaries_derivation():
 
     and phi=0.30 (lambda_e=0.236, lambda_d=0.358).
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-004
     @req:ADR-2199
     """
@@ -266,6 +272,7 @@ def test_boin_theoretical_boundaries_derivation():
 def test_incomplete_beta_cdf_and_overdose_prob():
     """Verify high-precision incomplete beta function and overdose probability calculation.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-004
     @req:ADR-2199
     """
@@ -283,6 +290,7 @@ def test_incomplete_beta_cdf_and_overdose_prob():
 def test_boin_cohort_decisions_and_interval_logic():
     """Verify BOIN automated cohort recommendations: ESCALATE, DE_ESCALATE, STAY.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-004
     @req:ADR-2199
     """
@@ -321,6 +329,7 @@ def test_boin_cohort_decisions_and_interval_logic():
 def test_boin_bayesian_overdose_elimination():
     """Verify Bayesian overdose stopping rule eliminates overly toxic dose levels.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-004
     @req:ADR-2199
     """
@@ -352,6 +361,7 @@ def test_boin_bayesian_overdose_elimination():
 def test_boin_mtd_selection():
     """Verify MTD selection selects safe dose level closest to target toxicity rate phi.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-004
     @req:ADR-2199
     """
@@ -374,6 +384,7 @@ def test_boin_mtd_selection():
 def test_crm_config_skeleton_validation():
     """Verify CRM configuration validates skeleton probabilities are strictly monotonic in (0, 1).
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-004
     @req:ADR-2199
     """
@@ -395,6 +406,7 @@ def test_crm_config_skeleton_validation():
 def test_crm_bayesian_posterior_updating_and_no_skipping():
     """Verify modified CRM updates Bayesian posterior curve and enforces no dose skipping on escalation.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-004
     @req:ADR-2199
     """
@@ -436,6 +448,7 @@ def test_crm_bayesian_posterior_updating_and_no_skipping():
 def test_rar_dynamic_probability_weighting_and_bounds():
     """Verify Response-Adaptive Randomization dynamic weighting, bounding, and normalization.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-004
     @req:ADR-2199
     """
@@ -480,6 +493,7 @@ def test_rar_dynamic_probability_weighting_and_bounds():
 def test_rar_futility_dropping_and_efficacy_graduation():
     """Verify RAR automatically drops futile arms and flags graduated arms without study downtime.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-004
     @req:ADR-2199
     """
@@ -526,6 +540,7 @@ def test_rar_futility_dropping_and_efficacy_graduation():
 def test_rtsm_allocator_integration_with_rar():
     """Verify RTSMAllocator supports RESPONSE_ADAPTIVE and RAR algorithm types.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-004
     @req:ADR-2199
     """
@@ -549,6 +564,7 @@ def test_rtsm_allocator_integration_with_rar():
 async def test_adaptive_dose_escalation_audit_trail_and_transitions():
     """Verify 21 CFR Part 11 audit logging of cohort evaluations and electronic transitions.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-004
     @req:ADR-2199
     """
@@ -647,6 +663,7 @@ async def test_adaptive_dose_escalation_audit_trail_and_transitions():
 async def test_rar_dynamic_arm_addition_and_termination_transaction():
     """Verify seamless zero-downtime dynamic addition and dropping of RAR arms.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-004
     @req:ADR-2199
     """
@@ -733,6 +750,7 @@ async def test_adaptive_api_endpoints_e2e_flow():
 
     transitions, boundary calculation, and RAR state.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-004
     @req:ADR-2199
     """

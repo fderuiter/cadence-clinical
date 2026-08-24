@@ -1017,9 +1017,13 @@ def can_access_study(
         return not ("external_monitor" in principal.roles or principal.assigned_studies)
 
     if "external_monitor" in principal.roles:
-        return study_id in principal.assigned_studies
+        return (
+            "*" in principal.assigned_studies or study_id in principal.assigned_studies
+        )
     if principal.assigned_studies:
-        return study_id in principal.assigned_studies
+        return (
+            "*" in principal.assigned_studies or study_id in principal.assigned_studies
+        )
     return True
 
 

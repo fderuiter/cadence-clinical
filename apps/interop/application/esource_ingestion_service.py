@@ -142,6 +142,28 @@ class EsourceIngestionService:
                     ecrf_ctx=ecrf_ctx,
                     candidates=candidates,
                 )
+            elif res_type == "Procedure":
+                self._normalize_procedure(
+                    resource=res,
+                    study_id=study_id,
+                    site_id=site_id,
+                    patient_id=raw_patient_id,
+                    patient_pseudonym=patient_pseudonym,
+                    ehr_system_id=ehr_system_id,
+                    ecrf_ctx=ecrf_ctx,
+                    candidates=candidates,
+                )
+            elif res_type == "Encounter":
+                self._normalize_encounter(
+                    resource=res,
+                    study_id=study_id,
+                    site_id=site_id,
+                    patient_id=raw_patient_id,
+                    patient_pseudonym=patient_pseudonym,
+                    ehr_system_id=ehr_system_id,
+                    ecrf_ctx=ecrf_ctx,
+                    candidates=candidates,
+                )
 
         return candidates
 
@@ -383,7 +405,28 @@ class EsourceIngestionService:
             "4548-4": ("HBA1C", "Hemoglobin A1c", "%"),
         }
 
-        if loinc_code in vital_loincs or is_vital or "vital" in display_name.lower():
+        is_exam = False
+        for cat in category_codings:
+            for c in cat.get("coding", []):
+                cat_code = c.get("code", "").lower()
+                if cat_code in ("exam", "physical-examination"):
+                    is_exam = True
+                    break
+        if concept and concept.target_domain == CDISCDomain.PE:
+            is_exam = True
+
+        if is_exam or (concept and concept.target_domain == CDISCDomain.PE):
+            target_domain = CDISCDomain.PE
+            testcd = concept.cdash_testcd if concept else "GENEXAM"
+            testname = (
+                concept.cdash_test
+                if concept
+                else (display_name or "Physical Examination")
+            )
+            default_unit = None
+            target_variable = f"eCRF.PE.{testcd}"
+            provenance = f"Mapped Physical Examination '{display_name}' ({loinc_code}) to CDASH PE.{testcd}"
+        elif loinc_code in vital_loincs or is_vital or "vital" in display_name.lower():
             target_domain = CDISCDomain.VS
             if loinc_code in vital_loincs:
                 testcd, testname, default_unit = vital_loincs[loinc_code]
@@ -693,6 +736,138 @@ class EsourceIngestionService:
                 discrepancy_type=disc,
                 confidence_score=0.95,
                 mapping_provenance=f"Mapped FHIR {res_type} RxNorm '{med_code}' to CDASH CM.CMTRT",
+                raw_fhir_resource=resource,
+            )
+        )
+
+    def _normalize_procedure(
+        self,
+        resource: dict[str, Any],
+        study_id: str,
+        site_id: str,
+        patient_id: str,
+        patient_pseudonym: str,
+        ehr_system_id: str,
+        ecrf_ctx: dict[str, Any],
+        candidates: list[EhrCandidateRecord],
+    ) -> None:
+        """Extract CDASH PR (Procedures) domain variables from FHIR Procedure."""
+        res_id = str(resource.get("id", uuid.uuid4()))
+        code_codings = resource.get("code", {}).get("coding", [])
+        display_name = resource.get("code", {}).get("text", "")
+        proc_code = ""
+
+        for coding in code_codings:
+            proc_code = coding.get("code", "")
+            if not display_name:
+                display_name = coding.get("display", "")
+
+        if not display_name and proc_code:
+            display_name = proc_code
+
+        if not display_name:
+            display_name = "Unspecified Procedure"
+
+        proc_date = (
+            resource.get("performedDateTime")
+            or resource.get("performedPeriod", {}).get("start")
+            or resource.get("authoredOn")
+            or datetime.now().isoformat()
+        )
+
+        status = resource.get("status", "completed")
+        concept = lookup_concept_by_code(proc_code)
+
+        testcd = concept.cdash_testcd if concept else "PRTRT"
+        testname = concept.cdash_test if concept else "Reported Name of Procedure"
+        target_variable = "eCRF.PR.PRTRT"
+
+        current_val, disc = self._compare_with_ecrf(
+            target_variable, display_name, None, ecrf_ctx
+        )
+
+        candidates.append(
+            EhrCandidateRecord(
+                study_id=study_id,
+                site_id=site_id,
+                subject_id=patient_id,
+                subject_pseudonym=patient_pseudonym,
+                ehr_system_id=ehr_system_id,
+                fhir_resource_type="Procedure",
+                fhir_resource_id=res_id,
+                source_timestamp=proc_date,
+                target_domain=CDISCDomain.PR,
+                target_variable=target_variable,
+                cdash_testcd=testcd,
+                cdash_test=testname,
+                candidate_value=display_name,
+                candidate_unit=f"Status: {status}",
+                current_ecrf_value=current_val,
+                discrepancy_type=disc,
+                confidence_score=0.95,
+                mapping_provenance=f"Mapped FHIR Procedure '{proc_code}' ('{display_name}') to CDASH PR.PRTRT",
+                raw_fhir_resource=resource,
+            )
+        )
+
+    def _normalize_encounter(
+        self,
+        resource: dict[str, Any],
+        study_id: str,
+        site_id: str,
+        patient_id: str,
+        patient_pseudonym: str,
+        ehr_system_id: str,
+        ecrf_ctx: dict[str, Any],
+        candidates: list[EhrCandidateRecord],
+    ) -> None:
+        """Extract CDASH SV (Subject Visits) domain variables from FHIR Encounter."""
+        res_id = str(resource.get("id", uuid.uuid4()))
+        type_codings = (
+            resource.get("type", [{}])[0].get("coding", [])
+            if resource.get("type")
+            else []
+        )
+        display_name = ""
+        if type_codings:
+            display_name = type_codings[0].get("display", "") or type_codings[0].get(
+                "code", ""
+            )
+        if not display_name and resource.get("class"):
+            display_name = resource.get("class", {}).get("display", "") or resource.get(
+                "class", {}
+            ).get("code", "")
+        if not display_name:
+            display_name = "Clinical Encounter"
+
+        enc_period = resource.get("period", {})
+        start_date = enc_period.get("start") or datetime.now().isoformat()
+
+        target_variable = "eCRF.SV.VISIT"
+        current_val, disc = self._compare_with_ecrf(
+            target_variable, display_name, None, ecrf_ctx
+        )
+
+        candidates.append(
+            EhrCandidateRecord(
+                study_id=study_id,
+                site_id=site_id,
+                subject_id=patient_id,
+                subject_pseudonym=patient_pseudonym,
+                ehr_system_id=ehr_system_id,
+                fhir_resource_type="Encounter",
+                fhir_resource_id=res_id,
+                source_timestamp=start_date,
+                target_domain=CDISCDomain.SV,
+                target_variable=target_variable,
+                cdash_testcd="VISIT",
+                cdash_test="Visit Name",
+                candidate_value=display_name,
+                candidate_unit=None,
+                current_ecrf_value=current_val,
+                discrepancy_type=disc,
+                confidence_score=0.95,
+                mapping_provenance=f"Mapped FHIR Encounter '{res_id}' to CDASH SV.VISIT",
                 raw_fhir_resource=resource,
             )
         )

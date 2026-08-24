@@ -79,7 +79,11 @@ def get_staff_headers(
 def test_smart_backend_services_asymmetric_jwt_lifecycle():
     """Test asymmetric private key JWT generation and verification per SMART Backend Services specification.
 
-    @req: PRD-ESR-001, PRD-SYS-122, ADR-2199
+    @req: PRD-SYS-185
+    @req: PRD-SYS-186
+    @req: PRD-ESR-001
+    @req: PRD-SYS-122
+    @req: ADR-2199
     """
     auth_service = SmartAuthService()
     priv_pem, pub_pem = auth_service.generate_rsa_key_pair(2048)
@@ -117,7 +121,11 @@ def test_smart_backend_services_asymmetric_jwt_lifecycle():
 def test_smart_backend_services_assertion_security_validations():
     """Test security constraints on SMART Backend Services assertions (expiry, audience, replay defense).
 
-    @req: PRD-ESR-001, PRD-SYS-122, ADR-2199
+    @req: PRD-SYS-185
+    @req: PRD-SYS-186
+    @req: PRD-ESR-001
+    @req: PRD-SYS-122
+    @req: ADR-2199
     """
     auth_service = SmartAuthService()
     priv_pem, pub_pem = auth_service.generate_rsa_key_pair(2048)
@@ -188,7 +196,10 @@ def test_smart_backend_services_assertion_security_validations():
 async def test_smart_token_exchange_and_caching():
     """Test OAuth2 client credentials token exchange and in-memory token lifecycle caching.
 
-    @req: PRD-ESR-001, ADR-2199
+    @req: PRD-SYS-185
+    @req: PRD-SYS-186
+    @req: PRD-ESR-001
+    @req: ADR-2199
     """
     auth_service = SmartAuthService()
     priv_pem, _ = auth_service.generate_rsa_key_pair(2048)
@@ -249,6 +260,149 @@ async def test_smart_token_exchange_and_caching():
         assert call_count == 2
 
 
+def test_smart_app_launch_flow_and_pkce_generation():
+    """Test RFC 7636 PKCE code challenge generation and SMART on FHIR authorization URL building.
+
+    @req: PRD-SYS-185
+    @req: PRD-SYS-186
+    @req: PRD-ESR-001
+    @req: ADR-2199
+    """
+    auth_service = SmartAuthService()
+
+    # 1. Generate PKCE pair
+    verifier, challenge = auth_service.generate_pkce_pair(64)
+    assert len(verifier) == 64
+    assert len(challenge) > 0
+    assert "=" not in challenge  # Base64url unpadded
+
+    # 2. Build EHR Launch URL
+    ehr_auth_url = auth_service.build_smart_launch_authorize_url(
+        authorize_endpoint="https://ehr.hospital.org/oauth2/authorize",
+        client_id="cadence-app-client",
+        redirect_uri="https://cadence.clinical.app/callback",
+        scope="launch launch/patient openid fhirUser patient/*.read",
+        state="crypto-csrf-state-nonce-123",
+        code_challenge=challenge,
+        launch_context="launch-ctx-token-ehr-7788",
+    )
+    assert "response_type=code" in ehr_auth_url
+    assert "client_id=cadence-app-client" in ehr_auth_url
+    assert "code_challenge=" in ehr_auth_url
+    assert "code_challenge_method=S256" in ehr_auth_url
+    assert "launch=launch-ctx-token-ehr-7788" in ehr_auth_url
+
+    # 3. Build Standalone Launch URL
+    standalone_url = auth_service.build_smart_launch_authorize_url(
+        authorize_endpoint="https://ehr.hospital.org/oauth2/authorize",
+        client_id="cadence-app-client",
+        redirect_uri="https://cadence.clinical.app/callback",
+        scope="patient/*.read openid",
+        state="state-abc-456",
+        code_challenge=challenge,
+        aud="https://ehr.hospital.org/fhir/r4",
+    )
+    assert "aud=https%3A%2F%2Fehr.hospital.org%2Ffhir%2Fr4" in standalone_url
+
+
+@pytest.mark.asyncio
+async def test_smart_oauth2_pkce_token_exchange_and_launch_context():
+    """Test OAuth2 PKCE authorization code exchange and SMART launch context metadata extraction.
+
+    @req: PRD-SYS-185
+    @req: PRD-SYS-186
+    @req: PRD-ESR-001
+    @req: ADR-2199
+    """
+    auth_service = SmartAuthService()
+    verifier, _ = auth_service.generate_pkce_pair(64)
+
+    mock_resp = {
+        "access_token": "bearer-smart-pkce-access-token-9988",
+        "token_type": "Bearer",
+        "expires_in": 1800,
+        "scope": "launch/patient patient/*.read openid",
+        "patient": "PAT-HOSPITAL-5566",
+        "encounter": "ENC-HOSPITAL-1122",
+        "tenant_id": "TENANT-EAST-HEALTH",
+        "need_patient_banner": True,
+    }
+
+    def mock_handler(req: httpx.Request) -> httpx.Response:
+        form = req.read().decode("utf-8")
+        assert "grant_type=authorization_code" in form
+        assert "code_verifier=" in form
+        assert "code=auth-code-12345" in form
+        return httpx.Response(200, json=mock_resp)
+
+    transport = httpx.MockTransport(mock_handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        token_resp = await auth_service.exchange_pkce_token(
+            token_endpoint="https://ehr.hospital.org/oauth2/token",
+            client_id="cadence-app-client",
+            code="auth-code-12345",
+            code_verifier=verifier,
+            redirect_uri="https://cadence.clinical.app/callback",
+            client=client,
+        )
+
+        assert token_resp.access_token == "bearer-smart-pkce-access-token-9988"
+        assert token_resp.patient == "PAT-HOSPITAL-5566"
+        assert token_resp.encounter == "ENC-HOSPITAL-1122"
+        assert token_resp.tenant_id == "TENANT-EAST-HEALTH"
+        assert token_resp.need_patient_banner is True
+
+
+def test_smart_ehr_tenant_scoping_validation():
+    """Test multi-tenant EHR boundary validation and cross-tenant access rejection.
+
+    @req: PRD-SYS-185
+    @req: PRD-SYS-186
+    @req: PRD-SYS-122
+    @req: ADR-2199
+    """
+    auth_service = SmartAuthService()
+
+    allowed = [
+        "https://fhir.hospital-system.org/tenant-a",
+        "https://fhir.hospital-system.org/tenant-b",
+    ]
+
+    # Valid tenant in whitelist
+    assert (
+        auth_service.validate_ehr_tenant_scoping(
+            issuer_url="https://fhir.hospital-system.org/tenant-a",
+            allowed_tenants=allowed,
+        )
+        is True
+    )
+
+    # Valid tenant with matching required tenant ID
+    assert (
+        auth_service.validate_ehr_tenant_scoping(
+            issuer_url="https://fhir.hospital-system.org/tenant-a",
+            required_tenant_id="tenant-a",
+        )
+        is True
+    )
+
+    # Invalid tenant not in whitelist
+    with pytest.raises(SmartAuthError) as exc_tenant:
+        auth_service.validate_ehr_tenant_scoping(
+            issuer_url="https://fhir.rogue-hospital.org/tenant-x",
+            allowed_tenants=allowed,
+        )
+    assert "not authorized in tenant whitelist" in exc_tenant.value.message
+
+    # Tenant mismatch
+    with pytest.raises(SmartAuthError) as exc_mismatch:
+        auth_service.validate_ehr_tenant_scoping(
+            issuer_url="https://fhir.hospital-system.org/tenant-a",
+            required_tenant_id="tenant-b",
+        )
+    assert "does not match required tenant ID" in exc_mismatch.value.message
+
+
 # ==============================================================================
 # 2. FHIR Ingestion and CDASH Domain Normalization Tests
 # ==============================================================================
@@ -257,7 +411,11 @@ async def test_smart_token_exchange_and_caching():
 def test_fhir_demographics_dm_ingestion_and_pii_stripping():
     """Test FHIR Patient normalization to CDASH DM domain with deterministic pseudonymization and PII stripping.
 
-    @req: PRD-ESR-001, PRD-SYS-122, ADR-2199
+    @req: PRD-SYS-185
+    @req: PRD-SYS-186
+    @req: PRD-ESR-001
+    @req: PRD-SYS-122
+    @req: ADR-2199
     """
     ingest_svc = EsourceIngestionService()
 
@@ -317,7 +475,10 @@ def test_fhir_demographics_dm_ingestion_and_pii_stripping():
 def test_fhir_vital_signs_vs_ingestion_and_multi_components():
     """Test FHIR Observation (vital-signs) normalization to CDASH VS domain, including multi-component panels.
 
-    @req: PRD-ESR-001, ADR-2199
+    @req: PRD-SYS-185
+    @req: PRD-SYS-186
+    @req: PRD-ESR-001
+    @req: ADR-2199
     """
     ingest_svc = EsourceIngestionService()
 
@@ -481,7 +642,10 @@ def test_fhir_vital_signs_vs_ingestion_and_multi_components():
 def test_fhir_laboratory_lb_and_medications_ingestion():
     """Test FHIR Observation (laboratory), Condition (MH), and MedicationRequest (CM) normalization.
 
-    @req: PRD-ESR-001, ADR-2199
+    @req: PRD-SYS-185
+    @req: PRD-SYS-186
+    @req: PRD-ESR-001
+    @req: ADR-2199
     """
     ingest_svc = EsourceIngestionService()
 
@@ -587,10 +751,141 @@ def test_fhir_laboratory_lb_and_medications_ingestion():
     assert med_cand.target_domain == "CM"
 
 
+def test_fhir_procedure_and_encounter_ingestion():
+    """Test FHIR Procedure (PR) and Encounter (SV) normalization into CDASH domain variables.
+
+    @req: PRD-SYS-185
+    @req: PRD-SYS-186
+    @req: PRD-ESR-001
+    @req: ADR-2199
+    """
+    ingest_svc = EsourceIngestionService()
+
+    fhir_bundle = {
+        "resourceType": "Bundle",
+        "entry": [
+            # Procedure (Appendectomy)
+            {
+                "resource": {
+                    "resourceType": "Procedure",
+                    "id": "PROC-APP-01",
+                    "status": "completed",
+                    "code": {
+                        "coding": [
+                            {
+                                "system": "http://snomed.info/sct",
+                                "code": "80146002",
+                                "display": "Appendectomy",
+                            }
+                        ]
+                    },
+                    "performedDateTime": "2024-05-12T14:30:00Z",
+                }
+            },
+            # Encounter (Screening Visit)
+            {
+                "resource": {
+                    "resourceType": "Encounter",
+                    "id": "ENC-VISIT-01",
+                    "status": "finished",
+                    "class": {
+                        "code": "AMB",
+                        "display": "Ambulatory Clinic Visit",
+                    },
+                    "period": {
+                        "start": "2026-08-20T09:00:00Z",
+                        "end": "2026-08-20T11:00:00Z",
+                    },
+                }
+            },
+        ],
+    }
+
+    candidates = ingest_svc.normalize_fhir_bundle(
+        bundle=fhir_bundle,
+        study_id="STUDY-PROC-101",
+        site_id="SITE-01",
+        ehr_system_id="EPIC-PROC",
+    )
+
+    # Check Procedure (PR.PRTRT)
+    proc_cand = next((c for c in candidates if c.target_domain == "PR"), None)
+    assert proc_cand is not None
+    assert proc_cand.target_variable == "eCRF.PR.PRTRT"
+    assert "Appendectomy" in str(proc_cand.candidate_value)
+
+    # Check Encounter (SV.VISIT)
+    enc_cand = next((c for c in candidates if c.target_domain == "SV"), None)
+    assert enc_cand is not None
+    assert enc_cand.target_variable == "eCRF.SV.VISIT"
+    assert "Ambulatory" in str(enc_cand.candidate_value)
+
+
+def test_fhir_physical_examination_pe_ingestion():
+    """Test FHIR Observation (Physical Exam category) normalization into CDASH PE domain variables.
+
+    @req: PRD-SYS-185
+    @req: PRD-SYS-186
+    @req: PRD-ESR-001
+    @req: ADR-2199
+    """
+    ingest_svc = EsourceIngestionService()
+
+    fhir_bundle = {
+        "resourceType": "Bundle",
+        "entry": [
+            {
+                "resource": {
+                    "resourceType": "Observation",
+                    "id": "OBS-PE-CV-01",
+                    "status": "final",
+                    "category": [
+                        {
+                            "coding": [
+                                {
+                                    "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                                    "code": "exam",
+                                }
+                            ]
+                        }
+                    ],
+                    "code": {
+                        "coding": [
+                            {
+                                "system": "http://snomed.info/sct",
+                                "code": "301857004",
+                                "display": "Cardiovascular examination",
+                            }
+                        ],
+                        "text": "Cardiovascular exam normal",
+                    },
+                    "effectiveDateTime": "2026-08-20T10:00:00Z",
+                    "valueQuantity": {"value": 1.0, "unit": "normal"},
+                }
+            }
+        ],
+    }
+
+    candidates = ingest_svc.normalize_fhir_bundle(
+        bundle=fhir_bundle,
+        study_id="STUDY-PE-101",
+        site_id="SITE-01",
+        ehr_system_id="EPIC-PE",
+    )
+
+    pe_cand = next((c for c in candidates if c.target_domain == "PE"), None)
+    assert pe_cand is not None
+    assert pe_cand.target_variable == "eCRF.PE.CVEXAM"
+    assert pe_cand.cdash_testcd == "CVEXAM"
+
+
 def test_ecrf_side_by_side_comparison_and_discrepancies():
     """Test discrepancy classification when comparing incoming candidate EHR values against existing eCRF state.
 
-    @req: PRD-ESR-002, ADR-2199
+    @req: PRD-SYS-185
+    @req: PRD-SYS-186
+    @req: PRD-ESR-002
+    @req: ADR-2199
     """
     ingest_svc = EsourceIngestionService()
 
@@ -670,7 +965,12 @@ def test_ecrf_side_by_side_comparison_and_discrepancies():
 async def test_crc_reconciliation_workflow_accept_and_commit():
     """Test 1-Click 'Accept & Commit' workflow with electronic signature and GxP audit provenance ledger.
 
-    @req: PRD-ESR-002, PRD-ESR-003, PRD-SYS-122, ADR-2199
+    @req: PRD-SYS-185
+    @req: PRD-SYS-186
+    @req: PRD-ESR-002
+    @req: PRD-ESR-003
+    @req: PRD-SYS-122
+    @req: ADR-2199
     """
     ingest_svc = EsourceIngestionService()
     reconcile_svc = EsourceReconciliationService()
@@ -745,7 +1045,11 @@ async def test_crc_reconciliation_workflow_accept_and_commit():
 async def test_crc_reconciliation_workflow_reject_with_reason():
     """Test 1-Click 'Reject with Reason' enforcing mandatory coordinator justification under GxP.
 
-    @req: PRD-ESR-002, PRD-ESR-003, ADR-2199
+    @req: PRD-SYS-185
+    @req: PRD-SYS-186
+    @req: PRD-ESR-002
+    @req: PRD-ESR-003
+    @req: ADR-2199
     """
     ingest_svc = EsourceIngestionService()
     reconcile_svc = EsourceReconciliationService()
@@ -818,7 +1122,11 @@ async def test_crc_reconciliation_workflow_reject_with_reason():
 async def test_crc_reconciliation_workflow_raise_clinical_query():
     """Test 1-Click 'Raise Clinical Query' creating an open discrepancy in the study query ledger.
 
-    @req: PRD-ESR-002, PRD-ESR-003, ADR-2199
+    @req: PRD-SYS-185
+    @req: PRD-SYS-186
+    @req: PRD-ESR-002
+    @req: PRD-ESR-003
+    @req: ADR-2199
     """
     ingest_svc = EsourceIngestionService()
     reconcile_svc = EsourceReconciliationService()
@@ -879,7 +1187,12 @@ async def test_crc_reconciliation_workflow_raise_clinical_query():
 async def test_non_destructive_review_guarantee_no_silent_overwrites():
     """Test non-destructive eSource review guarantee: data is never merged into eCRFs without explicit CRC approval.
 
-    @req: PRD-ESR-002, PRD-ESR-003, ADR-2199, FDA Guidance
+    @req: PRD-SYS-185
+    @req: PRD-SYS-186
+    @req: PRD-ESR-002
+    @req: PRD-ESR-003
+    @req: ADR-2199
+    @req: FDA Guidance
     """
     ingest_svc = EsourceIngestionService()
     reconcile_svc = EsourceReconciliationService()
@@ -935,7 +1248,13 @@ async def test_non_destructive_review_guarantee_no_silent_overwrites():
 def test_esource_rest_api_e2e_endpoints():
     """Test full eSource REST API suite (endpoint registration, bundle ingest, listing, accept, reject, query, provenance).
 
-    @req: PRD-ESR-001, PRD-ESR-002, PRD-ESR-003, PRD-SYS-122, ADR-2199
+    @req: PRD-SYS-185
+    @req: PRD-SYS-186
+    @req: PRD-ESR-001
+    @req: PRD-ESR-002
+    @req: PRD-ESR-003
+    @req: PRD-SYS-122
+    @req: ADR-2199
     """
     client = TestClient(app)
     headers = get_staff_headers(user_id="coordinator_mary", roles="site_coordinator")
@@ -1123,7 +1442,10 @@ def test_esource_rest_api_e2e_endpoints():
 async def test_automated_ehr_polling_pipeline():
     """Test automated hospital EHR polling against mock FHIR server endpoints with SMART authentication.
 
-    @req: PRD-ESR-001, ADR-2199
+    @req: PRD-SYS-185
+    @req: PRD-SYS-186
+    @req: PRD-ESR-001
+    @req: ADR-2199
     """
     auth_service = SmartAuthService()
     priv_pem, _ = auth_service.generate_rsa_key_pair(2048)

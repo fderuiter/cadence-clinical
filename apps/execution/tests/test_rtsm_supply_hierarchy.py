@@ -83,6 +83,7 @@ def get_gateway_headers(
 def test_build_supply_hierarchy_tree_pure():
     """Test pure-Python construction of multi-tier supply hierarchy tree and rollups.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-001
     """
     mfg = SupplyNode(
@@ -201,6 +202,7 @@ def test_build_supply_hierarchy_tree_pure():
 def test_hierarchy_circular_dependency_rejection():
     """Verify that circular parent-child links in supply hierarchy raise InvalidHierarchyError.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-001
     """
     node_a = SupplyNode(
@@ -230,6 +232,7 @@ def test_hierarchy_circular_dependency_rejection():
 async def test_supply_node_endpoints_and_audit():
     """Verify REST API registration of supply nodes, retrieval of hierarchy, and GxP audit trail.
 
+    @req:PRD-SYS-184
     @req:PRD-SCM-001
     """
     async with httpx.AsyncClient(

@@ -11,6 +11,7 @@ from apps.interop.domain.concept_maps.demographics_map import (
 )
 from apps.interop.domain.concept_maps.lab_tests_map import LAB_TESTS_CONCEPT_MAP
 from apps.interop.domain.concept_maps.medications_map import MEDICATIONS_CONCEPT_MAP
+from apps.interop.domain.concept_maps.physical_exam_map import PHYSICAL_EXAM_CONCEPT_MAP
 from apps.interop.domain.concept_maps.procedures_map import PROCEDURES_CONCEPT_MAP
 from apps.interop.domain.concept_maps.vital_signs_map import VITAL_SIGNS_CONCEPT_MAP
 from apps.interop.domain.semantic_mapping_models import (
@@ -25,6 +26,7 @@ ALL_CONCEPT_MAPS: list[ConceptMapElement] = (
     + CONDITIONS_CONCEPT_MAP
     + MEDICATIONS_CONCEPT_MAP
     + PROCEDURES_CONCEPT_MAP
+    + PHYSICAL_EXAM_CONCEPT_MAP
 )
 
 # Index by source_code (e.g. LOINC code or standard token)
@@ -64,6 +66,7 @@ __all__ = [
     "DEMOGRAPHICS_CONCEPT_MAP",
     "LAB_TESTS_CONCEPT_MAP",
     "MEDICATIONS_CONCEPT_MAP",
+    "PHYSICAL_EXAM_CONCEPT_MAP",
     "PROCEDURES_CONCEPT_MAP",
     "VITAL_SIGNS_CONCEPT_MAP",
     "derive_subject_age",
