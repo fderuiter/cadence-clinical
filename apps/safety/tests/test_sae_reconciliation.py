@@ -88,6 +88,12 @@ def get_signed_headers(roles: str = "admin", change_reason: str = "") -> dict:
 
 
 def test_pure_comparison_missing_on_either_side():
+    """Test pure comparison missing on either side.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     # EDC has 1 event, Safety has 0
     edc_sae = SeriousAdverseEvent(
         subject_key="SUBJ-001",
@@ -129,6 +135,12 @@ def test_pure_comparison_missing_on_either_side():
 
 
 def test_pure_comparison_same_code_different_terms():
+    """Test pure comparison same code different terms.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     coding_edc = MedDRACoding(
         llt_code="10019211",
         llt_name="Headache verbatim",
@@ -184,6 +196,12 @@ def test_pure_comparison_same_code_different_terms():
 
 
 def test_pure_comparison_differing_fields():
+    """Test pure comparison differing fields.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     sae_edc = SeriousAdverseEvent(
         subject_key="SUBJ-001",
         AETERM="HEADACHE",
@@ -220,6 +238,12 @@ def test_pure_comparison_differing_fields():
 
 
 def test_deterministic_output_sorting():
+    """Test deterministic output sorting.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     # Unordered list of SeriousAdverseEvent objects
     sae1 = SeriousAdverseEvent(
         subject_key="SUBJ-002",
@@ -251,6 +275,13 @@ def test_deterministic_output_sorting():
 
 @pytest.mark.asyncio
 async def test_execution_client_and_adapter_methods():
+    """Test execution client and adapter methods.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
+
     class MockAsyncClient:
         async def get(self, url, headers=None, params=None, timeout=10.0):
             # 1. Dataset-JSON AE Contract mock
@@ -410,6 +441,13 @@ async def test_execution_client_and_adapter_methods():
 
 @pytest.mark.asyncio
 async def test_reconciliation_persistence_and_audit():
+    """Test reconciliation persistence and audit.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
+
     class MockAsyncClient:
         async def get(self, url, headers=None, params=None, timeout=10.0):
             if "sdtm/AE" in url:
@@ -598,6 +636,12 @@ async def test_reconciliation_persistence_and_audit():
 
 
 def test_pure_function_generate_stable_event_key():
+    """Test pure function generate stable event key.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     # @req:Trace-15
     # USUBJID/AESEQ path
     sae_seq = SeriousAdverseEvent(
@@ -624,6 +668,12 @@ def test_pure_function_generate_stable_event_key():
 
 
 def test_pure_function_normalize_edc_ae_to_sae():
+    """Test pure function normalize edc ae to sae.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     # @req:Trace-15
     ae_dict = {
         "USUBJID": "SUBJ-789",
@@ -641,6 +691,12 @@ def test_pure_function_normalize_edc_ae_to_sae():
 
 
 def test_pure_function_normalize_external_icsr_to_saes():
+    """Test pure function normalize external icsr to saes.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     # @req:Trace-15
     icsr_dict = {
         "header": {
@@ -684,6 +740,13 @@ def test_pure_function_normalize_external_icsr_to_saes():
 
 @pytest.mark.asyncio
 async def test_reconciliation_runs_read_endpoints():
+    """Test reconciliation runs read endpoints.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
+
     # @req:Trace-15
     class MockAsyncClient:
         async def get(self, url, headers=None, params=None, timeout=10.0):
@@ -716,6 +779,12 @@ async def test_reconciliation_runs_read_endpoints():
 
 @pytest.mark.asyncio
 async def test_reconciliation_jobs_read_endpoints_and_gating():
+    """Test reconciliation jobs read endpoints and gating.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     # @req:Trace-15
     client = TestClient(app)
     headers = get_signed_headers(roles="safety_reviewer", change_reason="Retrieve jobs")
@@ -743,6 +812,13 @@ async def test_reconciliation_jobs_read_endpoints_and_gating():
 
 @pytest.mark.asyncio
 async def test_reconciliation_version_index_increment():
+    """Test reconciliation version index increment.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
+
     # @req:Trace-15
     class MockAsyncClient:
         async def get(self, url, headers=None, params=None, timeout=10.0):
@@ -825,6 +901,12 @@ async def test_reconciliation_version_index_increment():
 
 
 def test_safety_mutations_negative_signatures():
+    """Test safety mutations negative signatures.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     # @req:Trace-15
     client = TestClient(app)
     endpoints = [
@@ -893,6 +975,12 @@ def test_safety_mutations_negative_signatures():
 
 
 def test_safety_reads_negative_signatures():
+    """Test safety reads negative signatures.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     # @req:Trace-15
     client = TestClient(app)
     some_id = str(uuid.uuid4())
@@ -960,7 +1048,12 @@ def test_safety_reads_negative_signatures():
 
 
 def test_terminology_cache_functionality():
-    """Verify that TerminologyCache correctly caches resolutions, respects TTL, and handles stale-on-error fallback."""
+    """Verify that TerminologyCache correctly caches resolutions, respects TTL, and handles stale-on-error fallback.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     from apps.safety.reconciliation import TerminologyCache
 
     cache = TerminologyCache(max_size=3, ttl=0.1)

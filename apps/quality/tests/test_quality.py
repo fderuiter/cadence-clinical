@@ -90,8 +90,9 @@ def get_auth_headers(roles: str = "admin", change_reason: str = "") -> dict:
 
 
 def test_quality_health_check():
-    """
-    Verify health check of independent Quality & CAPA service.
+    """Verify health check of independent Quality & CAPA service.
+
+    @req:PRD-QLT-001
     """
     client = TestClient(app)
     response = client.get("/health")
@@ -103,8 +104,9 @@ def test_quality_health_check():
 
 @pytest.mark.asyncio
 async def test_quality_database_schema_creation():
-    """
-    Verify that all four quality tables can be created and queried successfully.
+    """Verify that all four quality tables can be created and queried successfully.
+
+    @req:PRD-QLT-001
     """
     async with db_manager.get_session_maker()() as session:
         # Querying each table using empty selects to ensure they exist and have columns defined correctly
@@ -121,8 +123,9 @@ async def test_quality_database_schema_creation():
 
 @pytest.mark.asyncio
 async def test_deviation_lifecycle_and_traceability_fields():
-    """
-    Verify that a Deviation can be persisted with string-backed enums and all mandatory traceability fields.
+    """Verify that a Deviation can be persisted with string-backed enums and all mandatory traceability fields.
+
+    @req:PRD-QLT-001
     """
     async with db_manager.get_session_maker()() as session:
         dev = Deviation(
@@ -165,11 +168,9 @@ async def test_deviation_lifecycle_and_traceability_fields():
 
 @pytest.mark.asyncio
 async def test_deviation_rca_capa_relationships_and_cascading():
-    """
-    Verify the relationships and Cascade constraints (SQLite foreign-key enforcement is enabled).
-    - Deviation (1) -> (0..1) RootCauseAnalysis
-    - Deviation (1) -> (0..N) CAPARecord
-    - RootCauseAnalysis (1) -> (0..N) CAPARecord
+    """Verify the relationships and Cascade constraints (SQLite foreign-key enforcement is enabled).
+
+    @req:PRD-QLT-002, PRD-QLT-003
     """
     async with db_manager.get_session_maker()() as session:
         # 1. Create Deviation
@@ -266,8 +267,9 @@ async def test_deviation_rca_capa_relationships_and_cascading():
 
 @pytest.mark.asyncio
 async def test_sqlite_foreign_key_constraints():
-    """
-    Ensure that SQLite foreign key constraint is enforced and throws IntegrityError on invalid ForeignKey.
+    """Ensure that SQLite foreign key constraint is enforced and throws IntegrityError on invalid ForeignKey.
+
+    @req:PRD-SYS-001
     """
     async with db_manager.get_session_maker()() as session:
         rca = RootCauseAnalysis(
@@ -287,8 +289,9 @@ async def test_sqlite_foreign_key_constraints():
 
 @pytest.mark.asyncio
 async def test_quality_audit_log_append_only():
-    """
-    Verify writing to the QualityAuditLog as an append-only ledger.
+    """Verify writing to the QualityAuditLog as an append-only ledger.
+
+    @req:PRD-SYS-001
     """
     async with db_manager.get_session_maker()() as session:
         await write_audit_log(
@@ -316,8 +319,9 @@ async def test_quality_audit_log_append_only():
 
 @pytest.mark.asyncio
 async def test_database_manager_uninitialized_raises_exception():
-    """
-    Verify that QualityDatabaseManager raises an exception if get_session_maker is called before init_db.
+    """Verify that QualityDatabaseManager raises an exception if get_session_maker is called before init_db.
+
+    @req:PRD-SYS-001
     """
     from packages.database import RelationalDatabaseManager
 
@@ -328,8 +332,9 @@ async def test_database_manager_uninitialized_raises_exception():
 
 
 def test_lifespan_coverage():
-    """
-    Exercise the FastAPI app lifespan startup and shutdown context manager.
+    """Exercise the FastAPI app lifespan startup and shutdown context manager.
+
+    @req:PRD-SYS-001
     """
     with TestClient(app) as client:
         response = client.get("/health")
@@ -338,8 +343,9 @@ def test_lifespan_coverage():
 
 @pytest.mark.asyncio
 async def test_sqlite_pragma_exception_handling():
-    """
-    Ensure that any exception raised during the sqlite PRAGMA setting is caught and handled.
+    """Ensure that any exception raised during the sqlite PRAGMA setting is caught and handled.
+
+    @req:PRD-SYS-001
     """
     from unittest.mock import MagicMock
 
@@ -376,8 +382,9 @@ async def test_sqlite_pragma_exception_handling():
 
 
 def test_missing_change_reasons_unauthorized():
-    """
-    Ensure all mutation paths return 403 when X-Change-Reason is missing or empty.
+    """Ensure all mutation paths return 403 when X-Change-Reason is missing or empty.
+
+    @req:PRD-SYS-001
     """
     client = TestClient(app)
     headers = get_auth_headers(roles="admin")
@@ -452,8 +459,9 @@ def test_missing_change_reasons_unauthorized():
 
 
 def test_deviation_not_found_404():
-    """
-    Ensure view deviation and RCA create/update return 404 when deviation doesn't exist.
+    """Ensure view deviation and RCA create/update return 404 when deviation doesn't exist.
+
+    @req:PRD-QLT-001
     """
     client = TestClient(app)
     headers = get_auth_headers(roles="admin", change_reason="Searching nonexistent")
@@ -479,8 +487,9 @@ def test_deviation_not_found_404():
 
 
 def test_list_deviations_filters():
-    """
-    Verify listing filter logic when site_id and status are supplied.
+    """Verify listing filter logic when site_id and status are supplied.
+
+    @req:PRD-QLT-001
     """
     client = TestClient(app)
     headers = get_auth_headers(
@@ -511,9 +520,9 @@ def test_list_deviations_filters():
 
 
 def test_capa_creation_validations_and_closed_deviation():
-    """
-    Verify that CAPA creation fails with 422 if deviation is in CLOSED/RESOLVED status,
-    or if RCA ID is mismatched with the deviation.
+    """Verify that CAPA creation fails with 422 if deviation is in CLOSED/RESOLVED status, or if RCA ID is mismatched with the deviation.
+
+    @req:PRD-QLT-003
     """
     client = TestClient(app)
     headers = get_auth_headers(roles="admin", change_reason="Closed deviation testing")
@@ -612,8 +621,9 @@ def test_capa_creation_validations_and_closed_deviation():
 
 
 def test_capa_transition_edge_cases_and_optimistic_locking():
-    """
-    Test CAPA transitions when CAPA doesn't exist, and when version_index mismatch causes a 409 conflict.
+    """Test CAPA transitions when CAPA doesn't exist, and when version_index mismatch causes a 409 conflict.
+
+    @req:PRD-QLT-003
     """
     client = TestClient(app)
     headers = get_auth_headers(
@@ -661,8 +671,9 @@ def test_capa_transition_edge_cases_and_optimistic_locking():
 
 
 def test_capa_update_edge_cases_and_optional_fields():
-    """
-    Test CAPA updates when CAPA is not found, and updating optional preventive_measures and target_completion_date attributes.
+    """Test CAPA updates when CAPA is not found, and updating optional preventive_measures and target_completion_date attributes.
+
+    @req:PRD-QLT-003
     """
     client = TestClient(app)
     headers = get_auth_headers(roles="admin", change_reason="CAPA update edge cases")
@@ -714,9 +725,9 @@ def test_capa_update_edge_cases_and_optional_fields():
 
 
 def test_endpoint_change_reason_check_via_mock(monkeypatch):
-    """
-    Directly verify the endpoints' internal change reason validation logic
-    by mocking get_user_context to return an empty change reason.
+    """Directly verify the endpoints' internal change reason validation logic by mocking get_user_context.
+
+    @req:PRD-SYS-001
     """
     client = TestClient(app)
 

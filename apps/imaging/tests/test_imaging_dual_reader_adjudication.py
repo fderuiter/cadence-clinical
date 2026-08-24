@@ -81,6 +81,7 @@ def test_blinded_dual_reader_isolation_unit():
     """Verify that Reader 1 and Reader 2 views are completely blinded from each other.
 
     @req:PRD-IMG-003
+    @req:PRD-SYS-166
     """
     session = DualReaderAdjudicationSession(
         session_id="ADJ-UNIT-001",
@@ -190,6 +191,7 @@ def test_discordance_detection_criteria_unit():
     """Verify granular discordance rules: overall response, SLD threshold, new lesions.
 
     @req:PRD-IMG-005
+    @req:PRD-SYS-166
     """
     session = DualReaderAdjudicationSession(
         session_id="ADJ-UNIT-002",
@@ -250,6 +252,8 @@ def test_edc_ecrf_binding_and_sdtm_derivation_unit():
     """Verify EDC eCRF tumor forms and CDISC SDTM TU/TR/RS domain exports.
 
     @req:PRD-IMG-006
+    @req:PRD-SYS-165
+    @req:PRD-SYS-166
     """
     session = DualReaderAdjudicationSession(
         session_id="ADJ-UNIT-003",
@@ -365,6 +369,7 @@ async def test_dual_reader_routing_and_concordance_api(client: AsyncClient):
 
     @req:PRD-IMG-003
     @req:PRD-IMG-005
+    @req:PRD-SYS-166
     """
     # 1. Create Dual-Reader Adjudication Session
     create_payload = {
@@ -481,6 +486,7 @@ async def test_discordant_dual_reads_and_step_up_adjudication_sign_off_api(
     @req:PRD-IMG-005
     @req:PRD-IMG-006
     @req:PRD-SYS-001
+    @req:PRD-SYS-166
     """
     # 1. Create Session
     create_payload = {

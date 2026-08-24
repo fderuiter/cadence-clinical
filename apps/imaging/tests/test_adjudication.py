@@ -118,7 +118,11 @@ class InMemoryImagingAdjudicationRepository(ImagingAdjudicationRepositoryPort):
 
 
 def test_sld_discordance_calculation():
-    """Verify relative SLD difference calculations."""
+    """Verify relative SLD difference calculations.
+
+    @req:PRD-IMG-005
+    @req:PRD-SYS-166
+    """
     # Reader 1: 50mm, Reader 2: 55mm -> |50-55|/55 = 5/55 = 0.0909 (9.09% < 20%)
     delta_concordant = ImagingAdjudicationEngine.calculate_sld_discordance(50.0, 55.0)
     assert delta_concordant == 0.0909
@@ -129,7 +133,11 @@ def test_sld_discordance_calculation():
 
 
 def test_primary_reads_concordance_happy_path():
-    """Verify that concordant primary reads auto-lock into consensus."""
+    """Verify that concordant primary reads auto-lock into consensus.
+
+    @req:PRD-IMG-003
+    @req:PRD-SYS-166
+    """
     session = DualReaderAdjudicationSession(
         session_id="ADJ-SESS-001",
         study_envelope_id="ENV-101",
@@ -179,7 +187,11 @@ def test_primary_reads_concordance_happy_path():
 
 
 def test_primary_reads_discordance_and_tie_breaker_escalation():
-    """Verify that divergent responses trigger tie-breaker escalation and adjudicator lock."""
+    """Verify that divergent responses trigger tie-breaker escalation and adjudicator lock.
+
+    @req:PRD-IMG-005
+    @req:PRD-SYS-166
+    """
     session = DualReaderAdjudicationSession(
         session_id="ADJ-SESS-002",
         study_envelope_id="ENV-102",
@@ -241,7 +253,11 @@ def test_primary_reads_discordance_and_tie_breaker_escalation():
 
 @pytest.mark.asyncio
 async def test_workflow_submit_reader_assessment_lifecycle():
-    """Verify AdjudicationWorkflow encapsulates multi-step dual-reader progression."""
+    """Verify AdjudicationWorkflow encapsulates multi-step dual-reader progression.
+
+    @req:PRD-IMG-003
+    @req:PRD-SYS-166
+    """
     repo = InMemoryImagingAdjudicationRepository()
     workflow = AdjudicationWorkflow(repo)
 
@@ -308,7 +324,12 @@ async def test_workflow_submit_reader_assessment_lifecycle():
 
 @pytest.mark.asyncio
 async def test_workflow_discordance_and_part11_signoff():
-    """Verify discordance detection, 21 CFR Part 11 cryptographic sealing, and tumor response sync."""
+    """Verify discordance detection, 21 CFR Part 11 cryptographic sealing, and tumor response sync.
+
+    @req:PRD-IMG-005
+    @req:PRD-SYS-001
+    @req:PRD-SYS-166
+    """
     repo = InMemoryImagingAdjudicationRepository()
     workflow = AdjudicationWorkflow(repo)
 
@@ -377,7 +398,10 @@ async def test_workflow_discordance_and_part11_signoff():
 
 @pytest.mark.asyncio
 async def test_workflow_session_not_found():
-    """Verify AdjudicationSessionNotFoundError is raised for non-existent sessions."""
+    """Verify AdjudicationSessionNotFoundError is raised for non-existent sessions.
+
+    @req:PRD-SYS-166
+    """
     repo = InMemoryImagingAdjudicationRepository()
     workflow = AdjudicationWorkflow(repo)
 

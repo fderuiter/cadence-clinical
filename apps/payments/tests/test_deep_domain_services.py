@@ -3,7 +3,7 @@
 2. BillingAndErpGateway
 3. ParticipantCompensationService
 
-Requirements: ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-004, PRD-PAY-006
+Requirements: ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-004, PRD-PAY-006, PRD-SYS-161, PRD-SYS-162, PRD-SYS-163
 """
 
 import pytest
@@ -29,6 +29,8 @@ from apps.payments.services.site_payment_ledger_engine import (
 async def test_site_payment_ledger_engine_direct(db_session: AsyncSession):
     """Directly test SitePaymentLedgerEngine domain methods without HTTP layer.
 
+    @req:PRD-SYS-161
+    @req:PRD-SYS-162
     @req:ADR-2199
     @req:PRD-PAY-002
     @req:PRD-PAY-003
@@ -108,6 +110,7 @@ async def test_site_payment_ledger_engine_direct(db_session: AsyncSession):
 async def test_billing_and_erp_gateway_direct(db_session: AsyncSession):
     """Directly test BillingAndErpGateway domain methods for invoicing and reconciliation.
 
+    @req:PRD-SYS-163
     @req:ADR-2199
     @req:PRD-PAY-004
     @req:PRD-PAY-006
@@ -198,6 +201,7 @@ async def test_billing_and_erp_gateway_direct(db_session: AsyncSession):
 async def test_participant_compensation_service_direct(db_session: AsyncSession):
     """Directly test ParticipantCompensationService for wallets, OCR, and lay summaries.
 
+    @req:PRD-SYS-161
     @req:ADR-2199
     @req:PRD-PAY-002
     @req:PRD-PAY-004

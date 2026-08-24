@@ -70,7 +70,7 @@ def get_auth_headers(
 def test_jurisdiction_rule_presets_and_configuration():
     """Validate jurisdiction startup criteria presets and custom study rule persistence.
 
-    @req:PRD-SSU-001, ADR-2199, ICH GCP E6(R2) Section 8
+    @req:PRD-SYS-183, PRD-SSU-001, ADR-2199, ICH GCP E6(R2) Section 8
     """
     client = TestClient(app)
     headers = get_auth_headers(
@@ -131,7 +131,7 @@ def test_jurisdiction_rule_presets_and_configuration():
 def test_multi_factor_6_facet_greenlight_evaluator():
     """Validate real-time multi-factor greenlight evaluator across the 6 operational facets.
 
-    @req:PRD-SSU-002, PRD-SSU-003, ADR-2202, ICH GCP E6(R2) Section 8, 21 CFR Part 11
+    @req:PRD-SYS-183, PRD-SSU-002, PRD-SSU-003, ADR-2202, ICH GCP E6(R2) Section 8, 21 CFR Part 11
     """
     client = TestClient(app)
     headers = get_auth_headers(
@@ -325,7 +325,7 @@ def test_multi_factor_6_facet_greenlight_evaluator():
 def test_jurisdiction_specific_startup_criteria():
     """Validate jurisdiction-specific regulatory startup criteria (EU CTR, Japan PMDA, UK MHRA).
 
-    @req:PRD-SSU-001, PRD-SSU-002, ADR-2202
+    @req:PRD-SYS-183, PRD-SSU-001, PRD-SSU-002, ADR-2202
     """
     client = TestClient(app)
     headers = get_auth_headers(roles="Sponsor Admin")
@@ -409,7 +409,7 @@ def test_jurisdiction_specific_startup_criteria():
 def test_hmac_sha256_cryptographic_token_generation_and_verification():
     """Validate HMAC-SHA256 token generation, canonical signing, tamper rejection, and expiry.
 
-    @req:PRD-SSU-003, ADR-2202, 21 CFR Part 11
+    @req:PRD-SYS-183, PRD-SSU-003, ADR-2202, 21 CFR Part 11
     """
     site_id = "SITE-TOKEN-101"
     study_id = "STUDY-TOKEN-101"
@@ -477,7 +477,7 @@ def test_hmac_sha256_cryptographic_token_generation_and_verification():
 async def test_transactional_outbox_site_greenlight_approved_event():
     """Validate atomic persistence of SiteGreenlightApproved event in transactional outbox.
 
-    @req:PRD-SSU-003, PRD-SYS-121, ADR-2202
+    @req:PRD-SYS-183, PRD-SSU-003, PRD-SYS-121, ADR-2202
     """
     client = TestClient(app)
     headers = get_auth_headers(
@@ -523,7 +523,7 @@ async def test_transactional_outbox_site_greenlight_approved_event():
     # Verify Outbox table directly
     async with db_manager.get_session_maker()() as session:
         stmt = select(IntegrationOutbox).where(
-            IntegrationOutbox.event_type.is_("SiteGreenlightApproved")
+            IntegrationOutbox.event_type == "SiteGreenlightApproved"
         )
         res = await session.execute(stmt)
         outbox_events = res.scalars().all()
@@ -542,7 +542,7 @@ async def test_transactional_outbox_site_greenlight_approved_event():
 def test_dual_signature_executive_gxp_override():
     """Validate dual-signature executive sponsor GxP override workflow with 21 CFR Part 11 justification.
 
-    @req:PRD-SSU-002, ADR-2202, 21 CFR Part 11
+    @req:PRD-SYS-183, PRD-SSU-002, ADR-2202, 21 CFR Part 11
     """
     client = TestClient(app)
     headers = get_auth_headers(

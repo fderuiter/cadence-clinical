@@ -1,6 +1,6 @@
 """Integration and unit tests for Self-Billing Invoicing, Remittance Advice Generator, and ERP Sync.
 
-Requirements: ADR-2199, PRD-PAY-004, PRD-PAY-006
+Requirements: ADR-2199, PRD-PAY-004, PRD-PAY-006, PRD-SYS-163
 """
 
 import pytest
@@ -19,6 +19,7 @@ async def test_compile_monthly_billing_cycle_and_invoice_aggregation(
 ):
     """Validate compilation of monthly billing cycle aggregating approved payables into self-billing invoice draft.
 
+    @req:PRD-SYS-163
     @req:ADR-2199
     @req:PRD-PAY-004
     @req:PRD-PAY-006
@@ -168,6 +169,7 @@ async def test_remittance_advice_pdf_download_and_tamper_detection(
 ):
     """Validate remittance advice PDF download, cryptographic signing, and tamper detection.
 
+    @req:PRD-SYS-163
     @req:ADR-2199
     @req:PRD-PAY-004
     @req:PRD-PAY-006
@@ -327,6 +329,7 @@ async def test_erp_synchronization_and_webhook_reconciliation(
 ):
     """Validate enterprise ERP export, webhook synchronization, and payment reconciliation.
 
+    @req:PRD-SYS-163
     @req:ADR-2199
     @req:PRD-PAY-004
     @req:PRD-PAY-006
@@ -508,6 +511,7 @@ async def test_erp_synchronization_and_webhook_reconciliation(
 async def test_netsuite_export_and_invoices_filtering(client: AsyncClient):
     """Validate NetSuite ERP export format and invoice query filtering.
 
+    @req:PRD-SYS-163
     @req:ADR-2199
     @req:PRD-PAY-004
     @req:PRD-PAY-006
@@ -607,6 +611,7 @@ async def test_netsuite_export_and_invoices_filtering(client: AsyncClient):
 async def test_unsigned_remittance_advice_verification(client: AsyncClient):
     """Validate verification status of an unsigned remittance advice statement.
 
+    @req:PRD-SYS-163
     @req:ADR-2199
     @req:PRD-PAY-004
     @req:PRD-PAY-006
@@ -691,6 +696,7 @@ async def test_unsigned_remittance_advice_verification(client: AsyncClient):
 async def test_compilation_with_no_payables_fails_gracefully(client: AsyncClient):
     """Validate that attempting to compile a billing cycle with zero approved payables returns 400 Bad Request.
 
+    @req:PRD-SYS-163
     @req:ADR-2199
     @req:PRD-PAY-004
     @req:PRD-PAY-006
@@ -728,6 +734,7 @@ async def test_compilation_with_no_payables_fails_gracefully(client: AsyncClient
 async def test_rbac_permissions_for_invoicing(client: AsyncClient):
     """Validate Role-Based Access Control (RBAC) on financial invoicing endpoints.
 
+    @req:PRD-SYS-163
     @req:ADR-2199
     @req:PRD-PAY-004
     @req:PRD-PAY-006

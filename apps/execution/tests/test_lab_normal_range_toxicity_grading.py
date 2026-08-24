@@ -98,7 +98,11 @@ async def setup_lab_governance_db():
 
 
 def test_cdisc_lab_xml_odm_parser():
-    """Verify CDISC LAB v1.0.1 XML ODM payload parsing."""
+    """Verify CDISC LAB v1.0.1 XML ODM payload parsing.
+
+    @req:PRD-SYS-170
+    @req:PRD-LBM-001
+    """
     xml_payload = """<?xml version="1.0" encoding="UTF-8"?>
     <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileType="Transactional" FileOID="LB_001">
       <ClinicalData StudyOID="STUDY-101">
@@ -138,7 +142,11 @@ def test_cdisc_lab_xml_odm_parser():
 
 
 def test_cdisc_lab_json_parser():
-    """Verify CDISC LAB JSON format parsing."""
+    """Verify CDISC LAB JSON format parsing.
+
+    @req:PRD-SYS-170
+    @req:PRD-LBM-001
+    """
     json_payload = {
         "records": [
             {
@@ -168,7 +176,11 @@ def test_cdisc_lab_json_parser():
 
 
 def test_local_manual_lab_parser():
-    """Verify manual local lab batch entry parsing."""
+    """Verify manual local lab batch entry parsing.
+
+    @req:PRD-SYS-170
+    @req:PRD-LBM-001
+    """
     manual_payload = {
         "site_id": "SITE-LOCAL-99",
         "study_id": "STUDY-101",
@@ -203,7 +215,11 @@ def test_local_manual_lab_parser():
 
 
 def test_reference_range_ethnicity_specificity_matching():
-    """Verify reference range selection specificity with sex, age, and ethnicity."""
+    """Verify reference range selection specificity with sex, age, and ethnicity.
+
+    @req:PRD-SYS-170
+    @req:PRD-LBM-002
+    """
     ranges = [
         # Generic range: ALL sex, ALL age, ALL ethnicity
         {
@@ -331,7 +347,11 @@ def test_reference_range_ethnicity_specificity_matching():
 
 @pytest.mark.asyncio
 async def test_loinc_catalog_and_mathematical_conversions():
-    """Verify LOINC catalog standard resolution and mathematical unit conversions."""
+    """Verify LOINC catalog standard resolution and mathematical unit conversions.
+
+    @req:PRD-SYS-170
+    @req:PRD-LBM-001
+    """
     # Check catalog items
     catalog = get_loinc_catalog()
     assert len(catalog) >= 10
@@ -367,7 +387,11 @@ async def test_loinc_catalog_and_mathematical_conversions():
 
 
 def test_ctcae_v5_and_daids_toxicity_grading():
-    """Verify CTCAE v5.0 and DAIDS v2.1 toxicity evaluation across analytes."""
+    """Verify CTCAE v5.0 and DAIDS v2.1 toxicity evaluation across analytes.
+
+    @req:PRD-SYS-171
+    @req:PRD-LBM-003
+    """
     # Hepatic ALT
     res_alt_g3 = LabToxicityEngine.evaluate_observation(
         test_code="ALT",
@@ -463,7 +487,12 @@ def test_ctcae_v5_and_daids_toxicity_grading():
 
 
 def test_hys_law_dili_detection():
-    """Verify Hy's Law compound alert for drug-induced liver injury."""
+    """Verify Hy's Law compound alert for drug-induced liver injury.
+
+    @req:PRD-SYS-171
+    @req:PRD-LBM-003
+    @req:PRD-PVG-001
+    """
     # Condition: ALT > 3x ULN (150 > 35*3=105), Total Bilirubin > 2x ULN (3.0 > 1.2*2=2.4), ALKP < 2x ULN (110 < 120*2=240)
     res = LabToxicityEngine.evaluate_observation(
         test_code="ALT",
@@ -482,7 +511,11 @@ def test_hys_law_dili_detection():
 
 
 def test_acute_delta_check_alert():
-    """Verify acute baseline delta deviation alert (>=50% increase from baseline)."""
+    """Verify acute baseline delta deviation alert (>=50% increase from baseline).
+
+    @req:PRD-SYS-171
+    @req:PRD-LBM-003
+    """
     res = LabToxicityEngine.evaluate_observation(
         test_code="CREAT",
         test_name="Creatinine",
@@ -503,7 +536,11 @@ def test_acute_delta_check_alert():
 
 @pytest.mark.asyncio
 async def test_local_lab_certification_safeguard():
-    """Verify local lab certification tracking and uncalibrated safeguard trigger on expired cert."""
+    """Verify local lab certification tracking and uncalibrated safeguard trigger on expired cert.
+
+    @req:PRD-SYS-170
+    @req:PRD-LBM-002
+    """
     async with db_manager.get_session_maker()() as session:
         # Create subject
         subj = ClinicalSubject(
@@ -578,7 +615,13 @@ async def test_local_lab_certification_safeguard():
 @pytest.mark.asyncio
 async def test_grade_3_4_ae_trigger_and_investigator_action_workflow():
     """Verify automated AE eCRF drafting, staged review creation, query creation,
-    and Investigator Confirm/Dismiss action with 21 CFR Part 11 electronic signature."""
+    and Investigator Confirm/Dismiss action with 21 CFR Part 11 electronic signature.
+
+    @req:PRD-SYS-171
+    @req:PRD-LBM-003
+    @req:PRD-PVG-001
+    @req:Trace-1
+    """
     async with db_manager.get_session_maker()() as session:
         # 1. Setup subject and reference range
         subj = ClinicalSubject(
@@ -735,7 +778,11 @@ async def test_grade_3_4_ae_trigger_and_investigator_action_workflow():
 
 @pytest.mark.asyncio
 async def test_local_lab_certification_rest_endpoints():
-    """Verify Local Lab Certification REST API CRUD and verification endpoints."""
+    """Verify Local Lab Certification REST API CRUD and verification endpoints.
+
+    @req:PRD-SYS-170
+    @req:PRD-LBM-002
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app),
         base_url="http://testserver",

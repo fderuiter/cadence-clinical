@@ -15,6 +15,9 @@ def test_parse_e2b_xml_valid_payload() -> None:
     """Validate parsing valid ICH E2B(R3) XML string into SAECaseRecord.
 
     Requirements: PRD-SYS-001
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
     """
     xml_sample = """<?xml version="1.0" encoding="UTF-8"?>
     <icsr>

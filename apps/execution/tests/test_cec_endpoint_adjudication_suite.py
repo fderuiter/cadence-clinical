@@ -5,6 +5,8 @@ Requirements:
 - PRD-CEC-001: Automated Patient Event Dossier Compilation & In-Flight PHI Masking
 - PRD-CEC-002: 2+1 Independent Blinded Reader & Tie-Breaker Workflow
 - PRD-CEC-003: Bi-Directional EDC Feedback & CDISC SDTM CE Domain Export
+- PRD-SYS-172: Blinded CEC Dossier Compilation & Dual-Reader Workflow Engine
+- PRD-SYS-173: CEC Committee Governance, Consensus Determination & 21 CFR Part 11 Electronic Signatures
 - PRD-SYS-124: Charter Governance, Quorum Tracking, and 21 CFR Part 11 Electronic Signatures
 - PRD-SYS-001: 21 CFR Part 11 Audit Trail Immutability
 """
@@ -93,7 +95,7 @@ def get_auth_headers(
 async def test_dossier_packaging_and_phi_masking_unit():
     """Verify automated dossier compilation and in-flight PHI masking.
 
-    @req:PRD-CEC-001, @req:PRD-SYS-124, @req:ADR-2199
+    @req:PRD-SYS-172, @req:PRD-CEC-001, @req:PRD-SYS-124, @req:ADR-2199
     """
     service = CecAdjudicationService()
 
@@ -181,7 +183,7 @@ async def test_dossier_packaging_and_phi_masking_unit():
 async def test_blinded_reader_isolation_unit():
     """Verify that Reader 1 and Reader 2 views are completely blinded from each other.
 
-    @req:PRD-CEC-002, @req:ADR-2199
+    @req:PRD-SYS-172, @req:PRD-CEC-002, @req:ADR-2199
     """
     service = CecAdjudicationService()
 
@@ -250,7 +252,7 @@ async def test_blinded_reader_isolation_unit():
 async def test_concordant_consensus_auto_finalization_unit():
     """Verify that when Reader 1 and Reader 2 agree, consensus is finalized automatically.
 
-    @req:PRD-CEC-002, @req:PRD-CEC-003, @req:ADR-2199
+    @req:PRD-SYS-172, @req:PRD-SYS-173, @req:PRD-CEC-002, @req:PRD-CEC-003, @req:ADR-2199
     """
     service = CecAdjudicationService()
 
@@ -346,7 +348,7 @@ async def test_concordant_consensus_auto_finalization_unit():
 async def test_discordance_detection_and_chair_tiebreaker_unit():
     """Verify discordance detection, escalation, and Chair tie-breaker resolution with Part 11 signature.
 
-    @req:PRD-CEC-002, @req:PRD-SYS-124, @req:ADR-2199
+    @req:PRD-SYS-173, @req:PRD-CEC-002, @req:PRD-SYS-124, @req:ADR-2199
     """
     service = CecAdjudicationService()
 
@@ -450,7 +452,7 @@ async def test_discordance_detection_and_chair_tiebreaker_unit():
 async def test_charter_governance_and_quorum_tracking_unit():
     """Verify charter configuration, voting rules, and meeting quorum calculation.
 
-    @req:PRD-SYS-124
+    @req:PRD-SYS-173, @req:PRD-SYS-124
     """
     service = CecAdjudicationService()
 
@@ -559,7 +561,7 @@ async def test_charter_governance_and_quorum_tracking_unit():
 async def test_sdtm_ce_domain_model_compilation_unit():
     """Verify compilation of finalized dossiers into valid CDISC SDTM CE & SUPPCE dataset.
 
-    @req:PRD-CEC-003, @req:PRD-SYS-001
+    @req:PRD-SYS-173, @req:PRD-CEC-003, @req:PRD-SYS-001
     """
     service = CecAdjudicationService()
 
@@ -639,7 +641,7 @@ async def test_sdtm_ce_domain_model_compilation_unit():
 async def test_cec_api_dossier_lifecycle_and_blinding():
     """Integration test: Package dossier, blind readers, submit reviews, and verify consensus via API.
 
-    @req:PRD-CEC-001, @req:PRD-CEC-002, @req:PRD-CEC-003, @req:ADR-2199
+    @req:PRD-SYS-172, @req:PRD-SYS-173, @req:PRD-CEC-001, @req:PRD-CEC-002, @req:PRD-CEC-003, @req:ADR-2199
     """
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(
@@ -767,7 +769,7 @@ async def test_cec_api_dossier_lifecycle_and_blinding():
 async def test_cec_api_discordance_and_chair_tiebreaker():
     """Integration test: Create discordant reviews and resolve via Chair tie-breaker API with eSignature.
 
-    @req:PRD-CEC-002, @req:PRD-SYS-124, @req:ADR-2199
+    @req:PRD-SYS-173, @req:PRD-CEC-002, @req:PRD-SYS-124, @req:ADR-2199
     """
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(
@@ -866,7 +868,7 @@ async def test_cec_api_discordance_and_chair_tiebreaker():
 async def test_cec_api_charter_and_meeting_quorum():
     """Integration test: Charter configuration and meeting quorum endpoints.
 
-    @req:PRD-SYS-124
+    @req:PRD-SYS-173, @req:PRD-SYS-124
     """
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(

@@ -20,7 +20,9 @@ const compoundName = computed(() => (route.query.compound as string) || 'CADENCE
 <style scoped>
 .safety-view {
   padding: 24px;
-  max-width: 1600px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  box-sizing: border-box;
 }
 </style>

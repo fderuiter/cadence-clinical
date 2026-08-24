@@ -75,7 +75,8 @@ async def setup_lab_assessment_db():
 async def test_loinc_catalog_and_unit_conversion():
     """Verify LOINC metadata catalog resolution and mathematical unit conversions.
 
-    @req:PRD-LAB-001
+    @req:PRD-SYS-170
+    @req:PRD-LBM-001
     @req:PRD-SYS-123
     @req:ADR-2199
     """
@@ -135,7 +136,8 @@ async def test_loinc_catalog_and_unit_conversion():
 async def test_multidimensional_reference_range_selection():
     """Verify age, sex, site, and ethnicity specificity scoring and tie-breaking.
 
-    @req:PRD-LAB-001
+    @req:PRD-SYS-170
+    @req:PRD-LBM-002
     @req:PRD-SYS-123
     @req:ADR-2199
     """
@@ -256,6 +258,7 @@ async def test_multidimensional_reference_range_selection():
 async def test_evaluate_reference_range_indicators():
     """Verify normal, low, high, and critical low/high range indicators.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-SYS-001
     """
@@ -297,6 +300,8 @@ async def test_evaluate_reference_range_indicators():
 async def test_toxicity_grading_ctcae_and_daids():
     """Verify NCI-CTCAE v5.0 and DAIDS v2.1 toxicity grading calculations.
 
+    @req:PRD-SYS-171
+    @req:PRD-LBM-003
     @req:PRD-SYS-123
     @req:PRD-PVG-001
     """
@@ -341,6 +346,8 @@ async def test_toxicity_grading_ctcae_and_daids():
 async def test_hys_law_compound_dili_assessment():
     """Verify Hy's Law Drug-Induced Liver Injury compound assessment criteria.
 
+    @req:PRD-SYS-171
+    @req:PRD-LBM-003
     @req:PRD-SYS-123
     @req:PRD-PVG-001
     """
@@ -376,6 +383,8 @@ async def test_hys_law_compound_dili_assessment():
 async def test_acute_delta_check():
     """Verify acute baseline delta calculation (>= 50% deviation with Grade >= 2).
 
+    @req:PRD-SYS-171
+    @req:PRD-LBM-003
     @req:PRD-LAB-001
     @req:PRD-SYS-123
     """
@@ -402,6 +411,8 @@ async def test_acute_delta_check():
 async def test_local_lab_certification_and_uncalibrated_safeguard():
     """Verify local laboratory accreditation verification and uncalibrated safeguard alerts.
 
+    @req:PRD-SYS-170
+    @req:PRD-LBM-002
     @req:PRD-LAB-001
     @req:Trace-15
     """
@@ -474,6 +485,8 @@ async def test_local_lab_certification_and_uncalibrated_safeguard():
 async def test_evaluate_laboratory_result_e2e_critical_ae_staging():
     """Verify end-to-end evaluation with automated Grade 4 AE eCRF drafting and query creation.
 
+    @req:PRD-SYS-171
+    @req:PRD-LBM-003
     @req:PRD-LAB-001
     @req:PRD-PVG-001
     @req:PRD-SYS-123
@@ -584,6 +597,8 @@ async def test_evaluate_laboratory_result_e2e_critical_ae_staging():
 async def test_recalculate_cohort_range_flags():
     """Verify study-test cohort range flag recalculation and version incrementing.
 
+    @req:PRD-SYS-170
+    @req:PRD-LBM-002
     @req:PRD-LAB-001
     @req:Trace-15
     """

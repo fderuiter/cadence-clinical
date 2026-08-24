@@ -18,6 +18,9 @@ def test_sae_reconciler_concordant_and_discrepant() -> None:
     """Validate SAE reconciler identifies matching cases and flags date/MedDRA discrepancies.
 
     Requirements: PRD-SYS-001
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
     """
     now_iso = datetime.now(UTC).isoformat()
 

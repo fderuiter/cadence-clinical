@@ -223,6 +223,12 @@ class MockAsyncClientForJobs:
 
 @pytest.mark.asyncio
 async def test_trigger_and_poll_reconciliation_job_success():
+    """Test trigger and poll reconciliation job success.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     mock_client = MockAsyncClientForJobs()
     app.state.test_httpx_client = mock_client
 
@@ -290,6 +296,12 @@ async def test_trigger_and_poll_reconciliation_job_success():
 
 @pytest.mark.asyncio
 async def test_reconciliation_job_failure_path():
+    """Test reconciliation job failure path.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     mock_client = MockAsyncClientForJobs()
     mock_client.should_fail_reconciliation = True
     app.state.test_httpx_client = mock_client
@@ -343,6 +355,9 @@ async def test_notifications_gxp_medical_monitor_alert():
     """
     Verify that notifications service create_notification registers MEDICAL_MONITOR_ALERT_ATTEMPT
     when recipient_role targets sponsor_mm.
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
     """
     from apps.notifications.database import db_manager as notifications_db_manager
     from apps.notifications.main import app as notifications_app
@@ -489,6 +504,12 @@ class MockAsyncClientForAlertFailure:
 
 @pytest.mark.asyncio
 async def test_alert_dispatch_failure_non_2xx():
+    """Test alert dispatch failure non 2xx.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     # @req:Trace-15
     mock_client = MockAsyncClientForAlertFailure(simulate_exception=False)
     app.state.test_httpx_client = mock_client
@@ -525,6 +546,12 @@ async def test_alert_dispatch_failure_non_2xx():
 
 @pytest.mark.asyncio
 async def test_alert_dispatch_failure_exception():
+    """Test alert dispatch failure exception.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     # @req:Trace-15
     mock_client = MockAsyncClientForAlertFailure(simulate_exception=True)
     app.state.test_httpx_client = mock_client

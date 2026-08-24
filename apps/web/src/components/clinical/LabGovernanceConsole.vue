@@ -67,6 +67,14 @@
       >
         📊 Feed Ingestion Monitor
       </button>
+      <button
+        role="tab"
+        :aria-selected="activeTab === 'trends'"
+        :class="['tab-button', { active: activeTab === 'trends' }]"
+        @click="activeTab = 'trends'"
+      >
+        📈 Longitudinal Trends & Delta Checks
+      </button>
     </nav>
 
     <!-- Main Content Panes -->
@@ -528,6 +536,223 @@
           </table>
         </div>
       </section>
+
+      <!-- TAB 6: Longitudinal Trends & Acute Delta Checks -->
+      <section v-if="activeTab === 'trends'" class="tab-pane" aria-labelledby="trends-tab-heading">
+        <div class="pane-toolbar">
+          <div class="filter-group">
+            <label for="trend-subject">Subject ID:</label>
+            <select id="trend-subject" v-model="trendSubject" class="select-input">
+              <option value="SUBJ-101">SUBJ-101 (Cohort A - Hepatic Safety)</option>
+              <option value="SUBJ-202">SUBJ-202 (Cohort A - Renal Function)</option>
+              <option value="SUBJ-303">SUBJ-303 (Cohort B - Hematology)</option>
+              <option value="SUBJ-TOX-99">SUBJ-TOX-99 (Severe Toxicities)</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="trend-test">Analyte:</label>
+            <select id="trend-test" v-model="trendTest" class="select-input">
+              <option value="ALT">ALT - Alanine Aminotransferase (U/L)</option>
+              <option value="AST">AST - Aspartate Aminotransferase (U/L)</option>
+              <option value="CREAT">CREAT - Serum Creatinine (mg/dL)</option>
+              <option value="POTASSIUM">POTASSIUM - Serum Potassium (mmol/L)</option>
+              <option value="HGB">HGB - Hemoglobin (g/dL)</option>
+              <option value="PLT">PLT - Platelet Count (10^9/L)</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="trend-scale">Grading Scale:</label>
+            <span class="badge badge-regulatory">NCI-CTCAE v5.0 Standard</span>
+          </div>
+        </div>
+
+        <!-- KPI Metric Summary Cards -->
+        <div class="trend-kpis">
+          <div class="kpi-card">
+            <span class="kpi-label">Baseline Value</span>
+            <span class="kpi-value">{{ trendSummary.baseline }} {{ trendSummary.unit }}</span>
+            <span class="kpi-sub">Ref: [{{ trendSummary.lln }} - {{ trendSummary.uln }}]</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Peak Value (Cmax)</span>
+            <span class="kpi-value text-danger">{{ trendSummary.peakValue }} {{ trendSummary.unit }}</span>
+            <span class="kpi-sub">Visit: {{ trendSummary.peakVisit }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Peak Toxicity Grade</span>
+            <span :class="['grade-badge', 'grade-' + trendSummary.peakGrade]">
+              Grade {{ trendSummary.peakGrade }}
+            </span>
+            <span class="kpi-sub">{{ trendSummary.peakDescription }}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Acute Delta Shift</span>
+            <span :class="['kpi-value', trendSummary.maxDeltaPct >= 50 ? 'text-danger' : 'text-primary']">
+              {{ trendSummary.maxDeltaPct > 0 ? '+' : '' }}{{ trendSummary.maxDeltaPct }}%
+            </span>
+            <span v-if="trendSummary.maxDeltaPct >= 50" class="safety-tag delta">⚡ Acute Shift Alert</span>
+            <span v-else class="kpi-sub">Within Normal Variance</span>
+          </div>
+        </div>
+
+        <!-- Interactive SVG Longitudinal Trend Chart -->
+        <div class="trend-chart-card">
+          <div class="chart-header">
+            <h4>Longitudinal Lab Trajectory & Reference Band Shading</h4>
+            <div class="chart-legend">
+              <span class="legend-item"><span class="legend-box normal-band"></span> Normal Limits [LLN - ULN]</span>
+              <span class="legend-item"><span class="legend-line uln-line"></span> Upper Limit of Normal (ULN: {{ trendSummary.uln }})</span>
+              <span class="legend-item"><span class="legend-line delta-line"></span> Acute Shift Trigger (+50%)</span>
+            </div>
+          </div>
+
+          <div class="svg-container">
+            <svg viewBox="0 0 800 280" class="trend-svg" role="img" aria-label="Longitudinal laboratory trend graph">
+              <!-- Background Grid & Reference Shading -->
+              <rect x="60" y="20" width="710" height="210" fill="#f8fafc" rx="4" />
+              <!-- Normal Range Band -->
+              <rect
+                :x="60"
+                :y="getYCoord(trendSummary.uln)"
+                width="710"
+                :height="Math.max(4, getYCoord(trendSummary.lln) - getYCoord(trendSummary.uln))"
+                fill="#ecfdf5"
+                opacity="0.75"
+              />
+
+              <!-- ULN Boundary Line -->
+              <line
+                x1="60"
+                :y1="getYCoord(trendSummary.uln)"
+                x2="770"
+                :y2="getYCoord(trendSummary.uln)"
+                stroke="#10b981"
+                stroke-dasharray="4,4"
+                stroke-width="1.5"
+              />
+              <text x="775" :y="getYCoord(trendSummary.uln) + 4" font-size="10" fill="#059669" font-weight="bold">ULN</text>
+
+              <!-- LLN Boundary Line (if > 0) -->
+              <line
+                v-if="trendSummary.lln > 0"
+                x1="60"
+                :y1="getYCoord(trendSummary.lln)"
+                x2="770"
+                :y2="getYCoord(trendSummary.lln)"
+                stroke="#10b981"
+                stroke-dasharray="4,4"
+                stroke-width="1.5"
+              />
+              <text v-if="trendSummary.lln > 0" x="775" :y="getYCoord(trendSummary.lln) + 4" font-size="10" fill="#059669" font-weight="bold">LLN</text>
+
+              <!-- Trend Polyline Path -->
+              <polyline
+                :points="trendPointsString"
+                fill="none"
+                stroke="#2563eb"
+                stroke-width="2.5"
+              />
+
+              <!-- Plotted Points & Tooltip Labels -->
+              <g v-for="(pt, idx) in trendPlotPoints" :key="idx">
+                <circle
+                  :cx="pt.x"
+                  :cy="pt.y"
+                  :r="pt.grade >= 3 ? 7 : 5"
+                  :fill="getPointColor(pt.grade)"
+                  stroke="#ffffff"
+                  stroke-width="2"
+                />
+                <!-- Value label above point -->
+                <text
+                  :x="pt.x"
+                  :y="pt.y - 10"
+                  text-anchor="middle"
+                  font-size="11"
+                  font-weight="bold"
+                  :fill="getPointColor(pt.grade)"
+                >
+                  {{ pt.value }}
+                </text>
+                <!-- Visit label on X-axis -->
+                <text
+                  :x="pt.x"
+                  y="250"
+                  text-anchor="middle"
+                  font-size="10"
+                  fill="#475569"
+                  font-weight="600"
+                >
+                  {{ pt.visit }}
+                </text>
+                <text
+                  :x="pt.x"
+                  y="265"
+                  text-anchor="middle"
+                  font-size="9"
+                  fill="#94a3b8"
+                >
+                  {{ pt.date }}
+                </text>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Longitudinal Lab Observations Table -->
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Visit Event</th>
+                <th>Collection Date</th>
+                <th>Lab Source</th>
+                <th>Observed Value</th>
+                <th>Normalized SI Value</th>
+                <th>Indicator</th>
+                <th>CTCAE v5.0 Toxicity</th>
+                <th>Baseline Delta</th>
+                <th>Investigator Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="obs in activeTrendData" :key="obs.visit" :class="{ 'row-critical': obs.grade >= 3 }">
+                <td><strong>{{ obs.visit }}</strong></td>
+                <td>{{ obs.date }}</td>
+                <td>
+                  <span :class="['status-pill', obs.source === 'CENTRAL' ? 'primary' : 'secondary']">
+                    {{ obs.source }}
+                  </span>
+                </td>
+                <td><strong class="value-highlight">{{ obs.value }} {{ trendSummary.unit }}</strong></td>
+                <td><code>{{ obs.normalizedValue }} {{ trendSummary.normalizedUnit }}</code></td>
+                <td>
+                  <span :class="['status-pill', obs.indicator === 'NORMAL' ? 'success' : obs.indicator.includes('HIGH') ? 'danger' : 'warning']">
+                    {{ obs.indicator }}
+                  </span>
+                </td>
+                <td>
+                  <span :class="['grade-badge', 'grade-' + obs.grade]">
+                    Grade {{ obs.grade }}
+                  </span>
+                  <span v-if="obs.grade >= 3" class="sub-text text-danger">Severe AE</span>
+                </td>
+                <td>
+                  <span v-if="obs.deltaPct !== null" :class="['delta-tag', obs.deltaPct >= 50 ? 'alert' : '']">
+                    {{ obs.deltaPct > 0 ? '+' : '' }}{{ obs.deltaPct }}%
+                  </span>
+                  <span v-else class="text-muted">Baseline</span>
+                </td>
+                <td>
+                  <span :class="['status-pill', getReviewStatusPillClass(obs.reviewStatus)]">
+                    {{ formatReviewStatus(obs.reviewStatus) }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </main>
 
     <!-- MODAL: Ingest Laboratory Batch -->
@@ -701,6 +926,202 @@ const simModel = ref({
   alkp_value: 95,
 })
 const simResult = ref(null)
+
+// Longitudinal Trends State & Sample Clinical Progression Datasets
+const trendSubject = ref('SUBJ-101')
+const trendTest = ref('ALT')
+
+const trendDatabase = {
+  'SUBJ-101': {
+    ALT: {
+      baseline: 28.0,
+      lln: 0.0,
+      uln: 35.0,
+      unit: 'U/L',
+      normalizedUnit: 'U/L',
+      data: [
+        { visit: 'Screening', date: '2026-06-01', source: 'CENTRAL', value: 26.0, normalizedValue: 26.0, indicator: 'NORMAL', grade: 0, deltaPct: null, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Baseline (D1)', date: '2026-06-15', source: 'CENTRAL', value: 28.0, normalizedValue: 28.0, indicator: 'NORMAL', grade: 0, deltaPct: 0.0, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 1 (D15)', date: '2026-06-30', source: 'CENTRAL', value: 65.0, normalizedValue: 65.0, indicator: 'HIGH', grade: 1, deltaPct: 132.1, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 2 (D29)', date: '2026-07-15', source: 'CENTRAL', value: 145.0, normalizedValue: 145.0, indicator: 'HIGH', grade: 2, deltaPct: 417.8, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 3 (D43)', date: '2026-07-29', source: 'CENTRAL', value: 280.0, normalizedValue: 280.0, indicator: 'HIGH HIGH', grade: 3, deltaPct: 900.0, reviewStatus: 'STAGED_FOR_INVESTIGATOR_REVIEW' },
+        { visit: 'Cycle 4 (D57)', date: '2026-08-12', source: 'CENTRAL', value: 110.0, normalizedValue: 110.0, indicator: 'HIGH', grade: 1, deltaPct: 292.8, reviewStatus: 'CONFIRMED_AS_AE' },
+      ],
+    },
+    AST: {
+      baseline: 24.0,
+      lln: 0.0,
+      uln: 35.0,
+      unit: 'U/L',
+      normalizedUnit: 'U/L',
+      data: [
+        { visit: 'Screening', date: '2026-06-01', source: 'CENTRAL', value: 22.0, normalizedValue: 22.0, indicator: 'NORMAL', grade: 0, deltaPct: null, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Baseline (D1)', date: '2026-06-15', source: 'CENTRAL', value: 24.0, normalizedValue: 24.0, indicator: 'NORMAL', grade: 0, deltaPct: 0.0, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 1 (D15)', date: '2026-06-30', source: 'CENTRAL', value: 48.0, normalizedValue: 48.0, indicator: 'HIGH', grade: 1, deltaPct: 100.0, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 2 (D29)', date: '2026-07-15', source: 'CENTRAL', value: 115.0, normalizedValue: 115.0, indicator: 'HIGH', grade: 2, deltaPct: 379.2, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 3 (D43)', date: '2026-07-29', source: 'CENTRAL', value: 195.0, normalizedValue: 195.0, indicator: 'HIGH HIGH', grade: 3, deltaPct: 712.5, reviewStatus: 'STAGED_FOR_INVESTIGATOR_REVIEW' },
+        { visit: 'Cycle 4 (D57)', date: '2026-08-12', source: 'CENTRAL', value: 85.0, normalizedValue: 85.0, indicator: 'HIGH', grade: 1, deltaPct: 254.2, reviewStatus: 'CONFIRMED_AS_AE' },
+      ],
+    },
+    CREAT: {
+      baseline: 0.9,
+      lln: 0.6,
+      uln: 1.2,
+      unit: 'mg/dL',
+      normalizedUnit: 'umol/L',
+      data: [
+        { visit: 'Screening', date: '2026-06-01', source: 'CENTRAL', value: 0.85, normalizedValue: 75.1, indicator: 'NORMAL', grade: 0, deltaPct: null, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Baseline (D1)', date: '2026-06-15', source: 'CENTRAL', value: 0.9, normalizedValue: 79.6, indicator: 'NORMAL', grade: 0, deltaPct: 0.0, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 1 (D15)', date: '2026-06-30', source: 'CENTRAL', value: 1.1, normalizedValue: 97.2, indicator: 'NORMAL', grade: 0, deltaPct: 22.2, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 2 (D29)', date: '2026-07-15', source: 'LOCAL', value: 1.4, normalizedValue: 123.8, indicator: 'HIGH', grade: 1, deltaPct: 55.6, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 3 (D43)', date: '2026-07-29', source: 'CENTRAL', value: 1.9, normalizedValue: 168.0, indicator: 'HIGH', grade: 2, deltaPct: 111.1, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 4 (D57)', date: '2026-08-12', source: 'CENTRAL', value: 1.0, normalizedValue: 88.4, indicator: 'NORMAL', grade: 0, deltaPct: 11.1, reviewStatus: 'NOT_APPLICABLE' },
+      ],
+    },
+    POTASSIUM: {
+      baseline: 4.2,
+      lln: 3.5,
+      uln: 5.0,
+      unit: 'mmol/L',
+      normalizedUnit: 'mmol/L',
+      data: [
+        { visit: 'Screening', date: '2026-06-01', source: 'CENTRAL', value: 4.1, normalizedValue: 4.1, indicator: 'NORMAL', grade: 0, deltaPct: null, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Baseline (D1)', date: '2026-06-15', source: 'CENTRAL', value: 4.2, normalizedValue: 4.2, indicator: 'NORMAL', grade: 0, deltaPct: 0.0, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 1 (D15)', date: '2026-06-30', source: 'CENTRAL', value: 4.5, normalizedValue: 4.5, indicator: 'NORMAL', grade: 0, deltaPct: 7.1, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 2 (D29)', date: '2026-07-15', source: 'CENTRAL', value: 5.4, normalizedValue: 5.4, indicator: 'HIGH', grade: 1, deltaPct: 28.6, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 3 (D43)', date: '2026-07-29', source: 'LOCAL', value: 6.2, normalizedValue: 6.2, indicator: 'HIGH HIGH', grade: 3, deltaPct: 47.6, reviewStatus: 'STAGED_FOR_INVESTIGATOR_REVIEW' },
+        { visit: 'Cycle 4 (D57)', date: '2026-08-12', source: 'CENTRAL', value: 4.4, normalizedValue: 4.4, indicator: 'NORMAL', grade: 0, deltaPct: 4.8, reviewStatus: 'CONFIRMED_AS_AE' },
+      ],
+    },
+    HGB: {
+      baseline: 14.2,
+      lln: 12.0,
+      uln: 16.0,
+      unit: 'g/dL',
+      normalizedUnit: 'g/L',
+      data: [
+        { visit: 'Screening', date: '2026-06-01', source: 'CENTRAL', value: 14.5, normalizedValue: 145.0, indicator: 'NORMAL', grade: 0, deltaPct: null, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Baseline (D1)', date: '2026-06-15', source: 'CENTRAL', value: 14.2, normalizedValue: 142.0, indicator: 'NORMAL', grade: 0, deltaPct: 0.0, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 1 (D15)', date: '2026-06-30', source: 'CENTRAL', value: 11.2, normalizedValue: 112.0, indicator: 'LOW', grade: 1, deltaPct: -21.1, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 2 (D29)', date: '2026-07-15', source: 'CENTRAL', value: 9.4, normalizedValue: 94.0, indicator: 'LOW', grade: 2, deltaPct: -33.8, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 3 (D43)', date: '2026-07-29', source: 'CENTRAL', value: 7.6, normalizedValue: 76.0, indicator: 'LOW LOW', grade: 3, deltaPct: -46.5, reviewStatus: 'STAGED_FOR_INVESTIGATOR_REVIEW' },
+        { visit: 'Cycle 4 (D57)', date: '2026-08-12', source: 'CENTRAL', value: 11.5, normalizedValue: 115.0, indicator: 'LOW', grade: 1, deltaPct: -19.0, reviewStatus: 'CONFIRMED_AS_AE' },
+      ],
+    },
+    PLT: {
+      baseline: 240.0,
+      lln: 150.0,
+      uln: 450.0,
+      unit: '10^9/L',
+      normalizedUnit: '10^9/L',
+      data: [
+        { visit: 'Screening', date: '2026-06-01', source: 'CENTRAL', value: 250.0, normalizedValue: 250.0, indicator: 'NORMAL', grade: 0, deltaPct: null, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Baseline (D1)', date: '2026-06-15', source: 'CENTRAL', value: 240.0, normalizedValue: 240.0, indicator: 'NORMAL', grade: 0, deltaPct: 0.0, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 1 (D15)', date: '2026-06-30', source: 'CENTRAL', value: 130.0, normalizedValue: 130.0, indicator: 'LOW', grade: 1, deltaPct: -45.8, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 2 (D29)', date: '2026-07-15', source: 'CENTRAL', value: 85.0, normalizedValue: 85.0, indicator: 'LOW', grade: 2, deltaPct: -64.6, reviewStatus: 'NOT_APPLICABLE' },
+        { visit: 'Cycle 3 (D43)', date: '2026-07-29', source: 'CENTRAL', value: 42.0, normalizedValue: 42.0, indicator: 'LOW LOW', grade: 3, deltaPct: -82.5, reviewStatus: 'STAGED_FOR_INVESTIGATOR_REVIEW' },
+        { visit: 'Cycle 4 (D57)', date: '2026-08-12', source: 'CENTRAL', value: 165.0, normalizedValue: 165.0, indicator: 'NORMAL', grade: 0, deltaPct: -31.3, reviewStatus: 'CONFIRMED_AS_AE' },
+      ],
+    },
+  },
+}
+
+const activeTrendData = computed(() => {
+  const subj = trendSubject.value
+  const tst = trendTest.value
+  if (trendDatabase[subj] && trendDatabase[subj][tst]) {
+    return trendDatabase[subj][tst].data
+  }
+  return trendDatabase['SUBJ-101']['ALT'].data
+})
+
+const trendSummary = computed(() => {
+  const subj = trendSubject.value
+  const tst = trendTest.value
+  const dataset = (trendDatabase[subj] && trendDatabase[subj][tst]) ? trendDatabase[subj][tst] : trendDatabase['SUBJ-101']['ALT']
+  const data = dataset.data
+  const baseline = dataset.baseline
+  const uln = dataset.uln
+  const lln = dataset.lln
+  const unit = dataset.unit
+  const normalizedUnit = dataset.normalizedUnit
+
+  let peakVal = data[0].value
+  let peakVisit = data[0].visit
+  let peakGrade = data[0].grade
+  let maxDeltaPct = 0
+
+  for (const obs of data) {
+    if (obs.value > peakVal) {
+      peakVal = obs.value
+      peakVisit = obs.visit
+    }
+    if (obs.grade > peakGrade) {
+      peakGrade = obs.grade
+    }
+    if (obs.deltaPct && Math.abs(obs.deltaPct) > Math.abs(maxDeltaPct)) {
+      maxDeltaPct = obs.deltaPct
+    }
+  }
+
+  const descriptions = {
+    0: 'Within Normal Limits',
+    1: 'Mild Abnormality (> ULN - 3.0x ULN)',
+    2: 'Moderate Toxicity (> 3.0 - 5.0x ULN)',
+    3: 'Severe Adverse Event Trigger (> 5.0 - 20.0x ULN)',
+    4: 'Life-Threatening (> 20.0x ULN)',
+  }
+
+  return {
+    baseline,
+    lln,
+    uln,
+    unit,
+    normalizedUnit,
+    peakValue: peakVal,
+    peakVisit,
+    peakGrade,
+    peakDescription: descriptions[peakGrade] || 'CTCAE Evaluation',
+    maxDeltaPct,
+  }
+})
+
+function getYCoord(val) {
+  const data = activeTrendData.value
+  const maxVal = Math.max(...data.map(d => d.value), trendSummary.value.uln * 1.25, 1)
+  const minVal = 0
+  const chartHeight = 180
+  const topMargin = 30
+  const normalized = (val - minVal) / (maxVal - minVal)
+  return topMargin + chartHeight * (1 - normalized)
+}
+
+const trendPlotPoints = computed(() => {
+  const data = activeTrendData.value
+  const width = 680
+  const leftMargin = 80
+  const step = data.length > 1 ? width / (data.length - 1) : width
+  return data.map((d, i) => ({
+    x: leftMargin + i * step,
+    y: getYCoord(d.value),
+    value: d.value,
+    visit: d.visit,
+    date: d.date,
+    grade: d.grade,
+  }))
+})
+
+const trendPointsString = computed(() => {
+  return trendPlotPoints.value.map(p => `${p.x},${p.y}`).join(' ')
+})
+
+function getPointColor(grade) {
+  if (grade >= 4) return '#991b1b'
+  if (grade === 3) return '#dc2626'
+  if (grade === 2) return '#d97706'
+  if (grade === 1) return '#0284c7'
+  return '#10b981'
+}
 
 // Computed Filters
 const filteredRanges = computed(() => {
@@ -1274,5 +1695,135 @@ onMounted(() => {
   text-align: center;
   color: #64748b;
   padding: 2rem;
+}
+
+/* Longitudinal Trends & Delta Checks Styles */
+.trend-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.kpi-card {
+  background: var(--neutral-light, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.kpi-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--primary-light, #64748b);
+  letter-spacing: 0.05em;
+}
+
+.kpi-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--primary, #0f172a);
+}
+
+.kpi-sub {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.trend-chart-card {
+  background: #ffffff;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chart-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary, #0f172a);
+}
+
+.chart-legend {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: #475569;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.legend-box.normal-band {
+  width: 14px;
+  height: 14px;
+  background: #ecfdf5;
+  border: 1px solid #10b981;
+  border-radius: 2px;
+}
+
+.legend-line.uln-line {
+  width: 16px;
+  height: 2px;
+  background: #10b981;
+  border-top: 2px dashed #10b981;
+}
+
+.legend-line.delta-line {
+  width: 16px;
+  height: 2px;
+  background: #f59e0b;
+}
+
+.svg-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.trend-svg {
+  width: 100%;
+  min-width: 650px;
+  height: auto;
+}
+
+.delta-tag {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 4px;
+  font-weight: 700;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.delta-tag.alert {
+  background: #fef08a;
+  color: #854d0e;
+  border: 1px solid #fde047;
+}
+
+.text-danger {
+  color: #dc2626 !important;
+}
+
+.text-primary {
+  color: #2563eb !important;
 }
 </style>

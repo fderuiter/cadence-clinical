@@ -11,7 +11,12 @@ from apps.safety.services.as2_gateway import (
 
 
 def test_mic_calculation_and_envelope_generation():
-    """Verify SHA-256 MIC calculation and AS2 headers formatting."""
+    """Verify SHA-256 MIC calculation and AS2 headers formatting.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     xml_sample = """<?xml version="1.0" encoding="UTF-8"?>
     <ichicsr lang="en">
         <safetyreport>
@@ -37,7 +42,12 @@ def test_mic_calculation_and_envelope_generation():
 
 
 def test_parse_valid_mdn_receipt():
-    """Verify parsing and MIC non-repudiation matching of a valid processed MDN."""
+    """Verify parsing and MIC non-repudiation matching of a valid processed MDN.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     xml_sample = "<ichicsr><safetyreport><id>123</id></safetyreport></ichicsr>"
     envelope = AS2GatewayService.create_outbound_envelope(
         as2_from="CADENCE-SPONSOR",
@@ -65,7 +75,12 @@ Received-Content-MIC: {envelope.content_mic_sha256}
 
 
 def test_parse_tampered_mdn_receipt_mismatch():
-    """Verify that an altered MIC in the MDN receipt is flagged as TAMPERED."""
+    """Verify that an altered MIC in the MDN receipt is flagged as TAMPERED.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     xml_sample = "<ichicsr><safetyreport><id>123</id></safetyreport></ichicsr>"
     envelope = AS2GatewayService.create_outbound_envelope(
         as2_from="CADENCE-SPONSOR",

@@ -25,22 +25,23 @@ from packages.security.signing import (
 )
 
 # Setup a test app wrapped in GatewayAuthMiddleware
-test_app = FastAPI()
-test_app.add_middleware(GatewayAuthMiddleware)
+gateway_app = FastAPI()
+gateway_app.__test__ = False
+gateway_app.add_middleware(GatewayAuthMiddleware)
 
 
-@test_app.get("/secure-endpoint")
+@gateway_app.get("/secure-endpoint")
 async def secure_endpoint():
     return {"status": "success", "message": "Access Granted"}
 
 
-@test_app.get("/permission-check")
+@gateway_app.get("/permission-check")
 async def permission_check_endpoint(request: Request):
     perms = [p.value for p in getattr(request.state, "permissions", set())]
     return {"permissions": sorted(perms)}
 
 
-@test_app.post(
+@gateway_app.post(
     "/datalock-protected",
     dependencies=[Depends(require_gateway_permission(PermissionEnum.DATA_LOCK))],
 )
@@ -48,17 +49,17 @@ async def datalock_protected_endpoint():
     return {"status": "locked"}
 
 
-@test_app.post("/secure-endpoint")
+@gateway_app.post("/secure-endpoint")
 async def secure_endpoint_post():
     return {"status": "success", "message": "Access Granted"}
 
 
-@test_app.get("/health")
+@gateway_app.get("/health")
 async def health_endpoint():
     return {"status": "ok"}
 
 
-@test_app.post("/api/v1/execution/form-submissions/{submission_id}/approve")
+@gateway_app.post("/api/v1/execution/form-submissions/{submission_id}/approve")
 async def form_approve_endpoint(submission_id: str):
     return {"status": "success", "message": "Form Approved"}
 
@@ -67,7 +68,7 @@ def test_middleware_health_bypass() -> None:
     """
     Test that health check endpoints bypass security middleware checks.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
@@ -77,7 +78,7 @@ def test_middleware_missing_headers() -> None:
     """
     Test that requests with missing gateway auth headers are rejected.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     response = client.get("/secure-endpoint")
     assert response.status_code == 401
     assert "Missing gateway authentication headers" in response.json()["detail"]
@@ -87,7 +88,7 @@ def test_middleware_expired_timestamp() -> None:
     """
     Test that requests with timestamps older than 300 seconds are rejected.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     expired_timestamp = str(time.time() - 301)
     headers = {
         "X-User-Id": "test_user",
@@ -104,7 +105,7 @@ def test_middleware_invalid_timestamp_format() -> None:
     """
     Test that requests with malformed timestamps are rejected.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     headers = {
         "X-User-Id": "test_user",
         "X-User-Roles": "user",
@@ -120,7 +121,7 @@ def test_middleware_missing_signature_version_rejected() -> None:
     """
     Test that requests omitting the version header are immediately rejected.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     user_id = "test_user"
     roles = "user,editor"
@@ -149,7 +150,7 @@ def test_middleware_explicit_legacy_version_accepted() -> None:
     """
     Test that explicitly specifying legacy Version 1 signature header is rejected.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     user_id = "legacy_user_v1"
     roles = "user"
@@ -170,7 +171,7 @@ def test_middleware_explicit_legacy_version_invalid_rejected() -> None:
     """
     Test that legacy Version 1 is rejected regardless of validity.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     user_id = "legacy_user_v1"
     roles = "user"
@@ -191,7 +192,7 @@ def test_middleware_unsupported_version_rejected() -> None:
     """
     Test that invalid or unsupported version headers are rejected.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     headers = {
         "X-User-Id": "user",
@@ -209,7 +210,7 @@ def test_middleware_v2_success() -> None:
     """
     Test that V2 signature verification passes given a valid JSON-canonical signature.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     user_id = "v2_user"
     roles = "admin"
@@ -235,7 +236,7 @@ def test_middleware_v2_missing_reason() -> None:
     """
     Test that V2 signature verification rejects mutation requests with missing or empty change reason with HTTP 403.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     user_id = "v2_user"
     roles = "admin"
@@ -259,7 +260,7 @@ def test_middleware_v2_invalid_signature() -> None:
     """
     Test that V2 signature verification rejects invalid signatures.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     headers = {
         "X-User-Id": "user",
@@ -278,7 +279,7 @@ def test_middleware_v2_mismatched_reason() -> None:
     """
     Test that V2 signature verification rejects if header change reason differs from signed reason.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     user_id = "v2_user"
     roles = "admin"
@@ -308,7 +309,7 @@ def test_middleware_v2_safe_method_no_reason_success() -> None:
     """
     Test that V2 signature verification permits safe HTTP methods (GET) without X-Change-Reason.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     user_id = "v2_user"
     roles = "admin"
@@ -331,7 +332,7 @@ def test_mutation_unsigned_and_non_compliant_rejections() -> None:
     """
     Test that unsigned or non-compliant mutation attempts are rejected with HTTP 400/403 responses.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
 
     # 1. POST (mutation) with missing headers -> HTTP 403
     response = client.post("/secure-endpoint")
@@ -492,7 +493,7 @@ def test_downstream_signature_gated_endpoint_requires_sig_token() -> None:
     # @req:Trace-17
     Test that signature-gated endpoints in downstream microservices reject requests without X-Sig-Token.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     user_id = "test_user"
     roles = "investigator"
@@ -524,7 +525,7 @@ def test_downstream_signature_gated_endpoint_valid_sig_token() -> None:
     # @req:Trace-17
     Test that a valid, bound, and unexpired X-Sig-Token permits access.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     user_id = "test_user"
     roles = "investigator"
@@ -567,7 +568,7 @@ def test_downstream_signature_gated_endpoint_expired_token() -> None:
     # @req:Trace-17
     Test that an expired X-Sig-Token is rejected by downstream middleware.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     user_id = "test_user"
     roles = "investigator"
@@ -610,7 +611,7 @@ def test_downstream_signature_gated_endpoint_mismatched_action() -> None:
     # @req:Trace-17
     Test that a token bound to a different action/path is rejected by downstream middleware.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     user_id = "test_user"
     roles = "investigator"
@@ -653,7 +654,7 @@ def test_downstream_signature_gated_endpoint_replay_blocked() -> None:
     # @req:Trace-17
     Test that a token cannot be used twice (replay attack is blocked).
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     user_id = "test_user"
     roles = "investigator"
@@ -879,7 +880,7 @@ def test_verify_gateway_signature_scope_fallback_restrictions() -> None:
     )
 
 
-@test_app.get("/verify-context-scope")
+@gateway_app.get("/verify-context-scope")
 async def verify_context_scope(request: Request):
     return {
         "site_id": getattr(request.state, "site_id", None),
@@ -888,8 +889,8 @@ async def verify_context_scope(request: Request):
     }
 
 
-# Add endpoint to verify context propagation under test_app
-@test_app.get("/verify-context-tenant")
+# Add endpoint to verify context propagation under gateway_app
+@gateway_app.get("/verify-context-tenant")
 async def verify_context_tenant():
     from packages.security.context import current_tenant_id
 
@@ -898,7 +899,7 @@ async def verify_context_tenant():
     }
 
 
-@test_app.get("/verify-context-vars")
+@gateway_app.get("/verify-context-vars")
 async def verify_context_vars():
     from packages.security.context import (
         current_site_id,
@@ -920,7 +921,7 @@ def test_middleware_tenant_context_and_state() -> None:
 
     Requirements: PRD-SYS-001
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     user_id = "tenant_user_01"
     roles = "sponsor_designer"
@@ -962,7 +963,7 @@ def test_middleware_tenant_missing_fallback() -> None:
 
     Requirements: PRD-SYS-001
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     user_id = "tenant_user_02"
     roles = "sponsor_designer"
@@ -999,7 +1000,7 @@ def test_middleware_tenant_signature_tampering_rejected() -> None:
 
     Requirements: PRD-SYS-001
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     user_id = "tenant_user_03"
     roles = "sponsor_designer"
@@ -1171,7 +1172,7 @@ def test_verify_sig_token_helper_scenarios() -> None:
     ],
 )
 def test_middleware_unblinded_access_parametrization(header_val, expected_bool) -> None:
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     user_id = "test_user"
     roles = "sponsor_designer"
@@ -1206,7 +1207,7 @@ def test_middleware_permissions_parsed_in_state() -> None:
 
     Requirements: PRD-SYS-001, 21 CFR Part 11
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
     user_id = "user_cra"
     roles = "ClinicalResearchAssociate"
@@ -1442,7 +1443,7 @@ def test_middleware_unblinded_access_edge_cases() -> None:
     """
     Test unblinded_access edge cases under GatewayAuthMiddleware.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     user_id = "test_user"
     roles = "sponsor_designer"
     change_reason = "gxp signoff"
@@ -1525,9 +1526,9 @@ def test_middleware_unblinded_access_edge_cases() -> None:
 
 def test_middleware_cross_request_scope_isolation() -> None:
     """
-    Cross-request isolation test issuing two sequential requests via TestClient(test_app).
+    Cross-request isolation test issuing two sequential requests via TestClient(gateway_app).
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     user_id = "test_user"
     roles = "sponsor_designer"
     change_reason = "gxp signoff"
@@ -1592,7 +1593,7 @@ def test_middleware_cross_request_scope_isolation() -> None:
         "sponsor_id": None,
         "unblinded_access": False,
     }
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     timestamp = str(time.time())
 
     # CRC attempt -> Missing DATA_LOCK permission -> Expect 403
@@ -1680,7 +1681,7 @@ def test_middleware_scope_header_mutation_and_injection_rejection() -> None:
     2. Sign a scope-free request, then inject each scope header individually.
        Assert rejection, proving the has_scopes-gated fallback does not validate an injected scope.
     """
-    client = TestClient(test_app)
+    client = TestClient(gateway_app)
     user_id = "test_user"
     roles = "sponsor_designer"
     change_reason = "gxp signoff"

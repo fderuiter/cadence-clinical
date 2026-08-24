@@ -115,8 +115,9 @@ def test_success_with_draft_flag():
                 # Verify RTM file content
                 rtm_content = rtm_file.read_text(encoding="utf-8")
                 # Check warning banner at the top of RTM file
-                assert rtm_content.startswith(
+                assert (
                     "> ⚠️ **DRAFT ONLY — UNVERIFIED GxP COMPLIANCE DOCUMENT** ⚠️"
+                    in rtm_content
                 )
                 # Check that unverified tests are labeled UNVERIFIED instead of PASSED
                 assert "⚪ (UNVERIFIED)" in rtm_content
@@ -124,8 +125,9 @@ def test_success_with_draft_flag():
                 # Verify Qualification Report file content
                 qual_content = qual_file.read_text(encoding="utf-8")
                 # Check warning banner at the top of Qualification Report
-                assert qual_content.startswith(
+                assert (
                     "> ⚠️ **DRAFT ONLY — UNVERIFIED GxP COMPLIANCE DOCUMENT** ⚠️"
+                    in qual_content
                 )
                 # Check status and duration are UNVERIFIED and N/A
                 assert "⚪ UNVERIFIED" in qual_content

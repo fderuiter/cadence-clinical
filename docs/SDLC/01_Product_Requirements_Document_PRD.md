@@ -1016,6 +1016,15 @@ To coordinate, track, and automate complex clinical trial site budgets, procedur
 #### PRD-PAY-006: 21 CFR Part 11 Financial Disbursement Audit Ledger
 - Every budget configuration edit, payable generation, holdback calculation, invoice approval, and payment confirmation must record an append-only, immutable transaction record to `PaymentAuditLog` capturing user context, timestamps, before/after states, and electronic signature manifestations.
 
+#### PRD-SYS-161: Site Payments Budget Contracts, Fee Schedule Rate Matrices & Trigger-to-Payable Engine
+- The system must provide end-to-end management of investigator grant budget contracts, multi-tier fee schedule procedure rates, institutional overhead additions, and event-driven triggers (eCRF submission, CRA SDV verification gating, and milestone completions).
+
+#### PRD-SYS-162: Site Payments Multi-Party Split Payee Allocations & Holdback Retention Governance
+- The system must support configurable percentage-based disbursements across multi-party split payees (summing to 100%) and enforce 10% holdback retention escrow released only upon dual Data Management and Quality sign-off.
+
+#### PRD-SYS-163: Site Payments Self-Billing Invoicing, Cryptographic Remittance Advice & ERP Settlement Reconciliation
+- The system must automate monthly and quarterly self-billing invoice compilation, generate cryptographically signed SHA-256 PDF remittance advice statements with 21 CFR Part 11 manifests, and execute bidirectional enterprise ERP synchronization and settlement reconciliation.
+
 ---
 
 ## 9. Medical Imaging & Blinded Central Endpoint Adjudication Subsystem
@@ -1095,6 +1104,15 @@ To provide comprehensive global adverse event safety management, multi-country e
 #### PRD-PVG-008: 21 CFR Part 11 Physician Electronic Signatures on ICSR Packages
 - Finalizing medical causality assessments, approving expedited safety reporting packages, and transmitting E2B(R3) XML must require multi-factor re-authentication electronic signatures by a qualified Safety Physician or Medical Monitor.
 
+#### PRD-SYS-167: Multi-Country Expedited ICSR Regulatory Reporting Clocks & Rules Engine
+- The safety subsystem must evaluate Individual Case Safety Reports (ICSRs) against multi-country regulatory reporting rules (FDA 7/15-day fatal/serious SUSARs, EMA EudraVigilance, PMDA Japan, MHRA, Health Canada), maintain dynamic countdown clocks from Day 0, and trigger automated threshold alerts at 75% and 90% clock elapsed time.
+
+#### PRD-SYS-168: AS2 S/MIME B2B XML Gateway Transmission & Signed MDN Receipt Validation
+- The safety subsystem must provide secure AS2 S/MIME encrypted B2B transmission of ICH E2B(R3) XML safety packages to health authority gateways, validate Message Integrity Checks (MIC), parse and verify synchronous/asynchronous signed Message Disposition Notifications (MDN), and process regulatory acknowledgments (ACK A/B/C).
+
+#### PRD-SYS-169: Vectorized Disproportionality Signal Detection Engine & Aggregate Safety Reporting (DSUR/PSUR)
+- The safety subsystem must execute vectorized disproportionality signal detection calculations (PRR with Chi-square Yates correction, ROR, EBGM with 95% confidence intervals) across adverse event terms, evaluate safety threshold breaches, and compile standardized aggregate safety reports including Development Safety Update Reports (DSUR) with subject exposure stratifications and interval line listings.
+
 ---
 
 ## 11. Advanced Supply Chain, Temperature Excursions & Cell/Gene Therapy RTSM
@@ -1169,6 +1187,15 @@ To provide automated statistical surveillance across clinical sites under ICH E6
 
 #### PRD-CSM-006: Automated Centralized Monitoring Anomaly Dossier & Inspection Snapshot
 - The system must compile an on-demand Centralized Monitoring Dossier summarizing site statistical distributions, KRI trends, anomaly flags, and CRA verification notes, cryptographically sealed for regulatory inspection.
+
+#### PRD-SYS-174: Centralized Statistical Monitoring & Forensic Fraud Detection Engine
+- The system must provide sample-gated Benford's Law analysis (first and second digit distributions, chi-squared goodness-of-fit, Nigrini conformity tiers) and cross-site variance shrinkage and repeated values analysis detecting fabricated or manipulated clinical data under ICH E6(R2)/(R3).
+
+#### PRD-SYS-175: Forensic Data Integrity Sentinels & Perceptual Image Hashing Tracer
+- The engine must execute multi-vector data integrity surveillance: cross-site patient vector cloning detection, temporal/behavioral timestamp clustering (off-hours/rapid burst/identical intervals), and perceptual image hashing (pHash/dHash) with transformation invariance (rotation, brightness) for duplicate medical image and document detection.
+
+#### PRD-SYS-176: TransCelerate RACT Dynamic Risk Scoring & Automated KRI Surveillance
+- The platform must implement dynamic TransCelerate RACT protocol risk scoring across all 6 risk categories, automated Key Risk Indicator (KRI) breach thresholds, weighted Site Risk Index (SRI) percentile ranking, and 1-click inspection-ready dossier compilation with cryptographic audit trails.
 
 ---
 
@@ -1313,6 +1340,12 @@ To provide centralized governance of central and local laboratory feeds, standar
 - Laboratory results must be evaluated in real-time against protocol-pinned toxicity scales (NCI-CTCAE v5.0 or DAIDS) to compute Grade 1–4 severity classifications.
 - Clinically significant Grade 3 or Grade 4 laboratory abnormalities must automatically trigger a staged Adverse Event eCRF draft routed directly to the Principal Investigator review queue.
 
+#### PRD-SYS-170: Central & Local Laboratory Batch Ingestion, Reference Range Governance & LOINC Unit Conversion
+- The lab management engine must provide high-throughput batch ingestion supporting CSV, HL7 v2.x (ORU^R01), FHIR JSON, CDISC LAB v1.0.1, and local manual entry with LOINC code standardization, age/sex/ethnicity/site-specific reference range matching, and uncalibrated local lab certification safeguards.
+
+#### PRD-SYS-171: NCI-CTCAE v5.0 / DAIDS Toxicity Grading Engine, Baseline Delta Checks & Automated AE Review Queue
+- The system must evaluate laboratory observations in real time against NCI-CTCAE v5.0 and DAIDS v2.1 criteria, detect Hy's Law DILI hepatotoxicity flags, calculate acute baseline shifts (>= 50% delta check alerts), and automatically draft staged Grade 3/4 Adverse Event eCRFs with discrepancy queries routed for investigator medical review.
+
 ---
 
 ## 19. Clinical Endpoint Adjudication Committee (CEC) Management Suite
@@ -1329,6 +1362,14 @@ To provide a blinded, chartered expert adjudication environment for major clinic
 
 #### PRD-CEC-003: Bi-Directional EDC Feedback & CDISC SDTM CE Domain Export
 - Approved consensus adjudication decisions must write back to the subject casebook and compile automatically into the CDISC SDTM CE (Clinical Events) dataset with full 21 CFR Part 11 electronic signature attribution.
+
+#### PRD-SYS-172: Blinded Clinical Endpoint Adjudication Committee (CEC) Dossier Compilation & Dual-Reader Engine
+- The system must provide automated multi-source clinical event dossier compilation bundling eCRFs, lab panels, 12-lead ECG findings, imaging reports, and medical narratives with deterministic date-shifting and tokenized patient/site anonymization (`[REDACTED_NAME]`, `[REDACTED_SITE]`, `[REDACTED_PHONE]`).
+- Outbound packages must enforce strict reader isolation at the API projection layer, keeping peer assessments completely blinded until consensus or escalation.
+
+#### PRD-SYS-173: CEC Committee Governance, Consensus Determination & 21 CFR Part 11 Electronic Signatures
+- The engine must support standardized endpoint criteria checklists, automated concordance evaluation, and discordance escalation to a Committee Chair tie-breaker panel.
+- Chair tie-breaker determinations and meeting quorum records must require 21 CFR Part 11 compliant electronic signatures with legal intent manifestations, immutable audit trailing via `AuditedModel`, and direct bidirectional synchronization into EDC observations and CDISC SDTM CE/SUPPCE datasets.
 
 ---
 

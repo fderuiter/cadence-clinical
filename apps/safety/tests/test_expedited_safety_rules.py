@@ -95,6 +95,7 @@ def test_fda_7_day_fatal_susar_evaluation():
 
     @req:PRD-PVG-001
     @req:ADR-2199
+    @req:PRD-SYS-167
     """
     engine = ExpeditedSafetyReportingRulesEngine()
     receipt_date = "2026-08-01T09:00:00Z"
@@ -137,6 +138,7 @@ def test_fda_15_day_serious_unexpected_susar_evaluation():
 
     @req:PRD-PVG-001
     @req:ADR-2199
+    @req:PRD-SYS-167
     """
     engine = ExpeditedSafetyReportingRulesEngine()
     receipt_date = "2026-08-01T00:00:00Z"
@@ -171,6 +173,7 @@ def test_ema_eudravigilance_rules_evaluation():
 
     @req:PRD-PVG-001
     @req:ADR-2199
+    @req:PRD-SYS-167
     """
     engine = ExpeditedSafetyReportingRulesEngine()
     receipt_date = "2026-08-10T12:00:00Z"
@@ -215,6 +218,7 @@ def test_pmda_mhra_health_canada_multi_country_evaluation():
 
     @req:PRD-PVG-001
     @req:ADR-2199
+    @req:PRD-SYS-167
     """
     engine = ExpeditedSafetyReportingRulesEngine()
     receipt_date = "2026-08-15T00:00:00Z"
@@ -259,6 +263,8 @@ def test_non_expedited_periodic_determination():
     """Validate expected, non-serious, or non-causal adverse events are classified as non-expedited.
 
     @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
     """
     engine = ExpeditedSafetyReportingRulesEngine()
     receipt_date = "2026-08-01T00:00:00Z"
@@ -316,6 +322,8 @@ def test_real_time_countdown_threshold_alert_escalation():
     """Validate 75% warning, 90% critical, and overdue threshold transitions on statutory clocks.
 
     @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
     """
     engine = ExpeditedSafetyReportingRulesEngine()
     receipt_date = datetime(2026, 8, 1, 0, 0, 0, tzinfo=UTC)
@@ -370,6 +378,8 @@ async def test_part11_physician_signature_success_and_audit():
 
     @req:PRD-PVG-008
     @req:ADR-2199
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
     """
     engine = ExpeditedSafetyReportingRulesEngine()
     session_maker = db_manager.get_session_maker()
@@ -439,6 +449,9 @@ async def test_part11_physician_signature_unauthorized_role_rejection():
     """Validate rejection of unauthorized roles attempting to sign ICSR packages.
 
     @req:PRD-PVG-008
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
     """
     engine = ExpeditedSafetyReportingRulesEngine()
     session_maker = db_manager.get_session_maker()
@@ -480,6 +493,9 @@ async def test_part11_physician_signature_missing_reason_rejection():
     """Validate rejection when reason_for_change is missing or empty.
 
     @req:PRD-PVG-008
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
     """
     engine = ExpeditedSafetyReportingRulesEngine()
     session_maker = db_manager.get_session_maker()
@@ -521,6 +537,8 @@ async def test_audit_log_immutability_enforcement():
 
     @req:PRD-PVG-001
     @req:PRD-PVG-008
+    @req:PRD-SYS-167
+    @req:ADR-2199
     """
     session_maker = db_manager.get_session_maker()
     async with session_maker() as session:
@@ -568,6 +586,7 @@ def test_api_evaluate_and_get_evaluation():
 
     @req:PRD-PVG-001
     @req:ADR-2199
+    @req:PRD-SYS-167
     """
     client = TestClient(app)
     headers = get_signed_headers(
@@ -617,6 +636,7 @@ def test_api_list_evaluations_and_countdown_alerts():
 
     @req:PRD-PVG-001
     @req:ADR-2199
+    @req:PRD-SYS-167
     """
     client = TestClient(app)
     headers = get_signed_headers(
@@ -669,6 +689,8 @@ def test_api_sign_evaluation_gated_workflow():
 
     @req:PRD-PVG-008
     @req:ADR-2199
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
     """
     client = TestClient(app)
 

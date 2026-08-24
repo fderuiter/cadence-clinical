@@ -913,7 +913,9 @@ class CecAdjudicationService:
         min_pct = charter.minimum_quorum_percentage if charter else 66.67
         min_count = charter.minimum_members_count if charter else 3
 
-        quorum_met = (attendee_count >= min_count) and (pct >= min_pct)
+        quorum_met = (attendee_count >= min_count) and (
+            round(pct, 2) >= round(min_pct, 2) or pct >= (min_pct - 0.01)
+        )
 
         minutes_digest = self.compute_sha256(
             {

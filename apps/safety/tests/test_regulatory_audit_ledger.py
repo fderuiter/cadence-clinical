@@ -77,6 +77,7 @@ def test_canonical_digest_determinism_and_key_sorting():
     @req:PRD-SYS-125
     @req:PRD-AGG-001
     @req:ADR-2199
+    @req:PRD-SYS-169
     """
     dict_a = {"study_id": "STUDY-001", "cases": 10, "is_locked": True}
     dict_b = {"is_locked": True, "cases": 10, "study_id": "STUDY-001"}
@@ -95,6 +96,7 @@ def test_merkle_tree_dataset_digest_calculation():
     @req:PRD-SYS-125
     @req:PRD-AGG-001
     @req:ADR-2199
+    @req:PRD-SYS-169
     """
     records = [
         {"case_id": "CASE-002", "term": "Headache", "severity": 1},
@@ -126,6 +128,7 @@ def test_merkle_tree_edge_cases_empty_and_single_leaf():
     @req:PRD-SYS-125
     @req:PRD-AGG-001
     @req:ADR-2199
+    @req:PRD-SYS-169
     """
     empty_root = RegulatoryAuditLedger.compute_merkle_root([])
     assert len(empty_root) == 64
@@ -146,6 +149,7 @@ def test_regulatory_snapshot_creation_and_reproducibility():
     @req:PRD-AGG-001
     @req:PRD-SYS-125
     @req:ADR-2199
+    @req:PRD-SYS-169
     """
     cases = [
         {"case_id": "C-1", "meddra_pt": "Rash", "onset_date": "2026-01-10"},
@@ -194,6 +198,7 @@ def test_regulatory_snapshot_tamper_detection():
     @req:PRD-AGG-001
     @req:PRD-SYS-125
     @req:ADR-2199
+    @req:PRD-SYS-169
     """
     cases = [{"case_id": "C-1", "meddra_pt": "Rash", "onset_date": "2026-01-10"}]
     subjects = [{"subject_id": "SUB-1", "treatment_arm": "Active"}]
@@ -249,6 +254,8 @@ def test_verify_snapshot_manifest_structured_response():
     @req:PRD-AGG-001
     @req:21 CFR Part 11
     @req:ADR-2199
+    @req:PRD-SYS-125
+    @req:PRD-SYS-169
     """
     manifest = {"cases_count": 5, "subjects_count": 10, "hash": "abcd" * 16}
     expected = "abcd" * 16
@@ -287,6 +294,9 @@ def test_seal_qppv_signoff_authorization_and_manifest():
     @req:PRD-PVG-008
     @req:21 CFR Part 11
     @req:ADR-2199
+    @req:PRD-AGG-001
+    @req:PRD-SYS-125
+    @req:PRD-SYS-169
     """
     report_payload = {
         "report_id": "RPT-001",
@@ -336,6 +346,9 @@ def test_seal_electronic_signature_generic_and_role_gating():
     @req:PRD-PVG-008
     @req:21 CFR Part 11
     @req:ADR-2199
+    @req:PRD-AGG-001
+    @req:PRD-SYS-125
+    @req:PRD-SYS-169
     """
     payload_to_sign = {
         "entity_id": "ALERT-001",
@@ -376,6 +389,9 @@ def test_as2_mic_calculation_and_envelope_sealing():
     @req:PRD-PVG-002
     @req:PRD-SYS-001
     @req:ADR-2199
+    @req:PRD-AGG-001
+    @req:PRD-SYS-125
+    @req:PRD-SYS-169
     """
     xml_content = "<?xml version='1.0'?><icsr><id>E2B-001</id></icsr>"
     mic = RegulatoryAuditLedger.calculate_as2_mic(xml_content)
@@ -403,6 +419,9 @@ def test_as2_mdn_receipt_verification_and_tamper_detection():
     @req:PRD-PVG-002
     @req:PRD-SYS-001
     @req:ADR-2199
+    @req:PRD-AGG-001
+    @req:PRD-SYS-125
+    @req:PRD-SYS-169
     """
     xml_content = "<?xml version='1.0'?><test>payload</test>"
     envelope = RegulatoryAuditLedger.seal_outbound_as2_envelope(
@@ -454,6 +473,10 @@ def test_device_vigilance_deadline_calculation():
     @req:PRD-SYS-126
     @req:PRD-DEV-003
     @req:ADR-2209
+    @req:PRD-AGG-001
+    @req:PRD-SYS-125
+    @req:PRD-SYS-169
+    @req:ADR-2199
     """
     ref_ts = datetime(2026, 8, 1, 12, 0, 0)
 
@@ -496,6 +519,10 @@ def test_device_adjudication_and_mir_report_sealing():
     @req:PRD-DEV-004
     @req:21 CFR Part 11
     @req:ADR-2209
+    @req:PRD-AGG-001
+    @req:PRD-SYS-125
+    @req:PRD-SYS-169
+    @req:ADR-2199
     """
     # 1. Seal adjudication
     adj_seal = RegulatoryAuditLedger.seal_device_adjudication(
@@ -555,6 +582,10 @@ async def test_device_safety_service_end_to_end_lifecycle():
     @req:PRD-DEV-004
     @req:21 CFR Part 11
     @req:ADR-2209
+    @req:PRD-AGG-001
+    @req:PRD-SYS-125
+    @req:PRD-SYS-169
+    @req:ADR-2199
     """
     async with db_manager.session_maker() as session:
         # 1. Open investigation
@@ -619,6 +650,9 @@ def test_as2_gateway_delegates_to_regulatory_audit_ledger():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-AGG-001
+    @req:PRD-SYS-125
+    @req:PRD-SYS-169
     """
     xml_data = "<icsr>test</icsr>"
     mic1 = AS2GatewayService.calculate_mic(xml_data)
@@ -638,6 +672,8 @@ def test_regulatory_snapshot_manager_delegates_to_regulatory_audit_ledger():
 
     @req:PRD-AGG-001
     @req:ADR-2199
+    @req:PRD-SYS-125
+    @req:PRD-SYS-169
     """
     cases = [{"case_id": "C-1", "meddra_pt": "Nausea"}]
     subjects = [{"subject_id": "S-1", "treatment_arm": "Active"}]

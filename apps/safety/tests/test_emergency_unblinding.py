@@ -127,7 +127,12 @@ async def setup_test_db():
 
 @pytest.mark.asyncio
 async def test_unblind_missing_sig_token() -> None:
-    """The request fails with a 401 status code if the required signature token header is missing."""
+    """The request fails with a 401 status code if the required signature token header is missing.
+
+    @req:PRD-PVG-007
+    @req:PRD-SYS-050
+    @req:ADR-2199
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -160,7 +165,12 @@ async def test_unblind_missing_sig_token() -> None:
 
 @pytest.mark.asyncio
 async def test_unblind_screening_status_error() -> None:
-    """The system returns a 400 error if a user attempts to unblind a subject in screening status."""
+    """The system returns a 400 error if a user attempts to unblind a subject in screening status.
+
+    @req:PRD-PVG-007
+    @req:PRD-SYS-050
+    @req:ADR-2199
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -191,7 +201,12 @@ async def test_unblind_screening_status_error() -> None:
 
 @pytest.mark.asyncio
 async def test_unblind_withdrawn_status_error() -> None:
-    """The system returns a 400 error if a user attempts to unblind a subject in withdrawn status."""
+    """The system returns a 400 error if a user attempts to unblind a subject in withdrawn status.
+
+    @req:PRD-PVG-007
+    @req:PRD-SYS-050
+    @req:ADR-2199
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -224,7 +239,12 @@ async def test_unblind_withdrawn_status_error() -> None:
 
 @pytest.mark.asyncio
 async def test_unblind_subject_not_found() -> None:
-    """Attempting to unblind a non-existent subject returns a 404 error."""
+    """Attempting to unblind a non-existent subject returns a 404 error.
+
+    @req:PRD-PVG-007
+    @req:PRD-SYS-050
+    @req:ADR-2199
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -243,7 +263,12 @@ async def test_unblind_subject_not_found() -> None:
 
 @pytest.mark.asyncio
 async def test_unblind_success_authorized_access() -> None:
-    """An authorized investigator with verified unblinded access can see the unmasked treatment arm and drug code."""
+    """An authorized investigator with verified unblinded access can see the unmasked treatment arm and drug code.
+
+    @req:PRD-PVG-007
+    @req:PRD-SYS-050
+    @req:ADR-2199
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -326,7 +351,12 @@ async def test_unblind_success_authorized_access() -> None:
 
 @pytest.mark.asyncio
 async def test_unblind_success_masked_access() -> None:
-    """An unauthorized role or an investigator without unblinded access sees masked values (BLINDED/Obfuscated Kit)."""
+    """An unauthorized role or an investigator without unblinded access sees masked values (BLINDED/Obfuscated Kit).
+
+    @req:PRD-PVG-007
+    @req:PRD-SYS-050
+    @req:ADR-2199
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:

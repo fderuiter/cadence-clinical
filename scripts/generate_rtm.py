@@ -584,6 +584,7 @@ def generate_rtm_md(
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     with open(output_path, "w", encoding="utf-8") as f:
+        f.write("---\nsearch: false\n---\n\n")
         if draft:
             f.write(DRAFT_BANNER)
         f.write("# Requirements Traceability Matrix (RTM)\n\n")
@@ -772,7 +773,7 @@ def generate_qualification_report(
     )
     skipped_run = sum(1 for r in test_results.values() if r["status"] == "SKIPPED")
 
-    report_lines = []
+    report_lines = ["---\nsearch: false\n---\n\n"]
     if draft:
         report_lines.append(DRAFT_BANNER)
     report_lines.append(

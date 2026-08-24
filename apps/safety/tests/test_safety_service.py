@@ -51,6 +51,11 @@ def get_auth_headers(roles: str = "admin", change_reason: str = "") -> dict:
 def test_safety_health_check():
     """
     Verify health check of independent Safety service is unauthenticated and works correctly.
+    @req:PRD-PVG-001
+    @req:PRD-PVG-002
+    @req:PRD-SYS-167
+    @req:PRD-SYS-168
+    @req:ADR-2199
     """
     client = TestClient(app)
     response = client.get("/health")
@@ -63,6 +68,11 @@ def test_safety_health_check():
 def test_unauthenticated_requests_are_rejected():
     """
     Verify direct/untrusted requests are rejected by GatewayAuthMiddleware.
+    @req:PRD-PVG-001
+    @req:PRD-PVG-002
+    @req:PRD-SYS-167
+    @req:PRD-SYS-168
+    @req:ADR-2199
     """
     client = TestClient(app)
     # Direct request without gateway headers on an authenticated route
@@ -75,6 +85,11 @@ def test_unauthenticated_requests_are_rejected():
 async def test_safety_database_schema_creation():
     """
     Verify that safety tables are created and queried successfully.
+    @req:PRD-PVG-001
+    @req:PRD-PVG-002
+    @req:PRD-SYS-167
+    @req:PRD-SYS-168
+    @req:ADR-2199
     """
     async with db_manager.get_session_maker()() as session:
         cases = await session.execute(select(SafetyCaseICSR))
@@ -90,6 +105,11 @@ async def test_safety_database_schema_creation():
 async def test_safety_case_lifecycle():
     """
     Verify that a safety case can be created, listed, and viewed with proper GxP fields.
+    @req:PRD-PVG-001
+    @req:PRD-PVG-002
+    @req:PRD-SYS-167
+    @req:PRD-SYS-168
+    @req:ADR-2199
     """
     client = TestClient(app)
     headers = get_auth_headers(
@@ -149,6 +169,11 @@ async def test_safety_case_lifecycle():
 async def test_safety_export_job_lifecycle():
     """
     Verify that safety export jobs can be created and tracked.
+    @req:PRD-PVG-001
+    @req:PRD-PVG-002
+    @req:PRD-SYS-167
+    @req:PRD-SYS-168
+    @req:ADR-2199
     """
     client = TestClient(app)
     headers = get_auth_headers(
@@ -186,6 +211,11 @@ async def test_safety_export_job_lifecycle():
 async def test_safety_audit_log_immutable_ledger():
     """
     Verify SafetyAuditLog is append-only and rejects updates/deletions.
+    @req:PRD-PVG-001
+    @req:PRD-PVG-002
+    @req:PRD-SYS-167
+    @req:PRD-SYS-168
+    @req:ADR-2199
     """
     client = TestClient(app)
     headers = get_auth_headers(roles="admin", change_reason="Auditing demonstration")
@@ -241,6 +271,11 @@ async def test_safety_audit_log_immutable_ledger():
 async def test_database_manager_uninitialized_raises_exception():
     """
     Verify that SafetyDatabaseManager raises an exception if get_session_maker is called before init_db.
+    @req:PRD-PVG-001
+    @req:PRD-PVG-002
+    @req:PRD-SYS-167
+    @req:PRD-SYS-168
+    @req:ADR-2199
     """
     from packages.database import RelationalDatabaseManager
 
@@ -254,6 +289,11 @@ async def test_database_manager_uninitialized_raises_exception():
 async def test_list_audit_logs_endpoint():
     """
     Verify list_safety_audit_logs endpoint is protected and returns descending order logs.
+    @req:PRD-PVG-001
+    @req:PRD-PVG-002
+    @req:PRD-SYS-167
+    @req:PRD-SYS-168
+    @req:ADR-2199
     """
     client = TestClient(app)
     headers = get_auth_headers(roles="admin", change_reason="List logs test reason")
@@ -271,6 +311,11 @@ async def test_list_audit_logs_endpoint():
 def test_missing_change_reason_fails_mutations():
     """
     Verify mutations fail if X-Change-Reason is missing.
+    @req:PRD-PVG-001
+    @req:PRD-PVG-002
+    @req:PRD-SYS-167
+    @req:PRD-SYS-168
+    @req:ADR-2199
     """
     client = TestClient(app)
     headers = get_auth_headers(roles="admin")  # Missing change_reason
@@ -289,6 +334,11 @@ def test_missing_change_reason_fails_mutations():
 def test_nonexistent_resources_return_404():
     """
     Verify 404 is returned when attempting to access nonexistent resources.
+    @req:PRD-PVG-001
+    @req:PRD-PVG-002
+    @req:PRD-SYS-167
+    @req:PRD-SYS-168
+    @req:ADR-2199
     """
     client = TestClient(app)
     headers = get_auth_headers(roles="admin", change_reason="Accessing nonexistent")
@@ -311,6 +361,11 @@ async def test_successful_export_and_transmission():
     1) Valid ICSR data is successfully exported and transmitted.
     2) The patient_id is pseudonymized, and birth_date is removed from transmission payload.
     3) No raw patient PII exists in the audit trail log details.
+    @req:PRD-PVG-001
+    @req:PRD-PVG-002
+    @req:PRD-SYS-167
+    @req:PRD-SYS-168
+    @req:ADR-2199
     """
     import httpx
 
@@ -386,6 +441,11 @@ async def test_successful_export_and_transmission():
 async def test_invalid_xml_validation_fails():
     """
     Verify that structurally invalid XML produces a 422 Client Error and is not transmitted.
+    @req:PRD-PVG-001
+    @req:PRD-PVG-002
+    @req:PRD-SYS-167
+    @req:PRD-SYS-168
+    @req:ADR-2199
     """
     import httpx
 
@@ -424,6 +484,11 @@ async def test_missing_v2_headers_or_change_reason_fails():
     Verify that POST /api/v1/safety/export requires:
     1) V2 signed headers
     2) Non-empty change reason (returns 403)
+    @req:PRD-PVG-001
+    @req:PRD-PVG-002
+    @req:PRD-SYS-167
+    @req:PRD-SYS-168
+    @req:ADR-2199
     """
     client = TestClient(app)
 

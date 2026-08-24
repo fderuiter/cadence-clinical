@@ -132,6 +132,15 @@
       </aside>
     </div>
 
+    <!-- Dual-Reader Blinded Recording & Committee Chair Tie-Breaker Section -->
+    <section class="adjudication-workflow-section">
+      <DualReaderAdjudicationPanel
+        :subject-id="selectedSubjectId"
+        :timepoint="selectedTimepoint"
+        @adjudication-completed="handleAdjudicationCompleted"
+      />
+    </section>
+
     <!-- Bottom: Longitudinal Tumor Trajectory Table -->
     <section class="trajectory-section">
       <div class="trajectory-header">
@@ -187,6 +196,7 @@
 import { ref, computed } from "vue";
 import DicomMprViewer from "../components/imaging/DicomMprViewer.vue";
 import OncologyCalipers from "../components/imaging/OncologyCalipers.vue";
+import DualReaderAdjudicationPanel from "../components/imaging/DualReaderAdjudicationPanel.vue";
 
 const selectedSubjectId = ref("SUBJ-ONC-001");
 const selectedTimepoint = ref("CYCLE_2_DAY_1");
@@ -321,6 +331,23 @@ function onTimepointChange() {
 
 function recalculateResponse() {
   // Switches between RECIST and Lugano
+}
+
+function handleAdjudicationCompleted(event) {
+  trajectoryHistory.value.push({
+    id: `adj-${Date.now()}`,
+    timepoint_name: selectedTimepoint.value,
+    assessment_criteria: selectedCriteria.value,
+    baseline_sld_mm: 50.0,
+    nadir_sld_mm: 22.0,
+    current_sld_mm: 22.0,
+    pct_change_baseline: -56.0,
+    pct_change_nadir: 0.0,
+    target_response: "PR",
+    overall_response: "PR",
+    reader_id: "chair_dr_smith (IRC Chair)",
+    created_at: new Date().toISOString().replace("T", " ").substring(0, 19) + " UTC",
+  });
 }
 </script>
 

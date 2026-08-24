@@ -1,6 +1,6 @@
 """Endpoint integration tests for Site Payments API routes.
 
-Requirements: ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-006
+Requirements: ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-006, PRD-SYS-161, PRD-SYS-162
 """
 
 import pytest
@@ -11,7 +11,11 @@ from apps.payments.tests.conftest import get_auth_headers
 
 @pytest.mark.asyncio
 async def test_health_check_endpoint(client: AsyncClient):
-    """Validate payments service health check endpoint."""
+    """Validate payments service health check endpoint.
+
+    @req:PRD-SYS-161
+    @req:PRD-PAY-002
+    """
     res = await client.get("/health")
     assert res.status_code == 200
     assert res.json() == {"status": "ok", "service": "payments"}
@@ -21,6 +25,8 @@ async def test_health_check_endpoint(client: AsyncClient):
 async def test_batch_event_ingestion_and_queries(client: AsyncClient):
     """Validate batch event ingestion endpoint and subsequent queries.
 
+    @req:PRD-SYS-161
+    @req:PRD-SYS-162
     @req:ADR-2199
     @req:PRD-PAY-002
     @req:PRD-PAY-003

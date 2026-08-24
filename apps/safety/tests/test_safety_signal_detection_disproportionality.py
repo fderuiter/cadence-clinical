@@ -94,6 +94,9 @@ def test_prr_calculation_point_estimate_and_ci():
     """Validate PRR point estimate, exact log standard error, and 95% Confidence Intervals.
 
     @req:PRD-PVG-003
+    @req:PRD-PVG-004
+    @req:PRD-SYS-169
+    @req:ADR-2199
     """
     # a = 15, b = 85 (Total target drug reports = 100)
     # c = 10, d = 990 (Total other drug reports = 1000)
@@ -120,6 +123,9 @@ def test_yates_chi_square_continuity_correction():
     """Validate Yates' corrected Chi-Square on strong and null signals.
 
     @req:PRD-PVG-003
+    @req:PRD-PVG-004
+    @req:PRD-SYS-169
+    @req:ADR-2199
     """
     # Strong signal table
     strong = DisproportionalityContingency(
@@ -151,6 +157,9 @@ def test_ror_point_estimate_and_confidence_interval():
     """Validate Reporting Odds Ratio (ROR) point estimate and 95% CI bounds.
 
     @req:PRD-PVG-003
+    @req:PRD-PVG-004
+    @req:PRD-SYS-169
+    @req:ADR-2199
     """
     # a = 12, b = 88, c = 8, d = 992
     # ROR = (12 * 992) / (88 * 8) = 11904 / 704 = 16.9091
@@ -174,6 +183,9 @@ def test_empirical_bayes_shrinkage_mgps_ebgm_and_eb05():
     """Validate Multi-item Gamma Poisson Shrinker (MGPS) shrinkage on sparse adverse events.
 
     @req:PRD-PVG-003
+    @req:PRD-PVG-004
+    @req:PRD-SYS-169
+    @req:ADR-2199
     """
     # Small count with high observed/expected: a = 4, expected E = 0.5
     contingency = DisproportionalityContingency(
@@ -197,6 +209,9 @@ def test_multi_item_mgps_interaction_shrinkage():
     """Validate multi-item interaction shrinkage for drug-drug-event combinations.
 
     @req:PRD-PVG-003
+    @req:PRD-PVG-004
+    @req:PRD-SYS-169
+    @req:ADR-2199
     """
     combos = [
         {
@@ -225,6 +240,9 @@ def test_pt_and_soc_level_stratification_scan():
     """Validate disproportionality scanning across both Preferred Term and System Organ Class levels.
 
     @req:PRD-PVG-003
+    @req:PRD-PVG-004
+    @req:PRD-SYS-169
+    @req:ADR-2199
     """
     cases = [
         {
@@ -296,6 +314,9 @@ def test_external_benchmark_dataset_comparison():
     """Validate comparison against external benchmark background rates (e.g. FAERS / EudraVigilance).
 
     @req:PRD-PVG-003
+    @req:PRD-PVG-004
+    @req:PRD-SYS-169
+    @req:ADR-2199
     """
     trial_cases = [
         {
@@ -351,6 +372,9 @@ async def test_signal_alert_triggering_and_severity_workflow():
 
     @req:PRD-PVG-003
     @req:PRD-SYS-001
+    @req:PRD-PVG-004
+    @req:PRD-SYS-169
+    @req:ADR-2199
     """
     async with db_manager.session_maker() as session:
         service = SafetySignalAlertService(session=session)
@@ -427,6 +451,8 @@ async def test_signal_alert_review_and_part11_esignature_approval():
     @req:PRD-PVG-003
     @req:PRD-PVG-008
     @req:ADR-2199
+    @req:PRD-PVG-004
+    @req:PRD-SYS-169
     """
     async with db_manager.session_maker() as session:
         service = SafetySignalAlertService(session=session)
@@ -512,6 +538,9 @@ def test_dsur_periodic_report_compilation_and_line_listings():
     """Validate ICH E2F DSUR compilation with SAE line listings and interval summary tabulations.
 
     @req:PRD-PVG-004
+    @req:PRD-PVG-003
+    @req:PRD-SYS-169
+    @req:ADR-2199
     """
     cases = [
         {
@@ -584,6 +613,9 @@ async def test_psur_periodic_report_compilation_and_part11_signature():
 
     @req:PRD-PVG-004
     @req:PRD-PVG-008
+    @req:PRD-PVG-003
+    @req:PRD-SYS-169
+    @req:ADR-2199
     """
     async with db_manager.session_maker() as session:
         service = SafetySignalAlertService(session=session)
@@ -652,6 +684,7 @@ def test_fastapi_rest_signal_detection_and_alerts_endpoints():
     @req:PRD-PVG-008
     @req:PRD-SYS-001
     @req:ADR-2199
+    @req:PRD-SYS-169
     """
     client = TestClient(app)
     headers = create_test_auth_headers(

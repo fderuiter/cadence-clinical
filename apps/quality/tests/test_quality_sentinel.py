@@ -19,7 +19,7 @@ client = TestClient(app)
 def test_quality_sentinel_complete_protocol() -> None:
     """Validate evaluating a complete protocol produces a 100.0 quality score.
 
-    Requirements: PRD-SYS-001
+    @req:PRD-SYS-001, PRD-QLT-001
     """
     study_payload = {
         "id": "study_complete_001",
@@ -50,7 +50,7 @@ def test_quality_sentinel_complete_protocol() -> None:
 def test_quality_sentinel_incomplete_protocol_detects_errors() -> None:
     """Validate incomplete protocol produces ERROR findings and lowers quality score.
 
-    Requirements: PRD-SYS-001
+    @req:PRD-SYS-001, PRD-QLT-001
     """
     incomplete_payload = {
         "id": "study_incomplete_002",
@@ -74,7 +74,7 @@ def test_quality_sentinel_incomplete_protocol_detects_errors() -> None:
 def test_quality_sentinel_router_endpoint() -> None:
     """Validate POST /api/v1/designer/sentinel/evaluate API endpoint returns report.
 
-    Requirements: PRD-SYS-001
+    @req:PRD-SYS-001, PRD-QLT-001
     """
     headers = _make_auth_headers(change_reason="Audit protocol quality sentinel")
     response = client.post(
@@ -106,7 +106,10 @@ def test_quality_sentinel_router_endpoint() -> None:
 
 
 def test_syllable_counter_deterministic() -> None:
-    """Validate the deterministic heuristic syllable counter."""
+    """Validate the deterministic heuristic syllable counter.
+
+    @req:PRD-SYS-001
+    """
     assert count_syllables_word("age") == 1
     assert count_syllables_word("protocol") == 3
     assert count_syllables_word("eligibility") == 6
@@ -114,7 +117,10 @@ def test_syllable_counter_deterministic() -> None:
 
 
 def test_readability_metrics_and_scoring() -> None:
-    """Validate Flesch Reading Ease and Flesch-Kincaid calculations on study narrative blocks."""
+    """Validate Flesch Reading Ease and Flesch-Kincaid calculations on study narrative blocks.
+
+    @req:PRD-SYS-001, PRD-QLT-001
+    """
     payload = {
         "id": "read_study",
         "studyDesigns": [{"id": "d1", "objectives": [{"id": "o1"}]}],
@@ -140,7 +146,10 @@ def test_readability_metrics_and_scoring() -> None:
 
 
 def test_burden_tracing_with_invasiveness_modifiers() -> None:
-    """Validate operational burden trace calculations with high/moderate invasiveness modifiers."""
+    """Validate operational burden trace calculations with high/moderate invasiveness modifiers.
+
+    @req:PRD-SYS-001, PRD-QLT-001
+    """
     payload = {
         "id": "burden_study",
         "studyDesigns": [
@@ -187,7 +196,10 @@ def test_burden_tracing_with_invasiveness_modifiers() -> None:
 
 
 def test_block_eligibility_soa_inconsistencies() -> None:
-    """Validate that quality findings successfully surface block or eligibility inconsistencies with SoA."""
+    """Validate that quality findings successfully surface block or eligibility inconsistencies with SoA.
+
+    @req:PRD-SYS-001, PRD-QLT-001
+    """
     payload = {
         "id": "incon_study",
         "studyDesigns": [
@@ -243,7 +255,10 @@ def test_block_eligibility_soa_inconsistencies() -> None:
 
 
 def test_amendment_impact_and_cost_estimation() -> None:
-    """Validate comparing study payload with frozen parent version projection calculates costs & burden change."""
+    """Validate comparing study payload with frozen parent version projection calculates costs & burden change.
+
+    @req:PRD-SYS-001, PRD-QLT-001
+    """
     from apps.designer.db import MOCK_STUDY_PROJECTIONS_BY_VERSION
 
     # Mock frozen parent projection state in database memory
@@ -296,7 +311,10 @@ def test_amendment_impact_and_cost_estimation() -> None:
 
 
 def test_pluggable_fixture_patient_attrition() -> None:
-    """Validate evaluating eligibility ASTs sequentially against built-in patient fixtures builds attrition."""
+    """Validate evaluating eligibility ASTs sequentially against built-in patient fixtures builds attrition.
+
+    @req:PRD-SYS-001, PRD-QLT-001
+    """
     # Criteria condition nodes:
     # Criterion 1: AGE >= 18
     # Criterion 2: LIVER_DISEASE == False
@@ -382,7 +400,7 @@ def test_pluggable_fixture_patient_attrition() -> None:
 def test_quality_sentinel_router_endpoint_dependency_override() -> None:
     """Validate POST /api/v1/designer/sentinel/evaluate with dependency overrides.
 
-    Requirements: PRD-SYS-001
+    @req:PRD-SYS-001, PRD-QLT-001
     """
     import time
     from unittest.mock import patch

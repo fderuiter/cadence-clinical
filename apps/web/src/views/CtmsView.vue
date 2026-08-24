@@ -2077,7 +2077,7 @@ const studyId = computed(() => store.activeStudyId || "STUDY-USDM-001");
 
 // Tabs selection
 const activeTab = ref(
-  route.path === "/ssu" || route.query.tab === "startup"
+  route?.path === "/ssu" || route?.query?.tab === "startup"
     ? "startup"
     : "operations"
 );

@@ -174,10 +174,10 @@ class LabToxicityEngine:
         ratio_uln = value / uln
         ratio_baseline = (value / baseline) if (baseline and baseline > 0) else 1.0
 
-        if ratio_uln > 6.0 or (baseline and ratio_baseline >= 3.0):
+        if ratio_uln > 6.0:
             return (
                 CTCAEGrade.GRADE_4,
-                f">6.0x ULN or >=3.0x baseline ({ratio_uln:.2f}x ULN) - Life Threatening / Dialysis Indicated",
+                f">6.0x ULN ({ratio_uln:.2f}x ULN) - Life Threatening / Dialysis Indicated",
             )
         if ratio_uln > 3.0 or (baseline and ratio_baseline >= 2.0):
             return (

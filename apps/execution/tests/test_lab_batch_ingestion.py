@@ -74,6 +74,7 @@ async def setup_test_db():
 async def test_csv_batch_ingestion_success():
     """Verify delimited CSV ingestion creates ClinicalObservation and discrepancy queries.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001
@@ -170,6 +171,7 @@ SUBJ-001,WBC,White Blood Cell Count,14.2,10^9/L,2026-08-11 10:00:00,CENTRAL
 async def test_hl7_batch_ingestion_oru_r01():
     """Verify parsing and ingestion of HL7 v2.x ORU^R01 messages with OBX segments.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001
@@ -245,6 +247,7 @@ async def test_hl7_batch_ingestion_oru_r01():
 async def test_fhir_observation_json_ingestion():
     """Verify ingestion of FHIR Observation JSON resources and Bundles.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001
@@ -345,6 +348,7 @@ async def test_fhir_observation_json_ingestion():
 async def test_age_sex_stratified_reference_range_evaluation():
     """Verify that age and sex demographics determine the matched reference range.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001
@@ -445,6 +449,7 @@ SUBJ-FEMALE,HGB,13.0,g/dL,2026-08-13
 async def test_critical_sae_alert_trigger():
     """Verify critical boundaries (critical_low, critical_high) trigger SAE alerts.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001
@@ -513,6 +518,7 @@ SUBJ-SAE-001,POTASSIUM,7.2,mmol/L
 async def test_ucum_unit_conversion_integration():
     """Verify UCUM unit conversion and catalog conversion factor execution.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001
@@ -596,6 +602,7 @@ SUBJ-UCUM-01,CHOLESTEROL,180.0,mg/dL
 async def test_csv_parser_resilience_and_errors():
     """Verify delimiter detection, header normalization, and error isolation on malformed records.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001
@@ -630,6 +637,7 @@ async def test_csv_parser_resilience_and_errors():
 async def test_hl7_and_fhir_parser_resilience():
     """Verify HL7 and FHIR parsing error reporting on invalid payloads.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001
@@ -660,6 +668,7 @@ async def test_hl7_and_fhir_parser_resilience():
 async def test_api_ingest_json_endpoint():
     """Verify POST /api/v1/execution/labs/ingest with JSON payload.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001
@@ -704,6 +713,7 @@ async def test_api_ingest_json_endpoint():
 async def test_api_ingest_multipart_file_endpoint():
     """Verify POST /api/v1/execution/labs/ingest with multipart/form-data file upload.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001
@@ -742,6 +752,7 @@ async def test_api_ingest_multipart_file_endpoint():
 async def test_api_batch_status_list_and_not_found():
     """Verify GET /api/v1/execution/labs/batch-status querying and 404 behavior.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001
@@ -773,6 +784,7 @@ async def test_api_batch_status_list_and_not_found():
 async def test_parse_helpers_unit_coverage():
     """Verify parser helper functions handle diverse date, numeric, and range formats.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001
@@ -832,6 +844,7 @@ async def test_parse_helpers_unit_coverage():
 async def test_fhir_diverse_structures_and_types():
     """Verify FHIR parsing for valueString, valueInteger, valueCodeableConcept, and arrays.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001
@@ -898,6 +911,7 @@ async def test_fhir_diverse_structures_and_types():
 async def test_hl7_diverse_segments_and_abnormal_flags():
     """Verify HL7 v2 parsing for various abnormal flags (A, N, LL, HH) and byte payloads.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001
@@ -953,6 +967,7 @@ async def test_hl7_diverse_segments_and_abnormal_flags():
 async def test_recalculate_range_flags_full_coverage():
     """Verify recalculate_range_flags across modified cohort demographics and references.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001
@@ -1034,6 +1049,7 @@ async def test_recalculate_range_flags_full_coverage():
 async def test_consent_version_stamping_on_ingestion():
     """Verify active SubjectConsent version is stamped onto ingested ClinicalObservation.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001
@@ -1086,6 +1102,7 @@ SUBJ-CONSENT-01,WBC,6.0,10^9/L
 async def test_unsupported_format_and_empty_payload():
     """Verify handling of unsupported formats and empty payloads.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001
@@ -1116,6 +1133,7 @@ async def test_unsupported_format_and_empty_payload():
 async def test_lab_ranges_specificity_and_tie_breaking():
     """Verify multi-dimensional specificity scoring and tie-breaking in select_reference_range.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001
@@ -1237,6 +1255,7 @@ async def test_lab_ranges_specificity_and_tie_breaking():
 async def test_batch_store_filtering_by_study():
     """Verify listing batches with study_id filter.
 
+    @req:PRD-SYS-170
     @req:PRD-LAB-001
     @req:PRD-MDR-001
     @req:PRD-QRY-001

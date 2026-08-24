@@ -220,6 +220,7 @@ def test_timeline_aggregator_chronological_ordering() -> None:
     """Validate chronological event aggregation across SDTM domains.
 
     @req:PRD-SYS-052
+    @req:ADR-2199
     """
     bundle = get_sample_sdtm_bundle("SUBJ-101")
     timeline = build_timeline_from_sdtm_records(
@@ -259,6 +260,8 @@ async def test_narrative_service_generation_and_draft_state() -> None:
     """Validate safety narrative generation creates DRAFT_AI state with dual-attribution metadata.
 
     @req:PRD-SYS-051, PRD-SYS-052
+    @req:PRD-SYS-052
+    @req:ADR-2199
     """
     service = SafetyNarrativeService()
     bundle = get_sample_sdtm_bundle("SUBJ-202")
@@ -323,6 +326,8 @@ async def test_narrative_service_esignature_and_approval_workflow() -> None:
     """Validate 21 CFR Part 11 cryptographic e-signature sign-off workflow.
 
     @req:PRD-SYS-051, PRD-SYS-052
+    @req:PRD-SYS-052
+    @req:ADR-2199
     """
     service = SafetyNarrativeService()
     bundle = get_sample_sdtm_bundle("SUBJ-303")
@@ -405,6 +410,7 @@ async def test_narrative_service_export_gate_blocks_unapproved() -> None:
     """Validate ICH E2B(R3) export gate blocks unapproved AI narrative drafts.
 
     @req:PRD-SYS-052
+    @req:ADR-2199
     """
     service = SafetyNarrativeService()
     bundle = get_sample_sdtm_bundle("SUBJ-404")
@@ -469,6 +475,8 @@ async def test_rest_api_narrative_endpoints_end_to_end() -> None:
     """Full roundtrip REST API integration test for generation, viewing, signing, and E2B export.
 
     @req:PRD-SYS-051, PRD-SYS-052
+    @req:PRD-SYS-052
+    @req:ADR-2199
     """
     bundle = get_sample_sdtm_bundle("SUBJ-505")
 

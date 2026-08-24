@@ -65,6 +65,7 @@ async def test_health_check(client: AsyncClient):
     """Validate health check endpoint returns status ok.
 
     @req:PRD-IMG-001
+    @req:PRD-SYS-164
     """
     resp = await client.get("/health")
     assert resp.status_code == 200
@@ -79,6 +80,7 @@ async def test_upload_single_dicom_endpoint(client: AsyncClient):
 
     @req:PRD-IMG-001
     @req:PRD-IMG-002
+    @req:PRD-SYS-164
     """
     dcm_bytes = create_sample_dicom()
 
@@ -121,6 +123,7 @@ async def test_upload_zip_archive_endpoint(client: AsyncClient):
 
     @req:PRD-IMG-001
     @req:PRD-IMG-002
+    @req:PRD-SYS-164
     """
     zip_bio = io.BytesIO()
     with zipfile.ZipFile(zip_bio, "w") as zf:
@@ -150,6 +153,7 @@ async def test_list_and_get_studies_endpoints(client: AsyncClient):
     """Validate GET /api/v1/imaging/studies and GET /api/v1/imaging/studies/{study_uid}.
 
     @req:PRD-IMG-001
+    @req:PRD-SYS-164
     """
     # First upload a study
     dcm_bytes = create_sample_dicom()
@@ -207,6 +211,7 @@ async def test_in_flight_deidentify_stream_endpoint(client: AsyncClient):
     """Validate POST /api/v1/imaging/deidentify returns in-memory sanitized stream.
 
     @req:PRD-IMG-002
+    @req:PRD-SYS-164
     """
     raw_dcm = create_sample_dicom(patient_name="SECRET^PATIENT")
     files = {"file": ("in_flight.dcm", raw_dcm, "application/dicom")}
@@ -231,6 +236,7 @@ async def test_upload_with_custom_pixel_mask_json(client: AsyncClient):
     """Validate custom pixel mask coordinate JSON injection.
 
     @req:PRD-IMG-002
+    @req:PRD-SYS-164
     """
     raw_dcm = create_sample_dicom()
     custom_boxes = [{"x_min": 5, "y_min": 5, "x_max": 20, "y_max": 20}]
@@ -254,6 +260,7 @@ async def test_not_found_errors(client: AsyncClient):
     """Validate 404 responses for nonexistent studies, instances, and certificates.
 
     @req:PRD-IMG-001
+    @req:PRD-SYS-164
     """
     res1 = await client.get("/api/v1/imaging/studies/nonexistent-study-uid-999")
     assert res1.status_code == 404

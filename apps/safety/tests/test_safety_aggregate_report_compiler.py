@@ -90,6 +90,9 @@ def test_subject_exposure_calculator_patient_years_and_stratifications():
     @req:PRD-AGG-002
     @req:PRD-PVG-004
     @req:ADR-2199
+    @req:PRD-AGG-001
+    @req:PRD-AGG-003
+    @req:PRD-SYS-169
     """
     subjects_data = [
         # Subject 1: Full reporting period 2026-01-01 to 2026-12-31 (365 days)
@@ -191,6 +194,10 @@ def test_regulatory_snapshot_cryptographic_seal_and_reproducibility():
     @req:PRD-AGG-001
     @req:PRD-SYS-001
     @req:ADR-2199
+    @req:PRD-AGG-002
+    @req:PRD-AGG-003
+    @req:PRD-PVG-004
+    @req:PRD-SYS-169
     """
     cases = [
         {
@@ -291,6 +298,9 @@ def test_periodic_report_compiler_summary_tabulations_and_rsi_breach():
     @req:PRD-AGG-003
     @req:PRD-PVG-004
     @req:ADR-2199
+    @req:PRD-AGG-001
+    @req:PRD-AGG-002
+    @req:PRD-SYS-169
     """
     rsi_config = ReferenceSafetyInformationConfig(
         rsi_document_id="IB-CADENCE-ED7",
@@ -444,6 +454,10 @@ async def test_executive_qppv_signoff_workflow_and_role_gating():
     @req:PRD-SYS-001
     @req:PRD-SYS-125
     @req:ADR-2199
+    @req:PRD-AGG-001
+    @req:PRD-AGG-002
+    @req:PRD-PVG-004
+    @req:PRD-SYS-169
     """
     async with db_manager.session_maker() as session:
         service = SafetySignalAlertService(session=session)
@@ -542,6 +556,7 @@ def test_fastapi_rest_aggregate_safety_compiler_and_exposure_endpoints():
     @req:PRD-PVG-004
     @req:PRD-PVG-008
     @req:ADR-2199
+    @req:PRD-SYS-169
     """
     client = TestClient(app)
     headers = create_test_auth_headers(

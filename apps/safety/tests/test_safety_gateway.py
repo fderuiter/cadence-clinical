@@ -189,7 +189,12 @@ class MockAsyncClientForJobs:
 
 @pytest.mark.asyncio
 async def test_safety_reconciliation_job_lifecycle_async():
-    """Verify that triggering an asynchronous reconciliation job via ASGITransport and polling works properly with GxP auditing and zero PII leak."""
+    """Verify that triggering an asynchronous reconciliation job via ASGITransport and polling works properly with GxP auditing and zero PII leak.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     mock_client = MockAsyncClientForJobs()
     app.state.test_httpx_client = mock_client
 
@@ -249,7 +254,12 @@ async def test_safety_reconciliation_job_lifecycle_async():
 
 @pytest.mark.asyncio
 async def test_safety_gateway_negative_signatures_async():
-    """Verify that endpoints reject invalid, expired, or tampered signatures."""
+    """Verify that endpoints reject invalid, expired, or tampered signatures.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         # Case 1: Invalid/garbage signature
@@ -327,6 +337,9 @@ def test_e2b_xml_generation_and_parser_roundtrip() -> None:
     """Validate E2BR3XMLBuilder generates valid XML that parses cleanly via E2BR3Parser.
 
     Requirements: PRD-SYS-001
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
     """
     now_iso = datetime.now(UTC).isoformat()
     original_case = SAECaseRecord(

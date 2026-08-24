@@ -33,6 +33,7 @@ def test_recist_sld_calculation():
     """Verify calculation of Sum of Longest Diameters (SLD) with nodal short-axis rule.
 
     @req:PRD-IMG-004
+    @req:PRD-SYS-165
     """
     lesions = [
         RECISTLesionInput(
@@ -72,6 +73,7 @@ def test_recist_baseline_timepoint_evaluation():
     """Verify that baseline evaluation establishes reference SLD and sets SD response.
 
     @req:PRD-IMG-004
+    @req:PRD-SYS-165
     """
     lesions = [
         RECISTLesionInput(
@@ -108,6 +110,7 @@ def test_recist_partial_response_derivation():
     """Verify that a >= 30% decrease from baseline qualifies as Partial Response (PR).
 
     @req:PRD-IMG-004
+    @req:PRD-SYS-165
     """
     # Baseline SLD = 50.0 mm
     # Follow-up: 30.0 mm (40% decrease -> PR)
@@ -146,6 +149,7 @@ def test_recist_progressive_disease_from_nadir():
     """Verify that a >= 20% increase from nadir AND >= 5mm absolute increase triggers PD.
 
     @req:PRD-IMG-004
+    @req:PRD-SYS-165
     """
     # Baseline = 50.0 mm, Nadir = 30.0 mm
     # Current SLD = 38.0 mm (+26.67% from nadir, +8.0 mm absolute increase) -> PD
@@ -184,6 +188,7 @@ def test_recist_complete_response_and_new_lesions():
     """Verify Complete Response (CR) and new lesion progression override.
 
     @req:PRD-IMG-004
+    @req:PRD-SYS-165
     """
     # Target lesions all 0mm -> CR
     lesions: list[RECISTLesionInput] = []
@@ -220,6 +225,7 @@ def test_lugano_ppd_and_spd_calculation():
     """Verify calculation of Lugano PPD and SPD across target nodal lesions.
 
     @req:PRD-IMG-004
+    @req:PRD-SYS-165
     """
     lesions = [
         LuganoLesionInput(
@@ -244,6 +250,7 @@ def test_lugano_partial_response_and_deauville_pet():
     """Verify Lugano PR (>= 50% decrease in SPD) and PET Deauville metabolic score.
 
     @req:PRD-IMG-004
+    @req:PRD-SYS-165
     """
     # Baseline SPD = 1000 mm^2
     # Follow-up: 450 mm^2 (55% decrease -> PR)
@@ -282,6 +289,7 @@ def test_lugano_progressive_disease_evaluation():
     """Verify Lugano Progressive Disease triggered by >= 50% increase from nadir SPD.
 
     @req:PRD-IMG-004
+    @req:PRD-SYS-165
     """
     # Baseline = 1000, Nadir = 400
     # Current = 650 (+62.5% increase from nadir) -> PD
@@ -317,6 +325,8 @@ def test_mpr_caliper_distance_and_perpendicular():
 
     @req:PRD-IMG-001
     @req:PRD-IMG-004
+    @req:PRD-SYS-164
+    @req:PRD-SYS-165
     """
     p1 = PointCoordinate(x=10.0, y=10.0)
     p2 = PointCoordinate(x=40.0, y=50.0)
@@ -348,6 +358,7 @@ def test_mpr_slice_plane_mapping():
     """Verify Axial slice coordinate mapping to Sagittal and Coronal planes.
 
     @req:PRD-IMG-001
+    @req:PRD-SYS-164
     """
     mapping = MprGeometryEngine.map_mpr_slice_index(
         axial_slice_index=24,
@@ -374,6 +385,8 @@ async def test_mpr_metadata_endpoint(client: AsyncClient):
 
     @req:PRD-IMG-001
     @req:PRD-IMG-004
+    @req:PRD-SYS-164
+    @req:PRD-SYS-165
     """
     resp = await client.get("/api/v1/imaging/series/SERIES-TEST-999/mpr-metadata")
     assert resp.status_code == 200
@@ -393,6 +406,7 @@ async def test_caliper_annotation_crud_and_audit(client: AsyncClient):
 
     @req:PRD-IMG-004
     @req:PRD-SYS-001
+    @req:PRD-SYS-165
     """
     sop_uid = "1.2.840.10008.5.1.4.1.1.4.999"
 
@@ -446,6 +460,7 @@ async def test_response_evaluations_endpoints(client: AsyncClient):
     """Validate POST /api/v1/imaging/response-evaluations/recist and /lugano.
 
     @req:PRD-IMG-004
+    @req:PRD-SYS-165
     """
     # RECIST Endpoint
     recist_payload = {
@@ -505,6 +520,7 @@ async def test_subject_timepoint_evaluation_and_trajectory(client: AsyncClient):
 
     @req:PRD-IMG-004
     @req:PRD-SYS-001
+    @req:PRD-SYS-165
     """
     subject_id = "SUBJ-ONCOLOGY-TRAJECTORY-1"
 

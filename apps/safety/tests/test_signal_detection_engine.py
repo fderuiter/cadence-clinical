@@ -11,7 +11,12 @@ from apps.safety.services.signal_detection_engine import (
 
 
 def test_disproportionality_metrics_strong_signal():
-    """Validate PRR, ROR, ChiSquare, and EBGM on a clear positive safety signal."""
+    """Validate PRR, ROR, ChiSquare, and EBGM on a clear positive safety signal.
+
+    @req:PRD-PVG-003
+    @req:PRD-SYS-169
+    @req:ADR-2199
+    """
     # Target Drug: CADENCE-101
     # Event: Hepatic Failure
     # a = 15 (Target Drug + Event), b = 85 (Target Drug + other events) -> Total target = 100
@@ -44,7 +49,12 @@ def test_disproportionality_metrics_strong_signal():
 
 
 def test_disproportionality_metrics_null_signal():
-    """Validate that baseline non-disproportionate reporting yields no signal."""
+    """Validate that baseline non-disproportionate reporting yields no signal.
+
+    @req:PRD-PVG-003
+    @req:PRD-SYS-169
+    @req:ADR-2199
+    """
     # a = 2, b = 98, c = 20, d = 980
     # PRR = (2 / 100) / (20 / 1000) = 0.02 / 0.02 = 1.0
     contingency = DisproportionalityContingency(
@@ -64,7 +74,12 @@ def test_disproportionality_metrics_null_signal():
 
 
 def test_scan_safety_dataset_batch():
-    """Verify batch scanning across multiple adverse events."""
+    """Verify batch scanning across multiple adverse events.
+
+    @req:PRD-PVG-003
+    @req:PRD-SYS-169
+    @req:ADR-2199
+    """
     cases = [
         {"drug_name": "CAD-01", "meddra_pt": "Acute kidney injury"},
         {"drug_name": "CAD-01", "meddra_pt": "Acute kidney injury"},

@@ -62,7 +62,12 @@ def get_valid_icsr() -> IndividualCaseSafetyReport:
 
 
 def test_valid_icsr_rendering_and_validation():
-    """Verify that a valid ICSR produces XML that passes structural validation."""
+    """Verify that a valid ICSR produces XML that passes structural validation.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     icsr = get_valid_icsr()
     xml_content = render_icsr_to_xml(icsr)
 
@@ -82,7 +87,12 @@ def test_valid_icsr_rendering_and_validation():
 
 
 def test_icsr_version_and_reason_for_change_rendering():
-    """Verify that version index and reason for change are correctly rendered."""
+    """Verify that version index and reason for change are correctly rendered.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     icsr = get_valid_icsr()
     icsr.version_index = 2
     icsr.reason_for_change = "Follow-up test reason"
@@ -96,7 +106,12 @@ def test_icsr_version_and_reason_for_change_rendering():
 
 
 def test_malformed_xml_validation_fails():
-    """Verify that malformed/invalid XML fails safely with a clear parsing error."""
+    """Verify that malformed/invalid XML fails safely with a clear parsing error.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     xml_content = "<ichicsr xmlns='urn:hl7-org:v3'><header><message_id>123</message_id></header>"  # Unclosed tag
     is_valid, msg = validate_icsr_xml(xml_content)
     assert is_valid is False
@@ -104,7 +119,12 @@ def test_malformed_xml_validation_fails():
 
 
 def test_invalid_root_tag_fails():
-    """Verify that validation fails if root tag is incorrect."""
+    """Verify that validation fails if root tag is incorrect.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
     <other_root xmlns="urn:hl7-org:v3">
     </other_root>"""
@@ -114,7 +134,12 @@ def test_invalid_root_tag_fails():
 
 
 def test_invalid_namespace_fails():
-    """Verify that validation fails if namespace is incorrect."""
+    """Verify that validation fails if namespace is incorrect.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
     <ichicsr xmlns="urn:other-namespace">
     </ichicsr>"""
@@ -124,7 +149,12 @@ def test_invalid_namespace_fails():
 
 
 def test_missing_header_fails():
-    """Verify that validation fails when header is missing."""
+    """Verify that validation fails when header is missing.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
     <ichicsr xmlns="urn:hl7-org:v3">
         <safety_report>
@@ -137,7 +167,12 @@ def test_missing_header_fails():
 
 
 def test_missing_header_fields_fail():
-    """Verify that validation fails when mandatory header fields are empty or missing."""
+    """Verify that validation fails when mandatory header fields are empty or missing.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     fields = [
         "message_id",
         "sender_organization",
@@ -173,7 +208,12 @@ def test_missing_header_fields_fail():
 
 
 def test_missing_safety_report_fails():
-    """Verify that validation fails when safety_report is missing."""
+    """Verify that validation fails when safety_report is missing.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
     <ichicsr xmlns="urn:hl7-org:v3">
         <header>
@@ -189,7 +229,12 @@ def test_missing_safety_report_fails():
 
 
 def test_missing_worldwide_unique_case_id_fails():
-    """Verify that validation fails when worldwide_unique_case_id is empty or missing."""
+    """Verify that validation fails when worldwide_unique_case_id is empty or missing.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
     <ichicsr xmlns="urn:hl7-org:v3">
         <header>
@@ -208,7 +253,12 @@ def test_missing_worldwide_unique_case_id_fails():
 
 
 def test_missing_patient_fails():
-    """Verify that validation fails when patient is missing."""
+    """Verify that validation fails when patient is missing.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
     <ichicsr xmlns="urn:hl7-org:v3">
         <header>
@@ -227,7 +277,12 @@ def test_missing_patient_fails():
 
 
 def test_missing_patient_fields_fail():
-    """Verify that validation fails when patient_id or sex is missing/empty."""
+    """Verify that validation fails when patient_id or sex is missing/empty.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     fields = ["patient_id", "sex"]
     for field in fields:
         patient_vals = {"patient_id": "SUBJ-001", "sex": "F"}
@@ -255,7 +310,12 @@ def test_missing_patient_fields_fail():
 
 
 def test_missing_reactions_or_reaction_term_fails():
-    """Verify that validation fails when reactions are missing or empty."""
+    """Verify that validation fails when reactions are missing or empty.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     # 1. Missing reactions element entirely
     xml_content = """<?xml version="1.0" encoding="utf-8"?>
     <ichicsr xmlns="urn:hl7-org:v3">
@@ -330,7 +390,12 @@ def test_missing_reactions_or_reaction_term_fails():
 
 
 def test_missing_drugs_or_drug_fields_fails():
-    """Verify that validation fails when suspect drugs are missing, empty or incomplete."""
+    """Verify that validation fails when suspect drugs are missing, empty or incomplete.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     # Base XML with valid headers, patient, and reaction
     base_xml_prefix = """<?xml version="1.0" encoding="utf-8"?>
     <ichicsr xmlns="urn:hl7-org:v3">
@@ -405,7 +470,12 @@ def test_missing_drugs_or_drug_fields_fails():
 
 
 def test_validate_e2b_xml_structure_direct():
-    """Verify validate_e2b_xml_structure directly validates correct structures."""
+    """Verify validate_e2b_xml_structure directly validates correct structures.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     icsr = get_valid_icsr()
     xml_content = render_icsr_to_xml(icsr)
 
@@ -415,7 +485,12 @@ def test_validate_e2b_xml_structure_direct():
 
 
 def test_generate_e2b_xml_happy_path():
-    """Verify that generate_e2b_xml returns a valid XML string when model is fully valid."""
+    """Verify that generate_e2b_xml returns a valid XML string when model is fully valid.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     icsr = get_valid_icsr()
     xml_content = generate_e2b_xml(icsr)
 
@@ -426,7 +501,12 @@ def test_generate_e2b_xml_happy_path():
 
 
 def test_generate_e2b_xml_invalid_raises_value_error():
-    """Verify that generate_e2b_xml raises ValueError if validation fails."""
+    """Verify that generate_e2b_xml raises ValueError if validation fails.
+
+    @req:PRD-PVG-002
+    @req:PRD-SYS-168
+    @req:ADR-2199
+    """
     icsr = get_valid_icsr()
     # Bypass Pydantic field validation but break XML constraint by setting a value that produces invalid XML format
     # For instance, we can't easily break pydantic validation with empty fields since they are mandatory and validate in pydantic,

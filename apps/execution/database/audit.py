@@ -791,6 +791,12 @@ def receive_before_flush(session: Session, flush_context, instances):
                 val = val.isoformat()
             new_values[attr.key] = val
 
+        ver_idx = 1
+        if hasattr(obj, "version") and isinstance(obj.version, int):
+            ver_idx = obj.version
+        elif hasattr(obj, "version_index") and isinstance(obj.version_index, int):
+            ver_idx = obj.version_index
+
         kwargs = {
             "table_name": obj.__tablename__,
             "record_id": get_primary_key(obj) or "pending",
@@ -799,7 +805,7 @@ def receive_before_flush(session: Session, flush_context, instances):
             "ip_address": ip_address,
             "old_values": None,
             "new_values": new_values,
-            "version_index": getattr(obj, "version", 1),
+            "version_index": ver_idx,
             "change_reason": reason,
         }
         if timestamp is not None:
@@ -846,9 +852,20 @@ def receive_before_flush(session: Session, flush_context, instances):
                 action = "DELETE"
 
             # Increment version index
-            if hasattr(obj, "version") and "version" not in new_values:
+            if (
+                hasattr(obj, "version")
+                and "version" not in new_values
+                and isinstance(obj.version, int)
+            ):
                 obj.version += 1
                 new_values["version"] = obj.version
+            elif (
+                hasattr(obj, "version_index")
+                and "version_index" not in new_values
+                and isinstance(obj.version_index, int)
+            ):
+                obj.version_index += 1
+                new_values["version_index"] = obj.version_index
 
             # FORCE change reason for auto-resolved edit check queries
             obj_reason = reason
@@ -859,6 +876,12 @@ def receive_before_flush(session: Session, flush_context, instances):
             ):
                 obj_reason = "Edit Check Auto-Resolution"
 
+            ver_idx = 1
+            if hasattr(obj, "version") and isinstance(obj.version, int):
+                ver_idx = obj.version
+            elif hasattr(obj, "version_index") and isinstance(obj.version_index, int):
+                ver_idx = obj.version_index
+
             kwargs = {
                 "table_name": obj.__tablename__,
                 "record_id": get_primary_key(obj),
@@ -867,7 +890,7 @@ def receive_before_flush(session: Session, flush_context, instances):
                 "ip_address": ip_address,
                 "old_values": old_values,
                 "new_values": new_values,
-                "version_index": getattr(obj, "version", 1),
+                "version_index": ver_idx,
                 "change_reason": obj_reason,
             }
             if timestamp is not None:
@@ -899,6 +922,12 @@ def receive_before_flush(session: Session, flush_context, instances):
                 val = val.isoformat()
             old_values[attr.key] = val
 
+        ver_idx = 1
+        if hasattr(obj, "version") and isinstance(obj.version, int):
+            ver_idx = obj.version
+        elif hasattr(obj, "version_index") and isinstance(obj.version_index, int):
+            ver_idx = obj.version_index
+
         kwargs = {
             "table_name": obj.__tablename__,
             "record_id": get_primary_key(obj),
@@ -907,7 +936,7 @@ def receive_before_flush(session: Session, flush_context, instances):
             "ip_address": ip_address,
             "old_values": old_values,
             "new_values": None,
-            "version_index": getattr(obj, "version", 1),
+            "version_index": ver_idx,
             "change_reason": reason,
         }
         if timestamp is not None:

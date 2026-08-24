@@ -67,11 +67,10 @@ def get_auth_headers(
 
 
 def test_create_and_list_deviations():
+    """Verify that a deviation can be created and retrieved via API.
+
+    @req:PRD-QLT-001, PRD-SYS-001
     """
-    Verify that a deviation can be created and retrieved via API.
-    """
-    # @req:PRD-SYS-001
-    # @req:Trace-7
     client = TestClient(app)
     headers = get_auth_headers(change_reason="Reporting protocol deviation")
     payload = {
@@ -112,10 +111,10 @@ def test_create_and_list_deviations():
 
 
 def test_create_and_update_rca():
+    """Verify that an RCA can be created or updated for an existing deviation.
+
+    @req:PRD-QLT-002, PRD-SYS-001
     """
-    Verify that an RCA can be created or updated for an existing deviation.
-    """
-    # @req:PRD-SYS-001
     client = TestClient(app)
     headers = get_auth_headers(change_reason="Create deviation for RCA test")
 
@@ -190,10 +189,10 @@ def test_create_and_update_rca():
 
 
 def test_capa_creation_validations():
+    """Verify that CAPA creation validates parent records and statuses.
+
+    @req:PRD-QLT-003, PRD-SYS-001
     """
-    Verify that CAPA creation validates parent records and statuses.
-    """
-    # @req:PRD-SUB-001
     client = TestClient(app)
     headers = get_auth_headers(change_reason="Create deviation for CAPA validations")
 
@@ -235,10 +234,10 @@ def test_capa_creation_validations():
 
 
 def test_capa_lifecycle_transitions():
+    """Verify legal and illegal CAPA status transitions.
+
+    @req:PRD-QLT-003, PRD-SYS-001
     """
-    Verify legal and illegal CAPA status transitions.
-    """
-    # @req:PRD-SUB-001
     client = TestClient(app)
     headers = get_auth_headers(change_reason="CAPA lifecycle testing")
 
@@ -343,10 +342,10 @@ def test_capa_lifecycle_transitions():
 
 
 def test_capa_updates_and_concurrency():
+    """Verify updates to CAPA records and optimistic locking behavior.
+
+    @req:PRD-QLT-003, PRD-SYS-001
     """
-    Verify updates to CAPA records and optimistic locking behavior.
-    """
-    # @req:PRD-SUB-001
     client = TestClient(app)
     headers = get_auth_headers(change_reason="Concurrency testing")
 
@@ -432,8 +431,9 @@ def test_capa_updates_and_concurrency():
 
 
 def test_read_only_roles_forbidden():
-    """
-    Verify that read-only roles (auditor, inspector, viewer, etc.) receive 403 Forbidden on all mutations.
+    """Verify that read-only roles (auditor, inspector, viewer, etc.) receive 403 Forbidden on all mutations.
+
+    @req:PRD-SYS-001
     """
     client = TestClient(app)
     ro_headers = get_auth_headers(roles="auditor", change_reason="Trying to write")
@@ -507,9 +507,9 @@ def test_read_only_roles_forbidden():
 
 
 def test_capa_approval_closure_requires_quality_oversight():
-    """
-    Verify that general write roles (e.g. cra) can perform general transitions but only quality oversight roles
-    (e.g. quality_manager, qa_lead, quality_oversight, admin) can perform approval/closure transitions.
+    """Verify that general write roles can perform general transitions but only quality oversight roles can approve/close.
+
+    @req:PRD-QLT-003, PRD-SYS-001
     """
     client = TestClient(app)
     admin_headers = get_auth_headers(
@@ -607,8 +607,9 @@ def test_capa_approval_closure_requires_quality_oversight():
 
 
 def test_mutation_without_change_reason_rejected():
-    """
-    Verify that mutations without X-Change-Reason are rejected by the gateway middleware.
+    """Verify that mutations without X-Change-Reason are rejected by the gateway middleware.
+
+    @req:PRD-SYS-001
     """
     client = TestClient(app)
     headers = get_auth_headers(roles="admin")
@@ -629,8 +630,9 @@ def test_mutation_without_change_reason_rejected():
 
 
 def test_successful_mutation_creates_audit_log_and_is_atomic():
-    """
-    Verify that every successful mutation creates an atomic audit log entry with detailed information.
+    """Verify that every successful mutation creates an atomic audit log entry with detailed information.
+
+    @req:PRD-SYS-001
     """
     client = TestClient(app)
     headers = get_auth_headers(roles="admin", change_reason="Initial mutation testing")
@@ -668,10 +670,9 @@ def test_successful_mutation_creates_audit_log_and_is_atomic():
 
 
 def test_audit_log_endpoint_properties():
-    """
-    Verify that the audit logs endpoint:
-    - returns entries in newest-first (descending chronological) order.
-    - exposes no write endpoints (POST/PUT/DELETE return 405).
+    """Verify that the audit logs endpoint returns entries in descending order and has no write endpoints.
+
+    @req:PRD-SYS-001
     """
     client = TestClient(app)
     headers = get_auth_headers(roles="admin", change_reason="Audit check")
@@ -708,9 +709,9 @@ def test_audit_log_endpoint_properties():
 
 
 def test_permission_failure_leaves_no_misleading_audit_entry():
-    """
-    Verify that if permission checks fail, no domain entities are created/modified,
-    and no misleading audit log is written (atomicity & consistency).
+    """Verify that if permission checks fail, no domain entities are created/modified, and no misleading audit log is written.
+
+    @req:PRD-SYS-001
     """
     client = TestClient(app)
     ro_headers = get_auth_headers(roles="auditor", change_reason="Unpermitted attempt")

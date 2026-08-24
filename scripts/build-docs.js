@@ -82,7 +82,7 @@ function runCommand(command) {
   console.log(`Running: ${command}`);
   try {
     // Use repoRoot for cwd to keep the execution portable and environment-agnostic
-    execSync(command, { stdio: "inherit", cwd: repoRoot });
+    execSync(command, { stdio: "inherit", cwd: repoRoot, env: process.env });
   } catch (error) {
     console.error(`Command failed: ${command}`);
     throw error;
@@ -341,6 +341,9 @@ try {
     "LICENSE.md",
   ]) {
     const filePath = path.join(repoRoot, "docs", file);
+    if (originalFilesMap.has(filePath)) {
+      continue;
+    }
     if (fs.existsSync(filePath)) {
       try {
         fs.unlinkSync(filePath);

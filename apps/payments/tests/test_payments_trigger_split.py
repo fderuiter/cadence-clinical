@@ -1,6 +1,6 @@
 """Unit and integration tests for Real-Time EDC/SDV Trigger-to-Payable & Split-Payee Engine.
 
-Requirements: ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-006
+Requirements: ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-006, PRD-SYS-161, PRD-SYS-162
 """
 
 import pytest
@@ -15,6 +15,8 @@ async def test_budget_contract_creation_and_split_payee_configuration(
 ):
     """Validate multi-tier budget contract creation and 100% split payee configuration.
 
+    @req:PRD-SYS-161
+    @req:PRD-SYS-162
     @req:ADR-2199
     @req:PRD-PAY-002
     @req:PRD-PAY-003
@@ -129,6 +131,7 @@ async def test_split_payee_validation_failure_on_invalid_percentage(
 ):
     """Validate that split payee allocations not summing to 100% are rejected.
 
+    @req:PRD-SYS-162
     @req:PRD-PAY-003
     """
     headers = get_auth_headers(roles="Grants Manager")
@@ -178,6 +181,8 @@ async def test_real_time_ecrf_submission_trigger_and_split_allocation(
 
     10% holdback reserve deduction, and multi-party split payee allocation.
 
+    @req:PRD-SYS-161
+    @req:PRD-SYS-162
     @req:ADR-2199
     @req:PRD-PAY-002
     @req:PRD-PAY-003
@@ -316,6 +321,8 @@ async def test_cra_sdv_verification_gating_workflow(client: AsyncClient):
 
     which is unlocked only upon CRA SDV verification event.
 
+    @req:PRD-SYS-161
+    @req:PRD-SYS-162
     @req:ADR-2199
     @req:PRD-PAY-002
     @req:PRD-PAY-003
@@ -425,6 +432,7 @@ async def test_deterministic_idempotency_prevents_duplicate_payables(
 ):
     """Validate that identical event IDs do not duplicate payable ledgers.
 
+    @req:PRD-SYS-161
     @req:ADR-2199
     @req:PRD-PAY-002
     """
@@ -503,6 +511,7 @@ async def test_holdback_retention_reserve_and_dual_signoff_release(
 ):
     """Validate 10% holdback retention reserve calculation and dual sign-off release governance.
 
+    @req:PRD-SYS-162
     @req:ADR-2199
     @req:PRD-PAY-003
     @req:PRD-PAY-006
@@ -621,6 +630,8 @@ async def test_payment_audit_ledger_immutable_tracking(client: AsyncClient):
 
     generates an append-only 21 CFR Part 11 audit log record.
 
+    @req:PRD-SYS-161
+    @req:PRD-SYS-162
     @req:ADR-2199
     @req:PRD-PAY-002
     @req:PRD-PAY-003
@@ -677,6 +688,8 @@ async def test_payment_audit_ledger_immutable_tracking(client: AsyncClient):
 async def test_ctms_milestone_completion_event_trigger(client: AsyncClient):
     """Validate CTMS milestone completion event triggering automated milestone payables.
 
+    @req:PRD-SYS-161
+    @req:PRD-SYS-162
     @req:ADR-2199
     @req:PRD-PAY-002
     @req:PRD-PAY-003
@@ -731,6 +744,7 @@ async def test_rbac_financial_permissions_and_auditor_isolation(
 ):
     """Validate RBAC access control: Grants Manager has write access, Auditor has read-only.
 
+    @req:PRD-SYS-161
     @req:ADR-2199
     @req:PRD-PAY-002
     """

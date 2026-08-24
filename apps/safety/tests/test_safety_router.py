@@ -16,6 +16,10 @@ def test_dispatch_safety_report_post_endpoint() -> None:
     """Validate POST /api/v1/execution/safety/dispatch dispatches ICSR report to gateway.
 
     Requirements: PRD-SYS-001
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:PRD-SYS-168
+    @req:ADR-2199
     """
     headers = create_test_auth_headers(
         user_id="pv_officer_01",
@@ -47,6 +51,10 @@ def test_reconcile_sae_cases_post_endpoint() -> None:
     """Validate POST /api/v1/execution/safety/reconcile executes AE/SAE reconciliation.
 
     Requirements: PRD-SYS-001
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:PRD-SYS-168
+    @req:ADR-2199
     """
     headers = create_test_auth_headers(
         user_id="pv_officer_01",

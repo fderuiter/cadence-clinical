@@ -119,6 +119,7 @@ def test_calculate_mic_canonical_formatting():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     payload = "Hello World\nLine 2\n"
     mic_256 = calculate_mic(payload, algorithm="sha-256")
@@ -139,6 +140,7 @@ def test_smime_sha256_digital_signature_and_verification():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     cert_pem, key_pem = generate_as2_test_keypair(common_name="Sponsor Signer")
 
@@ -182,6 +184,7 @@ def test_smime_aes256_hybrid_encryption_and_decryption():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     recipient_cert, recipient_key = generate_as2_test_keypair(
         common_name="FDA ESG Gateway"
@@ -220,6 +223,7 @@ def test_smime_full_pipeline_sign_then_encrypt():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     sender_cert, sender_key = generate_as2_test_keypair(
         common_name="Cadence Sponsor Gateway"
@@ -267,6 +271,7 @@ def test_mdn_parser_valid_synchronous_receipt():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     orig_msg_id = "<20260822-MSG001@cadence.clinical>"
     expected_mic = calculate_mic(SAMPLE_E2B_XML)
@@ -297,6 +302,7 @@ def test_mdn_parser_mic_mismatch_detection():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     orig_msg_id = "<20260822-MSG002@cadence.clinical>"
     correct_mic = calculate_mic(SAMPLE_E2B_XML)
@@ -323,6 +329,7 @@ def test_mdn_parser_signed_mdn_verification():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     fda_cert, fda_key = generate_as2_test_keypair(common_name="FDA ESG MDN Signer")
     orig_msg_id = "<20260822-MSG003@cadence.clinical>"
@@ -353,6 +360,7 @@ def test_mdn_parser_disposition_failure_handling():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     orig_msg_id = "<20260822-MSG004@cadence.clinical>"
     mic = calculate_mic(SAMPLE_E2B_XML)
@@ -384,6 +392,7 @@ def test_ack_b_syntactic_validation_success():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     msg_id = "MSG-20260822-001"
     case_id = "US-CADENCE-2026-00099"
@@ -407,6 +416,7 @@ def test_ack_b_syntactic_validation_failure():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     msg_id = "MSG-20260822-002"
     case_id = "US-CADENCE-2026-00099"
@@ -431,6 +441,7 @@ def test_ack_c_authority_center_acceptance():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     msg_id = "MSG-20260822-003"
     case_id = "US-CADENCE-2026-00099"
@@ -460,6 +471,7 @@ def test_ack_c_authority_center_rejection():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     msg_id = "MSG-20260822-004"
     case_id = "US-CADENCE-2026-00099"
@@ -491,6 +503,7 @@ async def test_as2_client_outbound_transmission_with_sync_mdn():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     fda_cert, fda_key = generate_as2_test_keypair(common_name="FDA ESG Mock Server")
 
@@ -584,6 +597,7 @@ async def test_as2_client_inbound_ack_b_and_ack_c_lifecycle():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     session_maker = db_manager.get_session_maker()
     async with session_maker() as session:
@@ -656,6 +670,7 @@ async def test_as2_transmission_audit_log_immutability_invariant():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     session_maker = db_manager.get_session_maker()
     async with session_maker() as session:
@@ -717,6 +732,7 @@ def test_rest_send_as2_transmission_endpoint():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     client = TestClient(app)
     headers = get_auth_headers(change_reason="Dispatch expedited SUSAR via REST API")
@@ -747,6 +763,7 @@ def test_rest_list_and_get_as2_transmissions():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     client = TestClient(app)
     headers = get_auth_headers()
@@ -784,6 +801,7 @@ def test_rest_process_inbound_mdn_endpoint():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     client = TestClient(app)
     headers = get_auth_headers()
@@ -827,6 +845,7 @@ def test_rest_process_regulatory_ack_endpoint():
 
     @req:PRD-PVG-002
     @req:ADR-2199
+    @req:PRD-SYS-168
     """
     client = TestClient(app)
     headers = get_auth_headers()

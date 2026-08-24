@@ -94,7 +94,13 @@ export default withMermaid(
       "Metadata-Driven Clinical Execution Platform Documentation Portal",
     base: process.env.VITEPRESS_BASE || "/cadence-clinical/",
     outDir: path.resolve(__dirname, "dist"),
+    srcExclude: ["**/SDLC/runs/**", "**/runs/**"],
     ignoreDeadLinks: true,
+    vite: {
+      build: {
+        chunkSizeWarningLimit: 2000,
+      },
+    },
     themeConfig: {
       search: {
         provider: "local",

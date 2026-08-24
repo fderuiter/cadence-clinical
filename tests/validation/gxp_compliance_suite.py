@@ -28,9 +28,14 @@ def test_gxp_compliance_drifts_identified():
         e for e in root_entries if (repo_root / e).is_file() and not e.startswith(".")
     }
 
-    # Walk docs/SDLC and process all markdown files
+    # Walk docs/SDLC and process specification markdown files (excluding historical runs and generated reports)
     sdlc_dir = repo_root / "docs" / "SDLC"
-    for p in sdlc_dir.rglob("*.md"):
+    for p in sorted(sdlc_dir.glob("*.md")):
+        if p.name in (
+            "Requirements_Traceability_Matrix.md",
+            "IQ_OQ_PQ_Execution_Report.md",
+        ):
+            continue
         vm.process_markdown_file(
             p, repo_root, root_dirs, root_files, codebase_map, strict=True
         )

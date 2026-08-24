@@ -14,6 +14,12 @@ from apps.safety.domain.sae_icsr import (
 
 
 def test_valid_meddra_coding():
+    """Test valid meddra coding.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     coding = MedDRACoding(
         llt_code="10019211",
         llt_name="Headache",
@@ -33,6 +39,12 @@ def test_valid_meddra_coding():
 
 
 def test_invalid_meddra_coding_primary_soc():
+    """Test invalid meddra coding primary soc.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     with pytest.raises(ValidationError) as exc:
         MedDRACoding(
             llt_code="10019211",
@@ -51,6 +63,12 @@ def test_invalid_meddra_coding_primary_soc():
 
 
 def test_valid_sae_minimum():
+    """Test valid sae minimum.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     sae = SeriousAdverseEvent(
         subject_key="SUBJ-001",
         AETERM="Severe Headache",
@@ -66,6 +84,12 @@ def test_valid_sae_minimum():
 
 
 def test_valid_sae_full_normalization():
+    """Test valid sae full normalization.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     coding = MedDRACoding(
         llt_code="10019211",
         llt_name="Headache",
@@ -99,6 +123,12 @@ def test_valid_sae_full_normalization():
 
 
 def test_invalid_sae_date_chronology():
+    """Test invalid sae date chronology.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     with pytest.raises(ValidationError) as exc:
         SeriousAdverseEvent(
             subject_key="SUBJ-001",
@@ -114,6 +144,12 @@ def test_invalid_sae_date_chronology():
 
 
 def test_invalid_sae_date_format():
+    """Test invalid sae date format.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     with pytest.raises(ValidationError) as exc:
         SeriousAdverseEvent(
             subject_key="SUBJ-001",
@@ -126,6 +162,12 @@ def test_invalid_sae_date_format():
 
 
 def test_invalid_sae_severity():
+    """Test invalid sae severity.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     with pytest.raises(ValidationError) as exc:
         SeriousAdverseEvent(
             subject_key="SUBJ-001",
@@ -138,6 +180,12 @@ def test_invalid_sae_severity():
 
 
 def test_invalid_sae_seriousness():
+    """Test invalid sae seriousness.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     with pytest.raises(ValidationError) as exc:
         SeriousAdverseEvent(
             subject_key="SUBJ-001",
@@ -150,6 +198,12 @@ def test_invalid_sae_seriousness():
 
 
 def test_invalid_sae_seq():
+    """Test invalid sae seq.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     with pytest.raises(ValidationError) as exc:
         SeriousAdverseEvent(
             subject_key="SUBJ-001",
@@ -163,6 +217,12 @@ def test_invalid_sae_seq():
 
 
 def test_sae_version_metadata():
+    """Test sae version metadata.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     # version_index = 1, reason_for_change can be None
     sae_v1 = SeriousAdverseEvent(
         subject_key="SUBJ-001",
@@ -227,6 +287,12 @@ def test_sae_version_metadata():
 
 
 def test_valid_icsr_full():
+    """Test valid icsr full.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     header = ICSRHeader(
         sender_organization="SPONSOR_A",
         receiver_organization="FDA",
@@ -283,6 +349,12 @@ def test_valid_icsr_full():
 
 
 def test_invalid_icsr_patient_age_negative():
+    """Test invalid icsr patient age negative.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     with pytest.raises(ValidationError) as exc:
         ICSRPatient(
             patient_id="SUBJ-001",
@@ -293,6 +365,12 @@ def test_invalid_icsr_patient_age_negative():
 
 
 def test_invalid_icsr_patient_age_unit():
+    """Test invalid icsr patient age unit.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     with pytest.raises(ValidationError) as exc:
         ICSRPatient(
             patient_id="SUBJ-001",
@@ -303,6 +381,12 @@ def test_invalid_icsr_patient_age_unit():
 
 
 def test_invalid_icsr_drug_role():
+    """Test invalid icsr drug role.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     with pytest.raises(ValidationError) as exc:
         ICSRSuspectDrug(
             drug_name="DrugX",
@@ -312,6 +396,12 @@ def test_invalid_icsr_drug_role():
 
 
 def test_icsr_version_metadata():
+    """Test icsr version metadata.
+
+    @req:PRD-PVG-001
+    @req:PRD-SYS-167
+    @req:ADR-2199
+    """
     header = ICSRHeader(
         sender_organization="SPONSOR_A",
         receiver_organization="FDA",

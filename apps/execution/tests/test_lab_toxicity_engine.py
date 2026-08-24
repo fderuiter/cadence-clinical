@@ -11,7 +11,11 @@ from apps.execution.services.lab_toxicity_engine import (
 
 
 def test_hepatic_alt_ctcae_grading():
-    """Verify ALT grading relative to ULN."""
+    """Verify ALT grading relative to ULN.
+
+    @req:PRD-SYS-171
+    @req:PRD-LBM-003
+    """
     uln = 35.0  # U/L
 
     # Normal: 30 U/L <= 35.0 -> Grade 0
@@ -50,7 +54,11 @@ def test_hepatic_alt_ctcae_grading():
 
 
 def test_renal_creatinine_grading_and_delta_check():
-    """Verify serum creatinine toxicity grading and KDIGO acute delta check."""
+    """Verify serum creatinine toxicity grading and KDIGO acute delta check.
+
+    @req:PRD-SYS-171
+    @req:PRD-LBM-003
+    """
     uln = 1.2  # mg/dL
     baseline = 1.0  # mg/dL
 
@@ -71,7 +79,11 @@ def test_renal_creatinine_grading_and_delta_check():
 
 
 def test_neutrophil_anc_grading():
-    """Verify Absolute Neutrophil Count (ANC) toxicity grading."""
+    """Verify Absolute Neutrophil Count (ANC) toxicity grading.
+
+    @req:PRD-SYS-171
+    @req:PRD-LBM-003
+    """
     # ANC = 0.8 x 10^9/L (<1.0 - 0.5 -> Grade 3)
     res_g3 = LabToxicityEngine.evaluate_observation(
         test_code="ANC",

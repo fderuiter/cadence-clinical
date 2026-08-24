@@ -76,6 +76,7 @@ async def test_single_dicom_ingestion_pipeline(db_session, test_env):
 
     @req:PRD-IMG-001
     @req:PRD-IMG-002
+    @req:PRD-SYS-164
     """
     raw_dcm = make_test_dicom()
     storage_provider = test_env["storage"]
@@ -130,6 +131,7 @@ async def test_zip_archive_multi_slice_ingestion(db_session, test_env):
 
     @req:PRD-IMG-001
     @req:PRD-IMG-002
+    @req:PRD-SYS-164
     """
     zip_bio = io.BytesIO()
     with zipfile.ZipFile(zip_bio, "w") as zf:
