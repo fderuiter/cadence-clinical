@@ -45,6 +45,7 @@ class GatekeeperRejectionReason(StrEnum):
     SITE_NOT_GREENLIGHTED = "SITE_NOT_GREENLIGHTED"
     TRAINING_REQUIRED = "TRAINING_REQUIRED"
     UNAUTHORIZED_DOA_ROLE = "UNAUTHORIZED_DOA_ROLE"
+    MISSING_SITE_ID = "MISSING_SITE_ID"
 
 
 class GatekeeperDecision(BaseModel):
@@ -297,13 +298,20 @@ class SiteExecutionGatekeeper:
         op_upper = operation_type.upper().strip()
         normalized_proto = protocol_version or "1.0.0"
 
-        if not site_id:
+        if not site_id or not site_id.strip():
+            rejection_reasons.append(GatekeeperRejectionReason.MISSING_SITE_ID)
+            rejection_details["site"] = {
+                "site_id": site_id or "",
+                "reason": "Target site_id is required for clinical write-mutations.",
+            }
             return GatekeeperDecision(
-                is_eligible=True,
+                is_eligible=False,
                 site_id=site_id or "",
                 user_id=user_id,
                 operation_type=operation_type,
                 study_id=study_id,
+                rejection_reasons=rejection_reasons,
+                rejection_details=rejection_details,
             )
 
         # ---------------------------------------------------------
@@ -361,11 +369,23 @@ class SiteExecutionGatekeeper:
                         },
                     }
             except Exception as exc:
-                logger.debug(
-                    "Could not query CTMS greenlight status (passing for local/offline): %s",
+                logger.warning(
+                    "SITE MUTATION BLOCKED: CTMS greenlight status check failed or timed out for site %s: %s",
+                    site_id,
                     exc,
                 )
-                greenlight_verified = True
+                rejection_reasons.append(
+                    GatekeeperRejectionReason.SITE_NOT_GREENLIGHTED
+                )
+                rejection_details["greenlight"] = {
+                    "site_id": site_id,
+                    "study_id": study_id,
+                    "overall_status": "TIMEOUT",
+                    "error": str(exc),
+                    "missing_facets": [
+                        "CTMS greenlight status verification request failed or timed out"
+                    ],
+                }
 
         # ---------------------------------------------------------
         # Pillar 2: Protocol Amendment GCP Training Validation
@@ -410,93 +430,29 @@ class SiteExecutionGatekeeper:
         # ---------------------------------------------------------
         # Pillar 3: Delegation of Authority (DOA) Log Verification
         # ---------------------------------------------------------
-        if not is_sys_user:
-            is_strict = strict_doa if strict_doa is not None else self._strict_doa
-            doa_svc = self.doa_service
-            site_records: list[DOAAssignmentRecord] = []
-            if study_id:
-                site_records = doa_svc.get_site_doa_log(
-                    study_id=study_id, site_id=site_id
-                )
-            if not site_records:
-                site_records = [
-                    rec for rec in doa_svc._store.values() if rec.site_id == site_id
-                ]
+        is_strict = strict_doa if strict_doa is not None else self._strict_doa
+        doa_svc = self.doa_service
+        site_records: list[DOAAssignmentRecord] = []
+        if study_id:
+            site_records = doa_svc.get_site_doa_log(study_id=study_id, site_id=site_id)
+        if not site_records:
+            site_records = [
+                rec for rec in doa_svc._store.values() if rec.site_id == site_id
+            ]
 
-            if site_records:
-                user_matches = [
-                    r
-                    for r in site_records
-                    if r.personnel_email == user_id
-                    or r.personnel_name == user_id
-                    or r.record_id == user_id
-                    or user_id in (r.personnel_email, r.personnel_name)
-                    or r.personnel_email.lower() == user_id.lower()
-                    or r.personnel_name.lower() == user_id.lower()
-                ]
+        if site_records:
+            user_matches = [
+                r
+                for r in site_records
+                if r.personnel_email == user_id
+                or r.personnel_name == user_id
+                or r.record_id == user_id
+                or user_id in (r.personnel_email, r.personnel_name)
+                or r.personnel_email.lower() == user_id.lower()
+                or r.personnel_name.lower() == user_id.lower()
+            ]
 
-                if not user_matches:
-                    rejection_reasons.append(
-                        GatekeeperRejectionReason.UNAUTHORIZED_DOA_ROLE
-                    )
-                    rejection_details["doa"] = {
-                        "site_id": site_id,
-                        "user_id": user_id,
-                        "operation_type": op_upper,
-                        "reason": f"User '{user_id}' has no Delegation of Authority (DOA) assignment at site '{site_id}'.",
-                    }
-                else:
-                    active_signed = [
-                        r for r in user_matches if r.is_active and r.signed_off
-                    ]
-                    if not active_signed:
-                        rejection_reasons.append(
-                            GatekeeperRejectionReason.UNAUTHORIZED_DOA_ROLE
-                        )
-                        rejection_details["doa"] = {
-                            "site_id": site_id,
-                            "user_id": user_id,
-                            "operation_type": op_upper,
-                            "reason": f"DOA delegation for user '{user_id}' at site '{site_id}' is pending PI sign-off or inactive.",
-                        }
-                    else:
-                        req_tasks = OPERATION_DOA_TASK_MAP.get(op_upper, [])
-                        req_roles = OPERATION_DOA_ROLE_MAP.get(op_upper, [])
-                        authorized = False
-
-                        for rec in active_signed:
-                            # Principal Investigator has full authority for all operations
-                            if rec.role == DOATaskRoleEnum.PRINCIPAL_INVESTIGATOR:
-                                authorized = True
-                                break
-                            if req_roles and rec.role in req_roles:
-                                authorized = True
-                                break
-                            if req_tasks and any(
-                                t in rec.delegated_tasks for t in req_tasks
-                            ):
-                                authorized = True
-                                break
-                            if not req_tasks and not req_roles:
-                                authorized = True
-                                break
-
-                        if not authorized:
-                            rejection_reasons.append(
-                                GatekeeperRejectionReason.UNAUTHORIZED_DOA_ROLE
-                            )
-                            rejection_details["doa"] = {
-                                "site_id": site_id,
-                                "user_id": user_id,
-                                "operation_type": op_upper,
-                                "assigned_role": [str(r.role) for r in active_signed],
-                                "delegated_tasks": [
-                                    [str(t) for t in r.delegated_tasks]
-                                    for r in active_signed
-                                ],
-                                "reason": f"User '{user_id}' lacks delegated tasks or role authority for operation '{op_upper}'.",
-                            }
-            elif is_strict:
+            if not user_matches:
                 rejection_reasons.append(
                     GatekeeperRejectionReason.UNAUTHORIZED_DOA_ROLE
                 )
@@ -504,8 +460,67 @@ class SiteExecutionGatekeeper:
                     "site_id": site_id,
                     "user_id": user_id,
                     "operation_type": op_upper,
-                    "reason": f"Site '{site_id}' has no active Delegation of Authority log registered (strict DOA mode enabled).",
+                    "reason": f"User '{user_id}' has no Delegation of Authority (DOA) assignment at site '{site_id}'.",
                 }
+            else:
+                active_signed = [
+                    r for r in user_matches if r.is_active and r.signed_off
+                ]
+                if not active_signed:
+                    rejection_reasons.append(
+                        GatekeeperRejectionReason.UNAUTHORIZED_DOA_ROLE
+                    )
+                    rejection_details["doa"] = {
+                        "site_id": site_id,
+                        "user_id": user_id,
+                        "operation_type": op_upper,
+                        "reason": f"DOA delegation for user '{user_id}' at site '{site_id}' is pending PI sign-off or inactive.",
+                    }
+                else:
+                    req_tasks = OPERATION_DOA_TASK_MAP.get(op_upper, [])
+                    req_roles = OPERATION_DOA_ROLE_MAP.get(op_upper, [])
+                    authorized = False
+
+                    for rec in active_signed:
+                        # Principal Investigator has full authority for all operations
+                        if rec.role == DOATaskRoleEnum.PRINCIPAL_INVESTIGATOR:
+                            authorized = True
+                            break
+                        if req_roles and rec.role in req_roles:
+                            authorized = True
+                            break
+                        if req_tasks and any(
+                            t in rec.delegated_tasks for t in req_tasks
+                        ):
+                            authorized = True
+                            break
+                        if not req_tasks and not req_roles:
+                            authorized = True
+                            break
+
+                    if not authorized:
+                        rejection_reasons.append(
+                            GatekeeperRejectionReason.UNAUTHORIZED_DOA_ROLE
+                        )
+                        rejection_details["doa"] = {
+                            "site_id": site_id,
+                            "user_id": user_id,
+                            "operation_type": op_upper,
+                            "assigned_role": [str(r.role) for r in active_signed],
+                            "delegated_tasks": [
+                                [str(t) for t in r.delegated_tasks]
+                                for r in active_signed
+                            ],
+                            "reason": f"User '{user_id}' lacks delegated tasks or role authority for operation '{op_upper}'.",
+                        }
+        elif is_strict:
+            rejection_reasons.append(GatekeeperRejectionReason.UNAUTHORIZED_DOA_ROLE)
+            rejection_details["doa"] = {
+                "site_id": site_id,
+                "user_id": user_id,
+                "operation_type": op_upper,
+                "reason": f"Site '{site_id}' has no active Delegation of Authority log registered (strict DOA mode enabled).",
+            }
 
         is_eligible = len(rejection_reasons) == 0
         return GatekeeperDecision(
