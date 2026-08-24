@@ -327,6 +327,8 @@ def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
         candidate = repo_root / stripped_path
         if candidate.exists():
             return candidate
+        if (candidate.parent / f"{candidate.name}.py").exists():
+            return candidate.parent / f"{candidate.name}.py"
 
         # Fallback for decentralized tests: if path starts with tests/test_*, search in workspace test dirs
         if first_part == "tests" and "/test_" in stripped_path:
@@ -1324,7 +1326,8 @@ def main():
         root_dirs = {
             e
             for e in root_entries
-            if (repo_root / e).is_dir() and (not e.startswith(".") or e == ".github")
+            if (repo_root / e).is_dir()
+            and (not e.startswith(".") or e in (".github", ".agents"))
         }
         root_files = {
             e
