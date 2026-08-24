@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import datetime as dt
+import enum
 import uuid
 from typing import Any
 
@@ -26,6 +27,81 @@ from apps.designer.domain.protocol_authoring.models import (
     Suggestion,
     SuggestionStatus,
 )
+
+
+class EntityLabel(enum.StrEnum):
+    STUDY = "Study"
+    STUDY_VERSION = "StudyVersion"
+    STUDY_EPOCH = "StudyEpoch"
+    STUDY_ARM = "StudyArm"
+    EPOCH = "Epoch"
+    VISIT = "Visit"
+    PROCEDURE = "Procedure"
+    TIMING_WINDOW = "TimingWindow"
+    ENCOUNTER = "Encounter"
+    ACTIVITY = "Activity"
+    ELIGIBILITY_CRITERION = "EligibilityCriterion"
+    LIBRARY_OBJECT = "LibraryObject"
+    LIBRARY_OBJECT_INSTANCE = "LibraryObjectInstance"
+    ACTION = "Action"
+    STUDY_PROPERTIES = "StudyProperties"
+    RULE = "Rule"
+    RULE_VERSION = "RuleVersion"
+    CRF_BLOCK = "CrfBlock"
+    SECTION_REVIEW = "SectionReview"
+    COMMENT_THREAD = "CommentThread"
+    COMMENT = "Comment"
+    SUGGESTION = "Suggestion"
+
+
+class RelationshipType(enum.StrEnum):
+    HAS_VERSION = "HAS_VERSION"
+    PREVIOUS_VERSION = "PREVIOUS_VERSION"
+    HAS_LIBRARY_INSTANCE = "HAS_LIBRARY_INSTANCE"
+    INSTANTIATED_FROM = "INSTANTIATED_FROM"
+    HAS_PROPERTIES = "HAS_PROPERTIES"
+    BEFORE = "BEFORE"
+    AFTER = "AFTER"
+    HAS_RULE = "HAS_RULE"
+    HAS_ARM = "HAS_ARM"
+    HAS_EPOCH = "HAS_EPOCH"
+    HAS_VISIT = "HAS_VISIT"
+    HAS_PROCEDURE = "HAS_PROCEDURE"
+    HAS_TIMING_WINDOW = "HAS_TIMING_WINDOW"
+    HAS_FORM = "HAS_FORM"
+    HAS_ACTIVITY = "HAS_ACTIVITY"
+    HAS_CRITERION = "HAS_CRITERION"
+    CONTAINS_ENCOUNTER = "CONTAINS_ENCOUNTER"
+    PERFORMS = "PERFORMS"
+    HAS_COMMENT_THREAD = "HAS_COMMENT_THREAD"
+    HAS_SUGGESTION = "HAS_SUGGESTION"
+    HAS_COMMENT = "HAS_COMMENT"
+    HAS_ACTION = "HAS_ACTION"
+    HAS_TIMING = "HAS_TIMING"
+    APPLICABLE_TO = "APPLICABLE_TO"
+
+
+def validate_entity_label(label: str | EntityLabel) -> str:
+    """Validate and return entity label from the strict EntityLabel enum allowlist."""
+    if isinstance(label, EntityLabel):
+        return label.value
+    for member in EntityLabel:
+        if member.value == label:
+            return member.value
+    raise ValueError(f"Entity label '{label}' is not in allowed EntityLabel enum.")
+
+
+def validate_relationship_type(rel_type: str | RelationshipType) -> str:
+    """Validate and return relationship type from the strict RelationshipType enum allowlist."""
+    if isinstance(rel_type, RelationshipType):
+        return rel_type.value
+    for member in RelationshipType:
+        if member.value == rel_type:
+            return member.value
+    raise ValueError(
+        f"Relationship type '{rel_type}' is not in allowed RelationshipType enum."
+    )
+
 
 
 async def assert_study_version_mutable(tx, study_version_id: str):
@@ -613,9 +689,21 @@ async def list_library_objects(
         conditions.append("n.id > $starting_after")
         params["starting_after"] = starting_after
 
+    allowed_conditions = {
+        "n.sponsor_id = $sponsor_id",
+        "coalesce(n.tenant_id, 'tenant_default') = $tenant_id",
+        "NOT (n)<-[:PREVIOUS_VERSION]-()",
+        "n.object_type = $object_type",
+        "n.id > $starting_after",
+    }
+    for cond in conditions:
+        if cond not in allowed_conditions:
+            raise ValueError(f"Unauthorized query condition fragment: {cond}")
+
+    label = validate_entity_label(EntityLabel.LIBRARY_OBJECT)
     where_clause = " AND ".join(conditions)
     query = f"""
-    MATCH (n:LibraryObject)
+    MATCH (n:{label})
     WHERE {where_clause}
     RETURN properties(n) AS props
     ORDER BY n.id ASC
@@ -1242,7 +1330,7 @@ async def amend_protocol_version(
             CREATE (new_ver:StudyVersion {
                 id: $new_id,
                 version_tag: $new_version_tag,
-                status: "DRAFT",
+                status: $draft_status,
                 version_index: $new_version_index,
                 created_at: datetime($created_at),
                 created_by: $created_by,
@@ -1259,6 +1347,7 @@ async def amend_protocol_version(
                 study_id=study_id,
                 new_id=new_id,
                 new_version_tag=new_version_tag,
+                draft_status="DRAFT",
                 new_version_index=new_version_index,
                 created_at=created_at_val,
                 created_by=user_id,
@@ -1296,49 +1385,58 @@ async def amend_protocol_version(
 
             # Clone up to 4 levels of structural relations
             rel_types = [
-                "HAS_ARM",
-                "HAS_EPOCH",
-                "HAS_VISIT",
-                "HAS_FORM",
-                "HAS_ACTIVITY",
+                RelationshipType.HAS_ARM,
+                RelationshipType.HAS_EPOCH,
+                RelationshipType.HAS_VISIT,
+                RelationshipType.HAS_FORM,
+                RelationshipType.HAS_ACTIVITY,
             ]
-            for rel in rel_types:
+            sv_label = validate_entity_label(EntityLabel.STUDY_VERSION)
+            prev_rel = validate_relationship_type(RelationshipType.PREVIOUS_VERSION)
+
+            for rel_enum in rel_types:
+                rel = validate_relationship_type(rel_enum)
                 clone_rel_query = f"""
-                MATCH (old_ver:StudyVersion {{id: $parent_id}})-[:{rel}]->(child)
-                MATCH (new_ver:StudyVersion {{id: $new_id}})
+                MATCH (old_ver:{sv_label} {{id: $parent_id}})-[:{rel}]->(child)
+                MATCH (new_ver:{sv_label} {{id: $new_id}})
                 CREATE (cloned)
                 SET cloned = child
                 SET cloned.id = "cloned_" + id(child)
                 CREATE (new_ver)-[:{rel}]->(cloned)
-                CREATE (cloned)-[:PREVIOUS_VERSION]->(child)
+                CREATE (cloned)-[:{prev_rel}]->(child)
                 """
                 await tx.run(clone_rel_query, parent_id=parent_id, new_id=new_id)
 
-            for rel1 in rel_types:
-                for rel2 in rel_types:
+            for rel1_enum in rel_types:
+                for rel2_enum in rel_types:
+                    rel1 = validate_relationship_type(rel1_enum)
+                    rel2 = validate_relationship_type(rel2_enum)
                     clone_level2_query = f"""
-                    MATCH (old_ver:StudyVersion {{id: $parent_id}})-[:{rel1}]->(child1)-[:{rel2}]->(child2)
-                    MATCH (new_ver:StudyVersion {{id: $new_id}})-[:{rel1}]->(cloned1)-[:PREVIOUS_VERSION]->(child1)
+                    MATCH (old_ver:{sv_label} {{id: $parent_id}})-[:{rel1}]->(child1)-[:{rel2}]->(child2)
+                    MATCH (new_ver:{sv_label} {{id: $new_id}})-[:{rel1}]->(cloned1)-[:{prev_rel}]->(child1)
                     CREATE (cloned2)
                     SET cloned2 = child2
                     SET cloned2.id = "cloned_" + id(child2)
                     CREATE (cloned1)-[:{rel2}]->(cloned2)
-                    CREATE (cloned2)-[:PREVIOUS_VERSION]->(child2)
+                    CREATE (cloned2)-[:{prev_rel}]->(child2)
                     """
                     await tx.run(clone_level2_query, parent_id=parent_id, new_id=new_id)
 
-            for rel1 in rel_types:
-                for rel2 in rel_types:
-                    for rel3 in rel_types:
+            for rel1_enum in rel_types:
+                for rel2_enum in rel_types:
+                    for rel3_enum in rel_types:
+                        rel1 = validate_relationship_type(rel1_enum)
+                        rel2 = validate_relationship_type(rel2_enum)
+                        rel3 = validate_relationship_type(rel3_enum)
                         clone_level3_query = f"""
-                        MATCH (old_ver:StudyVersion {{id: $parent_id}})-[:{rel1}]->(child1)-[:{rel2}]->(child2)-[:{rel3}]->(child3)
-                        MATCH (new_ver:StudyVersion {{id: $new_id}})-[:{rel1}]->(cloned1)-[:PREVIOUS_VERSION]->(child1)
-                        MATCH (cloned1)-[:{rel2}]->(cloned2)-[:PREVIOUS_VERSION]->(child2)
+                        MATCH (old_ver:{sv_label} {{id: $parent_id}})-[:{rel1}]->(child1)-[:{rel2}]->(child2)-[:{rel3}]->(child3)
+                        MATCH (new_ver:{sv_label} {{id: $new_id}})-[:{rel1}]->(cloned1)-[:{prev_rel}]->(child1)
+                        MATCH (cloned1)-[:{rel2}]->(cloned2)-[:{prev_rel}]->(child2)
                         CREATE (cloned3)
                         SET cloned3 = child3
                         SET cloned3.id = "cloned_" + id(child3)
                         CREATE (cloned2)-[:{rel3}]->(cloned3)
-                        CREATE (cloned3)-[:PREVIOUS_VERSION]->(child3)
+                        CREATE (cloned3)-[:{prev_rel}]->(child3)
                         """
                         await tx.run(
                             clone_level3_query, parent_id=parent_id, new_id=new_id
@@ -3227,7 +3325,7 @@ async def create_comment_thread(
             id: $thread_id,
             block_id: $block_id,
             section_id: $section_id,
-            status: "open",
+            status: $status,
             created_by: $created_by,
             created_at: datetime($created_at),
             block_version_index: $block_version
@@ -3250,6 +3348,7 @@ async def create_comment_thread(
                 thread_id=thread_id,
                 block_id=block_id,
                 section_id=section_id,
+                status="open",
                 created_by=created_by,
                 created_at=now.isoformat(),
                 block_version=block_version,
@@ -3498,7 +3597,7 @@ async def create_suggestion(
             block_id: $block_id,
             suggested_text: $suggested_text,
             original_text: $original_text,
-            status: "pending",
+            status: $status,
             created_by: $created_by,
             created_at: datetime($created_at),
             reason: $reason,
@@ -3515,6 +3614,7 @@ async def create_suggestion(
                 block_id=block_id,
                 suggested_text=suggested_text,
                 original_text=block.get("text", ""),
+                status="pending",
                 created_by=created_by,
                 created_at=now.isoformat(),
                 reason=reason,
@@ -3892,7 +3992,7 @@ async def approve_study_version_delta(
             MATCH (s:Study {id: $study_id})
             CREATE (a:Action {
                 id: $action_id,
-                type: "APPROVAL",
+                type: $action_type,
                 user_id: $user_id,
                 change_reason: $change_reason,
                 timestamp: datetime(),
@@ -3906,6 +4006,7 @@ async def approve_study_version_delta(
                 study_id=study_id,
                 version_id=version_id,
                 action_id=action_id,
+                action_type="APPROVAL",
                 user_id=user_id,
                 change_reason=change_reason,
                 manifestation_json=json.dumps(signature_manifestation_payload),
@@ -4049,8 +4150,8 @@ async def link_visit_or_procedure_to_timing(
 
             WITH sv, t
             MATCH (src)
-            WHERE (src:Visit AND $source_type = "visit" AND (sv)-[:HAS_VISIT]->(src) AND src.id = $source_id)
-               OR (src:Procedure AND $source_type = "procedure" AND (sv)-[:HAS_PROCEDURE]->(src) AND src.id = $source_id)
+            WHERE (src:Visit AND $source_type = $visit_type AND (sv)-[:HAS_VISIT]->(src) AND src.id = $source_id)
+               OR (src:Procedure AND $source_type = $proc_type AND (sv)-[:HAS_PROCEDURE]->(src) AND src.id = $source_id)
 
             MERGE (src)-[r:HAS_TIMING]->(t)
             CREATE (a:Action {
@@ -4068,6 +4169,8 @@ async def link_visit_or_procedure_to_timing(
                 source_id=source_id,
                 timing_id=timing_id,
                 source_type=source_type,
+                visit_type="visit",
+                proc_type="procedure",
                 user_id=user_id,
                 change_reason=change_reason,
                 action_id=str(uuid.uuid4()),
@@ -4123,9 +4226,9 @@ async def link_arm_applicability(
 
             WITH sv, arm
             MATCH (tgt)
-            WHERE (tgt:Visit AND $target_type = "visit" AND (sv)-[:HAS_VISIT]->(tgt) AND tgt.id = $target_id)
-               OR (tgt:Procedure AND $target_type = "procedure" AND (sv)-[:HAS_PROCEDURE]->(tgt) AND tgt.id = $target_id)
-               OR (tgt:Epoch AND $target_type = "epoch" AND (sv)-[:HAS_EPOCH]->(tgt) AND tgt.id = $target_id)
+            WHERE (tgt:Visit AND $target_type = $visit_type AND (sv)-[:HAS_VISIT]->(tgt) AND tgt.id = $target_id)
+               OR (tgt:Procedure AND $target_type = $proc_type AND (sv)-[:HAS_PROCEDURE]->(tgt) AND tgt.id = $target_id)
+               OR (tgt:Epoch AND $target_type = $epoch_type AND (sv)-[:HAS_EPOCH]->(tgt) AND tgt.id = $target_id)
 
             MERGE (arm)-[r:APPLICABLE_TO]->(tgt)
             CREATE (a:Action {
@@ -4143,6 +4246,9 @@ async def link_arm_applicability(
                 arm_id=arm_id,
                 target_id=target_id,
                 target_type=target_type,
+                visit_type="visit",
+                proc_type="procedure",
+                epoch_type="epoch",
                 user_id=user_id,
                 change_reason=change_reason,
                 action_id=str(uuid.uuid4()),
@@ -6115,16 +6221,26 @@ async def retire_soa_entity(
     it from the StudyVersion root non-destructively, preserving the history.
     """
     mapping = {
-        "arms": ("HAS_ARM", "StudyArm"),
-        "epochs": ("HAS_EPOCH", "Epoch"),
-        "visits": ("HAS_VISIT", "Visit"),
-        "procedures": ("HAS_PROCEDURE", "Procedure"),
-        "timing_windows": ("HAS_TIMING_WINDOW", "TimingWindow"),
+        "arms": (RelationshipType.HAS_ARM, EntityLabel.STUDY_ARM),
+        "epochs": (RelationshipType.HAS_EPOCH, EntityLabel.EPOCH),
+        "visits": (RelationshipType.HAS_VISIT, EntityLabel.VISIT),
+        "procedures": (RelationshipType.HAS_PROCEDURE, EntityLabel.PROCEDURE),
+        "timing_windows": (
+            RelationshipType.HAS_TIMING_WINDOW,
+            EntityLabel.TIMING_WINDOW,
+        ),
     }
     if entity_type not in mapping:
         raise ValueError(f"Invalid entity type: {entity_type}")
 
-    rel_name, label = mapping[entity_type]
+    rel_enum, label_enum = mapping[entity_type]
+    rel_name = validate_relationship_type(rel_enum)
+    label = validate_entity_label(label_enum)
+    sv_label = validate_entity_label(EntityLabel.STUDY_VERSION)
+    prev_rel = validate_relationship_type(RelationshipType.PREVIOUS_VERSION)
+    action_label = validate_entity_label(EntityLabel.ACTION)
+    after_rel = validate_relationship_type(RelationshipType.AFTER)
+    before_rel = validate_relationship_type(RelationshipType.BEFORE)
 
     if driver is None:
         assert_mock_study_version_mutable(study_version_id)
@@ -6165,7 +6281,7 @@ async def retire_soa_entity(
             )
             # Check existence
             check = await tx.run(
-                f"MATCH (sv:StudyVersion {{id: $study_version_id}})-[r:{rel_name}]->(old_node:{label} {{id: $entity_id}}) RETURN old_node.id",
+                f"MATCH (sv:{sv_label} {{id: $study_version_id}})-[r:{rel_name}]->(old_node:{label} {{id: $entity_id}}) RETURN old_node.id",
                 study_version_id=study_version_id,
                 entity_id=entity_id,
             )
@@ -6174,7 +6290,7 @@ async def retire_soa_entity(
 
             action_id = str(uuid.uuid4())
             query = f"""
-            MATCH (sv:StudyVersion {{id: $study_version_id}})-[r:{rel_name}]->(old_node:{label} {{id: $entity_id}})
+            MATCH (sv:{sv_label} {{id: $study_version_id}})-[r:{rel_name}]->(old_node:{label} {{id: $entity_id}})
             CREATE (new_node:{label} {{
                 id: $entity_id,
                 version_index: old_node.version_index + 1,
@@ -6189,15 +6305,15 @@ async def retire_soa_entity(
             SET new_node.version_index = old_node.version_index + 1
             CREATE (sv)-[:{rel_name}]->(new_node)
             DELETE r
-            CREATE (new_node)-[:PREVIOUS_VERSION]->(old_node)
-            CREATE (a:Action {{
+            CREATE (new_node)-[:{prev_rel}]->(old_node)
+            CREATE (a:{action_label} {{
                 id: $action_id,
                 user_id: $created_by,
                 change_reason: $change_reason,
                 timestamp: datetime()
             }})
-            CREATE (a)-[:AFTER]->(new_node)
-            CREATE (a)-[:BEFORE]->(old_node)
+            CREATE (a)-[:{after_rel}]->(new_node)
+            CREATE (a)-[:{before_rel}]->(old_node)
             RETURN new_node.id as id
             """
             res = await tx.run(
@@ -6390,8 +6506,8 @@ async def retire_timing_link(
 
             WITH sv, t
             MATCH (src)
-            WHERE (src:Visit AND $source_type = "visit" AND (sv)-[:HAS_VISIT]->(src) AND src.id = $source_id)
-               OR (src:Procedure AND $source_type = "procedure" AND (sv)-[:HAS_PROCEDURE]->(src) AND src.id = $source_id)
+            WHERE (src:Visit AND $source_type = $visit_type AND (sv)-[:HAS_VISIT]->(src) AND src.id = $source_id)
+               OR (src:Procedure AND $source_type = $proc_type AND (sv)-[:HAS_PROCEDURE]->(src) AND src.id = $source_id)
 
             MATCH (src)-[r:HAS_TIMING]->(t)
             DELETE r
@@ -6410,6 +6526,8 @@ async def retire_timing_link(
                 source_id=source_id,
                 timing_id=timing_id,
                 source_type=source_type,
+                visit_type="visit",
+                proc_type="procedure",
                 user_id=user_id,
                 change_reason=change_reason,
                 action_id=str(uuid.uuid4()),
@@ -6468,9 +6586,9 @@ async def retire_arm_applicability_link(
 
             WITH sv, arm
             MATCH (tgt)
-            WHERE (tgt:Visit AND $target_type = "visit" AND (sv)-[:HAS_VISIT]->(tgt) AND tgt.id = $target_id)
-               OR (tgt:Procedure AND $target_type = "procedure" AND (sv)-[:HAS_PROCEDURE]->(tgt) AND tgt.id = $target_id)
-               OR (tgt:Epoch AND $target_type = "epoch" AND (sv)-[:HAS_EPOCH]->(tgt) AND tgt.id = $target_id)
+            WHERE (tgt:Visit AND $target_type = $visit_type AND (sv)-[:HAS_VISIT]->(tgt) AND tgt.id = $target_id)
+               OR (tgt:Procedure AND $target_type = $proc_type AND (sv)-[:HAS_PROCEDURE]->(tgt) AND tgt.id = $target_id)
+               OR (tgt:Epoch AND $target_type = $epoch_type AND (sv)-[:HAS_EPOCH]->(tgt) AND tgt.id = $target_id)
 
             MATCH (arm)-[r:APPLICABLE_TO]->(tgt)
             DELETE r
@@ -6489,6 +6607,9 @@ async def retire_arm_applicability_link(
                 arm_id=arm_id,
                 target_id=target_id,
                 target_type=target_type,
+                visit_type="visit",
+                proc_type="procedure",
+                epoch_type="epoch",
                 user_id=user_id,
                 change_reason=change_reason,
                 action_id=str(uuid.uuid4()),

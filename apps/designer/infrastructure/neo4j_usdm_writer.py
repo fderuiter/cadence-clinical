@@ -12,6 +12,12 @@ from typing import Any
 
 from neo4j import AsyncDriver
 
+from apps.designer.adapters.repositories import (
+    EntityLabel,
+    RelationshipType,
+    validate_entity_label,
+    validate_relationship_type,
+)
 from apps.designer.delta import MOCK_SOA_DATA, _init_mock_soa
 from apps.designer.domain.digitization_models import (
     USDMProtocolExtractionResponse,
@@ -19,8 +25,22 @@ from apps.designer.domain.digitization_models import (
 
 logger = logging.getLogger(__name__)
 
-CYPHER_COMMIT_STUDY = """
-MERGE (s:Study {id: $study_id})
+STUDY_LABEL = validate_entity_label(EntityLabel.STUDY)
+STUDY_EPOCH_LABEL = validate_entity_label(EntityLabel.STUDY_EPOCH)
+STUDY_ARM_LABEL = validate_entity_label(EntityLabel.STUDY_ARM)
+ENCOUNTER_LABEL = validate_entity_label(EntityLabel.ENCOUNTER)
+ACTIVITY_LABEL = validate_entity_label(EntityLabel.ACTIVITY)
+ELIGIBILITY_CRITERION_LABEL = validate_entity_label(EntityLabel.ELIGIBILITY_CRITERION)
+
+HAS_EPOCH_REL = validate_relationship_type(RelationshipType.HAS_EPOCH)
+HAS_ARM_REL = validate_relationship_type(RelationshipType.HAS_ARM)
+CONTAINS_ENCOUNTER_REL = validate_relationship_type(RelationshipType.CONTAINS_ENCOUNTER)
+HAS_ACTIVITY_REL = validate_relationship_type(RelationshipType.HAS_ACTIVITY)
+PERFORMS_REL = validate_relationship_type(RelationshipType.PERFORMS)
+HAS_CRITERION_REL = validate_relationship_type(RelationshipType.HAS_CRITERION)
+
+CYPHER_COMMIT_STUDY = f"""
+MERGE (s:{STUDY_LABEL} {{id: $study_id}})
 SET s.title = $study_title,
     s.protocol_id = $protocol_id,
     s.phase = $phase,
@@ -29,69 +49,69 @@ SET s.title = $study_title,
     s.updated_at = datetime()
 """
 
-CYPHER_COMMIT_EPOCHS = """
+CYPHER_COMMIT_EPOCHS = f"""
 UNWIND $epochs AS ep
-MATCH (s:Study {id: $study_id})
-MERGE (e:StudyEpoch {id: $study_id + '_' + ep.name})
+MATCH (s:{STUDY_LABEL} {{id: $study_id}})
+MERGE (e:{STUDY_EPOCH_LABEL} {{id: $study_id + '_' + ep.name}})
 SET e.name = ep.name,
     e.epoch_type = ep.epoch_type,
     e.sequence_index = ep.sequence_index
-MERGE (s)-[:HAS_EPOCH]->(e)
+MERGE (s)-[:{HAS_EPOCH_REL}]->(e)
 """
 
-CYPHER_COMMIT_ARMS = """
+CYPHER_COMMIT_ARMS = f"""
 UNWIND $arms AS ar
-MATCH (s:Study {id: $study_id})
-MERGE (a:StudyArm {id: $study_id + '_' + ar.name})
+MATCH (s:{STUDY_LABEL} {{id: $study_id}})
+MERGE (a:{STUDY_ARM_LABEL} {{id: $study_id + '_' + ar.name}})
 SET a.name = ar.name,
     a.arm_type = ar.arm_type,
     a.description = ar.description,
     a.target_sample_size = ar.target_sample_size
-MERGE (s)-[:HAS_ARM]->(a)
+MERGE (s)-[:{HAS_ARM_REL}]->(a)
 """
 
-CYPHER_COMMIT_VISITS = """
+CYPHER_COMMIT_VISITS = f"""
 UNWIND $visits AS v
-MERGE (enc:Encounter {id: $study_id + '_' + v.visit_name})
+MERGE (enc:{ENCOUNTER_LABEL} {{id: $study_id + '_' + v.visit_name}})
 SET enc.name = v.visit_name,
     enc.target_day = v.target_day,
     enc.window_lower = v.window_lower_days,
     enc.window_upper = v.window_upper_days,
     enc.is_mandatory = v.is_mandatory
 WITH enc, v
-OPTIONAL MATCH (e:StudyEpoch {id: $study_id + '_' + v.epoch_name})
+OPTIONAL MATCH (e:{STUDY_EPOCH_LABEL} {{id: $study_id + '_' + v.epoch_name}})
 FOREACH (_ IN CASE WHEN e IS NOT NULL THEN [1] ELSE [] END |
-    MERGE (e)-[:CONTAINS_ENCOUNTER]->(enc)
+    MERGE (e)-[:{CONTAINS_ENCOUNTER_REL}]->(enc)
 )
 """
 
-CYPHER_COMMIT_ACTIVITIES = """
+CYPHER_COMMIT_ACTIVITIES = f"""
 UNWIND $activities AS act
-MATCH (s:Study {id: $study_id})
-MERGE (ac:Activity {id: $study_id + '_' + act.activity_name})
+MATCH (s:{STUDY_LABEL} {{id: $study_id}})
+MERGE (ac:{ACTIVITY_LABEL} {{id: $study_id + '_' + act.activity_name}})
 SET ac.name = act.activity_name,
     ac.cdash_domain = act.cdash_domain,
     ac.biomedical_concept_code = act.biomedical_concept_code
-MERGE (s)-[:HAS_ACTIVITY]->(ac)
+MERGE (s)-[:{HAS_ACTIVITY_REL}]->(ac)
 """
 
-CYPHER_COMMIT_SOA_LINKS = """
+CYPHER_COMMIT_SOA_LINKS = f"""
 UNWIND $activities AS act
 UNWIND act.assigned_visit_names AS visit_name
-MATCH (ac:Activity {id: $study_id + '_' + act.activity_name})
-MATCH (enc:Encounter {id: $study_id + '_' + visit_name})
-MERGE (enc)-[:PERFORMS]->(ac)
+MATCH (ac:{ACTIVITY_LABEL} {{id: $study_id + '_' + act.activity_name}})
+MATCH (enc:{ENCOUNTER_LABEL} {{id: $study_id + '_' + visit_name}})
+MERGE (enc)-[:{PERFORMS_REL}]->(ac)
 """
 
-CYPHER_COMMIT_CRITERIA = """
+CYPHER_COMMIT_CRITERIA = f"""
 UNWIND $criteria AS cr
-MATCH (s:Study {id: $study_id})
-MERGE (crit:EligibilityCriterion {id: $study_id + '_' + cr.identifier})
+MATCH (s:{STUDY_LABEL} {{id: $study_id}})
+MERGE (crit:{ELIGIBILITY_CRITERION_LABEL} {{id: $study_id + '_' + cr.identifier}})
 SET crit.identifier = cr.identifier,
     crit.criterion_type = cr.criterion_type,
     crit.text_expression = cr.text_expression,
     crit.logical_expression = cr.logical_expression
-MERGE (s)-[:HAS_CRITERION]->(crit)
+MERGE (s)-[:{HAS_CRITERION_REL}]->(crit)
 """
 
 # Backward compatibility alias
