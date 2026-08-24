@@ -205,18 +205,32 @@ export function interpretComprehensionResult(result: any): any;
 export function toBeAccessible(received: any): any;
 
 export function canonicalSerialize(obj: any): string;
-export function generateCanonicalSignature(obj: any, key: any): string;
-export function verifyCanonicalSignature(
-  obj: any,
-  sig: string,
-  key: any
-): boolean;
-export function generateGatewaySignature(payload: any, key: any): string;
-export function verifyGatewaySignature(
+export function generateCanonicalSignature(
   payload: any,
-  sig: string,
-  key: any
-): boolean;
+  secret: any
+): Promise<string>;
+export function verifyCanonicalSignature(
+  payload: any,
+  signature: string,
+  secret: any
+): Promise<boolean>;
+export function generateGatewaySignature(
+  userId: any,
+  roles?: any,
+  timestamp?: any,
+  version?: any,
+  changeReason?: any,
+  secret?: any
+): Promise<string>;
+export function verifyGatewaySignature(
+  signature: string,
+  userId?: any,
+  roles?: any,
+  timestamp?: any,
+  version?: any,
+  changeReason?: any,
+  secret?: any
+): Promise<boolean>;
 export function generateJwtHS256(payload: any, secret: string): string;
 export function sha256(message: string): Promise<string>;
 export function validateField(value: any, rules: any): any;
