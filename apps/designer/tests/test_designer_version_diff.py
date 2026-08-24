@@ -146,3 +146,32 @@ def test_designer_signing_raises_runtime_error_if_secret_missing(monkeypatch):
     with pytest.raises(RuntimeError) as exc_info:
         verify_version_signature({"signature": "some_signature"})
     assert "SIGNING_SECRET environment variable is missing" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_update_mock_version_status_missing_secret_raises_runtime_error(
+    monkeypatch,
+):
+    """Verify update_mock_version_status raises RuntimeError if SIGNING_SECRET is missing.
+
+    Requirements: PRD-SYS-001
+    """
+    from apps.designer.db import MOCK_STUDY_VERSIONS
+    from apps.designer.presentation.routers.designer_routes import (
+        update_mock_version_status,
+    )
+
+    MOCK_STUDY_VERSIONS["s1"] = [
+        {
+            "id": "v1",
+            "version_tag": "1.0",
+            "status": "DRAFT",
+            "version_index": 1,
+            "created_by": "user",
+        }
+    ]
+
+    monkeypatch.delenv("SIGNING_SECRET", raising=False)
+    with pytest.raises(RuntimeError) as exc_info:
+        update_mock_version_status("s1", "v1", "APPROVED")
+    assert "SIGNING_SECRET environment variable is missing" in str(exc_info.value)

@@ -209,3 +209,33 @@ def test_dual_custody_negative_mismatched_versions():
     assert "Mismatched key version between custody shares and encrypted data" in str(
         exc_info.value
     )
+
+
+def test_verify_electronic_signature_missing_secret_raises_runtime_error(
+    monkeypatch,
+):
+    """Verify verify_electronic_signature raises RuntimeError if symmetric secret is missing.
+
+    @req:PRD-SYS-001
+    """
+    from packages.security.crypto_verifier import (
+        SignatureVerificationRequest,
+        verify_electronic_signature,
+    )
+
+    monkeypatch.delenv("SIGNING_SECRET", raising=False)
+    monkeypatch.delenv("AUDIT_LOG_SECRET_KEY", raising=False)
+
+    req = SignatureVerificationRequest(
+        payload_hash="a" * 64,
+        signature_bytes_b64="c2lnbmF0dXJl",
+        signer_id="user123",
+        signing_reason="APPROVAL",
+    )
+
+    with pytest.raises(RuntimeError) as exc_info:
+        verify_electronic_signature(req)
+    assert (
+        "SIGNING_SECRET or AUDIT_LOG_SECRET_KEY environment variable is missing or empty"
+        in str(exc_info.value)
+    )

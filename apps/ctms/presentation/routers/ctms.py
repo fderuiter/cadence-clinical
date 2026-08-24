@@ -1460,9 +1460,12 @@ async def update_grant(
             sig_token = request.headers.get("X-Sig-Token") or request.headers.get(
                 "x-sig-token"
             )
-            secret = os.getenv(
-                "GATEWAY_SECRET", "internal-gateway-secret-12345"
-            ).encode()  # pragma: allowlist secret
+            gateway_secret_env = os.getenv("GATEWAY_SECRET")
+            if not gateway_secret_env:
+                raise RuntimeError(
+                    "GATEWAY_SECRET environment variable is missing or empty"
+                )
+            secret = gateway_secret_env.encode("utf-8")
 
             success, result_auth = verify_sig_token(
                 sig_token=sig_token,
@@ -2081,9 +2084,9 @@ async def process_visit_sync(
         metadata=metadata,
     )
 
-    gateway_secret_str = os.getenv(
-        "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-    )
+    gateway_secret_str = os.getenv("GATEWAY_SECRET")
+    if not gateway_secret_str:
+        raise RuntimeError("GATEWAY_SECRET environment variable is missing or empty")
     secret_bytes = gateway_secret_str.encode("utf-8")
 
     signature_status = "SKIPPED"

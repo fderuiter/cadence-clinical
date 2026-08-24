@@ -7,8 +7,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3687
-- **Passed:** 3657 🟢
+- **Total Automated Test Cases Run:** 3691
+- **Passed:** 3661 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 30 ⚪
 - **Overall Operational Pass Rate:** 99.19%
@@ -278,6 +278,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_cra_allocations_rbac_reassignment_workload` | `apps.ctms.tests.test_ctms` | PRD-CTMS-003, Trace-6 | 🟢 PASSED | < 1s |
 | `test_create_and_list_studies_rbac` | `apps.ctms.tests.test_ctms` | PRD-CTMS-004, Trace-6 | 🟢 PASSED | < 1s |
 | `test_ctms_health_check` | `apps.ctms.tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ctms_router_missing_gateway_secret_raises_runtime_error` | `apps.ctms.tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_sync_conflict_merge` | `apps.ctms.tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_sync_conflict_server_wins` | `apps.ctms.tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_sync_happy_path_and_reloads` | `apps.ctms.tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -497,6 +498,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_xpath_compile_logical_and_functions` | `apps.designer.tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_xpath_compile_simple` | `apps.designer.tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_signing_raises_runtime_error_if_secret_missing` | `apps.designer.tests.test_designer_version_diff` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_update_mock_version_status_missing_secret_raises_runtime_error` | `apps.designer.tests.test_designer_version_diff` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_version_diff_success` | `apps.designer.tests.test_designer_version_diff` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_version_diff_unrelated_or_nonexistent` | `apps.designer.tests.test_designer_version_diff` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_compile_usdm_from_dag_job_endpoint` | `apps.designer.tests.test_digitization_stage_dag` | PRD-DDF-001, PRD-MDR-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -1958,6 +1960,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_gatekeeper_cryptographic_greenlight_token_fast_path` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-121 | 🟢 PASSED | < 1s |
 | `test_gatekeeper_handles_multi_pillar_simultaneous_rejections` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-121 | 🟢 PASSED | < 1s |
 | `test_gatekeeper_system_service_account_bypass` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-121 | 🟢 PASSED | < 1s |
+| `test_training_verification_client_missing_gateway_secret_raises_runtime_error` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-TRN-002 | 🟢 PASSED | < 1s |
 | `test_protocol_capture_and_reconciliation_lifecycle` | `apps.execution.tests.test_study_migration` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_db_migration_cloning_and_sealing` | `apps.execution.tests.test_subject_migration` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_migrate_subject_submissions_field_remapping` | `apps.execution.tests.test_subject_migration` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3345,6 +3348,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_dual_custody_positive` | `packages.security.tests.test_cryptography` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_encryption_decryption_with_rotation` | `packages.security.tests.test_cryptography` | PRD-MDR-005, Trace-2 | 🟢 PASSED | < 1s |
 | `test_key_splitting` | `packages.security.tests.test_cryptography` | PRD-MDR-005, Trace-2 | 🟢 PASSED | < 1s |
+| `test_verify_electronic_signature_missing_secret_raises_runtime_error` | `packages.security.tests.test_cryptography` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_encryption_roundtrip` | `packages.security.tests.test_encryption` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_encryption_tamper_rejection` | `packages.security.tests.test_encryption` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_hkdf_determinism` | `packages.security.tests.test_encryption` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3976,31 +3980,31 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 
 ## Electronic Signature Block
 
-- **Signer Identity:** fred
+- **Signer Identity:** jules
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 98fb8dd60b74b9e150d6e5958357f09d555eb1e2e996151a8cab69f182210b2a
+- **Cryptographic Hash (SHA-256):** 394cf5d2a6b19bf0be0ada001ed77771c938dff48aad981dbe2a42bac7aecfde
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUHlSVTUH3Jg5TX8I1jRcG1AdFdPcwDQYJKoZIhvcNAQEL
-BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
-ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MzEzNTIyM1oXDTI3MDgyNDEzNTIyM1owUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
-VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArw4g
-o56ozmI3sfA7+7hXo7YPfFKRnR9Ece5BDE91blQxskBjx1CBT4ibrBBKUzgYme/M
-CDOrfT3xKITquxLH76DLLAxm3UwhuejI9nhJgmw5cx4MxiZ8MKS999caKt9EfTXa
-MRktdmV/bVW7s94FSyq3ZliqeujzMZlmN+UBSa9lIQ4y/YJLht+FCCWjF6RwF92y
-648Q1v08tFmC9eiIhdYLF4+IpxiEr9OZC68JStCfOd3jPucWGkIlM3Y2LztzUt50
-CDFT5u0TnpFleJFEoE5v6otOEoqAQp1Ic9W9ws8ukCNqHvv3tKA/IjRABUQhldJk
-I/7IfwAiFbRqF6u6RQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBOuYXcI4/KJzC3
-+G2MZ+AB8YuipDIolD2hs6QyCc4y/Pj81MNfd34c4XCEz3XgbCdKMDiESKV+XLrT
-zPmy3VDDlUZmWJ88spy04+PLTEkBfkS4OGRSErH/3nlupw8IBz85I6AJgMreQEB+
-RX/ICj/lCAY1KMSveWPWtPQdfFOPz2AZHgmPQI9zjsF/+kWvPX9+ewcLsZ8XMlss
-isE79iaWpMS/EhlmydJ9qPfDiMHBH1FogI4ox5hZPGNlaAO6KO3aQ+WMuuUF1SsU
-mIhhUTIWFG9St6JJWBPdPvud26wkdIsK/Gm7ao8P6CC8D2yMs6hhLJ9pMY8XkVA4
-gP2rpJXn
+MIIDNDCCAhygAwIBAgIUUZQ0eCy1x663vGJ0nRuOTWC1yGYwDQYJKoZIhvcNAQEL
+BQAwVDEuMCwGA1UEAwwlQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGp1
+bGVzKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTAeFw0yNjA4
+MjMyMDE1NTNaFw0yNzA4MjQyMDE1NTNaMFQxLjAsBgNVBAMMJUNhZGVuY2UgR3hQ
+IFZhbGlkYXRpb24gUnVubmVyIChqdWxlcykxIjAgBgNVBAoMGUNhZGVuY2UgQ2xp
+bmljYWwgU29mdHdhcmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQD2
+QPsBIktFGTXEiepRL/UQBY6WiSGG4IN3MdwcwYzcwswt9KinlEvDnvlQBP0ja0UU
+G+yXfj2ZHGdXdftUbVFWqP2SDo+j3UCDKmJFM0cAVU9v1ApyJHQSC9GNHmaIhgy/
+h0+F6aMITbCAdQDWP075TUeGCOVd/VxU61ZB7+lRXGSSJKdNX68oolskK6AcSefs
+4eosod2HD1O9J8aonUdsxpwvpVB0ryCp9yUjTOTCLPZnyhFBLcsQPmOcABE2GwjW
+7OIJKTMHN+MMmXAchmpBpmHYv4HEo6e/mZS2QbexCxIa4Mb9MJ76W3QpdrziG6wm
+q+2qLEa8Ageax38CdnSRAgMBAAEwDQYJKoZIhvcNAQELBQADggEBACSYPUueB3TK
+wUuwTBV7z2pF5fIm2Fqn5okHse0TXGbHbO14Ozja3Y6cz7EEVzLfO8O5pysINFGO
+Qoua69yFiXve+VhKBqt041fp2S/AZvXELYxrBZT7eMB6xzv8slYfdybcsNgsQfz8
+pJgT1Fqc8UDsrXfraSwdQuT/j/i0OejMMwCzkFY2ao5WvswcjnpJzQHYTUFUgNWp
+YRxEXA4qi5BcXGlKQPnleihbLyT2NsoyOoyvyobX8DhQbMOTFlpHn6XwAO+sj11+
+c/4TWcczbumlylT5QFbKJGwGp6BYt1QsjfiK/oGc6qpNvBuF/b2YhAKE1OaRDjSd
+j+wPqBJwTSA=
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-P8FTHtL0ZDkS9qQyO/LZ2S6Ql80AzBP8Fdr2QPou35dJh5TJqFvZeG9bFlLH79gZz7grVBsOrgFCvWln5k9YQUmIUKuHWccPpY/i/vlpFdsTar9VPPxVxItbPDmCAUuri8zoAVCh654AuvEZKW5uL3Mx0p3XBLApjsEjvkotjofCimnBbUlIQNErMtAE+/8ayis7oS+77fPsAbq+5cRFaDLWcBI2LXdjjz/xV0hFZztyx6VKeWoo8i//HxMFjnC+oQeRCZij5QlmzNLK3WxQ7OJMmqbXZmnh/vwjKMQTqqjmFzRCpe1ttQGx+FXon+4lOsguJ+3RR5j6LA2G3eHiGg==
+8MS6nAidvQ16/B8E2W04K5+9RTrZCgiiJBVXmuSla//vmek1AKRQSTg6tLWnV6JH/NZxo66IfpDZuqHi8scpQF91Tf0BhGxRHZSnFhxf6CUlzxuw0zIhtHLVpUUiCtIQOlIJADNgi6gYR+NZZejgpXFOr4ehfJTm+UfK5GOlspvCzjapid2Qe+UafitM2PLgnnK6v2UCFd1O2xeHqAI3w0mC4pa/rFKxlJEAJ+3XRlswoEcOhYIGJ+hjmQDINCpGNIbaveNxscuDfDoreIIwLJoQCR0lAnqj6K73B1JXPQ9xVVOUwqkhDUB+9qXp1WVtIXWoFEfU3Y8ArobGE4Stbg==
 -----END SIGNATURE-----

@@ -473,6 +473,11 @@ def verify_electronic_signature(
         )
 
     # Fallback to Symmetric HMAC verification
+    if not secret_key:
+        raise RuntimeError(
+            "SIGNING_SECRET or AUDIT_LOG_SECRET_KEY environment variable is missing or empty"
+        )
+
     # Prepare payload hash for verification (strip if XML/JSON)
     payload_str_clean = request.payload_hash.strip()
     if payload_str_clean.startswith("<") and payload_str_clean.endswith(">"):

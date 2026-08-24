@@ -734,3 +734,22 @@ async def test_fastapi_endpoints_integrate_with_consolidated_gatekeeper() -> Non
     )
     assert resp_to.status_code == 201
     assert resp_to.json()["transfer_order_number"] == "TO-E2E-999"
+
+
+@pytest.mark.asyncio
+async def test_training_verification_client_missing_gateway_secret_raises_runtime_error(
+    monkeypatch,
+) -> None:
+    """Validate that TrainingVerificationClient raises RuntimeError if GATEWAY_SECRET is missing.
+
+    @req:PRD-TRN-002, PRD-SYS-001
+    """
+    from apps.execution.training_gating import TrainingVerificationClient
+
+    monkeypatch.delenv("GATEWAY_SECRET", raising=False)
+    client = TrainingVerificationClient()
+    with pytest.raises(RuntimeError) as exc_info:
+        await client.get_qualification_status("user1", "STUDY1", "1.0")
+    assert "GATEWAY_SECRET environment variable is missing or empty" in str(
+        exc_info.value
+    )

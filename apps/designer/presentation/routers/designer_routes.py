@@ -1815,11 +1815,10 @@ async def forward_to_etmf(
     }
 
     timestamp = str(time.time())
-    secret = os.getenv(
-        "GATEWAY_SECRET", "internal-gateway-secret-12345"
-    ).encode(  # pragma: allowlist secret
-        "utf-8"
-    )
+    gateway_secret_env = os.getenv("GATEWAY_SECRET")
+    if not gateway_secret_env:
+        raise RuntimeError("GATEWAY_SECRET environment variable is missing or empty")
+    secret = gateway_secret_env.encode("utf-8")
     sig = generate_gateway_signature(
         user_id=user_id,
         roles=roles,
@@ -2438,7 +2437,9 @@ def update_mock_version_status(study_id: str, version_id: str, new_status: str) 
             if "base_version" in v and v["base_version"] is not None:
                 payload_to_sign["base_version"] = v["base_version"]
 
-            secret_env = os.getenv("SIGNING_SECRET") or "mock_secret"
+            secret_env = os.getenv("SIGNING_SECRET")
+            if not secret_env:
+                raise RuntimeError("SIGNING_SECRET environment variable is missing")
             secret = secret_env.encode("utf-8")
             v["signature"] = generate_canonical_signature(payload_to_sign, secret)
             return old_status
@@ -2487,7 +2488,9 @@ async def update_neo4j_version_status(
         ):
             payload_to_sign["base_version"] = version_props["base_version"]
 
-        secret_env = os.getenv("SIGNING_SECRET") or "mock_secret"
+        secret_env = os.getenv("SIGNING_SECRET")
+        if not secret_env:
+            raise RuntimeError("SIGNING_SECRET environment variable is missing")
         secret = secret_env.encode("utf-8")
         new_signature = generate_canonical_signature(payload_to_sign, secret)
 

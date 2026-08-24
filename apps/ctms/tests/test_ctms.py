@@ -1609,3 +1609,53 @@ async def test_milestone_trigger_manual():
         f"/api/v1/ctms/grants/{grant_id}/payables", headers=gm_headers
     )
     assert len(response_payables_2.json()) == 1
+
+
+@pytest.mark.asyncio
+async def test_ctms_router_missing_gateway_secret_raises_runtime_error(
+    monkeypatch,
+):
+    """Verify CTMS router endpoints raise RuntimeError if GATEWAY_SECRET is missing.
+
+    Requirements: PRD-SYS-001
+    """
+    from unittest.mock import MagicMock
+
+    from apps.ctms.presentation.dtos import InvestigatorGrantUpdate
+    from apps.ctms.presentation.routers.ctms import update_grant
+    from packages.security.rbac import Principal
+
+    monkeypatch.delenv("GATEWAY_SECRET", raising=False)
+    principal = Principal(
+        user_id="u1",
+        raw_roles=["Grants Manager"],
+        roles=["Grants Manager"],
+        permissions={"ctms_financial:write"},
+    )
+    request = MagicMock()
+    request.headers = {"X-Sig-Token": "valid_token"}
+    request.url.path = "/api/v1/ctms/grants/g1"
+
+    grant_mock = MagicMock()
+    grant_mock.status = "DRAFT"
+
+    async_exec_mock = MagicMock()
+    async_exec_mock.scalars.return_value.first.return_value = grant_mock
+
+    async def fake_execute(*args, **kwargs):
+        return async_exec_mock
+
+    session_mock = MagicMock()
+    session_mock.execute = fake_execute
+
+    with pytest.raises(RuntimeError) as exc_info:
+        await update_grant(
+            grant_id="g1",
+            request=request,
+            payload=InvestigatorGrantUpdate(status="APPROVED"),
+            session=session_mock,
+            principal=principal,
+        )
+    assert "GATEWAY_SECRET environment variable is missing or empty" in str(
+        exc_info.value
+    )
