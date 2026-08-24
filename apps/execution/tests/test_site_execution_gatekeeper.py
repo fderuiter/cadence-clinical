@@ -15,6 +15,7 @@ import time
 from collections.abc import AsyncGenerator
 from typing import Any
 
+import httpx
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
@@ -599,8 +600,172 @@ async def test_gatekeeper_cryptographic_greenlight_token_fast_path() -> None:
 
 
 @pytest.mark.asyncio
+async def test_gatekeeper_ctms_network_timeout_fails_closed() -> None:
+    """Validate that CTMS network timeouts fail closed with is_eligible=False and SITE_NOT_GREENLIGHTED.
+
+    @req:PRD-SYS-121, PRD-SSU-003, ADR-2202
+    """
+    study_id = "STUDY-GK-TIMEOUT"
+    site_id = "SITE-GK-TIMEOUT"
+    user_id = "crc_timeout_user"
+
+    class TimeoutGreenlightClient(IGreenlightVerificationClient):
+        async def get_greenlight_status(
+            self, study_id: str, site_id: str
+        ) -> dict[str, Any]:
+            raise httpx.TimeoutException("CTMS service request timed out after 3.0s")
+
+    gk = SiteExecutionGatekeeper(
+        greenlight_client=TimeoutGreenlightClient(),
+        doa_service=get_global_doa_service(),
+    )
+
+    decision = await gk.validate_mutation_eligibility(
+        site_id=site_id,
+        user_id=user_id,
+        operation_type="SUBJECT_CREATION",
+        study_id=study_id,
+    )
+
+    assert decision.is_eligible is False
+    assert GatekeeperRejectionReason.SITE_NOT_GREENLIGHTED in decision.rejection_reasons
+    assert "greenlight" in decision.rejection_details
+    assert decision.rejection_details["greenlight"]["overall_status"] == "TIMEOUT"
+    assert (
+        "CTMS greenlight status verification request failed or timed out"
+        in decision.rejection_details["greenlight"]["missing_facets"]
+    )
+
+    with pytest.raises(SiteNotEligibleForMutationError) as exc_info:
+        await require_site_mutation_authorization(
+            site_id=site_id,
+            user_id=user_id,
+            operation_type="SUBJECT_CREATION",
+            study_id=study_id,
+            gatekeeper=gk,
+        )
+    err = exc_info.value
+    assert err.status_code == 403
+    assert err.detail["error"] == "SITE_NOT_ELIGIBLE_FOR_MUTATION"
+    assert "SITE_NOT_GREENLIGHTED" in err.detail["rejection_reasons"]
+
+
+@pytest.mark.asyncio
+async def test_gatekeeper_rejects_empty_or_missing_site_id() -> None:
+    """Validate that requests with empty or missing site_id are rejected (is_eligible=False).
+
+    @req:PRD-SYS-121, PRD-SYS-001
+    """
+    study_id = "STUDY-GK-NOSITE"
+    user_id = "crc_nosite_user"
+
+    gk = get_site_execution_gatekeeper()
+
+    for invalid_site_id in ["", "   ", None]:
+        decision = await gk.validate_mutation_eligibility(
+            site_id=invalid_site_id,  # type: ignore[arg-type]
+            user_id=user_id,
+            operation_type="SUBJECT_CREATION",
+            study_id=study_id,
+        )
+
+        assert decision.is_eligible is False
+        assert GatekeeperRejectionReason.MISSING_SITE_ID in decision.rejection_reasons
+        assert "site" in decision.rejection_details
+
+        with pytest.raises(SiteNotEligibleForMutationError) as exc_info:
+            await require_site_mutation_authorization(
+                site_id=invalid_site_id,  # type: ignore[arg-type]
+                user_id=user_id,
+                operation_type="SUBJECT_CREATION",
+                study_id=study_id,
+                gatekeeper=gk,
+            )
+        err = exc_info.value
+        assert err.status_code == 403
+        assert "MISSING_SITE_ID" in err.detail["rejection_reasons"]
+
+
+@pytest.mark.asyncio
+async def test_gatekeeper_service_accounts_undergo_verified_delegation_log_checks() -> (
+    None
+):
+    """Validate that service accounts undergo verified delegation log checks and are blocked if unassigned or unauthorized.
+
+    @req:PRD-SYS-121, PRD-SYS-001, ADR-2199
+    """
+    study_id = "STUDY-GK-SA"
+    site_id = "SITE-GK-SA"
+    service_account_id = "execution-service"
+
+    doa = get_global_doa_service()
+
+    # Register DOA log for site with another user (so site has DOA records)
+    rec_pi = doa.add_assignment(
+        study_id=study_id,
+        site_id=site_id,
+        personnel_name="Dr. PI",
+        personnel_email="dr_pi@site.org",
+        role=DOATaskRoleEnum.PRINCIPAL_INVESTIGATOR,
+        delegated_tasks=[DOATaskDelegationEnum.PI_CASEBOOK_SIGNOFF],
+        start_date="2026-08-01",
+    )
+    doa.sign_off_assignment(rec_pi.record_id, "dr_pi@site.org", "PI Signoff")
+
+    gk = SiteExecutionGatekeeper(
+        greenlight_client=MockGreenlightClient("APPROVED"),
+        doa_service=doa,
+    )
+
+    # 1. Service account NOT in DOA log -> Blocked
+    dec_unassigned = await gk.validate_mutation_eligibility(
+        site_id=site_id,
+        user_id=service_account_id,
+        operation_type="SUBJECT_CREATION",
+        study_id=study_id,
+    )
+    assert dec_unassigned.is_eligible is False
+    assert (
+        GatekeeperRejectionReason.UNAUTHORIZED_DOA_ROLE
+        in dec_unassigned.rejection_reasons
+    )
+
+    # 2. Add service account to DOA log but pending sign-off -> Blocked
+    rec_sa = doa.add_assignment(
+        study_id=study_id,
+        site_id=site_id,
+        personnel_name="Execution Service Bot",
+        personnel_email=service_account_id,
+        role=DOATaskRoleEnum.CLINICAL_RESEARCH_COORDINATOR,
+        delegated_tasks=[DOATaskDelegationEnum.CRF_DATA_ENTRY],
+        start_date="2026-08-01",
+    )
+    dec_pending_sa = await gk.validate_mutation_eligibility(
+        site_id=site_id,
+        user_id=service_account_id,
+        operation_type="SUBJECT_CREATION",
+        study_id=study_id,
+    )
+    assert dec_pending_sa.is_eligible is False
+    assert (
+        GatekeeperRejectionReason.UNAUTHORIZED_DOA_ROLE
+        in dec_pending_sa.rejection_reasons
+    )
+
+    # 3. Sign off service account DOA assignment -> Authorized
+    doa.sign_off_assignment(rec_sa.record_id, "dr_pi@site.org", "Approved Service Bot")
+    dec_authorized_sa = await gk.validate_mutation_eligibility(
+        site_id=site_id,
+        user_id=service_account_id,
+        operation_type="SUBJECT_CREATION",
+        study_id=study_id,
+    )
+    assert dec_authorized_sa.is_eligible is True
+
+
+@pytest.mark.asyncio
 async def test_gatekeeper_system_service_account_bypass() -> None:
-    """Validate that automated system service accounts bypass user training and DOA log checks.
+    """Validate that automated system service accounts bypass user training checks.
 
     @req:PRD-SYS-121, ADR-2199
     """
