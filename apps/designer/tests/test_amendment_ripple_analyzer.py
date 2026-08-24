@@ -8,6 +8,7 @@ import hmac
 import json
 import time
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
@@ -542,14 +543,28 @@ async def test_designer_amendments_api_endpoints(
         assert len(assessment_data["operational_tickets"]) == 3
 
         # 2. Test POST /api/v1/designer/amendments/dispatch-tickets
-        res_dispatch = await client.post(
-            "/api/v1/designer/amendments/dispatch-tickets",
-            json={
-                "study_id": "CADENCE-101",
-                "impact_assessment": assessment_data,
-            },
-            headers=headers,
-        )
+        from apps.designer.domain.cdisc.ripple_models import DispatchedTicketInfo
+
+        async def mock_dispatch(self, blueprint, study_id, user_id="service_designer", change_reason=""):
+            return DispatchedTicketInfo(
+                ticket_id="tkt-123",
+                reference="TKT-12345",
+                domain_queue=blueprint.domain_queue,
+                title=blueprint.title,
+                priority=blueprint.priority,
+                status="OPEN",
+                assignee_role=blueprint.assignee_role,
+            )
+
+        with patch.object(DesignerTicketsClient, "dispatch_ticket", mock_dispatch):
+            res_dispatch = await client.post(
+                "/api/v1/designer/amendments/dispatch-tickets",
+                json={
+                    "study_id": "CADENCE-101",
+                    "impact_assessment": assessment_data,
+                },
+                headers=headers,
+            )
 
         assert res_dispatch.status_code == 200
         dispatch_data = res_dispatch.json()

@@ -49,31 +49,20 @@ class ETMFClient(IETMFClientPort):
             "dia_artifact": dia_artifact,
             "source_system": "CTMS",
         }
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                res = await client.post(
-                    f"{self.base_url}/api/v1/etmf/documents",
-                    json=payload,
-                    headers=headers,
-                )
-                if res.status_code in (200, 201):
-                    data = res.json()
-                    return {
-                        "document_id": data.get(
-                            "id", data.get("document_id", "mock-etmf-doc-id")
-                        ),
-                        "status": "SYNCED",
-                    }
-        except Exception as e:
-            logger.warning(
-                "Failed to connect to eTMF service at %s: %s", self.base_url, e
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            res = await client.post(
+                f"{self.base_url}/api/v1/etmf/documents",
+                json=payload,
+                headers=headers,
             )
-
-        # Fallback for offline or local test isolation
-        return {
-            "document_id": f"etmf-doc-{study_id}-{dia_zone}-{dia_section}",
-            "status": "SYNCED",
-        }
+            res.raise_for_status()
+            data = res.json()
+            return {
+                "document_id": data.get(
+                    "id", data.get("document_id", "mock-etmf-doc-id")
+                ),
+                "status": "SYNCED",
+            }
 
 
 class QualityClient(IQualityClientPort):
@@ -109,29 +98,18 @@ class QualityClient(IQualityClientPort):
             "description": f"Severity: {severity}\nDescription: {description}\nRoot Cause: {root_cause_summary}\nAction Plan: {corrective_action}",
             "source": "CTMS_PROTOCOL_DEVIATION",
         }
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                res = await client.post(
-                    f"{self.base_url}/api/v1/quality/capa",
-                    json=payload,
-                    headers=headers,
-                )
-                if res.status_code in (200, 201):
-                    data = res.json()
-                    return {
-                        "capa_id": data.get("id", data.get("capa_id", "mock-capa-id")),
-                        "status": "ESCALATED",
-                    }
-        except Exception as e:
-            logger.warning(
-                "Failed to connect to Quality service at %s: %s", self.base_url, e
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            res = await client.post(
+                f"{self.base_url}/api/v1/quality/capa",
+                json=payload,
+                headers=headers,
             )
-
-        # Fallback for offline or local test isolation
-        return {
-            "capa_id": f"CAPA-{study_id}-{site_id}-{severity}",
-            "status": "ESCALATED",
-        }
+            res.raise_for_status()
+            data = res.json()
+            return {
+                "capa_id": data.get("id", data.get("capa_id", "mock-capa-id")),
+                "status": "ESCALATED",
+            }
 
 
 class SafetyClient(ISafetyClientPort):
@@ -164,14 +142,11 @@ class SafetyClient(ISafetyClientPort):
             "severity": severity,
             "event_type": "PROTOCOL_DEVIATION_SAFETY_ALERT",
         }
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                res = await client.post(
-                    f"{self.base_url}/api/v1/safety/alerts",
-                    json=payload,
-                    headers=headers,
-                )
-                return res.status_code in (200, 201)
-        except Exception as e:
-            logger.info("Safety alert dispatched (local/offline fallback): %s", e)
-            return True
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            res = await client.post(
+                f"{self.base_url}/api/v1/safety/alerts",
+                json=payload,
+                headers=headers,
+            )
+            res.raise_for_status()
+            return res.status_code in (200, 201)

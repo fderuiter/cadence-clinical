@@ -70,48 +70,23 @@ class DesignerTicketsClient:
 
         url = f"{self.base_url}/api/v1/tickets/cross-app/events"
 
-        try:
-            async with httpx.AsyncClient(
-                transport=self.transport, timeout=self.timeout
-            ) as client:
-                res = await client.post(url, json=payload, headers=headers)
-                if res.status_code in (200, 201):
-                    data = res.json()
-                    return DispatchedTicketInfo(
-                        ticket_id=data.get("id", str(uuid.uuid4())),
-                        reference=data.get(
-                            "reference", f"TKT-{uuid.uuid4().hex[:5].upper()}"
-                        ),
-                        domain_queue=blueprint.domain_queue,
-                        title=blueprint.title,
-                        priority=blueprint.priority,
-                        status=data.get("status", "OPEN"),
-                        assignee_role=blueprint.assignee_role,
-                    )
-                logger.warning(
-                    "Cross-app ticket dispatch returned status %s: %s",
-                    res.status_code,
-                    res.text,
-                )
-        except Exception as exc:
-            logger.info(
-                "Tickets service offline or unreachable at %s (%s). Generating fallback ticket reference.",
-                self.base_url,
-                exc,
+        async with httpx.AsyncClient(
+            transport=self.transport, timeout=self.timeout
+        ) as client:
+            res = await client.post(url, json=payload, headers=headers)
+            res.raise_for_status()
+            data = res.json()
+            return DispatchedTicketInfo(
+                ticket_id=data.get("id", str(uuid.uuid4())),
+                reference=data.get(
+                    "reference", f"TKT-{uuid.uuid4().hex[:5].upper()}"
+                ),
+                domain_queue=blueprint.domain_queue,
+                title=blueprint.title,
+                priority=blueprint.priority,
+                status=data.get("status", "OPEN"),
+                assignee_role=blueprint.assignee_role,
             )
-
-        # Resilient offline/in-memory fallback
-        fallback_id = str(uuid.uuid4())
-        fallback_ref = f"TKT-{uuid.uuid4().hex[:5].upper()}"
-        return DispatchedTicketInfo(
-            ticket_id=fallback_id,
-            reference=fallback_ref,
-            domain_queue=blueprint.domain_queue,
-            title=blueprint.title,
-            priority=blueprint.priority,
-            status="OPEN",
-            assignee_role=blueprint.assignee_role,
-        )
 
     async def dispatch_batch(
         self,

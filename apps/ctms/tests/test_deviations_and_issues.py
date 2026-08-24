@@ -6,6 +6,8 @@ from fastapi.testclient import TestClient
 from jose import jwt
 from sqlalchemy import event
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 from apps.ctms.adapters.database import db_manager
 from apps.ctms.adapters.models import Base
 from apps.ctms.main import app
@@ -120,9 +122,15 @@ def test_protocol_deviation_lifecycle_and_capa_escalation():
     assert len(res_rca.json()["root_cause_5whys"]) == 5
 
     # Step 3: Escalate to Quality CAPA
-    res_capa = client.post(
-        f"/api/v1/ctms/deviations/{dev_id}/escalate-capa", headers=headers
-    )
+    mock_resp = MagicMock()
+    mock_resp.status_code = 201
+    mock_resp.json.return_value = {"id": "mock-capa-id-123", "status": "ESCALATED"}
+    mock_resp.raise_for_status = lambda: None
+
+    with patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_resp):
+        res_capa = client.post(
+            f"/api/v1/ctms/deviations/{dev_id}/escalate-capa", headers=headers
+        )
     assert res_capa.status_code == 200
     assert res_capa.json()["status"] == "CAPA_ESCALATED"
     assert res_capa.json()["quality_capa_id"] is not None
