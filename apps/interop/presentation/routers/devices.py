@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Request
 
-from apps.interop.domain.sdtm_device_mapper import map_dd, map_do
+from apps.interop.domain.cdr.submission_engine import CdiscSubmissionEngine
 from apps.interop.presentation.device_dtos import (
     DeviceInvestigationExportPackageRequest,
     DeviceInvestigationExportPackageResponse,
@@ -47,12 +47,13 @@ async def generate_sdtm_dd_endpoint(
         "X-Change-Reason", "CDISC SDTM DD dataset compilation"
     )
 
-    dd_models = map_dd(
+    engine = CdiscSubmissionEngine(study_id=payload.study_id)
+    dev_sdtm = engine.compile_device_sdtm(
         deficiencies=payload.deficiencies,
         created_by=user_id,
         reason_for_change=change_reason,
     )
-    records = [m.model_dump(mode="json") for m in dd_models]
+    records = [m.model_dump(mode="json") for m in dev_sdtm.get("DD", [])]
 
     return SDTMDDResponse(
         study_id=payload.study_id,
@@ -80,12 +81,13 @@ async def generate_sdtm_do_endpoint(
         "X-Change-Reason", "CDISC SDTM DO dataset compilation"
     )
 
-    do_models = map_do(
+    engine = CdiscSubmissionEngine(study_id=payload.study_id)
+    dev_sdtm = engine.compile_device_sdtm(
         devices=payload.devices,
         created_by=user_id,
         reason_for_change=change_reason,
     )
-    records = [m.model_dump(mode="json") for m in do_models]
+    records = [m.model_dump(mode="json") for m in dev_sdtm.get("DO", [])]
 
     return SDTMDOResponse(
         study_id=payload.study_id,
@@ -215,19 +217,17 @@ async def generate_export_package_endpoint(
         "X-Change-Reason", "Regulatory device export package generation"
     )
 
-    dd_models = map_dd(
+    engine = CdiscSubmissionEngine(study_id=payload.study_id)
+    package_dict = engine.compile_device_investigation_package(
+        study_id=payload.study_id,
         deficiencies=payload.deficiencies,
-        created_by=user_id,
-        reason_for_change=change_reason,
-    )
-    do_models = map_do(
         devices=payload.devices,
-        created_by=user_id,
-        reason_for_change=change_reason,
+        user_id=user_id,
+        change_reason=change_reason,
     )
 
-    dd_records = [m.model_dump(mode="json") for m in dd_models]
-    do_records = [m.model_dump(mode="json") for m in do_models]
+    dd_records = package_dict["sdtm_dd_dataset"]
+    do_records = package_dict["sdtm_do_dataset"]
 
     incident_reports = []
     for d in payload.deficiencies:

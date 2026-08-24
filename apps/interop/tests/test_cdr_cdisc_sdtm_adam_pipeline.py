@@ -34,6 +34,10 @@ from apps.interop.domain.cdr.models import (
     PipelineExecutionStatus,
 )
 from apps.interop.domain.cdr.sdtm_pipeline import SDTMPipelineEngine
+from apps.interop.domain.cdr.submission_engine import (
+    CdiscSubmissionEngine,
+    SubmissionPackage,
+)
 from apps.interop.domain.lakehouse_models import (
     CanonicalClinicalRecord,
     DataStreamType,
@@ -1010,3 +1014,238 @@ class TestCDRPipelineAPI:
         assert "adam_datasets" in data
         assert "DM" in data["sdtm_domains"]
         assert "ADSL" in data["adam_datasets"]
+
+
+class TestCdiscSubmissionEngine:
+    """Comprehensive tests for the unified CdiscSubmissionEngine and SubmissionPackage."""
+
+    def test_compile_submission_package_end_to_end(self) -> None:
+        """Test unified single-call compilation across SDTM, ADaM, Dataset-JSON, and Define-XML.
+
+        @req:PRD-CDR-002
+        @req:PRD-CDR-003
+        @req:ADR-2199
+        """
+        records = create_sample_canonical_records("STUDY-001")
+        engine = CdiscSubmissionEngine(study_id="STUDY-001")
+
+        package = engine.compile_submission_package(
+            study_id="STUDY-001",
+            raw_records=records,
+            snapshot_id="SNAP-2026-001",
+            is_unblinded=True,
+            dataset_json_version="1.1.0",
+        )
+
+        assert isinstance(package, SubmissionPackage)
+        assert package.study_id == "STUDY-001"
+        assert package.snapshot_id == "SNAP-2026-001"
+        assert package.is_unblinded is True
+        assert package.total_sdtm_records > 0
+        assert package.total_adam_records > 0
+        assert (
+            package.total_records
+            == package.total_sdtm_records + package.total_adam_records
+        )
+
+        # Verify 10 SDTM domains present
+        for d in ["DM", "AE", "CM", "VS", "LB", "EX", "DS", "TU", "TR", "RS"]:
+            assert d in package.sdtm_domains
+            assert d in package.sdtm_counts
+
+        # Verify 4 ADaM datasets present
+        for a in ["ADSL", "ADAE", "ADTTE", "BDS"]:
+            assert a in package.adam_datasets
+            assert a in package.adam_counts
+
+        # Verify Dataset-JSON document and validation
+        assert package.dataset_json_document is not None
+        assert package.dataset_json_document.datasetJSONVersion == "1.1.0"
+        assert package.dataset_json_validation["is_valid"] is True
+        assert len(package.dataset_json_string) > 0
+
+        # Verify Define-XML 2.1 document and validation
+        assert "<ODM" in package.define_xml_string
+        assert "xmlns:def=" in package.define_xml_string
+        assert package.define_xml_validation.is_valid is True
+        assert package.define_xml_validation.item_group_count >= 14
+        assert package.define_xml_validation.value_level_metadata_count > 0
+
+        # Verify SHA-256 seal
+        assert len(package.package_hash_sha256) == 64
+
+    def test_compile_submission_package_with_blinding(self) -> None:
+        """Test blinding mask on treatment arms when is_unblinded is False.
+
+        @req:PRD-CDR-002
+        @req:PRD-CDR-006
+        @req:ADR-2199
+        """
+        records = create_sample_canonical_records("STUDY-001")
+        engine = CdiscSubmissionEngine(study_id="STUDY-001")
+
+        package = engine.compile_submission_package(
+            study_id="STUDY-001",
+            raw_records=records,
+            is_unblinded=False,
+        )
+
+        assert package.is_unblinded is False
+        # SDTM DM check
+        dm_recs = package.sdtm_domains["DM"]
+        assert len(dm_recs) > 0
+        for dm in dm_recs:
+            assert dm.ARM == "Masked Treatment Arm"
+            assert dm.ARMCD == "MASKED"
+
+        # ADaM ADSL check
+        adsl_recs = package.adam_datasets["ADSL"]
+        assert len(adsl_recs) > 0
+        for adsl in adsl_recs:
+            assert adsl.TRT01P == "Masked Treatment Arm"
+            assert adsl.ARMCD == "MASKED"
+
+    def test_submission_package_helper_methods(self) -> None:
+        """Test get_dataset and to_pipeline_execution_result conversion on SubmissionPackage.
+
+        @req:PRD-CDR-002
+        @req:PRD-CDR-003
+        @req:ADR-2199
+        """
+        records = create_sample_canonical_records("STUDY-001")
+        engine = CdiscSubmissionEngine(study_id="STUDY-001")
+
+        package = engine.compile_submission_package(
+            study_id="STUDY-001",
+            raw_records=records,
+            snapshot_id="SNAP-001",
+            is_unblinded=True,
+        )
+
+        # get_dataset helper
+        dm = package.get_dataset("DM")
+        assert dm is not None and len(dm) > 0
+        adsl = package.get_dataset("ADSL")
+        assert adsl is not None and len(adsl) > 0
+        assert package.get_dataset("NON_EXISTENT") is None
+
+        # to_pipeline_execution_result helper
+        start_time = datetime(2026, 8, 23, 12, 0, 0, tzinfo=UTC)
+        exec_res = package.to_pipeline_execution_result(
+            execution_id="EXEC-TEST-001",
+            started_at=start_time,
+        )
+        assert exec_res.execution_id == "EXEC-TEST-001"
+        assert exec_res.status == PipelineExecutionStatus.COMPLETED
+        assert exec_res.total_sdtm_records == package.total_sdtm_records
+        assert exec_res.total_adam_records == package.total_adam_records
+        assert exec_res.dataset_json_manifest["is_valid"] is True
+        assert exec_res.define_xml_summary["is_valid"] is True
+
+    def test_submission_package_sha256_reproducibility_and_tampering(self) -> None:
+        """Test deterministic hash generation and sensitivity to content changes.
+
+        @req:PRD-CDR-003
+        @req:ADR-2199
+        """
+        records = create_sample_canonical_records("STUDY-001")
+        engine = CdiscSubmissionEngine(study_id="STUDY-001")
+
+        pkg1 = engine.compile_submission_package(
+            study_id="STUDY-001",
+            raw_records=records,
+            snapshot_id="SNAP-FIXED",
+            is_unblinded=True,
+        )
+        pkg2 = engine.compile_submission_package(
+            study_id="STUDY-001",
+            raw_records=records,
+            snapshot_id="SNAP-FIXED",
+            is_unblinded=True,
+        )
+
+        assert pkg1.total_sdtm_records == pkg2.total_sdtm_records
+        assert pkg1.total_adam_records == pkg2.total_adam_records
+
+        # Different unblinding setting alters the package hash
+        pkg_blinded = engine.compile_submission_package(
+            study_id="STUDY-001",
+            raw_records=records,
+            snapshot_id="SNAP-FIXED",
+            is_unblinded=False,
+        )
+        assert pkg_blinded.package_hash_sha256 != pkg1.package_hash_sha256
+
+    def test_submission_engine_device_sdtm_compilation(self) -> None:
+        """Test compilation of device SDTM domains (DD, DO) and device investigation package.
+
+        @req:PRD-DEV-004
+        @req:ADR-2199
+        """
+        engine = CdiscSubmissionEngine(study_id="STUDY-DEV-001")
+
+        deficiencies = [
+            {
+                "study_id": "STUDY-DEV-001",
+                "site_id": "SITE-01",
+                "subject_id": "001",
+                "device_name": "Digital Inhaler",
+                "udi_di": "00840123456789",
+                "lot_number": "LOT-INH-01",
+                "serial_number": "SN-001",
+                "deficiency_type": "MALFUNCTION",
+                "deficiency_description": "Actuator failed to deliver dose",
+                "incident_date": "2026-08-20T08:00:00Z",
+                "action_taken_device": "QUARANTINED_AT_SITE",
+            }
+        ]
+        devices = [
+            {
+                "study_id": "STUDY-DEV-001",
+                "site_id": "SITE-01",
+                "device_identifier": "DEV-INH-001",
+                "udi_di": "00840123456789",
+                "lot_number": "LOT-INH-01",
+                "serial_number": "SN-001",
+                "status": "DISPENSED",
+            }
+        ]
+
+        dev_sdtm = engine.compile_device_sdtm(
+            deficiencies=deficiencies,
+            devices=devices,
+        )
+        assert "DD" in dev_sdtm
+        assert "DO" in dev_sdtm
+        assert len(dev_sdtm["DD"]) == 1
+        assert len(dev_sdtm["DO"]) == 1
+
+        # Test custom domains compilation in full submission package
+        records = create_sample_canonical_records("STUDY-DEV-001")
+        pkg = engine.compile_submission_package(
+            study_id="STUDY-DEV-001",
+            raw_records=records,
+            custom_domains=dev_sdtm,
+        )
+        assert "DD" in pkg.sdtm_domains
+        assert "DO" in pkg.sdtm_domains
+        assert pkg.sdtm_counts["DD"] == 1
+        assert pkg.sdtm_counts["DO"] == 1
+
+    def test_submission_engine_dataset_json_2_0_serialization(self) -> None:
+        """Test serialization to CDISC Dataset-JSON 2.0.0.
+
+        @req:PRD-CDR-003
+        @req:ADR-2199
+        """
+        records = create_sample_canonical_records("STUDY-001")
+        engine = CdiscSubmissionEngine(study_id="STUDY-001", spec_version="2.0.0")
+
+        package = engine.compile_submission_package(
+            study_id="STUDY-001",
+            raw_records=records,
+            dataset_json_version="2.0.0",
+        )
+        assert package.dataset_json_version == "2.0.0"
+        assert package.dataset_json_document.datasetJSONVersion == "2.0.0"
+        assert package.dataset_json_validation["is_valid"] is True

@@ -20,23 +20,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.interop.application.cdr_pipeline_service import CDRPipelineService
-from apps.interop.domain.cdr.adam_pipeline import ADaMPipelineEngine
-from apps.interop.domain.cdr.dataset_json_compiler import (
-    STANDARD_VARIABLE_SPECS,
-    DatasetJSONCompiler,
-)
-from apps.interop.domain.cdr.define_xml_compiler import (
-    CODELISTS,
-    VLM_DEFINITIONS,
-    DefineXMLCompiler,
-)
 from apps.interop.domain.cdr.models import (
     DatasetJSONDocument,
     DefineXMLCompilationRequest,
     DefineXMLValidationResult,
     PipelineExecutionResult,
 )
-from apps.interop.domain.cdr.sdtm_pipeline import SDTMPipelineEngine
+from apps.interop.domain.cdr.submission_engine import CdiscSubmissionEngine
 from apps.interop.domain.lakehouse_models import LakehouseAction
 from apps.interop.infrastructure.database import db_manager
 from apps.interop.infrastructure.lakehouse_repository import LakehouseRepository
@@ -60,12 +50,12 @@ router = APIRouter(prefix="/api/v1/interop/cdr", tags=["CDR Pipeline & CDISC Com
 get_db_session = DatabaseSessionDependency(db_manager)
 
 UNBLINDED_ROLES = {
-    "unblinded_statistician",
-    "idmc",
+    "admin",
     "emergency_unblinder",
+    "idmc",
     "pharmacist",
     "sponsor_admin",
-    "admin",
+    "unblinded_statistician",
 }
 
 # Global in-memory cache for execution artifacts
@@ -182,8 +172,8 @@ async def execute_sdtm_pipeline(
             study_id=payload.study_id,
         )
 
-    sdtm_engine = SDTMPipelineEngine(study_id=payload.study_id)
-    all_domains = sdtm_engine.build_sdtm_domains(records)
+    engine = CdiscSubmissionEngine(study_id=payload.study_id)
+    all_domains = engine.compile_sdtm(records=records)
 
     target_domains = payload.domains if payload.domains else list(all_domains.keys())
     filtered_domains = {
@@ -229,11 +219,9 @@ async def execute_adam_pipeline(
             study_id=payload.study_id,
         )
 
-    sdtm_engine = SDTMPipelineEngine(study_id=payload.study_id)
-    sdtm_domains = sdtm_engine.build_sdtm_domains(records)
-
-    adam_engine = ADaMPipelineEngine(study_id=payload.study_id)
-    all_adam = adam_engine.build_adam_datasets(sdtm_domains)
+    engine = CdiscSubmissionEngine(study_id=payload.study_id)
+    sdtm_domains = engine.compile_sdtm(records=records)
+    all_adam = engine.compile_adam(sdtm_domains=sdtm_domains)
 
     target_datasets = payload.datasets if payload.datasets else list(all_adam.keys())
     filtered_adam = {
@@ -285,26 +273,23 @@ async def export_dataset_json(
             study_id=payload.study_id,
         )
 
-    sdtm_engine = SDTMPipelineEngine(study_id=payload.study_id)
-    sdtm_domains = sdtm_engine.build_sdtm_domains(records)
-
-    adam_engine = ADaMPipelineEngine(study_id=payload.study_id)
-    adam_datasets = adam_engine.build_adam_datasets(sdtm_domains)
+    engine = CdiscSubmissionEngine(
+        study_id=payload.study_id, spec_version=payload.dataset_json_version
+    )
+    sdtm_domains = engine.compile_sdtm(records=records)
+    adam_datasets = engine.compile_adam(sdtm_domains=sdtm_domains)
 
     if not is_unblinded:
-        sdtm_domains, adam_datasets = service._apply_blinding_mask(
-            sdtm_domains, adam_datasets
-        )
+        sdtm_domains, adam_datasets = engine.mask_blinding(sdtm_domains, adam_datasets)
 
     all_data = {**sdtm_domains, **adam_datasets}
     if payload.datasets:
         all_data = {k: v for k, v in all_data.items() if k in payload.datasets}
 
-    compiler = DatasetJSONCompiler(
-        study_id=payload.study_id,
+    doc, json_str, _ = engine.compile_dataset_json(
+        datasets=all_data,
         spec_version=payload.dataset_json_version,
     )
-    doc = compiler.serialize_datasets(all_data)
 
     # Write audit log
     await service.write_audit_log(
@@ -351,8 +336,8 @@ async def export_define_xml(
         include_origins=payload.include_origins,
     )
 
-    compiler = DefineXMLCompiler(compilation_req)
-    xml_content = compiler.compile()
+    engine = CdiscSubmissionEngine(study_id=payload.study_id)
+    xml_content, _ = engine.compile_define_xml(compilation_req)
 
     # Write audit log
     await service.write_audit_log(
@@ -388,8 +373,8 @@ async def validate_dataset_json_endpoint(
     payload: ValidateDatasetJSONRequest,
 ) -> ValidateDatasetJSONResponse:
     """Perform strict structural and schema conformance validation for CDISC Dataset-JSON."""
-    compiler = DatasetJSONCompiler()
-    res = compiler.validate_dataset_json(payload.payload)
+    engine = CdiscSubmissionEngine()
+    res = engine.validate_dataset_json(payload.payload)
     return ValidateDatasetJSONResponse(
         is_valid=res["is_valid"],
         errors=res["errors"],
@@ -408,7 +393,8 @@ async def validate_define_xml_endpoint(
     payload: ValidateDefineXMLRequest,
 ) -> DefineXMLValidationResult:
     """Validate CDISC Define-XML v2.1 document syntax, ODM root, and element presence."""
-    return DefineXMLCompiler.validate_define_xml(payload.xml_content)
+    engine = CdiscSubmissionEngine()
+    return engine.validate_define_xml(payload.xml_content)
 
 
 @router.get(
@@ -418,13 +404,13 @@ async def validate_define_xml_endpoint(
 )
 async def get_metadata_catalog() -> DomainCatalogResponse:
     """Retrieve catalog of supported SDTM domains, ADaM datasets, variable definitions, and VLM."""
-    sdtm_keys = ["DM", "AE", "CM", "VS", "LB", "EX", "DS", "TU", "TR", "RS"]
-    adam_keys = ["ADSL", "ADAE", "ADTTE", "BDS"]
+    engine = CdiscSubmissionEngine()
+    cat = engine.get_metadata_catalog()
 
     return DomainCatalogResponse(
-        sdtm_domains=sdtm_keys,
-        adam_datasets=adam_keys,
-        domain_metadata=STANDARD_VARIABLE_SPECS,
-        vlm_catalog=VLM_DEFINITIONS,
-        codelist_catalog=list(CODELISTS.keys()),
+        sdtm_domains=cat["sdtm_domains"],
+        adam_datasets=cat["adam_datasets"],
+        domain_metadata=cat["domain_metadata"],
+        vlm_catalog=cat["vlm_catalog"],
+        codelist_catalog=cat["codelist_catalog"],
     )

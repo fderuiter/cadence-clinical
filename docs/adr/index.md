@@ -148,6 +148,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-01: Cryptographic Signature Verification Engine for Part 11 eSignatures](2026-08-01-cryptographic-signature-verification-engine-for-esignatures.md)
 
 ### 3. Clinical Data Interoperability & Standards
+- [2026-08-23: Deepen CDISC Study Submission Compiler](2026-08-23-deepen-cdisc-study-submission-compiler.md)
 - [2026-08-23: DDF Compiler Pipeline Architecture](2026-08-23-ddf-compiler-pipeline-architecture.md)
 - [2026-08-23: SMART on FHIR Ingestion Pipeline & CRC Source Data Reconciliation Drawer](2026-08-23-smart-backend-services-and-crc-reconciliation-drawer.md)
 - [2026-08-21: Hybrid Semantic Medical Coding Pipeline with pgvector](2026-08-21-hybrid-semantic-medical-coding-pipeline-with-pgvector.md)

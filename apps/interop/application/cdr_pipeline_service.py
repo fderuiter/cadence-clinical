@@ -20,15 +20,13 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from apps.interop.domain.cdr.adam_pipeline import ADaMPipelineEngine
-from apps.interop.domain.cdr.dataset_json_compiler import DatasetJSONCompiler
-from apps.interop.domain.cdr.define_xml_compiler import DefineXMLCompiler
 from apps.interop.domain.cdr.models import (
-    DefineXMLCompilationRequest,
     PipelineExecutionResult,
-    PipelineExecutionStatus,
 )
-from apps.interop.domain.cdr.sdtm_pipeline import SDTMPipelineEngine
+from apps.interop.domain.cdr.submission_engine import (
+    CdiscSubmissionEngine,
+    SubmissionPackage,
+)
 from apps.interop.domain.lakehouse_models import (
     LakehouseAction,
 )
@@ -40,8 +38,15 @@ class CDRPipelineService:
 
     def __init__(self, repository: LakehouseRepositoryPort) -> None:
         self.repository = repository
+        self._submission_engine = CdiscSubmissionEngine()
         self._execution_history: dict[str, PipelineExecutionResult] = {}
         self._cached_results: dict[str, dict[str, Any]] = {}
+        self._cached_packages: dict[str, SubmissionPackage] = {}
+
+    @property
+    def submission_engine(self) -> CdiscSubmissionEngine:
+        """Access the underlying unified CDISC submission engine."""
+        return self._submission_engine
 
     async def write_audit_log(
         self,
@@ -87,45 +92,7 @@ class CDRPipelineService:
         adam_datasets: dict[str, list[Any]],
     ) -> tuple[dict[str, list[Any]], dict[str, list[Any]]]:
         """Mask unblinded treatment arm variables for blinded roles."""
-        masked_sdtm: dict[str, list[Any]] = {}
-        for d_name, recs in sdtm_domains.items():
-            masked_recs = []
-            for rec in recs:
-                r_copy = rec.model_copy(deep=True)
-                if hasattr(r_copy, "ARM") and r_copy.ARM:
-                    r_copy.ARM = "Masked Treatment Arm"
-                if hasattr(r_copy, "ARMCD") and r_copy.ARMCD:
-                    r_copy.ARMCD = "MASKED"
-                if hasattr(r_copy, "ACTARM") and r_copy.ACTARM:
-                    r_copy.ACTARM = "Masked Actual Arm"
-                if hasattr(r_copy, "ACTARMCD") and r_copy.ACTARMCD:
-                    r_copy.ACTARMCD = "MASKED"
-                if hasattr(r_copy, "EXTRT") and r_copy.EXTRT:
-                    r_copy.EXTRT = "Blind Study Medication"
-                masked_recs.append(r_copy)
-            masked_sdtm[d_name] = masked_recs
-
-        masked_adam: dict[str, list[Any]] = {}
-        for ds_name, recs in adam_datasets.items():
-            masked_recs = []
-            for rec in recs:
-                r_copy = rec.model_copy(deep=True)
-                if hasattr(r_copy, "ARM") and r_copy.ARM:
-                    r_copy.ARM = "Masked Treatment Arm"
-                if hasattr(r_copy, "ARMCD") and r_copy.ARMCD:
-                    r_copy.ARMCD = "MASKED"
-                if hasattr(r_copy, "ACTARM") and r_copy.ACTARM:
-                    r_copy.ACTARM = "Masked Actual Arm"
-                if hasattr(r_copy, "ACTARMCD") and r_copy.ACTARMCD:
-                    r_copy.ACTARMCD = "MASKED"
-                if hasattr(r_copy, "TRT01P") and r_copy.TRT01P:
-                    r_copy.TRT01P = "Masked Treatment Arm"
-                if hasattr(r_copy, "TRT01A") and r_copy.TRT01A:
-                    r_copy.TRT01A = "Masked Actual Arm"
-                masked_recs.append(r_copy)
-            masked_adam[ds_name] = masked_recs
-
-        return masked_sdtm, masked_adam
+        return self._submission_engine.mask_blinding(sdtm_domains, adam_datasets)
 
     async def execute_continuous_pipeline(
         self,
@@ -153,95 +120,40 @@ class CDRPipelineService:
                 study_id=study_id,
             )
 
-        # 2. Run SDTM Pipeline Engine (10 domains)
-        sdtm_engine = SDTMPipelineEngine(study_id=study_id)
-        sdtm_domains = sdtm_engine.build_sdtm_domains(raw_records)
-
-        # 3. Run ADaM Pipeline Engine (4 datasets)
-        adam_engine = ADaMPipelineEngine(study_id=study_id)
-        adam_datasets = adam_engine.build_adam_datasets(sdtm_domains)
-
-        # 4. Role-based Blinding Masking
-        if not is_unblinded:
-            sdtm_domains, adam_datasets = self._apply_blinding_mask(
-                sdtm_domains, adam_datasets
-            )
-
-        # 5. Compile into Dataset-JSON 1.1 / 2.0
-        json_compiler = DatasetJSONCompiler(
-            study_id=study_id, spec_version=dataset_json_version
-        )
-        all_datasets: dict[str, list[Any]] = {**sdtm_domains, **adam_datasets}
-        dataset_json_doc = json_compiler.serialize_datasets(all_datasets)
-        json_string = json_compiler.to_json(dataset_json_doc)
-        json_validation = json_compiler.validate_dataset_json(json_string)
-
-        # 6. Auto-compile Define-XML 2.1
-        define_req = DefineXMLCompilationRequest(
+        # 2. Deep single-call submission compilation
+        package = self._submission_engine.compile_submission_package(
             study_id=study_id,
+            raw_records=raw_records,
+            snapshot_id=snapshot_id,
+            is_unblinded=is_unblinded,
+            dataset_json_version=dataset_json_version,
             study_name=f"Cadence Protocol {study_id}",
-            domains=list(sdtm_domains.keys()),
-            adam_datasets=list(adam_datasets.keys()),
+            protocol_name=f"PROTOCOL-{study_id}",
             include_vlm=True,
             include_where_clauses=True,
             include_origins=True,
         )
-        define_compiler = DefineXMLCompiler(define_req)
-        define_xml_string = define_compiler.compile()
-        define_validation = DefineXMLCompiler.validate_define_xml(define_xml_string)
-
-        sdtm_counts = {k: len(v) for k, v in sdtm_domains.items()}
-        adam_counts = {k: len(v) for k, v in adam_datasets.items()}
-        total_sdtm = sum(sdtm_counts.values())
-        total_adam = sum(adam_counts.values())
 
         completed_at = datetime.now(UTC)
-
-        result = PipelineExecutionResult(
+        result = package.to_pipeline_execution_result(
             execution_id=exec_id,
-            study_id=study_id,
-            snapshot_id=snapshot_id,
-            status=PipelineExecutionStatus.COMPLETED,
             started_at=started_at,
             completed_at=completed_at,
-            sdtm_counts=sdtm_counts,
-            adam_counts=adam_counts,
-            total_sdtm_records=total_sdtm,
-            total_adam_records=total_adam,
-            dataset_json_manifest={
-                "datasetJSONVersion": dataset_json_version,
-                "fileOID": dataset_json_doc.fileOID,
-                "dataset_count": len(all_datasets),
-                "is_valid": json_validation["is_valid"],
-            },
-            define_xml_summary={
-                "define_version": "2.1.0",
-                "standard_name": "SDTM-IG / ADaM-IG",
-                "is_valid": define_validation.is_valid,
-                "item_group_count": define_validation.item_group_count,
-                "item_def_count": define_validation.item_def_count,
-                "vlm_count": define_validation.value_level_metadata_count,
-                "where_clause_count": define_validation.where_clause_count,
-                "origin_count": define_validation.item_def_count,
-            },
-            validation_summary={
-                "dataset_json": json_validation,
-                "define_xml": define_validation.model_dump(),
-            },
-            errors=[],
         )
 
-        # Cache result
+        # 3. Cache result and artifacts
         self._execution_history[exec_id] = result
+        self._cached_packages[exec_id] = package
         self._cached_results[exec_id] = {
-            "sdtm_domains": sdtm_domains,
-            "adam_datasets": adam_datasets,
-            "dataset_json_doc": dataset_json_doc,
-            "dataset_json_str": json_string,
-            "define_xml_str": define_xml_string,
+            "sdtm_domains": package.sdtm_domains,
+            "adam_datasets": package.adam_datasets,
+            "dataset_json_doc": package.dataset_json_document,
+            "dataset_json_str": package.dataset_json_string,
+            "define_xml_str": package.define_xml_string,
+            "package_hash_sha256": package.package_hash_sha256,
         }
 
-        # 7. Write 21 CFR Part 11 Audit Trail
+        # 4. Write 21 CFR Part 11 Audit Trail
         await self.write_audit_log(
             user_id=user_id,
             user_role=user_role,
@@ -250,11 +162,12 @@ class CDRPipelineService:
             snapshot_id=snapshot_id,
             details={
                 "execution_id": exec_id,
-                "total_sdtm_records": total_sdtm,
-                "total_adam_records": total_adam,
+                "total_sdtm_records": package.total_sdtm_records,
+                "total_adam_records": package.total_adam_records,
                 "dataset_json_version": dataset_json_version,
-                "define_xml_version": "2.1.0",
+                "define_xml_version": package.define_xml_version,
                 "is_unblinded": is_unblinded,
+                "package_hash_sha256": package.package_hash_sha256,
             },
             reason_for_change=reason_for_change,
         )
@@ -274,3 +187,9 @@ class CDRPipelineService:
         """Retrieve cached Define-XML string for execution."""
         cached = self._cached_results.get(execution_id)
         return cached.get("define_xml_str") if cached else None
+
+    def get_cached_submission_package(
+        self, execution_id: str
+    ) -> SubmissionPackage | None:
+        """Retrieve cached complete SubmissionPackage for execution."""
+        return self._cached_packages.get(execution_id)

@@ -39,7 +39,13 @@ def client():
 
 
 def test_generate_sdtm_dd_endpoint(client):
-    """Tests compiling CDISC SDTM DD (Device Deficiencies) dataset."""
+    """Tests compiling CDISC SDTM DD (Device Deficiencies) dataset.
+
+    @req:PRD-SYS-126
+    @req:PRD-DEV-004
+    @req:ADR-2209
+    @req:ADR-2199
+    """
     headers = create_test_auth_headers(
         user_id="biostat_data_manager",
         roles=["data_manager", "sponsor_admin"],
@@ -106,7 +112,13 @@ def test_generate_sdtm_dd_endpoint(client):
 
 
 def test_generate_sdtm_do_endpoint(client):
-    """Tests compiling CDISC SDTM DO (Device Tracking and Operations) dataset."""
+    """Tests compiling CDISC SDTM DO (Device Tracking and Operations) dataset.
+
+    @req:PRD-SYS-126
+    @req:PRD-DEV-004
+    @req:ADR-2209
+    @req:ADR-2199
+    """
     headers = create_test_auth_headers(
         user_id="biostat_data_manager",
         roles=["data_manager", "sponsor_admin"],
@@ -170,7 +182,13 @@ def test_generate_sdtm_do_endpoint(client):
 
 
 def test_generate_mir_report_endpoint(client):
-    """Tests generating an EU MDR / IVDR Manufacturer Incident Report (MIR v7.2 XML/JSON)."""
+    """Tests generating an EU MDR / IVDR Manufacturer Incident Report (MIR v7.2 XML/JSON).
+
+    @req:PRD-SYS-126
+    @req:PRD-DEV-004
+    @req:ADR-2209
+    @req:ADR-2199
+    """
     headers = create_test_auth_headers(
         user_id="regulatory_affairs_01",
         roles=["data_manager", "sponsor_admin"],
@@ -214,7 +232,13 @@ def test_generate_mir_report_endpoint(client):
 
 
 def test_generate_export_package_endpoint(client):
-    """Tests compiling the full regulatory investigation export package with SHA-256 Merkle audit manifest."""
+    """Tests compiling the full regulatory investigation export package with SHA-256 Merkle audit manifest.
+
+    @req:PRD-SYS-126
+    @req:PRD-DEV-004
+    @req:ADR-2209
+    @req:ADR-2199
+    """
     headers = create_test_auth_headers(
         user_id="regulatory_affairs_01",
         roles=["data_manager", "sponsor_admin"],
