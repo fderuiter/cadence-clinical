@@ -2,16 +2,21 @@
 * @clinical-platform/global-reviewers
 
 # Clinical Domains under apps/
+/apps/ai_gateway/        @clinical-platform/integration-and-routing
 /apps/ctms/              @clinical-platform/clinical-operations
 /apps/designer/          @clinical-platform/integration-and-routing
 /apps/econsent/          @clinical-platform/patient-engagement
 /apps/eisf/              @clinical-platform/document-management
 /apps/etmf/              @clinical-platform/document-management
 /apps/execution/         @clinical-platform/clinical-operations
+/apps/fileshare/         @clinical-platform/document-management
 /apps/gateway/           @clinical-platform/integration-and-routing
+/apps/imaging/           @clinical-platform/clinical-operations
 /apps/interop/           @clinical-platform/integration-and-routing
+/apps/knowledge/         @clinical-platform/document-management
 /apps/notifications/     @clinical-platform/patient-engagement
 /apps/org/               @clinical-platform/clinical-operations
+/apps/payments/          @clinical-platform/clinical-operations
 /apps/quality/           @clinical-platform/document-management
 /apps/safety/            @clinical-platform/compliance-and-safety
 /apps/subject-portal/    @clinical-platform/client-ux
@@ -20,13 +25,17 @@
 
 /packages/cli/             @clinical-platform/integration-and-routing
 /packages/compliance/    @clinical-platform/compliance-and-safety
+/packages/core-models/   @clinical-platform/integration-and-routing
 /packages/database/      @clinical-platform/clinical-operations
+/packages/ddf/           @clinical-platform/integration-and-routing
 /packages/deid/          @clinical-platform/security-and-privacy
 /packages/deidentification/ @clinical-platform/security-and-privacy
 /packages/gateway-rewrite/ @clinical-platform/integration-and-routing
 /packages/hexagonal/     @clinical-platform/clinical-operations
 /packages/security/      @clinical-platform/security-and-privacy
+/packages/sentinels/     @clinical-platform/compliance-and-safety
 /packages/storage/       @clinical-platform/document-management
 /packages/testing/       @clinical-platform/compliance-and-safety
+/packages/tooling_core/  @clinical-platform/integration-and-routing
 /packages/ui/            @clinical-platform/client-ux
 /packages/usdm-schemas/  @clinical-platform/integration-and-routing

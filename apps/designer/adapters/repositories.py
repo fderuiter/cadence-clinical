@@ -103,7 +103,6 @@ def validate_relationship_type(rel_type: str | RelationshipType) -> str:
     )
 
 
-
 async def assert_study_version_mutable(tx, study_version_id: str):
     """
     Ensures that the study version is in a mutable state (DRAFT or ACTIVE).
