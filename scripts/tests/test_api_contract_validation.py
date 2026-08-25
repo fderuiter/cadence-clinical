@@ -1,13 +1,8 @@
-import os
-
 import pytest
 import yaml
 
-from apps.designer.main import app as designer_app
-from apps.econsent.main import app as econsent_app
-from apps.eisf.main import app as eisf_app
-from apps.execution.main import app as execution_app
-from apps.org.main import app as org_app
+from apps.gateway.main import app as gateway_app
+from scripts.validate_schemas import discover_services
 from tests.contract_helpers import (
     assert_schema_parity,
     extract_openapi_yaml,
@@ -24,50 +19,29 @@ def loaded_specs():
     spec_yaml = extract_openapi_yaml("docs/SDLC/03_API_Integration_Specification.md")
     spec_dict = yaml.safe_load(spec_yaml)
 
-    # 1b. Load separate microservice specs and merge them
-    import json
-
-    for json_path, schema_prefix in [
-        ("docs/openapi/org_openapi.json", "Org_"),
-        ("docs/openapi/econsent_openapi.json", "Econsent_"),
-        ("docs/openapi/eisf_openapi.json", "Eisf_"),
-    ]:
-        if os.path.exists(json_path):
-            with open(json_path, encoding="utf-8") as f:
-                ms_spec = json.load(f)
-                ms_spec_rewritten = rewrite_references(ms_spec, schema_prefix)
-                # Merge paths
-                for path, path_item in ms_spec_rewritten.get("paths", {}).items():
-                    spec_dict["paths"][path] = path_item
-                # Merge schemas
-                for name, val in (
-                    ms_spec_rewritten.get("components", {}).get("schemas", {}).items()
-                ):
-                    if "components" not in spec_dict:
-                        spec_dict["components"] = {}
-                    if "schemas" not in spec_dict["components"]:
-                        spec_dict["components"]["schemas"] = {}
-                    spec_dict["components"]["schemas"][f"{schema_prefix}{name}"] = val
-
-    # 2. Extract codebase openapi specs statically
-    designer_spec = designer_app.openapi()
-    execution_spec = execution_app.openapi()
-    org_spec = org_app.openapi()
-    eisf_spec = eisf_app.openapi()
-    econsent_spec = econsent_app.openapi()
-
-    # 3. Aggregate all codebase routes applying gateway prefix mappings
-    # Paths are stored as: path_str -> { method_str -> operation_dict }
+    # 2. Extract codebase openapi specs dynamically
+    services = discover_services()
     code_routes = {}
     code_schemas = {}
 
-    for app_spec, path_prefix, schema_prefix in [
-        (designer_spec, "/designer", "Designer_"),
-        (execution_spec, "/execution", "Execution_"),
-        (org_spec, "/org", "Org_"),
-        (eisf_spec, "/eisf", "Eisf_"),
-        (econsent_spec, "/econsent", "Econsent_"),
-    ]:
+    # Native gateway routes
+    gateway_spec = gateway_app.openapi()
+    gateway_spec_rewritten = rewrite_references(gateway_spec, "Gateway_")
+    for path, path_item in gateway_spec_rewritten.get("paths", {}).items():
+        if path not in code_routes:
+            code_routes[path] = {}
+        for method, op in path_item.items():
+            code_routes[path][method.lower()] = op
+    for name, val in (
+        gateway_spec_rewritten.get("components", {}).get("schemas", {}).items()
+    ):
+        code_schemas[f"Gateway_{name}"] = val
+
+    # Downstream microservices
+    for service_name, config in services.items():
+        app_spec = config["app"].openapi()
+        schema_prefix = config["prefix"]
+        path_prefix = f"/{service_name}"
         app_spec_rewritten = rewrite_references(app_spec, schema_prefix)
         for path, path_item in app_spec_rewritten.get("paths", {}).items():
             prefixed_path = f"{path_prefix}{path}"
