@@ -295,11 +295,15 @@ app = FastAPI(title=f"{BRAND_NAME} - Designer (MDR/SDR)", version="0.1.0")
 
 assert_secure_secrets("designer", {"SIGNING_SECRET": os.getenv("SIGNING_SECRET")})
 
-from apps.designer.routers.cascade import router as cascade_router
-from apps.designer.routers.comments import router as comments_router
-from apps.designer.routers.protocol_export import router as export_router
-from apps.designer.routers.quality_sentinel import router as sentinel_router
-from apps.designer.routers.synopsis import router as synopsis_router
+from apps.designer.presentation.routers.cascade import router as cascade_router
+from apps.designer.presentation.routers.comments import router as comments_router
+from apps.designer.presentation.routers.protocol_export import (
+    router as export_router,
+)
+from apps.designer.presentation.routers.quality_sentinel import (
+    router as sentinel_router,
+)
+from apps.designer.presentation.routers.synopsis import router as synopsis_router
 
 app.include_router(synopsis_router)
 app.include_router(sentinel_router)

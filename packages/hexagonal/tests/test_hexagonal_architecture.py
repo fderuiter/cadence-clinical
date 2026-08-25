@@ -84,6 +84,17 @@ def test_presentation_layer_driver_isolation(service: str):
 
 
 @pytest.mark.parametrize("service", SERVICES)
+def test_no_legacy_top_level_routers_directory(service: str):
+    """Ensure no microservice maintains a legacy top-level 'routers' directory."""
+    root_dir = Path(__file__).resolve().parent.parent.parent.parent
+    legacy_routers_dir = root_dir / "apps" / service / "routers"
+    assert not legacy_routers_dir.exists(), (
+        f"Microservice '{service}' contains a legacy top-level 'routers' directory. "
+        "All API route definitions must reside inside 'presentation/routers'."
+    )
+
+
+@pytest.mark.parametrize("service", SERVICES)
 def test_decoupled_api_routers_have_no_direct_db_imports(service: str):
     """Ensure decoupled API router layers do not directly import ORM queries, database drivers, or legacy models."""
     root_dir = Path(__file__).resolve().parent.parent.parent.parent

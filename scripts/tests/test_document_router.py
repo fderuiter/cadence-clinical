@@ -19,7 +19,7 @@ from apps.execution.database.core import db_manager as exec_db_manager
 from apps.execution.database.models import AuditLog
 from apps.execution.database.models import Base as ExecBase
 from apps.execution.main import app as exec_app
-from apps.execution.routers.documents import _DOCUMENTS_DB
+from apps.execution.presentation.routers.documents import _DOCUMENTS_DB
 from apps.gateway.main import generate_signature
 
 

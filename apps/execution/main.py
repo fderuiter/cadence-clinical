@@ -81,27 +81,53 @@ from apps.execution.exceptions import (
 )
 from apps.execution.lab_range_cache import get_active_lab_ranges, lab_range_cache
 from apps.execution.outliers import recalculate_cohort_outliers
-from apps.execution.routers.amendments import router as amendments_router
-from apps.execution.routers.anomalies import router as anomalies_router
-from apps.execution.routers.anonymization import router as anonymization_router
-from apps.execution.routers.auditor import router as auditor_router
-from apps.execution.routers.cec import router as cec_router
-from apps.execution.routers.devices import router as devices_router
-from apps.execution.routers.dictionaries import router as dictionaries_router
-from apps.execution.routers.doa import router as doa_router
-from apps.execution.routers.documents import router as documents_router
-from apps.execution.routers.eisf import router as eisf_router
-from apps.execution.routers.exports import router as exports_router
-from apps.execution.routers.labs import router as labs_router
-from apps.execution.routers.locks import router as locks_router
-from apps.execution.routers.offline import router as offline_router
-from apps.execution.routers.queries import router as queries_router
-from apps.execution.routers.randomization import router as randomization_router
-from apps.execution.routers.rtsm import router as rtsm_router
-from apps.execution.routers.safety import router as safety_router
-from apps.execution.routers.sdv import router as sdv_router
-from apps.execution.routers.signatures import router as signatures_router
-from apps.execution.routers.unblinding import router as unblinding_router
+from apps.execution.presentation.routers.amendments import (
+    router as amendments_router,
+)
+from apps.execution.presentation.routers.anomalies import (
+    router as anomalies_router,
+)
+from apps.execution.presentation.routers.anonymization import (
+    router as anonymization_router,
+)
+from apps.execution.presentation.routers.auditor import (
+    router as auditor_router,
+)
+from apps.execution.presentation.routers.cec import router as cec_router
+from apps.execution.presentation.routers.devices import (
+    router as devices_router,
+)
+from apps.execution.presentation.routers.dictionaries import (
+    router as dictionaries_router,
+)
+from apps.execution.presentation.routers.doa import router as doa_router
+from apps.execution.presentation.routers.documents import (
+    router as documents_router,
+)
+from apps.execution.presentation.routers.eisf import router as eisf_router
+from apps.execution.presentation.routers.exports import (
+    router as exports_router,
+)
+from apps.execution.presentation.routers.labs import router as labs_router
+from apps.execution.presentation.routers.locks import router as locks_router
+from apps.execution.presentation.routers.offline import (
+    router as offline_router,
+)
+from apps.execution.presentation.routers.queries import (
+    router as queries_router,
+)
+from apps.execution.presentation.routers.randomization import (
+    router as randomization_router,
+)
+from apps.execution.presentation.routers.rtsm import router as rtsm_router
+from apps.execution.presentation.routers.safety import router as safety_router
+from apps.execution.presentation.routers.sdv import router as sdv_router
+from apps.execution.presentation.routers.signatures import (
+    router as signatures_router,
+)
+from apps.execution.presentation.routers.unblinding import (
+    router as unblinding_router,
+)
 from apps.execution.rtsm_authz import redact_response, verify_site_access
 from apps.execution.rtsm_supply import (
     ExpiredKitError,
