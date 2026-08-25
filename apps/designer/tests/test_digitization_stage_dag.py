@@ -195,13 +195,14 @@ async def test_schema_validation_gate_failure_stops_pipeline():
         study_id="study_fail_001",
     )
 
-    # Mock Stage 1 to produce invalid layout schema (missing protocol_title)
+    # Mock Stage 1 to produce invalid layout schema that cannot be auto-recovered
     with patch.object(
         runner,
         "_run_layout_parsing",
         return_value=(
             {
                 "protocol_id": "CDNC-001",
+                "_fail_recovery": True,
                 # missing required "protocol_title", "phase", "therapeutic_area"
             },
             0.1,
@@ -209,20 +210,117 @@ async def test_schema_validation_gate_failure_stops_pipeline():
     ):
         failed_job = await runner.run_job(job.job_id)
 
-    assert failed_job.status == DigitizationJobStatus.FAILED
+    assert failed_job.status == DigitizationJobStatus.PENDING_REVIEW
     assert failed_job.error_message is not None
     assert (
-        "protocol_title" in failed_job.error_message
+        "Human escalation required" in failed_job.error_message
+        or "protocol_title" in failed_job.error_message
         or "Field required" in failed_job.error_message
     )
 
-    # Checkpoint for stage 1 exists and is marked FAILED
+    # Checkpoint for stage 1 exists and is marked FAILED with recovery attempts recorded
     ckpt1 = failed_job.checkpoints[DigitizationStage.LAYOUT_PARSING.value]
     assert ckpt1.gate_status == StageGateStatus.FAILED
+    assert ckpt1.recovery_attempts == 2
     assert len(ckpt1.gate_errors) > 0
 
     # Stage 2 (SOA_EXTRACTION) must NOT have executed
     assert DigitizationStage.SOA_EXTRACTION.value not in failed_job.checkpoints
+
+
+@pytest.mark.asyncio
+async def test_automated_llm_schema_recovery_success():
+    """Verify that initial stage gate validation failure triggers automated LLM recovery and proceeds to completion.
+
+    @req:PRD-DDF-001
+    """
+    store = DigitizationJobStore()
+    runner = DigitizationDAGRunner(job_store=store)
+
+    job = await runner.initialize_job(
+        file_content=b"%PDF-1.4\nProtocol Title: Self Healing Test\n%%EOF",
+        filename="self_healing_test.pdf",
+        study_id="study_heal_001",
+    )
+
+    # Mock Stage 1 to initially fail validation (missing protocol_title), allowing automated recovery to heal it
+    with patch.object(
+        runner,
+        "_run_layout_parsing",
+        return_value=(
+            {
+                "protocol_id": "PROT-HEAL-01",
+                # missing protocol_title, phase, therapeutic_area -> triggers recovery loop
+            },
+            0.5,
+        ),
+    ):
+        completed_job = await runner.run_job(job.job_id)
+
+    assert completed_job.status == DigitizationJobStatus.COMPLETED
+    ckpt1 = completed_job.checkpoints[DigitizationStage.LAYOUT_PARSING.value]
+    assert ckpt1.gate_status == StageGateStatus.PASSED
+    assert ckpt1.recovery_attempts == 1
+    assert ckpt1.recovered_by_llm is True
+
+
+@pytest.mark.asyncio
+async def test_human_escalation_and_manual_stage_correction_with_signature():
+    """Verify human escalation to PENDING_REVIEW, manual correction submission with electronic signature, and stage resumption.
+
+    @req:PRD-DDF-001
+    """
+    store = DigitizationJobStore()
+    runner = DigitizationDAGRunner(job_store=store)
+
+    job = await runner.initialize_job(
+        file_content=b"%PDF-1.4\nCorrupted text\n%%EOF",
+        filename="escalation_test.pdf",
+        study_id="study_esc_001",
+    )
+
+    # Mock Stage 1 to fail validation and fail recovery
+    with patch.object(
+        runner,
+        "_run_layout_parsing",
+        return_value=(
+            {"protocol_id": "CDNC-ESC", "_fail_recovery": True},
+            0.1,
+        ),
+    ):
+        job = await runner.run_job(job.job_id)
+
+    assert job.status == DigitizationJobStatus.PENDING_REVIEW
+
+    # Submit stage correction with valid schema and 21 CFR Part 11 electronic signature
+    from apps.designer.domain.digitization_dag_models import SubmitStageCorrectionRequest
+
+    correction_payload = SubmitStageCorrectionRequest(
+        stage=DigitizationStage.LAYOUT_PARSING,
+        corrected_data={
+            "protocol_id": "CDNC-ESC-FIXED",
+            "protocol_title": "Fixed Protocol Title",
+            "phase": "PHASE_II",
+            "therapeutic_area": "Oncology",
+            "sections": {"1. Title": "Fixed Protocol Title"},
+            "word_count": 500,
+            "detected_page_count": 10,
+            "confidence_score": 1.0,
+        },
+        signature_username="qa_lead_user",
+        change_reason="Corrected missing protocol metadata for USDM v4 compliance",
+        resume_pipeline=True,
+    )
+
+    resumed_job = await runner.submit_stage_correction(job.job_id, correction_payload)
+
+    assert resumed_job.status == DigitizationJobStatus.COMPLETED
+    ckpt1 = resumed_job.checkpoints[DigitizationStage.LAYOUT_PARSING.value]
+    assert ckpt1.gate_status == StageGateStatus.PASSED
+    assert ckpt1.corrected_by == "qa_lead_user"
+    assert ckpt1.correction_reason == "Corrected missing protocol metadata for USDM v4 compliance"
+    assert ckpt1.signature_manifestation is not None
+    assert ckpt1.signature_manifestation["signer_id"] == "qa_lead_user"
 
 
 @pytest.mark.asyncio
