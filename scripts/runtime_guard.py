@@ -5,6 +5,9 @@ Ensures that all developer scripts and quality gate validators run under the
 pinned workspace Python runtime (Python 3.14+) and provides interpreter telemetry.
 """
 
+import contextlib
+import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -28,13 +31,44 @@ def print_runtime_info(script_name: str | None = None, quiet: bool = False) -> N
 def enforce_python_runtime(
     min_version: tuple[int, int] = MIN_PYTHON_VERSION,
     script_name: str | None = None,
+    auto_reexec: bool = True,
 ) -> None:
     """
     Enforces that the current Python interpreter meets the minimum version requirement.
-    If the current interpreter is incompatible, prints an actionable error message
-    and immediately terminates execution with exit code 1.
+    If the current interpreter is incompatible, automatically delegates execution to
+    the managed Python 3.14+ runtime via uv if available. Otherwise, prints an
+    actionable error message and terminates execution with exit code 1.
     """
     if sys.version_info < min_version:
+        # Check if auto re-execution via uv should be attempted
+        disable_reexec = os.environ.get(
+            "CADENCE_DISABLE_RUNTIME_REEXEC", ""
+        ).lower() in ("1", "true", "yes")
+        is_testing = "pytest" in sys.modules
+
+        if auto_reexec and not disable_reexec and not is_testing:
+            uv_bin = shutil.which("uv")
+            if uv_bin:
+                current_ver = (
+                    f"{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}"
+                )
+                min_ver_str = f"{min_version[0]}.{min_version[1]}+"
+                sys.stderr.write(
+                    f"[INFO] Incompatible Python runtime ({current_ver}) detected (<{min_ver_str}). "
+                    f"Delegating execution to uv managed Python {min_ver_str} runtime...\n"
+                )
+                sys.stderr.flush()
+                args = sys.argv if sys.argv else ["python"]
+                cmd = [
+                    uv_bin,
+                    "run",
+                    "--python",
+                    f"{min_version[0]}.{min_version[1]}",
+                    "python",
+                ] + args
+                with contextlib.suppress(Exception):
+                    os.execvp(uv_bin, cmd)
+
         current_ver = (
             f"{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}"
         )

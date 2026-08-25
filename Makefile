@@ -18,58 +18,58 @@ BOLD  := \033[1m
 
 setup: ## Install all Python + Node deps, Playwright browsers, and pre-commit hooks
 	uv sync --python 3.14 --all-extras
-	uv run playwright install chromium
-	uv run pre-commit install --install-hooks
+	uv run --python 3.14 playwright install chromium
+	uv run --python 3.14 pre-commit install --install-hooks
 	pnpm install --frozen-lockfile
 	@echo "$(CYAN)✔ Environment ready. Run 'make verify' to confirm everything passes.$(RESET)"
 
 ##@ Developer Experience & CLI
 doctor: ## Run system diagnostics and verify development environment health
-	uv run cadence doctor
+	uv run --python 3.14 cadence doctor
 
 dev: ## Orchestrate local microservices with live reloading
-	uv run cadence dev
+	uv run --python 3.14 cadence dev
 
 ##@ Code Quality
 
 fix: ## Auto-fix all ruff lint violations, format code, and sync schemas (safe to run anytime)
-	uv run cadence fix
+	uv run --python 3.14 cadence fix
 
 lint-paths: ## Run lightweight path-pattern boundary linter
-	uv run python scripts/validate_path_patterns.py --all
+	uv run --python 3.14 python scripts/validate_path_patterns.py --all
 
 typecheck: ## Run static type checking for repository contracts
-	uv run python scripts/verify_contracts.py
+	uv run --python 3.14 python scripts/verify_contracts.py
 
 lint: lint-paths typecheck ## Check lint (no auto-fix)
 	pnpm -r lint
-	uv run ruff check . --exclude apps/execution/database/models.py
+	uv run --python 3.14 ruff check . --exclude apps/execution/database/models.py
 
 format: ## Check formatting only (no auto-fix)
 	pnpm -r format
-	uv run ruff format --check --target-version py313 . --exclude apps/execution/database/models.py
+	uv run --python 3.14 ruff format --check --target-version py313 . --exclude apps/execution/database/models.py
 
 check: ## Run all pre-push quality gates: format, lint, secrets, ADRs, markdown, security, imports, contracts
-	uv run cadence check
+	uv run --python 3.14 cadence check
 
 verify: ## Full verification — quality gates + all test suites (use before opening a PR)
 	pnpm verify
 
 test: ## Run backend unit tests with coverage
-	uv run cadence test
+	uv run --python 3.14 cadence test
 
 ##@ GxP Compliance
 
 sync-gxp: ## Run tests → regenerate RTM docs → stage docs/SDLC/ (fixes the CI compliance gate)
-	uv run cadence gxp sync
+	uv run --python 3.14 cadence gxp sync
 
 rtm: ## Validate that checked-in RTM docs are up to date (read-only, no test run)
-	uv run cadence gxp validate
+	uv run --python 3.14 cadence gxp validate
 
 ##@ Architecture & Documentation
 
 adr: ## Scaffold a new Architecture Decision Record (prompts for title/domain/req)
-	uv run python scripts/create_adr.py
+	uv run --python 3.14 python scripts/create_adr.py
 
 docs: ## Serve the VitePress documentation portal locally
 	pnpm docs:dev
@@ -77,22 +77,22 @@ docs: ## Serve the VitePress documentation portal locally
 ##@ Database
 
 db-reset: ## Drop and re-create the local development database schema
-	uv run cadence db reset
+	uv run --python 3.14 cadence db reset
 
 db-reset-offline: ## Reset databases offline, generating warnings if remote connections fail
-	uv run cadence db reset --allow-offline
+	uv run --python 3.14 cadence db reset --allow-offline
 
 db-seed: ## Populate multi-engine databases with realistic end-to-end clinical trial datasets
-	uv run cadence db seed
+	uv run --python 3.14 cadence db seed
 
 db-status: ## Display multi-engine database sizes and available snapshots
-	uv run cadence db status
+	uv run --python 3.14 cadence db status
 
 regenerate-templates: ## Regenerate DOCX protocol templates programmatically
-	uv run python scripts/regenerate_templates.py
+	uv run --python 3.14 python scripts/regenerate_templates.py
 
 ports: ## Check that all required service ports are free
-	uv run cadence doctor
+	uv run --python 3.14 cadence doctor
 
 ##@ Help
 

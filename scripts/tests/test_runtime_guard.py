@@ -82,3 +82,35 @@ def test_enforce_python_runtime_matrix(
     captured = capsys.readouterr()
     assert f"Current runtime:  Python {version_str}" in captured.err
     assert "Required runtime: Python 3.14+" in captured.err
+
+
+def test_enforce_python_runtime_auto_reexec_delegates_to_uv(monkeypatch):
+    """Verify enforce_python_runtime attempts os.execvp delegation via uv on outdated Python."""
+    mock_version = (3, 12, 0, "final", 0)
+    monkeypatch.setattr(sys, "version_info", mock_version)
+
+    executed_cmd = []
+
+    def mock_execvp(file, args):
+        executed_cmd.extend(args)
+        raise SystemExit(0)
+
+    monkeypatch.setattr("os.execvp", mock_execvp)
+    monkeypatch.setattr(
+        "shutil.which", lambda cmd: "/usr/bin/uv" if cmd == "uv" else None
+    )
+
+    modules = dict(sys.modules)
+    modules.pop("pytest", None)
+    monkeypatch.setattr(sys, "modules", modules)
+
+    with pytest.raises(SystemExit) as exc_info:
+        rg.enforce_python_runtime(
+            min_version=(3, 14), script_name="check.py", auto_reexec=True
+        )
+
+    assert exc_info.value.code == 0
+    assert executed_cmd[0] == "/usr/bin/uv"
+    assert "run" in executed_cmd
+    assert "--python" in executed_cmd
+    assert "3.14" in executed_cmd
