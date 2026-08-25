@@ -31,27 +31,16 @@ os.environ.setdefault("JWT_SECRET_KEY", "dev-jwt-secret-key-12345")
 os.environ.setdefault("BRAND_DOMAIN", "ccrsoft.com")
 
 try:
-    from apps.designer.main import app as designer_app
-    from apps.execution.main import app as execution_app
+    from apps.gateway.main import app as gateway_app
 except ImportError as e:
-    print(f"Error importing service entrypoints: {e}", file=sys.stderr)
+    print(f"Error importing gateway entrypoint: {e}", file=sys.stderr)
     sys.exit(1)
-
-
-def deep_merge(dict1, dict2):
-    """Deep merge dict2 into dict1 in place."""
-    for key, val in dict2.items():
-        if isinstance(val, dict) and key in dict1 and isinstance(dict1[key], dict):
-            deep_merge(dict1[key], val)
-        else:
-            dict1[key] = val
-    return dict1
 
 
 def main():
     print("Generating and merging OpenAPI specifications statically...")
-    designer_spec = designer_app.openapi()
-    execution_spec = execution_app.openapi()
+    gateway_app.openapi_schema = None
+    aggregated_spec = gateway_app.openapi()
 
     brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
     # Create the aggregated structure
@@ -72,17 +61,9 @@ def main():
                 "description": "Local Dev Gateway Proxy",
             },
         ],
-        "paths": {},
-        "components": {},
+        "paths": aggregated_spec.get("paths", {}),
+        "components": aggregated_spec.get("components", {}),
     }
-
-    # Deep merge paths
-    deep_merge(merged_spec["paths"], designer_spec.get("paths", {}))
-    deep_merge(merged_spec["paths"], execution_spec.get("paths", {}))
-
-    # Deep merge components
-    deep_merge(merged_spec["components"], designer_spec.get("components", {}))
-    deep_merge(merged_spec["components"], execution_spec.get("components", {}))
 
     # Convert merged spec to YAML string
     # We want a clean string representation

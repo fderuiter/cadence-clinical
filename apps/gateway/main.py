@@ -151,13 +151,72 @@ def custom_openapi() -> dict[str, Any]:
         "components": {"schemas": {}},
     }
 
-    # Copy native paths and schemas
-    for path_str, path_item in native_openapi.get("paths", {}).items():
+    def rewrite_references(data: Any, prefix: str, visited: set | None = None) -> Any:
+        if visited is None:
+            visited = set()
+
+        if id(data) in visited:
+            return {
+                "type": "object",
+                "description": "Circular reference detected and isolated",
+            }
+
+        if isinstance(data, dict):
+            visited.add(id(data))
+            new_data = {}
+            for k, v in data.items():
+                if (
+                    k == "$ref"
+                    and isinstance(v, str)
+                    and v.startswith("#/components/schemas/")
+                ):
+                    ref_name = v[len("#/components/schemas/") :]
+                    if not ref_name.startswith(prefix):
+                        new_data[k] = f"#/components/schemas/{prefix}{ref_name}"
+                    else:
+                        new_data[k] = v
+                else:
+                    new_data[k] = rewrite_references(v, prefix, visited)
+            visited.remove(id(data))
+            return new_data
+        if isinstance(data, list):
+            visited.add(id(data))
+            new_list = [rewrite_references(item, prefix, visited) for item in data]
+            visited.remove(id(data))
+            return new_list
+        return data
+
+    http_methods = {"get", "put", "post", "delete", "options", "head", "patch", "trace"}
+
+    def rewrite_paths(paths_dict: dict[str, Any], prefix: str) -> dict[str, Any]:
+        new_paths = {}
+        for path_str, path_item in paths_dict.items():
+            if not isinstance(path_item, dict):
+                new_paths[path_str] = path_item
+                continue
+            new_path_item = {}
+            for k, v in path_item.items():
+                if k.lower() in http_methods and isinstance(v, dict):
+                    op = dict(v)
+                    if "operationId" in op and isinstance(op["operationId"], str):
+                        op_id = op["operationId"]
+                        if not op_id.startswith(prefix):
+                            op["operationId"] = f"{prefix}{op_id}"
+                    new_path_item[k] = op
+                else:
+                    new_path_item[k] = v
+            new_paths[path_str] = new_path_item
+        return new_paths
+
+    # Copy native paths and schemas with Gateway_ prefix
+    native_openapi_rewritten = rewrite_references(native_openapi, "Gateway_")
+    native_paths = rewrite_paths(native_openapi_rewritten.get("paths", {}), "Gateway_")
+    for path_str, path_item in native_paths.items():
         merged["paths"][path_str] = path_item
     for schema_name, schema_val in (
-        native_openapi.get("components", {}).get("schemas", {}).items()
+        native_openapi_rewritten.get("components", {}).get("schemas", {}).items()
     ):
-        merged["components"]["schemas"][schema_name] = schema_val
+        merged["components"]["schemas"][f"Gateway_{schema_name}"] = schema_val
 
     # Discover and load downstream services offline
     import importlib
