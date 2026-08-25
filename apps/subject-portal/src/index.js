@@ -670,7 +670,12 @@ async function startQuestionnaire(assignmentId) {
         12
       );
     } else {
-      formHtml += createClinicalInput(id, field.label, "", null, 12);
+      const isNumeric = field.type === "numeric" || field.type === "number";
+      const inputAttrs = {
+        type: isNumeric ? "number" : "text",
+        ...(isNumeric ? { inputmode: "numeric" } : {})
+      };
+      formHtml += createClinicalInput(id, field.label, "", null, 12, inputAttrs);
     }
   });
 
@@ -2786,6 +2791,11 @@ async function initializeApp() {
 }
 
 async function checkPINWrapper() {
+  if (getInMemorySessionKey()) {
+    state.pinUnlock.isOpen = false;
+    state.pinSetup.isOpen = false;
+    return;
+  }
   const config = await getWrappedMasterKeyConfig();
   if (config.wrappedKey) {
     if (!getInMemorySessionKey()) {
@@ -2956,7 +2966,14 @@ function createClinicalInput(
   gridSpan = 12,
   attributes = {}
 ) {
-  const extraAttrs = Object.entries(attributes)
+  const isNumeric = attributes.type === "numeric" || attributes.type === "number";
+  const inputType = isNumeric ? "number" : (attributes.type || "text");
+  const inputModeAttr = (attributes.inputmode || (isNumeric ? "numeric" : ""))
+    ? ` inputmode="${attributes.inputmode || "numeric"}"`
+    : "";
+
+  const containerAttrs = Object.entries(attributes)
+    .filter(([k]) => k !== "type" && k !== "inputmode")
     .map(([k, v]) => `${k}="${v}"`)
     .join(" ");
 
@@ -2964,10 +2981,10 @@ function createClinicalInput(
   const queryPanelHTML = createQueryPanel(id, query);
 
   return `
-<div class="clinical-input grid-span-${gridSpan}" style="grid-column: span ${gridSpan};" id="field-container-${id}" ${extraAttrs}>
+<div class="clinical-input grid-span-${gridSpan}" style="grid-column: span ${gridSpan};" id="field-container-${id}" ${containerAttrs}>
   <label for="${id}">${label}</label>
   <div class="input-wrapper">
-    <input type="text" id="${id}" name="${id}" value="${value}" />
+    <input type="${inputType}" id="${id}" name="${id}" value="${value}"${inputModeAttr} />
     ${queryFlagHTML}
   </div>
   ${queryPanelHTML}

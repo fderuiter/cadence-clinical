@@ -3,6 +3,12 @@
     id="app"
     :class="{ 'drawer-open': state.isSyncDrawerOpen }"
   >
+    <!-- Accessible Skip to Content Link -->
+    <a
+      href="#main-content"
+      class="skip-link"
+    >Skip to main content</a>
+
     <!-- Portal Header -->
     <header class="portal-header">
       <div class="header-branding">
@@ -34,6 +40,8 @@
           <span
             v-if="queuedSubmissionsCount > 0"
             class="sync-badge"
+            aria-live="polite"
+            aria-atomic="true"
           >
             {{ queuedSubmissionsCount }}
           </span>
@@ -73,7 +81,11 @@
 
       <div class="drawer-body">
         <div class="sync-status-section">
-          <p class="status-text">
+          <p
+            class="status-text"
+            role="status"
+            aria-live="polite"
+          >
             {{ state.syncStatusText || "Checking sync status..." }}
           </p>
           <button
@@ -232,7 +244,11 @@
       </nav>
 
       <!-- Main Viewport -->
-      <main class="portal-main">
+      <main
+        id="main-content"
+        class="portal-main"
+        tabindex="-1"
+      >
         <!-- Urgent Re-Consent Notification Banner -->
         <div
           v-if="state.pendingReconsent"
@@ -418,6 +434,8 @@
               id="sync-queue-status-text"
               class="text-muted"
               style="font-size: 14px; margin-bottom: 12px"
+              role="status"
+              aria-live="polite"
             >
               Checking sync status...
             </div>
@@ -453,25 +471,31 @@
           </div>
 
           <div class="card questionnaire-card">
-            <div id="questionnaire-form-container">
-              <!-- Dynamically compiled CDASH-inputs go here -->
-            </div>
-            <div class="form-actions">
-              <button
-                id="btn-cancel-questionnaire"
-                type="button"
-                class="btn btn-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                id="btn-submit-questionnaire"
-                type="button"
-                class="btn btn-primary"
-              >
-                Sign and Submit
-              </button>
-            </div>
+            <form
+              id="questionnaire-form"
+              @submit.prevent="submitActiveQuestionnaire"
+            >
+              <div id="questionnaire-form-container">
+                <!-- Dynamically compiled CDASH-inputs go here -->
+              </div>
+              <div class="form-actions">
+                <button
+                  id="btn-cancel-questionnaire"
+                  type="button"
+                  class="btn btn-secondary"
+                  @click="cancelQuestionnaire"
+                >
+                  Cancel
+                </button>
+                <button
+                  id="btn-submit-questionnaire"
+                  type="submit"
+                  class="btn btn-primary"
+                >
+                  Sign and Submit
+                </button>
+              </div>
+            </form>
           </div>
         </section>
 
@@ -952,11 +976,29 @@
             <p style="font-size: 14px; color: var(--text-muted);">
               Upload receipt photos for clinical trial travel, mileage, parking, and meals.
             </p>
-            <div style="border: 2px dashed var(--border-color); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; background: var(--bg-muted);">
+            <div
+              id="receipt-upload-dropzone"
+              class="dropzone-upload"
+              tabindex="0"
+              role="button"
+              aria-label="Upload receipt image for travel reimbursement"
+              style="border: 2px dashed var(--border-color); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; background: var(--bg-muted); min-height: 120px;"
+              @click="triggerReceiptUpload"
+              @keydown.enter.prevent="triggerReceiptUpload"
+              @keydown.space.prevent="triggerReceiptUpload"
+            >
               <span style="font-size: 24px;">📷</span>
               <p style="margin: 6px 0 0 0; font-size: 14px; font-weight: 600;">Tap to Capture or Upload Receipt Image</p>
               <small style="color: var(--text-muted);">OCR extraction will automatically detect merchant, date, and amount</small>
             </div>
+            <input
+              id="receipt-file-input"
+              type="file"
+              accept="image/*"
+              class="sr-only"
+              style="display: none;"
+              @change="handleReceiptFileSelected"
+            >
           </div>
         </section>
 
@@ -1012,97 +1054,100 @@
       @keydown="handleModalKeyDown"
     >
       <div class="modal">
-        <div
-          id="portal-modal-title"
-          class="modal-header"
-        >
-          Electronic Signature Required
-        </div>
-        <div class="modal-body">
-          <p>
-            To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>,
-            you must provide your electronic signature credentials and declare
-            your change reason or completion affirmation.
-          </p>
-          <!-- Accessible modal live error region -->
+        <form id="sign-modal-form" @submit.prevent>
           <div
-            id="modal-error-banner"
-            style="
-              display: none;
-              padding: 8px;
-              border-radius: 4px;
-              background-color: #fee2e2;
-              color: #b91c1c;
-              margin-bottom: 12px;
-              font-size: 13px;
-              font-weight: 600;
-            "
-            role="status"
-            aria-live="polite"
-          />
-
-          <div class="form-group mb-12">
-            <label for="sign-reason">Reason for Action / Declaration</label>
-            <select id="sign-reason">
-              <option value="Initial Questionnaire Completion">
-                Initial Questionnaire Completion
-              </option>
-              <option value="Correction of previous entry">
-                Correction of previous entry
-              </option>
-              <option value="Requested update by study coordinator">
-                Requested update by study coordinator
-              </option>
-              <option value="Acknowledge important reminder">
-                Acknowledge important reminder
-              </option>
-              <option value="Other">
-                Other (specify below)
-              </option>
-            </select>
+            id="portal-modal-title"
+            class="modal-header"
+          >
+            Electronic Signature Required
           </div>
-          <div class="form-group mb-12">
-            <label for="sign-reason-custom">Custom Reason Detail (Optional)</label>
-            <textarea
-              id="sign-reason-custom"
-              placeholder="Provide extra detail if 'Other' selected..."
+          <div class="modal-body">
+            <p>
+              To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>,
+              you must provide your electronic signature credentials and declare
+              your change reason or completion affirmation.
+            </p>
+            <!-- Accessible modal live error region -->
+            <div
+              id="modal-error-banner"
+              style="
+                display: none;
+                padding: 8px;
+                border-radius: 4px;
+                background-color: #fee2e2;
+                color: #b91c1c;
+                margin-bottom: 12px;
+                font-size: 13px;
+                font-weight: 600;
+              "
+              role="status"
+              aria-live="polite"
             />
+
+            <div class="form-group mb-12">
+              <label for="sign-reason">Reason for Action / Declaration</label>
+              <select id="sign-reason">
+                <option value="Initial Questionnaire Completion">
+                  Initial Questionnaire Completion
+                </option>
+                <option value="Correction of previous entry">
+                  Correction of previous entry
+                </option>
+                <option value="Requested update by study coordinator">
+                  Requested update by study coordinator
+                </option>
+                <option value="Acknowledge important reminder">
+                  Acknowledge important reminder
+                </option>
+                <option value="Other">
+                  Other (specify below)
+                </option>
+              </select>
+            </div>
+            <div class="form-group mb-12">
+              <label for="sign-reason-custom">Custom Reason Detail (Optional)</label>
+              <textarea
+                id="sign-reason-custom"
+                placeholder="Provide extra detail if 'Other' selected..."
+              />
+            </div>
+            <div class="form-group mb-12">
+              <label for="sign-username">User ID / Username</label>
+              <input
+                id="sign-username"
+                type="text"
+                placeholder="Enter your participant identifier..."
+                required
+              >
+            </div>
+            <div class="form-group">
+              <label for="sign-password">Security PIN / Password</label>
+              <input
+                id="sign-password"
+                type="password"
+                inputmode="numeric"
+                placeholder="••••••••"
+                required
+              >
+            </div>
           </div>
-          <div class="form-group mb-12">
-            <label for="sign-username">User ID / Username</label>
-            <input
-              id="sign-username"
-              type="text"
-              placeholder="Enter your participant identifier..."
-              required
+          <div class="modal-footer">
+            <button
+              id="btn-modal-cancel"
+              type="button"
+              class="btn btn-secondary"
             >
-          </div>
-          <div class="form-group">
-            <label for="sign-password">Security PIN / Password</label>
-            <input
-              id="sign-password"
-              type="password"
-              placeholder="••••••••"
-              required
+              Cancel
+            </button>
+            <button
+              id="btn-modal-sign"
+              type="submit"
+              class="btn btn-primary"
             >
+              Sign and Confirm
+            </button>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            id="btn-modal-cancel"
-            type="button"
-            class="btn btn-secondary"
-          >
-            Cancel
-          </button>
-          <button
-            id="btn-modal-sign"
-            type="button"
-            class="btn btn-primary"
-          >
-            Sign and Confirm
-          </button>
-        </div>
+        </form>
       </div>
     </div>
 
@@ -1121,124 +1166,129 @@
         class="modal"
         style="max-width: 600px"
       >
-        <div
-          id="portal-reconsent-modal-title"
-          class="modal-header"
+        <form
+          id="reconsent-modal-form"
+          @submit.prevent="submitReconsentSignature"
         >
-          Protocol Amendment Re-Consent Review
-        </div>
-        <div class="modal-body">
-          <p style="font-size: 14px; margin-bottom: 12px">
-            A new protocol amendment has been published for your clinical study.
-            Please review the change summary below and execute your electronic
-            signature to complete re-consent.
-          </p>
-
           <div
-            v-if="state.reconsentModalError"
-            id="reconsent-modal-error-banner"
-            style="
-              padding: 8px 12px;
-              border-radius: 4px;
-              background-color: #fee2e2;
-              color: #b91c1c;
-              margin-bottom: 12px;
-              font-size: 13px;
-              font-weight: 600;
-            "
-            role="status"
-            aria-live="polite"
+            id="portal-reconsent-modal-title"
+            class="modal-header"
           >
-            {{ state.reconsentModalError }}
+            Protocol Amendment Re-Consent Review
           </div>
-
-          <div
-            id="reconsent-change-summary"
-            class="card"
-            style="
-              background-color: #f8fafc;
-              border: 1px solid #e2e8f0;
-              padding: 12px 16px;
-              margin-bottom: 16px;
-              border-radius: 6px;
-            "
-          >
-            <h4 style="margin: 0 0 6px 0; font-size: 14px; color: #1e293b">
-              Summary of Protocol Amendments:
-            </h4>
-            <p style="margin: 0; font-size: 13px; color: #475569">
-              {{
-                state.pendingReconsent?.change_summary ||
-                  state.pendingReconsent?.summary_of_changes ||
-                  "Updated study consent document terms."
-              }}
+          <div class="modal-body">
+            <p style="font-size: 14px; margin-bottom: 12px">
+              A new protocol amendment has been published for your clinical study.
+              Please review the change summary below and execute your electronic
+              signature to complete re-consent.
             </p>
-          </div>
 
-          <div class="form-group mb-12">
-            <label for="reconsent-sign-reason">Reason for Action / Declaration</label>
-            <select
-              id="reconsent-sign-reason"
-              v-model="state.reconsentForm.reason"
+            <div
+              v-if="state.reconsentModalError"
+              id="reconsent-modal-error-banner"
+              style="
+                padding: 8px 12px;
+                border-radius: 4px;
+                background-color: #fee2e2;
+                color: #b91c1c;
+                margin-bottom: 12px;
+                font-size: 13px;
+                font-weight: 600;
+              "
+              role="status"
+              aria-live="polite"
             >
-              <option value="Protocol Amendment Re-Consent Acknowledgment">
-                Protocol Amendment Re-Consent Acknowledgment
-              </option>
-              <option value="Acknowledge updated clinical study consent">
-                Acknowledge updated clinical study consent
-              </option>
-              <option value="Other">
-                Other (specify below)
-              </option>
-            </select>
-          </div>
-          <div class="form-group mb-12">
-            <label for="reconsent-sign-reason-custom">Custom Reason Detail (Optional)</label>
-            <textarea
-              id="reconsent-sign-reason-custom"
-              v-model="state.reconsentForm.customReason"
-              placeholder="Provide extra detail if 'Other' selected..."
-            />
-          </div>
-          <div class="form-group mb-12">
-            <label for="reconsent-sign-username">User ID / Username</label>
-            <input
-              id="reconsent-sign-username"
-              v-model="state.reconsentForm.username"
-              type="text"
-              placeholder="Enter your participant identifier..."
-              required
+              {{ state.reconsentModalError }}
+            </div>
+
+            <div
+              id="reconsent-change-summary"
+              class="card"
+              style="
+                background-color: #f8fafc;
+                border: 1px solid #e2e8f0;
+                padding: 12px 16px;
+                margin-bottom: 16px;
+                border-radius: 6px;
+              "
             >
+              <h4 style="margin: 0 0 6px 0; font-size: 14px; color: #1e293b">
+                Summary of Protocol Amendments:
+              </h4>
+              <p style="margin: 0; font-size: 13px; color: #475569">
+                {{
+                  state.pendingReconsent?.change_summary ||
+                    state.pendingReconsent?.summary_of_changes ||
+                    "Updated study consent document terms."
+                }}
+              </p>
+            </div>
+
+            <div class="form-group mb-12">
+              <label for="reconsent-sign-reason">Reason for Action / Declaration</label>
+              <select
+                id="reconsent-sign-reason"
+                v-model="state.reconsentForm.reason"
+              >
+                <option value="Protocol Amendment Re-Consent Acknowledgment">
+                  Protocol Amendment Re-Consent Acknowledgment
+                </option>
+                <option value="Acknowledge updated clinical study consent">
+                  Acknowledge updated clinical study consent
+                </option>
+                <option value="Other">
+                  Other (specify below)
+                </option>
+              </select>
+            </div>
+            <div class="form-group mb-12">
+              <label for="reconsent-sign-reason-custom">Custom Reason Detail (Optional)</label>
+              <textarea
+                id="reconsent-sign-reason-custom"
+                v-model="state.reconsentForm.customReason"
+                placeholder="Provide extra detail if 'Other' selected..."
+              />
+            </div>
+            <div class="form-group mb-12">
+              <label for="reconsent-sign-username">User ID / Username</label>
+              <input
+                id="reconsent-sign-username"
+                v-model="state.reconsentForm.username"
+                type="text"
+                placeholder="Enter your participant identifier..."
+                required
+              >
+            </div>
+            <div class="form-group">
+              <label for="reconsent-sign-password">Security PIN / Password</label>
+              <input
+                id="reconsent-sign-password"
+                v-model="state.reconsentForm.password"
+                type="password"
+                inputmode="numeric"
+                placeholder="••••••••"
+                required
+              >
+            </div>
           </div>
-          <div class="form-group">
-            <label for="reconsent-sign-password">Security PIN / Password</label>
-            <input
-              id="reconsent-sign-password"
-              v-model="state.reconsentForm.password"
-              type="password"
-              placeholder="••••••••"
-              required
+          <div class="modal-footer">
+            <button
+              id="btn-reconsent-cancel"
+              type="button"
+              class="btn btn-secondary"
+              @click="closeReconsentModal"
             >
+              Cancel
+            </button>
+            <button
+              id="btn-reconsent-submit"
+              type="submit"
+              class="btn btn-primary"
+            >
+              Sign and Confirm Re-Consent
+            </button>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            id="btn-reconsent-cancel"
-            type="button"
-            class="btn btn-secondary"
-            @click="closeReconsentModal"
-          >
-            Cancel
-          </button>
-          <button
-            id="btn-reconsent-submit"
-            type="button"
-            class="btn btn-primary"
-            @click="submitReconsentSignature"
-          >
-            Sign and Confirm Re-Consent
-          </button>
-        </div>
+        </form>
       </div>
     </div>
 
@@ -1254,67 +1304,71 @@
       @keydown="handleSetupModalKeyDown"
     >
       <div class="modal">
-        <div
-          id="pin-setup-title"
-          class="modal-header"
+        <form
+          id="pin-setup-form"
+          @submit.prevent="handlePINSetupSubmit"
         >
-          Configure Security PIN
-        </div>
-        <div class="modal-body">
-          <p>
-            To secure your offline clinical data, please choose a numeric local
-            security PIN. This PIN will wrap and encrypt your offline database
-            encryption key.
-          </p>
           <div
-            v-if="state.pinSetup.error"
-            class="error-state"
-            style="
-              color: var(--danger);
-              font-weight: bold;
-              font-size: 14px;
-              margin-bottom: 12px;
-            "
-            role="status"
-            aria-live="polite"
+            id="pin-setup-title"
+            class="modal-header"
           >
-            {{ state.pinSetup.error }}
+            Configure Security PIN
           </div>
-          <div class="form-group mb-12">
-            <label for="setup-pin">Choose Numeric PIN</label>
-            <input
-              id="setup-pin"
-              v-model="state.pinSetup.pin"
-              type="password"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              placeholder="••••"
-              required
+          <div class="modal-body">
+            <p>
+              To secure your offline clinical data, please choose a numeric local
+              security PIN. This PIN will wrap and encrypt your offline database
+              encryption key.
+            </p>
+            <div
+              v-if="state.pinSetup.error"
+              class="error-state"
+              style="
+                color: var(--danger);
+                font-weight: bold;
+                font-size: 14px;
+                margin-bottom: 12px;
+              "
+              role="status"
+              aria-live="polite"
             >
+              {{ state.pinSetup.error }}
+            </div>
+            <div class="form-group mb-12">
+              <label for="setup-pin">Choose Numeric PIN</label>
+              <input
+                id="setup-pin"
+                v-model="state.pinSetup.pin"
+                type="password"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                placeholder="••••"
+                required
+              >
+            </div>
+            <div class="form-group">
+              <label for="confirm-setup-pin">Confirm Numeric PIN</label>
+              <input
+                id="confirm-setup-pin"
+                v-model="state.pinSetup.confirmPin"
+                type="password"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                placeholder="••••"
+                required
+              >
+            </div>
           </div>
-          <div class="form-group">
-            <label for="confirm-setup-pin">Confirm Numeric PIN</label>
-            <input
-              id="confirm-setup-pin"
-              v-model="state.pinSetup.confirmPin"
-              type="password"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              placeholder="••••"
-              required
+          <div class="modal-footer">
+            <button
+              id="btn-pin-setup-confirm"
+              type="submit"
+              class="btn btn-primary"
             >
+              Save and Configure
+            </button>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            id="btn-pin-setup-confirm"
-            type="button"
-            class="btn btn-primary"
-            @click="handlePINSetupSubmit"
-          >
-            Save and Configure
-          </button>
-        </div>
+        </form>
       </div>
     </div>
 
@@ -1330,56 +1384,60 @@
       @keydown="handleUnlockModalKeyDown"
     >
       <div class="modal">
-        <div
-          id="pin-unlock-title"
-          class="modal-header"
+        <form
+          id="pin-unlock-form"
+          @submit.prevent="handlePINUnlockSubmit"
         >
-          Device Locked - Enter Security PIN
-        </div>
-        <div class="modal-body">
-          <p>
-            Please enter your numeric security PIN to access the clinical portal
-            and decrypt your offline data.
-          </p>
           <div
-            v-if="state.pinUnlock.error"
-            id="pin-unlock-error"
-            class="error-state"
-            style="
-              color: var(--danger);
-              font-weight: bold;
-              font-size: 14px;
-              margin-bottom: 12px;
-            "
-            role="status"
-            aria-live="polite"
+            id="pin-unlock-title"
+            class="modal-header"
           >
-            {{ state.pinUnlock.error }}
+            Device Locked - Enter Security PIN
           </div>
-          <div class="form-group">
-            <label for="unlock-pin">Security PIN</label>
-            <input
-              id="unlock-pin"
-              v-model="state.pinUnlock.pin"
-              type="password"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              placeholder="••••"
-              required
-              @keydown.enter="handlePINUnlockSubmit"
+          <div class="modal-body">
+            <p>
+              Please enter your numeric security PIN to access the clinical portal
+              and decrypt your offline data.
+            </p>
+            <div
+              v-if="state.pinUnlock.error"
+              id="pin-unlock-error"
+              class="error-state"
+              style="
+                color: var(--danger);
+                font-weight: bold;
+                font-size: 14px;
+                margin-bottom: 12px;
+              "
+              role="status"
+              aria-live="polite"
             >
+              {{ state.pinUnlock.error }}
+            </div>
+            <div class="form-group">
+              <label for="unlock-pin">Security PIN</label>
+              <input
+                id="unlock-pin"
+                v-model="state.pinUnlock.pin"
+                type="password"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                placeholder="••••"
+                required
+                @keydown.enter="handlePINUnlockSubmit"
+              >
+            </div>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            id="btn-pin-unlock-confirm"
-            type="button"
-            class="btn btn-primary"
-            @click="handlePINUnlockSubmit"
-          >
-            Unlock
-          </button>
-        </div>
+          <div class="modal-footer">
+            <button
+              id="btn-pin-unlock-confirm"
+              type="submit"
+              class="btn btn-primary"
+            >
+              Unlock
+            </button>
+          </div>
+        </form>
       </div>
     </div>
 
@@ -1633,6 +1691,31 @@ function handleTabKeyDown(event) {
 
 function selectView(viewId) {
   showView(viewId);
+}
+
+function submitActiveQuestionnaire() {
+  const submitBtn = document.getElementById("btn-submit-questionnaire");
+  if (submitBtn) {
+    submitBtn.click();
+  }
+}
+
+function cancelQuestionnaire() {
+  showView("view-tasks");
+}
+
+function triggerReceiptUpload() {
+  const fileInput = document.getElementById("receipt-file-input");
+  if (fileInput) {
+    fileInput.click();
+  }
+}
+
+function handleReceiptFileSelected(e) {
+  const file = e.target?.files?.[0];
+  if (file) {
+    showToast(`Receipt uploaded: ${file.name}`);
+  }
 }
 
 function handleModalKeyDown(e) {
