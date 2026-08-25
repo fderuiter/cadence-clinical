@@ -6,7 +6,7 @@ Conforms to FDA 21 CFR Part 11 and CDISC GxP requirements.
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -15,6 +15,9 @@ from apps.designer.domain.eligibility.models import (
     NodeEvaluation,
 )
 from packages.compliance.services.protocol_rag import ProtocolRAGContextChunk
+
+PatientObservationValue = str | int | float | bool | None
+PatientProfileContext = dict[str, PatientObservationValue]
 
 
 class CriteriaBreakdownSummary(BaseModel):
@@ -130,7 +133,7 @@ class CohortFeasibilityRequest(BaseModel):
         default_factory=list,
         description="Structured inclusion and exclusion criteria AST definitions",
     )
-    patient_profiles: list[dict[str, Any]] | None = Field(
+    patient_profiles: list[PatientProfileContext] | None = Field(
         default=None,
         description="Optional patient observation data contexts. If omitted, synthetic profiles are generated.",
     )
@@ -235,6 +238,8 @@ __all__ = [
     "CohortFeasibilityRequest",
     "CriteriaBreakdownSummary",
     "NodeFitExplanation",
+    "PatientObservationValue",
+    "PatientProfileContext",
     "SubCohortRecommendation",
     "SyntheticSimulationSummary",
 ]

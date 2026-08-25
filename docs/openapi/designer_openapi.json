@@ -3797,7 +3797,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/EligibilityCriterion"
+                    "$ref": "#/components/schemas/EligibilityCriterion-Output"
                   },
                   "title": "Response List Eligibility Criteria Api V1 Studies  Study Id  Eligibility Criteria Get"
                 }
@@ -3847,7 +3847,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EligibilityCriterion"
+                  "$ref": "#/components/schemas/EligibilityCriterion-Output"
                 }
               }
             }
@@ -3896,7 +3896,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EligibilityCriterion"
+                  "$ref": "#/components/schemas/EligibilityCriterion-Output"
                 }
               }
             }
@@ -3953,7 +3953,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EligibilityCriterion"
+                  "$ref": "#/components/schemas/EligibilityCriterion-Output"
                 }
               }
             }
@@ -7058,6 +7058,141 @@
         }
       }
     },
+    "/api/v1/designer/cohort-feasibility/evaluate": {
+      "post": {
+        "tags": [
+          "Cohort Feasibility Engine"
+        ],
+        "summary": "Trigger multi-criteria cohort reasoning and synthetic feasibility simulation",
+        "description": "Executes multi-criteria cohort reasoning and synthetic subject profile feasibility simulation.\n\nSupports:\n- Asynchronous background worker execution guarded by PostgreSQL advisory locks (non-blocking)\n- De-identification scrubbing on evaluation context and prompts (packages/deid)\n- Grounded RAG protocol criteria matching (packages/compliance)\n- Three-valued logic (3VL) evaluation under complete, partial, and missing data scenarios\n- Granular node-level fit trace explanations\n\nArgs:\n    payload: Inbound CohortFeasibilityRequest payload.\n    background_tasks: FastAPI BackgroundTasks queue.\n    principal: Authenticated principal security context.\n\nReturns:\n    CohortFeasibilityJob when asynchronous background processing is requested,\n    or CohortFeasibilityReport when executed synchronously.",
+        "operationId": "evaluate_cohort_feasibility_endpoint_api_v1_designer_cohort_feasibility_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CohortFeasibilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/CohortFeasibilityReport"
+                    },
+                    {
+                      "$ref": "#/components/schemas/CohortFeasibilityJob"
+                    }
+                  ],
+                  "title": "Response Evaluate Cohort Feasibility Endpoint Api V1 Designer Cohort Feasibility Evaluate Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/designer/cohort-feasibility/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "Cohort Feasibility Engine"
+        ],
+        "summary": "Poll status and results of an asynchronous cohort feasibility job",
+        "description": "Retrieves asynchronous cohort feasibility job status and report.\n\nArgs:\n    job_id: Unique job identifier to query.\n    principal: Authenticated principal security context.\n\nReturns:\n    CohortFeasibilityJob status wrapper and report.\n\nRaises:\n    HTTPException: If the job with job_id is not found (404).",
+        "operationId": "get_feasibility_job_status_endpoint_api_v1_designer_cohort_feasibility_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CohortFeasibilityJob"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/designer/cohort-feasibility/synthetic-simulate": {
+      "post": {
+        "tags": [
+          "Cohort Feasibility Engine"
+        ],
+        "summary": "Simulate cohort feasibility under missing data scenarios using 3-valued logic",
+        "description": "Directly executes synthetic patient population simulation under missing data conditions.\n\nArgs:\n    payload: Inbound CohortFeasibilityRequest parameters.\n    principal: Authenticated principal security context.\n\nReturns:\n    CohortFeasibilityReport containing simulation results.",
+        "operationId": "simulate_synthetic_feasibility_endpoint_api_v1_designer_cohort_feasibility_synthetic_simulate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CohortFeasibilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CohortFeasibilityReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -8069,6 +8204,350 @@
         "title": "CodeValidationState",
         "description": "Validation state of a controlled terminology concept code."
       },
+      "CohortFeasibilityJob": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id",
+            "description": "Job identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Study ID"
+          },
+          "cohort_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cohort Id",
+            "description": "Cohort ID"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "RUNNING",
+              "COMPLETED",
+              "FAILED",
+              "DUPLICATE_LOCKED"
+            ],
+            "title": "Status",
+            "description": "Job status"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "ISO timestamp when job was enqueued"
+          },
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CohortFeasibilityReport"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Feasibility report when status is COMPLETED"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "study_id",
+          "cohort_id",
+          "status",
+          "created_at"
+        ],
+        "title": "CohortFeasibilityJob",
+        "description": "Asynchronous background job status wrapper."
+      },
+      "CohortFeasibilityReport": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id",
+            "description": "Unique analysis job identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target protocol study ID"
+          },
+          "cohort_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cohort Id",
+            "description": "Target cohort identifier"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "RUNNING",
+              "COMPLETED",
+              "FAILED",
+              "DUPLICATE_LOCKED"
+            ],
+            "title": "Status",
+            "description": "Execution status of the cohort feasibility job"
+          },
+          "starting_cohort_size": {
+            "type": "integer",
+            "title": "Starting Cohort Size",
+            "description": "Total patient profiles evaluated"
+          },
+          "eligible_count": {
+            "type": "integer",
+            "title": "Eligible Count",
+            "description": "Number of subjects fully eligible (all inclusion TRUE, exclusion FALSE)"
+          },
+          "ineligible_count": {
+            "type": "integer",
+            "title": "Ineligible Count",
+            "description": "Number of subjects ineligible (any inclusion FALSE or exclusion TRUE)"
+          },
+          "indeterminate_count": {
+            "type": "integer",
+            "title": "Indeterminate Count",
+            "description": "Number of subjects with INDETERMINATE overall outcome"
+          },
+          "overall_eligibility_rate": {
+            "type": "number",
+            "title": "Overall Eligibility Rate",
+            "description": "Overall eligibility percentage (0.0 - 100.0)"
+          },
+          "estimated_fit_percentage": {
+            "type": "number",
+            "title": "Estimated Fit Percentage",
+            "description": "Estimated population fit percentage"
+          },
+          "sub_cohort_recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/SubCohortRecommendation"
+            },
+            "type": "array",
+            "title": "Sub Cohort Recommendations",
+            "description": "Multi-criteria sub-cohort recommendations with breakdown summaries"
+          },
+          "node_explanations": {
+            "items": {
+              "$ref": "#/components/schemas/NodeFitExplanation"
+            },
+            "type": "array",
+            "title": "Node Explanations",
+            "description": "Granular node-level fit trace explanations for AST evaluations"
+          },
+          "synthetic_simulation_summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SyntheticSimulationSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Feasibility simulation summary across complete, partial, and missing data scenarios"
+          },
+          "deid_applied": {
+            "type": "boolean",
+            "title": "Deid Applied",
+            "description": "True if de-identification scrubbing was applied to AI prompts",
+            "default": true
+          },
+          "deid_tokens_count": {
+            "type": "integer",
+            "title": "Deid Tokens Count",
+            "description": "Count of PII/PHI tokens scrubbed",
+            "default": 0
+          },
+          "advisory_lock_acquired": {
+            "type": "boolean",
+            "title": "Advisory Lock Acquired",
+            "description": "True if background PostgreSQL advisory lock was successfully acquired",
+            "default": true
+          },
+          "execution_time_seconds": {
+            "type": "number",
+            "title": "Execution Time Seconds",
+            "description": "Total execution time in seconds",
+            "default": 0.0
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message",
+            "description": "Error message if job status is FAILED"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "study_id",
+          "status",
+          "starting_cohort_size",
+          "eligible_count",
+          "ineligible_count",
+          "indeterminate_count",
+          "overall_eligibility_rate",
+          "estimated_fit_percentage"
+        ],
+        "title": "CohortFeasibilityReport",
+        "description": "Comprehensive multi-criteria cohort reasoning and synthetic feasibility report."
+      },
+      "CohortFeasibilityRequest": {
+        "properties": {
+          "analysis_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis Id",
+            "description": "Optional caller-supplied job/analysis ID"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target protocol study ID, e.g., 'PROTOCOL-2026-T2D'"
+          },
+          "cohort_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cohort Id",
+            "description": "Target cohort or arm identifier",
+            "default": "MAIN_COHORT"
+          },
+          "unstructured_protocol_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ProtocolRAGContextChunk"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unstructured Protocol Text",
+            "description": "Unstructured protocol excerpts or RAG chunks for semantic vector matching"
+          },
+          "structured_criteria": {
+            "items": {
+              "$ref": "#/components/schemas/EligibilityCriterion-Input"
+            },
+            "type": "array",
+            "title": "Structured Criteria",
+            "description": "Structured inclusion and exclusion criteria AST definitions"
+          },
+          "patient_profiles": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Profiles",
+            "description": "Optional patient observation data contexts. If omitted, synthetic profiles are generated."
+          },
+          "synthetic_simulation_count": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Synthetic Simulation Count",
+            "description": "Number of GxP synthetic subject profiles to generate for feasibility simulation",
+            "default": 20
+          },
+          "missing_data_scenarios": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Missing Data Scenarios",
+            "description": "Optional specific field groups to simulate missing data conditions"
+          },
+          "is_async": {
+            "type": "boolean",
+            "title": "Is Async",
+            "description": "Whether to execute asynchronously in a background worker",
+            "default": true
+          },
+          "compliance_profile": {
+            "type": "string",
+            "title": "Compliance Profile",
+            "description": "De-identification compliance profile (HIPAA or GXP)",
+            "default": "HIPAA"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "CohortFeasibilityRequest",
+        "description": "Inbound request payload for multi-criteria cohort reasoning and synthetic feasibility simulation."
+      },
       "Comment": {
         "properties": {
           "comment_id": {
@@ -8945,7 +9424,7 @@
             "title": "Type"
           },
           "condition": {
-            "$ref": "#/components/schemas/ExpressionNode-Input"
+            "$ref": "#/components/schemas/packages__ddf__rules__ast__ExpressionNode"
           },
           "action": {
             "anyOf": [
@@ -9093,6 +9572,67 @@
           "properties"
         ],
         "title": "CreateTimingWindowRequest"
+      },
+      "CriteriaBreakdownSummary": {
+        "properties": {
+          "criterion_id": {
+            "type": "string",
+            "title": "Criterion Id",
+            "description": "Unique criterion identifier, e.g., 'INC_01'"
+          },
+          "identifier": {
+            "type": "string",
+            "title": "Identifier",
+            "description": "Business identifier, e.g., 'INC-001'"
+          },
+          "human_readable_text": {
+            "type": "string",
+            "title": "Human Readable Text",
+            "description": "Human readable description"
+          },
+          "criterion_type": {
+            "type": "string",
+            "enum": [
+              "inclusion",
+              "exclusion"
+            ],
+            "title": "Criterion Type",
+            "description": "Type of criterion"
+          },
+          "passed_count": {
+            "type": "integer",
+            "title": "Passed Count",
+            "description": "Number of subjects satisfying criterion",
+            "default": 0
+          },
+          "failed_count": {
+            "type": "integer",
+            "title": "Failed Count",
+            "description": "Number of subjects failing criterion",
+            "default": 0
+          },
+          "indeterminate_count": {
+            "type": "integer",
+            "title": "Indeterminate Count",
+            "description": "Number of subjects with indeterminate status due to missing data",
+            "default": 0
+          },
+          "pass_rate_percentage": {
+            "type": "number",
+            "title": "Pass Rate Percentage",
+            "description": "Percentage of evaluated subjects meeting criterion",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "criterion_id",
+          "identifier",
+          "human_readable_text",
+          "criterion_type"
+        ],
+        "title": "CriteriaBreakdownSummary",
+        "description": "Summary of criteria evaluation results for a sub-cohort or participant group."
       },
       "DAGJobStatusResponse": {
         "properties": {
@@ -9542,7 +10082,106 @@
         "title": "DomainQueue",
         "description": "Target clinical and operational domain queues for ticket routing."
       },
-      "EligibilityCriterion": {
+      "EligibilityCriterion-Input": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Chronological UTC timestamp when the record was created."
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Unique identifier of the user who created the record."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory explanation or audit justification for creating or mutating this record."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Row version counter or index.",
+            "default": 1
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier of this eligibility criterion, e.g., 'INC_01'.",
+            "default": ""
+          },
+          "criterion_type": {
+            "type": "string",
+            "enum": [
+              "inclusion",
+              "exclusion"
+            ],
+            "title": "Criterion Type",
+            "description": "Whether this is an inclusion or exclusion criterion."
+          },
+          "identifier": {
+            "type": "string",
+            "title": "Identifier",
+            "description": "Business identifier of this criterion, e.g., 'INC-001'.",
+            "default": ""
+          },
+          "human_readable_text": {
+            "type": "string",
+            "title": "Human Readable Text",
+            "description": "Human-readable text description of the criterion.",
+            "default": ""
+          },
+          "dsl_expression_string": {
+            "type": "string",
+            "title": "Dsl Expression String",
+            "description": "The raw DSL statement source, e.g., 'eCRF.DM.AGE >= 18'.",
+            "default": ""
+          },
+          "structured_expression_tree": {
+            "$ref": "#/components/schemas/apps__designer__domain__eligibility__models__ExpressionNode-Input",
+            "description": "The parsed structured AST of this criterion."
+          },
+          "expected_outcome": {
+            "type": "boolean",
+            "title": "Expected Outcome",
+            "description": "Expected Boolean outcome of evaluating the condition node. Typically True for inclusions and False for exclusions.",
+            "default": true
+          },
+          "criterion_id": {
+            "type": "string",
+            "title": "Criterion Id",
+            "description": "Backward compatible criterion_id field.",
+            "default": ""
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Backward compatible description field.",
+            "default": ""
+          },
+          "dsl_source": {
+            "type": "string",
+            "title": "Dsl Source",
+            "description": "Backward compatible dsl_source field.",
+            "default": ""
+          },
+          "condition": {
+            "$ref": "#/components/schemas/apps__designer__domain__eligibility__models__ExpressionNode-Input",
+            "description": "Backward compatible condition field."
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_by",
+          "reason_for_change",
+          "criterion_type"
+        ],
+        "title": "EligibilityCriterion",
+        "description": "Represents a single inclusion or exclusion criterion with full GxP audit metadata."
+      },
+      "EligibilityCriterion-Output": {
         "properties": {
           "created_at": {
             "type": "string",
@@ -9806,71 +10445,6 @@
           "epochs"
         ],
         "title": "EpochReorderRequest"
-      },
-      "ExpressionNode-Input": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "logical",
-              "comparison",
-              "function",
-              "field_ref",
-              "constant"
-            ],
-            "title": "Type"
-          },
-          "operator": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Operator"
-          },
-          "operands": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/ExpressionNode-Input"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Operands"
-          },
-          "value": {
-            "anyOf": [
-              {},
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Value"
-          },
-          "field_ref": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/FieldReference-Input"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "type"
-        ],
-        "title": "ExpressionNode",
-        "description": "A recursive node in a structured clinical expression tree."
       },
       "ExpressionNode-Output": {
         "properties": {
@@ -10287,53 +10861,6 @@
         ],
         "title": "FeasibilityReport",
         "description": "Cohort-backed patient population feasibility and attrition rates."
-      },
-      "FieldReference-Input": {
-        "properties": {
-          "field_id": {
-            "type": "string",
-            "title": "Field Id"
-          },
-          "form_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Form Id"
-          },
-          "visit_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Visit Id"
-          },
-          "visit_relative": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Visit Relative"
-          }
-        },
-        "type": "object",
-        "required": [
-          "field_id"
-        ],
-        "title": "FieldReference",
-        "description": "Represents a structured field reference within an expression tree."
       },
       "FieldReference-Output": {
         "properties": {
@@ -11191,6 +11718,120 @@
         "title": "NarrativeDelta",
         "description": "Semantic comparison between protocol narrative sections."
       },
+      "NodeEvaluation": {
+        "properties": {
+          "node_type": {
+            "type": "string",
+            "title": "Node Type",
+            "description": "The type of AST node that was evaluated."
+          },
+          "operator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operator",
+            "description": "The operator utilized during evaluation."
+          },
+          "value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value",
+            "description": "The evaluated literal value of the node, if determined."
+          },
+          "is_indeterminate": {
+            "type": "boolean",
+            "title": "Is Indeterminate",
+            "description": "Indicates if the evaluation is indeterminate (e.g. due to missing or null data).",
+            "default": false
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation",
+            "description": "Trace explanation detailing how this node evaluated to its outcome."
+          },
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/NodeEvaluation"
+            },
+            "type": "array",
+            "title": "Children",
+            "description": "Child node evaluation details."
+          }
+        },
+        "type": "object",
+        "required": [
+          "node_type",
+          "explanation"
+        ],
+        "title": "NodeEvaluation",
+        "description": "Detailed evaluation output for a single node inside the AST expression tree.\nProvides complete node-level traceability for regulatory compliance."
+      },
+      "NodeFitExplanation": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Subject or synthetic profile ID"
+          },
+          "criterion_id": {
+            "type": "string",
+            "title": "Criterion Id",
+            "description": "Evaluated criterion identifier"
+          },
+          "criterion_name": {
+            "type": "string",
+            "title": "Criterion Name",
+            "description": "Name or description of criterion"
+          },
+          "result_status": {
+            "type": "string",
+            "enum": [
+              "TRUE",
+              "FALSE",
+              "INDETERMINATE"
+            ],
+            "title": "Result Status",
+            "description": "Kleene 3VL outcome: TRUE (met), FALSE (failed), or INDETERMINATE (missing data)"
+          },
+          "node_trace": {
+            "$ref": "#/components/schemas/NodeEvaluation",
+            "description": "Granular recursive AST node evaluation trace"
+          },
+          "missing_fields": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Fields",
+            "description": "Captured fields that were missing or null during evaluation"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation",
+            "description": "Detailed human-readable fit explanation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_id",
+          "criterion_id",
+          "criterion_name",
+          "result_status",
+          "node_trace",
+          "explanation"
+        ],
+        "title": "NodeFitExplanation",
+        "description": "Granular node-level trace explanation for AST criteria evaluation."
+      },
       "ObjectType": {
         "type": "string",
         "enum": [
@@ -11705,6 +12346,70 @@
         ],
         "title": "ProtocolQualityScore",
         "description": "Protocol Quality Sentinel evaluation summary report.\n\nRequirements: PRD-SYS-001"
+      },
+      "ProtocolRAGContextChunk": {
+        "properties": {
+          "chunk_id": {
+            "type": "string",
+            "title": "Chunk Id",
+            "description": "Unique chunk identifier."
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version",
+            "description": "Protocol version (e.g., 'v2.1')."
+          },
+          "section_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Number",
+            "description": "Protocol section number (e.g. '7.3')."
+          },
+          "section_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Title",
+            "description": "Protocol section title."
+          },
+          "page_number": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Page Number",
+            "description": "1-indexed physical page number in source PDF."
+          },
+          "chunk_text": {
+            "type": "string",
+            "title": "Chunk Text",
+            "description": "Raw text of the protocol chunk."
+          },
+          "is_approved": {
+            "type": "boolean",
+            "title": "Is Approved",
+            "description": "Whether this protocol chunk is from an approved version.",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "chunk_id",
+          "protocol_version",
+          "page_number",
+          "chunk_text"
+        ],
+        "title": "ProtocolRAGContextChunk",
+        "description": "Normalized protocol excerpt chunk passed to RAG generation and verification."
       },
       "PublishStudyVersionRequest": {
         "properties": {
@@ -13104,6 +13809,55 @@
         "title": "StudyTerminologyValidationReport",
         "description": "Aggregated terminology validation report for an entire study structure."
       },
+      "SubCohortRecommendation": {
+        "properties": {
+          "sub_cohort_id": {
+            "type": "string",
+            "title": "Sub Cohort Id",
+            "description": "Unique identifier for sub-cohort, e.g., 'subcohort_renal_adjusted'"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Human-readable sub-cohort name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Clinical justification and definition summary"
+          },
+          "estimated_fit_percentage": {
+            "type": "number",
+            "title": "Estimated Fit Percentage",
+            "description": "Estimated percentage of target patient pool fitting this sub-cohort"
+          },
+          "criteria_breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/CriteriaBreakdownSummary"
+            },
+            "type": "array",
+            "title": "Criteria Breakdown",
+            "description": "Specific breakdown summary across criteria"
+          },
+          "sample_patient_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sample Patient Ids",
+            "description": "Representative sample patient identifiers (or synthetic profile IDs)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sub_cohort_id",
+          "name",
+          "description",
+          "estimated_fit_percentage"
+        ],
+        "title": "SubCohortRecommendation",
+        "description": "Multi-criteria sub-cohort recommendation with specific criteria breakdown and fit percentage."
+      },
       "SubjectManagementRtsmImpact": {
         "properties": {
           "cohort_adjustments_count": {
@@ -13482,6 +14236,53 @@
         ],
         "title": "SynthesizedECRFForm",
         "description": "Synthesized CDASH eCRF form definition compiled from extracted activities."
+      },
+      "SyntheticSimulationSummary": {
+        "properties": {
+          "simulated_subject_count": {
+            "type": "integer",
+            "title": "Simulated Subject Count",
+            "description": "Total synthetic subject profiles generated and evaluated"
+          },
+          "complete_data_fit_rate": {
+            "type": "number",
+            "title": "Complete Data Fit Rate",
+            "description": "Eligibility percentage under complete observation data (0.0 - 100.0)"
+          },
+          "partial_data_fit_rate": {
+            "type": "number",
+            "title": "Partial Data Fit Rate",
+            "description": "Eligibility percentage under partial observation data scenarios"
+          },
+          "missing_data_fit_rate": {
+            "type": "number",
+            "title": "Missing Data Fit Rate",
+            "description": "Eligibility percentage when key fields are missing"
+          },
+          "indeterminate_rate": {
+            "type": "number",
+            "title": "Indeterminate Rate",
+            "description": "Percentage of simulated evaluations resulting in INDETERMINATE state"
+          },
+          "high_risk_missing_fields": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "High Risk Missing Fields",
+            "description": "Fields whose absence causes eligibility to shift from TRUE to INDETERMINATE/UNKNOWN"
+          }
+        },
+        "type": "object",
+        "required": [
+          "simulated_subject_count",
+          "complete_data_fit_rate",
+          "partial_data_fit_rate",
+          "missing_data_fit_rate",
+          "indeterminate_rate"
+        ],
+        "title": "SyntheticSimulationSummary",
+        "description": "Summary of synthetic patient profile feasibility simulation under missing data scenarios."
       },
       "TerminologyConcept": {
         "properties": {
@@ -14565,6 +15366,108 @@
         ],
         "title": "VisitToEpochAssignmentRequest"
       },
+      "apps__designer__domain__eligibility__models__ExpressionNode-Input": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "logical",
+              "comparison",
+              "field_ref",
+              "constant"
+            ],
+            "title": "Type",
+            "description": "Node type indicating the structure of the node."
+          },
+          "operator": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ComparisonOperator"
+              },
+              {
+                "$ref": "#/components/schemas/LogicalOperator"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operator",
+            "description": "Operator for logical (and, or, not) or comparison (==, !=, <, <=, >, >=) nodes."
+          },
+          "operands": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/apps__designer__domain__eligibility__models__ExpressionNode-Input"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operands",
+            "description": "Child operands of logical or comparison nodes."
+          },
+          "value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value",
+            "description": "Literal constant value of type constant."
+          },
+          "field_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/apps__designer__domain__eligibility__models__FieldReference"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Field reference details of type field_ref."
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "ExpressionNode",
+        "description": "Recursive node inside a structured clinical expression tree (AST).\nSupported types are: logical, comparison, field_ref, constant."
+      },
+      "apps__designer__domain__eligibility__models__FieldReference": {
+        "properties": {
+          "raw_reference": {
+            "type": "string",
+            "title": "Raw Reference",
+            "description": "Raw field reference string, e.g., 'eCRF.DM.AGE'."
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain",
+            "description": "The target eCRF domain, e.g., 'DM'."
+          },
+          "variable": {
+            "type": "string",
+            "title": "Variable",
+            "description": "The domain variable, e.g., 'AGE'."
+          }
+        },
+        "type": "object",
+        "required": [
+          "raw_reference",
+          "domain",
+          "variable"
+        ],
+        "title": "FieldReference",
+        "description": "Represents a structured field reference pointing to an eCRF domain variable.\nFormat must strictly follow: eCRF.<DOMAIN>.<VARIABLE>"
+      },
       "apps__designer__domain__protocol_authoring__soa__CreateVisitRequest": {
         "properties": {
           "id": {
@@ -14680,6 +15583,118 @@
         ],
         "title": "UpdateVisitRequest",
         "description": "Request model for updating a Visit library object."
+      },
+      "packages__ddf__rules__ast__ExpressionNode": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "logical",
+              "comparison",
+              "function",
+              "field_ref",
+              "constant"
+            ],
+            "title": "Type"
+          },
+          "operator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operator"
+          },
+          "operands": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/packages__ddf__rules__ast__ExpressionNode"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operands"
+          },
+          "value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "field_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/packages__ddf__rules__ast__FieldReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "ExpressionNode",
+        "description": "A recursive node in a structured clinical expression tree."
+      },
+      "packages__ddf__rules__ast__FieldReference": {
+        "properties": {
+          "field_id": {
+            "type": "string",
+            "title": "Field Id"
+          },
+          "form_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form Id"
+          },
+          "visit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Id"
+          },
+          "visit_relative": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Relative"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_id"
+        ],
+        "title": "FieldReference",
+        "description": "Represents a structured field reference within an expression tree."
       }
     }
   }
