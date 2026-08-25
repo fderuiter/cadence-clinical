@@ -247,6 +247,14 @@ def main() -> None:
                                     "apps/execution/adapters/ai_anomaly_client.py",
                                 },
                                 {
+                                    "packages/compliance/audit.py",
+                                    "packages/security/audit_logger.py",
+                                },
+                                {
+                                    "packages/compliance/audit.py",
+                                    "packages/compliance/__init__.py",
+                                },
+                                {
                                     "apps/safety/adapters/ai_narrative_client.py",
                                     "apps/safety/infrastructure/execution_client.py",
                                 },
