@@ -125,6 +125,14 @@ ALLOWED_COMMON_TOOLS = {
     "tee",
     "powershell",
     "pre-commit",
+    "brew",
+    "apt",
+    "apt-get",
+    "yum",
+    "dnf",
+    "pacman",
+    "choco",
+    "winget",
 }
 
 # Regex to check if a flag is syntactically well-formed (cannot start with triple dashes)
