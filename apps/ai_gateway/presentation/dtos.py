@@ -5,6 +5,14 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from apps.ai_gateway.domain.models import MessageRole, ModelTier
+from apps.ai_gateway.domain.reasoning import (
+    ClinicalReasoningRequest,
+    ClinicalReasoningResponse,
+    DraftClinicalRecord,
+    ExecutionStateContext,
+    ReasoningStepState,
+    ReasoningStepType,
+)
 
 
 class ChatMessageDTO(BaseModel):
@@ -183,3 +191,20 @@ class TierInfoDTO(BaseModel):
         default_factory=list,
         description="Supported capabilities.",
     )
+
+
+__all__ = [
+    "ChatMessageDTO",
+    "ClinicalReasoningRequest",
+    "ClinicalReasoningResponse",
+    "DraftClinicalRecord",
+    "EmbeddingRequestDTO",
+    "EmbeddingResponseDTO",
+    "ExecutionStateContext",
+    "GenerationRequestDTO",
+    "GenerationResponseDTO",
+    "ReasoningStepState",
+    "ReasoningStepType",
+    "TierInfoDTO",
+    "TokenUsageDTO",
+]

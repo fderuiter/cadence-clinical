@@ -84,6 +84,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+- [2026-08-25: Hybrid Multi-Step Clinical Reasoning Core and Protocol Grounding Gate](2026-08-25-hybrid-multi-step-clinical-reasoning-core-and-protocol-grounding-gate.md)
 - [2026-08-21: AI Gateway Microservice and Three-Tier Clinical Intelligence Architecture](2026-08-21-ai-gateway-microservice-and-three-tier-clinical-intelligence-architecture.md)
 - [2026-08-18: Localize datetime helpers in security package](2026-08-18-localize-datetime-helpers-in-security-package.md)
 
