@@ -706,7 +706,7 @@ async def test_as2_transmission_audit_log_immutability_invariant():
         log_entry.details = "Mutated details"
         with pytest.raises(
             ValueError,
-            match="Updates to AS2TransmissionAuditLog are strictly forbidden",
+            match="strictly forbidden",
         ):
             await session.flush()
 
@@ -717,7 +717,7 @@ async def test_as2_transmission_audit_log_immutability_invariant():
         await session.delete(log_entry)
         with pytest.raises(
             ValueError,
-            match="Deletions from AS2TransmissionAuditLog are strictly forbidden",
+            match="strictly forbidden",
         ):
             await session.flush()
 

@@ -67,9 +67,7 @@ class DDFJobRunner:
                             accessibility_validator
                             or PlaywrightAccessibilityValidatorAdapter()
                         )
-                        compiler = DDFCompiler(
-                            accessibility_validator=validator
-                        )
+                        compiler = DDFCompiler(accessibility_validator=validator)
 
                         result = await compiler.compile(
                             study_id=study_id,

@@ -28,7 +28,9 @@ def _make_auth_headers(
     payload: dict | None = None,
 ) -> dict:
     timestamp = str(time.time())
-    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(
+    secret = os.getenv(
+        "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    ).encode(  # pragma: allowlist secret
         "utf-8"
     )
     signature = generate_gateway_signature(

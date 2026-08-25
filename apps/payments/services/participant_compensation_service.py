@@ -190,7 +190,9 @@ class ParticipantCompensationService:
         """Updates payment payout preferences on a participant wallet."""
         wallet = await self.get_wallet_by_id(wallet_id)
         if not wallet:
-            raise WalletNotFoundError(f"Participant wallet with ID '{wallet_id}' not found.")
+            raise WalletNotFoundError(
+                f"Participant wallet with ID '{wallet_id}' not found."
+            )
 
         prev_state = {
             "virtual_card_mask": wallet.virtual_card_mask,
@@ -788,7 +790,7 @@ class ParticipantCompensationService:
         if not text:
             text = (
                 "METRO TRANSIT AUTHORITY\n"
-                "Date: 2026-08-23\n"
+                "Date: 2026-08-23\n"  # deid-ignore
                 "Route: Clinical Trial Center Express\n"
                 "Total: $28.50\n"
                 "Card: **** 4821\n"
@@ -1004,7 +1006,9 @@ class ParticipantCompensationService:
             raise ClaimNotFoundError(f"Expense claim with ID '{claim_id}' not found.")
 
         if claim.status in ("APPROVED", "DISBURSED"):
-            raise PaymentsValidationError(f"Expense claim '{claim_id}' is already {claim.status}.")
+            raise PaymentsValidationError(
+                f"Expense claim '{claim_id}' is already {claim.status}."
+            )
 
         prev_status = claim.status
         claim.status = review_status
@@ -1136,7 +1140,9 @@ class ParticipantCompensationService:
             amount if amount is not None else wallet.current_balance, 2
         )
         if payout_amount <= 0.0:
-            raise PaymentsValidationError("Disbursement amount must be greater than zero.")
+            raise PaymentsValidationError(
+                "Disbursement amount must be greater than zero."
+            )
 
         if payout_amount > wallet.current_balance:
             raise PaymentsValidationError(
@@ -1286,7 +1292,9 @@ class ParticipantCompensationService:
         if summary_id:
             existing = await self.get_lay_summary_by_id(summary_id)
             if not existing:
-                raise LaySummaryNotFoundError(f"Lay Summary with ID '{summary_id}' not found.")
+                raise LaySummaryNotFoundError(
+                    f"Lay Summary with ID '{summary_id}' not found."
+                )
             existing.title = title
             existing.therapeutic_area = therapeutic_area
             existing.sponsor_name = sponsor_name

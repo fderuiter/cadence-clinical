@@ -21,6 +21,7 @@ import packages  # noqa: F401
 from apps.gateway.presentation.routers.cdisc import router as cdisc_router
 from apps.gateway.presentation.routers.ecoa import router as ecoa_router
 from apps.gateway.presentation.routers.usdm import router as usdm_router
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import validate_branding
 
 
@@ -101,8 +102,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     if http_client:
         await http_client.aclose()
 
-
-from packages.hexagonal import register_rfc7807_handlers
 
 validate_branding("gateway", is_gateway=True)
 

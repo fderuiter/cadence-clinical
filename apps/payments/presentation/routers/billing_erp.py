@@ -456,8 +456,7 @@ async def reconcile_invoice_payment(
         notes=payload.notes,
         user_id=principal.user_id,
         user_roles=",".join(principal.raw_roles),
-        reason_for_change=principal.change_reason
-        or "Financial Payment Reconciliation",
+        reason_for_change=principal.change_reason or "Financial Payment Reconciliation",
     )
 
     return PaymentReconciliationResponse(**res)

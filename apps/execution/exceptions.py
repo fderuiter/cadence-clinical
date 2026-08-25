@@ -2,11 +2,6 @@
 Clinical Domain Exceptions for hexagonal decoupling.
 """
 
-
-"""
-Clinical Domain Exceptions for hexagonal decoupling.
-"""
-
 from packages.hexagonal import DomainError as BaseDomainError
 from packages.hexagonal import EntityNotFoundError, ValidationError
 

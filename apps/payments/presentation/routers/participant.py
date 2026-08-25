@@ -455,8 +455,7 @@ async def submit_participant_w9_form(
         address=payload.address,
         user_id=principal.user_id,
         user_roles=",".join(principal.raw_roles),
-        reason_for_change=principal.change_reason
-        or "Submitted Form W-9 Certification",
+        reason_for_change=principal.change_reason or "Submitted Form W-9 Certification",
     )
     return W9SubmitResponse(**res)
 

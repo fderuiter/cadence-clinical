@@ -65,8 +65,8 @@ class BillingAndErpGateway:
         study_id: str,
         site_id: str,
         billing_cycle: str = "MONTHLY",
-        period_start: str = "2026-08-01",
-        period_end: str = "2026-08-31",
+        period_start: str = "2026-08-01",  # deid-ignore
+        period_end: str = "2026-08-31",  # deid-ignore
         auto_approve: bool = False,
         user_id: str = "system",
         user_roles: str = "Grants Manager",
@@ -357,7 +357,9 @@ class BillingAndErpGateway:
         """Approves a draft self-billing invoice for ERP synchronization and disbursement."""
         invoice = await self.get_invoice(invoice_id)
         if not invoice:
-            raise InvoiceNotFoundError(f"Self-billing invoice '{invoice_id}' not found.")
+            raise InvoiceNotFoundError(
+                f"Self-billing invoice '{invoice_id}' not found."
+            )
 
         prev_status = invoice.status
         now = datetime.now(UTC)
@@ -975,7 +977,9 @@ class BillingAndErpGateway:
             raise InvoiceNotFoundError(f"Invoice with ID '{invoice_id}' not found.")
 
         if amount_paid < 0:
-            raise PaymentsValidationError("Reconciliation amount paid cannot be negative.")
+            raise PaymentsValidationError(
+                "Reconciliation amount paid cannot be negative."
+            )
 
         prev_status = invoice.status
         now = datetime.now(UTC)

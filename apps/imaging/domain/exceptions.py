@@ -3,7 +3,6 @@
 Requirements: PRD-IMG-003, PRD-IMG-005, PRD-SYS-001
 """
 
-
 from packages.hexagonal import DomainError, EntityNotFoundError, ValidationError
 
 
@@ -25,7 +24,9 @@ class AdjudicationSessionNotFoundError(AdjudicationDomainError, EntityNotFoundEr
         self.session_id = session_id
 
 
-class AdjudicationSignOffRationaleRequiredError(AdjudicationDomainError, ValidationError):
+class AdjudicationSignOffRationaleRequiredError(
+    AdjudicationDomainError, ValidationError
+):
     """Raised when 21 CFR Part 11 step-up sign-off is attempted without a clinical rationale."""
 
     def __init__(

@@ -146,6 +146,7 @@ from apps.execution.subject_lifecycle import (
 from apps.execution.translator import process_translation
 from apps.execution.trial_lock import TrialLockManager
 from apps.execution.ucum import convert_unit, get_normalized_representation
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import (
     ROLE_CRA,
     ROLE_CRC,
@@ -360,8 +361,6 @@ class ProblemDetails(BaseModel):
 
 BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
 
-
-from packages.hexagonal import register_rfc7807_handlers
 
 validate_branding("execution")
 app = FastAPI(

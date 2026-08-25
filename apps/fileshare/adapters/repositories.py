@@ -8,8 +8,6 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from packages.database import map_database_exceptions
-
 from apps.fileshare.domain.models import (
     FileAuditLog,
     FileRecord,
@@ -31,6 +29,7 @@ from apps.fileshare.ports.repository_port import (
     PlaybackAuditRepositoryPort,
     ShareGrantRepositoryPort,
 )
+from packages.database import map_database_exceptions
 
 
 class SqlAlchemyFileRecordRepository(FileRecordRepositoryPort):
