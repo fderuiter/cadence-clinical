@@ -129,6 +129,9 @@ except ImportError:
             details: str | None = None
             arm_id: str | None = None
             derived_from_soa: bool = False
+            section_number: str | None = None
+            page_number: int | None = None
+            citation_marker: str | None = None
 
         class SoARowView(BaseModel):
             activity_id: str

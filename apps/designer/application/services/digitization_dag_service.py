@@ -50,6 +50,12 @@ from apps.designer.domain.digitization_models import (
     USDMProtocolExtractionResponse,
 )
 from apps.designer.domain.ports import DigitizationJobRepositoryPort
+from apps.designer.domain.synthesis.faithfulness import (
+    evaluate_synthesis_faithfulness,
+)
+from apps.designer.domain.synthesis.soa_compiler import (
+    compile_soa_matrix_payload,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -352,12 +358,22 @@ class DigitizationDAGRunner:
 
         cycles = validate_extracted_rules(all_rules)
 
+        soa_matrix = await compile_soa_matrix_payload(None, extracted)
+        faithfulness_meta = evaluate_synthesis_faithfulness(
+            synthesized_forms=forms,
+            soa_matrix=soa_matrix,
+            source_text=job.raw_text or extracted.study_title,
+            protocol_version="v1.0",
+        )
+        job.faithfulness_metadata = faithfulness_meta
+
         data = {
             "synthesized_forms": [f.model_dump() for f in forms],
             "rule_count": len(all_rules),
             "cycle_detected": len(cycles) > 0,
             "cycle_messages": cycles,
             "confidence_score": extracted.confidence_score,
+            "faithfulness_metadata": faithfulness_meta.model_dump(),
         }
         return data, extracted.confidence_score
 

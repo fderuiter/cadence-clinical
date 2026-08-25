@@ -50,6 +50,39 @@ class ExtractedVisit(BaseModel):
     )
 
 
+class FaithfulnessVerificationMetadata(BaseModel):
+    """Verification metadata containing post-synthesis faithfulness score and status indicators."""
+
+    faithfulness_score: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Overall post-synthesis output faithfulness confidence score evaluated against 0.85 threshold.",
+    )
+    is_faithful: bool = Field(
+        ...,
+        description="True if faithfulness score meets or exceeds 0.85 groundedness threshold.",
+    )
+    verification_status: Literal["VERIFIED", "FLAGGED_LOW_FAITHFULNESS"] = Field(
+        "VERIFIED",
+        description="Verification status flag for clinical auditability and user awareness.",
+    )
+    citation_coverage: float = Field(
+        1.0,
+        ge=0.0,
+        le=1.0,
+        description="Percentage of synthesized form fields and matrix cells containing section and page citations.",
+    )
+    protocol_version: str = Field(
+        "v1.0",
+        description="Target protocol version identifier used during citation formatting and verification.",
+    )
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="Diagnostic warning messages flagging low faithfulness or missing citations.",
+    )
+
+
 class ExtractedActivity(BaseModel):
     """Represents a clinical procedure or assessment extracted from the protocol."""
 
@@ -65,6 +98,15 @@ class ExtractedActivity(BaseModel):
     assigned_visit_names: list[str] = Field(
         default_factory=list,
         description="List of visit names where this procedure is scheduled",
+    )
+    section_number: str | None = Field(
+        None, description="Source protocol section citation number e.g. '5.1'"
+    )
+    page_number: int | None = Field(
+        None, description="Source protocol page citation number e.g. 12"
+    )
+    citation_marker: str | None = Field(
+        None, description="Verbatim citation marker string"
     )
 
 
@@ -113,6 +155,10 @@ class USDMProtocolExtractionResponse(BaseModel):
     confidence_score: float = Field(
         ..., ge=0.0, le=1.0, description="Overall LLM extraction confidence"
     )
+    faithfulness_metadata: FaithfulnessVerificationMetadata | None = Field(
+        None,
+        description="Post-synthesis faithfulness evaluation metrics and verification status",
+    )
 
 
 class SynthesizedECRFForm(BaseModel):
@@ -126,6 +172,15 @@ class SynthesizedECRFForm(BaseModel):
     )
     rules: list[dict[str, Any]] = Field(
         default_factory=list, description="Compiled validation and skip rules"
+    )
+    section_number: str | None = Field(
+        None, description="Protocol section number citation coordinate"
+    )
+    page_number: int | None = Field(
+        None, description="Protocol page number citation coordinate"
+    )
+    citation_marker: str | None = Field(
+        None, description="Standardized verbatim citation marker string"
     )
 
 
@@ -149,3 +204,7 @@ class CommitUSDMResponse(BaseModel):
     relationships_created: int
     synthesized_forms: list[SynthesizedECRFForm] = Field(default_factory=list)
     message: str
+    faithfulness_metadata: FaithfulnessVerificationMetadata | None = Field(
+        None,
+        description="Post-synthesis faithfulness evaluation metrics and verification status",
+    )
