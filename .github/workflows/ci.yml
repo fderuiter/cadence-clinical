@@ -616,7 +616,7 @@ jobs:
         run: uv sync --locked --all-extras
 
       - name: Download Unit Test Report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: junit-report-unit
@@ -624,7 +624,7 @@ jobs:
           merge-multiple: true
 
       - name: Download Integration Test Report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: junit-report-integration
@@ -632,7 +632,7 @@ jobs:
           merge-multiple: true
 
       - name: Download Qualification Test Report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: junit-report-qualification
@@ -672,7 +672,7 @@ jobs:
 
       - name: Download Duplication Summary
         if: always()
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: duplication-summary
