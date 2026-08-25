@@ -206,7 +206,7 @@ jobs:
 
       - name: Upload Duplication Summary
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: duplication-summary
           path: duplication_summary.json
@@ -406,7 +406,7 @@ jobs:
 
       - name: Upload unit test report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: junit-report-unit
           path: report-unit.xml
@@ -500,7 +500,7 @@ jobs:
 
       - name: Upload integration test report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: junit-report-integration
           path: report-integration.xml
@@ -569,7 +569,7 @@ jobs:
 
       - name: Upload qualification test report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: junit-report-qualification
           path: report-qualification.xml
