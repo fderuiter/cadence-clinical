@@ -478,7 +478,7 @@ def build_comment_body(
 
     # Read AST-Aware custom merge driver report if present
     ast_merge_table = ""
-    ast_report_path = "/tmp/ast_merge_report.json"
+    ast_report_path = "/tmp/ast_merge_report.json"  # nosec B108
     if os.path.exists(ast_report_path):
         try:
             with open(ast_report_path, encoding="utf-8") as f:

@@ -94,7 +94,8 @@ jobs:
             for i in {1..5}; do
               sudo curl --connect-timeout 15 --retry 5 --retry-delay 5 -sSfL -o /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.15.1/hadolint-Linux-x86_64 && break || {
                 if [ "$i" -eq 5 ]; then
-                  echo "Failed to install hadolint after 5 attempts."
+                  echo "::error::Failed to install hadolint after 5 attempts."
+                  exit 1
                 fi
                 echo "Download failed, retrying in 5 seconds... (Attempt $i/5)"
                 sleep 5
@@ -105,9 +106,31 @@ jobs:
             fi
           fi
           if command -v hadolint >/dev/null 2>&1; then
-            hadolint --failure-threshold error apps/gateway/Dockerfile apps/designer/Dockerfile apps/execution/Dockerfile apps/etmf/Dockerfile docker/Dockerfile
+            DOCKERFILES=$(find . -type f -name Dockerfile)
+            echo "Linting Dockerfiles:"
+            echo "$DOCKERFILES"
+            hadolint --failure-threshold error $DOCKERFILES
           else
-            echo "::warning::Hadolint is not installed or unavailable. Skipping Dockerfile lint check."
+            echo "::error::Hadolint is not installed or unavailable."
+            exit 1
+          fi
+
+      - name: Run ShellCheck on shell scripts
+        run: |
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            echo "Installing shellcheck..."
+            sudo apt-get update && sudo apt-get install -y shellcheck || {
+              echo "::error::Failed to install shellcheck."
+              exit 1
+            }
+          fi
+          if command -v shellcheck >/dev/null 2>&1; then
+            SHELL_SCRIPTS=$(find . -type f -name "*.sh" -not -path "*/.venv/*" -not -path "*/node_modules/*")
+            echo "Linting shell scripts: $SHELL_SCRIPTS"
+            shellcheck $SHELL_SCRIPTS
+          else
+            echo "::error::ShellCheck is not installed or unavailable."
+            exit 1
           fi
 
       - name: Run ADR validation
@@ -241,7 +264,21 @@ jobs:
       - name: Run static analysis
         id: run_static
         if: always()
-        run: uv run bandit -c pyproject.toml -ll -ii -r apps packages
+        run: uv run bandit -c pyproject.toml -ll -ii -r apps packages scripts
+
+      - name: Build container image for security scan
+        run: |
+          docker build -t cadence-gateway:latest -f apps/gateway/Dockerfile .
+
+      - name: Run container vulnerability scan
+        uses: aquasecurity/trivy-action@v0.28.0
+        with:
+          image-ref: 'cadence-gateway:latest'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
 
       - name: Run dependency audit
         id: run_audit
@@ -702,7 +739,7 @@ jobs:
               echo "Unsafe vulnerability/validation file: $file"
               SAFE=false
               break
-            elif [[ "$file" == docs/* ]] || [[ "$file" == *.md ]] || [[ "$file" == tests/* ]]; then
+            elif [[ "$file" == docs/* ]] || [[ "$file" == *.md ]]; then
               echo "Safe file: $file"
             else
               echo "Unsafe file: $file"

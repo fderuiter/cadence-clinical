@@ -13,9 +13,9 @@ def run_merge_driver(
     p = Path(filename)
     unique_filename = f"{p.stem}_{unique_id}{p.suffix}"
 
-    ancestor_path = Path(f"/tmp/ancestor_{unique_filename}")
-    current_path = Path(f"/tmp/current_{unique_filename}")
-    other_path = Path(f"/tmp/other_{unique_filename}")
+    ancestor_path = Path(f"/tmp/ancestor_{unique_filename}")  # nosec B108
+    current_path = Path(f"/tmp/current_{unique_filename}")  # nosec B108
+    other_path = Path(f"/tmp/other_{unique_filename}")  # nosec B108
 
     ancestor_path.write_text(ancestor_content, encoding="utf-8")
     current_path.write_text(current_content, encoding="utf-8")

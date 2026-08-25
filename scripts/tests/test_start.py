@@ -133,13 +133,13 @@ def test_run_web_server_nt(mock_exit, mock_run):
 def test_main_execution_service(mock_find, mock_migrate, mock_server):
     mock_find.return_value = "apps/execution/database/migrate.py"
 
-    start.main(["execution", "--host", "0.0.0.0", "--port", "8002", "--reload"])
+    start.main(["execution", "--host", "0.0.0.0", "--port", "8002", "--reload"])  # nosec B104
 
     mock_find.assert_called_once_with("execution")
     mock_migrate.assert_called_once_with(
         "execution", "apps/execution/database/migrate.py"
     )
-    mock_server.assert_called_once_with("execution", "0.0.0.0", 8002, ["--reload"])
+    mock_server.assert_called_once_with("execution", "0.0.0.0", 8002, ["--reload"])  # nosec B104
 
 
 @patch("scripts.start.run_web_server")
@@ -148,8 +148,8 @@ def test_main_execution_service(mock_find, mock_migrate, mock_server):
 def test_main_designer_service(mock_find, mock_migrate, mock_server):
     mock_find.return_value = None
 
-    start.main(["designer", "--host", "0.0.0.0", "--port", "8001"])
+    start.main(["designer", "--host", "0.0.0.0", "--port", "8001"])  # nosec B104
 
     mock_find.assert_called_once_with("designer")
     mock_migrate.assert_not_called()
-    mock_server.assert_called_once_with("designer", "0.0.0.0", 8001, [])
+    mock_server.assert_called_once_with("designer", "0.0.0.0", 8001, [])  # nosec B104
