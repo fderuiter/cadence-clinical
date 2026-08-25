@@ -1,6 +1,7 @@
 """Tests for layout and accessibility validator service."""
 
 import os
+
 import pytest
 import pytest_asyncio
 from sqlalchemy import select
@@ -111,4 +112,3 @@ async def test_injected_accessibility_validator_records_audit_log(setup_test_db)
         assert audit.action == "VALIDATE"
         assert audit.new_values["status"] == "PASS"
         assert audit.new_values["form_version_hash"] is not None
-
