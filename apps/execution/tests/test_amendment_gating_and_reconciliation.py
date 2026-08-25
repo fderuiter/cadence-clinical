@@ -148,14 +148,15 @@ async def test_exact_version_consent_and_reconsent_gating():
             "value": 120.0,
             "unit": "mmHg",
         }
-        with pytest.raises(PermissionError) as exc_info:
-            await client.post(
-                "/api/v1/execution/observations",
-                json=obs_payload,
-                headers=get_exec_auth_headers(),
-            )
-        assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
-            exc_info.value
+        res_gate = await client.post(
+            "/api/v1/execution/observations",
+            json=obs_payload,
+            headers=get_exec_auth_headers(),
+        )
+        assert res_gate.status_code == 423
+        assert (
+            "Re-Consent Required - Demographics & Visit Forms Locked"
+            in res_gate.json()["detail"]
         )
 
         await record_subject_consent(

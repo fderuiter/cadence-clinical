@@ -277,6 +277,82 @@ async def test_designer_semantic_diff_and_impact_summary() -> None:
 
 
 @pytest.mark.asyncio
+async def test_designer_semantic_diff_removed_and_modified_entities() -> None:
+    """Validate semantic diff detection for removed and modified arms, visits, activities, criteria, and forms.
+
+    @req:PRD-SYS-001, PRD-SUB-007
+    """
+    study_id = "test_study_diff_removed_004"
+
+    base_payload = {
+        "id": study_id,
+        "name": "CADENCE-102 Baseline",
+        "arms": [
+            {"id": "arm_1", "name": "Arm A", "description": "10mg"},
+            {"id": "arm_2", "name": "Arm B", "description": "Placebo"},
+        ],
+        "visits": [
+            {"id": "v1", "name": "Visit 1: Screening", "schedule": "Day -7"},
+            {"id": "v2", "name": "Visit 2: Baseline", "schedule": "Day 1"},
+        ],
+        "activities": [
+            {"id": "act_1", "name": "Activity 1", "spec": "Spec 1"},
+            {"id": "act_2", "name": "Activity 2", "spec": "Spec 2"},
+        ],
+        "eligibilityCriteria": [
+            {"id": "crit_1", "text": "Inclusion 1"},
+            {"id": "crit_2", "text": "Exclusion 1"},
+        ],
+        "forms": [
+            {"id": "f_1", "form_key": "FORM_1", "name": "Form 1"},
+            {"id": "f_2", "form_key": "FORM_2", "name": "Form 2"},
+        ],
+    }
+
+    amended_payload = {
+        "id": study_id,
+        "name": "CADENCE-102 Amended",
+        "arms": [
+            {"id": "arm_1", "name": "Arm A Modified", "description": "20mg"},
+        ],
+        "visits": [
+            {"id": "v1", "name": "Visit 1: Screening", "schedule": "Day -7"},
+        ],
+        "activities": [
+            {"id": "act_1", "name": "Activity 1", "spec": "Spec 1"},
+        ],
+        "eligibilityCriteria": [
+            {"id": "crit_1", "text": "Inclusion 1 Modified"},
+        ],
+        "forms": [
+            {"id": "f_1", "form_key": "FORM_1", "name": "Form 1"},
+        ],
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=designer_app), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            "/api/v1/designer/amendments/diff",
+            json={
+                "study_id": study_id,
+                "base_version_tag": "1.0.0",
+                "amended_version_tag": "1.1.0",
+                "base_payload": base_payload,
+                "draft_payload": amended_payload,
+            },
+            headers=get_auth_headers(),
+        )
+
+        assert response.status_code == 200
+        diff_data = response.json()
+        assert len(diff_data["usdm_graph_diffs"]) > 0
+        assert len(diff_data["soa_matrix_diffs"]) > 0
+        assert len(diff_data["eligibility_diffs"]) > 0
+        assert len(diff_data["ecrf_form_diffs"]) > 0
+
+
+@pytest.mark.asyncio
 async def test_designer_amendment_impact_endpoint_direct() -> None:
     """Validate standalone POST /api/v1/designer/amendments/impact endpoint.
 

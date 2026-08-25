@@ -284,14 +284,15 @@ async def test_manual_physical_paper_consent_override() -> None:
                 "visit_name": "Week 1",
                 "study_id": "STUDY-PAPER",
             }
-            with pytest.raises(PermissionError) as exc_info:
-                await client.post(
-                    "/api/v1/execution/visits",
-                    json=visit_payload,
-                    headers=get_auth_headers(),
-                )
-            assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
-                exc_info.value
+            res_visit_paper_fail = await client.post(
+                "/api/v1/execution/visits",
+                json=visit_payload,
+                headers=get_auth_headers(),
+            )
+            assert res_visit_paper_fail.status_code == 423
+            assert (
+                "Re-Consent Required - Demographics & Visit Forms Locked"
+                in res_visit_paper_fail.json()["detail"]
             )
 
             # 2. Record manual physical paper consent override

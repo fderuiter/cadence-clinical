@@ -108,14 +108,15 @@ async def test_subject_consent_blocking_and_reconsent_lifecycle() -> None:
                 "visit_name": "Week 4",
                 "study_id": "STUDY-123",
             }
-            with pytest.raises(PermissionError) as exc_info:
-                await client.post(
-                    "/api/v1/execution/visits",
-                    json=visit_payload,
-                    headers=get_auth_headers(),
-                )
-            assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
-                exc_info.value
+            res_v1_fail = await client.post(
+                "/api/v1/execution/visits",
+                json=visit_payload,
+                headers=get_auth_headers(),
+            )
+            assert res_v1_fail.status_code == 423
+            assert (
+                "Re-Consent Required - Demographics & Visit Forms Locked"
+                in res_v1_fail.json()["detail"]
             )
 
             # Record initial protocol version 1 consent (unblocked)
@@ -181,14 +182,15 @@ async def test_subject_consent_blocking_and_reconsent_lifecycle() -> None:
                 "visit_name": "Week 8",
                 "study_id": "STUDY-123",
             }
-            with pytest.raises(PermissionError) as exc_info_v2:
-                await client.post(
-                    "/api/v1/execution/visits",
-                    json=visit_payload_2,
-                    headers=get_auth_headers(),
-                )
-            assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
-                exc_info_v2.value
+            res_v2_fail = await client.post(
+                "/api/v1/execution/visits",
+                json=visit_payload_2,
+                headers=get_auth_headers(),
+            )
+            assert res_v2_fail.status_code == 423
+            assert (
+                "Re-Consent Required - Demographics & Visit Forms Locked"
+                in res_v2_fail.json()["detail"]
             )
 
             # Try to create an observation (should fail)
@@ -200,14 +202,15 @@ async def test_subject_consent_blocking_and_reconsent_lifecycle() -> None:
                 "value": 120.0,
                 "unit": "mmHg",
             }
-            with pytest.raises(PermissionError) as exc_info_obs:
-                await client.post(
-                    "/api/v1/execution/observations",
-                    json=obs_payload,
-                    headers=get_auth_headers(),
-                )
-            assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
-                exc_info_obs.value
+            res_obs_fail = await client.post(
+                "/api/v1/execution/observations",
+                json=obs_payload,
+                headers=get_auth_headers(),
+            )
+            assert res_obs_fail.status_code == 423
+            assert (
+                "Re-Consent Required - Demographics & Visit Forms Locked"
+                in res_obs_fail.json()["detail"]
             )
 
             # Try to create a FormSubmission (should fail)
@@ -218,14 +221,15 @@ async def test_subject_consent_blocking_and_reconsent_lifecycle() -> None:
                 "visit_id": "VISIT-1",
                 "form_id": "FORM-1",
             }
-            with pytest.raises(PermissionError) as exc_info_form:
-                await client.post(
-                    "/api/v1/execution/form-submissions",
-                    json=form_payload,
-                    headers=get_auth_headers(),
-                )
-            assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
-                exc_info_form.value
+            res_form_fail = await client.post(
+                "/api/v1/execution/form-submissions",
+                json=form_payload,
+                headers=get_auth_headers(),
+            )
+            assert res_form_fail.status_code == 423
+            assert (
+                "Re-Consent Required - Demographics & Visit Forms Locked"
+                in res_form_fail.json()["detail"]
             )
 
             # 3. Simulate matching consent for version 2 (signed=True, requires_reconsent=False)
@@ -307,14 +311,15 @@ async def test_subject_consent_endpoint_lifecycle() -> None:
                 "visit_name": "Screening",
                 "study_id": "STUDY-456",
             }
-            with pytest.raises(PermissionError) as exc_info:
-                await client.post(
-                    "/api/v1/execution/visits",
-                    json=visit_payload,
-                    headers=get_auth_headers(),
-                )
-            assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
-                exc_info.value
+            res_v_fail = await client.post(
+                "/api/v1/execution/visits",
+                json=visit_payload,
+                headers=get_auth_headers(),
+            )
+            assert res_v_fail.status_code == 423
+            assert (
+                "Re-Consent Required - Demographics & Visit Forms Locked"
+                in res_v_fail.json()["detail"]
             )
 
             # 2. Record initial protocol version 1 consent using our new POST endpoint!
@@ -377,14 +382,15 @@ async def test_subject_consent_endpoint_lifecycle() -> None:
                 "visit_name": "Week 2",
                 "study_id": "STUDY-456",
             }
-            with pytest.raises(PermissionError) as exc_info_re:
-                await client.post(
-                    "/api/v1/execution/visits",
-                    json=visit_payload_2,
-                    headers=get_auth_headers(),
-                )
-            assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
-                exc_info_re.value
+            res_v2_fail = await client.post(
+                "/api/v1/execution/visits",
+                json=visit_payload_2,
+                headers=get_auth_headers(),
+            )
+            assert res_v2_fail.status_code == 423
+            assert (
+                "Re-Consent Required - Demographics & Visit Forms Locked"
+                in res_v2_fail.json()["detail"]
             )
 
             # 4. Clear the gate by recording signed ICF for version 2.0 (requires_reconsent = False)
