@@ -20,6 +20,71 @@ class MessageRole(StrEnum):
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
+    TOOL = "tool"
+
+
+class FunctionDefinition(BaseModel):
+    """Function specification within a tool definition."""
+
+    name: str = Field(..., description="Name of the function to be called.")
+    description: str | None = Field(
+        default=None,
+        description="Description of function capability for the model.",
+    )
+    parameters: dict[str, Any] | None = Field(
+        default=None,
+        description="JSON Schema for function arguments.",
+    )
+
+
+class ToolDefinition(BaseModel):
+    """Tool definition specification for model function calling."""
+
+    type: str = Field(
+        default="function",
+        description="Type of tool. Defaults to 'function'.",
+    )
+    function: FunctionDefinition = Field(
+        ...,
+        description="Function declaration details.",
+    )
+
+
+class ToolCallFunction(BaseModel):
+    """Function call details emitted by the model."""
+
+    name: str = Field(..., description="Name of the requested function.")
+    arguments: str | dict[str, Any] = Field(
+        ...,
+        description="Raw JSON string or parsed dictionary of arguments.",
+    )
+
+
+class ToolCall(BaseModel):
+    """Structured tool call request emitted by the model."""
+
+    id: str = Field(..., description="Unique tool call invocation identifier.")
+    type: str = Field(
+        default="function",
+        description="Tool type (defaults to 'function').",
+    )
+    function: ToolCallFunction = Field(
+        ...,
+        description="Function call payload.",
+    )
+
+
+class ToolResponse(BaseModel):
+    """Structured result of executing a tool call."""
+
+    tool_call_id: str = Field(..., description="Matching ID of the tool call request.")
+    content: str | dict[str, Any] = Field(
+        ...,
+        description="Result content string or structured dictionary from tool execution.",
+    )
+    name: str | None = Field(
+        default=None, description="Optional name of the tool executed."
+    )
 
 
 class ChatMessage(BaseModel):
@@ -29,9 +94,21 @@ class ChatMessage(BaseModel):
         default=MessageRole.USER,
         description="Role of the message author.",
     )
-    content: str = Field(
-        ...,
+    content: str | None = Field(
+        default=None,
         description="Text content of the message.",
+    )
+    tool_calls: list[ToolCall] | None = Field(
+        default=None,
+        description="Optional list of tool calls emitted by assistant.",
+    )
+    tool_call_id: str | None = Field(
+        default=None,
+        description="ID of tool call this message responds to (for tool role).",
+    )
+    name: str | None = Field(
+        default=None,
+        description="Optional author or tool name.",
     )
 
 
@@ -45,6 +122,18 @@ class GenerationRequest(BaseModel):
     messages: list[ChatMessage] | None = Field(
         default=None,
         description="Structured list of conversational messages.",
+    )
+    tools: list[ToolDefinition] | None = Field(
+        default=None,
+        description="List of tool definitions available for model tool selection.",
+    )
+    tool_choice: str | dict[str, Any] | None = Field(
+        default=None,
+        description="Tool choice configuration (e.g. 'auto', 'required', or explicit selection).",
+    )
+    tool_responses: list[ToolResponse] | None = Field(
+        default=None,
+        description="List of execution responses for previously requested tool calls.",
     )
     tier: ModelTier = Field(
         default=ModelTier.TIER_2_FAST,
@@ -102,13 +191,17 @@ class TokenUsage(BaseModel):
 class GenerationResponse(BaseModel):
     """Response payload containing generated content and execution telemetry."""
 
-    content: str = Field(
-        ...,
+    content: str | None = Field(
+        default="",
         description="Raw generated text or serialized JSON string.",
     )
     structured_data: dict[str, Any] | None = Field(
         default=None,
         description="Parsed JSON payload if response_schema was enforced.",
+    )
+    tool_calls: list[ToolCall] | None = Field(
+        default=None,
+        description="Structured tool call requests emitted by the model.",
     )
     model: str = Field(
         ...,

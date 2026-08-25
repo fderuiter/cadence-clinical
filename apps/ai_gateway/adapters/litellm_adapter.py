@@ -16,6 +16,8 @@ from apps.ai_gateway.domain.models import (
     ModelTier,
     TierInfo,
     TokenUsage,
+    ToolCall,
+    ToolCallFunction,
 )
 from apps.ai_gateway.domain.ports import AIEnginePort
 
@@ -79,15 +81,57 @@ class LiteLLMAdapter(AIEnginePort):
         start_time = time.perf_counter()
 
         # Build messages payload
-        messages: list[dict[str, str]] = []
+        messages: list[dict[str, Any]] = []
         if request.messages:
-            messages = [
-                {"role": str(m.role), "content": m.content} for m in request.messages
-            ]
+            for m in request.messages:
+                m_dict: dict[str, Any] = {"role": str(m.role)}
+                if m.content is not None:
+                    m_dict["content"] = m.content
+                else:
+                    m_dict["content"] = ""
+                if m.name is not None:
+                    m_dict["name"] = m.name
+                if m.tool_call_id is not None:
+                    m_dict["tool_call_id"] = m.tool_call_id
+                if m.tool_calls:
+                    m_dict["tool_calls"] = [
+                        {
+                            "id": tc.id,
+                            "type": tc.type,
+                            "function": {
+                                "name": tc.function.name,
+                                "arguments": tc.function.arguments
+                                if isinstance(tc.function.arguments, str)
+                                else json.dumps(tc.function.arguments),
+                            },
+                        }
+                        for tc in m.tool_calls
+                    ]
+                messages.append(m_dict)
         elif request.prompt:
             messages = [{"role": "user", "content": request.prompt}]
+        elif request.tool_responses:
+            messages = []
         else:
-            raise ValueError("Either 'prompt' or 'messages' must be provided.")
+            raise ValueError(
+                "Either 'prompt', 'messages', or 'tool_responses' must be provided."
+            )
+
+        if request.tool_responses:
+            for tr in request.tool_responses:
+                tr_content = (
+                    tr.content
+                    if isinstance(tr.content, str)
+                    else json.dumps(tr.content)
+                )
+                tr_dict: dict[str, Any] = {
+                    "role": "tool",
+                    "tool_call_id": tr.tool_call_id,
+                    "content": tr_content,
+                }
+                if tr.name:
+                    tr_dict["name"] = tr.name
+                messages.append(tr_dict)
 
         kwargs: dict[str, Any] = {
             "model": model,
@@ -97,6 +141,12 @@ class LiteLLMAdapter(AIEnginePort):
 
         if request.max_tokens is not None:
             kwargs["max_tokens"] = request.max_tokens
+
+        if request.tools:
+            kwargs["tools"] = [t.model_dump(exclude_none=True) for t in request.tools]
+
+        if request.tool_choice is not None:
+            kwargs["tool_choice"] = request.tool_choice
 
         # Support JSON mode / Structured Outputs
         if request.response_schema is not None:
@@ -118,7 +168,45 @@ class LiteLLMAdapter(AIEnginePort):
 
         # Extract content
         choice = response.choices[0]
-        content = choice.message.content or ""
+        content = getattr(choice.message, "content", None) or ""
+
+        tool_calls: list[ToolCall] | None = None
+        raw_tool_calls = getattr(choice.message, "tool_calls", None)
+        if raw_tool_calls:
+            tool_calls = []
+            for tc in raw_tool_calls:
+                if isinstance(tc, dict):
+                    tc_id = str(tc.get("id", ""))
+                    tc_type = str(tc.get("type", "function"))
+                    tc_func = tc.get("function", {})
+                else:
+                    tc_id = str(getattr(tc, "id", ""))
+                    tc_type = str(getattr(tc, "type", "function"))
+                    tc_func = getattr(tc, "function", {})
+
+                if isinstance(tc_func, dict):
+                    fn_name = str(tc_func.get("name", ""))
+                    fn_args = tc_func.get("arguments", {})
+                else:
+                    fn_name = str(getattr(tc_func, "name", ""))
+                    fn_args = getattr(tc_func, "arguments", {})
+
+                if isinstance(fn_args, str):
+                    try:
+                        parsed_args = json.loads(fn_args)
+                        fn_args = parsed_args
+                    except Exception:
+                        pass
+                tool_calls.append(
+                    ToolCall(
+                        id=tc_id,
+                        type=tc_type,
+                        function=ToolCallFunction(
+                            name=fn_name,
+                            arguments=fn_args,
+                        ),
+                    )
+                )
 
         # Parse structured output if schema was supplied
         structured_data: dict[str, Any] | None = None
@@ -141,6 +229,7 @@ class LiteLLMAdapter(AIEnginePort):
         return GenerationResponse(
             content=content,
             structured_data=structured_data,
+            tool_calls=tool_calls,
             model=model,
             tier=request.tier,
             usage=usage,

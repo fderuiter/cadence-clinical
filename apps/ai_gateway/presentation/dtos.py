@@ -15,6 +15,70 @@ from apps.ai_gateway.domain.reasoning import (
 )
 
 
+class FunctionDefinitionDTO(BaseModel):
+    """Function specification transfer object."""
+
+    name: str = Field(..., description="Name of the function to be called.")
+    description: str | None = Field(
+        default=None,
+        description="Description of function capability for the model.",
+    )
+    parameters: dict[str, Any] | None = Field(
+        default=None,
+        description="JSON Schema for function arguments.",
+    )
+
+
+class ToolDefinitionDTO(BaseModel):
+    """Tool definition transfer object."""
+
+    type: str = Field(
+        default="function",
+        description="Type of tool. Defaults to 'function'.",
+    )
+    function: FunctionDefinitionDTO = Field(
+        ...,
+        description="Function declaration details.",
+    )
+
+
+class ToolCallFunctionDTO(BaseModel):
+    """Function call details transfer object."""
+
+    name: str = Field(..., description="Name of the requested function.")
+    arguments: str | dict[str, Any] = Field(
+        ...,
+        description="Raw JSON string or parsed dictionary of arguments.",
+    )
+
+
+class ToolCallDTO(BaseModel):
+    """Structured tool call transfer object."""
+
+    id: str = Field(..., description="Unique tool call invocation identifier.")
+    type: str = Field(
+        default="function",
+        description="Tool type.",
+    )
+    function: ToolCallFunctionDTO = Field(
+        ...,
+        description="Function call payload.",
+    )
+
+
+class ToolResponseDTO(BaseModel):
+    """Structured result transfer object for tool call execution."""
+
+    tool_call_id: str = Field(..., description="Matching ID of the tool call request.")
+    content: str | dict[str, Any] = Field(
+        ...,
+        description="Result content string or structured dictionary from tool execution.",
+    )
+    name: str | None = Field(
+        default=None, description="Optional name of the tool executed."
+    )
+
+
 class ChatMessageDTO(BaseModel):
     """Chat message transfer object."""
 
@@ -22,9 +86,21 @@ class ChatMessageDTO(BaseModel):
         default=MessageRole.USER,
         description="Role of the message author.",
     )
-    content: str = Field(
-        ...,
+    content: str | None = Field(
+        default=None,
         description="Text content of the message.",
+    )
+    tool_calls: list[ToolCallDTO] | None = Field(
+        default=None,
+        description="Optional list of tool calls emitted by assistant.",
+    )
+    tool_call_id: str | None = Field(
+        default=None,
+        description="ID of tool call this message responds to (for tool role).",
+    )
+    name: str | None = Field(
+        default=None,
+        description="Optional author or tool name.",
     )
 
 
@@ -38,6 +114,18 @@ class GenerationRequestDTO(BaseModel):
     messages: list[ChatMessageDTO] | None = Field(
         default=None,
         description="Multi-turn conversation history.",
+    )
+    tools: list[ToolDefinitionDTO] | None = Field(
+        default=None,
+        description="List of tool definitions available for model tool selection.",
+    )
+    tool_choice: str | dict[str, Any] | None = Field(
+        default=None,
+        description="Tool choice configuration (e.g. 'auto', 'required', or explicit selection).",
+    )
+    tool_responses: list[ToolResponseDTO] | None = Field(
+        default=None,
+        description="List of execution responses for previously requested tool calls.",
     )
     tier: ModelTier = Field(
         default=ModelTier.TIER_2_FAST,
@@ -95,10 +183,16 @@ class TokenUsageDTO(BaseModel):
 class GenerationResponseDTO(BaseModel):
     """Outbound DTO containing completion results and execution telemetry."""
 
-    content: str = Field(..., description="Generated text or serialized JSON.")
+    content: str | None = Field(
+        default="", description="Generated text or serialized JSON."
+    )
     structured_data: dict[str, Any] | None = Field(
         default=None,
         description="Structured JSON object if response_schema was requested.",
+    )
+    tool_calls: list[ToolCallDTO] | None = Field(
+        default=None,
+        description="Structured tool call requests emitted by the model.",
     )
     model: str = Field(..., description="Active model identifier.")
     tier: ModelTier = Field(..., description="Resolved model tier.")
