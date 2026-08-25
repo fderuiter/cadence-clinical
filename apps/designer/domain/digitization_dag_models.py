@@ -20,6 +20,7 @@ from apps.designer.domain.digitization_models import (
     ExtractedCriterion,
     ExtractedEpoch,
     ExtractedVisit,
+    FaithfulnessVerificationMetadata,
     SynthesizedECRFForm,
     USDMProtocolExtractionResponse,
 )
@@ -145,6 +146,10 @@ class ECRFSynthesisCheckpoint(BaseModel):
     confidence_score: float = Field(
         default=0.95, ge=0.0, le=1.0, description="Stage confidence score"
     )
+    faithfulness_metadata: FaithfulnessVerificationMetadata | None = Field(
+        default=None,
+        description="Post-synthesis output faithfulness evaluation metrics",
+    )
 
 
 class USDMCompilationCheckpoint(BaseModel):
@@ -249,6 +254,10 @@ class DigitizationJob(BaseModel):
     synthesized_forms: list[SynthesizedECRFForm] = Field(
         default_factory=list, description="Synthesized CDASH eCRF forms"
     )
+    faithfulness_metadata: FaithfulnessVerificationMetadata | None = Field(
+        default=None,
+        description="Post-synthesis output faithfulness evaluation metrics",
+    )
 
 
 # =========================================================================
@@ -295,6 +304,10 @@ class DAGJobStatusResponse(BaseModel):
     )
     synthesized_forms: list[SynthesizedECRFForm] = Field(
         default_factory=list, description="Synthesized eCRFs when completed"
+    )
+    faithfulness_metadata: FaithfulnessVerificationMetadata | None = Field(
+        default=None,
+        description="Post-synthesis faithfulness metrics and verification status",
     )
 
 

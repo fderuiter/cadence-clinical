@@ -362,6 +362,14 @@ def main() -> None:
                                     "apps/web/src/views/EcrfView.vue",
                                 },
                                 {
+                                    "packages/security/audit_logger.py",
+                                    "packages/compliance/audit.py",
+                                },
+                                {
+                                    "packages/compliance/__init__.py",
+                                    "packages/compliance/audit.py",
+                                },
+                                {
                                     "apps/ctms/services/doa_service.py",
                                     "apps/econsent/services/econsent_service.py",
                                     "apps/notifications/workers/notification_worker.py",

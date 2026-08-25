@@ -21,6 +21,7 @@ from apps.designer.domain.cdisc.usdm_models import (
 from apps.designer.domain.digitization_models import (
     USDMProtocolExtractionResponse,
 )
+from packages.compliance.services.protocol_rag import format_citation_marker
 from packages.database.mock_graph import MockGraphDriver
 
 logger = logging.getLogger(__name__)
@@ -228,6 +229,10 @@ class SoACompiler:
                             or enc_id in assigned_visits
                         )
 
+                        sec_num = getattr(act, "section_number", None) or "6.1"
+                        pg_num = getattr(act, "page_number", None) or 14
+                        cit_marker = format_citation_marker("v1.0", sec_num, pg_num)
+
                         cells.append(
                             {
                                 "activity_id": act.id,
@@ -237,6 +242,9 @@ class SoACompiler:
                                 "details": None,
                                 "arm_id": None,
                                 "derived_from_soa": False,
+                                "section_number": sec_num,
+                                "page_number": pg_num,
+                                "citation_marker": cit_marker,
                             }
                         )
 
@@ -324,6 +332,12 @@ class SoACompiler:
             act_id = f"act_{idx + 1}"
             assigned_visits = set(act.assigned_visit_names or [])
 
+            sec_num = getattr(act, "section_number", None) or "6.1"
+            pg_num = getattr(act, "page_number", None) or 14
+            cit_marker = getattr(
+                act, "citation_marker", None
+            ) or format_citation_marker("v1.0", sec_num, pg_num)
+
             cells: list[dict[str, Any]] = []
             for enc in encounters_list:
                 enc_id = enc["encounter_id"]
@@ -341,6 +355,9 @@ class SoACompiler:
                         "details": None,
                         "arm_id": None,
                         "derived_from_soa": False,
+                        "section_number": sec_num,
+                        "page_number": pg_num,
+                        "citation_marker": cit_marker,
                     }
                 )
 
@@ -502,6 +519,13 @@ class SoACompiler:
                 for cell in r.get("cells", []):
                     if not isinstance(cell, dict):
                         continue
+                    c_sec = (
+                        cell.get("section_number") or r.get("section_number") or "6.1"
+                    )
+                    c_pg = cell.get("page_number") or r.get("page_number") or 14
+                    c_marker = cell.get("citation_marker") or format_citation_marker(
+                        "v1.0", c_sec, c_pg
+                    )
                     cells.append(
                         {
                             "activity_id": str(cell.get("activity_id") or act_id),
@@ -515,6 +539,9 @@ class SoACompiler:
                             "derived_from_soa": bool(
                                 cell.get("derived_from_soa", False)
                             ),
+                            "section_number": c_sec,
+                            "page_number": c_pg,
+                            "citation_marker": c_marker,
                         }
                     )
                 rows_list.append(
@@ -553,6 +580,12 @@ class SoACompiler:
             assigned_visits = set(act.get("assigned_visit_names") or [])
             assigned_enc_ids = set(act.get("assigned_encounter_ids") or [])
 
+            sec_num = act.get("section_number") or "6.1"
+            pg_num = act.get("page_number") or 14
+            cit_marker = act.get("citation_marker") or format_citation_marker(
+                "v1.0", sec_num, pg_num
+            )
+
             cells = []
             for enc in encounters_list:
                 enc_id = enc["encounter_id"]
@@ -574,6 +607,9 @@ class SoACompiler:
                         "details": None,
                         "arm_id": None,
                         "derived_from_soa": False,
+                        "section_number": sec_num,
+                        "page_number": pg_num,
+                        "citation_marker": cit_marker,
                     }
                 )
 
@@ -769,6 +805,10 @@ class SoACompiler:
                 if is_applicable:
                     details = timing_map.get(enc_id) or timing_map.get(str(p_id))
 
+                sec_num = "6.1"
+                pg_num = 14
+                cit_marker = format_citation_marker("v1.0", sec_num, pg_num)
+
                 cells.append(
                     {
                         "activity_id": str(p_id),
@@ -779,6 +819,9 @@ class SoACompiler:
                         "arm_id": target_to_arm.get(enc_id)
                         or target_to_arm.get(str(p_id)),
                         "derived_from_soa": False,
+                        "section_number": sec_num,
+                        "page_number": pg_num,
+                        "citation_marker": cit_marker,
                     }
                 )
 
@@ -1009,6 +1052,10 @@ class SoACompiler:
                         or (enc_name, str(act_name)) in applicability_set
                     )
 
+                    sec_num = "6.1"
+                    pg_num = 14
+                    cit_marker = format_citation_marker("v1.0", sec_num, pg_num)
+
                     cells.append(
                         {
                             "activity_id": str(act_id),
@@ -1018,6 +1065,9 @@ class SoACompiler:
                             "details": None,
                             "arm_id": None,
                             "derived_from_soa": False,
+                            "section_number": sec_num,
+                            "page_number": pg_num,
+                            "citation_marker": cit_marker,
                         }
                     )
 

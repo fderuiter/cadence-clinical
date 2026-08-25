@@ -8298,6 +8298,17 @@
           "message": {
             "type": "string",
             "title": "Message"
+          },
+          "faithfulness_metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FaithfulnessVerificationMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Post-synthesis faithfulness evaluation metrics and verification status"
           }
         },
         "type": "object",
@@ -9179,6 +9190,17 @@
             "type": "array",
             "title": "Synthesized Forms",
             "description": "Synthesized eCRFs when completed"
+          },
+          "faithfulness_metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FaithfulnessVerificationMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Post-synthesis faithfulness metrics and verification status"
           }
         },
         "type": "object",
@@ -9956,6 +9978,42 @@
             "type": "array",
             "title": "Assigned Visit Names",
             "description": "List of visit names where this procedure is scheduled"
+          },
+          "section_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Number",
+            "description": "Source protocol section citation number e.g. '5.1'"
+          },
+          "page_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Number",
+            "description": "Source protocol page citation number e.g. 12"
+          },
+          "citation_marker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Citation Marker",
+            "description": "Verbatim citation marker string"
           }
         },
         "type": "object",
@@ -10139,6 +10197,61 @@
         ],
         "title": "ExtractedVisit",
         "description": "Represents a study encounter or visit extracted from the protocol."
+      },
+      "FaithfulnessVerificationMetadata": {
+        "properties": {
+          "faithfulness_score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Faithfulness Score",
+            "description": "Overall post-synthesis output faithfulness confidence score evaluated against 0.85 threshold."
+          },
+          "is_faithful": {
+            "type": "boolean",
+            "title": "Is Faithful",
+            "description": "True if faithfulness score meets or exceeds 0.85 groundedness threshold."
+          },
+          "verification_status": {
+            "type": "string",
+            "enum": [
+              "VERIFIED",
+              "FLAGGED_LOW_FAITHFULNESS"
+            ],
+            "title": "Verification Status",
+            "description": "Verification status flag for clinical auditability and user awareness.",
+            "default": "VERIFIED"
+          },
+          "citation_coverage": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Citation Coverage",
+            "description": "Percentage of synthesized form fields and matrix cells containing section and page citations.",
+            "default": 1.0
+          },
+          "protocol_version": {
+            "type": "string",
+            "title": "Protocol Version",
+            "description": "Target protocol version identifier used during citation formatting and verification.",
+            "default": "v1.0"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "description": "Diagnostic warning messages flagging low faithfulness or missing citations."
+          }
+        },
+        "type": "object",
+        "required": [
+          "faithfulness_score",
+          "is_faithful"
+        ],
+        "title": "FaithfulnessVerificationMetadata",
+        "description": "Verification metadata containing post-synthesis faithfulness score and status indicators."
       },
       "FeasibilityReport": {
         "properties": {
@@ -12425,6 +12538,42 @@
             "title": "Derived From Soa",
             "description": "Flag indicating selective lineage.",
             "default": false
+          },
+          "section_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Number",
+            "description": "Protocol section citation number coordinate (e.g., '6.1')."
+          },
+          "page_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Number",
+            "description": "Protocol page citation number coordinate (e.g., 18)."
+          },
+          "citation_marker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Citation Marker",
+            "description": "Standardized verbatim citation marker string."
           }
         },
         "type": "object",
@@ -13287,6 +13436,42 @@
             "type": "array",
             "title": "Rules",
             "description": "Compiled validation and skip rules"
+          },
+          "section_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Number",
+            "description": "Protocol section number citation coordinate"
+          },
+          "page_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Number",
+            "description": "Protocol page number citation coordinate"
+          },
+          "citation_marker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Citation Marker",
+            "description": "Standardized verbatim citation marker string"
           }
         },
         "type": "object",
@@ -13728,6 +13913,17 @@
             "minimum": 0.0,
             "title": "Confidence Score",
             "description": "Overall LLM extraction confidence"
+          },
+          "faithfulness_metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FaithfulnessVerificationMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Post-synthesis faithfulness evaluation metrics and verification status"
           }
         },
         "type": "object",
