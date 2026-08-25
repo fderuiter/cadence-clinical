@@ -64,7 +64,7 @@ def test_cdisc_openapi_component_schemas() -> None:
     ]
 
     for model_name in expected_schemas:
-        assert model_name in schemas, (
+        assert model_name in schemas or f"Gateway_{model_name}" in schemas, (
             f"Missing model schema in OpenAPI specs: {model_name}"
         )
 

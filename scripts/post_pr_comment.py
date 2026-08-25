@@ -53,6 +53,7 @@ ROW_KEYS: dict[str, str] = {
     "Database Migration Integrity": "migration",
     "Markdown Validation": "markdown",
     "Architectural Drift Validation": "architecture",
+    "OpenAPI Documentation Drift": "openapi_drift",
 }
 
 FIX_COMMANDS: dict[str, str] = {
@@ -71,6 +72,7 @@ FIX_COMMANDS: dict[str, str] = {
     "migration": "`uv run python3 apps/execution/database/rollback.py`",
     "markdown": "`uv run python scripts/validate_markdown.py`",
     "architecture": "`uv run python scripts/validate_architecture_drift.py`",
+    "openapi_drift": "`uv run cadence fix --all`",
 }
 
 
@@ -198,6 +200,7 @@ def merge_outcomes(
         "migration",
         "markdown",
         "architecture",
+        "openapi_drift",
     ]:
         new_val = new_outcomes.get(key)
         existing_val = existing_outcomes.get(key)
@@ -379,6 +382,10 @@ def build_comment_body(
         (
             "Architectural Drift Validation (validate_architecture_drift.py)",
             "architecture",
+        ),
+        (
+            "OpenAPI Documentation Drift (validate_openapi_drift.py)",
+            "openapi_drift",
         ),
     ]
 
@@ -639,6 +646,7 @@ def main() -> None:
             "migration": os.environ.get("MIGRATION_OUTCOME", ""),
             "markdown": os.environ.get("MARKDOWN_OUTCOME", ""),
             "architecture": os.environ.get("ARCHITECTURE_OUTCOME", ""),
+            "openapi_drift": os.environ.get("OPENAPI_DRIFT_OUTCOME", ""),
         }
 
         # Fetch existing comments to see if we have an existing checklist comment

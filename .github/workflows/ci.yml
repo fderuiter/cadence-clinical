@@ -28,6 +28,7 @@ jobs:
       traceability_outcome: ${{ steps.run_traceability.outcome }}
       markdown_outcome: ${{ steps.run_markdown.outcome }}
       architecture_outcome: ${{ steps.run_architecture.outcome }}
+      openapi_drift_outcome: ${{ steps.run_openapi_drift.outcome }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -79,6 +80,11 @@ jobs:
         id: run_contracts
         if: always()
         run: uv run python scripts/verify_contracts.py
+
+      - name: Run OpenAPI Documentation Drift Check
+        id: run_openapi_drift
+        if: always()
+        run: uv run python scripts/validate_openapi_drift.py
 
       - name: Run linting
         id: run_linting
@@ -767,6 +773,7 @@ jobs:
           TRACEABILITY_OUTCOME: ${{ needs.style.outputs.traceability_outcome }}
           MARKDOWN_OUTCOME: ${{ needs.style.outputs.markdown_outcome }}
           ARCHITECTURE_OUTCOME: ${{ needs.style.outputs.architecture_outcome }}
+          OPENAPI_DRIFT_OUTCOME: ${{ needs.style.outputs.openapi_drift_outcome }}
         run: uv run python scripts/post_pr_comment.py
   classify:
     name: Classify Change

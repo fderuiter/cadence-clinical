@@ -12,7 +12,7 @@
         ],
         "summary": "List Cdisc Products",
         "description": "List available CDISC products and standards catalogs.\n\nRequirements: PRD-SYS-001",
-        "operationId": "list_cdisc_products_api_v1_cdisc_products_get",
+        "operationId": "Gateway_list_cdisc_products_api_v1_cdisc_products_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -20,7 +20,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/CdiscProductSummary"
+                    "$ref": "#/components/schemas/Gateway_CdiscProductSummary"
                   },
                   "type": "array",
                   "title": "Response List Cdisc Products Api V1 Cdisc Products Get"
@@ -38,7 +38,7 @@
         ],
         "summary": "Get Cdash Domain Definition",
         "description": "Retrieve CDASH domain specification definition.\n\nRequirements: PRD-SYS-001",
-        "operationId": "get_cdash_domain_definition_api_v1_cdisc_cdash__domain_code__get",
+        "operationId": "Gateway_get_cdash_domain_definition_api_v1_cdisc_cdash__domain_code__get",
         "parameters": [
           {
             "name": "domain_code",
@@ -68,7 +68,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CdashDomainDefinition"
+                  "$ref": "#/components/schemas/Gateway_CdashDomainDefinition"
                 }
               }
             }
@@ -78,7 +78,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Gateway_HTTPValidationError"
                 }
               }
             }
@@ -93,7 +93,7 @@
         ],
         "summary": "Get Sdtm Domain Definition",
         "description": "Retrieve SDTM domain specification definition.\n\nRequirements: PRD-SYS-001",
-        "operationId": "get_sdtm_domain_definition_api_v1_cdisc_sdtm__domain_code__get",
+        "operationId": "Gateway_get_sdtm_domain_definition_api_v1_cdisc_sdtm__domain_code__get",
         "parameters": [
           {
             "name": "domain_code",
@@ -123,7 +123,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SdtmDomainDefinition"
+                  "$ref": "#/components/schemas/Gateway_SdtmDomainDefinition"
                 }
               }
             }
@@ -133,7 +133,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Gateway_HTTPValidationError"
                 }
               }
             }
@@ -148,7 +148,7 @@
         ],
         "summary": "Get Controlled Terminology Codelist",
         "description": "Retrieve controlled terminology codelist definition with local cache check.\n\nRequirements: PRD-SYS-001",
-        "operationId": "get_controlled_terminology_codelist_api_v1_cdisc_codelists__codelist_code__get",
+        "operationId": "Gateway_get_controlled_terminology_codelist_api_v1_cdisc_codelists__codelist_code__get",
         "parameters": [
           {
             "name": "codelist_code",
@@ -178,7 +178,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CodelistDefinition"
+                  "$ref": "#/components/schemas/Gateway_CodelistDefinition"
                 }
               }
             }
@@ -188,7 +188,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Gateway_HTTPValidationError"
                 }
               }
             }
@@ -203,12 +203,12 @@
         ],
         "summary": "Import Usdm Protocol Spec",
         "description": "Import CDISC USDM JSON protocol specification into Study Designer.\n\nRequirements: PRD-SYS-001",
-        "operationId": "import_usdm_protocol_spec_api_v1_usdm_import_post",
+        "operationId": "Gateway_import_usdm_protocol_spec_api_v1_usdm_import_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UsdmImportRequest"
+                "$ref": "#/components/schemas/Gateway_UsdmImportRequest"
               }
             }
           },
@@ -220,7 +220,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UsdmImportResponse"
+                  "$ref": "#/components/schemas/Gateway_UsdmImportResponse"
                 }
               }
             }
@@ -230,7 +230,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Gateway_HTTPValidationError"
                 }
               }
             }
@@ -245,7 +245,7 @@
         ],
         "summary": "Export Usdm Protocol Spec",
         "description": "Export study specification from Neo4j into CDISC USDM v3.0 JSON.\n\nRequirements: PRD-SYS-001",
-        "operationId": "export_usdm_protocol_spec_api_v1_usdm_export__study_id__get",
+        "operationId": "Gateway_export_usdm_protocol_spec_api_v1_usdm_export__study_id__get",
         "parameters": [
           {
             "name": "study_id",
@@ -263,7 +263,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UsdmExportResponse"
+                  "$ref": "#/components/schemas/Gateway_UsdmExportResponse"
                 }
               }
             }
@@ -273,7 +273,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Gateway_HTTPValidationError"
                 }
               }
             }
@@ -288,12 +288,12 @@
         ],
         "summary": "Submit Epro Entry",
         "description": "Submit a single participant ePRO/eCOA diary submission.\n\nRequirements: PRD-SYS-001",
-        "operationId": "submit_epro_entry_api_v1_ecoa_epro_submit_post",
+        "operationId": "Gateway_submit_epro_entry_api_v1_ecoa_epro_submit_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/EPROOfflineEntry"
+                "$ref": "#/components/schemas/Gateway_EPROOfflineEntry"
               }
             }
           },
@@ -305,7 +305,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EPROSubmitResponse"
+                  "$ref": "#/components/schemas/Gateway_EPROSubmitResponse"
                 }
               }
             }
@@ -315,7 +315,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Gateway_HTTPValidationError"
                 }
               }
             }
@@ -330,12 +330,12 @@
         ],
         "summary": "Sync Epro Entries",
         "description": "Bulk sync offline participant ePRO submissions.\n\nRequirements: PRD-SYS-001",
-        "operationId": "sync_epro_entries_api_v1_ecoa_epro_sync_post",
+        "operationId": "Gateway_sync_epro_entries_api_v1_ecoa_epro_sync_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/EPROBulkSyncRequest"
+                "$ref": "#/components/schemas/Gateway_EPROBulkSyncRequest"
               }
             }
           },
@@ -347,7 +347,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EPROBulkSyncResponse"
+                  "$ref": "#/components/schemas/Gateway_EPROBulkSyncResponse"
                 }
               }
             }
@@ -357,7 +357,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Gateway_HTTPValidationError"
                 }
               }
             }
@@ -372,7 +372,7 @@
         ],
         "summary": "Get Instrument",
         "description": "Retrieve an eCOA instrument definition by ID.\n\nRequirements: PRD-SYS-001",
-        "operationId": "get_instrument_api_v1_ecoa_instruments__id__get",
+        "operationId": "Gateway_get_instrument_api_v1_ecoa_instruments__id__get",
         "parameters": [
           {
             "name": "id",
@@ -390,7 +390,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InstrumentResponse"
+                  "$ref": "#/components/schemas/Gateway_InstrumentResponse"
                 }
               }
             }
@@ -400,7 +400,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Gateway_HTTPValidationError"
                 }
               }
             }
@@ -415,7 +415,7 @@
         ],
         "summary": "Get Subject Assignments",
         "description": "Retrieve all assignments for a given subject.\n\nRequirements: PRD-SYS-001",
-        "operationId": "get_subject_assignments_api_v1_ecoa_assignments_subject__subject_id__get",
+        "operationId": "Gateway_get_subject_assignments_api_v1_ecoa_assignments_subject__subject_id__get",
         "parameters": [
           {
             "name": "subject_id",
@@ -435,7 +435,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/SubjectAssignmentResponse"
+                    "$ref": "#/components/schemas/Gateway_SubjectAssignmentResponse"
                   },
                   "title": "Response Get Subject Assignments Api V1 Ecoa Assignments Subject  Subject Id  Get"
                 }
@@ -447,7 +447,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Gateway_HTTPValidationError"
                 }
               }
             }
@@ -462,7 +462,7 @@
         ],
         "summary": "Get Subject Compliance",
         "description": "Retrieve/compute eCOA compliance status metrics for a subject.\n\nRequirements: PRD-SYS-001",
-        "operationId": "get_subject_compliance_api_v1_ecoa_subjects__subject_id__compliance_get",
+        "operationId": "Gateway_get_subject_compliance_api_v1_ecoa_subjects__subject_id__compliance_get",
         "parameters": [
           {
             "name": "subject_id",
@@ -480,7 +480,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SubjectComplianceResponse"
+                  "$ref": "#/components/schemas/Gateway_SubjectComplianceResponse"
                 }
               }
             }
@@ -490,7 +490,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Gateway_HTTPValidationError"
                 }
               }
             }
@@ -505,7 +505,7 @@
         ],
         "summary": "Get Subject Instruments",
         "description": "Retrieve all unique assigned instruments for a given subject.\n\nRequirements: PRD-SYS-001",
-        "operationId": "get_subject_instruments_api_v1_ecoa_subjects__subject_id__instruments_get",
+        "operationId": "Gateway_get_subject_instruments_api_v1_ecoa_subjects__subject_id__instruments_get",
         "parameters": [
           {
             "name": "subject_id",
@@ -525,7 +525,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/InstrumentResponse"
+                    "$ref": "#/components/schemas/Gateway_InstrumentResponse"
                   },
                   "title": "Response Get Subject Instruments Api V1 Ecoa Subjects  Subject Id  Instruments Get"
                 }
@@ -537,7 +537,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Gateway_HTTPValidationError"
                 }
               }
             }
@@ -552,7 +552,7 @@
         ],
         "summary": "Get Subject Notifications",
         "description": "Retrieve all notifications for a given subject.\n\nRequirements: PRD-SYS-001",
-        "operationId": "get_subject_notifications_api_v1_ecoa_subjects__subject_id__notifications_get",
+        "operationId": "Gateway_get_subject_notifications_api_v1_ecoa_subjects__subject_id__notifications_get",
         "parameters": [
           {
             "name": "subject_id",
@@ -572,7 +572,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/SubjectNotificationResponse"
+                    "$ref": "#/components/schemas/Gateway_SubjectNotificationResponse"
                   },
                   "title": "Response Get Subject Notifications Api V1 Ecoa Subjects  Subject Id  Notifications Get"
                 }
@@ -584,7 +584,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Gateway_HTTPValidationError"
                 }
               }
             }
@@ -599,7 +599,7 @@
         ],
         "summary": "Acknowledge Notification",
         "description": "Acknowledge/read a notification.\n\nRequirements: PRD-SYS-001",
-        "operationId": "acknowledge_notification_api_v1_ecoa_notifications__notification_id__acknowledge_post",
+        "operationId": "Gateway_acknowledge_notification_api_v1_ecoa_notifications__notification_id__acknowledge_post",
         "parameters": [
           {
             "name": "notification_id",
@@ -616,7 +616,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AcknowledgeNotificationRequest"
+                "$ref": "#/components/schemas/Gateway_AcknowledgeNotificationRequest"
               }
             }
           }
@@ -627,7 +627,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SubjectNotificationResponse"
+                  "$ref": "#/components/schemas/Gateway_SubjectNotificationResponse"
                 }
               }
             }
@@ -637,7 +637,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Gateway_HTTPValidationError"
                 }
               }
             }
@@ -652,12 +652,12 @@
         ],
         "summary": "Create Instrument",
         "description": "Author a new eCOA questionnaire/diary definition.\n\nRequirements: PRD-SYS-001",
-        "operationId": "create_instrument_api_v1_ecoa_instruments_post",
+        "operationId": "Gateway_create_instrument_api_v1_ecoa_instruments_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/InstrumentCreate"
+                "$ref": "#/components/schemas/Gateway_InstrumentCreate"
               }
             }
           },
@@ -669,7 +669,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InstrumentResponse"
+                  "$ref": "#/components/schemas/Gateway_InstrumentResponse"
                 }
               }
             }
@@ -679,7 +679,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Gateway_HTTPValidationError"
                 }
               }
             }
@@ -694,12 +694,12 @@
         ],
         "summary": "Create Subject Assignment",
         "description": "Assign an eCOA instrument to a subject with due/recurrence window data.\n\nRequirements: PRD-SYS-001",
-        "operationId": "create_subject_assignment_api_v1_ecoa_assignments_post",
+        "operationId": "Gateway_create_subject_assignment_api_v1_ecoa_assignments_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SubjectAssignmentCreate"
+                "$ref": "#/components/schemas/Gateway_SubjectAssignmentCreate"
               }
             }
           },
@@ -711,7 +711,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SubjectAssignmentResponse"
+                  "$ref": "#/components/schemas/Gateway_SubjectAssignmentResponse"
                 }
               }
             }
@@ -721,7 +721,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Gateway_HTTPValidationError"
                 }
               }
             }
@@ -733,12 +733,12 @@
       "post": {
         "summary": "Signature Verification",
         "description": "POST /api/v1/auth/signature-verification\nVerifies re-supplied credentials (and MFA/TOTP when enabled) against Keycloak.\nEnforces step-up authentication using ACR (Authentication Context Class Reference),\nmax_age bounds, and direct password re-verification.\nIssues a short-lived (60-second) sig_token bound to user and action.",
-        "operationId": "signature_verification_api_v1_auth_signature_verification_post",
+        "operationId": "Gateway_signature_verification_api_v1_auth_signature_verification_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SignatureVerificationRequest"
+                "$ref": "#/components/schemas/Gateway_SignatureVerificationRequest"
               }
             }
           },
@@ -758,7 +758,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Gateway_HTTPValidationError"
                 }
               }
             }
@@ -769,14 +769,14 @@
     "/api/v1/auth/demo-session": {
       "post": {
         "summary": "Create Demo Session",
-        "operationId": "create_demo_session_api_v1_auth_demo_session_post",
+        "operationId": "Gateway_create_demo_session_api_v1_auth_demo_session_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "anyOf": [
                   {
-                    "$ref": "#/components/schemas/DemoSessionRequest"
+                    "$ref": "#/components/schemas/Gateway_DemoSessionRequest"
                   },
                   {
                     "type": "null"
@@ -805,7 +805,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Gateway_HTTPValidationError"
                 }
               }
             }
@@ -816,14 +816,14 @@
     "/api/v1/auth/demo": {
       "post": {
         "summary": "Create Demo Session",
-        "operationId": "create_demo_session_api_v1_auth_demo_post",
+        "operationId": "Gateway_create_demo_session_api_v1_auth_demo_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "anyOf": [
                   {
-                    "$ref": "#/components/schemas/DemoSessionRequest"
+                    "$ref": "#/components/schemas/Gateway_DemoSessionRequest"
                   },
                   {
                     "type": "null"
@@ -852,7 +852,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Gateway_HTTPValidationError"
                 }
               }
             }
@@ -54208,7 +54208,7 @@
   },
   "components": {
     "schemas": {
-      "AcknowledgeNotificationRequest": {
+      "Gateway_AcknowledgeNotificationRequest": {
         "properties": {
           "reason_for_change": {
             "type": "string",
@@ -54221,7 +54221,7 @@
         ],
         "title": "AcknowledgeNotificationRequest"
       },
-      "AssignmentComplianceDetail": {
+      "Gateway_AssignmentComplianceDetail": {
         "properties": {
           "assignment_id": {
             "type": "string",
@@ -54280,7 +54280,7 @@
         ],
         "title": "AssignmentComplianceDetail"
       },
-      "CdashDomainDefinition": {
+      "Gateway_CdashDomainDefinition": {
         "properties": {
           "domain_code": {
             "type": "string",
@@ -54322,7 +54322,7 @@
         ],
         "title": "CdashDomainDefinition"
       },
-      "CdiscProductSummary": {
+      "Gateway_CdiscProductSummary": {
         "properties": {
           "title": {
             "type": "string",
@@ -54362,7 +54362,7 @@
         ],
         "title": "CdiscProductSummary"
       },
-      "CodelistDefinition": {
+      "Gateway_CodelistDefinition": {
         "properties": {
           "codelist_code": {
             "type": "string",
@@ -54379,7 +54379,7 @@
           },
           "terms": {
             "items": {
-              "$ref": "#/components/schemas/CodelistTerm"
+              "$ref": "#/components/schemas/Gateway_CodelistTerm"
             },
             "type": "array",
             "title": "Terms"
@@ -54392,7 +54392,7 @@
         ],
         "title": "CodelistDefinition"
       },
-      "CodelistTerm": {
+      "Gateway_CodelistTerm": {
         "properties": {
           "concept_id": {
             "type": "string",
@@ -54426,7 +54426,7 @@
         ],
         "title": "CodelistTerm"
       },
-      "ConflictStrategyEnum": {
+      "Gateway_ConflictStrategyEnum": {
         "type": "string",
         "enum": [
           "CLIENT_WINS",
@@ -54435,7 +54435,7 @@
         ],
         "title": "ConflictStrategyEnum"
       },
-      "DemoSessionRequest": {
+      "Gateway_DemoSessionRequest": {
         "properties": {
           "username": {
             "anyOf": [
@@ -54477,11 +54477,11 @@
         "type": "object",
         "title": "DemoSessionRequest"
       },
-      "EPROBulkSyncRequest": {
+      "Gateway_EPROBulkSyncRequest": {
         "properties": {
           "submissions": {
             "items": {
-              "$ref": "#/components/schemas/EPROOfflineEntry"
+              "$ref": "#/components/schemas/Gateway_EPROOfflineEntry"
             },
             "type": "array",
             "title": "Submissions"
@@ -54493,7 +54493,7 @@
         ],
         "title": "EPROBulkSyncRequest"
       },
-      "EPROBulkSyncResponse": {
+      "Gateway_EPROBulkSyncResponse": {
         "properties": {
           "status": {
             "type": "string",
@@ -54521,7 +54521,7 @@
           },
           "results": {
             "items": {
-              "$ref": "#/components/schemas/EPROSubmitResponse"
+              "$ref": "#/components/schemas/Gateway_EPROSubmitResponse"
             },
             "type": "array",
             "title": "Results"
@@ -54539,7 +54539,7 @@
         ],
         "title": "EPROBulkSyncResponse"
       },
-      "EPROOfflineEntry": {
+      "Gateway_EPROOfflineEntry": {
         "properties": {
           "subject_id": {
             "type": "string",
@@ -54560,7 +54560,7 @@
             "title": "Answers"
           },
           "offline_sync_markers": {
-            "$ref": "#/components/schemas/EPROOfflineMarker"
+            "$ref": "#/components/schemas/Gateway_EPROOfflineMarker"
           }
         },
         "type": "object",
@@ -54573,7 +54573,7 @@
         ],
         "title": "EPROOfflineEntry"
       },
-      "EPROOfflineMarker": {
+      "Gateway_EPROOfflineMarker": {
         "properties": {
           "sequence_number": {
             "type": "integer",
@@ -54584,7 +54584,7 @@
             "title": "Client Id"
           },
           "conflict_strategy": {
-            "$ref": "#/components/schemas/ConflictStrategyEnum",
+            "$ref": "#/components/schemas/Gateway_ConflictStrategyEnum",
             "default": "CLIENT_WINS"
           },
           "signature": {
@@ -54621,7 +54621,7 @@
         ],
         "title": "EPROOfflineMarker"
       },
-      "EPROSubmitResponse": {
+      "Gateway_EPROSubmitResponse": {
         "properties": {
           "status": {
             "type": "string",
@@ -54745,7 +54745,7 @@
           "offline_sync_markers": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/EPROOfflineMarker"
+                "$ref": "#/components/schemas/Gateway_EPROOfflineMarker"
               },
               {
                 "type": "null"
@@ -54759,11 +54759,11 @@
         ],
         "title": "EPROSubmitResponse"
       },
-      "HTTPValidationError": {
+      "Gateway_HTTPValidationError": {
         "properties": {
           "detail": {
             "items": {
-              "$ref": "#/components/schemas/ValidationError"
+              "$ref": "#/components/schemas/Gateway_ValidationError"
             },
             "type": "array",
             "title": "Detail"
@@ -54772,7 +54772,7 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
-      "InstrumentCreate": {
+      "Gateway_InstrumentCreate": {
         "properties": {
           "study_id": {
             "type": "string",
@@ -54831,7 +54831,7 @@
         ],
         "title": "InstrumentCreate"
       },
-      "InstrumentResponse": {
+      "Gateway_InstrumentResponse": {
         "properties": {
           "id": {
             "type": "string",
@@ -54900,7 +54900,7 @@
         ],
         "title": "InstrumentResponse"
       },
-      "SdtmDomainDefinition": {
+      "Gateway_SdtmDomainDefinition": {
         "properties": {
           "domain_code": {
             "type": "string",
@@ -54948,7 +54948,7 @@
         ],
         "title": "SdtmDomainDefinition"
       },
-      "SignatureVerificationRequest": {
+      "Gateway_SignatureVerificationRequest": {
         "properties": {
           "username": {
             "type": "string",
@@ -55004,7 +55004,7 @@
         ],
         "title": "SignatureVerificationRequest"
       },
-      "SubjectAssignmentCreate": {
+      "Gateway_SubjectAssignmentCreate": {
         "properties": {
           "study_id": {
             "type": "string",
@@ -55075,7 +55075,7 @@
         ],
         "title": "SubjectAssignmentCreate"
       },
-      "SubjectAssignmentResponse": {
+      "Gateway_SubjectAssignmentResponse": {
         "properties": {
           "id": {
             "type": "string",
@@ -55156,7 +55156,7 @@
         ],
         "title": "SubjectAssignmentResponse"
       },
-      "SubjectComplianceResponse": {
+      "Gateway_SubjectComplianceResponse": {
         "properties": {
           "subject_id": {
             "type": "string",
@@ -55180,7 +55180,7 @@
           },
           "assignments": {
             "items": {
-              "$ref": "#/components/schemas/AssignmentComplianceDetail"
+              "$ref": "#/components/schemas/Gateway_AssignmentComplianceDetail"
             },
             "type": "array",
             "title": "Assignments"
@@ -55197,7 +55197,7 @@
         ],
         "title": "SubjectComplianceResponse"
       },
-      "SubjectNotificationResponse": {
+      "Gateway_SubjectNotificationResponse": {
         "properties": {
           "id": {
             "type": "string",
@@ -55280,7 +55280,7 @@
         ],
         "title": "SubjectNotificationResponse"
       },
-      "UsdmExportResponse": {
+      "Gateway_UsdmExportResponse": {
         "properties": {
           "study_id": {
             "type": "string",
@@ -55299,7 +55299,7 @@
         ],
         "title": "UsdmExportResponse"
       },
-      "UsdmImportRequest": {
+      "Gateway_UsdmImportRequest": {
         "properties": {
           "raw_usdm_json": {
             "additionalProperties": true,
@@ -55332,7 +55332,7 @@
         ],
         "title": "UsdmImportRequest"
       },
-      "UsdmImportResponse": {
+      "Gateway_UsdmImportResponse": {
         "properties": {
           "study_id": {
             "type": "string",
@@ -55362,7 +55362,7 @@
         ],
         "title": "UsdmImportResponse"
       },
-      "ValidationError": {
+      "Gateway_ValidationError": {
         "properties": {
           "loc": {
             "items": {

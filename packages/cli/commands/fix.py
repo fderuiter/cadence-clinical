@@ -84,6 +84,15 @@ def run_fix(
                 ],
             )
         )
+        steps.append(
+            (
+                "OpenAPI Specification Sync",
+                [
+                    sys.executable,
+                    "scripts/sync_openapi_spec.py",
+                ],
+            )
+        )
 
     if sync_gxp:
         steps.append(("GxP Compliance Sync", [sys.executable, "scripts/sync_gxp.py"]))
