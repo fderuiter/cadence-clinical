@@ -22,10 +22,10 @@ class SafetyExecutionClientError(Exception):
 _sdtm_domain_resolver: (
     Callable[[str, str], Awaitable[dict[str, list[dict[str, Any]]]]] | None
 ) = None
-_meddra_code_resolver: (
-    Callable[[str, str, str], Awaitable[dict[str, Any]]] | None
-) = None
-_execution_client_instance: "ExecutionClient | None" = None
+_meddra_code_resolver: Callable[[str, str, str], Awaitable[dict[str, Any]]] | None = (
+    None
+)
+_execution_client_instance: ExecutionClient | None = None
 
 
 def register_sdtm_domain_resolver(
@@ -44,13 +44,13 @@ def register_meddra_code_resolver(
     _meddra_code_resolver = resolver
 
 
-def set_execution_client(client: "ExecutionClient | None") -> None:
+def set_execution_client(client: ExecutionClient | None) -> None:
     """Sets or overrides the default Safety ExecutionClient instance."""
     global _execution_client_instance
     _execution_client_instance = client
 
 
-def get_execution_client() -> "ExecutionClient":
+def get_execution_client() -> ExecutionClient:
     """Retrieves the active Safety ExecutionClient instance."""
     global _execution_client_instance
     if _execution_client_instance is None:

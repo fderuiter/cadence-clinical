@@ -1,4 +1,3 @@
-import datetime
 import logging
 import os
 from collections.abc import Awaitable, Callable
@@ -57,27 +56,6 @@ def map_db_to_criterion(db_crit: dict[str, Any]) -> EligibilityCriterion:
         raise ValueError(
             "Criterion must provide a structured condition or a valid dsl_source."
         )
-
-    created_at = db_crit.get("created_at")
-    if not created_at:
-        created_at_dt = datetime.datetime.now(datetime.UTC)
-    elif isinstance(created_at, str):
-        try:
-            created_at_dt = datetime.datetime.fromisoformat(
-                created_at.replace("Z", "+00:00")
-            )
-        except Exception:
-            created_at_dt = datetime.datetime.now(datetime.UTC)
-    else:
-        try:
-            if hasattr(created_at, "isoformat"):
-                created_at_dt = datetime.datetime.fromisoformat(
-                    created_at.isoformat().replace("Z", "+00:00")
-                )
-            else:
-                created_at_dt = datetime.datetime.now(datetime.UTC)
-        except Exception:
-            created_at_dt = datetime.datetime.now(datetime.UTC)
 
     return EligibilityCriterion(
         criterion_id=str(db_crit.get("criterion_id") or db_crit.get("id") or ""),

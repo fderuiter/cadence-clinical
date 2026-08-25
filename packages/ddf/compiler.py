@@ -42,9 +42,7 @@ class DDFCompiler:
                 )
             self.accessibility_stage = accessibility_stage
         elif accessibility_validator is not None:
-            self.accessibility_stage = LayoutAccessibilityStage(
-                accessibility_validator
-            )
+            self.accessibility_stage = LayoutAccessibilityStage(accessibility_validator)
         else:
             raise ValueError(
                 "Accessibility validator port is uninitialized or missing. "

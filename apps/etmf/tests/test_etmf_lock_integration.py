@@ -108,6 +108,7 @@ async def test_pluggable_trial_lock_resolver_hooks():
     """
     Verify that pluggable resolver and trigger handler hooks allow test overrides.
     """
+
     async def custom_status_resolver():
         return True
 

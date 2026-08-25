@@ -41,4 +41,3 @@ class TrialLockClientError(ETMFDomainError):
     """Raised when trial lock communication or validation fails."""
 
     pass
-

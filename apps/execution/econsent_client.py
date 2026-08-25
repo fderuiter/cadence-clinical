@@ -33,7 +33,9 @@ class IConsentVerificationClient(ABC):
 
 IConsentClient = IConsentVerificationClient
 
-_subject_consent_resolver: Callable[[str, str | None], Awaitable[dict[str, Any]]] | None = None
+_subject_consent_resolver: (
+    Callable[[str, str | None], Awaitable[dict[str, Any]]] | None
+) = None
 _consent_client_instance: IConsentVerificationClient | None = None
 
 
@@ -130,9 +132,7 @@ class EConsentClient(IConsentVerificationClient):
             ) from e
         except Exception as e:
             logger.error("Unexpected error in eConsent client: %s", e)
-            raise EConsentClientError(
-                f"Error parsing eConsent status: {str(e)}"
-            ) from e
+            raise EConsentClientError(f"Error parsing eConsent status: {str(e)}") from e
 
 
 async def fetch_subject_consent_status(

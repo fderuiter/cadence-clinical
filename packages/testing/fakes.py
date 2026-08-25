@@ -185,7 +185,9 @@ class InMemoryStoragePort(StoragePort[dict[str, Any]]):
 class FakeAccessibilityValidator:
     """In-memory test double adapter implementing AccessibilityValidatorPort."""
 
-    def __init__(self, should_fail: bool = False, violations: list[dict[str, Any]] | None = None) -> None:
+    def __init__(
+        self, should_fail: bool = False, violations: list[dict[str, Any]] | None = None
+    ) -> None:
         self.should_fail = should_fail
         self.violations = violations or (
             [

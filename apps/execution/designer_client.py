@@ -20,7 +20,7 @@ class DesignerCriteriaClientError(Exception):
 
 
 _study_criteria_resolver: Callable[[str], Awaitable[list[Any]]] | None = None
-_designer_client_instance: "DesignerCriteriaClient | None" = None
+_designer_client_instance: DesignerCriteriaClient | None = None
 
 
 def register_study_criteria_resolver(
@@ -31,13 +31,13 @@ def register_study_criteria_resolver(
     _study_criteria_resolver = resolver
 
 
-def set_designer_client(client: "DesignerCriteriaClient | None") -> None:
+def set_designer_client(client: DesignerCriteriaClient | None) -> None:
     """Sets or overrides the default DesignerCriteriaClient instance."""
     global _designer_client_instance
     _designer_client_instance = client
 
 
-def get_designer_client() -> "DesignerCriteriaClient":
+def get_designer_client() -> DesignerCriteriaClient:
     """Retrieves the active DesignerCriteriaClient instance."""
     global _designer_client_instance
     if _designer_client_instance is None:
@@ -74,7 +74,8 @@ class DesignerCriteriaClient:
         if _study_criteria_resolver is not None:
             res = await _study_criteria_resolver(study_id)
             return [
-                item if isinstance(item, DesignerEligibilityCriterionDTO)
+                item
+                if isinstance(item, DesignerEligibilityCriterionDTO)
                 else DesignerEligibilityCriterionDTO(**item)
                 for item in res
             ]
