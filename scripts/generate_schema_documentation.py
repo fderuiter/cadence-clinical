@@ -143,359 +143,157 @@ def parse_sqlalchemy_schema(base_class: Any, service_name: str) -> list[dict[str
     return tables_meta
 
 
+def parse_pydantic_schema(
+    model_mapping: list[tuple[type, str, str, bool, bool]], service_name: str
+) -> list[dict[str, Any]]:
+    """Extracts schema definitions dynamically from active Pydantic domain models.
+
+    Args:
+        model_mapping: List of tuples (model_cls, table_name, display_class_name, is_gxp, is_immutable)
+        service_name: Name of the microservice.
+
+    Returns:
+        List of dictionaries representing node metadata.
+    """
+    tables_meta = []
+    for cls, table_name, display_class_name, is_gxp, is_immutable in model_mapping:
+        docstring = cls.__doc__ or "No description provided."
+        cleaned_doc = "\n".join(
+            line.strip() for line in docstring.split("\n") if line.strip()
+        )
+
+        columns = []
+        if hasattr(cls, "model_fields"):
+            for field_name, field_info in cls.model_fields.items():
+                col_name = field_info.alias or field_name
+                raw_annotation = (
+                    str(field_info.annotation) if field_info.annotation else "String"
+                )
+
+                if "str" in raw_annotation.lower():
+                    if "uuid" in raw_annotation.lower() or col_name in (
+                        "id",
+                        "arm_id",
+                        "visit_id",
+                    ):
+                        col_type = "String (UUID)"
+                    else:
+                        col_type = "String"
+                elif "int" in raw_annotation.lower():
+                    col_type = "Integer"
+                elif "bool" in raw_annotation.lower():
+                    col_type = "Boolean"
+                elif "dict" in raw_annotation.lower():
+                    col_type = "JSON"
+                elif "list" in raw_annotation.lower():
+                    col_type = "Array"
+                else:
+                    col_type = "String"
+
+                is_pk = col_name in ("id", "arm_id", "visit_id")
+                is_nullable = (
+                    not field_info.is_required()
+                    or "None" in raw_annotation
+                    or "Optional" in raw_annotation
+                )
+
+                is_gxp_field = col_name in (
+                    "status",
+                    "version_index",
+                    "created_by",
+                    "created_at",
+                    "signature",
+                    "is_deleted",
+                    "reason_for_change",
+                    "version",
+                )
+
+                columns.append(
+                    {
+                        "name": col_name,
+                        "type": col_type,
+                        "primary_key": is_pk,
+                        "nullable": is_nullable,
+                        "foreign_keys": [],
+                        "gxp_highlight": is_gxp_field,
+                    }
+                )
+
+        tables_meta.append(
+            {
+                "id": f"{service_name}_{table_name}",
+                "table_name": table_name,
+                "class_name": display_class_name,
+                "description": cleaned_doc,
+                "service": service_name,
+                "gxp": is_gxp,
+                "immutable": is_immutable,
+                "columns": columns,
+            }
+        )
+
+    return tables_meta
+
+
 def get_designer_schema() -> list[dict[str, Any]]:
-    """Synthesizes Neo4j USDM graph schemas statically for the Designer microservice.
+    """Synthesizes Neo4j USDM graph schemas dynamically from Designer active domain models.
 
     Returns:
         A list of dictionaries representing graph node metadata.
     """
-    return [
-        {
-            "id": "designer_Study",
-            "table_name": "Study",
-            "class_name": "Study",
-            "description": (
-                "Core USDM clinical trial representation detailing high-level "
-                "protocol specifications, title, and study-wide status constraints."
-            ),
-            "service": "designer",
-            "gxp": True,
-            "immutable": False,
-            "columns": [
-                {
-                    "name": "id",
-                    "type": "String (UUID)",
-                    "primary_key": True,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-                {
-                    "name": "title",
-                    "type": "String",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-                {
-                    "name": "current_version",
-                    "type": "String",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-                {
-                    "name": "status",
-                    "type": "String (Active-Recruiting, Locked, etc.)",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": True,
-                },
-                {
-                    "name": "desc",
-                    "type": "String",
-                    "primary_key": False,
-                    "nullable": True,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-            ],
-        },
-        {
-            "id": "designer_StudyVersion",
-            "table_name": "StudyVersion",
-            "class_name": "StudyVersion",
-            "description": (
-                "A snapshot version of the study protocol incorporating cryptographic "
-                "signatures to guarantee GxP audit-trail integrity for FDA 21 CFR Part 11."
-            ),
-            "service": "designer",
-            "gxp": True,
-            "immutable": True,
-            "columns": [
-                {
-                    "name": "id",
-                    "type": "String (UUID)",
-                    "primary_key": True,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-                {
-                    "name": "version_tag",
-                    "type": "String",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-                {
-                    "name": "version_index",
-                    "type": "Integer",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": True,
-                },
-                {
-                    "name": "status",
-                    "type": "String",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": True,
-                },
-                {
-                    "name": "created_by",
-                    "type": "String",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": True,
-                },
-                {
-                    "name": "created_at",
-                    "type": "Datetime (UTC)",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": True,
-                },
-                {
-                    "name": "signature",
-                    "type": "String (HMAC-SHA256)",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": True,
-                },
-            ],
-        },
-        {
-            "id": "designer_Epoch",
-            "table_name": "Epoch",
-            "class_name": "Epoch",
-            "description": (
-                "A trial subdivision describing periods of conduct such as Screening, "
-                "Treatment, or Follow-Up."
-            ),
-            "service": "designer",
-            "gxp": True,
-            "immutable": False,
-            "columns": [
-                {
-                    "name": "id",
-                    "type": "String (UUID)",
-                    "primary_key": True,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-                {
-                    "name": "name",
-                    "type": "String",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-                {
-                    "name": "order",
-                    "type": "Integer",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-            ],
-        },
-        {
-            "id": "designer_Activity",
-            "table_name": "Activity",
-            "class_name": "Activity",
-            "description": "An action performed on clinical study subjects (e.g., Blood Draw, Vitals).",
-            "service": "designer",
-            "gxp": True,
-            "immutable": False,
-            "columns": [
-                {
-                    "name": "id",
-                    "type": "String (UUID)",
-                    "primary_key": True,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-                {
-                    "name": "name",
-                    "type": "String",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-            ],
-        },
-        {
-            "id": "designer_TreatmentArm",
-            "table_name": "TreatmentArm",
-            "class_name": "TreatmentArm",
-            "description": "A standardized treatment path designating study arms.",
-            "service": "designer",
-            "gxp": True,
-            "immutable": False,
-            "columns": [
-                {
-                    "name": "arm_id",
-                    "type": "String (UUID)",
-                    "primary_key": True,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-                {
-                    "name": "name",
-                    "type": "String",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-                {
-                    "name": "type_concept_id",
-                    "type": "String (NCI Concept)",
-                    "primary_key": False,
-                    "nullable": True,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-            ],
-        },
-        {
-            "id": "designer_ScheduledVisit",
-            "table_name": "ScheduledVisit",
-            "class_name": "ScheduledVisit",
-            "description": "A planned encounter or visit within the clinical study.",
-            "service": "designer",
-            "gxp": True,
-            "immutable": False,
-            "columns": [
-                {
-                    "name": "visit_id",
-                    "type": "String (UUID)",
-                    "primary_key": True,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-                {
-                    "name": "name",
-                    "type": "String",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-                {
-                    "name": "visit_type_concept_id",
-                    "type": "String (NCI Concept)",
-                    "primary_key": False,
-                    "nullable": True,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-            ],
-        },
-        {
-            "id": "designer_LibraryObject",
-            "table_name": "LibraryObject",
-            "class_name": "LibraryObject",
-            "description": "CDISC Terminology and study element templates.",
-            "service": "designer",
-            "gxp": True,
-            "immutable": False,
-            "columns": [
-                {
-                    "name": "id",
-                    "type": "String (UUID)",
-                    "primary_key": True,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-                {
-                    "name": "name",
-                    "type": "String",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-                {
-                    "name": "version",
-                    "type": "Integer",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": True,
-                },
-                {
-                    "name": "status",
-                    "type": "String",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": True,
-                },
-            ],
-        },
-        {
-            "id": "designer_EligibilityCriterion",
-            "table_name": "EligibilityCriterion",
-            "class_name": "EligibilityCriterion",
-            "description": "Structured criteria used to gauge subject eligibility.",
-            "service": "designer",
-            "gxp": True,
-            "immutable": False,
-            "columns": [
-                {
-                    "name": "id",
-                    "type": "String (UUID)",
-                    "primary_key": True,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-                {
-                    "name": "name",
-                    "type": "String",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-                {
-                    "name": "expression",
-                    "type": "String (Boolean logic)",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": False,
-                },
-                {
-                    "name": "is_deleted",
-                    "type": "Boolean",
-                    "primary_key": False,
-                    "nullable": False,
-                    "foreign_keys": [],
-                    "gxp_highlight": True,
-                },
-            ],
-        },
+    from apps.designer.domain.cdisc.usdm_models import (
+        Activity,
+        EligibilityCriterion,
+        Encounter,
+        StudyArm,
+        StudyEpoch,
+        StudyVersion,
+        USDMStudy,
+    )
+    from apps.designer.library import LibraryObjectBase
+
+    designer_models = [
+        (USDMStudy, "Study", "Study", True, False),
+        (StudyVersion, "StudyVersion", "StudyVersion", True, True),
+        (StudyEpoch, "Epoch", "Epoch", True, False),
+        (Activity, "Activity", "Activity", True, False),
+        (StudyArm, "TreatmentArm", "TreatmentArm", True, False),
+        (Encounter, "ScheduledVisit", "ScheduledVisit", True, False),
+        (LibraryObjectBase, "LibraryObject", "LibraryObject", True, False),
+        (
+            EligibilityCriterion,
+            "EligibilityCriterion",
+            "EligibilityCriterion",
+            True,
+            False,
+        ),
     ]
+
+    return parse_pydantic_schema(designer_models, "designer")
+
+
+def ensure_vendor_assets() -> None:
+    """Ensures vendor asset directories contain required local styling and scripting dependencies."""
+    vendor_dirs = [
+        ROOT_DIR / "docs" / "vendor",
+        ROOT_DIR / "docs" / "schema" / "vendor",
+    ]
+
+    source_dir = ROOT_DIR / "docs" / "vendor"
+    source_dir.mkdir(parents=True, exist_ok=True)
+
+    tw_source = source_dir / "tailwindcss.js"
+    vis_source = source_dir / "vis-network.min.js"
+
+    for v_dir in vendor_dirs:
+        v_dir.mkdir(parents=True, exist_ok=True)
+        target_tw = v_dir / "tailwindcss.js"
+        target_vis = v_dir / "vis-network.min.js"
+
+        if tw_source.exists() and not target_tw.exists():
+            target_tw.write_bytes(tw_source.read_bytes())
+        if vis_source.exists() and not target_vis.exists():
+            target_vis.write_bytes(vis_source.read_bytes())
 
 
 def generate_html_visualizer(
@@ -517,10 +315,10 @@ def generate_html_visualizer(
 <head>
   <meta charset="UTF-8">
   <title>Cadence Clinical System Schema Boundaries & GxP Traceability Matrix</title>
-  <!-- Tailwind CSS via CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Vis.js Network via CDN -->
-  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <!-- Tailwind CSS via local vendored asset -->
+  <script src="vendor/tailwindcss.js"></script>
+  <!-- Vis.js Network via local vendored asset -->
+  <script type="text/javascript" src="vendor/vis-network.min.js"></script>
   <style>
     #network-container {{
       width: 100%;
@@ -1262,6 +1060,8 @@ def main():
         help="Emit full USDM document to stdout.",
     )
     args, _ = parser.parse_known_args()
+
+    ensure_vendor_assets()
 
     try:
         services = extract_all_service_schemas()

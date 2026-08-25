@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <title>Cadence Clinical System Schema Boundaries & GxP Traceability Matrix</title>
-  <!-- Tailwind CSS via CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Vis.js Network via CDN -->
-  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <!-- Tailwind CSS via local vendored asset -->
+  <script src="vendor/tailwindcss.js"></script>
+  <!-- Vis.js Network via local vendored asset -->
+  <script type="text/javascript" src="vendor/vis-network.min.js"></script>
   <style>
     #network-container {
       width: 100%;
@@ -27128,7 +27128,7 @@
           "id": "designer_Study",
           "table_name": "Study",
           "class_name": "Study",
-          "description": "Core USDM clinical trial representation detailing high-level protocol specifications, title, and study-wide status constraints.",
+          "description": "Root USDM protocol study specification container.",
           "service": "designer",
           "gxp": true,
           "immutable": false,
@@ -27142,32 +27142,72 @@
               "gxp_highlight": false
             },
             {
-              "name": "title",
+              "name": "name",
               "type": "String",
               "primary_key": false,
-              "nullable": false,
+              "nullable": true,
               "foreign_keys": [],
               "gxp_highlight": false
             },
             {
-              "name": "current_version",
+              "name": "protocolTitle",
               "type": "String",
               "primary_key": false,
-              "nullable": false,
+              "nullable": true,
               "foreign_keys": [],
               "gxp_highlight": false
             },
             {
-              "name": "status",
-              "type": "String (Active-Recruiting, Locked, etc.)",
+              "name": "protocolId",
+              "type": "String",
               "primary_key": false,
-              "nullable": false,
+              "nullable": true,
               "foreign_keys": [],
-              "gxp_highlight": true
+              "gxp_highlight": false
             },
             {
-              "name": "desc",
+              "name": "phase",
               "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "therapeuticArea",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "usdmVersion",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "studyVersions",
+              "type": "Array",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "studyDesigns",
+              "type": "Array",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "biomedicalConcepts",
+              "type": "Array",
               "primary_key": false,
               "nullable": true,
               "foreign_keys": [],
@@ -27179,7 +27219,7 @@
           "id": "designer_StudyVersion",
           "table_name": "StudyVersion",
           "class_name": "StudyVersion",
-          "description": "A snapshot version of the study protocol incorporating cryptographic signatures to guarantee GxP audit-trail integrity for FDA 21 CFR Part 11.",
+          "description": "Study version containing version metadata and study designs.",
           "service": "designer",
           "gxp": true,
           "immutable": true,
@@ -27193,7 +27233,58 @@
               "gxp_highlight": false
             },
             {
-              "name": "version_tag",
+              "name": "versionTag",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "status",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "versionIndex",
+              "type": "Integer",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "studyDesigns",
+              "type": "Array",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            }
+          ]
+        },
+        {
+          "id": "designer_Epoch",
+          "table_name": "Epoch",
+          "class_name": "Epoch",
+          "description": "Study epoch definition.",
+          "service": "designer",
+          "gxp": true,
+          "immutable": false,
+          "columns": [
+            {
+              "name": "id",
+              "type": "String (UUID)",
+              "primary_key": true,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "name",
               "type": "String",
               "primary_key": false,
               "nullable": false,
@@ -27201,8 +27292,308 @@
               "gxp_highlight": false
             },
             {
-              "name": "version_index",
+              "name": "epochType",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "sequenceNumber",
               "type": "Integer",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "sequenceIndex",
+              "type": "Integer",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            }
+          ]
+        },
+        {
+          "id": "designer_Activity",
+          "table_name": "Activity",
+          "class_name": "Activity",
+          "description": "Study activity or procedure definition.",
+          "service": "designer",
+          "gxp": true,
+          "immutable": false,
+          "columns": [
+            {
+              "name": "id",
+              "type": "String (UUID)",
+              "primary_key": true,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "name",
+              "type": "String",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "description",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "cdashDomain",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "biomedicalConceptCode",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "biomedicalConceptIds",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "biomedicalConcepts",
+              "type": "Array",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "assignedVisitNames",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "assignedEncounterIds",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "definedProcedures",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            }
+          ]
+        },
+        {
+          "id": "designer_TreatmentArm",
+          "table_name": "TreatmentArm",
+          "class_name": "TreatmentArm",
+          "description": "Study arm definition.",
+          "service": "designer",
+          "gxp": true,
+          "immutable": false,
+          "columns": [
+            {
+              "name": "id",
+              "type": "String (UUID)",
+              "primary_key": true,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "name",
+              "type": "String",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "armType",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "description",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "targetSampleSize",
+              "type": "Integer",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            }
+          ]
+        },
+        {
+          "id": "designer_ScheduledVisit",
+          "table_name": "ScheduledVisit",
+          "class_name": "ScheduledVisit",
+          "description": "Study encounter / visit definition.",
+          "service": "designer",
+          "gxp": true,
+          "immutable": false,
+          "columns": [
+            {
+              "name": "id",
+              "type": "String (UUID)",
+              "primary_key": true,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "name",
+              "type": "String",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "encounterType",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "targetDay",
+              "type": "Integer",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "windowLower",
+              "type": "Integer",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "windowUpper",
+              "type": "Integer",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "windowLowerDays",
+              "type": "Integer",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "windowUpperDays",
+              "type": "Integer",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "isMandatory",
+              "type": "Boolean",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "epochId",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "epochName",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "startDate",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "endDate",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            }
+          ]
+        },
+        {
+          "id": "designer_LibraryObject",
+          "table_name": "LibraryObject",
+          "class_name": "LibraryObject",
+          "description": "Base response model exposing audit trail, tenant, version, and status metadata.",
+          "service": "designer",
+          "gxp": true,
+          "immutable": false,
+          "columns": [
+            {
+              "name": "id",
+              "type": "String (UUID)",
+              "primary_key": true,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "version",
+              "type": "String",
               "primary_key": false,
               "nullable": false,
               "foreign_keys": [],
@@ -27210,6 +27601,30 @@
             },
             {
               "name": "status",
+              "type": "String",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": true
+            },
+            {
+              "name": "sponsor_id",
+              "type": "String",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "tenant_id",
+              "type": "String",
+              "primary_key": false,
+              "nullable": false,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "created_at",
               "type": "String",
               "primary_key": false,
               "nullable": false,
@@ -27225,195 +27640,36 @@
               "gxp_highlight": true
             },
             {
-              "name": "created_at",
-              "type": "Datetime (UTC)",
-              "primary_key": false,
-              "nullable": false,
-              "foreign_keys": [],
-              "gxp_highlight": true
-            },
-            {
-              "name": "signature",
-              "type": "String (HMAC-SHA256)",
-              "primary_key": false,
-              "nullable": false,
-              "foreign_keys": [],
-              "gxp_highlight": true
-            }
-          ]
-        },
-        {
-          "id": "designer_Epoch",
-          "table_name": "Epoch",
-          "class_name": "Epoch",
-          "description": "A trial subdivision describing periods of conduct such as Screening, Treatment, or Follow-Up.",
-          "service": "designer",
-          "gxp": true,
-          "immutable": false,
-          "columns": [
-            {
-              "name": "id",
-              "type": "String (UUID)",
-              "primary_key": true,
-              "nullable": false,
-              "foreign_keys": [],
-              "gxp_highlight": false
-            },
-            {
-              "name": "name",
+              "name": "updated_at",
               "type": "String",
-              "primary_key": false,
-              "nullable": false,
-              "foreign_keys": [],
-              "gxp_highlight": false
-            },
-            {
-              "name": "order",
-              "type": "Integer",
-              "primary_key": false,
-              "nullable": false,
-              "foreign_keys": [],
-              "gxp_highlight": false
-            }
-          ]
-        },
-        {
-          "id": "designer_Activity",
-          "table_name": "Activity",
-          "class_name": "Activity",
-          "description": "An action performed on clinical study subjects (e.g., Blood Draw, Vitals).",
-          "service": "designer",
-          "gxp": true,
-          "immutable": false,
-          "columns": [
-            {
-              "name": "id",
-              "type": "String (UUID)",
-              "primary_key": true,
-              "nullable": false,
-              "foreign_keys": [],
-              "gxp_highlight": false
-            },
-            {
-              "name": "name",
-              "type": "String",
-              "primary_key": false,
-              "nullable": false,
-              "foreign_keys": [],
-              "gxp_highlight": false
-            }
-          ]
-        },
-        {
-          "id": "designer_TreatmentArm",
-          "table_name": "TreatmentArm",
-          "class_name": "TreatmentArm",
-          "description": "A standardized treatment path designating study arms.",
-          "service": "designer",
-          "gxp": true,
-          "immutable": false,
-          "columns": [
-            {
-              "name": "arm_id",
-              "type": "String (UUID)",
-              "primary_key": true,
-              "nullable": false,
-              "foreign_keys": [],
-              "gxp_highlight": false
-            },
-            {
-              "name": "name",
-              "type": "String",
-              "primary_key": false,
-              "nullable": false,
-              "foreign_keys": [],
-              "gxp_highlight": false
-            },
-            {
-              "name": "type_concept_id",
-              "type": "String (NCI Concept)",
               "primary_key": false,
               "nullable": true,
               "foreign_keys": [],
               "gxp_highlight": false
-            }
-          ]
-        },
-        {
-          "id": "designer_ScheduledVisit",
-          "table_name": "ScheduledVisit",
-          "class_name": "ScheduledVisit",
-          "description": "A planned encounter or visit within the clinical study.",
-          "service": "designer",
-          "gxp": true,
-          "immutable": false,
-          "columns": [
-            {
-              "name": "visit_id",
-              "type": "String (UUID)",
-              "primary_key": true,
-              "nullable": false,
-              "foreign_keys": [],
-              "gxp_highlight": false
             },
             {
-              "name": "name",
+              "name": "updated_by",
               "type": "String",
-              "primary_key": false,
-              "nullable": false,
-              "foreign_keys": [],
-              "gxp_highlight": false
-            },
-            {
-              "name": "visit_type_concept_id",
-              "type": "String (NCI Concept)",
               "primary_key": false,
               "nullable": true,
               "foreign_keys": [],
               "gxp_highlight": false
-            }
-          ]
-        },
-        {
-          "id": "designer_LibraryObject",
-          "table_name": "LibraryObject",
-          "class_name": "LibraryObject",
-          "description": "CDISC Terminology and study element templates.",
-          "service": "designer",
-          "gxp": true,
-          "immutable": false,
-          "columns": [
-            {
-              "name": "id",
-              "type": "String (UUID)",
-              "primary_key": true,
-              "nullable": false,
-              "foreign_keys": [],
-              "gxp_highlight": false
             },
             {
-              "name": "name",
+              "name": "reason_for_change",
               "type": "String",
               "primary_key": false,
-              "nullable": false,
-              "foreign_keys": [],
-              "gxp_highlight": false
-            },
-            {
-              "name": "version",
-              "type": "Integer",
-              "primary_key": false,
-              "nullable": false,
+              "nullable": true,
               "foreign_keys": [],
               "gxp_highlight": true
             },
             {
-              "name": "status",
+              "name": "prior_status",
               "type": "String",
               "primary_key": false,
-              "nullable": false,
+              "nullable": true,
               "foreign_keys": [],
-              "gxp_highlight": true
+              "gxp_highlight": false
             }
           ]
         },
@@ -27421,7 +27677,7 @@
           "id": "designer_EligibilityCriterion",
           "table_name": "EligibilityCriterion",
           "class_name": "EligibilityCriterion",
-          "description": "Structured criteria used to gauge subject eligibility.",
+          "description": "Eligibility criterion (Inclusion or Exclusion).",
           "service": "designer",
           "gxp": true,
           "immutable": false,
@@ -27438,25 +27694,65 @@
               "name": "name",
               "type": "String",
               "primary_key": false,
-              "nullable": false,
+              "nullable": true,
               "foreign_keys": [],
               "gxp_highlight": false
             },
             {
-              "name": "expression",
-              "type": "String (Boolean logic)",
+              "name": "criterionType",
+              "type": "String",
               "primary_key": false,
-              "nullable": false,
+              "nullable": true,
               "foreign_keys": [],
               "gxp_highlight": false
             },
             {
-              "name": "is_deleted",
-              "type": "Boolean",
+              "name": "identifier",
+              "type": "String",
               "primary_key": false,
-              "nullable": false,
+              "nullable": true,
               "foreign_keys": [],
-              "gxp_highlight": true
+              "gxp_highlight": false
+            },
+            {
+              "name": "category",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "text",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "textExpression",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "logicalExpression",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
+            },
+            {
+              "name": "template",
+              "type": "String",
+              "primary_key": false,
+              "nullable": true,
+              "foreign_keys": [],
+              "gxp_highlight": false
             }
           ]
         }

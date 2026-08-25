@@ -6,6 +6,15 @@ const repoRoot = path.resolve(__dirname, "..");
 
 // Automatically set RTM_DRAFT to true for docs compilation to ensure the process is fail-safe when report.xml is absent.
 process.env.RTM_DRAFT = "true";
+if (!process.env.AUDIT_LOG_SECRET_KEY) {
+  process.env.AUDIT_LOG_SECRET_KEY = "development_secret_key_for_rtm_generation_32bytes";
+}
+if (!process.env.INBOUND_EMAIL_HMAC_SECRET) {
+  process.env.INBOUND_EMAIL_HMAC_SECRET = "development_secret_key_for_rtm_generation_32bytes";
+}
+if (!process.env.GATEWAY_SECRET_KEY) {
+  process.env.GATEWAY_SECRET_KEY = "development_secret_key_for_rtm_generation_32bytes";
+}
 
 // Ensure adequate heap allocation for large documentation bundles under VitePress
 if (!process.env.NODE_OPTIONS || !process.env.NODE_OPTIONS.includes("--max-old-space-size")) {
