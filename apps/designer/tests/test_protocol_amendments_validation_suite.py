@@ -2,6 +2,7 @@ import copy
 import hashlib
 import hmac
 import json
+import os
 import time
 
 import httpx
@@ -14,8 +15,6 @@ from apps.designer.db import (
     MOCK_STUDY_VERSIONS,
 )
 from apps.designer.main import app as designer_app
-
-import os
 
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
 

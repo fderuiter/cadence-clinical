@@ -31,9 +31,7 @@ def get_auth_headers():
     }
     serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     secret = os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026").encode()
-    signature = hmac.new(
-        secret, serialized.encode(), hashlib.sha256
-    ).hexdigest()
+    signature = hmac.new(secret, serialized.encode(), hashlib.sha256).hexdigest()
     return {
         "X-User-Id": user_id,
         "X-User-Roles": roles,

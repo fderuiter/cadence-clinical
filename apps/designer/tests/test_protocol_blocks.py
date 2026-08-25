@@ -468,7 +468,9 @@ def test_api_block_crud_with_rbac():
         import time
 
         timestamp = str(time.time())
-        secret = (os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026").encode()
+        secret = (
+            os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
+        ).encode()
         sig = generate_gateway_signature(
             user_id="user_admin",
             roles=roles,

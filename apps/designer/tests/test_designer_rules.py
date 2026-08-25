@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import os
 import time
 from unittest.mock import AsyncMock, MagicMock
 
@@ -26,8 +27,6 @@ from apps.designer.rules import (
     detect_circular_dependencies,
     detect_unknown_fields,
 )
-
-import os
 
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
 

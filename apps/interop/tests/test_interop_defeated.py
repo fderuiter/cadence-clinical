@@ -355,7 +355,9 @@ async def test_submit_with_valid_signature():
         ),
     )
 
-    secret_bytes = os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026").encode()
+    secret_bytes = os.getenv(
+        "GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"
+    ).encode()
     sig_payload = get_signature_payload(incoming_record)
     sig = generate_canonical_signature(sig_payload, secret_bytes)
 
@@ -487,7 +489,9 @@ async def test_bulk_sync_with_valid_signatures_and_tallies():
     # 2. subject_bulk_ghost: bulk_diary - no signature (STRUCTURAL_CONFLICT)
     # 3. subject_bulk_1: bulk_diary - valid signature (UPDATED_CLIENT_WINS)
 
-    secret_bytes = os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026").encode()
+    secret_bytes = os.getenv(
+        "GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"
+    ).encode()
     device_timestamp = datetime.now(UTC)
 
     # Entry 1

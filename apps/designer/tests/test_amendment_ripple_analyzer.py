@@ -6,6 +6,7 @@ Requirements: PRD-SYS-001, PRD-SUB-007, PRD-SYS-051
 import hashlib
 import hmac
 import json
+import os
 import time
 from typing import Any
 from unittest.mock import patch
@@ -25,8 +26,6 @@ from apps.designer.main import app as designer_app
 from apps.tickets.adapters.database import db_manager as tickets_db_manager
 from apps.tickets.adapters.models import Base as TicketsBase
 from apps.tickets.main import app as tickets_app
-
-import os
 
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
 

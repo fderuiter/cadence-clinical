@@ -28,9 +28,9 @@ def _make_auth_headers(
     payload: dict | None = None,
 ) -> dict:
     timestamp = str(time.time())
-    secret = (os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026").encode(
-        "utf-8"
-    )
+    secret = (
+        os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
+    ).encode("utf-8")
     signature = generate_gateway_signature(
         user_id=user_id,
         roles=roles,

@@ -54,7 +54,9 @@ def get_auth_headers(
     import time
 
     timestamp = str(time.time())
-    secret = (os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026").encode()
+    secret = (
+        os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
+    ).encode()
     sig = generate_gateway_signature(
         user_id=user_id,
         roles=roles,

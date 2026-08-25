@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-25: Enforce Startup Security Fail-Fast Assertions and Remove Insecure Fallback Secrets](2026-08-25-enforce-startup-security-fail-fast-assertions-and-remove-insecure-fallback-secrets.md)
 - [2026-08-23: Automated Golden Path Video Recording and GDrive Sync](2026-08-23-automated-golden-path-video-recording-and-gdrive-sync.md)
 - [2026-08-23: Medical Device and IVD Investigation Suite with UDI and Malfunction Quarantine](2026-08-23-medical-device-and-ivd-investigation-suite-with-udi-and-malfunction-quarantine.md)
 - [2026-08-22: Hermetic Containerized Statistical Computing Environment and Role-Gated Unblinded Data Vault](2026-08-22-hermetic-containerized-statistical-computing-environment-and-role-gated-unblinded-data-vault.md)

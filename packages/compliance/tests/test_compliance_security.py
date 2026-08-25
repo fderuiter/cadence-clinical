@@ -384,7 +384,9 @@ def test_assert_secure_secrets_validation(monkeypatch):
     with pytest.raises(RuntimeError) as exc_info:
         assert_secure_secrets(
             "test-service",
-            {"GATEWAY_SECRET": "internal-gateway-secret-12345"},  # pragma: allowlist secret
+            {
+                "GATEWAY_SECRET": "internal-gateway-secret-12345"
+            },  # pragma: allowlist secret
         )
     assert "Uses insecure fallback value" in str(exc_info.value)
 
@@ -393,7 +395,9 @@ def test_assert_secure_secrets_validation(monkeypatch):
     with pytest.raises(RuntimeError) as exc_info:
         assert_secure_secrets(
             "test-service",
-            {"GATEWAY_SECRET": "internal-gateway-secret-12345"},  # pragma: allowlist secret
+            {
+                "GATEWAY_SECRET": "internal-gateway-secret-12345"
+            },  # pragma: allowlist secret
         )
     assert "Uses insecure fallback value" in str(exc_info.value)
 
@@ -402,7 +406,9 @@ def test_assert_secure_secrets_validation(monkeypatch):
     with pytest.raises(RuntimeError) as exc_info:
         assert_secure_secrets(
             "test-service",
-            {"GATEWAY_SECRET": "internal-gateway-secret-12345"},  # pragma: allowlist secret
+            {
+                "GATEWAY_SECRET": "internal-gateway-secret-12345"
+            },  # pragma: allowlist secret
         )
     assert "Uses insecure fallback value" in str(exc_info.value)
 

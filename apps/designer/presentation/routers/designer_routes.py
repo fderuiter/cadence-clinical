@@ -2440,7 +2440,9 @@ def update_mock_version_status(study_id: str, version_id: str, new_status: str) 
 
             secret_env = os.getenv("SIGNING_SECRET")
             if not secret_env:
-                raise RuntimeError("SIGNING_SECRET environment variable is missing or unconfigured")
+                raise RuntimeError(
+                    "SIGNING_SECRET environment variable is missing or unconfigured"
+                )
             secret = secret_env.encode("utf-8")
             v["signature"] = generate_canonical_signature(payload_to_sign, secret)
             return old_status
@@ -2491,7 +2493,9 @@ async def update_neo4j_version_status(
 
         secret_env = os.getenv("SIGNING_SECRET")
         if not secret_env:
-            raise RuntimeError("SIGNING_SECRET environment variable is missing or unconfigured")
+            raise RuntimeError(
+                "SIGNING_SECRET environment variable is missing or unconfigured"
+            )
         secret = secret_env.encode("utf-8")
         new_signature = generate_canonical_signature(payload_to_sign, secret)
 

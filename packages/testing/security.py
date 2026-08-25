@@ -63,7 +63,9 @@ def create_test_auth_headers(
 
     secret_bytes = (
         secret
-        or (os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026").encode()
+        or (
+            os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
+        ).encode()
     )
     assigned_roles = roles or ["Site Investigator / CRC"]
     roles_str = ",".join(assigned_roles)
@@ -120,7 +122,9 @@ def generate_signature(
 
     secret_bytes = (
         secret
-        or (os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026").encode()
+        or (
+            os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
+        ).encode()
     )
     return generate_gateway_signature(
         user_id=user_id,

@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import os
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -15,8 +16,6 @@ from apps.designer.delta import (
     _init_mock_soa,
 )
 from apps.designer.main import app
-
-import os
 
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
 
