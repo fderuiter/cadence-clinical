@@ -156,7 +156,8 @@ class USDMProtocolExtractionResponse(BaseModel):
         ..., ge=0.0, le=1.0, description="Overall LLM extraction confidence"
     )
     faithfulness_metadata: FaithfulnessVerificationMetadata | None = Field(
-        None, description="Post-synthesis faithfulness evaluation metrics and verification status"
+        None,
+        description="Post-synthesis faithfulness evaluation metrics and verification status",
     )
 
 
@@ -204,5 +205,6 @@ class CommitUSDMResponse(BaseModel):
     synthesized_forms: list[SynthesizedECRFForm] = Field(default_factory=list)
     message: str
     faithfulness_metadata: FaithfulnessVerificationMetadata | None = Field(
-        None, description="Post-synthesis faithfulness evaluation metrics and verification status"
+        None,
+        description="Post-synthesis faithfulness evaluation metrics and verification status",
     )

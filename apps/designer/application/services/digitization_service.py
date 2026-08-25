@@ -681,7 +681,9 @@ def synthesize_ecrf_forms(
 
         sec_num = act.section_number or "5.1"
         pg_num = act.page_number or 12
-        cit_marker = act.citation_marker or format_citation_marker("v1.0", sec_num, pg_num)
+        cit_marker = act.citation_marker or format_citation_marker(
+            "v1.0", sec_num, pg_num
+        )
 
         items_copy = []
         for raw_item in form_items:
@@ -690,9 +692,9 @@ def synthesize_ecrf_forms(
             item_pg = item_dict.get("page_number") or pg_num
             item_dict["section_number"] = item_sec
             item_dict["page_number"] = item_pg
-            item_dict["citation_marker"] = item_dict.get("citation_marker") or format_citation_marker(
-                "v1.0", item_sec, item_pg
-            )
+            item_dict["citation_marker"] = item_dict.get(
+                "citation_marker"
+            ) or format_citation_marker("v1.0", item_sec, item_pg)
             items_copy.append(item_dict)
 
         form = SynthesizedECRFForm(

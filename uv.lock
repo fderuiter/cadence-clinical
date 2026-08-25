@@ -953,7 +953,7 @@ requires-dist = [
     { name = "docxcompose", specifier = ">=2.2.0" },
     { name = "docxtpl", specifier = ">=0.20.2" },
     { name = "ecdsa", marker = "extra == 'dev'", specifier = ">=0.19.2" },
-    { name = "fastapi", specifier = ">=0.139.2,<0.140.0" },
+    { name = "fastapi", specifier = ">=0.139.2,<0.142.0" },
     { name = "google-api-python-client", specifier = ">=2.120.0" },
     { name = "google-auth", specifier = ">=2.28.0" },
     { name = "google-auth-httplib2", specifier = ">=0.2.0" },
@@ -988,7 +988,7 @@ requires-dist = [
     { name = "sqlmodel", specifier = ">=0.0.39" },
     { name = "typer", specifier = ">=0.12.0" },
     { name = "usdm", specifier = ">=0.65.0" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.51.0,<0.52.0" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.51.0,<0.53.0" },
     { name = "weasyprint", specifier = ">=61.0" },
 ]
 provides-extras = ["dev"]
@@ -2494,6 +2494,7 @@ name = "packages-testing"
 version = "0.1.0"
 source = { editable = "packages/testing" }
 dependencies = [
+    { name = "packages-ddf" },
     { name = "packages-hexagonal" },
     { name = "packages-security" },
     { name = "packages-storage" },
@@ -2502,6 +2503,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "packages-ddf", editable = "packages/ddf" },
     { name = "packages-hexagonal", editable = "packages/hexagonal" },
     { name = "packages-security", editable = "packages/security" },
     { name = "packages-storage", editable = "packages/storage" },

@@ -34,6 +34,12 @@ def evaluate_synthesis_faithfulness(
 
     SLA Target: Sub-5.0s execution SLA targets.
 
+    Args:
+        synthesized_forms: List of synthesized eCRF form models or dictionaries.
+        soa_matrix: Optional Schedule of Activities matrix dictionary or view.
+        source_text: Optional protocol source text for lexical grounding verification.
+        protocol_version: Version identifier of the protocol (e.g. "v1.0").
+
     Returns:
         FaithfulnessVerificationMetadata containing score, verification_status, and warning flags.
     """
@@ -116,9 +122,7 @@ def evaluate_synthesis_faithfulness(
         rows = soa_matrix.get("rows", [])
         for r in rows:
             cells = (
-                r.get("cells", [])
-                if isinstance(r, dict)
-                else getattr(r, "cells", [])
+                r.get("cells", []) if isinstance(r, dict) else getattr(r, "cells", [])
             )
             act_name = (
                 r.get("activity_name", "")
@@ -174,8 +178,7 @@ def evaluate_synthesis_faithfulness(
         version_aligned_count / total_components if total_components > 0 else 1.0
     )
     denom = total_components + (
-        len(synthesized_forms)
-        + (len(soa_matrix.get("rows", [])) if soa_matrix else 0)
+        len(synthesized_forms) + (len(soa_matrix.get("rows", [])) if soa_matrix else 0)
     )
     lexical_rate = lexical_matches / denom if denom > 0 else 1.0
     lexical_rate = min(1.0, lexical_rate)

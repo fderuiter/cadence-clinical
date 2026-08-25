@@ -147,7 +147,8 @@ class ECRFSynthesisCheckpoint(BaseModel):
         default=0.95, ge=0.0, le=1.0, description="Stage confidence score"
     )
     faithfulness_metadata: FaithfulnessVerificationMetadata | None = Field(
-        default=None, description="Post-synthesis output faithfulness evaluation metrics"
+        default=None,
+        description="Post-synthesis output faithfulness evaluation metrics",
     )
 
 
@@ -254,7 +255,8 @@ class DigitizationJob(BaseModel):
         default_factory=list, description="Synthesized CDASH eCRF forms"
     )
     faithfulness_metadata: FaithfulnessVerificationMetadata | None = Field(
-        default=None, description="Post-synthesis output faithfulness evaluation metrics"
+        default=None,
+        description="Post-synthesis output faithfulness evaluation metrics",
     )
 
 
@@ -304,7 +306,8 @@ class DAGJobStatusResponse(BaseModel):
         default_factory=list, description="Synthesized eCRFs when completed"
     )
     faithfulness_metadata: FaithfulnessVerificationMetadata | None = Field(
-        default=None, description="Post-synthesis faithfulness metrics and verification status"
+        default=None,
+        description="Post-synthesis faithfulness metrics and verification status",
     )
 
 

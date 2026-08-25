@@ -133,7 +133,9 @@ def test_standardized_citation_marker_formatting() -> None:
     @req:PRD-SYS-001
     """
     synthesizer = CRFSynthesizer()
-    extracted = _heuristic_protocol_extraction("Protocol text for oncology study", "protocol.pdf")
+    extracted = _heuristic_protocol_extraction(
+        "Protocol text for oncology study", "protocol.pdf"
+    )
     forms = synthesizer.synthesize(extracted)
 
     assert len(forms) > 0

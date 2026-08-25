@@ -334,7 +334,9 @@ class SoACompiler:
 
             sec_num = getattr(act, "section_number", None) or "6.1"
             pg_num = getattr(act, "page_number", None) or 14
-            cit_marker = getattr(act, "citation_marker", None) or format_citation_marker("v1.0", sec_num, pg_num)
+            cit_marker = getattr(
+                act, "citation_marker", None
+            ) or format_citation_marker("v1.0", sec_num, pg_num)
 
             cells: list[dict[str, Any]] = []
             for enc in encounters_list:
@@ -517,9 +519,13 @@ class SoACompiler:
                 for cell in r.get("cells", []):
                     if not isinstance(cell, dict):
                         continue
-                    c_sec = cell.get("section_number") or r.get("section_number") or "6.1"
+                    c_sec = (
+                        cell.get("section_number") or r.get("section_number") or "6.1"
+                    )
                     c_pg = cell.get("page_number") or r.get("page_number") or 14
-                    c_marker = cell.get("citation_marker") or format_citation_marker("v1.0", c_sec, c_pg)
+                    c_marker = cell.get("citation_marker") or format_citation_marker(
+                        "v1.0", c_sec, c_pg
+                    )
                     cells.append(
                         {
                             "activity_id": str(cell.get("activity_id") or act_id),
@@ -576,7 +582,9 @@ class SoACompiler:
 
             sec_num = act.get("section_number") or "6.1"
             pg_num = act.get("page_number") or 14
-            cit_marker = act.get("citation_marker") or format_citation_marker("v1.0", sec_num, pg_num)
+            cit_marker = act.get("citation_marker") or format_citation_marker(
+                "v1.0", sec_num, pg_num
+            )
 
             cells = []
             for enc in encounters_list:
