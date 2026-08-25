@@ -33,5 +33,5 @@ Chosen option: Option 1, because automatically formatting and fixing imports usi
 
 ## 6. Implementation & Verification
 
-- Corrected import styles and unused imports inside `apps/gateway/main.py` and `apps/gateway/routers/ecoa.py`.
+- Corrected import styles and unused imports inside `apps/gateway/main.py` and `apps/gateway/presentation/routers/ecoa.py`.
 - Validated that `pnpm check` and `pnpm lint` pass successfully locally.

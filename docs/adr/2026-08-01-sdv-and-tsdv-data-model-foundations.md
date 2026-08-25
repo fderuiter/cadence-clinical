@@ -48,6 +48,6 @@ This requires a robust, flexible, and GxP-compliant database schema and applicat
 
 - **Target files/packages modified:**
   - `apps/execution/database/models.py`: Added `SDVSignOff`, `TSDVConfig` classes and corresponding `clinical_observations` columns (`is_sdv_verified`, `sdv_verified_by`, `sdv_verified_at`, `page_id`).
-  - `apps/execution/routers/sdv.py`: Implemented API endpoints for configuring TSDV, evaluating study sampling requirements, and signing off or dropping verifications.
+  - `apps/execution/presentation/routers/sdv.py`: Implemented API endpoints for configuring TSDV, evaluating study sampling requirements, and signing off or dropping verifications.
 - **Verification tests added under `tests/`:**
   - `tests/test_sdv.py`: Verifies TSDV config CRUD, subject/field sampling evaluations, bulk sign-off APIs, and drop verification audit logging.

@@ -49,6 +49,6 @@ In clinical trials, site coordinators and subject participants often record ePRO
   - `apps/execution/database/models.py` (added `ProcessedOfflineBatch`)
   - `apps/execution/database/migrate.py` (registered class in pre-boot migration scope)
   - `apps/execution/services/offline_sync.py` (implemented `OfflineSyncEngine`)
-  - `apps/execution/routers/offline.py` (added sync API endpoint)
+  - `apps/execution/presentation/routers/offline.py` (added sync API endpoint)
 - **Verification Plan:**
   - Validated via `tests/test_offline_sync.py` verifying standard delta ingestion, duplicate retry idempotency, sequential chronological ordering, cryptographic payload validation, and server-side conflict resolution flagging.
