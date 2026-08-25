@@ -50,11 +50,7 @@
     </div>
 
     <!-- Queue Table -->
-    <div
-      v-else
-      ref="containerRef"
-      class="table-responsive"
-    >
+    <div v-else ref="containerRef" class="table-responsive">
       <table
         class="data-table coding-table"
         role="grid"
@@ -64,10 +60,7 @@
       >
         <thead>
           <tr>
-            <th
-              scope="col"
-              class="col-checkbox"
-            >
+            <th scope="col" class="col-checkbox">
               <input
                 type="checkbox"
                 :checked="isAllSelected"
@@ -77,37 +70,12 @@
                 @change="toggleSelectAll"
               />
             </th>
-            <th
-              scope="col"
-            >
-              Status
-            </th>
-            <th
-              scope="col"
-            >
-              Verbatim Term &amp; Source
-            </th>
-            <th
-              scope="col"
-            >
-              Dictionary
-            </th>
-            <th
-              scope="col"
-            >
-              Coded Code &amp; Term
-            </th>
-            <th
-              scope="col"
-            >
-              Match / Suggestions
-            </th>
-            <th
-              scope="col"
-              class="col-actions"
-            >
-              Actions
-            </th>
+            <th scope="col">Status</th>
+            <th scope="col">Verbatim Term &amp; Source</th>
+            <th scope="col">Dictionary</th>
+            <th scope="col">Coded Code &amp; Term</th>
+            <th scope="col">Match / Suggestions</th>
+            <th scope="col" class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -204,10 +172,7 @@
               @click="selectCell(rIndex, 4)"
               @keydown="handleCellKeyDown($event, rIndex, 4, item)"
             >
-              <div
-                v-if="item.coded_code"
-                class="coded-result-box"
-              >
+              <div v-if="item.coded_code" class="coded-result-box">
                 <div class="coded-term">
                   {{ item.coded_term }}
                 </div>
@@ -537,24 +502,17 @@ import { use2DGrid } from "../composables/use2DGrid";
 const codingStore = useCodingStore();
 const containerRef = ref(null);
 
-const grid = use2DGrid(
-  () => codingStore.filteredAssignments.length,
-  7,
-  {
-    containerRef,
-    initialRow: 0,
-    initialCol: 0,
-    onCopyCell: (rIndex, cIndex, item) => copyCodingCellValue(rIndex, cIndex, item),
-    onCellAction: (rIndex, cIndex, item, event) => handleCodingCellAction(rIndex, cIndex, item, event),
-  }
-);
+const grid = use2DGrid(() => codingStore.filteredAssignments.length, 7, {
+  containerRef,
+  initialRow: 0,
+  initialCol: 0,
+  onCopyCell: (rIndex, cIndex, item) =>
+    copyCodingCellValue(rIndex, cIndex, item),
+  onCellAction: (rIndex, cIndex, item, event) =>
+    handleCodingCellAction(rIndex, cIndex, item, event),
+});
 
-const {
-  isCellActive,
-  getCellTabindex,
-  selectCell,
-  handleCellKeyDown,
-} = grid;
+const { isCellActive, getCellTabindex, selectCell, handleCellKeyDown } = grid;
 
 function copyCodingCellValue(rIndex, cIndex, item) {
   if (!item) return;
@@ -573,22 +531,30 @@ function copyCodingCellValue(rIndex, cIndex, item) {
       val = `${item.dictionary_type || ""} v${item.dictionary_version || ""}`;
       break;
     case 4:
-      val = item.coded_code ? `${item.coded_term || ""} (${item.coded_code})` : "Uncoded";
+      val = item.coded_code
+        ? `${item.coded_term || ""} (${item.coded_code})`
+        : "Uncoded";
       break;
     case 5:
-      val = item.suggestions && item.suggestions.length > 0
-        ? `${getSuggestionPt(item.suggestions[0])} (${getSuggestionCode(item.suggestions[0])})`
-        : item.score
-        ? `${Math.round(item.score * 100)}%`
-        : "No suggestions";
+      val =
+        item.suggestions && item.suggestions.length > 0
+          ? `${getSuggestionPt(item.suggestions[0])} (${getSuggestionCode(item.suggestions[0])})`
+          : item.score
+            ? `${Math.round(item.score * 100)}%`
+            : "No suggestions";
       break;
     case 6:
       val = "Actions";
       break;
   }
 
-  if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-    navigator.clipboard.writeText(val).catch((err) => console.error("Copy failed", err));
+  if (
+    navigator.clipboard &&
+    typeof navigator.clipboard.writeText === "function"
+  ) {
+    navigator.clipboard
+      .writeText(val)
+      .catch((err) => console.error("Copy failed", err));
   }
 }
 

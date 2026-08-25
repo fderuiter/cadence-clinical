@@ -1,5 +1,5 @@
 /* tslint:disable */
- 
+/* eslint-disable */
 /**
  * Auto-generated TypeScript interfaces representing the GxP clinical database models.
  * Excludes all internal compliance-only tables and audit logs.
