@@ -293,3 +293,133 @@ def test_stateless_execution_with_caller_managed_state():
     data_2 = response_2.json()
     assert data_2["execution_state"]["session_id"] == returned_state["session_id"]
     assert data_2["status"] == "DRAFT_STAGED"
+
+
+def test_custom_citation_confidence_threshold_rejection():
+    """Verify that custom elevated citation threshold (e.g. 0.99) causes fail-closed rejection when score is lower.
+
+    @req:PRD-SYS-051
+    """
+    headers = build_auth_headers()
+
+    chunks = [
+        ProtocolRAGContextChunk(
+            chunk_id="chk_elig_99",
+            protocol_version="v1.0",
+            section_number="1.0",
+            section_title="Background",
+            page_number=2,
+            chunk_text="General study overview text with minimal specific eligibility rules.",
+            is_approved=True,
+        )
+    ]
+
+    payload = {
+        "query": "Synthesize highly specific dosage protocol parameters for oncology trial.",
+        "tenant_id": "tenant_cadence_beta",
+        "study_id": "PROTOCOL-2026-HIGH-CONF",
+        "protocol_chunks": [c.model_dump() for c in chunks],
+        "min_citation_confidence": 0.99,
+    }
+
+    response = client.post(
+        "/api/v1/ai/reasoning/multi-step",
+        json=payload,
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+    data = response.json()
+    assert "CITATION_CONFIDENCE_BELOW_THRESHOLD" in data["detail"]
+
+
+def test_list_patient_records_and_profile_fallback():
+    """Verify list-structured patient records and invalid compliance profile fallback behavior.
+
+    @req:PRD-SYS-051
+    """
+    headers = build_auth_headers()
+
+    chunks = [
+        ProtocolRAGContextChunk(
+            chunk_id="chk_elig_list",
+            protocol_version="v4.0",
+            section_number="5.1",
+            section_title="Inclusion Criteria",
+            page_number=30,
+            chunk_text="Inclusion criterion: Subjects must have documented asthma diagnosis.",
+            is_approved=True,
+        )
+    ]
+
+    patient_records_list = [
+        {"patient_name": "Jane Smith", "ssn": "987-65-4321", "condition": "Asthma"},
+        {"patient_name": "Alice Brown", "ssn": "111-22-3333", "condition": "Asthma"},
+    ]
+
+    payload = {
+        "query": "Analyze patient list eligibility against Protocol v4.0 asthma inclusion guidelines.",
+        "tenant_id": "tenant_cadence_beta",
+        "study_id": "PROTOCOL-2026-ASTHMA",
+        "protocol_chunks": [c.model_dump() for c in chunks],
+        "patient_records": patient_records_list,
+        "compliance_profile": "INVALID_PROFILE_NAME",
+        "min_citation_confidence": 0.85,
+    }
+
+    response = client.post(
+        "/api/v1/ai/reasoning/multi-step",
+        json=payload,
+        headers=headers,
+    )
+
+    assert response.status_code == 200, response.text
+    data = response.json()
+
+    assert data["phi_masking_applied"] is True
+    assert data["phi_tokens_masked"] >= 1
+    assert data["status"] == "DRAFT_STAGED"
+
+
+def test_esignature_and_audit_context_propagation():
+    """Verify that tenant and electronic signature audit context propagate through reasoning execution steps.
+
+    @req:PRD-SYS-051
+    """
+    headers = build_auth_headers(user_id="usr_pi_signer")
+
+    chunks = [
+        ProtocolRAGContextChunk(
+            chunk_id="chk_elig_audit",
+            protocol_version="v1.2",
+            section_number="2.1",
+            section_title="Protocol Scope",
+            page_number=8,
+            chunk_text="Protocol Scope: Mandatory e-signature audit trail for all staged clinical records.",
+            is_approved=True,
+        )
+    ]
+
+    payload = {
+        "query": "Synthesize protocol scope and e-signature audit requirements for Protocol v1.2.",
+        "tenant_id": "tenant_cadence_beta",
+        "study_id": "PROTOCOL-2026-AUDIT",
+        "protocol_chunks": [c.model_dump() for c in chunks],
+        "min_citation_confidence": 0.85,
+        "esignature_context": {
+            "user_id": "usr_pi_signer",
+            "role": "Principal_Investigator",
+            "signature_intent": "REVIEW_AND_STAGE",
+        },
+    }
+
+    response = client.post(
+        "/api/v1/ai/reasoning/multi-step",
+        json=payload,
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "DRAFT_STAGED"
+    assert data["draft_record"]["requires_esignature"] is True
