@@ -282,16 +282,12 @@ def ensure_vendor_assets() -> None:
     source_dir = ROOT_DIR / "docs" / "vendor"
     source_dir.mkdir(parents=True, exist_ok=True)
 
-    tw_source = source_dir / "tailwindcss.js"
     vis_source = source_dir / "vis-network.min.js"
 
     for v_dir in vendor_dirs:
         v_dir.mkdir(parents=True, exist_ok=True)
-        target_tw = v_dir / "tailwindcss.js"
         target_vis = v_dir / "vis-network.min.js"
 
-        if tw_source.exists() and not target_tw.exists():
-            target_tw.write_bytes(tw_source.read_bytes())
         if vis_source.exists() and not target_vis.exists():
             target_vis.write_bytes(vis_source.read_bytes())
 
@@ -315,11 +311,195 @@ def generate_html_visualizer(
 <head>
   <meta charset="UTF-8">
   <title>Cadence Clinical System Schema Boundaries & GxP Traceability Matrix</title>
-  <!-- Tailwind CSS via local vendored asset -->
-  <script src="vendor/tailwindcss.js"></script>
   <!-- Vis.js Network via local vendored asset -->
   <script type="text/javascript" src="vendor/vis-network.min.js"></script>
   <style>
+    * {{
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }}
+    body {{
+      background-color: #f8fafc;
+      color: #1e293b;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+    }}
+    .header {{
+      background-color: #1e1b4b;
+      color: #ffffff;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      padding: 1.5rem 2rem;
+      margin-bottom: 2rem;
+    }}
+    .header-container {{
+      max-width: 80rem;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }}
+    @media (min-width: 768px) {{
+      .header-container {{
+        flex-direction: row;
+        align-items: center;
+      }}
+    }}
+    .header-title {{
+      font-size: 1.875rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      margin-top: 0.5rem;
+    }}
+    .header-subtitle {{
+      color: #c7d2fe;
+      margin-top: 0.25rem;
+    }}
+    .tag-compliance {{
+      background-color: #4338ca;
+      color: #e0e7ff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.25rem 0.625rem;
+      border-radius: 0.25rem;
+      display: inline-block;
+    }}
+    .pipeline-status {{
+      background-color: #312e81;
+      border: 1px solid #4338ca;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      color: #e0e7ff;
+    }}
+    .pipeline-status-title {{
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 0.25rem;
+    }}
+    .main-container {{
+      max-width: 80rem;
+      margin: 0 auto;
+      padding: 0 2rem 4rem 2rem;
+    }}
+    .grid-stats {{
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }}
+    @media (min-width: 768px) {{
+      .grid-stats {{
+        grid-template-columns: repeat(4, 1fr);
+      }}
+    }}
+    .card {{
+      background-color: #ffffff;
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+    }}
+    .stat-card {{
+      display: flex;
+      flex-direction: column;
+    }}
+    .stat-card-red {{
+      border-color: #fee2e2;
+      background-color: rgba(254, 242, 242, 0.4);
+    }}
+    .stat-card-amber {{
+      border-color: #fef3c7;
+      background-color: rgba(254, 243, 199, 0.4);
+    }}
+    .stat-label {{
+      color: #64748b;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }}
+    .stat-label-red {{ color: #b91c1c; }}
+    .stat-label-amber {{ color: #b45309; }}
+    .stat-value {{
+      font-size: 1.875rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin-top: 0.5rem;
+    }}
+    .stat-value-red {{ color: #7f1d1d; }}
+    .stat-value-amber {{ color: #78350f; }}
+    .stat-subtext {{
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin-top: 0.25rem;
+    }}
+    .stat-subtext-indigo {{ color: #4f46e5; }}
+    .stat-subtext-emerald {{ color: #059669; }}
+    .stat-subtext-red {{ color: #dc2626; }}
+    .stat-subtext-amber {{ color: #d97706; }}
+    .grid-workspace {{
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }}
+    @media (min-width: 1024px) {{
+      .grid-workspace {{
+        grid-template-columns: 2fr 1fr;
+      }}
+    }}
+    .workspace-left {{
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }}
+    .controls-header {{
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }}
+    @media (min-width: 640px) {{
+      .controls-header {{
+        flex-direction: row;
+        align-items: center;
+      }}
+    }}
+    .section-title {{
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #0f172a;
+    }}
+    .filter-group {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+    }}
+    .select-input {{
+      background-color: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 0.25rem;
+      padding: 0.375rem 0.5rem;
+      color: #334155;
+      font-weight: 500;
+    }}
+    .search-input {{
+      background-color: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 0.25rem;
+      padding: 0.375rem 0.75rem;
+      color: #334155;
+    }}
+    .search-input::placeholder {{
+      color: #94a3b8;
+    }}
     #network-container {{
       width: 100%;
       height: 650px;
@@ -327,141 +507,434 @@ def generate_html_visualizer(
       background-color: #f8fafc;
       border-radius: 0.5rem;
     }}
+    .legend-container {{
+      margin-top: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      justify-content: space-between;
+      align-items: center;
+      color: #64748b;
+    }}
+    .legend-group {{
+      display: flex;
+      gap: 1rem;
+    }}
+    .legend-item {{
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }}
+    .dot {{
+      width: 0.875rem;
+      height: 0.875rem;
+      border-radius: 9999px;
+      display: inline-block;
+    }}
+    .dot-designer {{ background-color: #6366f1; }}
+    .dot-execution {{ background-color: #10b981; }}
+    .dot-etmf {{ background-color: #f59e0b; }}
+    .dot-gxp {{
+      width: 0.75rem;
+      height: 0.75rem;
+      border-radius: 9999px;
+      border: 2px solid #ef4444;
+      display: inline-block;
+    }}
+    .dot-immutable {{
+      width: 0.75rem;
+      height: 0.75rem;
+      background-color: #fecaca;
+      border: 1px solid #f87171;
+      border-radius: 0.25rem;
+      display: inline-block;
+    }}
+    .inspect-panel {{
+      display: flex;
+      flex-direction: column;
+      height: 740px;
+    }}
+    .inspect-header {{
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #0f172a;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 0.75rem;
+    }}
+    .inspect-placeholder {{
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 2rem;
+      color: #94a3b8;
+    }}
+    .inspect-placeholder svg {{
+      width: 4rem;
+      height: 4rem;
+      margin-bottom: 1rem;
+      color: #cbd5e1;
+    }}
+    .inspect-placeholder-title {{
+      font-weight: 500;
+      color: #475569;
+    }}
+    .inspect-placeholder-desc {{
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
+    }}
+    .inspect-details {{
+      flex: 1;
+      overflow-y: auto;
+      padding-top: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }}
+    .inspect-table-name {{
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin-top: 0.5rem;
+    }}
+    .inspect-class-name {{
+      font-size: 0.875rem;
+      color: #94a3b8;
+      font-family: monospace;
+    }}
+    .badge-service {{
+      padding: 0.25rem 0.625rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: inline-block;
+    }}
+    .badge-service-designer {{ background-color: #e0e7ff; color: #3730a3; }}
+    .badge-service-execution {{ background-color: #ccfbf1; color: #115e59; }}
+    .badge-service-etmf {{ background-color: #fef3c7; color: #92400e; }}
+    .badge-service-violet {{ background-color: #f3e8ff; color: #6b21a8; }}
+    .badge-group {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }}
+    .badge-compliance {{
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      border-radius: 0.5rem;
+    }}
+    .badge-gxp {{
+      background-color: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }}
+    .badge-immutable {{
+      background-color: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }}
+    .subheading {{
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+    }}
+    .desc-box {{
+      font-size: 0.875rem;
+      color: #475569;
+      margin-top: 0.25rem;
+      line-height: 1.6;
+      background-color: #f8fafc;
+      padding: 0.75rem;
+      border-radius: 0.25rem;
+      border: 1px solid #f1f5f9;
+    }}
+    .table-wrapper {{
+      border: 1px solid #e2e8f0;
+      border-radius: 0.25rem;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }}
+    .inspect-table {{
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }}
+    .inspect-table th {{
+      background-color: #f8fafc;
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #64748b;
+      border-bottom: 1px solid #e2e8f0;
+    }}
+    .inspect-table td {{
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid #f1f5f9;
+    }}
+    .inspect-table tr:last-child td {{
+      border-bottom: none;
+    }}
+    .gxp-row {{
+      background-color: rgba(254, 242, 242, 0.5);
+    }}
+    .inspect-table-notice {{
+      padding: 1.5rem 1rem;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 0.75rem;
+      font-style: italic;
+      background-color: #f8fafc;
+    }}
+    .flag-badge {{
+      display: inline-block;
+      padding: 0.125rem 0.375rem;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 0.25rem;
+      margin-right: 0.25rem;
+    }}
+    .flag-pk {{ background-color: #dbeafe; color: #1e40af; }}
+    .flag-req {{ background-color: #f1f5f9; color: #1e293b; }}
+    .flag-gxp {{ background-color: #fee2e2; color: #991b1b; }}
+    .section-lineages {{
+      margin-top: 3rem;
+      background-color: #ffffff;
+      padding: 2rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+    }}
+    .lineage-title {{
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 1rem;
+    }}
+    .lineage-desc {{
+      color: #475569;
+      margin-bottom: 1.5rem;
+      line-height: 1.6;
+    }}
+    .grid-lineages {{
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }}
+    @media (min-width: 768px) {{
+      .grid-lineages {{
+        grid-template-columns: repeat(3, 1fr);
+      }}
+    }}
+    .lineage-card {{
+      border: 1px solid #f1f5f9;
+      background-color: rgba(248, 250, 252, 0.5);
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+    }}
+    .lineage-card-header {{
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }}
+    .lineage-badge {{
+      padding: 0.5rem;
+      border-radius: 0.25rem;
+      font-weight: 700;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+    }}
+    .lineage-badge-indigo {{ background-color: #e0e7ff; color: #4338ca; }}
+    .lineage-badge-emerald {{ background-color: #dcfce7; color: #15803d; }}
+    .lineage-badge-amber {{ background-color: #fef3c7; color: #b45309; }}
+    .lineage-card-title {{
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #1e293b;
+    }}
+    .lineage-card-text {{
+      font-size: 0.75rem;
+      color: #64748b;
+      line-height: 1.6;
+    }}
+    .footer {{
+      background-color: #0f172a;
+      color: #94a3b8;
+      padding: 3rem 2rem;
+      text-align: center;
+      font-size: 0.875rem;
+      border-top: 1px solid #1e293b;
+    }}
+    .footer-container {{
+      max-width: 80rem;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }}
+    .footer-title {{
+      font-weight: 600;
+      color: #cbd5e1;
+    }}
+    .footer-subtext {{
+      font-size: 0.75rem;
+      color: #475569;
+      margin-top: 1rem;
+    }}
+    .hidden {{
+      display: none !important;
+    }}
+    .flex {{
+      display: flex !important;
+    }}
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans">
+<body>
 
-  <header class="bg-indigo-900 text-white shadow-md py-6 px-8 mb-8">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+  <header class="header">
+    <div class="header-container">
       <div>
-        <span class="bg-indigo-700 text-indigo-100 text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded">FDA 21 CFR Part 11 & EU Annex 11 Compliance</span>
-        <h1 class="text-3xl font-extrabold tracking-tight mt-2">Codified Schema Boundaries & Automated Documentation</h1>
-        <p class="text-indigo-200 mt-1">Interactive system-wide schema graph showing physical microservice boundaries, security logs, and write-protected GxP clinical lineages.</p>
+        <span class="tag-compliance">FDA 21 CFR Part 11 & EU Annex 11 Compliance</span>
+        <h1 class="header-title">Codified Schema Boundaries & Automated Documentation</h1>
+        <p class="header-subtitle">Interactive system-wide schema graph showing physical microservice boundaries, security logs, and write-protected GxP clinical lineages.</p>
       </div>
-      <div class="bg-indigo-800 border border-indigo-700 p-4 rounded-lg text-sm text-indigo-100">
-        <p class="font-semibold text-white">Pipeline Execution Status</p>
-        <p class="mt-1">✓ Automated Generation</p>
+      <div class="pipeline-status">
+        <p class="pipeline-status-title">Pipeline Execution Status</p>
+        <p>✓ Automated Generation</p>
         <p>✓ Zero active DB driver imports</p>
       </div>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-8 pb-16">
+  <main class="main-container">
 
     <!-- Dashboard Statistics -->
-    <section class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200 flex flex-col">
-        <span class="text-slate-500 text-sm font-semibold uppercase tracking-wider">Total Service Boundaries</span>
-        <span class="text-3xl font-extrabold text-slate-900 mt-2">3</span>
-        <span class="text-xs text-indigo-600 mt-1 font-medium">Designer, Execution, eTMF</span>
+    <section class="grid-stats">
+      <div class="card stat-card">
+        <span class="stat-label">Total Service Boundaries</span>
+        <span class="stat-value">3</span>
+        <span class="stat-subtext stat-subtext-indigo">Designer, Execution, eTMF</span>
       </div>
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200 flex flex-col">
-        <span class="text-slate-500 text-sm font-semibold uppercase tracking-wider">Total Database Entities</span>
-        <span id="stat-entities" class="text-3xl font-extrabold text-slate-900 mt-2">0</span>
-        <span class="text-xs text-emerald-600 mt-1 font-medium">Statically synthesized</span>
+      <div class="card stat-card">
+        <span class="stat-label">Total Database Entities</span>
+        <span id="stat-entities" class="stat-value">0</span>
+        <span class="stat-subtext stat-subtext-emerald">Statically synthesized</span>
       </div>
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-red-100 flex flex-col bg-red-50/20">
-        <span class="text-red-700 text-sm font-semibold uppercase tracking-wider">GxP Regulated Entities</span>
-        <span id="stat-gxp" class="text-3xl font-extrabold text-red-900 mt-2">0</span>
-        <span class="text-xs text-red-600 mt-1 font-medium">Require mandatory change-reasoning</span>
+      <div class="card stat-card stat-card-red">
+        <span class="stat-label stat-label-red">GxP Regulated Entities</span>
+        <span id="stat-gxp" class="stat-value stat-value-red">0</span>
+        <span class="stat-subtext stat-subtext-red">Require mandatory change-reasoning</span>
       </div>
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-amber-100 flex flex-col bg-amber-50/20">
-        <span class="text-amber-700 text-sm font-semibold uppercase tracking-wider">Write-Protected (Immutable)</span>
-        <span id="stat-immutable" class="text-3xl font-extrabold text-amber-900 mt-2">0</span>
-        <span class="text-xs text-amber-600 mt-1 font-medium">Signature or QC locked</span>
+      <div class="card stat-card stat-card-amber">
+        <span class="stat-label stat-label-amber">Write-Protected (Immutable)</span>
+        <span id="stat-immutable" class="stat-value stat-value-amber">0</span>
+        <span class="stat-subtext stat-subtext-amber">Signature or QC locked</span>
       </div>
     </section>
 
     <!-- Visualizer Workspace -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="grid-workspace">
 
       <!-- Graph and Filters -->
-      <div class="lg:col-span-2 space-y-6">
-        <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-            <h2 class="text-xl font-bold text-slate-900">Interactive Boundary Explorer</h2>
+      <div class="workspace-left">
+        <div class="card">
+          <div class="controls-header">
+            <h2 class="section-title">Interactive Boundary Explorer</h2>
 
             <!-- Filters -->
-            <div class="flex flex-wrap gap-2 text-sm">
-              <select id="filter-service" class="bg-slate-100 border border-slate-300 rounded px-2 py-1.5 text-slate-700 font-medium">
+            <div class="filter-group">
+              <select id="filter-service" class="select-input">
                 <option value="all">All Service Boundaries</option>
                 <option value="designer">Designer / MDR (Graph)</option>
                 <option value="execution">Execution / EDC (Relational)</option>
                 <option value="etmf">eTMF (Relational)</option>
               </select>
-              <select id="filter-gxp" class="bg-slate-100 border border-slate-300 rounded px-2 py-1.5 text-slate-700 font-medium">
+              <select id="filter-gxp" class="select-input">
                 <option value="all">All Compliance Tiers</option>
                 <option value="gxp">GxP-Regulated Only</option>
                 <option value="immutable">Write-Protected Only</option>
               </select>
-              <input type="text" id="search-tables" placeholder="Search entity..." class="bg-white border border-slate-300 rounded px-3 py-1.5 text-slate-700 placeholder-slate-400">
+              <input type="text" id="search-tables" placeholder="Search entity..." class="search-input">
             </div>
           </div>
 
           <!-- Network Canvas -->
           <div id="network-container"></div>
 
-          <div class="mt-4 flex flex-wrap gap-4 text-xs font-semibold justify-between items-center text-slate-500">
-            <div class="flex gap-4">
-              <span class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 rounded-full bg-indigo-500 inline-block"></span> Designer (Neo4j)</span>
-              <span class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 rounded-full bg-emerald-500 inline-block"></span> Execution (Postgres)</span>
-              <span class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 rounded-full bg-amber-500 inline-block"></span> eTMF (Postgres)</span>
+          <div class="legend-container">
+            <div class="legend-group">
+              <span class="legend-item"><span class="dot dot-designer"></span> Designer (Neo4j)</span>
+              <span class="legend-item"><span class="dot dot-execution"></span> Execution (Postgres)</span>
+              <span class="legend-item"><span class="dot dot-etmf"></span> eTMF (Postgres)</span>
             </div>
-            <div class="flex gap-4">
-              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full border-2 border-red-500 inline-block"></span> GxP High Risk</span>
-              <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-red-200 border border-red-400 rounded inline-block"></span> Write-Protected/Immutable</span>
+            <div class="legend-group">
+              <span class="legend-item"><span class="dot-gxp"></span> GxP High Risk</span>
+              <span class="legend-item"><span class="dot-immutable"></span> Write-Protected/Immutable</span>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Schema and GxP Attributes sidebar -->
-      <div class="space-y-6">
-        <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200 flex flex-col h-[740px]">
-          <h2 class="text-xl font-bold text-slate-900 border-b border-slate-100 pb-3">Entity Inspection Panel</h2>
+      <div>
+        <div class="card inspect-panel">
+          <h2 class="inspect-header">Entity Inspection Panel</h2>
 
-          <div id="inspect-placeholder" class="flex-1 flex flex-col justify-center items-center text-center p-8 text-slate-400">
-            <svg class="w-16 h-16 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div id="inspect-placeholder" class="inspect-placeholder">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
             </svg>
-            <p class="font-medium text-slate-600">No Entity Selected</p>
-            <p class="text-sm mt-1">Select any database node or relationship pathway on the diagram to inspect its schema design, GxP properties, and regulatory compliance flags.</p>
+            <p class="inspect-placeholder-title">No Entity Selected</p>
+            <p class="inspect-placeholder-desc">Select any database node or relationship pathway on the diagram to inspect its schema design, GxP properties, and regulatory compliance flags.</p>
           </div>
 
-          <div id="inspect-details" class="flex-1 overflow-y-auto hidden space-y-4 pt-4">
+          <div id="inspect-details" class="inspect-details hidden">
             <div>
-              <span id="inspect-service-badge" class="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider"></span>
-              <h3 id="inspect-table-name" class="text-2xl font-extrabold text-slate-900 mt-2"></h3>
-              <p id="inspect-class-name" class="text-sm text-slate-400 font-mono"></p>
+              <span id="inspect-service-badge" class="badge-service"></span>
+              <h3 id="inspect-table-name" class="inspect-table-name"></h3>
+              <p id="inspect-class-name" class="inspect-class-name"></p>
             </div>
 
             <!-- GxP badging -->
-            <div class="flex flex-wrap gap-2">
-              <span id="inspect-gxp-badge" class="hidden items-center gap-1 px-3 py-1 bg-red-100 text-red-800 text-xs font-bold rounded-lg border border-red-200">
+            <div class="badge-group">
+              <span id="inspect-gxp-badge" class="badge-compliance badge-gxp hidden">
                 ⚠️ GxP Audit Logged
               </span>
-              <span id="inspect-immutable-badge" class="hidden items-center gap-1 px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-lg border border-amber-200">
+              <span id="inspect-immutable-badge" class="badge-compliance badge-immutable hidden">
                 🔒 Write-Once Immutable
               </span>
             </div>
 
             <div>
-              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Description</h4>
-              <p id="inspect-desc" class="text-sm text-slate-600 mt-1 leading-relaxed bg-slate-50 p-3 rounded border border-slate-100"></p>
+              <h4 class="subheading">Description</h4>
+              <p id="inspect-desc" class="desc-box"></p>
             </div>
 
             <div>
-              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Properties & Schema</h4>
-              <div class="border border-slate-200 rounded overflow-hidden">
-                <table class="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead class="bg-slate-50">
+              <h4 class="subheading">Properties &amp; Schema</h4>
+              <div class="table-wrapper">
+                <table class="inspect-table">
+                  <thead>
                     <tr>
-                      <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500">Property / Column</th>
-                      <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500">Type</th>
-                      <th class="px-3 py-2 text-center text-xs font-semibold text-slate-500">Flags</th>
+                      <th>Property / Column</th>
+                      <th>Type</th>
+                      <th style="text-align: center;">Flags</th>
                     </tr>
                   </thead>
-                  <tbody id="inspect-columns-tbody" class="divide-y divide-slate-100 bg-white">
+                  <tbody id="inspect-columns-tbody">
                     <!-- Dynamic -->
                   </tbody>
                 </table>
@@ -473,39 +946,39 @@ def generate_html_visualizer(
     </div>
 
     <!-- Data Lineages and Compliance Verification -->
-    <section class="mt-12 bg-white p-8 rounded-lg shadow-sm border border-slate-200">
-      <h2 class="text-2xl font-extrabold text-slate-900 mb-4">Inter-Service Lineages & Documented Interfaces</h2>
-      <p class="text-slate-600 mb-6 leading-relaxed">
+    <section class="section-lineages">
+      <h2 class="lineage-title">Inter-Service Lineages &amp; Documented Interfaces</h2>
+      <p class="lineage-desc">
         To remain completely compliant with <strong>ADR-2164</strong> and prevent runtime database cross-dependencies, standard microservices in the Cadence platform are structurally isolated. Sibling microservices cannot directly query each other's storage backends. Instead, all cross-service boundaries communicate exclusively through secure, pre-defined, and authenticated <strong>REST APIs and Events</strong>.
       </p>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="border border-slate-100 bg-slate-50/50 p-6 rounded-lg">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="p-2 bg-indigo-100 text-indigo-700 rounded font-bold text-xs uppercase">Designer &rarr; Execution</span>
-            <span class="text-sm font-semibold text-slate-800">USDM Ingestion</span>
+      <div class="grid-lineages">
+        <div class="lineage-card">
+          <div class="lineage-card-header">
+            <span class="lineage-badge lineage-badge-indigo">Designer &rarr; Execution</span>
+            <span class="lineage-card-title">USDM Ingestion</span>
           </div>
-          <p class="text-xs text-slate-500 leading-relaxed">
+          <p class="lineage-card-text">
             The <strong>Execution Service</strong> statically imports clinical protocol structures designed within the Neo4j Graph database. Relies on the <code>/api/v1/designer/usdm/export</code> endpoint with HMAC signoffs, guaranteeing strict non-repudiation.
           </p>
         </div>
 
-        <div class="border border-slate-100 bg-slate-50/50 p-6 rounded-lg">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="p-2 bg-emerald-100 text-emerald-700 rounded font-bold text-xs uppercase">Execution &rarr; eTMF</span>
-            <span class="text-sm font-semibold text-slate-800">Filing & Archival</span>
+        <div class="lineage-card">
+          <div class="lineage-card-header">
+            <span class="lineage-badge lineage-badge-emerald">Execution &rarr; eTMF</span>
+            <span class="lineage-card-title">Filing &amp; Archival</span>
           </div>
-          <p class="text-xs text-slate-500 leading-relaxed">
+          <p class="lineage-card-text">
             Clinical documentation, subject consents, and electronic signatures are captured in the relational EDC model, then pushed to the <strong>eTMF repository</strong>. Communication requires <code>GatewayAuthMiddleware</code> verification.
           </p>
         </div>
 
-        <div class="border border-slate-100 bg-slate-50/50 p-6 rounded-lg">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="p-2 bg-amber-100 text-amber-700 rounded font-bold text-xs uppercase">System &rarr; Ledger</span>
-            <span class="text-sm font-semibold text-slate-800">HMAC Auditing</span>
+        <div class="lineage-card">
+          <div class="lineage-card-header">
+            <span class="lineage-badge lineage-badge-amber">System &rarr; Ledger</span>
+            <span class="lineage-card-title">HMAC Auditing</span>
           </div>
-          <p class="text-xs text-slate-500 leading-relaxed">
+          <p class="lineage-card-text">
             All GxP audited models hook into the <code>Part11AuditMixin</code> and <code>AuditFields</code>. Standard transactions are cryptographically signed and chained in a SHA-256 HMAC ledger, satisfying Part 11 electronic records.
           </p>
         </div>
@@ -514,11 +987,11 @@ def generate_html_visualizer(
 
   </main>
 
-  <footer class="bg-slate-900 text-slate-400 py-12 px-8 text-center text-sm border-t border-slate-800">
-    <div class="max-w-7xl mx-auto space-y-2">
-      <p class="font-semibold text-slate-300">Cadence Clinical Research Software Platform — Automated Compliance Suite</p>
+  <footer class="footer">
+    <div class="footer-container">
+      <p class="footer-title">Cadence Clinical Research Software Platform — Automated Compliance Suite</p>
       <p>FDA 21 CFR Part 11 and EU Annex 11 Compliant Schema Visualizer.</p>
-      <p class="text-xs text-slate-600 mt-4">This documentation dashboard is generated statically during standard software build pipelines and is strictly read-only.</p>
+      <p class="footer-subtext">This documentation dashboard is generated statically during standard software build pipelines and is strictly read-only.</p>
     </div>
   </footer>
 
@@ -681,13 +1154,13 @@ def generate_html_visualizer(
       // Set Service badge
       const serviceBadge = document.getElementById("inspect-service-badge");
       serviceBadge.innerText = schemaData.services[table.service].name + " (" + schemaData.services[table.service].db_type + ")";
-      serviceBadge.className = "px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ";
+      serviceBadge.className = "badge-service ";
       if (table.service === "designer") {{
-        serviceBadge.classList.add("bg-indigo-100", "text-indigo-800");
+        serviceBadge.classList.add("badge-service-designer");
       }} else if (table.service === "execution") {{
-        serviceBadge.classList.add("bg-teal-100", "text-teal-800");
+        serviceBadge.classList.add("badge-service-execution");
       }} else {{
-        serviceBadge.classList.add("bg-amber-100", "text-amber-800");
+        serviceBadge.classList.add("badge-service-etmf");
       }}
 
       // Text fields
@@ -702,6 +1175,7 @@ def generate_html_visualizer(
         gxpBadge.classList.add("flex");
       }} else {{
         gxpBadge.classList.add("hidden");
+        gxpBadge.classList.remove("flex");
       }}
 
       const immutableBadge = document.getElementById("inspect-immutable-badge");
@@ -710,6 +1184,7 @@ def generate_html_visualizer(
         immutableBadge.classList.add("flex");
       }} else {{
         immutableBadge.classList.add("hidden");
+        immutableBadge.classList.remove("flex");
       }}
 
       // Populate properties table
@@ -718,25 +1193,25 @@ def generate_html_visualizer(
       table.columns.forEach(col => {{
         const tr = document.createElement("tr");
         if (col.gxp_highlight) {{
-          tr.className = "bg-red-50/50";
+          tr.className = "gxp-row";
         }}
 
         // Flags HTML
         let flagsHtml = "";
         if (col.primary_key) {{
-          flagsHtml += '<span class="inline-block px-1.5 py-0.5 bg-blue-100 text-blue-800 font-bold text-[10px] rounded mr-1">PK</span>';
+          flagsHtml += '<span class="flag-badge flag-pk">PK</span>';
         }}
         if (!col.nullable) {{
-          flagsHtml += '<span class="inline-block px-1.5 py-0.5 bg-slate-100 text-slate-800 font-bold text-[10px] rounded mr-1">REQ</span>';
+          flagsHtml += '<span class="flag-badge flag-req">REQ</span>';
         }}
         if (col.gxp_highlight) {{
-          flagsHtml += '<span class="inline-block px-1.5 py-0.5 bg-red-100 text-red-800 font-bold text-[10px] rounded">GxP</span>';
+          flagsHtml += '<span class="flag-badge flag-gxp">GxP</span>';
         }}
 
         tr.innerHTML = `
-          <td class="px-3 py-2 font-mono text-xs text-slate-950 font-medium">${{col.name}}</td>
-          <td class="px-3 py-2 font-mono text-xs text-slate-500">${{col.type}}</td>
-          <td class="px-3 py-2 text-center font-mono text-xs">${{flagsHtml}}</td>
+          <td style="font-family: monospace; font-size: 0.75rem; color: #020617; font-weight: 500;">${{col.name}}</td>
+          <td style="font-family: monospace; font-size: 0.75rem; color: #64748b;">${{col.type}}</td>
+          <td style="text-align: center; font-family: monospace; font-size: 0.75rem;">${{flagsHtml}}</td>
         `;
         tbody.appendChild(tr);
       }});
@@ -757,7 +1232,7 @@ def generate_html_visualizer(
 
           const serviceBadge = document.getElementById("inspect-service-badge");
           serviceBadge.innerText = "Inter-Service Interface Communication Boundary";
-          serviceBadge.className = "px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-violet-100 text-violet-800";
+          serviceBadge.className = "badge-service badge-service-violet";
 
           document.getElementById("inspect-table-name").innerText = matchingEdge.label;
           document.getElementById("inspect-class-name").innerText = "Endpoint / Event Channel Pathway";
@@ -766,7 +1241,7 @@ def generate_html_visualizer(
           document.getElementById("inspect-immutable-badge").classList.add("hidden");
           document.getElementById("inspect-columns-tbody").innerHTML = `
             <tr>
-              <td colspan="3" class="px-4 py-6 text-center text-slate-400 text-xs italic bg-slate-50">This connection represents an authorized inter-service transfer interface path under ADR-2164 compliance framework.</td>
+              <td colspan="3" class="inspect-table-notice">This connection represents an authorized inter-service transfer interface path under ADR-2164 compliance framework.</td>
             </tr>
           `;
         }}
