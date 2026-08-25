@@ -14,6 +14,7 @@ from apps.imaging.adapters.database import db_manager, get_db_session
 from apps.imaging.infrastructure.models import Base
 from apps.imaging.presentation.routers.imaging import router as imaging_router
 from packages.database import get_relational_db_lifespan
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -31,6 +32,8 @@ app = FastAPI(
         base_metadata=Base.metadata,
     ),
 )
+
+register_rfc7807_handlers(app)
 
 # Enforce secure gateway authentication on every request
 app.add_middleware(GatewayAuthMiddleware)

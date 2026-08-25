@@ -169,7 +169,7 @@ async def test_split_payee_validation_failure_on_invalid_percentage(
         json=invalid_split,
         headers=headers,
     )
-    assert res.status_code == 400
+    assert res.status_code in (400, 422)
     assert "must sum exactly to 100.0%" in res.json()["detail"]
 
 
@@ -389,7 +389,7 @@ async def test_cra_sdv_verification_gating_workflow(client: AsyncClient):
         action=app_path,
     )
     approve_fail = await client.post(app_path, headers=app_headers)
-    assert approve_fail.status_code == 400
+    assert approve_fail.status_code in (400, 422)
     assert "gated pending CRA SDV" in approve_fail.json()["detail"]
 
     # Step 2: CRA performs Source Data Verification (SDV)
@@ -584,7 +584,7 @@ async def test_holdback_retention_reserve_and_dual_signoff_release(
         },
         headers=headers,
     )
-    assert fail_release_1.status_code == 400
+    assert fail_release_1.status_code in (400, 422)
     assert "Data Management sign-off is required" in fail_release_1.json()["detail"]
 
     # Step 3: Attempt release with missing Quality sign-off -> Fails
@@ -599,7 +599,7 @@ async def test_holdback_retention_reserve_and_dual_signoff_release(
         },
         headers=headers,
     )
-    assert fail_release_2.status_code == 400
+    assert fail_release_2.status_code in (400, 422)
     assert "Quality Oversight sign-off is required" in fail_release_2.json()["detail"]
 
     # Step 4: Execute compliant release with dual DM + Quality sign-off

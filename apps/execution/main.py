@@ -361,10 +361,13 @@ class ProblemDetails(BaseModel):
 BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
 
 
+from packages.hexagonal import register_rfc7807_handlers
+
 validate_branding("execution")
 app = FastAPI(
     title=f"{BRAND_NAME} - EDC Execution Engine", version="0.1.0", lifespan=lifespan
 )
+register_rfc7807_handlers(app)
 
 app.include_router(locks_router)
 app.include_router(signatures_router)

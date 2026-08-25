@@ -102,6 +102,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         await http_client.aclose()
 
 
+from packages.hexagonal import register_rfc7807_handlers
+
 validate_branding("gateway", is_gateway=True)
 
 app = FastAPI(
@@ -112,6 +114,7 @@ app = FastAPI(
     redoc_url=None,
     lifespan=lifespan,
 )
+register_rfc7807_handlers(app)
 
 app.include_router(cdisc_router, prefix="/api/v1/cdisc", tags=["CDISC Standards"])
 app.include_router(usdm_router, prefix="/api/v1/usdm", tags=["USDM Data Flow"])

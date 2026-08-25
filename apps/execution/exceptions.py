@@ -3,7 +3,15 @@ Clinical Domain Exceptions for hexagonal decoupling.
 """
 
 
-class DomainError(Exception):
+"""
+Clinical Domain Exceptions for hexagonal decoupling.
+"""
+
+from packages.hexagonal import DomainError as BaseDomainError
+from packages.hexagonal import EntityNotFoundError, ValidationError
+
+
+class DomainError(BaseDomainError):
     """Base exception for all domain-level errors.
 
     Used for framework-agnostic error propagation across service boundaries,
@@ -15,37 +23,37 @@ class DomainError(Exception):
         self.message = message
 
 
-class SubjectEligibilityError(DomainError):
+class SubjectEligibilityError(DomainError, ValidationError):
     """Raised when subject eligibility checks fail or eligibility status is invalid."""
 
     pass
 
 
-class CodingAssignmentNotFoundError(DomainError):
+class CodingAssignmentNotFoundError(DomainError, EntityNotFoundError):
     """Raised when a medical coding assignment cannot be found."""
 
     pass
 
 
-class InvalidCodingActionError(DomainError):
+class InvalidCodingActionError(DomainError, ValidationError):
     """Raised when an invalid coding action (ACCEPT/OVERRIDE/QUERY) or validation fails."""
 
     pass
 
 
-class DictionaryNotFoundError(DomainError):
+class DictionaryNotFoundError(DomainError, EntityNotFoundError):
     """Raised when a dictionary type or version is not found or unsupported."""
 
     pass
 
 
-class ChangeRequestNotFoundError(DomainError):
+class ChangeRequestNotFoundError(DomainError, EntityNotFoundError):
     """Raised when a compliance change request cannot be found."""
 
     pass
 
 
-class InvalidChangeRequestActionError(DomainError):
+class InvalidChangeRequestActionError(DomainError, ValidationError):
     """Raised when a compliance change request action fails GxP verification."""
 
     pass

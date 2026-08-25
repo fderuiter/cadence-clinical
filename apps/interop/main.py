@@ -51,6 +51,8 @@ assert_secure_secrets(
 BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
 
 
+from packages.hexagonal import register_rfc7807_handlers
+
 validate_branding("interop")
 app = FastAPI(
     title=f"{BRAND_NAME} - FHIR / eSource & eCOA Sync Gateway",
@@ -61,6 +63,7 @@ app = FastAPI(
         base_metadata=Base.metadata,
     ),
 )
+register_rfc7807_handlers(app)
 
 # Enforce secure gateway authentication middleware
 app.add_middleware(GatewayAuthMiddleware)

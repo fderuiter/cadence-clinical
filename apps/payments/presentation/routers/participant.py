@@ -360,22 +360,19 @@ async def update_participant_wallet_payout_methods(
     principal: Principal = Depends(get_principal),
 ) -> ParticipantWalletResponse:
     """Updates payout credentials (virtual card / direct ACH) for a participant wallet."""
-    try:
-        wallet = await service.update_wallet_payout_methods(
-            wallet_id=wallet_id,
-            virtual_card_token=payload.virtual_card_token,
-            virtual_card_mask=payload.virtual_card_mask,
-            virtual_card_expiry=payload.virtual_card_expiry,
-            card_status=payload.card_status,
-            ach_routing_number=payload.ach_routing_number,
-            ach_account_mask=payload.ach_account_mask,
-            ach_account_holder=payload.ach_account_holder,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-            reason_for_change=principal.change_reason or "Updated Payout Methods",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    wallet = await service.update_wallet_payout_methods(
+        wallet_id=wallet_id,
+        virtual_card_token=payload.virtual_card_token,
+        virtual_card_mask=payload.virtual_card_mask,
+        virtual_card_expiry=payload.virtual_card_expiry,
+        card_status=payload.card_status,
+        ach_routing_number=payload.ach_routing_number,
+        ach_account_mask=payload.ach_account_mask,
+        ach_account_holder=payload.ach_account_holder,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+        reason_for_change=principal.change_reason or "Updated Payout Methods",
+    )
     return map_wallet_response(wallet)
 
 
@@ -393,18 +390,15 @@ async def issue_participant_reloadable_card(
     principal: Principal = Depends(get_principal),
 ) -> IssueReloadableCardResponse:
     """Provisions an automated reloadable debit card linked to the participant wallet."""
-    try:
-        res = await service.issue_reloadable_debit_card(
-            wallet_id=wallet_id,
-            cardholder_name=payload.cardholder_name,
-            card_type=payload.card_type,
-            initial_load=payload.initial_load,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-            reason_for_change=principal.change_reason or "Automated Debit Card Issuing",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    res = await service.issue_reloadable_debit_card(
+        wallet_id=wallet_id,
+        cardholder_name=payload.cardholder_name,
+        card_type=payload.card_type,
+        initial_load=payload.initial_load,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+        reason_for_change=principal.change_reason or "Automated Debit Card Issuing",
+    )
     return IssueReloadableCardResponse(**res)
 
 
@@ -420,10 +414,7 @@ async def get_participant_balance_inquiry(
     principal: Principal = Depends(get_principal),
 ) -> BalanceInquiryResponse:
     """Performs real-time multi-channel balance inquiry."""
-    try:
-        res = await service.get_balance_inquiry(wallet_id=wallet_id)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    res = await service.get_balance_inquiry(wallet_id=wallet_id)
     return BalanceInquiryResponse(**res)
 
 
@@ -439,10 +430,7 @@ async def get_participant_1099_tax_status(
     principal: Principal = Depends(get_principal),
 ) -> Tax1099ThresholdResponse:
     """Retrieves real-time IRS Form 1099 tax threshold analysis and W-9 validation state."""
-    try:
-        res = await service.get_1099_tax_status(wallet_id=wallet_id)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    res = await service.get_1099_tax_status(wallet_id=wallet_id)
     return Tax1099ThresholdResponse(**res)
 
 
@@ -459,20 +447,17 @@ async def submit_participant_w9_form(
     principal: Principal = Depends(get_principal),
 ) -> W9SubmitResponse:
     """Submits IRS Form W-9 certification for participant 1099 compliance."""
-    try:
-        res = await service.submit_w9_form(
-            wallet_id=wallet_id,
-            tax_id_last_four=payload.tax_id_last_four,
-            full_legal_name=payload.full_legal_name,
-            certify_accurate=payload.certify_accurate,
-            address=payload.address,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-            reason_for_change=principal.change_reason
-            or "Submitted Form W-9 Certification",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    res = await service.submit_w9_form(
+        wallet_id=wallet_id,
+        tax_id_last_four=payload.tax_id_last_four,
+        full_legal_name=payload.full_legal_name,
+        certify_accurate=payload.certify_accurate,
+        address=payload.address,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+        reason_for_change=principal.change_reason
+        or "Submitted Form W-9 Certification",
+    )
     return W9SubmitResponse(**res)
 
 
@@ -508,16 +493,13 @@ async def verify_participant_w9_form(
 ) -> ParticipantWalletResponse:
     """Performs coordinator verification on submitted Form W-9."""
     check_coordinator_or_financial_write_access(principal)
-    try:
-        wallet = await service.verify_w9_form(
-            wallet_id=wallet_id,
-            verified_by=principal.user_id,
-            reviewer_roles=",".join(principal.raw_roles),
-            notes=payload.notes,
-            reason_for_change=principal.change_reason or "Verified Form W-9",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    wallet = await service.verify_w9_form(
+        wallet_id=wallet_id,
+        verified_by=principal.user_id,
+        reviewer_roles=",".join(principal.raw_roles),
+        notes=payload.notes,
+        reason_for_change=principal.change_reason or "Verified Form W-9",
+    )
     return map_wallet_response(wallet)
 
 
@@ -535,18 +517,15 @@ async def disburse_participant_funds(
     principal: Principal = Depends(get_principal),
 ) -> DisbursementResponse:
     """Dispatches digital funds payout (Virtual Card / Direct ACH) with 21 CFR Part 11 ledger recording."""
-    try:
-        disbursement = await service.disburse_funds(
-            wallet_id=wallet_id,
-            disbursement_type=payload.disbursement_type,
-            amount=payload.amount,
-            destination_mask=payload.destination_mask,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-            reason_for_change=principal.change_reason or "Digital Payout Request",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    disbursement = await service.disburse_funds(
+        wallet_id=wallet_id,
+        disbursement_type=payload.disbursement_type,
+        amount=payload.amount,
+        destination_mask=payload.destination_mask,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+        reason_for_change=principal.change_reason or "Digital Payout Request",
+    )
     return map_disbursement_response(disbursement)
 
 
@@ -605,25 +584,22 @@ async def create_participant_stipend_rule(
 ) -> ParticipantStipendRuleResponse:
     """Configures participant visit compensation rules linked to the Schedule of Activities."""
     check_financial_write_access(principal)
-    try:
-        rule = await service.create_stipend_rule(
-            study_id=payload.study_id,
-            visit_code=payload.visit_code,
-            visit_name=payload.visit_name,
-            amount=payload.amount,
-            currency=payload.currency,
-            procedure_code=payload.procedure_code,
-            requires_verification=payload.requires_verification,
-            taxable=payload.taxable,
-            anti_coercion_cap=payload.anti_coercion_cap,
-            is_milestone=payload.is_milestone,
-            milestone_code=payload.milestone_code,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-            reason_for_change=principal.change_reason or "Configured SoA Stipend Rule",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    rule = await service.create_stipend_rule(
+        study_id=payload.study_id,
+        visit_code=payload.visit_code,
+        visit_name=payload.visit_name,
+        amount=payload.amount,
+        currency=payload.currency,
+        procedure_code=payload.procedure_code,
+        requires_verification=payload.requires_verification,
+        taxable=payload.taxable,
+        anti_coercion_cap=payload.anti_coercion_cap,
+        is_milestone=payload.is_milestone,
+        milestone_code=payload.milestone_code,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+        reason_for_change=principal.change_reason or "Configured SoA Stipend Rule",
+    )
     return map_stipend_rule_response(rule)
 
 
@@ -776,21 +752,18 @@ async def review_participant_expense_claim(
     principal: Principal = Depends(get_principal),
 ) -> ExpenseClaimResponse:
     """Processes 1-click coordinator review and approval/rejection of a travel expense claim."""
-    try:
-        claim = await service.review_expense_claim(
-            claim_id=claim_id,
-            review_status=payload.status,
-            reviewer_id=principal.user_id,
-            reviewer_roles=",".join(principal.raw_roles),
-            review_notes=payload.review_notes,
-            adjusted_amount=payload.adjusted_amount,
-            adjusted_category=payload.adjusted_category,
-            adjusted_merchant=payload.adjusted_merchant,
-            reason_for_change=principal.change_reason
-            or f"Coordinator {payload.status.lower()} claim",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    claim = await service.review_expense_claim(
+        claim_id=claim_id,
+        review_status=payload.status,
+        reviewer_id=principal.user_id,
+        reviewer_roles=",".join(principal.raw_roles),
+        review_notes=payload.review_notes,
+        adjusted_amount=payload.adjusted_amount,
+        adjusted_category=payload.adjusted_category,
+        adjusted_merchant=payload.adjusted_merchant,
+        reason_for_change=principal.change_reason
+        or f"Coordinator {payload.status.lower()} claim",
+    )
     return map_expense_claim_response(claim)
 
 
@@ -886,17 +859,14 @@ async def publish_lay_summary(
     principal: Principal = Depends(get_principal),
 ) -> LaySummaryResponse:
     """Formally publishes an IRB-approved lay summary for participant access."""
-    try:
-        summary = await service.publish_lay_summary(
-            summary_id=summary_id,
-            irb_approval_number=payload.irb_approval_number,
-            irb_approval_date=payload.irb_approval_date,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-            reason_for_change=principal.change_reason or "Published Lay Summary",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    summary = await service.publish_lay_summary(
+        summary_id=summary_id,
+        irb_approval_number=payload.irb_approval_number,
+        irb_approval_date=payload.irb_approval_date,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+        reason_for_change=principal.change_reason or "Published Lay Summary",
+    )
     return map_lay_summary_response(summary)
 
 
@@ -914,19 +884,16 @@ async def confirm_lay_summary_receipt(
     principal: Principal = Depends(get_principal),
 ) -> LaySummaryReceiptResponse:
     """Records participant confirmation of lay summary receipt with comprehension score and SHA-256 seal."""
-    try:
-        receipt = await service.confirm_lay_summary_receipt(
-            summary_id=summary_id,
-            subject_id=payload.subject_id,
-            study_id=payload.study_id,
-            comprehension_score=payload.comprehension_score,
-            comprehension_feedback=payload.comprehension_feedback,
-            confirmation_statement=payload.confirmation_statement,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    receipt = await service.confirm_lay_summary_receipt(
+        summary_id=summary_id,
+        subject_id=payload.subject_id,
+        study_id=payload.study_id,
+        comprehension_score=payload.comprehension_score,
+        comprehension_feedback=payload.comprehension_feedback,
+        confirmation_statement=payload.confirmation_statement,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+    )
     return map_lay_summary_receipt_response(receipt)
 
 

@@ -193,21 +193,18 @@ async def compile_billing_cycle(
 ) -> SelfBillingInvoiceResponse:
     """Automates monthly or quarterly billing cycle compilation into a self-billing invoice."""
     check_financial_write_access(principal)
-    try:
-        invoice = await gateway.compile_billing_cycle(
-            study_id=payload.study_id,
-            site_id=payload.site_id,
-            billing_cycle=payload.billing_cycle,
-            period_start=payload.period_start,
-            period_end=payload.period_end,
-            auto_approve=payload.auto_approve,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-            reason_for_change=principal.change_reason
-            or f"Compiled {payload.billing_cycle} billing cycle",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    invoice = await gateway.compile_billing_cycle(
+        study_id=payload.study_id,
+        site_id=payload.site_id,
+        billing_cycle=payload.billing_cycle,
+        period_start=payload.period_start,
+        period_end=payload.period_end,
+        auto_approve=payload.auto_approve,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+        reason_for_change=principal.change_reason
+        or f"Compiled {payload.billing_cycle} billing cycle",
+    )
 
     return map_invoice_response(invoice)
 
@@ -262,15 +259,12 @@ async def approve_self_billing_invoice(
 ) -> SelfBillingInvoiceResponse:
     """Approves a draft self-billing invoice for ERP synchronization and disbursement."""
     check_financial_write_access(principal)
-    try:
-        invoice = await gateway.approve_self_billing_invoice(
-            invoice_id=invoice_id,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-            reason_for_change=principal.change_reason or "Approved invoice",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    invoice = await gateway.approve_self_billing_invoice(
+        invoice_id=invoice_id,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+        reason_for_change=principal.change_reason or "Approved invoice",
+    )
 
     return map_invoice_response(invoice)
 
@@ -338,20 +332,17 @@ async def sign_remittance_advice(
 ) -> RemittanceAdviceResponse:
     """Applies 21 CFR Part 11 cryptographic digital signature to remittance advice statement."""
     check_financial_write_access(principal)
-    try:
-        remittance = await gateway.sign_and_seal_remittance_advice(
-            invoice_id=invoice_id,
-            signer_name=payload.signer_name,
-            signer_role=payload.signer_role,
-            signature_reason=payload.signature_reason,
-            cert_pem=payload.cert_pem,
-            private_key_pem=payload.private_key_pem,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-            reason_for_change=principal.change_reason or payload.signature_reason,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    remittance = await gateway.sign_and_seal_remittance_advice(
+        invoice_id=invoice_id,
+        signer_name=payload.signer_name,
+        signer_role=payload.signer_role,
+        signature_reason=payload.signature_reason,
+        cert_pem=payload.cert_pem,
+        private_key_pem=payload.private_key_pem,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+        reason_for_change=principal.change_reason or payload.signature_reason,
+    )
 
     return map_remittance_response(remittance)
 
@@ -367,10 +358,7 @@ async def verify_remittance_advice_signature(
 ) -> RemittanceSignatureVerificationResponse:
     """Verifies cryptographic signature validity and tamper resistance of remittance advice statement."""
     check_financial_read_access(principal)
-    try:
-        res = await gateway.verify_remittance_advice_signature(invoice_id)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    res = await gateway.verify_remittance_advice_signature(invoice_id)
 
     return RemittanceSignatureVerificationResponse(**res)
 
@@ -387,17 +375,14 @@ async def dispatch_remittance_advice(
 ) -> RemittanceAdviceResponse:
     """Dispatches signed remittance advice statement via automated email notification."""
     check_financial_write_access(principal)
-    try:
-        remittance = await gateway.dispatch_remittance_advice(
-            invoice_id=invoice_id,
-            recipient_email=payload.recipient_email,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-            reason_for_change=principal.change_reason
-            or f"Dispatched remittance advice to {payload.recipient_email}",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    remittance = await gateway.dispatch_remittance_advice(
+        invoice_id=invoice_id,
+        recipient_email=payload.recipient_email,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+        reason_for_change=principal.change_reason
+        or f"Dispatched remittance advice to {payload.recipient_email}",
+    )
 
     return map_remittance_response(remittance)
 
@@ -419,15 +404,12 @@ async def export_invoice_to_erp(
 ) -> ErpExportResponse:
     """Exports invoice into standardized ERP transmission format (SAP/NetSuite)."""
     check_financial_write_access(principal)
-    try:
-        export_envelope = await gateway.export_invoice_to_erp(
-            invoice_id=invoice_id,
-            erp_system=erp_system,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    export_envelope = await gateway.export_invoice_to_erp(
+        invoice_id=invoice_id,
+        erp_system=erp_system,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+    )
 
     return ErpExportResponse(
         erp_system=export_envelope.erp_system,
@@ -444,14 +426,11 @@ async def process_erp_webhook(
     gateway: BillingAndErpGateway = Depends(get_billing_erp_gateway),
 ) -> ErpWebhookResponse:
     """Inbound enterprise ERP webhook receiver for payment execution and reconciliation status updates."""
-    try:
-        res = await gateway.process_erp_webhook(
-            payload=payload,
-            user_id=f"ERP_{payload.erp_system}",
-            user_roles="ERP Integration Connector",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    res = await gateway.process_erp_webhook(
+        payload=payload,
+        user_id=f"ERP_{payload.erp_system}",
+        user_roles="ERP Integration Connector",
+    )
 
     return ErpWebhookResponse(**res)
 
@@ -468,21 +447,18 @@ async def reconcile_invoice_payment(
 ) -> PaymentReconciliationResponse:
     """Reconciles payment execution against self-billing invoice and underlying payables."""
     check_financial_write_access(principal)
-    try:
-        res = await gateway.reconcile_invoice_payment(
-            invoice_id=invoice_id,
-            payment_reference=payload.payment_reference,
-            erp_system=payload.erp_system,
-            payment_date=payload.payment_date,
-            amount_paid=payload.amount_paid,
-            notes=payload.notes,
-            user_id=principal.user_id,
-            user_roles=",".join(principal.raw_roles),
-            reason_for_change=principal.change_reason
-            or "Financial Payment Reconciliation",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    res = await gateway.reconcile_invoice_payment(
+        invoice_id=invoice_id,
+        payment_reference=payload.payment_reference,
+        erp_system=payload.erp_system,
+        payment_date=payload.payment_date,
+        amount_paid=payload.amount_paid,
+        notes=payload.notes,
+        user_id=principal.user_id,
+        user_roles=",".join(principal.raw_roles),
+        reason_for_change=principal.change_reason
+        or "Financial Payment Reconciliation",
+    )
 
     return PaymentReconciliationResponse(**res)
 

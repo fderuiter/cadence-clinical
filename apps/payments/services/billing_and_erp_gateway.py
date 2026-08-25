@@ -20,6 +20,11 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from apps.payments.domain.exceptions import (
+    ContractNotFoundError,
+    InvoiceNotFoundError,
+    PaymentsValidationError,
+)
 from apps.payments.domain.models import (
     AuditAction,
     ErpExportEnvelope,
@@ -82,7 +87,7 @@ class BillingAndErpGateway:
         res_contract = await self.session.execute(stmt_contract)
         contract = res_contract.scalars().first()
         if not contract:
-            raise ValueError(
+            raise ContractNotFoundError(
                 f"No active budget contract found for study '{study_id}' and site '{site_id}'."
             )
 
@@ -120,7 +125,7 @@ class BillingAndErpGateway:
             payables = list(res_payables_trig.scalars().all())
 
         if not payables:
-            raise ValueError(
+            raise PaymentsValidationError(
                 f"No approved payable line items available for billing compilation in study '{study_id}', site '{site_id}'."
             )
 
@@ -352,7 +357,7 @@ class BillingAndErpGateway:
         """Approves a draft self-billing invoice for ERP synchronization and disbursement."""
         invoice = await self.get_invoice(invoice_id)
         if not invoice:
-            raise ValueError(f"Self-billing invoice '{invoice_id}' not found.")
+            raise InvoiceNotFoundError(f"Self-billing invoice '{invoice_id}' not found.")
 
         prev_status = invoice.status
         now = datetime.now(UTC)
@@ -467,11 +472,11 @@ class BillingAndErpGateway:
         """Cryptographically signs and seals a PDF remittance advice statement with 21 CFR Part 11 validation."""
         invoice = await self.get_invoice(invoice_id)
         if not invoice:
-            raise ValueError(f"Invoice with ID '{invoice_id}' not found.")
+            raise InvoiceNotFoundError(f"Invoice with ID '{invoice_id}' not found.")
 
         remittance = invoice.remittance_advice
         if not remittance:
-            raise ValueError(
+            raise PaymentsValidationError(
                 f"No remittance advice document found for invoice '{invoice_id}'."
             )
 
@@ -642,7 +647,7 @@ class BillingAndErpGateway:
         """Cryptographically verifies electronic signature and tamper resistance of remittance advice."""
         remittance = await self.get_remittance_advice(invoice_id)
         if not remittance:
-            raise ValueError(
+            raise PaymentsValidationError(
                 f"No remittance advice document found for invoice '{invoice_id}'."
             )
 
@@ -681,12 +686,12 @@ class BillingAndErpGateway:
         """Dispatches signed remittance advice statement to site financial contact."""
         remittance = await self.get_remittance_advice(invoice_id)
         if not remittance:
-            raise ValueError(
+            raise PaymentsValidationError(
                 f"No remittance advice document found for invoice '{invoice_id}'."
             )
 
         if not remittance.is_signed:
-            raise ValueError(
+            raise PaymentsValidationError(
                 "Cannot dispatch unsigned remittance advice. Sign the document prior to dispatch."
             )
 
@@ -735,7 +740,7 @@ class BillingAndErpGateway:
         """Generates ERP export payload and marks invoice for enterprise ERP sync."""
         invoice = await self.get_invoice(invoice_id)
         if not invoice:
-            raise ValueError(f"Invoice with ID '{invoice_id}' not found.")
+            raise InvoiceNotFoundError(f"Invoice with ID '{invoice_id}' not found.")
 
         now = datetime.now(UTC)
         export_timestamp = now.isoformat()
@@ -852,7 +857,7 @@ class BillingAndErpGateway:
             invoice = await self.get_invoice_by_number(payload.invoice_number)
 
         if not invoice:
-            raise ValueError(
+            raise InvoiceNotFoundError(
                 f"Target invoice not found for webhook reference '{payload.invoice_id or payload.invoice_number}'."
             )
 
@@ -967,10 +972,10 @@ class BillingAndErpGateway:
         """Formally reconciles bank/ERP disbursement with self-billing invoice and underlying payables."""
         invoice = await self.get_invoice(invoice_id)
         if not invoice:
-            raise ValueError(f"Invoice with ID '{invoice_id}' not found.")
+            raise InvoiceNotFoundError(f"Invoice with ID '{invoice_id}' not found.")
 
         if amount_paid < 0:
-            raise ValueError("Reconciliation amount paid cannot be negative.")
+            raise PaymentsValidationError("Reconciliation amount paid cannot be negative.")
 
         prev_status = invoice.status
         now = datetime.now(UTC)

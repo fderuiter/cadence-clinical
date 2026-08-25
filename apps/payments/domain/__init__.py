@@ -1,1 +1,1 @@
-"""Domain models and contracts for Site Payments."""
+"""Payments Domain Package."""
