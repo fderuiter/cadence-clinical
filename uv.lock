@@ -33,6 +33,7 @@ members = [
     "cadence-knowledge",
     "packages-cli",
     "packages-compliance",
+    "packages-core",
     "packages-database",
     "packages-ddf",
     "packages-deid",
@@ -2357,6 +2358,17 @@ requires-dist = [
 ]
 
 [[package]]
+name = "packages-core"
+version = "0.1.0"
+source = { editable = "packages/core" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic", specifier = ">=2.6.0" }]
+
+[[package]]
 name = "packages-database"
 version = "0.1.0"
 source = { editable = "packages/database" }
@@ -2364,8 +2376,8 @@ dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
     { name = "fastapi" },
+    { name = "packages-core" },
     { name = "packages-hexagonal" },
-    { name = "packages-security" },
     { name = "pydantic" },
     { name = "sqlalchemy" },
 ]
@@ -2375,8 +2387,8 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.13.0" },
     { name = "asyncpg", specifier = ">=0.29.0" },
     { name = "fastapi", specifier = ">=0.139.2,<0.140.0" },
+    { name = "packages-core", editable = "packages/core" },
     { name = "packages-hexagonal", editable = "packages/hexagonal" },
-    { name = "packages-security", editable = "packages/security" },
     { name = "pydantic", specifier = ">=2.6.0" },
     { name = "sqlalchemy", specifier = ">=2.0.28" },
 ]
@@ -2433,8 +2445,8 @@ dependencies = [
     { name = "ecdsa" },
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "packages-core" },
     { name = "pydantic" },
-    { name = "python-jose", extra = ["cryptography"] },
     { name = "redis" },
 ]
 
@@ -2444,8 +2456,8 @@ requires-dist = [
     { name = "ecdsa", specifier = ">=0.19.2" },
     { name = "fastapi", specifier = ">=0.139.2,<0.140.0" },
     { name = "httpx", specifier = ">=0.27.0" },
+    { name = "packages-core", editable = "packages/core" },
     { name = "pydantic", specifier = ">=2.6.0" },
-    { name = "python-jose", extras = ["cryptography"], specifier = ">=3.3.0" },
     { name = "redis", specifier = ">=5.0.0" },
 ]
 

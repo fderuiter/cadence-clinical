@@ -248,7 +248,7 @@ def receive_before_flush(session: Session, flush_context, instances):
             )
             if not reason:
                 try:
-                    from packages.security.context import current_change_reason
+                    from packages.core.context import current_change_reason
 
                     reason = current_change_reason.get()
                 except ImportError:
@@ -386,7 +386,7 @@ class DatabaseSessionDependency:
                 # Propagate context variables into database session if context variables exist
                 try:
                     if session.bind and session.bind.dialect.name == "postgresql":
-                        from packages.security.context import (
+                        from packages.core.context import (
                             current_change_reason,
                             current_user_id,
                         )
@@ -529,7 +529,7 @@ def create_transactional_decorator(
                                 session.bind
                                 and session.bind.dialect.name == "postgresql"
                             ):
-                                from packages.security.context import (
+                                from packages.core.context import (
                                     current_change_reason,
                                     current_user_id,
                                 )

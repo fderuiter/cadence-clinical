@@ -224,7 +224,12 @@ def check_file_imports(file_path: Path) -> list[str]:
         elif len(parts) >= 2 and parts[0] == "packages":
             imported_package = parts[1]
             if is_package:
-                if imported_package != entity_name:
+                if entity_name == "database" and imported_package == "security":
+                    violations.append(
+                        f"Line {lineno}: Package boundary violation! Database package 'database' "
+                        f"is prohibited from importing directly from security package '{imported_package}' via '{mod_name}'."
+                    )
+                elif imported_package != entity_name:
                     declared_deps = get_package_dependencies(entity_name)
                     required_dep = f"packages-{imported_package.replace('_', '-')}"
                     if required_dep not in declared_deps:

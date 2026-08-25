@@ -25,16 +25,17 @@ exclude = [
 
 [tool.uv.sources]
 packages-cli = { workspace = true }
-packages-security = { workspace = true }
-packages-database = { workspace = true }
-packages-deid = { workspace = true }
-packages-storage = { workspace = true }
-packages-hexagonal = { workspace = true }
 packages-compliance = { workspace = true }
+packages-core = { workspace = true }
+packages-database = { workspace = true }
+packages-ddf = { workspace = true }
+packages-deid = { workspace = true }
+packages-hexagonal = { workspace = true }
+packages-security = { workspace = true }
+packages-sentinels = { workspace = true }
+packages-storage = { workspace = true }
 packages-testing = { workspace = true }
 packages-tooling-core = { workspace = true }
-packages-sentinels = { workspace = true }
-packages-ddf = { workspace = true }
 apps-ai-gateway = { workspace = true }
 apps-ctms = { workspace = true }
 apps-designer = { workspace = true }

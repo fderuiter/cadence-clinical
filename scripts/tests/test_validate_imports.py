@@ -224,6 +224,40 @@ def test_check_file_imports_package_to_package_undeclared(tmp_path):
         scripts.validate_imports._PACKAGE_DEPS_CACHE.clear()
 
 
+def test_check_file_imports_database_to_security_prohibited(tmp_path):
+    database_dir = tmp_path / "packages" / "database"
+    database_dir.mkdir(parents=True, exist_ok=True)
+
+    pyproject_file = database_dir / "pyproject.toml"
+    pyproject_file.write_text(
+        '[project]\nname = "packages-database"\ndependencies = ["packages-security"]\n',
+        encoding="utf-8",
+    )
+
+    file_path = database_dir / "models.py"
+    file_path.write_text(
+        "from packages.security.datetime_helpers import AwareDatetime\n",
+        encoding="utf-8",
+    )
+
+    import scripts.validate_imports
+
+    original_packages_dir = scripts.validate_imports.PACKAGES_DIR
+    original_root_dir = scripts.validate_imports.ROOT_DIR
+    scripts.validate_imports.PACKAGES_DIR = tmp_path / "packages"
+    scripts.validate_imports.ROOT_DIR = tmp_path
+    scripts.validate_imports._PACKAGE_DEPS_CACHE.clear()
+
+    try:
+        violations = check_file_imports(file_path)
+        assert len(violations) == 1
+        assert "prohibited from importing directly from security package" in violations[0]
+    finally:
+        scripts.validate_imports.PACKAGES_DIR = original_packages_dir
+        scripts.validate_imports.ROOT_DIR = original_root_dir
+        scripts.validate_imports._PACKAGE_DEPS_CACHE.clear()
+
+
 def test_check_file_imports_test_files_enforced_unless_exempt(tmp_path):
     # Set up a mock structure: apps/etmf/tests/test_foo.py (non-exempt) and apps/etmf/tests/test_exempt.py (exempt)
     etmf_tests_dir = tmp_path / "apps" / "etmf" / "tests"

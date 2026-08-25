@@ -14,6 +14,7 @@ from sqlalchemy import Column, Integer, String, select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
+from packages.core.context import current_change_reason
 from packages.database import (
     AuditJustificationError,
     ComplianceError,
@@ -25,7 +26,6 @@ from packages.hexagonal import (
     EntityAlreadyExistsError,
     EntityNotFoundError,
 )
-from packages.security.context import current_change_reason
 
 Base = declarative_base()
 
