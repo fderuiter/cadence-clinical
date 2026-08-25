@@ -537,7 +537,7 @@ class TestOfflineSchemaDrift:
                     )
 
     def test_schema_visualizers_use_vendored_assets(self) -> None:
-        """Validate that generated HTML visualizer artifacts use local vendored assets without CDNs."""
+        """Validate that generated HTML visualizer artifacts use local vendored assets without CDNs or Tailwind."""
         repo_root = Path(__file__).parent.parent.parent.resolve()
         html_files = [
             repo_root / "docs" / "schema_visualizer.html",
@@ -550,17 +550,15 @@ class TestOfflineSchemaDrift:
                 f"CDN link found in {html_file}"
             )
             assert "unpkg.com" not in content, f"CDN link found in {html_file}"
-            assert "vendor/tailwindcss.js" in content, (
-                f"Missing vendor script in {html_file}"
+            assert "vendor/tailwindcss.js" not in content, (
+                f"Tailwind asset reference found in {html_file}"
             )
             assert "vendor/vis-network.min.js" in content, (
                 f"Missing vendor script in {html_file}"
             )
 
         vendor_files = [
-            repo_root / "docs" / "vendor" / "tailwindcss.js",
             repo_root / "docs" / "vendor" / "vis-network.min.js",
-            repo_root / "docs" / "schema" / "vendor" / "tailwindcss.js",
             repo_root / "docs" / "schema" / "vendor" / "vis-network.min.js",
         ]
         for vf in vendor_files:
