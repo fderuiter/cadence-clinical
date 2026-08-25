@@ -47,7 +47,7 @@ def main():
         "test-gxp-audit-secret-key-placeholder-abc",  # pragma: allowlist secret
     )
     os.environ.setdefault(
-        "GATEWAY_SECRET", "internal-gateway-secret-12345"
+        "GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"
     )  # pragma: allowlist secret
     os.environ.setdefault(
         "SIGNING_SECRET", "designer-amendment-secure-key-12345"

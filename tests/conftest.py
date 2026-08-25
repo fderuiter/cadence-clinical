@@ -19,7 +19,9 @@ os.environ.setdefault("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026")
 os.environ.setdefault("SIGNING_SECRET", "designer-amendment-secure-key-12345")
 os.environ.setdefault("RTSM_MASTER_SECRET", "valid-test-rtsm-master-secret-key-2026")
 os.environ.setdefault("BIOSTAT_EXPORT_SALT", "valid-test-biostat-export-salt-2026")
-os.environ.setdefault("WEBHOOK_SIGNING_SECRET", "valid-test-webhook-signing-secret-2026")
+os.environ.setdefault(
+    "WEBHOOK_SIGNING_SECRET", "valid-test-webhook-signing-secret-2026"
+)
 os.environ.setdefault("PSEUDONYMIZATION_SALT", "valid-test-pseudonymization-salt-2026")
 os.environ.setdefault("SAFETY_SALT", "valid-test-safety-salt-2026")
 os.environ.setdefault(
@@ -1065,7 +1067,7 @@ def intercept_cross_service_calls():
 def signed_headers():
     """Factory fixture to build valid V2 gateway-signed headers for testing.
 
-    Resolves GATEWAY_SECRET from env, defaulting to 'internal-gateway-secret-12345'.
+    Resolves GATEWAY_SECRET from env, defaulting to 'valid-test-gateway-secret-key-2026'.
     Always includes tenant_id in both the signed payload and X-Tenant-Id header.
     Supports a 'tamper' mode by passing tamper_tenant_id to sign with a different tenant_id.
     """
@@ -1083,7 +1085,7 @@ def signed_headers():
         study_id: str | None = None,
         tamper_tenant_id: str | None = None,
     ) -> dict[str, str]:
-        secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+        secret_env = os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026")
         secret_bytes = (
             secret_env.encode("utf-8") if isinstance(secret_env, str) else secret_env
         )

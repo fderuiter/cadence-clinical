@@ -12,7 +12,7 @@ from apps.designer.db import (
 )
 from apps.designer.main import app
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
+GATEWAY_SECRET = "valid-test-gateway-secret-key-2026"  # pragma: allowlist secret
 
 
 def get_auth_headers(

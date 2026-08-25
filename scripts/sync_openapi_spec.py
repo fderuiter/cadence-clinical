@@ -26,7 +26,7 @@ os.environ.setdefault("AUDIT_LOG_SECRET_KEY", "dev-secret-key-12345")
 os.environ.setdefault(
     "INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz"
 )
-os.environ.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
+os.environ.setdefault("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026")
 os.environ.setdefault("JWT_SECRET_KEY", "dev-jwt-secret-key-12345")
 os.environ.setdefault("BRAND_DOMAIN", "ccrsoft.com")
 

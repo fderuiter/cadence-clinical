@@ -78,7 +78,7 @@ os.environ["GXP_SYNC_RUNNING"] = "1"
 os.environ.setdefault(
     "AUDIT_LOG_SECRET_KEY", "test-gxp-audit-secret-key-placeholder-abc"
 )
-os.environ.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
+os.environ.setdefault("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026")
 os.environ.setdefault("SIGNING_SECRET", "designer-amendment-secure-key-12345")
 os.environ.setdefault(
     "INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz"

@@ -1,5 +1,4 @@
 import os
-import sys
 
 INSECURE_FALLBACKS = {
     "internal-gateway-secret-12345",
@@ -53,16 +52,12 @@ def assert_secure_secrets(
 
     if invalid_secrets:
         # Format detailed error message identifying the specific environment variables
-        details = "; ".join(
-            f"{name} ({reason})" for name, reason in invalid_secrets
-        )
+        details = "; ".join(f"{name} ({reason})" for name, reason in invalid_secrets)
         error_msg = (
             f"FATAL STARTUP ERROR: [{service_name}] Environment configuration validation failed. "
             f"Critical secrets must have secure overrides. "
             f"Issues detected: {details}."
         )
-        # Write to stderr
-        print(error_msg, file=sys.stderr)
         raise RuntimeError(error_msg)
 
 
@@ -107,5 +102,4 @@ def validate_branding(service_name: str, is_gateway: bool = False) -> None:
                 f"missing secure configurations detected in environment '{app_env}' for variables: "
                 f"{', '.join(invalid)}. Halting boot sequence."
             )
-            print(error_msg, file=sys.stderr)
             raise RuntimeError(error_msg)

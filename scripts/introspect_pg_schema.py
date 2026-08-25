@@ -122,7 +122,7 @@ def generate_typescript_schemas(db_url: str, output_path: str) -> bool:
 
     os.environ.setdefault("TERMINOLOGY_OFFLINE", "true")
     os.environ.setdefault("ALLOW_MOCK_SIGNATURES", "1")
-    os.environ.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
+    os.environ.setdefault("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026")
     os.environ.setdefault("SIGNING_SECRET", "designer-amendment-secure-key-12345")
     os.environ.setdefault(
         "AUDIT_LOG_SECRET_KEY", "test-gxp-audit-secret-key-placeholder-abc"
