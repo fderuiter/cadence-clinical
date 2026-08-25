@@ -25,6 +25,7 @@ from apps.knowledge.presentation.routers.training import (
     router as training_router,
 )
 from packages.database import get_relational_db_lifespan
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -42,6 +43,8 @@ app = FastAPI(
         base_metadata=Base.metadata,
     ),
 )
+
+register_rfc7807_handlers(app)
 
 # Enforce secure gateway authentication on every request
 app.add_middleware(GatewayAuthMiddleware)

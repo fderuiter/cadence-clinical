@@ -89,9 +89,11 @@ class TrainingVerificationClient(ITrainingVerificationClient):
         user_role: str | None = None,
     ) -> dict[str, Any]:
         timestamp = str(time.time())
-        secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(
+        secret = os.getenv(
+            "GATEWAY_SECRET", "internal-gateway-secret-12345"
+        ).encode(  # pragma: allowlist secret
             "utf-8"
-        )  # pragma: allowlist secret
+        )
         sig = generate_gateway_signature(
             user_id="execution-service",
             roles="system",

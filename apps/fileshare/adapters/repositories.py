@@ -29,6 +29,7 @@ from apps.fileshare.ports.repository_port import (
     PlaybackAuditRepositoryPort,
     ShareGrantRepositoryPort,
 )
+from packages.database import map_database_exceptions
 
 
 class SqlAlchemyFileRecordRepository(FileRecordRepositoryPort):
@@ -37,6 +38,7 @@ class SqlAlchemyFileRecordRepository(FileRecordRepositoryPort):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
+    @map_database_exceptions
     async def get_by_id(
         self, entity_id: str, include_deleted: bool = False
     ) -> FileRecord | None:
@@ -47,6 +49,7 @@ class SqlAlchemyFileRecordRepository(FileRecordRepositoryPort):
         model = res.scalar_one_or_none()
         return model.to_domain() if model else None
 
+    @map_database_exceptions
     async def get_by_object_key(self, object_key: str) -> FileRecord | None:
         stmt = select(FileRecordModel).where(
             FileRecordModel.object_key == object_key,
@@ -56,6 +59,7 @@ class SqlAlchemyFileRecordRepository(FileRecordRepositoryPort):
         model = res.scalar_one_or_none()
         return model.to_domain() if model else None
 
+    @map_database_exceptions
     async def list_by_study(
         self,
         study_id: str | None = None,
@@ -89,6 +93,7 @@ class SqlAlchemyFileRecordRepository(FileRecordRepositoryPort):
         res = await self.session.execute(stmt)
         return [m.to_domain() for m in res.scalars().all()]
 
+    @map_database_exceptions
     async def save(self, entity: FileRecord) -> FileRecord:
         stmt = select(FileRecordModel).where(FileRecordModel.id == entity.id)
         res = await self.session.execute(stmt)

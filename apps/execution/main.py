@@ -146,6 +146,7 @@ from apps.execution.subject_lifecycle import (
 from apps.execution.translator import process_translation
 from apps.execution.trial_lock import TrialLockManager
 from apps.execution.ucum import convert_unit, get_normalized_representation
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import (
     ROLE_CRA,
     ROLE_CRC,
@@ -365,6 +366,7 @@ validate_branding("execution")
 app = FastAPI(
     title=f"{BRAND_NAME} - EDC Execution Engine", version="0.1.0", lifespan=lifespan
 )
+register_rfc7807_handlers(app)
 
 app.include_router(locks_router)
 app.include_router(signatures_router)

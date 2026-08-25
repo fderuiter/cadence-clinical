@@ -38,7 +38,10 @@ def _generate_sig_token(
 ) -> str:
     """Generate a 21 CFR Part 11 compliant step-up signature token."""
     secret_bytes = (
-        secret or os.getenv("GATEWAY_SECRET", "test-gateway-secret-12345").encode()
+        secret
+        or os.getenv(
+            "GATEWAY_SECRET", "test-gateway-secret-12345"
+        ).encode()  # pragma: allowlist secret
     )
     payload = {
         "sub": user_id,
@@ -58,7 +61,9 @@ def _make_headers(
     sig_token: str | None = None,
 ) -> dict[str, str]:
     """Builds valid HMAC-signed gateway headers for testing."""
-    secret_bytes = os.getenv("GATEWAY_SECRET", "test-gateway-secret-12345").encode()
+    secret_bytes = os.getenv(
+        "GATEWAY_SECRET", "test-gateway-secret-12345"
+    ).encode()  # pragma: allowlist secret
     h = create_test_auth_headers(
         user_id=user_id,
         roles=[role],
@@ -602,7 +607,7 @@ async def test_discordant_dual_reads_and_step_up_adjudication_sign_off_api(
     signoff_payload = {
         "signer_id": "chair_dr_adjudicator",
         "signer_name": "Dr. Arthur Chair",
-        "password": "PasswordPart11Secret!",
+        "password": "PasswordPart11Secret!",  # pragma: allowlist secret
         "signing_reason": "ADJUDICATION_SIGN_OFF",
         "binding_reader": "ADJUDICATOR",
         "rationale": "Reviewed slice 48 axial series 2. Confirmed Reader 2 misidentified portal vein branching as new liver metastasis. Target lesion measured 22.0mm. Adjudicated final response: Partial Response (PR).",

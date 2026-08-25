@@ -21,6 +21,7 @@ import packages  # noqa: F401
 from apps.gateway.presentation.routers.cdisc import router as cdisc_router
 from apps.gateway.presentation.routers.ecoa import router as ecoa_router
 from apps.gateway.presentation.routers.usdm import router as usdm_router
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import validate_branding
 
 
@@ -112,6 +113,7 @@ app = FastAPI(
     redoc_url=None,
     lifespan=lifespan,
 )
+register_rfc7807_handlers(app)
 
 app.include_router(cdisc_router, prefix="/api/v1/cdisc", tags=["CDISC Standards"])
 app.include_router(usdm_router, prefix="/api/v1/usdm", tags=["USDM Data Flow"])

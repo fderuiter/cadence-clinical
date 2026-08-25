@@ -1358,6 +1358,8 @@ def main():
         ".mypy_cache",
         "build",
         "dist",
+        "test-results",
+        "playwright-report",
     }
 
     # Files to completely exclude from markdown scanning

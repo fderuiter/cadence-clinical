@@ -21,7 +21,11 @@ from apps.imaging.infrastructure.models import (
 )
 from apps.imaging.ports.repository_port import ImagingAdjudicationRepositoryPort
 from apps.imaging.services.adjudication import AdjudicationWorkflow
-from packages.database import DatabaseSessionDependency, RelationalDatabaseManager
+from packages.database import (
+    DatabaseSessionDependency,
+    RelationalDatabaseManager,
+    map_database_exceptions,
+)
 
 db_manager = RelationalDatabaseManager("imaging")
 get_db_session = DatabaseSessionDependency(db_manager)
@@ -97,6 +101,7 @@ class SqlImagingAdjudicationRepository(ImagingAdjudicationRepositoryPort):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
+    @map_database_exceptions
     async def get_by_id(
         self, entity_id: str, *args: Any, **kwargs: Any
     ) -> DualReaderAdjudicationSession | None:
@@ -110,6 +115,7 @@ class SqlImagingAdjudicationRepository(ImagingAdjudicationRepositoryPort):
             return None
         return _model_to_domain(model)
 
+    @map_database_exceptions
     async def save(
         self, entity: DualReaderAdjudicationSession, *args: Any, **kwargs: Any
     ) -> DualReaderAdjudicationSession:
@@ -235,6 +241,7 @@ class SqlImagingAdjudicationRepository(ImagingAdjudicationRepositoryPort):
         await self._session.refresh(model)
         return _model_to_domain(model)
 
+    @map_database_exceptions
     async def list_by_filters(
         self,
         study_id: str | None = None,
@@ -268,6 +275,7 @@ class SqlImagingAdjudicationRepository(ImagingAdjudicationRepositoryPort):
         models = res.scalars().all()
         return [_model_to_domain(m) for m in models]
 
+    @map_database_exceptions
     async def record_tumor_response_assessment(
         self,
         session: DualReaderAdjudicationSession,
@@ -319,6 +327,7 @@ class SqlImagingAdjudicationRepository(ImagingAdjudicationRepositoryPort):
         self._session.add(assessment_model)
         await self._session.commit()
 
+    @map_database_exceptions
     async def record_audit_log(
         self,
         action: str,

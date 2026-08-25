@@ -24,6 +24,7 @@ from apps.notifications.presentation.routers.notifications import (
     router as notifications_router,
 )
 from packages.database import get_relational_db_lifespan
+from packages.hexagonal import register_rfc7807_handlers
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -48,6 +49,8 @@ app = FastAPI(
         shutdown_hooks=[stop_dispatcher],
     ),
 )
+
+register_rfc7807_handlers(app)
 
 app.add_middleware(GatewayAuthMiddleware)
 
