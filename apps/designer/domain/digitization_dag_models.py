@@ -42,6 +42,7 @@ class DigitizationJobStatus(StrEnum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
+    PENDING_REVIEW = "PENDING_REVIEW"
     FAILED = "FAILED"
     CANCELLED = "CANCELLED"
 
@@ -199,6 +200,26 @@ class StageCheckpoint(BaseModel):
     gate_errors: list[str] = Field(
         default_factory=list, description="Diagnostic schema validation error messages"
     )
+    recovery_attempts: int = Field(
+        default=0,
+        description="Number of automated LLM schema recovery attempts executed",
+    )
+    recovered_by_llm: bool = Field(
+        default=False,
+        description="Whether stage validation passed via automated LLM self-healing",
+    )
+    corrected_by: str | None = Field(
+        default=None,
+        description="Username or Signer ID who manually corrected the stage gate",
+    )
+    correction_reason: str | None = Field(
+        default=None,
+        description="Part 11 change reason provided for manual correction",
+    )
+    signature_manifestation: dict[str, Any] | None = Field(
+        default=None,
+        description="Part 11 signature manifestation audit record",
+    )
     confidence_score: float = Field(
         default=1.0, ge=0.0, le=1.0, description="Calculated confidence score"
     )
@@ -240,6 +261,10 @@ class DigitizationJob(BaseModel):
     created_by: str = Field(
         default="system",
         description="User ID or service principal that created the job",
+    )
+    retry_counts: dict[str, int] = Field(
+        default_factory=dict,
+        description="Number of recovery retries executed per stage",
     )
     checkpoints: dict[str, StageCheckpoint] = Field(
         default_factory=dict,
@@ -320,6 +345,22 @@ class ResumeDAGJobRequest(BaseModel):
     )
     change_reason: str | None = Field(
         default=None, description="Optional reason for resumption"
+    )
+
+
+class SubmitStageCorrectionRequest(BaseModel):
+    """Request payload to submit manual stage corrections and electronic signature for human escalation."""
+
+    stage: DigitizationStage = Field(..., description="Stage gate being corrected")
+    corrected_data: dict[str, Any] = Field(..., description="Corrected stage data payload")
+    signature_username: str = Field(..., description="Part 11 signer username/ID")
+    change_reason: str = Field(..., description="Part 11 GxP reason for manual correction")
+    signature_token: str | None = Field(
+        default=None, description="Optional authentication or signature token"
+    )
+    resume_pipeline: bool = Field(
+        default=True,
+        description="Whether to resume DAG execution immediately after saving correction",
     )
 
 

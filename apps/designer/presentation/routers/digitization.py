@@ -22,6 +22,8 @@ from fastapi import (
     status,
 )
 
+from pydantic import ValidationError
+
 from apps.designer.adapters.digitization_job_store import (
     DigitizationJobStore,
     get_digitization_job_store,
@@ -40,8 +42,10 @@ from apps.designer.domain.digitization_dag_models import (
     CompileUSDMFromJobRequest,
     DAGJobStatusResponse,
     DigitizationJobStatus,
+    DigitizationStage,
     ResumeDAGJobRequest,
     StartDAGJobResponse,
+    SubmitStageCorrectionRequest,
 )
 from apps.designer.domain.digitization_models import (
     CommitUSDMRequest,
@@ -332,6 +336,81 @@ async def resume_digitization_dag_job(
         final_usdm_payload=job.final_usdm_payload,
         synthesized_forms=job.synthesized_forms,
         faithfulness_metadata=job.faithfulness_metadata,
+    )
+
+
+@router.post(
+    "/api/v1/designer/digitization/dag/jobs/{job_id}/stages/{stage}/correct",
+    response_model=DAGJobStatusResponse,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_permission("protocol_ingestion:upload"))],
+)
+async def submit_stage_correction_endpoint(
+    job_id: str,
+    stage: DigitizationStage,
+    payload: SubmitStageCorrectionRequest,
+    job_store: DigitizationJobStore = Depends(get_digitization_job_store),
+    dag_runner: DigitizationDAGRunner = Depends(get_digitization_dag_runner),
+) -> DAGJobStatusResponse:
+    """Submits manual corrections and electronic signature for a flagged stage gate, resuming execution."""
+    job = await job_store.get_job(job_id)
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Digitization job '{job_id}' not found.",
+        )
+
+    if not payload.signature_username or not payload.signature_username.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Electronic signature username is required.",
+        )
+
+    if not payload.change_reason or not payload.change_reason.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Part 11 change justification reason is required.",
+        )
+
+    try:
+        updated_job = await dag_runner.submit_stage_correction(job_id, payload)
+    except ValueError as val_err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(val_err),
+        ) from val_err
+    except ValidationError as val_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Corrected schema payload validation failed: {str(val_err)}",
+        ) from val_err
+
+    progress = 0
+    if updated_job.status == DigitizationJobStatus.COMPLETED:
+        progress = 100
+    elif updated_job.current_stage:
+        progress = STAGE_PROGRESS_MAP.get(updated_job.current_stage, 0)
+
+    is_term = updated_job.status in (
+        DigitizationJobStatus.COMPLETED,
+        DigitizationJobStatus.FAILED,
+        DigitizationJobStatus.CANCELLED,
+    )
+
+    return DAGJobStatusResponse(
+        job_id=updated_job.job_id,
+        study_id=updated_job.study_id,
+        status=updated_job.status,
+        current_stage=updated_job.current_stage,
+        progress_pct=progress,
+        created_at=updated_job.created_at,
+        updated_at=updated_job.updated_at,
+        checkpoints=updated_job.checkpoints,
+        error_message=updated_job.error_message,
+        is_terminal=is_term,
+        final_usdm_payload=updated_job.final_usdm_payload,
+        synthesized_forms=updated_job.synthesized_forms,
+        faithfulness_metadata=updated_job.faithfulness_metadata,
     )
 
 
