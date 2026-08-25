@@ -10,6 +10,7 @@ from typing import Any
 
 from fastapi import FastAPI
 from sqlalchemy import JSON, Boolean, DateTime, Integer, String, event, func
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.exc import IntegrityError, NoResultFound, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import Mapped, Session, mapped_column
@@ -40,6 +41,18 @@ class ComplianceError(PermissionError):
 
 class AuditJustificationError(ValueError):
     """Raised when an audited record is created, modified, or deleted without a valid justification."""
+
+    pass
+
+
+class AuditImmutabilityError(PermissionError, ValueError):
+    """Raised when an attempt is made to update or delete an existing immutable audit record."""
+
+    pass
+
+
+class AuditChainIntegrityError(ValueError):
+    """Raised when cryptographic SHA-256 HMAC audit chain verification detects tampering."""
 
     pass
 
@@ -105,12 +118,47 @@ def is_form_locked(form_id: str) -> bool:
 def receive_before_flush(session: Session, flush_context, instances):
     """
     Standard GxP pre-flush listener that intercepts session flushes to:
-    1. Reject modifications if trial is frozen/locked.
-    2. Reject modifications if specific site/visit/subject/form locks are active.
-    3. Reject creations or updates/deletions of audited/clinical data lacking valid justifications.
+    1. Reject modifications or deletions of historic audit log records (immutability).
+    2. Reject modifications if trial is frozen/locked.
+    3. Reject modifications if specific site/visit/subject/form locks are active.
+    4. Reject creations or updates/deletions of audited/clinical data lacking valid justifications.
     """
-    if not session.is_modified:
+    if not session.is_modified and not session.deleted:
         return
+
+    # 0. Immutability Guard (Criterion 3)
+    for obj in session.deleted:
+        classname = obj.__class__.__name__
+        tablename = str(getattr(obj, "__tablename__", ""))
+        if (
+            "AuditLog" in classname
+            or "AuditLedger" in classname
+            or "AuditRecord" in classname
+            or tablename.endswith("audit_logs")
+            or ("audit" in tablename.lower() and "schema" not in tablename.lower())
+        ):
+            raise AuditImmutabilityError(
+                f"Deletion of audit log record ({classname}) is strictly forbidden by 21 CFR Part 11 immutability rules."
+            )
+
+    for obj in session.dirty:
+        if obj in session.new:
+            continue
+        classname = obj.__class__.__name__
+        tablename = str(getattr(obj, "__tablename__", ""))
+        if (
+            "AuditLog" in classname
+            or "AuditLedger" in classname
+            or "AuditRecord" in classname
+            or tablename.endswith("audit_logs")
+            or ("audit" in tablename.lower() and "schema" not in tablename.lower())
+        ):
+            state = sa_inspect(obj)
+            has_changes = any(attr.history.has_changes() for attr in state.attrs)
+            if has_changes:
+                raise AuditImmutabilityError(
+                    f"Modification of existing audit log record ({classname}) is strictly forbidden by 21 CFR Part 11 immutability rules."
+                )
 
     # Check if there are any non-excluded modifications
     non_excluded_objs = []
