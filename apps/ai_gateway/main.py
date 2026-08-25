@@ -22,6 +22,9 @@ from apps.ai_gateway.presentation.routers.inference import (
 from apps.ai_gateway.presentation.routers.rag import (
     router as rag_router,
 )
+from apps.ai_gateway.presentation.routers.reasoning import (
+    router as reasoning_router,
+)
 from packages.security import validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -38,9 +41,10 @@ app = FastAPI(
 # Enforce secure gateway HMAC authentication middleware
 app.add_middleware(GatewayAuthMiddleware)
 
-# Include inference routers
+# Include inference & reasoning routers
 app.include_router(inference_router)
 app.include_router(rag_router)
+app.include_router(reasoning_router)
 
 
 @app.get("/health")
@@ -62,4 +66,6 @@ __all__ = [
     "get_ai_engine",
     "health_check",
     "inference_router",
+    "rag_router",
+    "reasoning_router",
 ]
