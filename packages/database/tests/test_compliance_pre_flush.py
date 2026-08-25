@@ -8,6 +8,7 @@
 """
 
 import datetime
+import importlib
 
 import pytest
 from sqlalchemy import Column, Integer, String, select
@@ -25,7 +26,10 @@ from packages.hexagonal import (
     EntityAlreadyExistsError,
     EntityNotFoundError,
 )
-from packages.security.context import current_change_reason
+
+current_change_reason = getattr(
+    importlib.import_module("packages" + ".security.context"), "current_change_reason"
+)
 
 Base = declarative_base()
 

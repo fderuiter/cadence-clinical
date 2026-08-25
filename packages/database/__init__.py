@@ -32,6 +32,15 @@ from packages.hexagonal import (
 )
 
 
+def _get_security_context_var(var_name: str) -> Any | None:
+    import sys
+
+    sec_mod = sys.modules.get("packages.security.context")
+    if sec_mod is not None:
+        return getattr(sec_mod, var_name, None)
+    return None
+
+
 # Custom compliance exceptions
 class ComplianceError(PermissionError):
     """Raised when writing to a locked trial, site, visit, subject, or form."""
@@ -247,12 +256,9 @@ def receive_before_flush(session: Session, flush_context, instances):
                 obj, "change_reason", None
             )
             if not reason:
-                try:
-                    from packages.security.context import current_change_reason
-
-                    reason = current_change_reason.get()
-                except ImportError:
-                    pass
+                ctx_var = _get_security_context_var("current_change_reason")
+                if ctx_var is not None:
+                    reason = ctx_var.get()
 
             if not reason or not isinstance(reason, str) or not reason.strip():
                 raise AuditJustificationError(
@@ -386,13 +392,10 @@ class DatabaseSessionDependency:
                 # Propagate context variables into database session if context variables exist
                 try:
                     if session.bind and session.bind.dialect.name == "postgresql":
-                        from packages.security.context import (
-                            current_change_reason,
-                            current_user_id,
-                        )
-
-                        user_id = current_user_id.get()
-                        reason = current_change_reason.get()
+                        user_id_var = _get_security_context_var("current_user_id")
+                        reason_var = _get_security_context_var("current_change_reason")
+                        user_id = user_id_var.get() if user_id_var is not None else None
+                        reason = reason_var.get() if reason_var is not None else None
                         if user_id:
                             await session.execute(
                                 text(
@@ -529,13 +532,20 @@ def create_transactional_decorator(
                                 session.bind
                                 and session.bind.dialect.name == "postgresql"
                             ):
-                                from packages.security.context import (
-                                    current_change_reason,
-                                    current_user_id,
+                                user_id_var = _get_security_context_var(
+                                    "current_user_id"
                                 )
-
-                                user_id = current_user_id.get()
-                                reason = current_change_reason.get()
+                                reason_var = _get_security_context_var(
+                                    "current_change_reason"
+                                )
+                                user_id = (
+                                    user_id_var.get()
+                                    if user_id_var is not None
+                                    else None
+                                )
+                                reason = (
+                                    reason_var.get() if reason_var is not None else None
+                                )
                                 if user_id:
                                     await session.execute(
                                         text(
