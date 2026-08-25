@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 
@@ -101,7 +100,7 @@ async def evaluate_cohort_feasibility_endpoint(
     payload: CohortFeasibilityRequest,
     background_tasks: BackgroundTasks,
     principal: Principal = Depends(get_principal),
-) -> Any:
+) -> CohortFeasibilityReport | CohortFeasibilityJob:
     """Executes multi-criteria cohort reasoning and synthetic subject profile feasibility simulation.
 
     Supports:
@@ -110,6 +109,15 @@ async def evaluate_cohort_feasibility_endpoint(
     - Grounded RAG protocol criteria matching (packages/compliance)
     - Three-valued logic (3VL) evaluation under complete, partial, and missing data scenarios
     - Granular node-level fit trace explanations
+
+    Args:
+        payload: Inbound CohortFeasibilityRequest payload.
+        background_tasks: FastAPI BackgroundTasks queue.
+        principal: Authenticated principal security context.
+
+    Returns:
+        CohortFeasibilityJob when asynchronous background processing is requested,
+        or CohortFeasibilityReport when executed synchronously.
     """
     job_id = payload.analysis_id or f"feas_{uuid.uuid4().hex[:12]}"
     payload.analysis_id = job_id
@@ -139,7 +147,18 @@ async def get_feasibility_job_status_endpoint(
     job_id: str,
     principal: Principal = Depends(get_principal),
 ) -> CohortFeasibilityJob:
-    """Retrieves asynchronous cohort feasibility job status and report."""
+    """Retrieves asynchronous cohort feasibility job status and report.
+
+    Args:
+        job_id: Unique job identifier to query.
+        principal: Authenticated principal security context.
+
+    Returns:
+        CohortFeasibilityJob status wrapper and report.
+
+    Raises:
+        HTTPException: If the job with job_id is not found (404).
+    """
     job = CohortFeasibilityWorker.get_job(job_id)
     if not job:
         raise HTTPException(
@@ -160,7 +179,15 @@ async def simulate_synthetic_feasibility_endpoint(
     payload: CohortFeasibilityRequest,
     principal: Principal = Depends(get_principal),
 ) -> CohortFeasibilityReport:
-    """Directly executes synthetic patient population simulation under missing data conditions."""
+    """Directly executes synthetic patient population simulation under missing data conditions.
+
+    Args:
+        payload: Inbound CohortFeasibilityRequest parameters.
+        principal: Authenticated principal security context.
+
+    Returns:
+        CohortFeasibilityReport containing simulation results.
+    """
     payload.is_async = False
     engine = CohortFeasibilityEngine()
     report = await engine.execute_feasibility_analysis(payload)

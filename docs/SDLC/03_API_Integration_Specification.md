@@ -1772,6 +1772,73 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ai_gateway_HTTPValidationError'
+  /ai_gateway/api/v1/ai/reasoning/multi-step:
+    post:
+      tags:
+      - Clinical Reasoning
+      summary: Execute multi-step clinical reasoning planning loop with grounded citations
+      description: 'Executes a multi-step clinical reasoning workflow for protocol synthesis and patient data.
+
+
+        Enforces:
+
+        - Multi-step planning loops breaking down trial queries into discrete steps
+
+        - In-flight PHI masking using temporary surrogate tokens for intermediate steps
+
+        - Evaluation of protocol citations and 85% confidence threshold gate (fail-closed)
+
+        - Stateless persistence with caller-managed execution state context
+
+        - Staging generated clinical records into draft state requiring human e-signature
+
+        - Mandatory tenant and audit context validation'
+      operationId: Ai_gateway_execute_multi_step_reasoning_api_v1_ai_reasoning_multi_step_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Ai_gateway_ClinicalReasoningRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ai_gateway_ClinicalReasoningResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ai_gateway_HTTPValidationError'
+  /ai_gateway/api/v1/ai/reasoning/plan:
+    post:
+      tags:
+      - Clinical Reasoning
+      summary: Initialize or advance a caller-managed multi-step clinical reasoning plan
+      description: Initialize or advance a multi-step clinical reasoning loop statelessly.
+      operationId: Ai_gateway_plan_clinical_reasoning_api_v1_ai_reasoning_plan_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Ai_gateway_ClinicalReasoningRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ai_gateway_ClinicalReasoningResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ai_gateway_HTTPValidationError'
   /ai_gateway/healthz:
     get:
       summary: Health Check
@@ -7119,7 +7186,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Designer_EligibilityCriterion'
+                  $ref: '#/components/schemas/Designer_EligibilityCriterion-Output'
                 title: Response List Eligibility Criteria Api V1 Studies  Study Id  Eligibility Criteria Get
         '422':
           description: Validation Error
@@ -7150,7 +7217,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Designer_EligibilityCriterion'
+                $ref: '#/components/schemas/Designer_EligibilityCriterion-Output'
         '422':
           description: Validation Error
           content:
@@ -7181,7 +7248,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Designer_EligibilityCriterion'
+                $ref: '#/components/schemas/Designer_EligibilityCriterion-Output'
         '422':
           description: Validation Error
           content:
@@ -7217,7 +7284,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Designer_EligibilityCriterion'
+                $ref: '#/components/schemas/Designer_EligibilityCriterion-Output'
         '422':
           description: Validation Error
           content:
@@ -9158,6 +9225,88 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Designer_GenerateStartupTemplateResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Designer_HTTPValidationError'
+  /designer/api/v1/designer/cohort-feasibility/evaluate:
+    post:
+      tags:
+      - Cohort Feasibility Engine
+      summary: Trigger multi-criteria cohort reasoning and synthetic feasibility simulation
+      description: "Executes multi-criteria cohort reasoning and synthetic subject profile feasibility simulation.\n\nSupports:\n- Asynchronous background worker execution guarded by PostgreSQL advisory locks (non-blocking)\n- De-identification scrubbing on evaluation context and prompts (packages/deid)\n- Grounded RAG protocol criteria matching (packages/compliance)\n- Three-valued logic (3VL) evaluation under complete, partial, and missing data scenarios\n- Granular node-level fit trace explanations\n\nArgs:\n    payload: Inbound CohortFeasibilityRequest payload.\n    background_tasks: FastAPI BackgroundTasks queue.\n    principal: Authenticated principal security context.\n\nReturns:\n    CohortFeasibilityJob when asynchronous background processing is requested,\n    or CohortFeasibilityReport when executed synchronously."
+      operationId: Designer_evaluate_cohort_feasibility_endpoint_api_v1_designer_cohort_feasibility_evaluate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Designer_CohortFeasibilityRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/Designer_CohortFeasibilityReport'
+                - $ref: '#/components/schemas/Designer_CohortFeasibilityJob'
+                title: Response Evaluate Cohort Feasibility Endpoint Api V1 Designer Cohort Feasibility Evaluate Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Designer_HTTPValidationError'
+  /designer/api/v1/designer/cohort-feasibility/jobs/{job_id}:
+    get:
+      tags:
+      - Cohort Feasibility Engine
+      summary: Poll status and results of an asynchronous cohort feasibility job
+      description: "Retrieves asynchronous cohort feasibility job status and report.\n\nArgs:\n    job_id: Unique job identifier to query.\n    principal: Authenticated principal security context.\n\nReturns:\n    CohortFeasibilityJob status wrapper and report.\n\nRaises:\n    HTTPException: If the job with job_id is not found (404)."
+      operationId: Designer_get_feasibility_job_status_endpoint_api_v1_designer_cohort_feasibility_jobs__job_id__get
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Job Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Designer_CohortFeasibilityJob'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Designer_HTTPValidationError'
+  /designer/api/v1/designer/cohort-feasibility/synthetic-simulate:
+    post:
+      tags:
+      - Cohort Feasibility Engine
+      summary: Simulate cohort feasibility under missing data scenarios using 3-valued logic
+      description: "Directly executes synthetic patient population simulation under missing data conditions.\n\nArgs:\n    payload: Inbound CohortFeasibilityRequest parameters.\n    principal: Authenticated principal security context.\n\nReturns:\n    CohortFeasibilityReport containing simulation results."
+      operationId: Designer_simulate_synthetic_feasibility_endpoint_api_v1_designer_cohort_feasibility_synthetic_simulate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Designer_CohortFeasibilityRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Designer_CohortFeasibilityReport'
         '422':
           description: Validation Error
           content:
@@ -36280,14 +36429,220 @@ components:
           description: Role of the message author.
           default: user
         content:
-          type: string
+          anyOf:
+          - type: string
+          - type: 'null'
           title: Content
           description: Text content of the message.
+        tool_calls:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Ai_gateway_ToolCallDTO'
+            type: array
+          - type: 'null'
+          title: Tool Calls
+          description: Optional list of tool calls emitted by assistant.
+        tool_call_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Tool Call Id
+          description: ID of tool call this message responds to (for tool role).
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+          description: Optional author or tool name.
       type: object
-      required:
-      - content
       title: ChatMessageDTO
       description: Chat message transfer object.
+    Ai_gateway_ClinicalReasoningRequest:
+      properties:
+        query:
+          type: string
+          minLength: 3
+          title: Query
+          description: Complex clinical trial reasoning query.
+        tenant_id:
+          type: string
+          title: Tenant Id
+          description: Mandatory tenant isolation identifier.
+        study_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Study Id
+          description: Target study identifier.
+        protocol_chunks:
+          items:
+            $ref: '#/components/schemas/Ai_gateway_ProtocolRAGContextChunk'
+          type: array
+          title: Protocol Chunks
+          description: Clinical trial protocol chunks for citation verification.
+        patient_records:
+          anyOf:
+          - items:
+              additionalProperties: true
+              type: object
+            type: array
+          - additionalProperties: true
+            type: object
+          - type: string
+          - type: 'null'
+          title: Patient Records
+          description: Patient records or clinical context containing sensitive identifiers.
+        execution_state:
+          anyOf:
+          - $ref: '#/components/schemas/Ai_gateway_ExecutionStateContext'
+          - type: 'null'
+          description: Caller-managed execution state context for stateless continuation.
+        min_citation_confidence:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Min Citation Confidence
+          description: Minimum required citation confidence score (default 0.85).
+          default: 0.85
+        compliance_profile:
+          type: string
+          title: Compliance Profile
+          description: Compliance profile for PHI detection (HIPAA, GDPR, EU_CTR).
+          default: HIPAA
+        esignature_context:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Esignature Context
+          description: Electronic signature & audit context passed across execution steps.
+      type: object
+      required:
+      - query
+      - tenant_id
+      title: ClinicalReasoningRequest
+      description: Inbound request for multi-step clinical trial reasoning.
+    Ai_gateway_ClinicalReasoningResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          description: Execution status ('DRAFT_STAGED', 'REJECTED_LOW_CONFIDENCE', 'COMPLETED', 'ERROR').
+        draft_record:
+          anyOf:
+          - $ref: '#/components/schemas/Ai_gateway_DraftClinicalRecord'
+          - type: 'null'
+          description: Staged draft clinical record (None if rejected or low confidence).
+        reasoning_chain:
+          items:
+            $ref: '#/components/schemas/Ai_gateway_ReasoningStepState'
+          type: array
+          title: Reasoning Chain
+          description: Discrete multi-step planning loop execution history.
+        citations:
+          items:
+            $ref: '#/components/schemas/Ai_gateway_ParsedCitation'
+          type: array
+          title: Citations
+          description: Extracted & verified protocol citations.
+        overall_faithfulness_score:
+          type: number
+          title: Overall Faithfulness Score
+          description: Overall citation confidence score (0.0 to 1.0).
+        is_citation_verified:
+          type: boolean
+          title: Is Citation Verified
+          description: True if overall faithfulness >= min_citation_confidence.
+        phi_masking_applied:
+          type: boolean
+          title: Phi Masking Applied
+          description: True if PHI masking was applied to intermediate steps.
+        phi_tokens_masked:
+          type: integer
+          title: Phi Tokens Masked
+          description: Total surrogate PHI tokens masked during execution.
+        execution_state:
+          $ref: '#/components/schemas/Ai_gateway_ExecutionStateContext'
+          description: Updated caller-managed execution state context.
+        model_used:
+          type: string
+          title: Model Used
+          description: AI model used.
+          default: tier-3-frontier-reasoning
+        latency_ms:
+          type: number
+          title: Latency Ms
+          description: Latency in milliseconds.
+          default: 0.0
+      type: object
+      required:
+      - status
+      - overall_faithfulness_score
+      - is_citation_verified
+      - phi_masking_applied
+      - phi_tokens_masked
+      - execution_state
+      title: ClinicalReasoningResponse
+      description: Outbound response containing staged draft record, reasoning chain, and telemetry.
+    Ai_gateway_DraftClinicalRecord:
+      properties:
+        record_id:
+          type: string
+          title: Record Id
+          description: Unique draft record identifier.
+        title:
+          type: string
+          title: Title
+          description: Draft clinical record title.
+        study_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Study Id
+          description: Associated study ID.
+        status:
+          type: string
+          title: Status
+          description: Draft state status requiring explicit human review/signature before release.
+          default: DRAFT_STAGED
+        synthesized_guidelines:
+          type: string
+          title: Synthesized Guidelines
+          description: Synthesized clinical guidelines and protocol analysis.
+        eligibility_criteria:
+          items:
+            type: string
+          type: array
+          title: Eligibility Criteria
+          description: Extracted eligibility criteria.
+        citations:
+          items:
+            $ref: '#/components/schemas/Ai_gateway_ParsedCitation'
+          type: array
+          title: Citations
+          description: Grounded verbatim protocol citations.
+        requires_esignature:
+          type: boolean
+          title: Requires Esignature
+          description: Mandates explicit human review and e-signature authorization.
+          default: true
+        created_by_agent:
+          type: string
+          title: Created By Agent
+          description: Agent version identifier.
+          default: HybridClinicalReasoningAgent/v1
+        created_at:
+          type: string
+          title: Created At
+          description: ISO 8601 creation timestamp.
+      type: object
+      required:
+      - record_id
+      - title
+      - synthesized_guidelines
+      - created_at
+      title: DraftClinicalRecord
+      description: Generated clinical trial record staged in draft state requiring human review.
     Ai_gateway_EmbeddingRequestDTO:
       properties:
         input_texts:
@@ -36378,6 +36733,78 @@ components:
       - tier
       title: EmbeddingResponseDTO
       description: Outbound DTO containing generated float vector embeddings.
+    Ai_gateway_ExecutionStateContext:
+      properties:
+        session_id:
+          type: string
+          title: Session Id
+          description: Unique reasoning session correlation identifier.
+        current_step_index:
+          type: integer
+          minimum: 0.0
+          title: Current Step Index
+          description: Index of the active reasoning step.
+          default: 0
+        total_steps:
+          type: integer
+          minimum: 1.0
+          title: Total Steps
+          description: Total planned steps in the reasoning workflow.
+          default: 5
+        completed_steps:
+          items:
+            $ref: '#/components/schemas/Ai_gateway_ReasoningStepState'
+          type: array
+          title: Completed Steps
+          description: List of previously completed reasoning steps.
+        patient_context:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: string
+          - type: 'null'
+          title: Patient Context
+          description: Optional raw or masked patient record context.
+        protocol_chunks:
+          items:
+            $ref: '#/components/schemas/Ai_gateway_ProtocolRAGContextChunk'
+          type: array
+          title: Protocol Chunks
+          description: Target clinical protocol context chunks.
+        metadata:
+          additionalProperties: true
+          type: object
+          title: Metadata
+          description: Arbitrary caller-supplied execution metadata.
+      type: object
+      required:
+      - session_id
+      title: ExecutionStateContext
+      description: Caller-managed execution state context enabling stateless microservice persistence.
+    Ai_gateway_FunctionDefinitionDTO:
+      properties:
+        name:
+          type: string
+          title: Name
+          description: Name of the function to be called.
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+          description: Description of function capability for the model.
+        parameters:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Parameters
+          description: JSON Schema for function arguments.
+      type: object
+      required:
+      - name
+      title: FunctionDefinitionDTO
+      description: Function specification transfer object.
     Ai_gateway_GenerationRequestDTO:
       properties:
         prompt:
@@ -36394,6 +36821,30 @@ components:
           - type: 'null'
           title: Messages
           description: Multi-turn conversation history.
+        tools:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Ai_gateway_ToolDefinitionDTO'
+            type: array
+          - type: 'null'
+          title: Tools
+          description: List of tool definitions available for model tool selection.
+        tool_choice:
+          anyOf:
+          - type: string
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Tool Choice
+          description: Tool choice configuration (e.g. 'auto', 'required', or explicit selection).
+        tool_responses:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Ai_gateway_ToolResponseDTO'
+            type: array
+          - type: 'null'
+          title: Tool Responses
+          description: List of execution responses for previously requested tool calls.
         tier:
           $ref: '#/components/schemas/Ai_gateway_ModelTier'
           description: Execution tier (tier_1_local, tier_2_fast, tier_3_frontier).
@@ -36461,9 +36912,12 @@ components:
     Ai_gateway_GenerationResponseDTO:
       properties:
         content:
-          type: string
+          anyOf:
+          - type: string
+          - type: 'null'
           title: Content
           description: Generated text or serialized JSON.
+          default: ''
         structured_data:
           anyOf:
           - additionalProperties: true
@@ -36471,6 +36925,14 @@ components:
           - type: 'null'
           title: Structured Data
           description: Structured JSON object if response_schema was requested.
+        tool_calls:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Ai_gateway_ToolCallDTO'
+            type: array
+          - type: 'null'
+          title: Tool Calls
+          description: Structured tool call requests emitted by the model.
         model:
           type: string
           title: Model
@@ -36498,7 +36960,6 @@ components:
           default: 0
       type: object
       required:
-      - content
       - model
       - tier
       title: GenerationResponseDTO
@@ -36518,6 +36979,7 @@ components:
       - system
       - user
       - assistant
+      - tool
       title: MessageRole
       description: Standard message roles for conversational or structured prompts.
     Ai_gateway_ModelTier:
@@ -36700,6 +37162,71 @@ components:
       - confidence_tier
       title: ProtocolRAGResponse
       description: Outbound response containing grounded answer, citations, and faithfulness telemetry.
+    Ai_gateway_ReasoningStepState:
+      properties:
+        step_index:
+          type: integer
+          minimum: 0.0
+          title: Step Index
+          description: 0-indexed step number in reasoning loop.
+        step_type:
+          anyOf:
+          - $ref: '#/components/schemas/Ai_gateway_ReasoningStepType'
+          - type: string
+          title: Step Type
+          description: Category/type of reasoning step.
+        title:
+          type: string
+          title: Title
+          description: Human-readable title of step.
+        input_summary:
+          type: string
+          title: Input Summary
+          description: Summary of inputs passed into step.
+        output_text:
+          type: string
+          title: Output Text
+          description: Output generated during this reasoning step.
+        status:
+          type: string
+          title: Status
+          description: Execution status ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED').
+          default: COMPLETED
+        has_phi_masked:
+          type: boolean
+          title: Has Phi Masked
+          description: True if patient identifiers were masked in this step.
+          default: false
+        masked_tokens_count:
+          type: integer
+          title: Masked Tokens Count
+          description: Count of surrogate tokens replaced during step execution.
+          default: 0
+        step_citations:
+          items:
+            $ref: '#/components/schemas/Ai_gateway_ParsedCitation'
+          type: array
+          title: Step Citations
+          description: Protocol citations extracted/verified in this step.
+      type: object
+      required:
+      - step_index
+      - step_type
+      - title
+      - input_summary
+      - output_text
+      title: ReasoningStepState
+      description: Representation of an individual step in the multi-step planning loop.
+    Ai_gateway_ReasoningStepType:
+      type: string
+      enum:
+      - planning
+      - extraction
+      - synthesis
+      - verification
+      - draft_staging
+      title: ReasoningStepType
+      description: Types of steps in a multi-step clinical reasoning planning loop.
     Ai_gateway_TierInfoDTO:
       properties:
         tier:
@@ -36746,6 +37273,85 @@ components:
       type: object
       title: TokenUsageDTO
       description: Token consumption accounting transfer object.
+    Ai_gateway_ToolCallDTO:
+      properties:
+        id:
+          type: string
+          title: Id
+          description: Unique tool call invocation identifier.
+        type:
+          type: string
+          title: Type
+          description: Tool type.
+          default: function
+        function:
+          $ref: '#/components/schemas/Ai_gateway_ToolCallFunctionDTO'
+          description: Function call payload.
+      type: object
+      required:
+      - id
+      - function
+      title: ToolCallDTO
+      description: Structured tool call transfer object.
+    Ai_gateway_ToolCallFunctionDTO:
+      properties:
+        name:
+          type: string
+          title: Name
+          description: Name of the requested function.
+        arguments:
+          anyOf:
+          - type: string
+          - additionalProperties: true
+            type: object
+          title: Arguments
+          description: Raw JSON string or parsed dictionary of arguments.
+      type: object
+      required:
+      - name
+      - arguments
+      title: ToolCallFunctionDTO
+      description: Function call details transfer object.
+    Ai_gateway_ToolDefinitionDTO:
+      properties:
+        type:
+          type: string
+          title: Type
+          description: Type of tool. Defaults to 'function'.
+          default: function
+        function:
+          $ref: '#/components/schemas/Ai_gateway_FunctionDefinitionDTO'
+          description: Function declaration details.
+      type: object
+      required:
+      - function
+      title: ToolDefinitionDTO
+      description: Tool definition transfer object.
+    Ai_gateway_ToolResponseDTO:
+      properties:
+        tool_call_id:
+          type: string
+          title: Tool Call Id
+          description: Matching ID of the tool call request.
+        content:
+          anyOf:
+          - type: string
+          - additionalProperties: true
+            type: object
+          title: Content
+          description: Result content string or structured dictionary from tool execution.
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+          description: Optional name of the tool executed.
+      type: object
+      required:
+      - tool_call_id
+      - content
+      title: ToolResponseDTO
+      description: Structured result transfer object for tool call execution.
     Ai_gateway_ValidationError:
       properties:
         loc:
@@ -41124,6 +41730,235 @@ components:
       - DEGRADED
       title: CodeValidationState
       description: Validation state of a controlled terminology concept code.
+    Designer_CohortFeasibilityJob:
+      properties:
+        job_id:
+          type: string
+          title: Job Id
+          description: Job identifier
+        study_id:
+          type: string
+          title: Study Id
+          description: Study ID
+        cohort_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cohort Id
+          description: Cohort ID
+        status:
+          type: string
+          enum:
+          - PENDING
+          - RUNNING
+          - COMPLETED
+          - FAILED
+          - DUPLICATE_LOCKED
+          title: Status
+          description: Job status
+        created_at:
+          type: string
+          title: Created At
+          description: ISO timestamp when job was enqueued
+        report:
+          anyOf:
+          - $ref: '#/components/schemas/Designer_CohortFeasibilityReport'
+          - type: 'null'
+          description: Feasibility report when status is COMPLETED
+      type: object
+      required:
+      - job_id
+      - study_id
+      - cohort_id
+      - status
+      - created_at
+      title: CohortFeasibilityJob
+      description: Asynchronous background job status wrapper.
+    Designer_CohortFeasibilityReport:
+      properties:
+        job_id:
+          type: string
+          title: Job Id
+          description: Unique analysis job identifier
+        study_id:
+          type: string
+          title: Study Id
+          description: Target protocol study ID
+        cohort_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cohort Id
+          description: Target cohort identifier
+        status:
+          type: string
+          enum:
+          - PENDING
+          - RUNNING
+          - COMPLETED
+          - FAILED
+          - DUPLICATE_LOCKED
+          title: Status
+          description: Execution status of the cohort feasibility job
+        starting_cohort_size:
+          type: integer
+          title: Starting Cohort Size
+          description: Total patient profiles evaluated
+        eligible_count:
+          type: integer
+          title: Eligible Count
+          description: Number of subjects fully eligible (all inclusion TRUE, exclusion FALSE)
+        ineligible_count:
+          type: integer
+          title: Ineligible Count
+          description: Number of subjects ineligible (any inclusion FALSE or exclusion TRUE)
+        indeterminate_count:
+          type: integer
+          title: Indeterminate Count
+          description: Number of subjects with INDETERMINATE overall outcome
+        overall_eligibility_rate:
+          type: number
+          title: Overall Eligibility Rate
+          description: Overall eligibility percentage (0.0 - 100.0)
+        estimated_fit_percentage:
+          type: number
+          title: Estimated Fit Percentage
+          description: Estimated population fit percentage
+        sub_cohort_recommendations:
+          items:
+            $ref: '#/components/schemas/Designer_SubCohortRecommendation'
+          type: array
+          title: Sub Cohort Recommendations
+          description: Multi-criteria sub-cohort recommendations with breakdown summaries
+        node_explanations:
+          items:
+            $ref: '#/components/schemas/Designer_NodeFitExplanation'
+          type: array
+          title: Node Explanations
+          description: Granular node-level fit trace explanations for AST evaluations
+        synthetic_simulation_summary:
+          anyOf:
+          - $ref: '#/components/schemas/Designer_SyntheticSimulationSummary'
+          - type: 'null'
+          description: Feasibility simulation summary across complete, partial, and missing data scenarios
+        deid_applied:
+          type: boolean
+          title: Deid Applied
+          description: True if de-identification scrubbing was applied to AI prompts
+          default: true
+        deid_tokens_count:
+          type: integer
+          title: Deid Tokens Count
+          description: Count of PII/PHI tokens scrubbed
+          default: 0
+        advisory_lock_acquired:
+          type: boolean
+          title: Advisory Lock Acquired
+          description: True if background PostgreSQL advisory lock was successfully acquired
+          default: true
+        execution_time_seconds:
+          type: number
+          title: Execution Time Seconds
+          description: Total execution time in seconds
+          default: 0.0
+        error_message:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error Message
+          description: Error message if job status is FAILED
+      type: object
+      required:
+      - job_id
+      - study_id
+      - status
+      - starting_cohort_size
+      - eligible_count
+      - ineligible_count
+      - indeterminate_count
+      - overall_eligibility_rate
+      - estimated_fit_percentage
+      title: CohortFeasibilityReport
+      description: Comprehensive multi-criteria cohort reasoning and synthetic feasibility report.
+    Designer_CohortFeasibilityRequest:
+      properties:
+        analysis_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Analysis Id
+          description: Optional caller-supplied job/analysis ID
+        study_id:
+          type: string
+          title: Study Id
+          description: Target protocol study ID, e.g., 'PROTOCOL-2026-T2D'
+        cohort_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cohort Id
+          description: Target cohort or arm identifier
+          default: MAIN_COHORT
+        unstructured_protocol_text:
+          anyOf:
+          - type: string
+          - items:
+              $ref: '#/components/schemas/Designer_ProtocolRAGContextChunk'
+            type: array
+          - type: 'null'
+          title: Unstructured Protocol Text
+          description: Unstructured protocol excerpts or RAG chunks for semantic vector matching
+        structured_criteria:
+          items:
+            $ref: '#/components/schemas/Designer_EligibilityCriterion-Input'
+          type: array
+          title: Structured Criteria
+          description: Structured inclusion and exclusion criteria AST definitions
+        patient_profiles:
+          anyOf:
+          - items:
+              additionalProperties:
+                anyOf:
+                - type: string
+                - type: integer
+                - type: number
+                - type: boolean
+                - type: 'null'
+              type: object
+            type: array
+          - type: 'null'
+          title: Patient Profiles
+          description: Optional patient observation data contexts. If omitted, synthetic profiles are generated.
+        synthetic_simulation_count:
+          type: integer
+          maximum: 500.0
+          minimum: 1.0
+          title: Synthetic Simulation Count
+          description: Number of GxP synthetic subject profiles to generate for feasibility simulation
+          default: 20
+        missing_data_scenarios:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Missing Data Scenarios
+          description: Optional specific field groups to simulate missing data conditions
+        is_async:
+          type: boolean
+          title: Is Async
+          description: Whether to execute asynchronously in a background worker
+          default: true
+        compliance_profile:
+          type: string
+          title: Compliance Profile
+          description: De-identification compliance profile (HIPAA or GXP)
+          default: HIPAA
+      type: object
+      required:
+      - study_id
+      title: CohortFeasibilityRequest
+      description: Inbound request payload for multi-criteria cohort reasoning and synthetic feasibility simulation.
     Designer_Comment:
       properties:
         comment_id:
@@ -41298,6 +42133,11 @@ components:
         message:
           type: string
           title: Message
+        faithfulness_metadata:
+          anyOf:
+          - $ref: '#/components/schemas/Designer_FaithfulnessVerificationMetadata'
+          - type: 'null'
+          description: Post-synthesis faithfulness evaluation metrics and verification status
       type: object
       required:
       - study_id
@@ -41747,7 +42587,7 @@ components:
           - cross_form_check
           title: Type
         condition:
-          $ref: '#/components/schemas/Designer_ExpressionNode-Input'
+          $ref: '#/components/schemas/Designer_packages__ddf__rules__ast__ExpressionNode'
         action:
           anyOf:
           - type: string
@@ -41842,6 +42682,55 @@ components:
       - id
       - properties
       title: CreateTimingWindowRequest
+    Designer_CriteriaBreakdownSummary:
+      properties:
+        criterion_id:
+          type: string
+          title: Criterion Id
+          description: Unique criterion identifier, e.g., 'INC_01'
+        identifier:
+          type: string
+          title: Identifier
+          description: Business identifier, e.g., 'INC-001'
+        human_readable_text:
+          type: string
+          title: Human Readable Text
+          description: Human readable description
+        criterion_type:
+          type: string
+          enum:
+          - inclusion
+          - exclusion
+          title: Criterion Type
+          description: Type of criterion
+        passed_count:
+          type: integer
+          title: Passed Count
+          description: Number of subjects satisfying criterion
+          default: 0
+        failed_count:
+          type: integer
+          title: Failed Count
+          description: Number of subjects failing criterion
+          default: 0
+        indeterminate_count:
+          type: integer
+          title: Indeterminate Count
+          description: Number of subjects with indeterminate status due to missing data
+          default: 0
+        pass_rate_percentage:
+          type: number
+          title: Pass Rate Percentage
+          description: Percentage of evaluated subjects meeting criterion
+          default: 0.0
+      type: object
+      required:
+      - criterion_id
+      - identifier
+      - human_readable_text
+      - criterion_type
+      title: CriteriaBreakdownSummary
+      description: Summary of criteria evaluation results for a sub-cohort or participant group.
     Designer_DAGJobStatusResponse:
       properties:
         job_id:
@@ -41905,6 +42794,11 @@ components:
           type: array
           title: Synthesized Forms
           description: Synthesized eCRFs when completed
+        faithfulness_metadata:
+          anyOf:
+          - $ref: '#/components/schemas/Designer_FaithfulnessVerificationMetadata'
+          - type: 'null'
+          description: Post-synthesis faithfulness metrics and verification status
       type: object
       required:
       - job_id
@@ -42155,7 +43049,87 @@ components:
       - CLINICAL_OPERATIONS
       title: DomainQueue
       description: Target clinical and operational domain queues for ticket routing.
-    Designer_EligibilityCriterion:
+    Designer_EligibilityCriterion-Input:
+      properties:
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+          description: Chronological UTC timestamp when the record was created.
+        created_by:
+          type: string
+          title: Created By
+          description: Unique identifier of the user who created the record.
+        reason_for_change:
+          type: string
+          title: Reason For Change
+          description: Mandatory explanation or audit justification for creating or mutating this record.
+        version_index:
+          type: integer
+          title: Version Index
+          description: Row version counter or index.
+          default: 1
+        id:
+          type: string
+          title: Id
+          description: Unique identifier of this eligibility criterion, e.g., 'INC_01'.
+          default: ''
+        criterion_type:
+          type: string
+          enum:
+          - inclusion
+          - exclusion
+          title: Criterion Type
+          description: Whether this is an inclusion or exclusion criterion.
+        identifier:
+          type: string
+          title: Identifier
+          description: Business identifier of this criterion, e.g., 'INC-001'.
+          default: ''
+        human_readable_text:
+          type: string
+          title: Human Readable Text
+          description: Human-readable text description of the criterion.
+          default: ''
+        dsl_expression_string:
+          type: string
+          title: Dsl Expression String
+          description: The raw DSL statement source, e.g., 'eCRF.DM.AGE >= 18'.
+          default: ''
+        structured_expression_tree:
+          $ref: '#/components/schemas/Designer_apps__designer__domain__eligibility__models__ExpressionNode-Input'
+          description: The parsed structured AST of this criterion.
+        expected_outcome:
+          type: boolean
+          title: Expected Outcome
+          description: Expected Boolean outcome of evaluating the condition node. Typically True for inclusions and False for exclusions.
+          default: true
+        criterion_id:
+          type: string
+          title: Criterion Id
+          description: Backward compatible criterion_id field.
+          default: ''
+        description:
+          type: string
+          title: Description
+          description: Backward compatible description field.
+          default: ''
+        dsl_source:
+          type: string
+          title: Dsl Source
+          description: Backward compatible dsl_source field.
+          default: ''
+        condition:
+          $ref: '#/components/schemas/Designer_apps__designer__domain__eligibility__models__ExpressionNode-Input'
+          description: Backward compatible condition field.
+      type: object
+      required:
+      - created_by
+      - reason_for_change
+      - criterion_type
+      title: EligibilityCriterion
+      description: Represents a single inclusion or exclusion criterion with full GxP audit metadata.
+    Designer_EligibilityCriterion-Output:
       properties:
         created_at:
           type: string
@@ -42345,43 +43319,6 @@ components:
       required:
       - epochs
       title: EpochReorderRequest
-    Designer_ExpressionNode-Input:
-      properties:
-        type:
-          type: string
-          enum:
-          - logical
-          - comparison
-          - function
-          - field_ref
-          - constant
-          title: Type
-        operator:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Operator
-        operands:
-          anyOf:
-          - items:
-              $ref: '#/components/schemas/Designer_ExpressionNode-Input'
-            type: array
-          - type: 'null'
-          title: Operands
-        value:
-          anyOf:
-          - {}
-          - type: 'null'
-          title: Value
-        field_ref:
-          anyOf:
-          - $ref: '#/components/schemas/Designer_FieldReference-Input'
-          - type: 'null'
-      type: object
-      required:
-      - type
-      title: ExpressionNode
-      description: A recursive node in a structured clinical expression tree.
     Designer_ExpressionNode-Output:
       properties:
         type:
@@ -42449,6 +43386,24 @@ components:
           type: array
           title: Assigned Visit Names
           description: List of visit names where this procedure is scheduled
+        section_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Section Number
+          description: Source protocol section citation number e.g. '5.1'
+        page_number:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Page Number
+          description: Source protocol page citation number e.g. 12
+        citation_marker:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Citation Marker
+          description: Verbatim citation marker string
       type: object
       required:
       - activity_name
@@ -42582,6 +43537,50 @@ components:
       - target_day
       title: ExtractedVisit
       description: Represents a study encounter or visit extracted from the protocol.
+    Designer_FaithfulnessVerificationMetadata:
+      properties:
+        faithfulness_score:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Faithfulness Score
+          description: Overall post-synthesis output faithfulness confidence score evaluated against 0.85 threshold.
+        is_faithful:
+          type: boolean
+          title: Is Faithful
+          description: True if faithfulness score meets or exceeds 0.85 groundedness threshold.
+        verification_status:
+          type: string
+          enum:
+          - VERIFIED
+          - FLAGGED_LOW_FAITHFULNESS
+          title: Verification Status
+          description: Verification status flag for clinical auditability and user awareness.
+          default: VERIFIED
+        citation_coverage:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Citation Coverage
+          description: Percentage of synthesized form fields and matrix cells containing section and page citations.
+          default: 1.0
+        protocol_version:
+          type: string
+          title: Protocol Version
+          description: Target protocol version identifier used during citation formatting and verification.
+          default: v1.0
+        warnings:
+          items:
+            type: string
+          type: array
+          title: Warnings
+          description: Diagnostic warning messages flagging low faithfulness or missing citations.
+      type: object
+      required:
+      - faithfulness_score
+      - is_faithful
+      title: FaithfulnessVerificationMetadata
+      description: Verification metadata containing post-synthesis faithfulness score and status indicators.
     Designer_FeasibilityReport:
       properties:
         starting_cohort_size:
@@ -42609,31 +43608,6 @@ components:
       - overall_eligibility_rate
       title: FeasibilityReport
       description: Cohort-backed patient population feasibility and attrition rates.
-    Designer_FieldReference-Input:
-      properties:
-        field_id:
-          type: string
-          title: Field Id
-        form_id:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Form Id
-        visit_id:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Visit Id
-        visit_relative:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Visit Relative
-      type: object
-      required:
-      - field_id
-      title: FieldReference
-      description: Represents a structured field reference within an expression tree.
     Designer_FieldReference-Output:
       properties:
         raw_reference:
@@ -43245,6 +44219,92 @@ components:
       - delta_summary
       title: NarrativeDelta
       description: Semantic comparison between protocol narrative sections.
+    Designer_NodeEvaluation:
+      properties:
+        node_type:
+          type: string
+          title: Node Type
+          description: The type of AST node that was evaluated.
+        operator:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Operator
+          description: The operator utilized during evaluation.
+        value:
+          anyOf:
+          - {}
+          - type: 'null'
+          title: Value
+          description: The evaluated literal value of the node, if determined.
+        is_indeterminate:
+          type: boolean
+          title: Is Indeterminate
+          description: Indicates if the evaluation is indeterminate (e.g. due to missing or null data).
+          default: false
+        explanation:
+          type: string
+          title: Explanation
+          description: Trace explanation detailing how this node evaluated to its outcome.
+        children:
+          items:
+            $ref: '#/components/schemas/Designer_NodeEvaluation'
+          type: array
+          title: Children
+          description: Child node evaluation details.
+      type: object
+      required:
+      - node_type
+      - explanation
+      title: NodeEvaluation
+      description: 'Detailed evaluation output for a single node inside the AST expression tree.
+
+        Provides complete node-level traceability for regulatory compliance.'
+    Designer_NodeFitExplanation:
+      properties:
+        subject_id:
+          type: string
+          title: Subject Id
+          description: Subject or synthetic profile ID
+        criterion_id:
+          type: string
+          title: Criterion Id
+          description: Evaluated criterion identifier
+        criterion_name:
+          type: string
+          title: Criterion Name
+          description: Name or description of criterion
+        result_status:
+          type: string
+          enum:
+          - 'TRUE'
+          - 'FALSE'
+          - INDETERMINATE
+          title: Result Status
+          description: 'Kleene 3VL outcome: TRUE (met), FALSE (failed), or INDETERMINATE (missing data)'
+        node_trace:
+          $ref: '#/components/schemas/Designer_NodeEvaluation'
+          description: Granular recursive AST node evaluation trace
+        missing_fields:
+          items:
+            type: string
+          type: array
+          title: Missing Fields
+          description: Captured fields that were missing or null during evaluation
+        explanation:
+          type: string
+          title: Explanation
+          description: Detailed human-readable fit explanation
+      type: object
+      required:
+      - subject_id
+      - criterion_id
+      - criterion_name
+      - result_status
+      - node_trace
+      - explanation
+      title: NodeFitExplanation
+      description: Granular node-level trace explanation for AST criteria evaluation.
     Designer_ObjectType:
       type: string
       enum:
@@ -43609,6 +44669,50 @@ components:
 
 
         Requirements: PRD-SYS-001'
+    Designer_ProtocolRAGContextChunk:
+      properties:
+        chunk_id:
+          type: string
+          title: Chunk Id
+          description: Unique chunk identifier.
+        protocol_version:
+          type: string
+          title: Protocol Version
+          description: Protocol version (e.g., 'v2.1').
+        section_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Section Number
+          description: Protocol section number (e.g. '7.3').
+        section_title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Section Title
+          description: Protocol section title.
+        page_number:
+          type: integer
+          minimum: 1.0
+          title: Page Number
+          description: 1-indexed physical page number in source PDF.
+        chunk_text:
+          type: string
+          title: Chunk Text
+          description: Raw text of the protocol chunk.
+        is_approved:
+          type: boolean
+          title: Is Approved
+          description: Whether this protocol chunk is from an approved version.
+          default: true
+      type: object
+      required:
+      - chunk_id
+      - protocol_version
+      - page_number
+      - chunk_text
+      title: ProtocolRAGContextChunk
+      description: Normalized protocol excerpt chunk passed to RAG generation and verification.
     Designer_PublishStudyVersionRequest:
       properties:
         description:
@@ -44199,6 +45303,24 @@ components:
           title: Derived From Soa
           description: Flag indicating selective lineage.
           default: false
+        section_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Section Number
+          description: Protocol section citation number coordinate (e.g., '6.1').
+        page_number:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Page Number
+          description: Protocol page citation number coordinate (e.g., 18).
+        citation_marker:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Citation Marker
+          description: Standardized verbatim citation marker string.
       type: object
       required:
       - activity_id
@@ -44590,6 +45712,44 @@ components:
       - concepts
       title: StudyTerminologyValidationReport
       description: Aggregated terminology validation report for an entire study structure.
+    Designer_SubCohortRecommendation:
+      properties:
+        sub_cohort_id:
+          type: string
+          title: Sub Cohort Id
+          description: Unique identifier for sub-cohort, e.g., 'subcohort_renal_adjusted'
+        name:
+          type: string
+          title: Name
+          description: Human-readable sub-cohort name
+        description:
+          type: string
+          title: Description
+          description: Clinical justification and definition summary
+        estimated_fit_percentage:
+          type: number
+          title: Estimated Fit Percentage
+          description: Estimated percentage of target patient pool fitting this sub-cohort
+        criteria_breakdown:
+          items:
+            $ref: '#/components/schemas/Designer_CriteriaBreakdownSummary'
+          type: array
+          title: Criteria Breakdown
+          description: Specific breakdown summary across criteria
+        sample_patient_ids:
+          items:
+            type: string
+          type: array
+          title: Sample Patient Ids
+          description: Representative sample patient identifiers (or synthetic profile IDs)
+      type: object
+      required:
+      - sub_cohort_id
+      - name
+      - description
+      - estimated_fit_percentage
+      title: SubCohortRecommendation
+      description: Multi-criteria sub-cohort recommendation with specific criteria breakdown and fit percentage.
     Designer_SubjectManagementRtsmImpact:
       properties:
         cohort_adjustments_count:
@@ -44840,6 +46000,24 @@ components:
           type: array
           title: Rules
           description: Compiled validation and skip rules
+        section_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Section Number
+          description: Protocol section number citation coordinate
+        page_number:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Page Number
+          description: Protocol page number citation coordinate
+        citation_marker:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Citation Marker
+          description: Standardized verbatim citation marker string
       type: object
       required:
       - form_id
@@ -44847,6 +46025,43 @@ components:
       - cdash_domain
       title: SynthesizedECRFForm
       description: Synthesized CDASH eCRF form definition compiled from extracted activities.
+    Designer_SyntheticSimulationSummary:
+      properties:
+        simulated_subject_count:
+          type: integer
+          title: Simulated Subject Count
+          description: Total synthetic subject profiles generated and evaluated
+        complete_data_fit_rate:
+          type: number
+          title: Complete Data Fit Rate
+          description: Eligibility percentage under complete observation data (0.0 - 100.0)
+        partial_data_fit_rate:
+          type: number
+          title: Partial Data Fit Rate
+          description: Eligibility percentage under partial observation data scenarios
+        missing_data_fit_rate:
+          type: number
+          title: Missing Data Fit Rate
+          description: Eligibility percentage when key fields are missing
+        indeterminate_rate:
+          type: number
+          title: Indeterminate Rate
+          description: Percentage of simulated evaluations resulting in INDETERMINATE state
+        high_risk_missing_fields:
+          items:
+            type: string
+          type: array
+          title: High Risk Missing Fields
+          description: Fields whose absence causes eligibility to shift from TRUE to INDETERMINATE/UNKNOWN
+      type: object
+      required:
+      - simulated_subject_count
+      - complete_data_fit_rate
+      - partial_data_fit_rate
+      - missing_data_fit_rate
+      - indeterminate_rate
+      title: SyntheticSimulationSummary
+      description: Summary of synthetic patient profile feasibility simulation under missing data scenarios.
     Designer_TerminologyConcept:
       properties:
         code:
@@ -45126,6 +46341,11 @@ components:
           minimum: 0.0
           title: Confidence Score
           description: Overall LLM extraction confidence
+        faithfulness_metadata:
+          anyOf:
+          - $ref: '#/components/schemas/Designer_FaithfulnessVerificationMetadata'
+          - type: 'null'
+          description: Post-synthesis faithfulness evaluation metrics and verification status
       type: object
       required:
       - study_title
@@ -45576,6 +46796,74 @@ components:
       - epoch_id
       - visit_ids
       title: VisitToEpochAssignmentRequest
+    Designer_apps__designer__domain__eligibility__models__ExpressionNode-Input:
+      properties:
+        type:
+          type: string
+          enum:
+          - logical
+          - comparison
+          - field_ref
+          - constant
+          title: Type
+          description: Node type indicating the structure of the node.
+        operator:
+          anyOf:
+          - $ref: '#/components/schemas/Designer_ComparisonOperator'
+          - $ref: '#/components/schemas/Designer_LogicalOperator'
+          - type: string
+          - type: 'null'
+          title: Operator
+          description: Operator for logical (and, or, not) or comparison (==, !=, <, <=, >, >=) nodes.
+        operands:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Designer_apps__designer__domain__eligibility__models__ExpressionNode-Input'
+            type: array
+          - type: 'null'
+          title: Operands
+          description: Child operands of logical or comparison nodes.
+        value:
+          anyOf:
+          - {}
+          - type: 'null'
+          title: Value
+          description: Literal constant value of type constant.
+        field_ref:
+          anyOf:
+          - $ref: '#/components/schemas/Designer_apps__designer__domain__eligibility__models__FieldReference'
+          - type: 'null'
+          description: Field reference details of type field_ref.
+      type: object
+      required:
+      - type
+      title: ExpressionNode
+      description: 'Recursive node inside a structured clinical expression tree (AST).
+
+        Supported types are: logical, comparison, field_ref, constant.'
+    Designer_apps__designer__domain__eligibility__models__FieldReference:
+      properties:
+        raw_reference:
+          type: string
+          title: Raw Reference
+          description: Raw field reference string, e.g., 'eCRF.DM.AGE'.
+        domain:
+          type: string
+          title: Domain
+          description: The target eCRF domain, e.g., 'DM'.
+        variable:
+          type: string
+          title: Variable
+          description: The domain variable, e.g., 'AGE'.
+      type: object
+      required:
+      - raw_reference
+      - domain
+      - variable
+      title: FieldReference
+      description: 'Represents a structured field reference pointing to an eCRF domain variable.
+
+        Format must strictly follow: eCRF.<DOMAIN>.<VARIABLE>'
     Designer_apps__designer__domain__protocol_authoring__soa__CreateVisitRequest:
       properties:
         id:
@@ -45665,6 +46953,68 @@ components:
       - payload
       title: UpdateVisitRequest
       description: Request model for updating a Visit library object.
+    Designer_packages__ddf__rules__ast__ExpressionNode:
+      properties:
+        type:
+          type: string
+          enum:
+          - logical
+          - comparison
+          - function
+          - field_ref
+          - constant
+          title: Type
+        operator:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Operator
+        operands:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Designer_packages__ddf__rules__ast__ExpressionNode'
+            type: array
+          - type: 'null'
+          title: Operands
+        value:
+          anyOf:
+          - {}
+          - type: 'null'
+          title: Value
+        field_ref:
+          anyOf:
+          - $ref: '#/components/schemas/Designer_packages__ddf__rules__ast__FieldReference'
+          - type: 'null'
+      type: object
+      required:
+      - type
+      title: ExpressionNode
+      description: A recursive node in a structured clinical expression tree.
+    Designer_packages__ddf__rules__ast__FieldReference:
+      properties:
+        field_id:
+          type: string
+          title: Field Id
+        form_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Form Id
+        visit_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Visit Id
+        visit_relative:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Visit Relative
+      type: object
+      required:
+      - field_id
+      title: FieldReference
+      description: Represents a structured field reference within an expression tree.
     Econsent_ArchivalDeliveryResponse:
       properties:
         created_at:

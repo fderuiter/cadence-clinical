@@ -18,7 +18,6 @@ import logging
 import random
 import time
 import uuid
-from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +26,7 @@ from apps.designer.domain.cohort_feasibility_models import (
     CohortFeasibilityRequest,
     CriteriaBreakdownSummary,
     NodeFitExplanation,
+    PatientProfileContext,
     SubCohortRecommendation,
     SyntheticSimulationSummary,
 )
@@ -37,6 +37,7 @@ from apps.designer.domain.eligibility.models import (
     EligibilityCriterion,
     ExpressionNode,
     FieldReference,
+    NodeEvaluation,
 )
 from apps.designer.workers.cohort_feasibility_worker import (
     acquire_advisory_lock,
@@ -51,7 +52,9 @@ from packages.deid.models import ComplianceProfile
 logger = logging.getLogger("cohort-feasibility-engine")
 
 
-def generate_synthetic_patient_profiles(count: int = 20) -> list[dict[str, Any]]:
+def generate_synthetic_patient_profiles(
+    count: int = 20,
+) -> list[PatientProfileContext]:
     """Generates GxP-compliant synthetic patient profiles for trial feasibility simulation.
 
     Args:
@@ -232,7 +235,7 @@ class CohortFeasibilityEngine:
             indeterminate_count = 0
 
             node_explanations: list[NodeFitExplanation] = []
-            subject_results: list[dict[str, Any]] = []
+            subject_results: list[dict[str, object]] = []
 
             for subj in patient_pool:
                 subj_id = str(
@@ -273,7 +276,7 @@ class CohortFeasibilityEngine:
 
                     missing_fields = []
 
-                    def find_missing(ev: Any):
+                    def find_missing(ev: NodeEvaluation) -> None:
                         if (
                             ev.is_indeterminate
                             and "missing or null" in ev.explanation.lower()
@@ -354,12 +357,16 @@ class CohortFeasibilityEngine:
             )
 
     def _build_default_criteria(self) -> list[EligibilityCriterion]:
-        """Builds default structured AST eligibility criteria if none provided."""
+        """Builds default structured AST eligibility criteria if none provided.
+
+        Returns:
+            List of EligibilityCriterion objects.
+        """
         c1 = EligibilityCriterion(
             id="INC_01",
             criterion_type="inclusion",
             identifier="INC-001",
-            human_readable_text="Subject must be aged 18 to 75 years inclusive.",
+            human_readable_text="Subject must be aged 18 to 75 years inclusive.",  # deid-ignore
             dsl_expression_string="eCRF.DM.AGE >= 18 and eCRF.DM.AGE <= 75",
             created_by="system",
             reason_for_change="Initial criteria baseline",
@@ -431,10 +438,19 @@ class CohortFeasibilityEngine:
     def _run_synthetic_missing_data_simulation(
         self,
         criteria: list[EligibilityCriterion],
-        base_profiles: list[dict[str, Any]],
+        base_profiles: list[PatientProfileContext],
         scenarios: list[str] | None,
     ) -> SyntheticSimulationSummary:
-        """Evaluates feasibility across complete, partial, and missing observation scenarios using Kleene 3VL."""
+        """Evaluates feasibility across complete, partial, and missing observation scenarios using Kleene 3VL.
+
+        Args:
+            criteria: List of eligibility criteria to evaluate.
+            base_profiles: List of synthetic patient profiles.
+            scenarios: Optional list of specific missing data field group scenarios.
+
+        Returns:
+            SyntheticSimulationSummary reporting fit rates and missing field risks.
+        """
         total = len(base_profiles)
         if total == 0:
             return SyntheticSimulationSummary(
@@ -497,10 +513,19 @@ class CohortFeasibilityEngine:
     def _generate_sub_cohort_recommendations(
         self,
         criteria: list[EligibilityCriterion],
-        subject_results: list[dict[str, Any]],
+        subject_results: list[dict[str, object]],
         rag_chunks: list[ProtocolRAGContextChunk],
     ) -> list[SubCohortRecommendation]:
-        """Generates structured sub-cohort recommendations with breakdown summaries and fit percentages."""
+        """Generates structured sub-cohort recommendations with breakdown summaries and fit percentages.
+
+        Args:
+            criteria: List of evaluated eligibility criteria.
+            subject_results: List of evaluation result records per subject.
+            rag_chunks: RAG protocol text chunks.
+
+        Returns:
+            List of SubCohortRecommendation objects.
+        """
         total_subjects = len(subject_results)
         if total_subjects == 0:
             return []

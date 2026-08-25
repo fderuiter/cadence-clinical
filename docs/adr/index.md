@@ -189,6 +189,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+- [2026-08-25: Autonomous Multi Criteria Cohort Reasoning and Synthetic Feasibility Engine](2026-08-25-autonomous-multi-criteria-cohort-reasoning-and-synthetic-feasibility-engine.md)
 - [2026-08-23: Decompose Payments Domain Modules](2026-08-23-decompose-payments-domain-modules.md)
 - [2026-08-23: Deep Regulatory Transmission Gateway and Multi-Tier Acknowledgement Seam](2026-08-23-deep-regulatory-transmission-gateway-and-multi-tier-acknowledgement-seam.md)
 - [2026-08-23: Deep Adjudication Workflow Seam](2026-08-23-deep-adjudication-workflow-seam.md)
