@@ -125,6 +125,9 @@ from apps.designer.presentation.routers.amendments import (
     router as amendments_router,
 )
 from apps.designer.presentation.routers.cascade import router as cascade_router
+from apps.designer.presentation.routers.cohort_feasibility import (
+    router as cohort_feasibility_router,
+)
 from apps.designer.presentation.routers.comments import router as comments_router
 from apps.designer.presentation.routers.designer_routes import (
     MOCK_PROTOCOL_INGESTIONS,
@@ -201,6 +204,7 @@ app.include_router(digitization_router)
 app.include_router(amendments_router)
 app.include_router(designer_router)
 app.include_router(startup_matrix_router)
+app.include_router(cohort_feasibility_router)
 
 
 from fastapi.exception_handlers import http_exception_handler
