@@ -547,6 +547,22 @@ async def invalid_state_transition_handler(
     )
 
 
+@app.exception_handler(PermissionError)
+async def permission_error_handler(
+    request: Request, exc: PermissionError
+) -> JSONResponse:
+    brand_domain = os.getenv("BRAND_DOMAIN", "ccrsoft.com")
+    problem = ProblemDetails(
+        type=f"https://api.{brand_domain}/errors/resource-locked",
+        title="Resource Locked",
+        status=423,
+        detail=str(exc),
+        instance=request.url.path,
+        code="RESOURCE_LOCKED",
+    )
+    return JSONResponse(status_code=423, content=problem.model_dump(exclude_none=True))
+
+
 app.add_middleware(ContextResetMiddleware)
 app.add_middleware(GatewayAuthMiddleware)
 
