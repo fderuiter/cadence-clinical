@@ -304,7 +304,7 @@ function handleDeleteAnnotation(id) {
   currentAnnotations.value = currentAnnotations.value.filter((a) => a.id !== id);
 }
 
-function handleAssessmentSigned(event) {
+function handleAssessmentSigned(_event) {
   trajectoryHistory.value.push({
     id: `eval-${Date.now()}`,
     timepoint_name: selectedTimepoint.value,
@@ -333,7 +333,7 @@ function recalculateResponse() {
   // Switches between RECIST and Lugano
 }
 
-function handleAdjudicationCompleted(event) {
+function handleAdjudicationCompleted(_event) {
   trajectoryHistory.value.push({
     id: `adj-${Date.now()}`,
     timepoint_name: selectedTimepoint.value,
