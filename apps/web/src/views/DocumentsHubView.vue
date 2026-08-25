@@ -1,10 +1,7 @@
 <template>
   <div class="documents-hub-layout">
     <!-- Left Navigation Panel: Folder Tree -->
-    <aside
-      class="hub-sidebar"
-      aria-label="Clinical Folder Tree"
-    >
+    <aside class="hub-sidebar" aria-label="Clinical Folder Tree">
       <DocumentsFolderTree
         :studies-tree="fileshareStore.filteredStudiesTree"
         :initial-study-id="initialStudyId"
@@ -13,18 +10,14 @@
     </aside>
 
     <!-- Main Workspace: Search Bar, Toolbar & Documents Grid -->
-    <main
-      class="hub-content-area"
-      aria-label="Documents Grid Workspace"
-    >
+    <main class="hub-content-area" aria-label="Documents Grid Workspace">
       <!-- Top Action Bar -->
       <div class="hub-header-bar">
         <div class="header-left-col">
-          <h2 class="hub-page-title">
-            Documents Hub
-          </h2>
+          <h2 class="hub-page-title">Documents Hub</h2>
           <p class="hub-page-subtitle">
-            Cross-study unified clinical fileshare, protected media viewer &amp; permission delegation vault
+            Cross-study unified clinical fileshare, protected media viewer &amp;
+            permission delegation vault
           </p>
         </div>
 
@@ -39,7 +32,7 @@
               class="hub-search-input"
               aria-label="Search all documents"
               @input="onSearchInput"
-            >
+            />
             <button
               v-if="searchInput"
               class="clear-search-btn"
@@ -60,10 +53,9 @@
             class="filter-pill study-pill"
           >
             Study: <strong>{{ fileshareStore.activeFilters.studyId }}</strong>
-            <button
-              class="remove-pill-btn"
-              @click="clearFilter('studyId')"
-            >×</button>
+            <button class="remove-pill-btn" @click="clearFilter('studyId')">
+              ×
+            </button>
           </span>
 
           <span
@@ -71,10 +63,9 @@
             class="filter-pill site-pill"
           >
             Site: <strong>{{ fileshareStore.activeFilters.siteId }}</strong>
-            <button
-              class="remove-pill-btn"
-              @click="clearFilter('siteId')"
-            >×</button>
+            <button class="remove-pill-btn" @click="clearFilter('siteId')">
+              ×
+            </button>
           </span>
 
           <span
@@ -82,21 +73,20 @@
             class="filter-pill zone-pill"
           >
             Zone: <strong>{{ fileshareStore.activeFilters.zoneCode }}</strong>
-            <button
-              class="remove-pill-btn"
-              @click="clearFilter('zoneCode')"
-            >×</button>
+            <button class="remove-pill-btn" @click="clearFilter('zoneCode')">
+              ×
+            </button>
           </span>
 
           <span
             v-if="fileshareStore.activeFilters.sectionCode"
             class="filter-pill section-pill"
           >
-            Section: <strong>{{ fileshareStore.activeFilters.sectionCode }}</strong>
-            <button
-              class="remove-pill-btn"
-              @click="clearFilter('sectionCode')"
-            >×</button>
+            Section:
+            <strong>{{ fileshareStore.activeFilters.sectionCode }}</strong>
+            <button class="remove-pill-btn" @click="clearFilter('sectionCode')">
+              ×
+            </button>
           </span>
 
           <button
@@ -109,10 +99,7 @@
         </div>
 
         <!-- Bulk Selection Action Ribbon -->
-        <div
-          v-if="selectedFiles.length > 0"
-          class="bulk-actions-toolbar"
-        >
+        <div v-if="selectedFiles.length > 0" class="bulk-actions-toolbar">
           <span class="selection-count-badge">
             ✓ {{ selectedFiles.length }} Selected
           </span>
@@ -143,66 +130,60 @@
                   :indeterminate="isPartiallySelected"
                   aria-label="Select all visible documents"
                   @change="toggleSelectAll"
-                >
+                />
               </th>
-              <th
-                class="sortable-th"
-                @click="setSort('filename')"
-              >
+              <th class="sortable-th" @click="setSort('filename')">
                 Name
-                <span class="sort-indicator">{{ getSortIndicator('filename') }}</span>
+                <span class="sort-indicator">{{
+                  getSortIndicator("filename")
+                }}</span>
               </th>
-              <th
-                class="sortable-th"
-                @click="setSort('study_id')"
-              >
+              <th class="sortable-th" @click="setSort('study_id')">
                 Study
-                <span class="sort-indicator">{{ getSortIndicator('study_id') }}</span>
+                <span class="sort-indicator">{{
+                  getSortIndicator("study_id")
+                }}</span>
               </th>
-              <th
-                class="sortable-th"
-                @click="setSort('site_id')"
-              >
+              <th class="sortable-th" @click="setSort('site_id')">
                 Site
-                <span class="sort-indicator">{{ getSortIndicator('site_id') }}</span>
+                <span class="sort-indicator">{{
+                  getSortIndicator("site_id")
+                }}</span>
               </th>
-              <th
-                class="sortable-th"
-                @click="setSort('uploaded_by')"
-              >
+              <th class="sortable-th" @click="setSort('uploaded_by')">
                 Uploaded By
-                <span class="sort-indicator">{{ getSortIndicator('uploaded_by') }}</span>
+                <span class="sort-indicator">{{
+                  getSortIndicator("uploaded_by")
+                }}</span>
               </th>
-              <th
-                class="sortable-th"
-                @click="setSort('uploaded_at')"
-              >
+              <th class="sortable-th" @click="setSort('uploaded_at')">
                 Last Modified
-                <span class="sort-indicator">{{ getSortIndicator('uploaded_at') }}</span>
+                <span class="sort-indicator">{{
+                  getSortIndicator("uploaded_at")
+                }}</span>
               </th>
-              <th
-                class="sortable-th"
-                @click="setSort('status')"
-              >
+              <th class="sortable-th" @click="setSort('status')">
                 Status
-                <span class="sort-indicator">{{ getSortIndicator('status') }}</span>
+                <span class="sort-indicator">{{
+                  getSortIndicator("status")
+                }}</span>
               </th>
               <th>Shared</th>
-              <th class="actions-th">
-                Actions
-              </th>
+              <th class="actions-th">Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="paginatedDocuments.length === 0">
-              <td
-                colspan="9"
-                class="empty-grid-cell"
-              >
+              <td colspan="9" class="empty-grid-cell">
                 <div class="empty-state-box">
                   <span class="empty-state-icon">📂</span>
-                  <h4>No clinical documents match your search or filter criteria.</h4>
-                  <p>Try resetting filters or expanding other study branches in the folder tree.</p>
+                  <h4>
+                    No clinical documents match your search or filter criteria.
+                  </h4>
+                  <p>
+                    Try resetting filters or expanding other study branches in
+                    the folder tree.
+                  </p>
                 </div>
               </td>
             </tr>
@@ -214,35 +195,26 @@
               :class="{ 'row-selected': isFileSelected(file.id) }"
             >
               <!-- Multi-select Checkbox -->
-              <td
-                class="checkbox-col"
-                @click.stop
-              >
+              <td class="checkbox-col" @click.stop>
                 <input
                   type="checkbox"
                   :checked="isFileSelected(file.id)"
                   :aria-label="'Select document ' + file.filename"
                   @change="fileshareStore.toggleFileSelection(file.id)"
-                >
+                />
               </td>
 
               <!-- File Name & MIME Icon -->
-              <td
-                class="filename-col"
-                @click="openPreview(file)"
-              >
-                <span
-                  class="mime-icon"
-                  :title="file.mime_type"
-                >{{ getMimeIcon(file) }}</span>
-                <span
-                  class="filename-text"
-                  :title="file.filename"
-                >{{ file.filename }}</span>
-                <span
-                  v-if="file.version_index > 1"
-                  class="version-pill"
-                >v{{ file.version_index }}.0</span>
+              <td class="filename-col" @click="openPreview(file)">
+                <span class="mime-icon" :title="file.mime_type">{{
+                  getMimeIcon(file)
+                }}</span>
+                <span class="filename-text" :title="file.filename">{{
+                  file.filename
+                }}</span>
+                <span v-if="file.version_index > 1" class="version-pill"
+                  >v{{ file.version_index }}.0</span
+                >
               </td>
 
               <!-- Study ID -->
@@ -252,19 +224,17 @@
 
               <!-- Site ID -->
               <td>
-                <span
-                  v-if="file.site_id"
-                  class="site-badge"
-                >{{ file.site_id }}</span>
-                <span
-                  v-else
-                  class="text-muted"
-                >Global</span>
+                <span v-if="file.site_id" class="site-badge">{{
+                  file.site_id
+                }}</span>
+                <span v-else class="text-muted">Global</span>
               </td>
 
               <!-- Uploaded By -->
               <td>
-                <span class="uploader-name">{{ file.uploaded_by || file.created_by }}</span>
+                <span class="uploader-name">{{
+                  file.uploaded_by || file.created_by
+                }}</span>
               </td>
 
               <!-- Last Modified -->
@@ -279,7 +249,12 @@
                   class="status-pill status-hold"
                   :title="file.hold_reason || 'File is under retention hold.'"
                 >
-                  🔒 {{ file.status === 'ON_HOLD' ? 'ON HOLD' : (file.status || 'ON HOLD') }}
+                  🔒
+                  {{
+                    file.status === "ON_HOLD"
+                      ? "ON HOLD"
+                      : file.status || "ON HOLD"
+                  }}
                 </span>
                 <span
                   v-else
@@ -309,10 +284,7 @@
               </td>
 
               <!-- Action Buttons -->
-              <td
-                class="actions-cell"
-                @click.stop
-              >
+              <td class="actions-cell" @click.stop>
                 <div class="action-btn-group">
                   <button
                     class="btn btn-sm btn-outline-primary btn-preview-action"
@@ -341,7 +313,11 @@
                   <button
                     class="btn btn-sm btn-outline-danger btn-delete-action"
                     :disabled="file.is_on_hold"
-                    :title="file.is_on_hold ? 'File is under retention hold.' : 'Delete document'"
+                    :title="
+                      file.is_on_hold
+                        ? 'File is under retention hold.'
+                        : 'Delete document'
+                    "
                     :aria-label="'Delete ' + file.filename"
                     @click="handleDeleteFile(file)"
                   >
@@ -355,15 +331,16 @@
       </div>
 
       <!-- Pagination Footer -->
-      <div
-        v-if="totalItems > 0"
-        class="hub-pagination-bar"
-      >
+      <div v-if="totalItems > 0" class="hub-pagination-bar">
         <div class="pagination-info">
           Showing
-          <span class="font-bold">{{ Math.min((currentPage - 1) * itemsPerPage + 1, totalItems) }}</span>
+          <span class="font-bold">{{
+            Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)
+          }}</span>
           to
-          <span class="font-bold">{{ Math.min(currentPage * itemsPerPage, totalItems) }}</span>
+          <span class="font-bold">{{
+            Math.min(currentPage * itemsPerPage, totalItems)
+          }}</span>
           of
           <span class="font-bold">{{ totalItems }}</span> documents
         </div>
@@ -517,7 +494,14 @@ function resetAllFilters() {
 
 const hasActiveFilter = computed(() => {
   const f = fileshareStore.activeFilters;
-  return !!(f.studyId || f.siteId || f.zoneCode || f.sectionCode || f.folderCode || f.searchQuery);
+  return !!(
+    f.studyId ||
+    f.siteId ||
+    f.zoneCode ||
+    f.sectionCode ||
+    f.folderCode ||
+    f.searchQuery
+  );
 });
 
 // Sorting Logic
@@ -557,7 +541,9 @@ const sortedDocuments = computed(() => {
 });
 
 const totalItems = computed(() => sortedDocuments.value.length);
-const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / itemsPerPage)));
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(totalItems.value / itemsPerPage))
+);
 
 const paginatedDocuments = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
@@ -566,7 +552,9 @@ const paginatedDocuments = computed(() => {
 
 // Selection Management
 const selectedFiles = computed(() => {
-  return fileshareStore.files.filter((f) => fileshareStore.selectedFileIds.includes(f.id));
+  return fileshareStore.files.filter((f) =>
+    fileshareStore.selectedFileIds.includes(f.id)
+  );
 });
 
 function isFileSelected(fileId) {
@@ -581,7 +569,9 @@ const isAllSelected = computed(() => {
 
 const isPartiallySelected = computed(() => {
   const pageDocs = paginatedDocuments.value;
-  const count = pageDocs.filter((f) => fileshareStore.selectedFileIds.includes(f.id)).length;
+  const count = pageDocs.filter((f) =>
+    fileshareStore.selectedFileIds.includes(f.id)
+  ).length;
   return count > 0 && count < pageDocs.length;
 });
 
@@ -632,10 +622,18 @@ function getMimeIcon(file) {
   const name = (file.filename || "").toLowerCase();
 
   if (mime.includes("pdf") || name.endsWith(".pdf")) return "📕";
-  if (mime.includes("video") || name.endsWith(".mp4") || name.endsWith(".webm")) return "🎬";
-  if (mime.includes("audio") || name.endsWith(".mp3") || name.endsWith(".wav")) return "🎙️";
-  if (mime.includes("image") || name.endsWith(".png") || name.endsWith(".jpg")) return "🖼️";
-  if (mime.includes("spreadsheet") || name.endsWith(".xlsx") || name.endsWith(".csv")) return "📊";
+  if (mime.includes("video") || name.endsWith(".mp4") || name.endsWith(".webm"))
+    return "🎬";
+  if (mime.includes("audio") || name.endsWith(".mp3") || name.endsWith(".wav"))
+    return "🎙️";
+  if (mime.includes("image") || name.endsWith(".png") || name.endsWith(".jpg"))
+    return "🖼️";
+  if (
+    mime.includes("spreadsheet") ||
+    name.endsWith(".xlsx") ||
+    name.endsWith(".csv")
+  )
+    return "📊";
   if (mime.includes("word") || name.endsWith(".docx")) return "📝";
   return "📄";
 }
@@ -656,7 +654,8 @@ function formatDate(dateStr) {
 
 function getStatusClass(status) {
   const s = (status || "").toLowerCase();
-  if (s.includes("approved") || s.includes("active") || s.includes("verified")) return "status-approved";
+  if (s.includes("approved") || s.includes("active") || s.includes("verified"))
+    return "status-approved";
   if (s.includes("review") || s.includes("pending")) return "status-review";
   if (s.includes("hold") || s.includes("archive")) return "status-hold";
   return "status-draft";
@@ -664,9 +663,14 @@ function getStatusClass(status) {
 
 async function handleDeleteFile(file) {
   if (file.is_on_hold) return;
-  const confirmed = window.confirm(`Are you sure you want to delete ${file.filename}?`);
+  const confirmed = window.confirm(
+    `Are you sure you want to delete ${file.filename}?`
+  );
   if (confirmed) {
-    await fileshareStore.deleteFile(file.id, "User deleted document from Documents Hub");
+    await fileshareStore.deleteFile(
+      file.id,
+      "User deleted document from Documents Hub"
+    );
   }
 }
 </script>

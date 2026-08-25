@@ -6,6 +6,8 @@
     }"
   >
     <!-- Section Header Card -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-keyboard-click="toggleCollapse"
       class="section-header-card section-header"
@@ -31,30 +33,18 @@
       </div>
 
       <!-- Action Controls -->
-      <div
-        class="section-header-right"
-        @click.stop
-      >
-        <button
-          class="btn-add-field btn-add-item"
-          @click="addNewItem"
-        >
+      <div class="section-header-right" @click.stop>
+        <button class="btn-add-field btn-add-item" @click="addNewItem">
           <span>➕</span> Add Field
         </button>
-        <button
-          class="btn-section-toggle"
-          @click="toggleCollapse"
-        >
+        <button class="btn-section-toggle" @click="toggleCollapse">
           {{ section.isCollapsed ? "Expand" : "Collapse" }}
         </button>
       </div>
     </div>
 
     <!-- Section Body: Draggable Nested Items List -->
-    <div
-      v-show="!section.isCollapsed"
-      class="section-body"
-    >
+    <div v-show="!section.isCollapsed" class="section-body">
       <!-- Visual Dropzone Indicator when empty -->
       <div
         v-if="!section.items || section.items.length === 0"

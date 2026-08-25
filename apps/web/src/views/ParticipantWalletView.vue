@@ -5,15 +5,21 @@
       <div class="header-content-group">
         <div class="header-badge-row">
           <span class="badge badge-gxp">21 CFR Part 11</span>
-          <span class="badge badge-regulatory">Participant Financial Wallet</span>
-          <span class="badge badge-standard">PRD-SYS-182 Micro-Ledger Tracer</span>
+          <span class="badge badge-regulatory"
+            >Participant Financial Wallet</span
+          >
+          <span class="badge badge-standard"
+            >PRD-SYS-182 Micro-Ledger Tracer</span
+          >
         </div>
         <h2 class="view-title">
           Participant Financial Wallet &amp; Automated Stipend Micro-Ledger
         </h2>
         <p class="view-subtitle">
-          Manage protocol-linked Schedule of Activities (SoA) stipends, mobile OCR travel/meal reimbursement claims,
-          IRS Form 1099 ($600 cap) tax threshold monitoring, automated reloadable debit card issuing, and IRB anti-coercion limits.
+          Manage protocol-linked Schedule of Activities (SoA) stipends, mobile
+          OCR travel/meal reimbursement claims, IRS Form 1099 ($600 cap) tax
+          threshold monitoring, automated reloadable debit card issuing, and IRB
+          anti-coercion limits.
         </p>
       </div>
       <div class="header-action-group">
@@ -60,7 +66,9 @@
       <div class="stat-card">
         <div class="stat-icon pending-icon">⏳</div>
         <div class="stat-details">
-          <div class="stat-value">{{ pendingClaimsCount }}</div>
+          <div class="stat-value">
+            {{ pendingClaimsCount }}
+          </div>
           <div class="stat-label">Claims Pending Review</div>
         </div>
       </div>
@@ -73,7 +81,10 @@
           <span class="tax-icon-badge">📑</span>
           <div>
             <strong>IRS Form 1099 Tax Reporting Threshold Tracer</strong>
-            <span class="tax-subtext">Subject: {{ selectedWallet.subject_id }} | Annual Cap: $600.00</span>
+            <span class="tax-subtext"
+              >Subject: {{ selectedWallet.subject_id }} | Annual Cap:
+              $600.00</span
+            >
           </div>
         </div>
         <div class="tax-badge-group">
@@ -81,11 +92,15 @@
             class="badge"
             :class="{
               'badge-gxp': selectedWalletTaxStatus?.warning_level === 'NORMAL',
-              'badge-warning': selectedWalletTaxStatus?.warning_level === 'APPROACHING',
-              'badge-danger': selectedWalletTaxStatus?.warning_level === 'EXCEEDED',
+              'badge-warning':
+                selectedWalletTaxStatus?.warning_level === 'APPROACHING',
+              'badge-danger':
+                selectedWalletTaxStatus?.warning_level === 'EXCEEDED',
             }"
           >
-            {{ selectedWalletTaxStatus?.warning_level || 'NORMAL' }} ({{ (selectedWalletTaxStatus?.threshold_percentage || 0).toFixed(1) }}%)
+            {{ selectedWalletTaxStatus?.warning_level || "NORMAL" }} ({{
+              (selectedWalletTaxStatus?.threshold_percentage || 0).toFixed(1)
+            }}%)
           </span>
           <span
             class="badge"
@@ -106,26 +121,61 @@
         <div
           class="progress-bar-fill"
           :class="{
-            'fill-normal': (selectedWalletTaxStatus?.threshold_percentage || 0) < 80,
-            'fill-approaching': (selectedWalletTaxStatus?.threshold_percentage || 0) >= 80 && (selectedWalletTaxStatus?.threshold_percentage || 0) < 100,
-            'fill-exceeded': (selectedWalletTaxStatus?.threshold_percentage || 0) >= 100,
+            'fill-normal':
+              (selectedWalletTaxStatus?.threshold_percentage || 0) < 80,
+            'fill-approaching':
+              (selectedWalletTaxStatus?.threshold_percentage || 0) >= 80 &&
+              (selectedWalletTaxStatus?.threshold_percentage || 0) < 100,
+            'fill-exceeded':
+              (selectedWalletTaxStatus?.threshold_percentage || 0) >= 100,
           }"
-          :style="{ width: `${Math.min(100, selectedWalletTaxStatus?.threshold_percentage || 0)}%` }"
-        ></div>
+          :style="{
+            width: `${Math.min(100, selectedWalletTaxStatus?.threshold_percentage || 0)}%`,
+          }"
+        />
       </div>
       <div class="tax-legend">
-        <span>Current Taxable YTD: ${{ (selectedWallet.taxable_ytd || 0).toFixed(2) }}</span>
-        <span>Remaining to $600 Cap: ${{ Math.max(0, 600 - (selectedWallet.taxable_ytd || 0)).toFixed(2) }}</span>
+        <span
+          >Current Taxable YTD: ${{
+            (selectedWallet.taxable_ytd || 0).toFixed(2)
+          }}</span
+        >
+        <span
+          >Remaining to $600 Cap: ${{
+            Math.max(0, 600 - (selectedWallet.taxable_ytd || 0)).toFixed(2)
+          }}</span
+        >
       </div>
 
       <!-- W-9 Warning Alert & Trigger -->
-      <div v-if="selectedWallet.w9_status === 'REQUIRED'" class="alert-tax-warning">
-        <span>⚠️ <strong>W-9 Required:</strong> Subject has reached or exceeded the $600.00 IRS 1099 threshold. Taxpayer identification certification must be collected.</span>
-        <button class="btn btn-xs btn-primary" @click="showW9Modal = true">Submit Form W-9</button>
+      <div
+        v-if="selectedWallet.w9_status === 'REQUIRED'"
+        class="alert-tax-warning"
+      >
+        <span
+          >⚠️ <strong>W-9 Required:</strong> Subject has reached or exceeded the
+          $600.00 IRS 1099 threshold. Taxpayer identification certification must
+          be collected.</span
+        >
+        <button class="btn btn-xs btn-primary" @click="showW9Modal = true">
+          Submit Form W-9
+        </button>
       </div>
-      <div v-else-if="selectedWallet.w9_status === 'SUBMITTED'" class="alert-tax-info">
-        <span>⏳ <strong>W-9 Pending Verification:</strong> Subject submitted TIN ending in {{ selectedWallet.tax_id_last_four || '****' }}. Awaiting coordinator validation.</span>
-        <button class="btn btn-xs btn-success" @click="verifyW9Form(selectedWallet.id)">Verify W-9 (CRC)</button>
+      <div
+        v-else-if="selectedWallet.w9_status === 'SUBMITTED'"
+        class="alert-tax-info"
+      >
+        <span
+          >⏳ <strong>W-9 Pending Verification:</strong> Subject submitted TIN
+          ending in {{ selectedWallet.tax_id_last_four || "****" }}. Awaiting
+          coordinator validation.</span
+        >
+        <button
+          class="btn btn-xs btn-success"
+          @click="verifyW9Form(selectedWallet.id)"
+        >
+          Verify W-9 (CRC)
+        </button>
       </div>
     </div>
 
@@ -172,8 +222,12 @@
     <div v-if="activeTab === 'wallets'" class="tab-content">
       <div class="panel-box">
         <div class="panel-header">
-          <h3 class="panel-title">Participant Wallet Directory &amp; 1099 Compliance State</h3>
-          <span class="panel-tag">{{ wallets.length }} Wallets Provisioned</span>
+          <h3 class="panel-title">
+            Participant Wallet Directory &amp; 1099 Compliance State
+          </h3>
+          <span class="panel-tag"
+            >{{ wallets.length }} Wallets Provisioned</span
+          >
         </div>
         <div class="panel-body">
           <div class="table-container">
@@ -192,10 +246,18 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="w in wallets" :key="w.id" :class="{ 'row-highlight': selectedWallet?.id === w.id }">
-                  <td><strong>{{ w.subject_id }}</strong></td>
+                <tr
+                  v-for="w in wallets"
+                  :key="w.id"
+                  :class="{ 'row-highlight': selectedWallet?.id === w.id }"
+                >
+                  <td>
+                    <strong>{{ w.subject_id }}</strong>
+                  </td>
                   <td>{{ w.study_id }} / {{ w.site_id }}</td>
-                  <td class="text-success font-bold">${{ w.current_balance.toFixed(2) }} {{ w.currency }}</td>
+                  <td class="text-success font-bold">
+                    ${{ w.current_balance.toFixed(2) }} {{ w.currency }}
+                  </td>
                   <td>
                     <div class="tax-cell">
                       <span>${{ (w.taxable_ytd || 0).toFixed(2) }}</span>
@@ -217,17 +279,25 @@
                         'badge-standard': w.w9_status === 'NOT_REQUIRED',
                       }"
                     >
-                      {{ w.w9_status || 'NOT_REQUIRED' }}
+                      {{ w.w9_status || "NOT_REQUIRED" }}
                     </span>
                   </td>
                   <td>
-                    <span class="badge badge-standard">{{ w.virtual_card_mask || 'Reloadable Debit Card' }}</span>
+                    <span class="badge badge-standard">{{
+                      w.virtual_card_mask || "Reloadable Debit Card"
+                    }}</span>
                   </td>
                   <td>
-                    <span v-if="w.anti_coercion_cap" class="badge badge-regulatory">${{ w.anti_coercion_cap.toFixed(2) }} max</span>
+                    <span
+                      v-if="w.anti_coercion_cap"
+                      class="badge badge-regulatory"
+                      >${{ w.anti_coercion_cap.toFixed(2) }} max</span
+                    >
                     <span v-else class="text-muted">Protocol Default</span>
                   </td>
-                  <td><span class="badge badge-gxp">{{ w.status }}</span></td>
+                  <td>
+                    <span class="badge badge-gxp">{{ w.status }}</span>
+                  </td>
                   <td>
                     <div class="action-btn-group">
                       <button
@@ -237,7 +307,10 @@
                         Inspect / Disburse
                       </button>
                       <button
-                        v-if="!w.virtual_card_token || w.virtual_card_token.startsWith('VTOK')"
+                        v-if="
+                          !w.virtual_card_token ||
+                          w.virtual_card_token.startsWith('VTOK')
+                        "
                         class="btn btn-sm btn-secondary"
                         @click="issueReloadableCard(w.id)"
                       >
@@ -247,7 +320,9 @@
                   </td>
                 </tr>
                 <tr v-if="wallets.length === 0">
-                  <td colspan="9" class="empty-cell">No participant wallets provisioned yet.</td>
+                  <td colspan="9" class="empty-cell">
+                    No participant wallets provisioned yet.
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -257,12 +332,28 @@
           <div v-if="selectedWallet" class="selected-wallet-card">
             <div class="card-header-flex">
               <div>
-                <h4 class="card-heading">Active Wallet: {{ selectedWallet.subject_id }}</h4>
-                <p class="card-subheading">Study: {{ selectedWallet.study_id }} | Site: {{ selectedWallet.site_id }} | Currency: {{ selectedWallet.currency }}</p>
+                <h4 class="card-heading">
+                  Active Wallet: {{ selectedWallet.subject_id }}
+                </h4>
+                <p class="card-subheading">
+                  Study: {{ selectedWallet.study_id }} | Site:
+                  {{ selectedWallet.site_id }} | Currency:
+                  {{ selectedWallet.currency }}
+                </p>
               </div>
               <div class="card-header-actions">
-                <button class="btn btn-sm btn-secondary" @click="fetchBalanceInquiry(selectedWallet.id)">Inquire Balance</button>
-                <button class="btn btn-sm btn-secondary" @click="selectedWallet = null">Close</button>
+                <button
+                  class="btn btn-sm btn-secondary"
+                  @click="fetchBalanceInquiry(selectedWallet.id)"
+                >
+                  Inquire Balance
+                </button>
+                <button
+                  class="btn btn-sm btn-secondary"
+                  @click="selectedWallet = null"
+                >
+                  Close
+                </button>
               </div>
             </div>
 
@@ -270,52 +361,100 @@
             <div v-if="balanceInquiryData" class="balance-inquiry-box">
               <div class="inquiry-stat">
                 <span class="inquiry-label">Available Balance</span>
-                <span class="inquiry-val text-success font-bold">${{ balanceInquiryData.available_balance.toFixed(2) }}</span>
+                <span class="inquiry-val text-success font-bold"
+                  >${{ balanceInquiryData.available_balance.toFixed(2) }}</span
+                >
               </div>
               <div class="inquiry-stat">
                 <span class="inquiry-label">Pending Expense Claims</span>
-                <span class="inquiry-val text-warning font-bold">${{ balanceInquiryData.pending_claims_total.toFixed(2) }}</span>
+                <span class="inquiry-val text-warning font-bold"
+                  >${{
+                    balanceInquiryData.pending_claims_total.toFixed(2)
+                  }}</span
+                >
               </div>
               <div class="inquiry-stat">
                 <span class="inquiry-label">Lifetime Stipends</span>
-                <span class="inquiry-val">${{ balanceInquiryData.lifetime_stipends.toFixed(2) }}</span>
+                <span class="inquiry-val"
+                  >${{ balanceInquiryData.lifetime_stipends.toFixed(2) }}</span
+                >
               </div>
               <div class="inquiry-stat">
                 <span class="inquiry-label">Lifetime Reimbursements</span>
-                <span class="inquiry-val">${{ balanceInquiryData.lifetime_reimbursements.toFixed(2) }}</span>
+                <span class="inquiry-val"
+                  >${{
+                    balanceInquiryData.lifetime_reimbursements.toFixed(2)
+                  }}</span
+                >
               </div>
               <div class="inquiry-stat">
                 <span class="inquiry-label">1099 Taxable YTD</span>
-                <span class="inquiry-val">${{ balanceInquiryData.taxable_ytd.toFixed(2) }}</span>
+                <span class="inquiry-val"
+                  >${{ balanceInquiryData.taxable_ytd.toFixed(2) }}</span
+                >
               </div>
             </div>
 
             <div class="credentials-grid">
               <div class="cred-card virtual-card-preview">
-                <div class="card-chip">💳 {{ selectedWallet.card_type || 'Reloadable Debit Card' }}</div>
-                <div class="card-number">{{ selectedWallet.virtual_card_mask || '**** **** **** 4821' }}</div>
-                <div class="card-exp">EXP: {{ selectedWallet.virtual_card_expiry || '12/29' }} | Status: {{ selectedWallet.card_status || 'ACTIVE' }}</div>
-                <div class="card-holder">{{ selectedWallet.ach_account_holder || ('Participant ' + selectedWallet.subject_id) }}</div>
+                <div class="card-chip">
+                  💳 {{ selectedWallet.card_type || "Reloadable Debit Card" }}
+                </div>
+                <div class="card-number">
+                  {{
+                    selectedWallet.virtual_card_mask || "**** **** **** 4821"
+                  }}
+                </div>
+                <div class="card-exp">
+                  EXP: {{ selectedWallet.virtual_card_expiry || "12/29" }} |
+                  Status: {{ selectedWallet.card_status || "ACTIVE" }}
+                </div>
+                <div class="card-holder">
+                  {{
+                    selectedWallet.ach_account_holder ||
+                    "Participant " + selectedWallet.subject_id
+                  }}
+                </div>
               </div>
               <div class="cred-card ach-preview">
                 <div class="card-chip">🏦 Direct ACH Payout Account</div>
-                <div class="ach-row"><strong>Routing:</strong> {{ selectedWallet.ach_routing_number || '021000021' }}</div>
-                <div class="ach-row"><strong>Account:</strong> {{ selectedWallet.ach_account_mask || 'ACH-***4321' }}</div>
-                <div class="ach-row"><strong>Holder:</strong> {{ selectedWallet.ach_account_holder }}</div>
-                <div class="ach-row"><strong>W-9 Form:</strong> <span class="badge badge-gxp">{{ selectedWallet.w9_status }}</span></div>
+                <div class="ach-row">
+                  <strong>Routing:</strong>
+                  {{ selectedWallet.ach_routing_number || "021000021" }}
+                </div>
+                <div class="ach-row">
+                  <strong>Account:</strong>
+                  {{ selectedWallet.ach_account_mask || "ACH-***4321" }}
+                </div>
+                <div class="ach-row">
+                  <strong>Holder:</strong>
+                  {{ selectedWallet.ach_account_holder }}
+                </div>
+                <div class="ach-row">
+                  <strong>W-9 Form:</strong>
+                  <span class="badge badge-gxp">{{
+                    selectedWallet.w9_status
+                  }}</span>
+                </div>
               </div>
             </div>
 
             <div class="disburse-action-bar">
               <div class="disburse-input-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Payout Method:</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <select v-model="disburseForm.type" class="form-select">
-                  <option value="VIRTUAL_CARD">Instant Reloadable Debit Card</option>
+                  <option value="VIRTUAL_CARD">
+                    Instant Reloadable Debit Card
+                  </option>
                   <option value="DIRECT_ACH">Direct Bank ACH Transfer</option>
                 </select>
               </div>
               <div class="disburse-input-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Amount ($):</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
                   v-model.number="disburseForm.amount"
                   type="number"
@@ -329,7 +468,11 @@
                 :disabled="selectedWallet.current_balance <= 0 || isSubmitting"
                 @click="triggerDisbursement"
               >
-                🚀 Disburse Funds (${{ (disburseForm.amount || selectedWallet.current_balance).toFixed(2) }})
+                🚀 Disburse Funds (${{
+                  (
+                    disburseForm.amount || selectedWallet.current_balance
+                  ).toFixed(2)
+                }})
               </button>
             </div>
           </div>
@@ -343,8 +486,12 @@
         <!-- Stipend Rules Catalog -->
         <div class="panel-box">
           <div class="panel-header">
-            <h3 class="panel-title">Schedule of Activities (SoA) Compensation Matrix</h3>
-            <span class="panel-tag">{{ stipendRules.length }} Active Rules</span>
+            <h3 class="panel-title">
+              Schedule of Activities (SoA) Compensation Matrix
+            </h3>
+            <span class="panel-tag"
+              >{{ stipendRules.length }} Active Rules</span
+            >
           </div>
           <div class="panel-body">
             <div class="table-container">
@@ -361,18 +508,36 @@
                 </thead>
                 <tbody>
                   <tr v-for="r in stipendRules" :key="r.id">
-                    <td><code>{{ r.visit_code }}</code></td>
-                    <td><strong>{{ r.visit_name }}</strong></td>
-                    <td class="text-success font-bold">${{ r.amount.toFixed(2) }} {{ r.currency }}</td>
                     <td>
-                      <span v-if="r.is_milestone" class="badge badge-regulatory">{{ r.milestone_code || 'Milestone' }}</span>
+                      <code>{{ r.visit_code }}</code>
+                    </td>
+                    <td>
+                      <strong>{{ r.visit_name }}</strong>
+                    </td>
+                    <td class="text-success font-bold">
+                      ${{ r.amount.toFixed(2) }} {{ r.currency }}
+                    </td>
+                    <td>
+                      <span
+                        v-if="r.is_milestone"
+                        class="badge badge-regulatory"
+                        >{{ r.milestone_code || "Milestone" }}</span
+                      >
                       <span v-else class="text-muted">Standard Visit</span>
                     </td>
                     <td>
-                      <span v-if="r.anti_coercion_cap" class="badge badge-warning">${{ r.anti_coercion_cap.toFixed(2) }} limit</span>
+                      <span
+                        v-if="r.anti_coercion_cap"
+                        class="badge badge-warning"
+                        >${{ r.anti_coercion_cap.toFixed(2) }} limit</span
+                      >
                       <span v-else class="text-muted">Standard</span>
                     </td>
-                    <td><span class="badge badge-standard">{{ r.taxable ? '1099 Taxable' : 'Non-Taxable' }}</span></td>
+                    <td>
+                      <span class="badge badge-standard">{{
+                        r.taxable ? "1099 Taxable" : "Non-Taxable"
+                      }}</span>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -383,30 +548,46 @@
         <!-- Visit Trigger Simulator -->
         <div class="panel-box">
           <div class="panel-header">
-            <h3 class="panel-title">⚡ EDC Verified Visit Completion Trigger Simulator</h3>
+            <h3 class="panel-title">
+              ⚡ EDC Verified Visit Completion Trigger Simulator
+            </h3>
           </div>
           <div class="panel-body">
             <p class="info-desc">
-              Simulate an inbound webhook or coordinator confirmation from EDC. Upon verified clinic visit completion,
-              the SoA protocol rule automatically credits the subject's wallet and updates IRS 1099 tax counters.
+              Simulate an inbound webhook or coordinator confirmation from EDC.
+              Upon verified clinic visit completion, the SoA protocol rule
+              automatically credits the subject's wallet and updates IRS 1099
+              tax counters.
             </p>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Study Protocol:</label>
               <input v-model="visitEventForm.study_id" class="form-input" />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Site ID:</label>
               <input v-model="visitEventForm.site_id" class="form-input" />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Subject ID / MRN:</label>
               <input v-model="visitEventForm.subject_id" class="form-input" />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Completed Visit:</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <select v-model="visitEventForm.visit_code" class="form-select">
-                <option v-for="r in stipendRules" :key="r.id" :value="r.visit_code">
-                  {{ r.visit_name }} ({{ r.visit_code }}) - ${{ r.amount.toFixed(2) }} {{ r.taxable ? '[Taxable]' : '' }}
+                <option
+                  v-for="r in stipendRules"
+                  :key="r.id"
+                  :value="r.visit_code"
+                >
+                  {{ r.visit_name }} ({{ r.visit_code }}) - ${{
+                    r.amount.toFixed(2)
+                  }}
+                  {{ r.taxable ? "[Taxable]" : "" }}
                 </option>
               </select>
             </div>
@@ -435,37 +616,87 @@
             <span class="badge badge-regulatory">Automated Parser</span>
           </div>
           <div class="panel-body">
+            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <div class="ocr-dropzone" @click="simulateReceiptUpload">
               <div class="dropzone-icon">📷</div>
               <div class="dropzone-text">
                 <strong>Click to Upload Receipt Image / Sample OCR</strong>
-                <p>Supports JPG, PNG, PDF receipts for Mileage, Parking, Transit, Meals, Lodging</p>
+                <p>
+                  Supports JPG, PNG, PDF receipts for Mileage, Parking, Transit,
+                  Meals, Lodging
+                </p>
               </div>
             </div>
 
             <div class="sample-receipt-presets">
               <span class="preset-label">Quick Sample Scenarios:</span>
-              <button class="btn btn-xs btn-secondary" @click="loadSampleReceipt('transit')">Metro Transit ($28.50)</button>
-              <button class="btn btn-xs btn-secondary" @click="loadSampleReceipt('parking')">Hospital Parking ($22.00)</button>
-              <button class="btn btn-xs btn-secondary" @click="loadSampleReceipt('gas')">Mileage / Gas ($45.00)</button>
-              <button class="btn btn-xs btn-secondary" @click="loadSampleReceipt('meal_standard')">Lunch Cafe ($18.75)</button>
-              <button class="btn btn-xs btn-secondary" @click="loadSampleReceipt('meal_excess')">Dinner Above $75 ($95.00)</button>
+              <button
+                class="btn btn-xs btn-secondary"
+                @click="loadSampleReceipt('transit')"
+              >
+                Metro Transit ($28.50)
+              </button>
+              <button
+                class="btn btn-xs btn-secondary"
+                @click="loadSampleReceipt('parking')"
+              >
+                Hospital Parking ($22.00)
+              </button>
+              <button
+                class="btn btn-xs btn-secondary"
+                @click="loadSampleReceipt('gas')"
+              >
+                Mileage / Gas ($45.00)
+              </button>
+              <button
+                class="btn btn-xs btn-secondary"
+                @click="loadSampleReceipt('meal_standard')"
+              >
+                Lunch Cafe ($18.75)
+              </button>
+              <button
+                class="btn btn-xs btn-secondary"
+                @click="loadSampleReceipt('meal_excess')"
+              >
+                Dinner Above $75 ($95.00)
+              </button>
             </div>
 
             <div v-if="ocrResult" class="ocr-result-card">
               <div class="ocr-header">
-                <h4>Extracted Metadata (Confidence: {{ (ocrResult.confidence_score * 100).toFixed(0) }}%)</h4>
+                <h4>
+                  Extracted Metadata (Confidence:
+                  {{ (ocrResult.confidence_score * 100).toFixed(0) }}%)
+                </h4>
                 <span class="badge badge-gxp">{{ ocrResult.category }}</span>
               </div>
               <div class="ocr-grid">
-                <div><strong>Merchant:</strong> {{ ocrResult.merchant_name }}</div>
+                <div>
+                  <strong>Merchant:</strong> {{ ocrResult.merchant_name }}
+                </div>
                 <div><strong>Date:</strong> {{ ocrResult.expense_date }}</div>
-                <div><strong>Gross Amount:</strong> ${{ ocrResult.gross_amount.toFixed(2) }}</div>
-                <div><strong>Tax Offset:</strong> ${{ ocrResult.tax_deduction.toFixed(2) }}</div>
-                <div><strong>Net Reimbursement:</strong> <span class="text-success font-bold">${{ ocrResult.net_amount.toFixed(2) }}</span></div>
+                <div>
+                  <strong>Gross Amount:</strong> ${{
+                    ocrResult.gross_amount.toFixed(2)
+                  }}
+                </div>
+                <div>
+                  <strong>Tax Offset:</strong> ${{
+                    ocrResult.tax_deduction.toFixed(2)
+                  }}
+                </div>
+                <div>
+                  <strong>Net Reimbursement:</strong>
+                  <span class="text-success font-bold"
+                    >${{ ocrResult.net_amount.toFixed(2) }}</span
+                  >
+                </div>
               </div>
               <div v-if="ocrResult.tax_deduction > 0" class="tax-offset-notice">
-                ⚠️ Gross amount exceeds the $75.00 meal per-diem cap. Tax withholding of ${{ ocrResult.tax_deduction.toFixed(2) }} deducted from reimbursement.
+                ⚠️ Gross amount exceeds the $75.00 meal per-diem cap. Tax
+                withholding of ${{ ocrResult.tax_deduction.toFixed(2) }}
+                deducted from reimbursement.
               </div>
               <div class="ocr-raw">
                 <small><strong>Raw Detected Text:</strong></small>
@@ -478,14 +709,18 @@
         <!-- Submit Claim Form -->
         <div class="panel-box">
           <div class="panel-header">
-            <h3 class="panel-title">Submit Travel / Meal Reimbursement Claim</h3>
+            <h3 class="panel-title">
+              Submit Travel / Meal Reimbursement Claim
+            </h3>
           </div>
           <div class="panel-body">
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Participant Subject ID:</label>
               <input v-model="expenseForm.subject_id" class="form-input" />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Study ID / Site ID:</label>
               <div class="form-row-2">
                 <input v-model="expenseForm.study_id" class="form-input" />
@@ -493,7 +728,9 @@
               </div>
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Category:</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <select v-model="expenseForm.category" class="form-select">
                 <option value="MILEAGE">Mileage / Fuel</option>
                 <option value="PARKING">Parking Fee / Garage</option>
@@ -504,22 +741,39 @@
               </select>
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Merchant / Vendor Name:</label>
               <input v-model="expenseForm.merchant_name" class="form-input" />
             </div>
             <div class="form-row-2">
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Gross Amount ($):</label>
-                <input v-model.number="expenseForm.gross_amount" type="number" step="0.01" class="form-input" />
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input
+                  v-model.number="expenseForm.gross_amount"
+                  type="number"
+                  step="0.01"
+                  class="form-input"
+                />
               </div>
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Expense Date:</label>
-                <input v-model="expenseForm.expense_date" type="date" class="form-input" />
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input
+                  v-model="expenseForm.expense_date"
+                  type="date"
+                  class="form-input"
+                />
               </div>
             </div>
             <div v-if="expenseForm.category === 'MEAL'" class="form-group">
               <label class="checkbox-label">
-                <input v-model="expenseForm.is_meal_allowance" type="checkbox" />
+                <input
+                  v-model="expenseForm.is_meal_allowance"
+                  type="checkbox"
+                />
                 Apply standard $75.00 daily per-diem cap
               </label>
             </div>
@@ -542,8 +796,12 @@
     <div v-if="activeTab === 'approvals'" class="tab-content">
       <div class="panel-box">
         <div class="panel-header">
-          <h3 class="panel-title">1-Click Coordinator Expense Claim Review Queue</h3>
-          <span class="badge badge-regulatory">{{ pendingClaims.length }} Pending Decisions</span>
+          <h3 class="panel-title">
+            1-Click Coordinator Expense Claim Review Queue
+          </h3>
+          <span class="badge badge-regulatory"
+            >{{ pendingClaims.length }} Pending Decisions</span
+          >
         </div>
         <div class="panel-body">
           <div class="table-container">
@@ -564,16 +822,26 @@
               </thead>
               <tbody>
                 <tr v-for="c in pendingClaims" :key="c.id">
-                  <td><code>{{ c.id.substring(0, 8) }}...</code></td>
-                  <td><strong>{{ c.subject_id }}</strong></td>
+                  <td>
+                    <code>{{ c.id.substring(0, 8) }}...</code>
+                  </td>
+                  <td>
+                    <strong>{{ c.subject_id }}</strong>
+                  </td>
                   <td>{{ c.expense_date }}</td>
-                  <td><span class="badge badge-standard">{{ c.category }}</span></td>
+                  <td>
+                    <span class="badge badge-standard">{{ c.category }}</span>
+                  </td>
                   <td>{{ c.merchant_name }}</td>
                   <td>${{ c.gross_amount.toFixed(2) }}</td>
                   <td>${{ c.tax_deduction.toFixed(2) }}</td>
-                  <td class="text-success font-bold">${{ c.net_amount.toFixed(2) }}</td>
+                  <td class="text-success font-bold">
+                    ${{ c.net_amount.toFixed(2) }}
+                  </td>
                   <td>
-                    <span class="badge badge-gxp">{{ c.receipt_image_name || 'Receipt.jpg' }}</span>
+                    <span class="badge badge-gxp">{{
+                      c.receipt_image_name || "Receipt.jpg"
+                    }}</span>
                   </td>
                   <td>
                     <div class="action-btn-group">
@@ -595,7 +863,9 @@
                   </td>
                 </tr>
                 <tr v-if="pendingClaims.length === 0">
-                  <td colspan="10" class="empty-cell">🎉 No pending expense claims in queue!</td>
+                  <td colspan="10" class="empty-cell">
+                    🎉 No pending expense claims in queue!
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -608,7 +878,9 @@
     <div v-if="activeTab === 'disbursements'" class="tab-content">
       <div class="panel-box">
         <div class="panel-header">
-          <h3 class="panel-title">21 CFR Part 11 Immutable Participant Financial Ledger</h3>
+          <h3 class="panel-title">
+            21 CFR Part 11 Immutable Participant Financial Ledger
+          </h3>
           <span class="badge badge-gxp">Digital Payout Dispatches</span>
         </div>
         <div class="panel-body">
@@ -628,7 +900,9 @@
               <tbody>
                 <tr v-for="tx in ledgerTransactions" :key="tx.id">
                   <td>{{ formatDate(tx.created_at) }}</td>
-                  <td><strong>{{ tx.subject_id }}</strong></td>
+                  <td>
+                    <strong>{{ tx.subject_id }}</strong>
+                  </td>
                   <td>{{ tx.study_id }}</td>
                   <td>
                     <span
@@ -638,14 +912,22 @@
                       {{ tx.transaction_type }}
                     </span>
                   </td>
-                  <td :class="tx.amount >= 0 ? 'text-success font-bold' : 'text-danger font-bold'">
-                    {{ tx.amount >= 0 ? '+' : '' }}${{ tx.amount.toFixed(2) }}
+                  <td
+                    :class="
+                      tx.amount >= 0
+                        ? 'text-success font-bold'
+                        : 'text-danger font-bold'
+                    "
+                  >
+                    {{ tx.amount >= 0 ? "+" : "" }}${{ tx.amount.toFixed(2) }}
                   </td>
                   <td>${{ tx.balance_after.toFixed(2) }}</td>
                   <td>{{ tx.description }}</td>
                 </tr>
                 <tr v-if="ledgerTransactions.length === 0">
-                  <td colspan="7" class="empty-cell">No transaction ledger records recorded yet.</td>
+                  <td colspan="7" class="empty-cell">
+                    No transaction ledger records recorded yet.
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -655,40 +937,70 @@
     </div>
 
     <!-- Modal: Form W-9 Taxpayer Certification -->
-    <div v-if="showW9Modal" class="modal-backdrop" @click.self="showW9Modal = false">
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <div
+      v-if="showW9Modal"
+      class="modal-backdrop"
+      @click.self="showW9Modal = false"
+    >
       <div class="modal-card">
         <div class="modal-header">
           <h3>IRS Form W-9 Taxpayer Certification</h3>
-          <button class="modal-close-btn" @click="showW9Modal = false">&times;</button>
+          <button class="modal-close-btn" @click="showW9Modal = false">
+            &times;
+          </button>
         </div>
         <div class="modal-body">
           <p class="modal-desc">
-            Under penalties of perjury, certify that the Taxpayer Identification Number (TIN) provided below is accurate.
+            Under penalties of perjury, certify that the Taxpayer Identification
+            Number (TIN) provided below is accurate.
           </p>
           <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label>Legal Taxpayer Name:</label>
-            <input v-model="w9Form.full_legal_name" class="form-input" placeholder="e.g. Jane Doe" />
+            <input
+              v-model="w9Form.full_legal_name"
+              class="form-input"
+              placeholder="e.g. Jane Doe"
+            />
           </div>
           <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label>Last 4 Digits of SSN / ITIN:</label>
-            <input v-model="w9Form.tax_id_last_four" maxlength="4" class="form-input" placeholder="e.g. 1234" />
+            <input
+              v-model="w9Form.tax_id_last_four"
+              maxlength="4"
+              class="form-input"
+              placeholder="e.g. 1234"
+            />
           </div>
           <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label>Mailing Address:</label>
-            <input v-model="w9Form.address" class="form-input" placeholder="123 Clinical Way, City, State" />
+            <input
+              v-model="w9Form.address"
+              class="form-input"
+              placeholder="123 Clinical Way, City, State"
+            />
           </div>
           <div class="form-group">
             <label class="checkbox-label">
               <input v-model="w9Form.certify_accurate" type="checkbox" />
-              I certify under penalty of perjury that the TIN entered above is correct.
+              I certify under penalty of perjury that the TIN entered above is
+              correct.
             </label>
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showW9Modal = false">Cancel</button>
+          <button class="btn btn-secondary" @click="showW9Modal = false">
+            Cancel
+          </button>
           <button
             class="btn btn-primary"
-            :disabled="!w9Form.certify_accurate || w9Form.tax_id_last_four.length !== 4"
+            :disabled="
+              !w9Form.certify_accurate || w9Form.tax_id_last_four.length !== 4
+            "
             @click="submitW9Form"
           >
             Submit W-9 Certification
@@ -700,14 +1012,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted } from "vue";
 
-const activeTab = ref('wallets');
+const activeTab = ref("wallets");
 const isLoading = ref(false);
 const isSubmitting = ref(false);
 const showW9Modal = ref(false);
-const visitTriggerSuccess = ref('');
-const claimSubmitSuccess = ref('');
+const visitTriggerSuccess = ref("");
+const claimSubmitSuccess = ref("");
 
 const selectedWallet = ref<any>(null);
 const selectedWalletTaxStatus = ref<any>(null);
@@ -719,106 +1031,123 @@ const ledgerTransactions = ref<any[]>([]);
 const ocrResult = ref<any>(null);
 
 const disburseForm = ref({
-  type: 'VIRTUAL_CARD',
+  type: "VIRTUAL_CARD",
   amount: 0,
 });
 
 const w9Form = ref({
-  full_legal_name: '',
-  tax_id_last_four: '',
-  address: '',
+  full_legal_name: "",
+  tax_id_last_four: "",
+  address: "",
   certify_accurate: true,
 });
 
 const visitEventForm = ref({
-  study_id: 'STUDY-DCT-001',
-  site_id: 'SITE-101',
-  subject_id: 'SUBJ-1001',
-  visit_code: 'V1_SCREENING',
+  study_id: "STUDY-DCT-001",
+  site_id: "SITE-101",
+  subject_id: "SUBJ-1001",
+  visit_code: "V1_SCREENING",
 });
 
 const expenseForm = ref({
-  subject_id: 'SUBJ-1001',
-  study_id: 'STUDY-DCT-001',
-  site_id: 'SITE-101',
-  category: 'TRANSIT',
-  merchant_name: 'Metro Transit Authority',
-  gross_amount: 28.50,
+  subject_id: "SUBJ-1001",
+  study_id: "STUDY-DCT-001",
+  site_id: "SITE-101",
+  category: "TRANSIT",
+  merchant_name: "Metro Transit Authority",
+  gross_amount: 28.5,
   is_meal_allowance: false,
   expense_date: new Date().toISOString().substring(0, 10),
 });
 
-const totalBalance = computed(() => wallets.value.reduce((acc, w) => acc + (w.current_balance || 0), 0));
-const totalStipends = computed(() => wallets.value.reduce((acc, w) => acc + (w.lifetime_stipends || 0), 0));
-const totalReimbursements = computed(() => wallets.value.reduce((acc, w) => acc + (w.lifetime_reimbursements || 0), 0));
-const totalTaxableYtd = computed(() => wallets.value.reduce((acc, w) => acc + (w.taxable_ytd || 0), 0));
-const pendingClaims = computed(() => expenseClaims.value.filter(c => c.status === 'PENDING_REVIEW'));
+const totalBalance = computed(() =>
+  wallets.value.reduce((acc, w) => acc + (w.current_balance || 0), 0)
+);
+const totalStipends = computed(() =>
+  wallets.value.reduce((acc, w) => acc + (w.lifetime_stipends || 0), 0)
+);
+const totalReimbursements = computed(() =>
+  wallets.value.reduce((acc, w) => acc + (w.lifetime_reimbursements || 0), 0)
+);
+const totalTaxableYtd = computed(() =>
+  wallets.value.reduce((acc, w) => acc + (w.taxable_ytd || 0), 0)
+);
+const pendingClaims = computed(() =>
+  expenseClaims.value.filter((c) => c.status === "PENDING_REVIEW")
+);
 const pendingClaimsCount = computed(() => pendingClaims.value.length);
 
 function formatDate(iso: string) {
-  if (!iso) return '-';
+  if (!iso) return "-";
   return new Date(iso).toLocaleString();
 }
 
 async function selectWallet(w: any) {
   selectedWallet.value = w;
   disburseForm.value.amount = w.current_balance;
-  await Promise.all([
-    fetchTaxStatus(w.id),
-    fetchBalanceInquiry(w.id),
-  ]);
+  await Promise.all([fetchTaxStatus(w.id), fetchBalanceInquiry(w.id)]);
 }
 
 async function fetchTaxStatus(walletId: string) {
   try {
-    const res = await fetch(`/api/v1/payments/participant/wallets/${walletId}/tax-1099-status`);
+    const res = await fetch(
+      `/api/v1/payments/participant/wallets/${walletId}/tax-1099-status`
+    );
     if (res.ok) {
       selectedWalletTaxStatus.value = await res.json();
     }
   } catch (e) {
-    console.error('Error fetching tax status:', e);
+    console.error("Error fetching tax status:", e);
   }
 }
 
 async function fetchBalanceInquiry(walletId: string) {
   try {
-    const res = await fetch(`/api/v1/payments/participant/wallets/${walletId}/balance`);
+    const res = await fetch(
+      `/api/v1/payments/participant/wallets/${walletId}/balance`
+    );
     if (res.ok) {
       balanceInquiryData.value = await res.json();
     }
   } catch (e) {
-    console.error('Error fetching balance inquiry:', e);
+    console.error("Error fetching balance inquiry:", e);
   }
 }
 
 async function issueReloadableCard(walletId: string) {
   try {
-    const res = await fetch(`/api/v1/payments/participant/wallets/${walletId}/issue-card`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ card_type: 'RELOADABLE_DEBIT' }),
-    });
+    const res = await fetch(
+      `/api/v1/payments/participant/wallets/${walletId}/issue-card`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ card_type: "RELOADABLE_DEBIT" }),
+      }
+    );
     if (res.ok) {
       await loadAllData();
     }
   } catch (e) {
-    console.error('Error issuing reloadable card:', e);
+    console.error("Error issuing reloadable card:", e);
   }
 }
 
 async function submitW9Form() {
   if (!selectedWallet.value) return;
   try {
-    const res = await fetch(`/api/v1/payments/participant/wallets/${selectedWallet.value.id}/submit-w9`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        full_legal_name: w9Form.value.full_legal_name,
-        tax_id_last_four: w9Form.value.tax_id_last_four,
-        address: w9Form.value.address,
-        certify_accurate: w9Form.value.certify_accurate,
-      }),
-    });
+    const res = await fetch(
+      `/api/v1/payments/participant/wallets/${selectedWallet.value.id}/submit-w9`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_legal_name: w9Form.value.full_legal_name,
+          tax_id_last_four: w9Form.value.tax_id_last_four,
+          address: w9Form.value.address,
+          certify_accurate: w9Form.value.certify_accurate,
+        }),
+      }
+    );
     if (res.ok) {
       showW9Modal.value = false;
       await loadAllData();
@@ -827,17 +1156,22 @@ async function submitW9Form() {
       }
     }
   } catch (e) {
-    console.error('Error submitting W-9 form:', e);
+    console.error("Error submitting W-9 form:", e);
   }
 }
 
 async function verifyW9Form(walletId: string) {
   try {
-    const res = await fetch(`/api/v1/payments/participant/wallets/${walletId}/verify-w9`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes: 'TIN matched against IRS TIN verification ledger.' }),
-    });
+    const res = await fetch(
+      `/api/v1/payments/participant/wallets/${walletId}/verify-w9`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notes: "TIN matched against IRS TIN verification ledger.",
+        }),
+      }
+    );
     if (res.ok) {
       await loadAllData();
       if (selectedWallet.value) {
@@ -845,91 +1179,96 @@ async function verifyW9Form(walletId: string) {
       }
     }
   } catch (e) {
-    console.error('Error verifying W-9:', e);
+    console.error("Error verifying W-9:", e);
   }
 }
 
 function simulateReceiptUpload() {
-  loadSampleReceipt('transit');
+  loadSampleReceipt("transit");
 }
 
 function loadSampleReceipt(scenario: string) {
-  if (scenario === 'transit') {
+  if (scenario === "transit") {
     ocrResult.value = {
-      merchant_name: 'Metro Transit Authority',
+      merchant_name: "Metro Transit Authority",
       expense_date: new Date().toISOString().substring(0, 10),
-      gross_amount: 28.50,
+      gross_amount: 28.5,
       tax_deduction: 0.0,
-      net_amount: 28.50,
-      category: 'TRANSIT',
+      net_amount: 28.5,
+      category: "TRANSIT",
       confidence_score: 0.98,
-      detected_keywords: ['transit', 'ticket', 'fare'],
-      raw_text: 'METRO TRANSIT AUTHORITY\nRoute: Clinical Trial Express\nDate: 2026-08-23\nFare Paid: $28.50\nCard: **** 4821',
+      detected_keywords: ["transit", "ticket", "fare"],
+      raw_text:
+        "METRO TRANSIT AUTHORITY\nRoute: Clinical Trial Express\nDate: 2026-08-23\nFare Paid: $28.50\nCard: **** 4821",
     };
-    expenseForm.value.merchant_name = 'Metro Transit Authority';
-    expenseForm.value.gross_amount = 28.50;
-    expenseForm.value.category = 'TRANSIT';
-  } else if (scenario === 'parking') {
+    expenseForm.value.merchant_name = "Metro Transit Authority";
+    expenseForm.value.gross_amount = 28.5;
+    expenseForm.value.category = "TRANSIT";
+  } else if (scenario === "parking") {
     ocrResult.value = {
-      merchant_name: 'Medical Center Parking Garage',
+      merchant_name: "Medical Center Parking Garage",
       expense_date: new Date().toISOString().substring(0, 10),
-      gross_amount: 22.00,
+      gross_amount: 22.0,
       tax_deduction: 0.0,
-      net_amount: 22.00,
-      category: 'PARKING',
+      net_amount: 22.0,
+      category: "PARKING",
       confidence_score: 0.97,
-      detected_keywords: ['parking', 'garage', 'valet'],
-      raw_text: 'MEDICAL CENTER PARKING GARAGE\nDate: 2026-08-23\nEntry: 08:30 Exit: 14:15\nTotal Due: $22.00\nPAID IN FULL',
+      detected_keywords: ["parking", "garage", "valet"],
+      raw_text:
+        "MEDICAL CENTER PARKING GARAGE\nDate: 2026-08-23\nEntry: 08:30 Exit: 14:15\nTotal Due: $22.00\nPAID IN FULL",
     };
-    expenseForm.value.merchant_name = 'Medical Center Parking Garage';
-    expenseForm.value.gross_amount = 22.00;
-    expenseForm.value.category = 'PARKING';
-  } else if (scenario === 'gas') {
+    expenseForm.value.merchant_name = "Medical Center Parking Garage";
+    expenseForm.value.gross_amount = 22.0;
+    expenseForm.value.category = "PARKING";
+  } else if (scenario === "gas") {
     ocrResult.value = {
-      merchant_name: 'Shell Service Station',
+      merchant_name: "Shell Service Station",
       expense_date: new Date().toISOString().substring(0, 10),
-      gross_amount: 45.00,
+      gross_amount: 45.0,
       tax_deduction: 0.0,
-      net_amount: 45.00,
-      category: 'MILEAGE',
+      net_amount: 45.0,
+      category: "MILEAGE",
       confidence_score: 0.95,
-      detected_keywords: ['gas', 'fuel', 'pump'],
-      raw_text: 'SHELL OIL STATION #4411\nPump 04 - Regular Unleaded\nGallons: 11.25\nTotal: $45.00',
+      detected_keywords: ["gas", "fuel", "pump"],
+      raw_text:
+        "SHELL OIL STATION #4411\nPump 04 - Regular Unleaded\nGallons: 11.25\nTotal: $45.00",
     };
-    expenseForm.value.merchant_name = 'Shell Service Station';
-    expenseForm.value.gross_amount = 45.00;
-    expenseForm.value.category = 'MILEAGE';
-  } else if (scenario === 'meal_excess') {
+    expenseForm.value.merchant_name = "Shell Service Station";
+    expenseForm.value.gross_amount = 45.0;
+    expenseForm.value.category = "MILEAGE";
+  } else if (scenario === "meal_excess") {
     ocrResult.value = {
-      merchant_name: 'Hospital Plaza Bistro',
+      merchant_name: "Hospital Plaza Bistro",
       expense_date: new Date().toISOString().substring(0, 10),
-      gross_amount: 95.00,
-      tax_deduction: 3.00,
-      net_amount: 92.00,
-      category: 'MEAL',
+      gross_amount: 95.0,
+      tax_deduction: 3.0,
+      net_amount: 92.0,
+      category: "MEAL",
       confidence_score: 0.96,
-      detected_keywords: ['bistro', 'dinner', 'taxable_meal_excess'],
-      raw_text: 'HOSPITAL PLAZA BISTRO\nExtended Observation Dinner\nTotal: $95.00',
+      detected_keywords: ["bistro", "dinner", "taxable_meal_excess"],
+      raw_text:
+        "HOSPITAL PLAZA BISTRO\nExtended Observation Dinner\nTotal: $95.00",
     };
-    expenseForm.value.merchant_name = 'Hospital Plaza Bistro';
-    expenseForm.value.gross_amount = 95.00;
-    expenseForm.value.category = 'MEAL';
+    expenseForm.value.merchant_name = "Hospital Plaza Bistro";
+    expenseForm.value.gross_amount = 95.0;
+    expenseForm.value.category = "MEAL";
     expenseForm.value.is_meal_allowance = true;
   } else {
     ocrResult.value = {
-      merchant_name: 'Hospital Plaza Cafe',
+      merchant_name: "Hospital Plaza Cafe",
       expense_date: new Date().toISOString().substring(0, 10),
       gross_amount: 18.75,
       tax_deduction: 0.0,
       net_amount: 18.75,
-      category: 'MEAL',
+      category: "MEAL",
       confidence_score: 0.96,
-      detected_keywords: ['cafe', 'meal', 'lunch'],
-      raw_text: 'HOSPITAL PLAZA CAFE\n1x Patient Lunch Special\n1x Bottled Water\nTotal: $18.75',
+      detected_keywords: ["cafe", "meal", "lunch"],
+      raw_text:
+        "HOSPITAL PLAZA CAFE\n1x Patient Lunch Special\n1x Bottled Water\nTotal: $18.75",
     };
-    expenseForm.value.merchant_name = 'Hospital Plaza Cafe';
+    expenseForm.value.merchant_name = "Hospital Plaza Cafe";
     expenseForm.value.gross_amount = 18.75;
-    expenseForm.value.category = 'MEAL';
+    expenseForm.value.category = "MEAL";
   }
 }
 
@@ -937,9 +1276,9 @@ async function loadAllData() {
   isLoading.value = true;
   try {
     const [wRes, rRes, cRes] = await Promise.all([
-      fetch('/api/v1/payments/participant/wallets'),
-      fetch('/api/v1/payments/participant/stipend-rules'),
-      fetch('/api/v1/payments/participant/expenses'),
+      fetch("/api/v1/payments/participant/wallets"),
+      fetch("/api/v1/payments/participant/stipend-rules"),
+      fetch("/api/v1/payments/participant/expenses"),
     ]);
 
     if (wRes.ok) wallets.value = await wRes.json();
@@ -949,65 +1288,120 @@ async function loadAllData() {
     // Default fallback mock items if empty
     if (stipendRules.value.length === 0) {
       stipendRules.value = [
-        { id: '1', visit_code: 'V1_SCREENING', visit_name: 'Screening & Consent', amount: 75.0, currency: 'USD', taxable: false, anti_coercion_cap: 100.0, is_milestone: false },
-        { id: '2', visit_code: 'V2_BASELINE', visit_name: 'Baseline & Randomization', amount: 100.0, currency: 'USD', taxable: false, anti_coercion_cap: 150.0, is_milestone: false },
-        { id: '3', visit_code: 'V3_CYCLE_1', visit_name: 'Treatment Cycle 1 Visit', amount: 150.0, currency: 'USD', taxable: true, anti_coercion_cap: 200.0, is_milestone: false },
-        { id: '4', visit_code: 'V4_CYCLE_2', visit_name: 'Treatment Cycle 2 Visit', amount: 150.0, currency: 'USD', taxable: true, anti_coercion_cap: 200.0, is_milestone: false },
-        { id: '5', visit_code: 'V5_CYCLE_3', visit_name: 'Treatment Cycle 3 Visit', amount: 150.0, currency: 'USD', taxable: true, anti_coercion_cap: 200.0, is_milestone: false },
-        { id: '6', visit_code: 'V6_END_STUDY', visit_name: 'End of Study Milestone', amount: 200.0, currency: 'USD', taxable: true, anti_coercion_cap: 250.0, is_milestone: true, milestone_code: 'MILESTONE_PRIMARY' },
+        {
+          id: "1",
+          visit_code: "V1_SCREENING",
+          visit_name: "Screening & Consent",
+          amount: 75.0,
+          currency: "USD",
+          taxable: false,
+          anti_coercion_cap: 100.0,
+          is_milestone: false,
+        },
+        {
+          id: "2",
+          visit_code: "V2_BASELINE",
+          visit_name: "Baseline & Randomization",
+          amount: 100.0,
+          currency: "USD",
+          taxable: false,
+          anti_coercion_cap: 150.0,
+          is_milestone: false,
+        },
+        {
+          id: "3",
+          visit_code: "V3_CYCLE_1",
+          visit_name: "Treatment Cycle 1 Visit",
+          amount: 150.0,
+          currency: "USD",
+          taxable: true,
+          anti_coercion_cap: 200.0,
+          is_milestone: false,
+        },
+        {
+          id: "4",
+          visit_code: "V4_CYCLE_2",
+          visit_name: "Treatment Cycle 2 Visit",
+          amount: 150.0,
+          currency: "USD",
+          taxable: true,
+          anti_coercion_cap: 200.0,
+          is_milestone: false,
+        },
+        {
+          id: "5",
+          visit_code: "V5_CYCLE_3",
+          visit_name: "Treatment Cycle 3 Visit",
+          amount: 150.0,
+          currency: "USD",
+          taxable: true,
+          anti_coercion_cap: 200.0,
+          is_milestone: false,
+        },
+        {
+          id: "6",
+          visit_code: "V6_END_STUDY",
+          visit_name: "End of Study Milestone",
+          amount: 200.0,
+          currency: "USD",
+          taxable: true,
+          anti_coercion_cap: 250.0,
+          is_milestone: true,
+          milestone_code: "MILESTONE_PRIMARY",
+        },
       ];
     }
 
     if (wallets.value.length === 0) {
       wallets.value = [
         {
-          id: 'w-101',
-          subject_id: 'SUBJ-1001',
-          study_id: 'STUDY-DCT-001',
-          site_id: 'SITE-101',
+          id: "w-101",
+          subject_id: "SUBJ-1001",
+          study_id: "STUDY-DCT-001",
+          site_id: "SITE-101",
           current_balance: 325.0,
           lifetime_stipends: 250.0,
           lifetime_reimbursements: 75.0,
           lifetime_disbursements: 0.0,
           taxable_ytd: 450.0,
           is_1099_threshold_exceeded: false,
-          w9_status: 'NOT_REQUIRED',
-          currency: 'USD',
-          status: 'ACTIVE',
-          card_type: 'RELOADABLE_DEBIT',
-          card_status: 'ACTIVE',
-          virtual_card_mask: '**** **** **** 4821',
-          virtual_card_expiry: '12/29',
-          ach_routing_number: '021000021',
-          ach_account_mask: 'ACH-***4321',
-          ach_account_holder: 'Participant SUBJ-1001',
+          w9_status: "NOT_REQUIRED",
+          currency: "USD",
+          status: "ACTIVE",
+          card_type: "RELOADABLE_DEBIT",
+          card_status: "ACTIVE",
+          virtual_card_mask: "**** **** **** 4821",
+          virtual_card_expiry: "12/29",
+          ach_routing_number: "021000021",
+          ach_account_mask: "ACH-***4321",
+          ach_account_holder: "Participant SUBJ-1001",
         },
         {
-          id: 'w-102',
-          subject_id: 'SUBJ-1002',
-          study_id: 'STUDY-DCT-001',
-          site_id: 'SITE-101',
+          id: "w-102",
+          subject_id: "SUBJ-1002",
+          study_id: "STUDY-DCT-001",
+          site_id: "SITE-101",
           current_balance: 175.0,
           lifetime_stipends: 650.0,
           lifetime_reimbursements: 0.0,
           lifetime_disbursements: 475.0,
           taxable_ytd: 650.0,
           is_1099_threshold_exceeded: true,
-          w9_status: 'REQUIRED',
-          currency: 'USD',
-          status: 'ACTIVE',
-          card_type: 'RELOADABLE_DEBIT',
-          card_status: 'ACTIVE',
-          virtual_card_mask: '**** **** **** 9012',
-          virtual_card_expiry: '06/28',
-          ach_routing_number: '021000021',
-          ach_account_mask: 'ACH-***9012',
-          ach_account_holder: 'Participant SUBJ-1002',
+          w9_status: "REQUIRED",
+          currency: "USD",
+          status: "ACTIVE",
+          card_type: "RELOADABLE_DEBIT",
+          card_status: "ACTIVE",
+          virtual_card_mask: "**** **** **** 9012",
+          virtual_card_expiry: "06/28",
+          ach_routing_number: "021000021",
+          ach_account_mask: "ACH-***9012",
+          ach_account_holder: "Participant SUBJ-1002",
         },
       ];
     }
   } catch (e) {
-    console.error('Error loading participant wallet data:', e);
+    console.error("Error loading participant wallet data:", e);
   } finally {
     isLoading.value = false;
   }
@@ -1015,27 +1409,30 @@ async function loadAllData() {
 
 async function triggerVisitVerified() {
   isSubmitting.value = true;
-  visitTriggerSuccess.value = '';
+  visitTriggerSuccess.value = "";
   try {
-    const res = await fetch('/api/v1/payments/participant/events/visit-verified', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        study_id: visitEventForm.value.study_id,
-        site_id: visitEventForm.value.site_id,
-        subject_id: visitEventForm.value.subject_id,
-        visit_code: visitEventForm.value.visit_code,
-        event_id: `EVT-${Date.now()}`,
-        verified_by: 'coordinator_alice',
-      }),
-    });
+    const res = await fetch(
+      "/api/v1/payments/participant/events/visit-verified",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          study_id: visitEventForm.value.study_id,
+          site_id: visitEventForm.value.site_id,
+          subject_id: visitEventForm.value.subject_id,
+          visit_code: visitEventForm.value.visit_code,
+          event_id: `EVT-${Date.now()}`,
+          verified_by: "coordinator_alice",
+        }),
+      }
+    );
     if (res.ok) {
       const data = await res.json();
-      visitTriggerSuccess.value = `Successfully credited $${data.amount?.toFixed(2) || '150.00'} stipend for visit ${visitEventForm.value.visit_code}! New balance: $${data.current_balance?.toFixed(2) || '475.00'}`;
+      visitTriggerSuccess.value = `Successfully credited $${data.amount?.toFixed(2) || "150.00"} stipend for visit ${visitEventForm.value.visit_code}! New balance: $${data.current_balance?.toFixed(2) || "475.00"}`;
       await loadAllData();
     }
   } catch (e) {
-    console.error('Error triggering visit verification:', e);
+    console.error("Error triggering visit verification:", e);
   } finally {
     isSubmitting.value = false;
   }
@@ -1043,11 +1440,11 @@ async function triggerVisitVerified() {
 
 async function submitExpenseClaim() {
   isSubmitting.value = true;
-  claimSubmitSuccess.value = '';
+  claimSubmitSuccess.value = "";
   try {
-    const res = await fetch('/api/v1/payments/participant/expenses', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch("/api/v1/payments/participant/expenses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         subject_id: expenseForm.value.subject_id,
         study_id: expenseForm.value.study_id,
@@ -1058,17 +1455,17 @@ async function submitExpenseClaim() {
         is_meal_allowance: expenseForm.value.is_meal_allowance,
         per_diem_cap: expenseForm.value.is_meal_allowance ? 75.0 : undefined,
         expense_date: expenseForm.value.expense_date,
-        receipt_image_name: 'receipt_scanned.jpg',
+        receipt_image_name: "receipt_scanned.jpg",
         receipt_ocr_data: ocrResult.value || {},
       }),
     });
     if (res.ok) {
       claimSubmitSuccess.value = `Expense claim of $${expenseForm.value.gross_amount.toFixed(2)} submitted successfully!`;
       await loadAllData();
-      activeTab.value = 'approvals';
+      activeTab.value = "approvals";
     }
   } catch (e) {
-    console.error('Error submitting expense claim:', e);
+    console.error("Error submitting expense claim:", e);
   } finally {
     isSubmitting.value = false;
   }
@@ -1077,19 +1474,25 @@ async function submitExpenseClaim() {
 async function reviewClaim(claimId: string, decision: string) {
   isSubmitting.value = true;
   try {
-    const res = await fetch(`/api/v1/payments/participant/expenses/${claimId}/review`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        status: decision,
-        review_notes: decision === 'APPROVED' ? 'Verified valid clinical travel receipt.' : 'Non-compliant receipt documentation.',
-      }),
-    });
+    const res = await fetch(
+      `/api/v1/payments/participant/expenses/${claimId}/review`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: decision,
+          review_notes:
+            decision === "APPROVED"
+              ? "Verified valid clinical travel receipt."
+              : "Non-compliant receipt documentation.",
+        }),
+      }
+    );
     if (res.ok) {
       await loadAllData();
     }
   } catch (e) {
-    console.error('Error reviewing claim:', e);
+    console.error("Error reviewing claim:", e);
   } finally {
     isSubmitting.value = false;
   }
@@ -1099,21 +1502,25 @@ async function triggerDisbursement() {
   if (!selectedWallet.value) return;
   isSubmitting.value = true;
   try {
-    const res = await fetch(`/api/v1/payments/participant/wallets/${selectedWallet.value.id}/disburse`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        disbursement_type: disburseForm.value.type,
-        amount: disburseForm.value.amount || selectedWallet.value.current_balance,
-      }),
-    });
+    const res = await fetch(
+      `/api/v1/payments/participant/wallets/${selectedWallet.value.id}/disburse`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          disbursement_type: disburseForm.value.type,
+          amount:
+            disburseForm.value.amount || selectedWallet.value.current_balance,
+        }),
+      }
+    );
     if (res.ok) {
       await loadAllData();
       selectedWallet.value = null;
-      activeTab.value = 'disbursements';
+      activeTab.value = "disbursements";
     }
   } catch (e) {
-    console.error('Error triggering disbursement:', e);
+    console.error("Error triggering disbursement:", e);
   } finally {
     isSubmitting.value = false;
   }
@@ -1684,7 +2091,8 @@ onMounted(() => {
   cursor: pointer;
 }
 
-.form-input, .form-select {
+.form-input,
+.form-select {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border, #e2e8f0);
@@ -1814,11 +2222,21 @@ onMounted(() => {
   gap: 6px;
 }
 
-.text-success { color: var(--semantic-color-success, #15803d); }
-.text-warning { color: var(--semantic-color-warning, #854d0e); }
-.text-danger { color: var(--semantic-color-error, #b91c1c); }
-.text-muted { color: var(--semantic-color-text-muted, #475569); }
-.font-bold { font-weight: 700; }
+.text-success {
+  color: var(--semantic-color-success, #15803d);
+}
+.text-warning {
+  color: var(--semantic-color-warning, #854d0e);
+}
+.text-danger {
+  color: var(--semantic-color-error, #b91c1c);
+}
+.text-muted {
+  color: var(--semantic-color-text-muted, #475569);
+}
+.font-bold {
+  font-weight: 700;
+}
 
 .modal-backdrop {
   position: fixed;

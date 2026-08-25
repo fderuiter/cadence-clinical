@@ -15,7 +15,12 @@ vi.mock("../src/api/fileshare", () => ({
   fileshareService: {
     listFiles: vi.fn(() => Promise.resolve([])),
     getFileRecord: vi.fn((fileId) => Promise.resolve({ id: fileId })),
-    getDownloadUrl: vi.fn((fileId) => Promise.resolve({ file_id: fileId, download_url: "http://example.com/file" })),
+    getDownloadUrl: vi.fn((fileId) =>
+      Promise.resolve({
+        file_id: fileId,
+        download_url: "http://example.com/file",
+      })
+    ),
     createShareGrant: vi.fn((fileId, payload) =>
       Promise.resolve({
         id: "grant-mock-123",
@@ -82,7 +87,13 @@ describe("feat(fileshare): 10 — Documents Hub UI (#4317)", () => {
     const authStore = useAuthStore();
     authStore.isAuthenticated = true;
     authStore.currentPersona = "super_admin";
-    authStore.rawRoles = ["Sponsor Admin", "Sponsor Designer", "CRA", "CRC", "Auditor"];
+    authStore.rawRoles = [
+      "Sponsor Admin",
+      "Sponsor Designer",
+      "CRA",
+      "CRC",
+      "Auditor",
+    ];
   });
 
   describe("DocumentsHubView.vue Component", () => {
@@ -115,7 +126,9 @@ describe("feat(fileshare): 10 — Documents Hub UI (#4317)", () => {
 
       const rows = wrapper.findAll(".document-row");
       expect(rows.length).toBe(1);
-      expect(rows[0].text()).toContain("Clinical_Trial_Protocol_v2.0_Final_Signed.pdf");
+      expect(rows[0].text()).toContain(
+        "Clinical_Trial_Protocol_v2.0_Final_Signed.pdf"
+      );
     });
 
     it("sorts columns ascending and descending when header is clicked", async () => {
@@ -125,17 +138,27 @@ describe("feat(fileshare): 10 — Documents Hub UI (#4317)", () => {
         },
       });
 
-      const nameTh = wrapper.findAll(".sortable-th").find((th) => th.text().includes("Name"));
+      const nameTh = wrapper
+        .findAll(".sortable-th")
+        .find((th) => th.text().includes("Name"));
       expect(nameTh).toBeDefined();
 
       // Click to sort by name ASC
       await nameTh.trigger("click");
-      let firstRowName = wrapper.findAll(".document-row")[0].find(".filename-text").text();
-      expect(firstRowName).toBe("Clinical_Trial_Protocol_v2.0_Final_Signed.pdf");
+      let firstRowName = wrapper
+        .findAll(".document-row")[0]
+        .find(".filename-text")
+        .text();
+      expect(firstRowName).toBe(
+        "Clinical_Trial_Protocol_v2.0_Final_Signed.pdf"
+      );
 
       // Click again to sort by name DESC
       await nameTh.trigger("click");
-      firstRowName = wrapper.findAll(".document-row")[0].find(".filename-text").text();
+      firstRowName = wrapper
+        .findAll(".document-row")[0]
+        .find(".filename-text")
+        .text();
       expect(firstRowName).toBe("Subject_101_Baseline_Echocardiogram.png");
     });
 
@@ -146,17 +169,23 @@ describe("feat(fileshare): 10 — Documents Hub UI (#4317)", () => {
         },
       });
 
-      const checkboxes = wrapper.findAll('.document-row .checkbox-col input[type="checkbox"]');
+      const checkboxes = wrapper.findAll(
+        '.document-row .checkbox-col input[type="checkbox"]'
+      );
       expect(checkboxes.length).toBeGreaterThan(1);
 
       // Select first row
       await checkboxes[0].setChecked(true);
       expect(wrapper.find(".bulk-actions-toolbar").exists()).toBe(true);
-      expect(wrapper.find(".selection-count-badge").text()).toContain("1 Selected");
+      expect(wrapper.find(".selection-count-badge").text()).toContain(
+        "1 Selected"
+      );
 
       // Select second row
       await checkboxes[1].setChecked(true);
-      expect(wrapper.find(".selection-count-badge").text()).toContain("2 Selected");
+      expect(wrapper.find(".selection-count-badge").text()).toContain(
+        "2 Selected"
+      );
 
       // Click Bulk Share button
       const bulkShareBtn = wrapper.find(".btn-bulk-share");
@@ -230,25 +259,32 @@ describe("feat(fileshare): 10 — Documents Hub UI (#4317)", () => {
       expect(rows.length).toBe(2);
 
       // Held file row
-      const heldRow = rows.find((r) => r.text().includes("Investigator_Brochure_v5.0.pdf"));
+      const heldRow = rows.find((r) =>
+        r.text().includes("Investigator_Brochure_v5.0.pdf")
+      );
       expect(heldRow).toBeDefined();
       const heldBadge = heldRow.find(".status-pill.status-hold");
       expect(heldBadge.exists()).toBe(true);
       expect(heldBadge.text()).toContain("🔒");
-      expect(heldBadge.attributes("title")).toBe("Legal subpoena investigation");
+      expect(heldBadge.attributes("title")).toBe(
+        "Legal subpoena investigation"
+      );
 
       const heldDeleteBtn = heldRow.find(".btn-delete-action");
       expect(heldDeleteBtn.attributes("disabled")).toBeDefined();
-      expect(heldDeleteBtn.attributes("title")).toBe("File is under retention hold.");
+      expect(heldDeleteBtn.attributes("title")).toBe(
+        "File is under retention hold."
+      );
 
       // Unheld file row
-      const unheldRow = rows.find((r) => r.text().includes("Lab_Results_002.pdf"));
+      const unheldRow = rows.find((r) =>
+        r.text().includes("Lab_Results_002.pdf")
+      );
       expect(unheldRow).toBeDefined();
       const unheldDeleteBtn = unheldRow.find(".btn-delete-action");
       expect(unheldDeleteBtn.attributes("disabled")).toBeUndefined();
       expect(unheldDeleteBtn.attributes("title")).toBe("Delete document");
     });
-
   });
 
   describe("ShareDrawer.vue Component", () => {
@@ -294,7 +330,9 @@ describe("feat(fileshare): 10 — Documents Hub UI (#4317)", () => {
       const emittedPayload = wrapper.emitted("grant-created")[0][0];
       expect(emittedPayload.granted_to_user_id).toBe("auditor_user_02");
       expect(emittedPayload.permission_level).toBe("download");
-      expect(emittedPayload.reason_for_change).toBe("Regulatory trial master inspection access");
+      expect(emittedPayload.reason_for_change).toBe(
+        "Regulatory trial master inspection access"
+      );
     });
 
     it("generates external guest link with expiry and copy support", async () => {
@@ -307,7 +345,9 @@ describe("feat(fileshare): 10 — Documents Hub UI (#4317)", () => {
       });
 
       // Switch to Guest Link tab
-      const guestTabBtn = wrapper.findAll(".tab-btn").find((b) => b.text().includes("External Guest Link"));
+      const guestTabBtn = wrapper
+        .findAll(".tab-btn")
+        .find((b) => b.text().includes("External Guest Link"));
       expect(guestTabBtn).toBeDefined();
       await guestTabBtn.trigger("click");
 
@@ -332,7 +372,9 @@ describe("feat(fileshare): 10 — Documents Hub UI (#4317)", () => {
       });
 
       // Switch to Active Grants tab
-      const grantsTabBtn = wrapper.findAll(".tab-btn").find((b) => b.text().includes("Active Grants"));
+      const grantsTabBtn = wrapper
+        .findAll(".tab-btn")
+        .find((b) => b.text().includes("Active Grants"));
       await grantsTabBtn.trigger("click");
 
       const grantCards = wrapper.findAll(".grant-row-card");
@@ -363,7 +405,9 @@ describe("feat(fileshare): 10 — Documents Hub UI (#4317)", () => {
 
       expect(wrapper.find(".pdf-document-sheet").exists()).toBe(true);
       expect(wrapper.find(".watermark-overlay-container").exists()).toBe(true);
-      expect(wrapper.find(".watermark-text").text()).toContain("SECURE PREVIEW");
+      expect(wrapper.find(".watermark-text").text()).toContain(
+        "SECURE PREVIEW"
+      );
       expect(wrapper.find(".btn-download").exists()).toBe(true);
     });
 
@@ -432,7 +476,9 @@ describe("feat(fileshare): 10 — Documents Hub UI (#4317)", () => {
   describe("Router Registration", () => {
     it("has /documents route configured with requiresAuth: true", () => {
       const routes = router.getRoutes();
-      const docRoute = routes.find((r) => r.path === "/documents" || r.name === "documents");
+      const docRoute = routes.find(
+        (r) => r.path === "/documents" || r.name === "documents"
+      );
       expect(docRoute).toBeDefined();
       expect(docRoute.meta?.requiresAuth).toBe(true);
     });

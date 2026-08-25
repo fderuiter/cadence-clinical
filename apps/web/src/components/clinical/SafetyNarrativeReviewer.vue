@@ -1,18 +1,33 @@
 <template>
-  <div class="safety-narrative-reviewer" role="region" aria-label="Generative Pharmacovigilance Safety Narrative Reviewer">
+  <div
+    class="safety-narrative-reviewer"
+    role="region"
+    aria-label="Generative Pharmacovigilance Safety Narrative Reviewer"
+  >
     <!-- Top Action Bar & Header -->
     <header class="narrative-header">
       <div class="header-main">
         <div class="title-group">
           <span class="badge badge-regulatory">ICH E2B(R3)</span>
-          <h2 class="narrative-title">{{ narrative.title || 'Serious Adverse Event Safety Narrative' }}</h2>
+          <h2 class="narrative-title">
+            {{ narrative.title || "Serious Adverse Event Safety Narrative" }}
+          </h2>
         </div>
         <div class="header-metadata">
-          <span class="meta-item"><strong>Subject:</strong> {{ narrative.subject_id }}</span>
-          <span class="meta-item"><strong>Study:</strong> {{ narrative.study_id }}</span>
-          <span class="meta-item"><strong>SAE Key:</strong> {{ narrative.sae_event_key }}</span>
-          <span class="meta-item"><strong>Status:</strong>
-            <span :class="['status-pill', narrative.review_status.toLowerCase()]">
+          <span class="meta-item"
+            ><strong>Subject:</strong> {{ narrative.subject_id }}</span
+          >
+          <span class="meta-item"
+            ><strong>Study:</strong> {{ narrative.study_id }}</span
+          >
+          <span class="meta-item"
+            ><strong>SAE Key:</strong> {{ narrative.sae_event_key }}</span
+          >
+          <span class="meta-item"
+            ><strong>Status:</strong>
+            <span
+              :class="['status-pill', narrative.review_status.toLowerCase()]"
+            >
               {{ narrative.review_status }}
             </span>
           </span>
@@ -26,16 +41,16 @@
         <button
           v-if="narrative.review_status !== 'APPROVED'"
           class="btn btn-primary"
-          @click="openSignatureModal"
           :disabled="isSubmitting"
+          @click="openSignatureModal"
         >
           <span class="icon">✍️</span> Part 11 Sign & Approve
         </button>
         <button
           v-if="narrative.review_status === 'APPROVED'"
           class="btn btn-secondary"
-          @click="exportE2BXml"
           :disabled="isExporting"
+          @click="exportE2BXml"
         >
           <span class="icon">📄</span> Export E2B(R3) XML
         </button>
@@ -48,28 +63,40 @@
       <section class="timeline-pane" aria-labelledby="timeline-pane-heading">
         <div class="pane-header">
           <h3 id="timeline-pane-heading">Clinical Event Timeline</h3>
-          <span class="event-count">{{ narrative.timeline_events?.length || 0 }} Grounded Events</span>
+          <span class="event-count"
+            >{{ narrative.timeline_events?.length || 0 }} Grounded Events</span
+          >
         </div>
         <div class="timeline-scroll-area">
           <div
             v-for="event in narrative.timeline_events"
-            :key="event.event_id"
             :id="`timeline-${event.event_id}`"
+            :key="event.event_id"
             :class="[
               'timeline-card',
               event.event_type.toLowerCase(),
-              { 'is-highlighted': highlightedEventIds.includes(event.event_id) }
+              {
+                'is-highlighted': highlightedEventIds.includes(event.event_id),
+              },
             ]"
           >
             <div class="card-top">
               <span class="event-type-badge">{{ event.event_type }}</span>
-              <span class="event-date">{{ event.event_date || 'Date Unknown' }}</span>
+              <span class="event-date">{{
+                event.event_date || "Date Unknown"
+              }}</span>
             </div>
-            <h4 class="event-title">{{ event.title }}</h4>
-            <p class="event-desc">{{ event.description }}</p>
+            <h4 class="event-title">
+              {{ event.title }}
+            </h4>
+            <p class="event-desc">
+              {{ event.description }}
+            </p>
             <div class="card-footer">
               <span class="event-id-tag">{{ event.event_id }}</span>
-              <span v-if="event.domain" class="domain-tag">Domain: {{ event.domain }}</span>
+              <span v-if="event.domain" class="domain-tag"
+                >Domain: {{ event.domain }}</span
+              >
             </div>
           </div>
         </div>
@@ -79,7 +106,9 @@
       <section class="narrative-pane" aria-labelledby="narrative-pane-heading">
         <div class="pane-header">
           <h3 id="narrative-pane-heading">Regulatory Narrative Course</h3>
-          <span class="model-info">Model: {{ narrative.model_identifier }}</span>
+          <span class="model-info"
+            >Model: {{ narrative.model_identifier }}</span
+          >
         </div>
 
         <div class="narrative-sections-area">
@@ -89,29 +118,48 @@
             class="section-card"
           >
             <header class="section-header">
-              <h4 class="section-title">{{ section.section_title }}</h4>
+              <h4 class="section-title">
+                {{ section.section_title }}
+              </h4>
               <span class="section-type-code">{{ section.section_type }}</span>
             </header>
 
             <div class="section-body">
-              <p class="section-content">{{ section.content }}</p>
+              <p class="section-content">
+                {{ section.content }}
+              </p>
             </div>
 
             <!-- Grounded Claims Sub-block -->
-            <footer v-if="section.grounded_claims?.length" class="grounded-claims-block">
+            <footer
+              v-if="section.grounded_claims?.length"
+              class="grounded-claims-block"
+            >
               <h5 class="claims-heading">Grounded eCRF Claim References</h5>
               <ul class="claims-list">
+                <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                 <li
                   v-for="claim in section.grounded_claims"
                   :key="claim.claim_id"
                   tabindex="0"
-                  :class="['claim-item', { 'is-active': activeClaimId === claim.claim_id }]"
-                  @mouseenter="highlightEvents(claim.grounded_event_ids, claim.claim_id)"
+                  :class="[
+                    'claim-item',
+                    { 'is-active': activeClaimId === claim.claim_id },
+                  ]"
+                  @mouseenter="
+                    highlightEvents(claim.grounded_event_ids, claim.claim_id)
+                  "
                   @mouseleave="clearHighlight"
-                  @focus="highlightEvents(claim.grounded_event_ids, claim.claim_id)"
+                  @focus="
+                    highlightEvents(claim.grounded_event_ids, claim.claim_id)
+                  "
                   @blur="clearHighlight"
-                  @click="highlightEvents(claim.grounded_event_ids, claim.claim_id)"
-                  @keydown.enter="highlightEvents(claim.grounded_event_ids, claim.claim_id)"
+                  @click="
+                    highlightEvents(claim.grounded_event_ids, claim.claim_id)
+                  "
+                  @keydown.enter="
+                    highlightEvents(claim.grounded_event_ids, claim.claim_id)
+                  "
                 >
                   <span class="claim-bullet">🔗</span>
                   <span class="claim-text">"{{ claim.sentence_text }}"</span>
@@ -135,16 +183,25 @@
     </main>
 
     <!-- Part 11 Electronic Signature Modal -->
-    <div v-if="showSignatureModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div
+      v-if="showSignatureModal"
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+    >
       <div class="modal-dialog">
         <header class="modal-header">
           <h3>21 CFR Part 11 Electronic Signature</h3>
-          <button type="button" class="btn-close" @click="closeSignatureModal">✕</button>
+          <button type="button" class="btn-close" @click="closeSignatureModal">
+            ✕
+          </button>
         </header>
         <div class="modal-body">
           <p class="cert-notice">
-            By applying your electronic signature, you legally certify as the designated Safety Physician or Medical Monitor
-            that this serious adverse event narrative accurately reflects the clinical course documented in the trial casebook.
+            By applying your electronic signature, you legally certify as the
+            designated Safety Physician or Medical Monitor that this serious
+            adverse event narrative accurately reflects the clinical course
+            documented in the trial casebook.
           </p>
           <div class="form-group">
             <label for="sig-reason">Reason for Signing / Justification *</label>
@@ -167,17 +224,25 @@
               placeholder="Enter signer passcode"
             />
           </div>
-          <p v-if="signError" class="error-msg">{{ signError }}</p>
+          <p v-if="signError" class="error-msg">
+            {{ signError }}
+          </p>
         </div>
         <footer class="modal-footer">
-          <button type="button" class="btn btn-text" @click="closeSignatureModal">Cancel</button>
+          <button
+            type="button"
+            class="btn btn-text"
+            @click="closeSignatureModal"
+          >
+            Cancel
+          </button>
           <button
             type="button"
             class="btn btn-primary"
             :disabled="!signForm.reason.trim() || isSubmitting"
             @click="submitSignature"
           >
-            {{ isSubmitting ? 'Signing...' : 'Sign Document' }}
+            {{ isSubmitting ? "Signing..." : "Sign Document" }}
           </button>
         </footer>
       </div>
@@ -186,39 +251,38 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive } from "vue";
 
 const props = defineProps({
   narrative: {
     type: Object,
-    required: true,
     default: () => ({
-      id: '',
-      study_id: '',
-      subject_id: '',
-      sae_event_key: '',
-      title: '',
-      review_status: 'DRAFT_AI',
+      id: "",
+      study_id: "",
+      subject_id: "",
+      sae_event_key: "",
+      title: "",
+      review_status: "DRAFT_AI",
       confidence_score: 0.95,
-      model_identifier: 'cadence-frontier-reasoner-v1',
+      model_identifier: "cadence-frontier-reasoner-v1",
       sections: [],
       timeline_events: [],
     }),
   },
 });
 
-const emit = defineEmits(['sign', 'export-e2b']);
+const emit = defineEmits(["sign", "export-e2b"]);
 
 const highlightedEventIds = ref([]);
 const activeClaimId = ref(null);
 const showSignatureModal = ref(false);
 const isSubmitting = ref(false);
 const isExporting = ref(false);
-const signError = ref('');
+const signError = ref("");
 
 const signForm = reactive({
-  reason: 'Safety Physician Medical Review & Regulatory Approval',
-  secret: '',
+  reason: "Safety Physician Medical Review & Regulatory Approval",
+  secret: "",
 });
 
 function highlightEvents(eventIds, claimId) {
@@ -234,13 +298,13 @@ function clearHighlight() {
 function scrollToEvent(eventId) {
   const el = document.getElementById(`timeline-${eventId}`);
   if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
     highlightedEventIds.value = [eventId];
   }
 }
 
 function openSignatureModal() {
-  signError.value = '';
+  signError.value = "";
   showSignatureModal.value = true;
 }
 
@@ -250,27 +314,27 @@ function closeSignatureModal() {
 
 async function submitSignature() {
   if (!signForm.reason.trim()) {
-    signError.value = 'Reason for change is mandatory.';
+    signError.value = "Reason for change is mandatory.";
     return;
   }
   isSubmitting.value = true;
-  signError.value = '';
+  signError.value = "";
   try {
-    emit('sign', {
+    emit("sign", {
       narrativeId: props.narrative.id,
       reason: signForm.reason,
       secret: signForm.secret,
     });
     showSignatureModal.value = false;
   } catch (err) {
-    signError.value = err.message || 'Signature failed.';
+    signError.value = err.message || "Signature failed.";
   } finally {
     isSubmitting.value = false;
   }
 }
 
 function exportE2BXml() {
-  emit('export-e2b', props.narrative.id);
+  emit("export-e2b", props.narrative.id);
 }
 </script>
 
@@ -281,7 +345,9 @@ function exportE2BXml() {
   height: 100%;
   background: var(--surface, #ffffff);
   color: var(--text-primary, #1e293b);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
 }
 
 .narrative-header {
@@ -422,7 +488,8 @@ function exportE2BXml() {
   margin: 0;
 }
 
-.event-count, .model-info {
+.event-count,
+.model-info {
   font-size: 0.75rem;
   color: #64748b;
 }
@@ -584,7 +651,8 @@ function exportE2BXml() {
   transition: background 0.15s ease;
 }
 
-.claim-item:hover, .claim-item.is-active {
+.claim-item:hover,
+.claim-item.is-active {
   background: #f0f9ff;
 }
 

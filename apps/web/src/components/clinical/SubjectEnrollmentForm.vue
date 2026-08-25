@@ -5,23 +5,17 @@
         <h3 class="card-title">
           <span>🩺</span> Subject Registration &amp; Screening
         </h3>
-        <span
-          v-if="screeningStatus"
-          class="badge"
-          :class="screeningBadgeClass"
-        >
+        <span v-if="screeningStatus" class="badge" :class="screeningBadgeClass">
           {{ screeningStatus }}
         </span>
       </div>
       <p class="card-subtitle">
-        Enroll new participants and evaluate clinical protocol eligibility criteria in real time.
+        Enroll new participants and evaluate clinical protocol eligibility
+        criteria in real time.
       </p>
     </div>
 
-    <form
-      class="enrollment-form-body"
-      @submit.prevent="handleEnrollSubmit"
-    >
+    <form class="enrollment-form-body" @submit.prevent="handleEnrollSubmit">
       <div class="form-grid">
         <!-- Subject ID (Required) -->
         <div class="form-group col-6">
@@ -121,7 +115,9 @@
         :class="{
           'eligible-pane': screeningResult.eligible === true,
           'ineligible-pane': screeningResult.eligible === false,
-          'indeterminate-pane': screeningResult.eligible === null || screeningResult.eligible === undefined,
+          'indeterminate-pane':
+            screeningResult.eligible === null ||
+            screeningResult.eligible === undefined,
         }"
       >
         <div class="screening-header-row">
@@ -129,17 +125,17 @@
             <span class="outcome-icon">{{ outcomeIcon }}</span>
             <span class="outcome-text">{{ outcomeSummaryText }}</span>
           </div>
-          <span
-            class="badge"
-            :class="screeningBadgeClass"
-          >
+          <span class="badge" :class="screeningBadgeClass">
             {{ outcomeBadgeText }}
           </span>
         </div>
 
         <!-- Failed Criteria Chips -->
         <div
-          v-if="screeningResult.failed_criteria && screeningResult.failed_criteria.length > 0"
+          v-if="
+            screeningResult.failed_criteria &&
+            screeningResult.failed_criteria.length > 0
+          "
           class="criteria-list-section failed-criteria"
         >
           <div class="criteria-list-title">
@@ -158,7 +154,10 @@
 
         <!-- Indeterminate Criteria Chips -->
         <div
-          v-if="screeningResult.indeterminate_criteria && screeningResult.indeterminate_criteria.length > 0"
+          v-if="
+            screeningResult.indeterminate_criteria &&
+            screeningResult.indeterminate_criteria.length > 0
+          "
           class="criteria-list-section indeterminate-criteria"
         >
           <div class="criteria-list-title">
@@ -329,10 +328,14 @@ function handleEnrollSubmit() {
   }
 
   const demographics = {};
-  if (formData.name && formData.name.trim()) demographics.name = formData.name.trim();
-  if (formData.birthdate && formData.birthdate.trim()) demographics.birthdate = formData.birthdate.trim();
-  if (formData.gender && formData.gender.trim()) demographics.gender = formData.gender.trim();
-  if (formData.race && formData.race.trim()) demographics.race = formData.race.trim();
+  if (formData.name && formData.name.trim())
+    demographics.name = formData.name.trim();
+  if (formData.birthdate && formData.birthdate.trim())
+    demographics.birthdate = formData.birthdate.trim();
+  if (formData.gender && formData.gender.trim())
+    demographics.gender = formData.gender.trim();
+  if (formData.race && formData.race.trim())
+    demographics.race = formData.race.trim();
 
   emit("enroll", {
     subject_id: formData.subject_id.trim(),
@@ -364,8 +367,10 @@ const outcomeIcon = computed(() => {
 
 const outcomeSummaryText = computed(() => {
   if (!props.screeningResult) return "Pending Evaluation";
-  if (props.screeningResult.eligible === true) return "Subject meets all protocol inclusion criteria";
-  if (props.screeningResult.eligible === false) return "Subject failed one or more eligibility criteria";
+  if (props.screeningResult.eligible === true)
+    return "Subject meets all protocol inclusion criteria";
+  if (props.screeningResult.eligible === false)
+    return "Subject failed one or more eligibility criteria";
   return "Criteria evaluation requires manual review";
 });
 

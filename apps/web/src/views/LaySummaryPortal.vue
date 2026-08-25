@@ -12,9 +12,10 @@
           EU CTR Plain-Language Lay Summary &amp; Results Portal
         </h2>
         <p class="view-subtitle">
-          Empowering clinical trial participants with accessible, plain-language summaries of clinical trial results
-          under EU CTR Regulation No 536/2014 Article 37. Includes patient comprehension assessments and cryptographically
-          sealed confirmation receipts (SHA-256).
+          Empowering clinical trial participants with accessible, plain-language
+          summaries of clinical trial results under EU CTR Regulation No
+          536/2014 Article 37. Includes patient comprehension assessments and
+          cryptographically sealed confirmation receipts (SHA-256).
         </p>
       </div>
       <div class="header-action-group">
@@ -33,21 +34,27 @@
       <div class="stat-card">
         <div class="stat-icon summary-icon">📜</div>
         <div class="stat-details">
-          <div class="stat-value">{{ publishedSummariesCount }}</div>
+          <div class="stat-value">
+            {{ publishedSummariesCount }}
+          </div>
           <div class="stat-label">Published Lay Summaries</div>
         </div>
       </div>
       <div class="stat-card">
         <div class="stat-icon score-icon">⭐</div>
         <div class="stat-details">
-          <div class="stat-value">{{ avgComprehensionScore.toFixed(1) }} / 5.0</div>
+          <div class="stat-value">
+            {{ avgComprehensionScore.toFixed(1) }} / 5.0
+          </div>
           <div class="stat-label">Avg Comprehension Rating</div>
         </div>
       </div>
       <div class="stat-card">
         <div class="stat-icon receipt-icon">🔏</div>
         <div class="stat-details">
-          <div class="stat-value">{{ totalReceiptsCount }}</div>
+          <div class="stat-value">
+            {{ totalReceiptsCount }}
+          </div>
           <div class="stat-label">Confirmed Receipts (SHA-256)</div>
         </div>
       </div>
@@ -102,6 +109,8 @@
           </div>
           <div class="panel-body compact-body">
             <div class="summary-list">
+              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
               <div
                 v-for="s in summaries"
                 :key="s.id"
@@ -111,11 +120,20 @@
               >
                 <div class="item-badge-row">
                   <span class="badge badge-gxp">{{ s.trial_phase }}</span>
-                  <span class="badge badge-regulatory">{{ s.language.toUpperCase() }}</span>
+                  <span class="badge badge-regulatory">{{
+                    s.language.toUpperCase()
+                  }}</span>
                 </div>
-                <h4 class="item-title">{{ s.title }}</h4>
-                <p class="item-meta">Study: <strong>{{ s.study_id }}</strong> | Sponsor: {{ s.sponsor_name }}</p>
-                <div class="item-irb">IRB Approval: {{ s.irb_approval_number }}</div>
+                <h4 class="item-title">
+                  {{ s.title }}
+                </h4>
+                <p class="item-meta">
+                  Study: <strong>{{ s.study_id }}</strong> | Sponsor:
+                  {{ s.sponsor_name }}
+                </p>
+                <div class="item-irb">
+                  IRB Approval: {{ s.irb_approval_number }}
+                </div>
               </div>
             </div>
           </div>
@@ -126,10 +144,16 @@
           <div class="panel-header">
             <div>
               <div class="header-badge-row">
-                <span class="badge badge-gxp">IRB Approved: {{ selectedSummary.irb_approval_number }}</span>
-                <span class="badge badge-standard">Date: {{ selectedSummary.irb_approval_date }}</span>
+                <span class="badge badge-gxp"
+                  >IRB Approved: {{ selectedSummary.irb_approval_number }}</span
+                >
+                <span class="badge badge-standard"
+                  >Date: {{ selectedSummary.irb_approval_date }}</span
+                >
               </div>
-              <h3 class="panel-title">{{ selectedSummary.title }}</h3>
+              <h3 class="panel-title">
+                {{ selectedSummary.title }}
+              </h3>
             </div>
             <button
               class="btn btn-sm btn-primary"
@@ -142,7 +166,9 @@
             <!-- Narrative Overview -->
             <div class="lay-overview-box">
               <h4 class="section-heading">Overview for Trial Participants</h4>
-              <p class="overview-text">{{ selectedSummary.summary_text }}</p>
+              <p class="overview-text">
+                {{ selectedSummary.summary_text }}
+              </p>
             </div>
 
             <!-- Structured Plain Language Sections per EU CTR Guidelines -->
@@ -151,7 +177,12 @@
                 <div class="card-icon">🎯</div>
                 <div class="card-content">
                   <h5>1. What was the goal of this study?</h5>
-                  <p>{{ selectedSummary.plain_language_sections?.objective || 'To evaluate whether the study medicine improves clinical outcomes compared to standard care.' }}</p>
+                  <p>
+                    {{
+                      selectedSummary.plain_language_sections?.objective ||
+                      "To evaluate whether the study medicine improves clinical outcomes compared to standard care."
+                    }}
+                  </p>
                 </div>
               </div>
 
@@ -159,7 +190,12 @@
                 <div class="card-icon">👥</div>
                 <div class="card-content">
                   <h5>2. Who participated in this trial?</h5>
-                  <p>{{ selectedSummary.plain_language_sections?.participants || 'Adult patients with confirmed diagnosis who met protocol criteria and voluntarily gave informed consent.' }}</p>
+                  <p>
+                    {{
+                      selectedSummary.plain_language_sections?.participants ||
+                      "Adult patients with confirmed diagnosis who met protocol criteria and voluntarily gave informed consent."
+                    }}
+                  </p>
                 </div>
               </div>
 
@@ -167,7 +203,12 @@
                 <div class="card-icon">💊</div>
                 <div class="card-content">
                   <h5>3. What treatments were studied?</h5>
-                  <p>{{ selectedSummary.plain_language_sections?.treatments || 'Investigational therapy administered in combination with standard of care vs. placebo control.' }}</p>
+                  <p>
+                    {{
+                      selectedSummary.plain_language_sections?.treatments ||
+                      "Investigational therapy administered in combination with standard of care vs. placebo control."
+                    }}
+                  </p>
                 </div>
               </div>
 
@@ -175,7 +216,12 @@
                 <div class="card-icon">📊</div>
                 <div class="card-content">
                   <h5>4. What were the key results?</h5>
-                  <p>{{ selectedSummary.plain_language_sections?.results || 'The primary efficacy endpoint was achieved with statistically significant benefits and improved quality of life.' }}</p>
+                  <p>
+                    {{
+                      selectedSummary.plain_language_sections?.results ||
+                      "The primary efficacy endpoint was achieved with statistically significant benefits and improved quality of life."
+                    }}
+                  </p>
                 </div>
               </div>
 
@@ -183,7 +229,12 @@
                 <div class="card-icon">🛡️</div>
                 <div class="card-content">
                   <h5>5. What side effects were observed?</h5>
-                  <p>{{ selectedSummary.plain_language_sections?.side_effects || 'Adverse events were generally mild-to-moderate, manageable, and resolved without treatment discontinuation.' }}</p>
+                  <p>
+                    {{
+                      selectedSummary.plain_language_sections?.side_effects ||
+                      "Adverse events were generally mild-to-moderate, manageable, and resolved without treatment discontinuation."
+                    }}
+                  </p>
                 </div>
               </div>
 
@@ -191,7 +242,12 @@
                 <div class="card-icon">🚀</div>
                 <div class="card-content">
                   <h5>6. What are the next steps?</h5>
-                  <p>{{ selectedSummary.plain_language_sections?.future_plans || 'Long-term extension monitoring is continuing, and regulatory submission dossiers have been submitted.' }}</p>
+                  <p>
+                    {{
+                      selectedSummary.plain_language_sections?.future_plans ||
+                      "Long-term extension monitoring is continuing, and regulatory submission dossiers have been submitted."
+                    }}
+                  </p>
                 </div>
               </div>
             </div>
@@ -206,31 +262,43 @@
         <!-- Comprehension Rating & Signature Form -->
         <div class="panel-box">
           <div class="panel-header">
-            <h3 class="panel-title">Participant Acknowledgment &amp; Comprehension Rating</h3>
+            <h3 class="panel-title">
+              Participant Acknowledgment &amp; Comprehension Rating
+            </h3>
             <span class="badge badge-regulatory">EU CTR Art 37</span>
           </div>
           <div class="panel-body">
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Select Clinical Trial Lay Summary:</label>
-              <select v-model="confirmForm.summary_id" class="form-select" @change="onConfirmSummarySelect">
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <select
+                v-model="confirmForm.summary_id"
+                class="form-select"
+                @change="onConfirmSummarySelect"
+              >
                 <option v-for="s in summaries" :key="s.id" :value="s.id">
                   {{ s.study_id }}: {{ s.title }}
                 </option>
               </select>
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Participant Subject ID / MRN:</label>
               <input v-model="confirmForm.subject_id" class="form-input" />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Study Protocol ID:</label>
               <input v-model="confirmForm.study_id" class="form-input" />
             </div>
 
             <!-- 5-Star Comprehension Assessment -->
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="rating-label">
-                How clear and understandable was this trial summary? (1 = Very Difficult, 5 = Very Clear)
+                How clear and understandable was this trial summary? (1 = Very
+                Difficult, 5 = Very Clear)
               </label>
               <div class="star-rating-box">
                 <button
@@ -243,12 +311,16 @@
                 >
                   ★
                 </button>
-                <span class="score-display">Rating: {{ confirmForm.comprehension_score }} / 5 Stars</span>
+                <span class="score-display"
+                  >Rating: {{ confirmForm.comprehension_score }} / 5 Stars</span
+                >
               </div>
             </div>
 
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Participant Feedback or Questions (Optional):</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <textarea
                 v-model="confirmForm.comprehension_feedback"
                 class="form-textarea"
@@ -269,7 +341,8 @@
               :disabled="!confirmForm.agree || isSubmitting"
               @click="submitConfirmationReceipt"
             >
-              🔏 Generate Cryptographically Sealed Confirmation Receipt (SHA-256)
+              🔏 Generate Cryptographically Sealed Confirmation Receipt
+              (SHA-256)
             </button>
           </div>
         </div>
@@ -277,7 +350,9 @@
         <!-- Receipt Certificate Preview -->
         <div class="panel-box">
           <div class="panel-header">
-            <h3 class="panel-title">📜 Cryptographic Receipt Certificate Preview</h3>
+            <h3 class="panel-title">
+              📜 Cryptographic Receipt Certificate Preview
+            </h3>
             <span class="badge badge-gxp">21 CFR Part 11 Sealed</span>
           </div>
           <div class="panel-body">
@@ -286,12 +361,26 @@
                 <div class="cert-seal">EU CTR CERTIFIED</div>
                 <div class="cert-id">Receipt ID: {{ lastReceipt.id }}</div>
               </div>
-              <h4 class="cert-title">Confirmation of Plain Language Trial Results Delivery</h4>
+              <h4 class="cert-title">
+                Confirmation of Plain Language Trial Results Delivery
+              </h4>
               <div class="cert-body">
-                <p>This certifies that participant <strong>{{ lastReceipt.subject_id }}</strong> has accessed, reviewed, and confirmed comprehension of the clinical trial summary for study <strong>{{ lastReceipt.study_id }}</strong>.</p>
+                <p>
+                  This certifies that participant
+                  <strong>{{ lastReceipt.subject_id }}</strong> has accessed,
+                  reviewed, and confirmed comprehension of the clinical trial
+                  summary for study <strong>{{ lastReceipt.study_id }}</strong
+                  >.
+                </p>
                 <div class="cert-meta-row">
-                  <div><strong>Comprehension Rating:</strong> {{ lastReceipt.comprehension_score }} / 5 Stars</div>
-                  <div><strong>Confirmed At:</strong> {{ formatDate(lastReceipt.confirmed_at) }}</div>
+                  <div>
+                    <strong>Comprehension Rating:</strong>
+                    {{ lastReceipt.comprehension_score }} / 5 Stars
+                  </div>
+                  <div>
+                    <strong>Confirmed At:</strong>
+                    {{ formatDate(lastReceipt.confirmed_at) }}
+                  </div>
                 </div>
                 <div class="cert-hash-box">
                   <span class="hash-label">SHA-256 Cryptographic Seal:</span>
@@ -301,7 +390,10 @@
             </div>
             <div v-else class="empty-cert-box">
               <div class="empty-cert-icon">🔏</div>
-              <p>Complete the comprehension assessment and click generate to create a sealed certificate.</p>
+              <p>
+                Complete the comprehension assessment and click generate to
+                create a sealed certificate.
+              </p>
             </div>
           </div>
         </div>
@@ -312,19 +404,30 @@
     <div v-if="activeTab === 'studio'" class="tab-content">
       <div class="panel-box">
         <div class="panel-header">
-          <h3 class="panel-title">EU CTR 536/2014 Article 37 Plain Language Summary Authoring Studio</h3>
-          <span class="badge badge-regulatory">Sponsor &amp; IRB Governance</span>
+          <h3 class="panel-title">
+            EU CTR 536/2014 Article 37 Plain Language Summary Authoring Studio
+          </h3>
+          <span class="badge badge-regulatory"
+            >Sponsor &amp; IRB Governance</span
+          >
         </div>
         <div class="panel-body">
           <div class="form-row-2">
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Study Protocol ID:</label>
               <input v-model="studioForm.study_id" class="form-input" />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Protocol Code / Phase:</label>
               <div class="form-row-2">
-                <input v-model="studioForm.protocol_id" class="form-input" placeholder="e.g. PROTOCOL-CAD-001" />
+                <input
+                  v-model="studioForm.protocol_id"
+                  class="form-input"
+                  placeholder="e.g. PROTOCOL-CAD-001"
+                />
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <select v-model="studioForm.trial_phase" class="form-select">
                   <option value="Phase I">Phase I</option>
                   <option value="Phase II">Phase II</option>
@@ -337,67 +440,122 @@
 
           <div class="form-row-2">
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Therapeutic Area / Indication:</label>
               <input v-model="studioForm.therapeutic_area" class="form-input" />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Sponsor Organization:</label>
               <input v-model="studioForm.sponsor_name" class="form-input" />
             </div>
           </div>
 
           <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label>Plain-Language Lay Summary Title:</label>
             <input v-model="studioForm.title" class="form-input" />
           </div>
 
           <div class="form-row-2">
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>IRB/Ethics Committee Approval Number:</label>
-              <input v-model="studioForm.irb_approval_number" class="form-input" />
+              <input
+                v-model="studioForm.irb_approval_number"
+                class="form-input"
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>IRB Approval Date:</label>
-              <input v-model="studioForm.irb_approval_date" type="date" class="form-input" />
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="studioForm.irb_approval_date"
+                type="date"
+                class="form-input"
+              />
             </div>
           </div>
 
           <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label>Narrative Summary Overview:</label>
-            <textarea v-model="studioForm.summary_text" class="form-textarea" rows="3" />
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <textarea
+              v-model="studioForm.summary_text"
+              class="form-textarea"
+              rows="3"
+            />
           </div>
 
           <h4 class="studio-subheading">Plain Language Section Content</h4>
           <div class="form-row-2">
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>1. Study Goal / Objective:</label>
-              <textarea v-model="studioForm.sections.objective" class="form-textarea" rows="2" />
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <textarea
+                v-model="studioForm.sections.objective"
+                class="form-textarea"
+                rows="2"
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>2. Participant Demographics:</label>
-              <textarea v-model="studioForm.sections.participants" class="form-textarea" rows="2" />
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <textarea
+                v-model="studioForm.sections.participants"
+                class="form-textarea"
+                rows="2"
+              />
             </div>
           </div>
 
           <div class="form-row-2">
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>3. Treatments Studied:</label>
-              <textarea v-model="studioForm.sections.treatments" class="form-textarea" rows="2" />
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <textarea
+                v-model="studioForm.sections.treatments"
+                class="form-textarea"
+                rows="2"
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>4. Key Results &amp; Findings:</label>
-              <textarea v-model="studioForm.sections.results" class="form-textarea" rows="2" />
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <textarea
+                v-model="studioForm.sections.results"
+                class="form-textarea"
+                rows="2"
+              />
             </div>
           </div>
 
           <div class="form-row-2">
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>5. Side Effects &amp; Safety Profile:</label>
-              <textarea v-model="studioForm.sections.side_effects" class="form-textarea" rows="2" />
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <textarea
+                v-model="studioForm.sections.side_effects"
+                class="form-textarea"
+                rows="2"
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>6. Future Plans &amp; Next Steps:</label>
-              <textarea v-model="studioForm.sections.future_plans" class="form-textarea" rows="2" />
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <textarea
+                v-model="studioForm.sections.future_plans"
+                class="form-textarea"
+                rows="2"
+              />
             </div>
           </div>
 
@@ -419,8 +577,13 @@
     <div v-if="activeTab === 'audit'" class="tab-content">
       <div class="panel-box">
         <div class="panel-header">
-          <h3 class="panel-title">EU CTR 536/2014 Article 37 Participant Delivery &amp; Comprehension Ledger</h3>
-          <span class="badge badge-gxp">{{ auditReceipts.length }} Immutable Receipts</span>
+          <h3 class="panel-title">
+            EU CTR 536/2014 Article 37 Participant Delivery &amp; Comprehension
+            Ledger
+          </h3>
+          <span class="badge badge-gxp"
+            >{{ auditReceipts.length }} Immutable Receipts</span
+          >
         </div>
         <div class="panel-body">
           <div class="table-container">
@@ -439,19 +602,29 @@
               <tbody>
                 <tr v-for="r in auditReceipts" :key="r.id">
                   <td>{{ formatDate(r.confirmed_at) }}</td>
-                  <td><strong>{{ r.subject_id }}</strong></td>
+                  <td>
+                    <strong>{{ r.subject_id }}</strong>
+                  </td>
                   <td>{{ r.study_id }}</td>
                   <td>
-                    <span class="star-pill">★ {{ r.comprehension_score }}/5</span>
+                    <span class="star-pill"
+                      >★ {{ r.comprehension_score }}/5</span
+                    >
                   </td>
-                  <td>{{ r.comprehension_feedback || '-' }}</td>
-                  <td><code>{{ r.signer_identity }}</code></td>
+                  <td>{{ r.comprehension_feedback || "-" }}</td>
                   <td>
-                    <code class="hash-code">{{ r.receipt_hash.substring(0, 16) }}...</code>
+                    <code>{{ r.signer_identity }}</code>
+                  </td>
+                  <td>
+                    <code class="hash-code"
+                      >{{ r.receipt_hash.substring(0, 16) }}...</code
+                    >
                   </td>
                 </tr>
                 <tr v-if="auditReceipts.length === 0">
-                  <td colspan="7" class="empty-cell">No participant confirmation receipts recorded yet.</td>
+                  <td colspan="7" class="empty-cell">
+                    No participant confirmation receipts recorded yet.
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -463,12 +636,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted } from "vue";
 
-const activeTab = ref('reader');
+const activeTab = ref("reader");
 const isLoading = ref(false);
 const isSubmitting = ref(false);
-const publishSuccess = ref('');
+const publishSuccess = ref("");
 
 const summaries = ref<any[]>([]);
 const selectedSummary = ref<any>(null);
@@ -476,51 +649,68 @@ const auditReceipts = ref<any[]>([]);
 const lastReceipt = ref<any>(null);
 
 const confirmForm = ref({
-  summary_id: '',
-  subject_id: 'SUBJ-1001',
-  study_id: 'STUDY-DCT-001',
+  summary_id: "",
+  subject_id: "SUBJ-1001",
+  study_id: "STUDY-DCT-001",
   comprehension_score: 5,
-  comprehension_feedback: 'The sections were very well explained, especially the treatment side effects and clinical results.',
-  statement: 'I confirm I have received, reviewed, and understood the plain language summary of clinical trial results per EU CTR Regulation No 536/2014 Article 37.',
+  comprehension_feedback:
+    "The sections were very well explained, especially the treatment side effects and clinical results.",
+  statement:
+    "I confirm I have received, reviewed, and understood the plain language summary of clinical trial results per EU CTR Regulation No 536/2014 Article 37.",
   agree: true,
 });
 
 const studioForm = ref({
-  study_id: 'STUDY-DCT-001',
-  protocol_id: 'PROTOCOL-CAD-001',
-  title: 'Clinical Trial Results in Plain Language: Safety and Efficacy of Investigational CAD-2026',
-  trial_phase: 'Phase III',
-  therapeutic_area: 'Oncology & Immunotherapy',
-  sponsor_name: 'Cadence BioSciences Global',
-  irb_approval_number: 'IRB-2026-EUCTR-9941',
-  irb_approval_date: '2026-08-01',
-  language: 'en',
-  summary_text: 'This document provides a summary of the main results from the Phase III clinical study for CAD-2026 in adult patients. It has been prepared in plain language for clinical trial participants, their families, and the general public in accordance with European Union Clinical Trials Regulation (EU CTR) 536/2014 Article 37.',
+  study_id: "STUDY-DCT-001",
+  protocol_id: "PROTOCOL-CAD-001",
+  title:
+    "Clinical Trial Results in Plain Language: Safety and Efficacy of Investigational CAD-2026",
+  trial_phase: "Phase III",
+  therapeutic_area: "Oncology & Immunotherapy",
+  sponsor_name: "Cadence BioSciences Global",
+  irb_approval_number: "IRB-2026-EUCTR-9941",
+  irb_approval_date: "2026-08-01",
+  language: "en",
+  summary_text:
+    "This document provides a summary of the main results from the Phase III clinical study for CAD-2026 in adult patients. It has been prepared in plain language for clinical trial participants, their families, and the general public in accordance with European Union Clinical Trials Regulation (EU CTR) 536/2014 Article 37.",
   sections: {
-    objective: 'To determine whether the investigational therapy CAD-2026 provides superior disease progression-free survival compared to standard chemotherapy.',
-    participants: 'A total of 450 adult participants (aged 18-75) diagnosed with stage III/IV solid tumors enrolled across 25 global clinical trial sites.',
-    treatments: 'Participants were randomly assigned to receive either CAD-2026 (200 mg intravenous infusion every 3 weeks) or standard of care comparator for 12 treatment cycles.',
-    results: 'Participants receiving CAD-2026 demonstrated a 42% relative reduction in disease progression risk with a median response duration of 18.4 months.',
-    side_effects: 'The most common mild side effects were fatigue (28%), mild nausea (18%), and transient headache (12%). Severe allergic reactions occurred in less than 1% of participants.',
-    future_plans: 'Based on these positive clinical results, regulatory marketing authorization applications have been submitted to the EMA and FDA, with long-term 5-year follow-up ongoing.',
+    objective:
+      "To determine whether the investigational therapy CAD-2026 provides superior disease progression-free survival compared to standard chemotherapy.",
+    participants:
+      "A total of 450 adult participants (aged 18-75) diagnosed with stage III/IV solid tumors enrolled across 25 global clinical trial sites.",
+    treatments:
+      "Participants were randomly assigned to receive either CAD-2026 (200 mg intravenous infusion every 3 weeks) or standard of care comparator for 12 treatment cycles.",
+    results:
+      "Participants receiving CAD-2026 demonstrated a 42% relative reduction in disease progression risk with a median response duration of 18.4 months.",
+    side_effects:
+      "The most common mild side effects were fatigue (28%), mild nausea (18%), and transient headache (12%). Severe allergic reactions occurred in less than 1% of participants.",
+    future_plans:
+      "Based on these positive clinical results, regulatory marketing authorization applications have been submitted to the EMA and FDA, with long-term 5-year follow-up ongoing.",
   },
 });
 
-const publishedSummariesCount = computed(() => summaries.value.filter(s => s.status === 'PUBLISHED').length);
+const publishedSummariesCount = computed(
+  () => summaries.value.filter((s) => s.status === "PUBLISHED").length
+);
 const totalReceiptsCount = computed(() => auditReceipts.value.length);
 const avgComprehensionScore = computed(() => {
   if (auditReceipts.value.length === 0) return 4.8;
-  const sum = auditReceipts.value.reduce((acc, r) => acc + (r.comprehension_score || 5), 0);
+  const sum = auditReceipts.value.reduce(
+    (acc, r) => acc + (r.comprehension_score || 5),
+    0
+  );
   return sum / auditReceipts.value.length;
 });
 
 function formatDate(iso: string) {
-  if (!iso) return '-';
+  if (!iso) return "-";
   return new Date(iso).toLocaleString();
 }
 
 function onConfirmSummarySelect() {
-  const match = summaries.value.find(s => s.id === confirmForm.value.summary_id);
+  const match = summaries.value.find(
+    (s) => s.id === confirmForm.value.summary_id
+  );
   if (match) {
     confirmForm.value.study_id = match.study_id;
   }
@@ -529,13 +719,13 @@ function onConfirmSummarySelect() {
 function prepareConfirmation(summary: any) {
   confirmForm.value.summary_id = summary.id;
   confirmForm.value.study_id = summary.study_id;
-  activeTab.value = 'confirm';
+  activeTab.value = "confirm";
 }
 
 async function loadSummaries() {
   isLoading.value = true;
   try {
-    const res = await fetch('/api/v1/payments/lay-summaries');
+    const res = await fetch("/api/v1/payments/lay-summaries");
     if (res.ok) {
       summaries.value = await res.json();
     }
@@ -543,25 +733,30 @@ async function loadSummaries() {
     if (summaries.value.length === 0) {
       summaries.value = [
         {
-          id: 'ls-101',
-          study_id: 'STUDY-DCT-001',
-          protocol_id: 'PROTOCOL-CAD-001',
-          title: 'Plain Language Summary of Study CAD-2026 for Advanced Solid Tumors',
-          trial_phase: 'Phase III',
-          therapeutic_area: 'Oncology',
-          sponsor_name: 'Cadence BioSciences Global',
-          irb_approval_number: 'IRB-2026-EUCTR-9941',
-          irb_approval_date: '2026-08-01',
-          language: 'en',
-          status: 'PUBLISHED',
-          summary_text: 'This document explains the key findings of clinical study CAD-2026 for adult participants and the public per EU CTR 536/2014 Article 37.',
+          id: "ls-101",
+          study_id: "STUDY-DCT-001",
+          protocol_id: "PROTOCOL-CAD-001",
+          title:
+            "Plain Language Summary of Study CAD-2026 for Advanced Solid Tumors",
+          trial_phase: "Phase III",
+          therapeutic_area: "Oncology",
+          sponsor_name: "Cadence BioSciences Global",
+          irb_approval_number: "IRB-2026-EUCTR-9941",
+          irb_approval_date: "2026-08-01",
+          language: "en",
+          status: "PUBLISHED",
+          summary_text:
+            "This document explains the key findings of clinical study CAD-2026 for adult participants and the public per EU CTR 536/2014 Article 37.",
           plain_language_sections: {
-            objective: 'To evaluate the safety, tolerability, and tumor reduction efficacy of CAD-2026.',
-            participants: '450 adult participants across 25 sites.',
-            treatments: 'Investigational CAD-2026 infusion vs. standard comparator.',
-            results: '42% reduction in progression risk with favorable response rate.',
-            side_effects: 'Fatigue, mild nausea, and transient headache.',
-            future_plans: 'Regulatory submissions submitted to EMA and FDA.',
+            objective:
+              "To evaluate the safety, tolerability, and tumor reduction efficacy of CAD-2026.",
+            participants: "450 adult participants across 25 sites.",
+            treatments:
+              "Investigational CAD-2026 infusion vs. standard comparator.",
+            results:
+              "42% reduction in progression risk with favorable response rate.",
+            side_effects: "Fatigue, mild nausea, and transient headache.",
+            future_plans: "Regulatory submissions submitted to EMA and FDA.",
           },
         },
       ];
@@ -574,7 +769,9 @@ async function loadSummaries() {
 
     // Load audit receipts
     if (selectedSummary.value) {
-      const rRes = await fetch(`/api/v1/payments/lay-summaries/${selectedSummary.value.id}/receipts`);
+      const rRes = await fetch(
+        `/api/v1/payments/lay-summaries/${selectedSummary.value.id}/receipts`
+      );
       if (rRes.ok) {
         auditReceipts.value = await rRes.json();
       }
@@ -583,20 +780,21 @@ async function loadSummaries() {
     if (auditReceipts.value.length === 0) {
       auditReceipts.value = [
         {
-          id: 'rec-001',
-          summary_id: 'ls-101',
-          subject_id: 'SUBJ-1001',
-          study_id: 'STUDY-DCT-001',
+          id: "rec-001",
+          summary_id: "ls-101",
+          subject_id: "SUBJ-1001",
+          study_id: "STUDY-DCT-001",
           comprehension_score: 5,
-          comprehension_feedback: 'Clear, concise, and easy to understand.',
-          signer_identity: 'SUBJ-1001',
+          comprehension_feedback: "Clear, concise, and easy to understand.",
+          signer_identity: "SUBJ-1001",
           confirmed_at: new Date().toISOString(),
-          receipt_hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+          receipt_hash:
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         },
       ];
     }
   } catch (e) {
-    console.error('Error loading lay summaries:', e);
+    console.error("Error loading lay summaries:", e);
   } finally {
     isLoading.value = false;
   }
@@ -606,23 +804,26 @@ async function submitConfirmationReceipt() {
   if (!confirmForm.value.summary_id) return;
   isSubmitting.value = true;
   try {
-    const res = await fetch(`/api/v1/payments/lay-summaries/${confirmForm.value.summary_id}/confirm-receipt`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        subject_id: confirmForm.value.subject_id,
-        study_id: confirmForm.value.study_id,
-        comprehension_score: confirmForm.value.comprehension_score,
-        comprehension_feedback: confirmForm.value.comprehension_feedback,
-        confirmation_statement: confirmForm.value.statement,
-      }),
-    });
+    const res = await fetch(
+      `/api/v1/payments/lay-summaries/${confirmForm.value.summary_id}/confirm-receipt`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject_id: confirmForm.value.subject_id,
+          study_id: confirmForm.value.study_id,
+          comprehension_score: confirmForm.value.comprehension_score,
+          comprehension_feedback: confirmForm.value.comprehension_feedback,
+          confirmation_statement: confirmForm.value.statement,
+        }),
+      }
+    );
     if (res.ok) {
       lastReceipt.value = await res.json();
       auditReceipts.value.unshift(lastReceipt.value);
     }
   } catch (e) {
-    console.error('Error confirming receipt:', e);
+    console.error("Error confirming receipt:", e);
   } finally {
     isSubmitting.value = false;
   }
@@ -630,11 +831,11 @@ async function submitConfirmationReceipt() {
 
 async function publishStudioSummary() {
   isSubmitting.value = true;
-  publishSuccess.value = '';
+  publishSuccess.value = "";
   try {
-    const res = await fetch('/api/v1/payments/lay-summaries', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch("/api/v1/payments/lay-summaries", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         study_id: studioForm.value.study_id,
         protocol_id: studioForm.value.protocol_id,
@@ -647,7 +848,7 @@ async function publishStudioSummary() {
         irb_approval_number: studioForm.value.irb_approval_number,
         irb_approval_date: studioForm.value.irb_approval_date,
         language: studioForm.value.language,
-        status: 'PUBLISHED',
+        status: "PUBLISHED",
       }),
     });
     if (res.ok) {
@@ -655,10 +856,10 @@ async function publishStudioSummary() {
       publishSuccess.value = `Successfully published Lay Summary '${saved.title}' live!`;
       await loadSummaries();
       selectedSummary.value = saved;
-      activeTab.value = 'reader';
+      activeTab.value = "reader";
     }
   } catch (e) {
-    console.error('Error publishing lay summary:', e);
+    console.error("Error publishing lay summary:", e);
   } finally {
     isSubmitting.value = false;
   }
@@ -674,7 +875,9 @@ onMounted(() => {
   padding: 24px;
   max-width: 1600px;
   margin: 0 auto;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
   color: #1e293b;
 }
 
@@ -1220,7 +1423,9 @@ onMounted(() => {
   margin-bottom: 4px;
 }
 
-.form-input, .form-select, .form-textarea {
+.form-input,
+.form-select,
+.form-textarea {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid #cbd5e1;

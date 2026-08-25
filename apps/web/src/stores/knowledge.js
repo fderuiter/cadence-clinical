@@ -74,7 +74,8 @@ export const useKnowledgeStore = defineStore("knowledge", {
     async fetchContextualHelp(route, persona) {
       const authStore = useAuthStore();
       const targetRoute = route || this.currentRoute || "/";
-      const targetPersona = persona || authStore.currentPersona || "super_admin";
+      const targetPersona =
+        persona || authStore.currentPersona || "super_admin";
 
       this.currentRoute = targetRoute;
       this.activePersona = targetPersona;
@@ -89,8 +90,10 @@ export const useKnowledgeStore = defineStore("knowledge", {
 
         if (response) {
           this.matchedMapping = response.matched_mapping || null;
-          this.primaryArticle = response.primary_article || response.article || null;
-          this.primaryVersion = response.primary_version || response.version || null;
+          this.primaryArticle =
+            response.primary_article || response.article || null;
+          this.primaryVersion =
+            response.primary_version || response.version || null;
           this.sectionAnchor = response.section_anchor || null;
           this.relatedArticles = response.related_articles || [];
         } else {
@@ -130,8 +133,8 @@ export const useKnowledgeStore = defineStore("knowledge", {
             const matchTags = Array.isArray(art.tags)
               ? art.tags.some((t) => t.toLowerCase().includes(lowerQ))
               : typeof art.tags === "string"
-              ? art.tags.toLowerCase().includes(lowerQ)
-              : false;
+                ? art.tags.toLowerCase().includes(lowerQ)
+                : false;
             return matchTitle || matchBody || matchTags;
           });
         }

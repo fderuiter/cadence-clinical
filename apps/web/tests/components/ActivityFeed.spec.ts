@@ -71,7 +71,9 @@ describe("ActivityFeed.vue - Document Activity Feed & Audit Trail", () => {
      * @req: PRD-DOC-001
      */
     const store = useFileshareStore();
-    vi.spyOn(store, "fetchActivityFeed").mockResolvedValue(mockActivityResponse as any);
+    vi.spyOn(store, "fetchActivityFeed").mockResolvedValue(
+      mockActivityResponse as any
+    );
 
     const wrapper = mount(ActivityFeed, {
       props: {
@@ -89,7 +91,10 @@ describe("ActivityFeed.vue - Document Activity Feed & Audit Trail", () => {
 
     await flushPromises();
 
-    expect(store.fetchActivityFeed).toHaveBeenCalledWith("file-act-123", expect.any(Object));
+    expect(store.fetchActivityFeed).toHaveBeenCalledWith(
+      "file-act-123",
+      expect.any(Object)
+    );
 
     // Verify timeline items rendered
     const timelineItems = wrapper.findAll(".timeline-item");
@@ -104,7 +109,9 @@ describe("ActivityFeed.vue - Document Activity Feed & Audit Trail", () => {
      * @req: PRD-SYS-001
      */
     const store = useFileshareStore();
-    vi.spyOn(store, "fetchActivityFeed").mockResolvedValue(mockActivityResponse as any);
+    vi.spyOn(store, "fetchActivityFeed").mockResolvedValue(
+      mockActivityResponse as any
+    );
 
     const wrapper = mount(ActivityFeed, {
       props: {
@@ -135,7 +142,9 @@ describe("ActivityFeed.vue - Document Activity Feed & Audit Trail", () => {
      * @req: PRD-DOC-001
      */
     const store = useFileshareStore();
-    const fetchSpy = vi.spyOn(store, "fetchActivityFeed").mockResolvedValue(mockActivityResponse as any);
+    const fetchSpy = vi
+      .spyOn(store, "fetchActivityFeed")
+      .mockResolvedValue(mockActivityResponse as any);
 
     const wrapper = mount(ActivityFeed, {
       props: {
@@ -193,7 +202,9 @@ describe("ActivityFeed.vue - Document Activity Feed & Audit Trail", () => {
      * @req: PRD-DOC-001
      */
     const store = useFileshareStore();
-    vi.spyOn(store, "fetchActivityFeed").mockResolvedValue(mockActivityResponse as any);
+    vi.spyOn(store, "fetchActivityFeed").mockResolvedValue(
+      mockActivityResponse as any
+    );
 
     const wrapper = mount(ActivityFeed, {
       props: {

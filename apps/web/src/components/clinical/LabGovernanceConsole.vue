@@ -1,17 +1,40 @@
 <template>
-  <div class="lab-governance-console" role="region" aria-label="Laboratory Normal Range Governance & Toxicity Grading Console">
+  <div
+    class="lab-governance-console"
+    role="region"
+    aria-label="Laboratory Normal Range Governance & Toxicity Grading Console"
+  >
     <!-- Header Bar -->
     <header class="console-header">
       <div class="header-main">
         <div class="title-group">
-          <span class="badge badge-regulatory">CDISC LAB v1.0.1 / NCI-CTCAE v5.0 / DAIDS / CLIA</span>
-          <h2 class="console-title">Lab Reference Range Governance & Toxicity Grading Console</h2>
+          <span class="badge badge-regulatory"
+            >CDISC LAB v1.0.1 / NCI-CTCAE v5.0 / DAIDS / CLIA</span
+          >
+          <h2 class="console-title">
+            Lab Reference Range Governance & Toxicity Grading Console
+          </h2>
         </div>
         <div class="header-metadata">
-          <span class="meta-item"><strong>Study:</strong> {{ currentStudyId || 'STUDY-101' }}</span>
-          <span class="meta-item"><strong>Active Ranges:</strong> <span class="status-pill info">{{ ranges.length }}</span></span>
-          <span class="meta-item"><strong>Staged AE Triggers:</strong> <span class="status-pill danger">{{ stagedReviews.length }}</span></span>
-          <span class="meta-item"><strong>Local Certifications:</strong> <span class="status-pill success">{{ certifications.length }}</span></span>
+          <span class="meta-item"
+            ><strong>Study:</strong> {{ currentStudyId || "STUDY-101" }}</span
+          >
+          <span class="meta-item"
+            ><strong>Active Ranges:</strong>
+            <span class="status-pill info">{{ ranges.length }}</span></span
+          >
+          <span class="meta-item"
+            ><strong>Staged AE Triggers:</strong>
+            <span class="status-pill danger">{{
+              stagedReviews.length
+            }}</span></span
+          >
+          <span class="meta-item"
+            ><strong>Local Certifications:</strong>
+            <span class="status-pill success">{{
+              certifications.length
+            }}</span></span
+          >
         </div>
       </div>
 
@@ -80,7 +103,11 @@
     <!-- Main Content Panes -->
     <main class="main-content">
       <!-- TAB 1: Normal Reference Ranges Governance -->
-      <section v-if="activeTab === 'ranges'" class="tab-pane" aria-labelledby="ranges-tab-heading">
+      <section
+        v-if="activeTab === 'ranges'"
+        class="tab-pane"
+        aria-labelledby="ranges-tab-heading"
+      >
         <div class="pane-toolbar">
           <div class="filter-group">
             <label for="range-test-filter">Analyte Filter:</label>
@@ -94,7 +121,11 @@
           </div>
           <div class="filter-group">
             <label for="range-source-filter">Lab Source:</label>
-            <select id="range-source-filter" v-model="rangeSourceFilter" class="select-input">
+            <select
+              id="range-source-filter"
+              v-model="rangeSourceFilter"
+              class="select-input"
+            >
               <option value="ALL">All Sources (Central & Local)</option>
               <option value="CENTRAL">Central Lab Only</option>
               <option value="LOCAL">Local Lab Only</option>
@@ -102,7 +133,11 @@
           </div>
           <div class="filter-group">
             <label for="range-sex-filter">Sex Applicability:</label>
-            <select id="range-sex-filter" v-model="rangeSexFilter" class="select-input">
+            <select
+              id="range-sex-filter"
+              v-model="rangeSexFilter"
+              class="select-input"
+            >
               <option value="ALL">All Demographics</option>
               <option value="M">Male (M)</option>
               <option value="F">Female (F)</option>
@@ -128,38 +163,65 @@
             </thead>
             <tbody>
               <tr v-for="r in filteredRanges" :key="r.id">
-                <td><strong class="code-tag">{{ r.test_code }}</strong></td>
+                <td>
+                  <strong class="code-tag">{{ r.test_code }}</strong>
+                </td>
                 <td>{{ r.test_name }}</td>
                 <td>
-                  <span :class="['status-pill', r.source === 'CENTRAL' ? 'primary' : 'secondary']">
+                  <span
+                    :class="[
+                      'status-pill',
+                      r.source === 'CENTRAL' ? 'primary' : 'secondary',
+                    ]"
+                  >
                     {{ r.source }}
                   </span>
                 </td>
-                <td>{{ r.site_id || 'All Sites (Global)' }}</td>
+                <td>{{ r.site_id || "All Sites (Global)" }}</td>
                 <td>
                   <div class="demographic-tags">
-                    <span class="mini-tag">Sex: {{ r.sex_applicability || 'ALL' }}</span>
-                    <span class="mini-tag">Age: {{ formatAgeRange(r.age_low, r.age_high) }}</span>
-                    <span v-if="r.ethnicity_applicability" class="mini-tag">Eth: {{ r.ethnicity_applicability }}</span>
+                    <span class="mini-tag"
+                      >Sex: {{ r.sex_applicability || "ALL" }}</span
+                    >
+                    <span class="mini-tag"
+                      >Age: {{ formatAgeRange(r.age_low, r.age_high) }}</span
+                    >
+                    <span v-if="r.ethnicity_applicability" class="mini-tag"
+                      >Eth: {{ r.ethnicity_applicability }}</span
+                    >
                   </div>
                 </td>
-                <td><code>{{ r.normalized_unit || r.unit }}</code></td>
                 <td>
-                  <span class="range-span">{{ r.low_bound ?? '—' }} – {{ r.high_bound ?? '—' }}</span>
+                  <code>{{ r.normalized_unit || r.unit }}</code>
                 </td>
                 <td>
-                  <span v-if="r.critical_low !== null || r.critical_high !== null" class="critical-span">
-                    &lt;{{ r.critical_low ?? '—' }} | &gt;{{ r.critical_high ?? '—' }}
+                  <span class="range-span"
+                    >{{ r.low_bound ?? "—" }} – {{ r.high_bound ?? "—" }}</span
+                  >
+                </td>
+                <td>
+                  <span
+                    v-if="r.critical_low !== null || r.critical_high !== null"
+                    class="critical-span"
+                  >
+                    &lt;{{ r.critical_low ?? "—" }} | &gt;{{
+                      r.critical_high ?? "—"
+                    }}
                   </span>
                   <span v-else class="text-muted">None</span>
                 </td>
                 <td>v{{ r.version || 1 }}</td>
                 <td>
-                  <button class="btn btn-sm btn-outline" @click="editRange(r)">Edit</button>
+                  <button class="btn btn-sm btn-outline" @click="editRange(r)">
+                    Edit
+                  </button>
                 </td>
               </tr>
               <tr v-if="filteredRanges.length === 0">
-                <td colspan="10" class="empty-state">No laboratory reference ranges match the active filter criteria.</td>
+                <td colspan="10" class="empty-state">
+                  No laboratory reference ranges match the active filter
+                  criteria.
+                </td>
               </tr>
             </tbody>
           </table>
@@ -167,21 +229,39 @@
       </section>
 
       <!-- TAB 2: Investigator Grade 3/4 Adverse Event Review Queue -->
-      <section v-if="activeTab === 'toxicity_queue'" class="tab-pane" aria-labelledby="toxicity-queue-heading">
+      <section
+        v-if="activeTab === 'toxicity_queue'"
+        class="tab-pane"
+        aria-labelledby="toxicity-queue-heading"
+      >
         <div class="pane-toolbar alert-toolbar">
           <div class="alert-info-box">
             <span class="icon-warning">⚠️</span>
             <div>
               <strong>Investigator Safety Trigger Workflow:</strong>
-              <p>Automated CTCAE v5.0 / DAIDS Grade 3/4 toxicities, Hy's Law DILI alerts, and acute &ge;50% delta checks auto-draft an AE eCRF staged for clinical review with 21 CFR Part 11 electronic signature audit trails.</p>
+              <p>
+                Automated CTCAE v5.0 / DAIDS Grade 3/4 toxicities, Hy's Law DILI
+                alerts, and acute &ge;50% delta checks auto-draft an AE eCRF
+                staged for clinical review with 21 CFR Part 11 electronic
+                signature audit trails.
+              </p>
             </div>
           </div>
           <div class="filter-group">
             <label for="review-status-filter">Status Filter:</label>
-            <select id="review-status-filter" v-model="reviewStatusFilter" class="select-input" @change="fetchStagedReviews">
-              <option value="STAGED_FOR_INVESTIGATOR_REVIEW">Staged for Review (Action Required)</option>
+            <select
+              id="review-status-filter"
+              v-model="reviewStatusFilter"
+              class="select-input"
+              @change="fetchStagedReviews"
+            >
+              <option value="STAGED_FOR_INVESTIGATOR_REVIEW">
+                Staged for Review (Action Required)
+              </option>
               <option value="CONFIRMED_AS_AE">Confirmed as AE</option>
-              <option value="DISMISSED_NOT_CLINICALLY_SIGNIFICANT">Dismissed (Not Significant)</option>
+              <option value="DISMISSED_NOT_CLINICALLY_SIGNIFICANT">
+                Dismissed (Not Significant)
+              </option>
               <option value="ESCALATED_SAE">Escalated to SAE</option>
               <option value="ALL">All Items</option>
             </select>
@@ -204,15 +284,28 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="review in stagedReviews" :key="review.id" :class="{ 'row-critical': review.ctcae_grade >= 4 || review.is_hys_law_warning }">
-                <td><strong>{{ review.subject_id }}</strong></td>
-                <td>{{ review.visit_id || 'Encounter' }}</td>
+              <tr
+                v-for="review in stagedReviews"
+                :key="review.id"
+                :class="{
+                  'row-critical':
+                    review.ctcae_grade >= 4 || review.is_hys_law_warning,
+                }"
+              >
+                <td>
+                  <strong>{{ review.subject_id }}</strong>
+                </td>
+                <td>{{ review.visit_id || "Encounter" }}</td>
                 <td>
                   <strong>{{ review.test_code }}</strong>
-                  <div class="sub-text">{{ review.test_name }}</div>
+                  <div class="sub-text">
+                    {{ review.test_name }}
+                  </div>
                 </td>
                 <td>
-                  <span class="value-highlight">{{ review.lab_value }} {{ review.unit }}</span>
+                  <span class="value-highlight"
+                    >{{ review.lab_value }} {{ review.unit }}</span
+                  >
                 </td>
                 <td>
                   <span :class="['grade-badge', 'grade-' + review.ctcae_grade]">
@@ -221,32 +314,59 @@
                 </td>
                 <td>
                   <div class="flags-stack">
-                    <span v-if="review.is_hys_law_warning" class="safety-tag hys-law">🚨 Hy's Law DILI</span>
-                    <span v-if="review.is_delta_check_alert" class="safety-tag delta">⚡ Delta Alert ({{ review.delta_percentage }}%)</span>
-                    <span v-if="!review.is_hys_law_warning && !review.is_delta_check_alert" class="text-muted">Standard</span>
+                    <span
+                      v-if="review.is_hys_law_warning"
+                      class="safety-tag hys-law"
+                      >🚨 Hy's Law DILI</span
+                    >
+                    <span
+                      v-if="review.is_delta_check_alert"
+                      class="safety-tag delta"
+                      >⚡ Delta Alert ({{ review.delta_percentage }}%)</span
+                    >
+                    <span
+                      v-if="
+                        !review.is_hys_law_warning &&
+                        !review.is_delta_check_alert
+                      "
+                      class="text-muted"
+                      >Standard</span
+                    >
                   </div>
                 </td>
-                <td class="clinical-desc-cell">{{ review.clinical_description }}</td>
+                <td class="clinical-desc-cell">
+                  {{ review.clinical_description }}
+                </td>
                 <td>
-                  <span :class="['status-pill', getReviewStatusPillClass(review.review_status)]">
+                  <span
+                    :class="[
+                      'status-pill',
+                      getReviewStatusPillClass(review.review_status),
+                    ]"
+                  >
                     {{ formatReviewStatus(review.review_status) }}
                   </span>
                 </td>
                 <td>
                   <button
-                    v-if="review.review_status === 'STAGED_FOR_INVESTIGATOR_REVIEW'"
+                    v-if="
+                      review.review_status === 'STAGED_FOR_INVESTIGATOR_REVIEW'
+                    "
                     class="btn btn-sm btn-primary"
                     @click="openActionModal(review)"
                   >
                     Investigator Sign-off
                   </button>
                   <span v-else class="text-muted signed-tag">
-                    Reviewed by {{ review.reviewed_by || 'Investigator' }}
+                    Reviewed by {{ review.reviewed_by || "Investigator" }}
                   </span>
                 </td>
               </tr>
               <tr v-if="stagedReviews.length === 0">
-                <td colspan="9" class="empty-state">No staged adverse event laboratory triggers pending investigator review.</td>
+                <td colspan="9" class="empty-state">
+                  No staged adverse event laboratory triggers pending
+                  investigator review.
+                </td>
               </tr>
             </tbody>
           </table>
@@ -254,11 +374,20 @@
       </section>
 
       <!-- TAB 3: Local Lab Certifications & Accreditation Governance -->
-      <section v-if="activeTab === 'certifications'" class="tab-pane" aria-labelledby="certifications-tab-heading">
+      <section
+        v-if="activeTab === 'certifications'"
+        class="tab-pane"
+        aria-labelledby="certifications-tab-heading"
+      >
         <div class="pane-toolbar">
           <div class="title-sub">
-            <h3>Local Laboratory Accreditations & CLIA/CAP Certification Tracking</h3>
-            <p>Monitors laboratory accreditation expiration and enforces uncalibrated range safeguards.</p>
+            <h3>
+              Local Laboratory Accreditations & CLIA/CAP Certification Tracking
+            </h3>
+            <p>
+              Monitors laboratory accreditation expiration and enforces
+              uncalibrated range safeguards.
+            </p>
           </div>
           <button class="btn btn-primary" @click="openCreateCertModal">
             <span class="icon">➕</span> Register Local Lab Certification
@@ -282,19 +411,33 @@
             </thead>
             <tbody>
               <tr v-for="cert in certifications" :key="cert.id">
-                <td><strong>{{ cert.site_id }}</strong></td>
+                <td>
+                  <strong>{{ cert.site_id }}</strong>
+                </td>
                 <td>{{ cert.lab_name }}</td>
-                <td><span class="accred-tag">{{ cert.accreditation_body }}</span></td>
-                <td><code>{{ cert.certification_number }}</code></td>
+                <td>
+                  <span class="accred-tag">{{ cert.accreditation_body }}</span>
+                </td>
+                <td>
+                  <code>{{ cert.certification_number }}</code>
+                </td>
                 <td>{{ formatDate(cert.effective_date) }}</td>
                 <td>{{ formatDate(cert.expiration_date) }}</td>
                 <td>
-                  <span :class="['status-pill', cert.status === 'ACTIVE' ? 'success' : 'danger']">
+                  <span
+                    :class="[
+                      'status-pill',
+                      cert.status === 'ACTIVE' ? 'success' : 'danger',
+                    ]"
+                  >
                     {{ cert.status }}
                   </span>
                 </td>
                 <td>
-                  <span v-if="isCertExpired(cert.expiration_date)" class="safeguard-badge active">
+                  <span
+                    v-if="isCertExpired(cert.expiration_date)"
+                    class="safeguard-badge active"
+                  >
                     ⚠️ Uncalibrated Range Safeguard Active
                   </span>
                   <span v-else class="safeguard-badge normal">
@@ -302,11 +445,19 @@
                   </span>
                 </td>
                 <td>
-                  <button class="btn btn-sm btn-outline" @click="verifyCert(cert)">Verify Site</button>
+                  <button
+                    class="btn btn-sm btn-outline"
+                    @click="verifyCert(cert)"
+                  >
+                    Verify Site
+                  </button>
                 </td>
               </tr>
               <tr v-if="certifications.length === 0">
-                <td colspan="9" class="empty-state">No local laboratory certifications recorded. Register CLIA/CAP credentials to enable local lab ingestion.</td>
+                <td colspan="9" class="empty-state">
+                  No local laboratory certifications recorded. Register CLIA/CAP
+                  credentials to enable local lab ingestion.
+                </td>
               </tr>
             </tbody>
           </table>
@@ -314,53 +465,99 @@
       </section>
 
       <!-- TAB 4: LOINC Standard Mapping & Mathematical Unit Conversion Engine -->
-      <section v-if="activeTab === 'loinc_converter'" class="tab-pane" aria-labelledby="loinc-tab-heading">
+      <section
+        v-if="activeTab === 'loinc_converter'"
+        class="tab-pane"
+        aria-labelledby="loinc-tab-heading"
+      >
         <div class="converter-grid">
           <!-- Live Interactive Unit Converter -->
           <div class="converter-card">
             <h4>🔄 Real-Time LOINC Mathematical Unit Converter</h4>
             <div class="form-group">
               <label for="conv-test">Analyte / Test Code:</label>
-              <select id="conv-test" v-model="conversionModel.test_code" class="select-input" @change="onConversionTestChange">
-                <option value="ALT">ALT (Alanine Aminotransferase) [LOINC: 1742-6]</option>
-                <option value="AST">AST (Aspartate Aminotransferase) [LOINC: 1920-8]</option>
+              <select
+                id="conv-test"
+                v-model="conversionModel.test_code"
+                class="select-input"
+                @change="onConversionTestChange"
+              >
+                <option value="ALT">
+                  ALT (Alanine Aminotransferase) [LOINC: 1742-6]
+                </option>
+                <option value="AST">
+                  AST (Aspartate Aminotransferase) [LOINC: 1920-8]
+                </option>
                 <option value="BILI">Total Bilirubin [LOINC: 1975-2]</option>
                 <option value="CREAT">Serum Creatinine [LOINC: 2160-0]</option>
                 <option value="GLUCOSE">Fasting Glucose [LOINC: 2345-7]</option>
                 <option value="HEMOGLOBIN">Hemoglobin [LOINC: 718-7]</option>
                 <option value="PLATELETS">Platelets [LOINC: 777-3]</option>
-                <option value="ANC">Absolute Neutrophil Count [LOINC: 26499-4]</option>
+                <option value="ANC">
+                  Absolute Neutrophil Count [LOINC: 26499-4]
+                </option>
                 <option value="POTASSIUM">Potassium [LOINC: 2823-3]</option>
                 <option value="SODIUM">Sodium [LOINC: 2951-2]</option>
                 <option value="CALCIUM">Calcium [LOINC: 17861-6]</option>
-                <option value="CHOLESTEROL">Total Cholesterol [LOINC: 2093-3]</option>
-                <option value="TRIGLYCERIDES">Triglycerides [LOINC: 2571-8]</option>
+                <option value="CHOLESTEROL">
+                  Total Cholesterol [LOINC: 2093-3]
+                </option>
+                <option value="TRIGLYCERIDES">
+                  Triglycerides [LOINC: 2571-8]
+                </option>
               </select>
             </div>
 
             <div class="converter-row">
               <div class="form-group">
                 <label for="conv-val">Input Value:</label>
-                <input id="conv-val" v-model.number="conversionModel.value" type="number" step="any" class="text-input" />
+                <input
+                  id="conv-val"
+                  v-model.number="conversionModel.value"
+                  type="number"
+                  step="any"
+                  class="text-input"
+                />
               </div>
               <div class="form-group">
                 <label for="conv-from">From Unit:</label>
-                <input id="conv-from" v-model="conversionModel.from_unit" type="text" class="text-input" />
+                <input
+                  id="conv-from"
+                  v-model="conversionModel.from_unit"
+                  type="text"
+                  class="text-input"
+                />
               </div>
               <div class="form-group">
                 <label for="conv-to">To Unit (Standard SI):</label>
-                <input id="conv-to" v-model="conversionModel.to_unit" type="text" class="text-input" />
+                <input
+                  id="conv-to"
+                  v-model="conversionModel.to_unit"
+                  type="text"
+                  class="text-input"
+                />
               </div>
             </div>
 
-            <button class="btn btn-primary" @click="runUnitConversion" :disabled="isConverting">
-              {{ isConverting ? 'Converting...' : 'Execute Mathematical Conversion' }}
+            <button
+              class="btn btn-primary"
+              :disabled="isConverting"
+              @click="runUnitConversion"
+            >
+              {{
+                isConverting
+                  ? "Converting..."
+                  : "Execute Mathematical Conversion"
+              }}
             </button>
 
             <div v-if="conversionResult" class="conversion-output">
               <div class="output-row">
                 <span>Converted Normalized Result:</span>
-                <strong>{{ conversionResult.converted_value }} {{ conversionResult.to_unit }}</strong>
+                <strong
+                  >{{ conversionResult.converted_value }}
+                  {{ conversionResult.to_unit }}</strong
+                >
               </div>
               <div class="output-row">
                 <span>Multiplication Factor:</span>
@@ -368,7 +565,9 @@
               </div>
               <div class="output-row">
                 <span>Mapped LOINC Code:</span>
-                <code>{{ conversionResult.loinc_code || 'Standard UCUM' }}</code>
+                <code>{{
+                  conversionResult.loinc_code || "Standard UCUM"
+                }}</code>
               </div>
             </div>
           </div>
@@ -378,7 +577,11 @@
             <h4>🧪 Toxicity Evaluation & Hy's Law Simulator</h4>
             <div class="form-group">
               <label for="sim-scale">Grading System Standard:</label>
-              <select id="sim-scale" v-model="simModel.grading_scale" class="select-input">
+              <select
+                id="sim-scale"
+                v-model="simModel.grading_scale"
+                class="select-input"
+              >
                 <option value="CTCAE_V5">NCI-CTCAE v5.0</option>
                 <option value="DAIDS_V2_1">DAIDS v2.1 Severity Table</option>
               </select>
@@ -387,44 +590,95 @@
             <div class="converter-row">
               <div class="form-group">
                 <label for="sim-test">Test Code:</label>
-                <input id="sim-test" v-model="simModel.test_code" type="text" class="text-input" />
+                <input
+                  id="sim-test"
+                  v-model="simModel.test_code"
+                  type="text"
+                  class="text-input"
+                />
               </div>
               <div class="form-group">
                 <label for="sim-val">Observed Value:</label>
-                <input id="sim-val" v-model.number="simModel.value" type="number" step="any" class="text-input" />
+                <input
+                  id="sim-val"
+                  v-model.number="simModel.value"
+                  type="number"
+                  step="any"
+                  class="text-input"
+                />
               </div>
               <div class="form-group">
                 <label for="sim-unit">Unit:</label>
-                <input id="sim-unit" v-model="simModel.unit" type="text" class="text-input" />
+                <input
+                  id="sim-unit"
+                  v-model="simModel.unit"
+                  type="text"
+                  class="text-input"
+                />
               </div>
             </div>
 
             <div class="converter-row">
               <div class="form-group">
                 <label for="sim-uln">Demographic ULN:</label>
-                <input id="sim-uln" v-model.number="simModel.ref_high" type="number" step="any" class="text-input" />
+                <input
+                  id="sim-uln"
+                  v-model.number="simModel.ref_high"
+                  type="number"
+                  step="any"
+                  class="text-input"
+                />
               </div>
               <div class="form-group">
                 <label for="sim-lln">Demographic LLN:</label>
-                <input id="sim-lln" v-model.number="simModel.ref_low" type="number" step="any" class="text-input" />
+                <input
+                  id="sim-lln"
+                  v-model.number="simModel.ref_low"
+                  type="number"
+                  step="any"
+                  class="text-input"
+                />
               </div>
               <div class="form-group">
                 <label for="sim-base">Subject Baseline:</label>
-                <input id="sim-base" v-model.number="simModel.baseline_value" type="number" step="any" class="text-input" />
+                <input
+                  id="sim-base"
+                  v-model.number="simModel.baseline_value"
+                  type="number"
+                  step="any"
+                  class="text-input"
+                />
               </div>
             </div>
 
             <!-- Co-analytes for Hy's Law simulation -->
-            <div v-if="simModel.test_code === 'ALT' || simModel.test_code === 'AST'" class="hys-law-inputs">
+            <div
+              v-if="
+                simModel.test_code === 'ALT' || simModel.test_code === 'AST'
+              "
+              class="hys-law-inputs"
+            >
               <h5>Co-analytes for Hy's Law DILI Check:</h5>
               <div class="converter-row">
                 <div class="form-group">
                   <label for="sim-bili">Total Bilirubin (mg/dL):</label>
-                  <input id="sim-bili" v-model.number="simModel.bili_value" type="number" step="any" class="text-input" />
+                  <input
+                    id="sim-bili"
+                    v-model.number="simModel.bili_value"
+                    type="number"
+                    step="any"
+                    class="text-input"
+                  />
                 </div>
                 <div class="form-group">
                   <label for="sim-alkp">ALKP (U/L):</label>
-                  <input id="sim-alkp" v-model.number="simModel.alkp_value" type="number" step="any" class="text-input" />
+                  <input
+                    id="sim-alkp"
+                    v-model.number="simModel.alkp_value"
+                    type="number"
+                    step="any"
+                    class="text-input"
+                  />
                 </div>
               </div>
             </div>
@@ -436,7 +690,9 @@
             <div v-if="simResult" class="conversion-output">
               <div class="output-row">
                 <span>Calculated Toxicity Grade:</span>
-                <span :class="['grade-badge', 'grade-' + simResult.ctcae_grade]">Grade {{ simResult.ctcae_grade }}</span>
+                <span :class="['grade-badge', 'grade-' + simResult.ctcae_grade]"
+                  >Grade {{ simResult.ctcae_grade }}</span
+                >
               </div>
               <div class="output-row">
                 <span>Clinical Severity:</span>
@@ -444,11 +700,20 @@
               </div>
               <div class="output-row">
                 <span>Grade 3/4 AE Trigger Fired:</span>
-                <strong>{{ simResult.is_critical_ae_trigger ? 'YES (Auto-Drafts eCRF)' : 'NO' }}</strong>
+                <strong>{{
+                  simResult.is_critical_ae_trigger
+                    ? "YES (Auto-Drafts eCRF)"
+                    : "NO"
+                }}</strong>
               </div>
-              <div v-if="simResult.is_hys_law_warning" class="output-row alert-row">
+              <div
+                v-if="simResult.is_hys_law_warning"
+                class="output-row alert-row"
+              >
                 <span>Hy's Law DILI Alert:</span>
-                <strong class="text-danger">CRITICAL DRUG-INDUCED LIVER INJURY WARNING</strong>
+                <strong class="text-danger"
+                  >CRITICAL DRUG-INDUCED LIVER INJURY WARNING</strong
+                >
               </div>
             </div>
           </div>
@@ -471,12 +736,20 @@
               </thead>
               <tbody>
                 <tr v-for="item in loincCatalog" :key="item.loinc_code">
-                  <td><strong>{{ item.test_code }}</strong></td>
+                  <td>
+                    <strong>{{ item.test_code }}</strong>
+                  </td>
                   <td>{{ item.test_name }}</td>
-                  <td><code class="loinc-badge">{{ item.loinc_code }}</code></td>
-                  <td><code>{{ item.standard_unit }}</code></td>
-                  <td><span class="category-tag">{{ item.category }}</span></td>
-                  <td>{{ item.molecular_weight ?? '—' }}</td>
+                  <td>
+                    <code class="loinc-badge">{{ item.loinc_code }}</code>
+                  </td>
+                  <td>
+                    <code>{{ item.standard_unit }}</code>
+                  </td>
+                  <td>
+                    <span class="category-tag">{{ item.category }}</span>
+                  </td>
+                  <td>{{ item.molecular_weight ?? "—" }}</td>
                 </tr>
               </tbody>
             </table>
@@ -485,11 +758,18 @@
       </section>
 
       <!-- TAB 5: Laboratory Feed Ingestion Monitor -->
-      <section v-if="activeTab === 'batches'" class="tab-pane" aria-labelledby="batches-tab-heading">
+      <section
+        v-if="activeTab === 'batches'"
+        class="tab-pane"
+        aria-labelledby="batches-tab-heading"
+      >
         <div class="pane-toolbar">
           <div class="title-sub">
             <h3>Central & Local Laboratory Feed Ingestion Log</h3>
-            <p>Real-time transaction tracking across HL7 v2.x, CDISC LAB v1.0.1, CSV/sFTP, and Local Lab batch entry.</p>
+            <p>
+              Real-time transaction tracking across HL7 v2.x, CDISC LAB v1.0.1,
+              CSV/sFTP, and Local Lab batch entry.
+            </p>
           </div>
           <button class="btn btn-secondary" @click="fetchBatchStatuses">
             <span class="icon">🔄</span> Refresh Feeds
@@ -514,23 +794,46 @@
             </thead>
             <tbody>
               <tr v-for="b in batches" :key="b.batch_id">
-                <td><code>{{ b.batch_id.slice(0, 8) }}...</code></td>
-                <td><span class="format-badge">{{ b.format.toUpperCase() }}</span></td>
                 <td>
-                  <span :class="['status-pill', b.status === 'COMPLETED' ? 'success' : b.status === 'COMPLETED_WITH_ERRORS' ? 'warning' : 'danger']">
+                  <code>{{ b.batch_id.slice(0, 8) }}...</code>
+                </td>
+                <td>
+                  <span class="format-badge">{{ b.format.toUpperCase() }}</span>
+                </td>
+                <td>
+                  <span
+                    :class="[
+                      'status-pill',
+                      b.status === 'COMPLETED'
+                        ? 'success'
+                        : b.status === 'COMPLETED_WITH_ERRORS'
+                          ? 'warning'
+                          : 'danger',
+                    ]"
+                  >
                     {{ b.status }}
                   </span>
                 </td>
                 <td>{{ b.total_processed }}</td>
                 <td>{{ b.ingested_count }}</td>
                 <td>{{ b.out_of_range_count }}</td>
-                <td><span class="count-badge danger">{{ b.staged_aes_count }}</span></td>
-                <td><span class="count-badge warning">{{ b.uncalibrated_safeguards }}</span></td>
+                <td>
+                  <span class="count-badge danger">{{
+                    b.staged_aes_count
+                  }}</span>
+                </td>
+                <td>
+                  <span class="count-badge warning">{{
+                    b.uncalibrated_safeguards
+                  }}</span>
+                </td>
                 <td>{{ b.queries_raised }}</td>
                 <td>{{ formatDate(b.created_at) }}</td>
               </tr>
               <tr v-if="batches.length === 0">
-                <td colspan="10" class="empty-state">No laboratory feed batches processed yet.</td>
+                <td colspan="10" class="empty-state">
+                  No laboratory feed batches processed yet.
+                </td>
               </tr>
             </tbody>
           </table>
@@ -538,24 +841,42 @@
       </section>
 
       <!-- TAB 6: Longitudinal Trends & Acute Delta Checks -->
-      <section v-if="activeTab === 'trends'" class="tab-pane" aria-labelledby="trends-tab-heading">
+      <section
+        v-if="activeTab === 'trends'"
+        class="tab-pane"
+        aria-labelledby="trends-tab-heading"
+      >
         <div class="pane-toolbar">
           <div class="filter-group">
             <label for="trend-subject">Subject ID:</label>
-            <select id="trend-subject" v-model="trendSubject" class="select-input">
-              <option value="SUBJ-101">SUBJ-101 (Cohort A - Hepatic Safety)</option>
-              <option value="SUBJ-202">SUBJ-202 (Cohort A - Renal Function)</option>
+            <select
+              id="trend-subject"
+              v-model="trendSubject"
+              class="select-input"
+            >
+              <option value="SUBJ-101">
+                SUBJ-101 (Cohort A - Hepatic Safety)
+              </option>
+              <option value="SUBJ-202">
+                SUBJ-202 (Cohort A - Renal Function)
+              </option>
               <option value="SUBJ-303">SUBJ-303 (Cohort B - Hematology)</option>
-              <option value="SUBJ-TOX-99">SUBJ-TOX-99 (Severe Toxicities)</option>
+              <option value="SUBJ-TOX-99">
+                SUBJ-TOX-99 (Severe Toxicities)
+              </option>
             </select>
           </div>
           <div class="filter-group">
             <label for="trend-test">Analyte:</label>
             <select id="trend-test" v-model="trendTest" class="select-input">
               <option value="ALT">ALT - Alanine Aminotransferase (U/L)</option>
-              <option value="AST">AST - Aspartate Aminotransferase (U/L)</option>
+              <option value="AST">
+                AST - Aspartate Aminotransferase (U/L)
+              </option>
               <option value="CREAT">CREAT - Serum Creatinine (mg/dL)</option>
-              <option value="POTASSIUM">POTASSIUM - Serum Potassium (mmol/L)</option>
+              <option value="POTASSIUM">
+                POTASSIUM - Serum Potassium (mmol/L)
+              </option>
               <option value="HGB">HGB - Hemoglobin (g/dL)</option>
               <option value="PLT">PLT - Platelet Count (10^9/L)</option>
             </select>
@@ -570,12 +891,18 @@
         <div class="trend-kpis">
           <div class="kpi-card">
             <span class="kpi-label">Baseline Value</span>
-            <span class="kpi-value">{{ trendSummary.baseline }} {{ trendSummary.unit }}</span>
-            <span class="kpi-sub">Ref: [{{ trendSummary.lln }} - {{ trendSummary.uln }}]</span>
+            <span class="kpi-value"
+              >{{ trendSummary.baseline }} {{ trendSummary.unit }}</span
+            >
+            <span class="kpi-sub"
+              >Ref: [{{ trendSummary.lln }} - {{ trendSummary.uln }}]</span
+            >
           </div>
           <div class="kpi-card">
             <span class="kpi-label">Peak Value (Cmax)</span>
-            <span class="kpi-value text-danger">{{ trendSummary.peakValue }} {{ trendSummary.unit }}</span>
+            <span class="kpi-value text-danger"
+              >{{ trendSummary.peakValue }} {{ trendSummary.unit }}</span
+            >
             <span class="kpi-sub">Visit: {{ trendSummary.peakVisit }}</span>
           </div>
           <div class="kpi-card">
@@ -587,10 +914,18 @@
           </div>
           <div class="kpi-card">
             <span class="kpi-label">Acute Delta Shift</span>
-            <span :class="['kpi-value', trendSummary.maxDeltaPct >= 50 ? 'text-danger' : 'text-primary']">
-              {{ trendSummary.maxDeltaPct > 0 ? '+' : '' }}{{ trendSummary.maxDeltaPct }}%
+            <span
+              :class="[
+                'kpi-value',
+                trendSummary.maxDeltaPct >= 50 ? 'text-danger' : 'text-primary',
+              ]"
+            >
+              {{ trendSummary.maxDeltaPct > 0 ? "+" : ""
+              }}{{ trendSummary.maxDeltaPct }}%
             </span>
-            <span v-if="trendSummary.maxDeltaPct >= 50" class="safety-tag delta">⚡ Acute Shift Alert</span>
+            <span v-if="trendSummary.maxDeltaPct >= 50" class="safety-tag delta"
+              >⚡ Acute Shift Alert</span
+            >
             <span v-else class="kpi-sub">Within Normal Variance</span>
           </div>
         </div>
@@ -600,22 +935,48 @@
           <div class="chart-header">
             <h4>Longitudinal Lab Trajectory & Reference Band Shading</h4>
             <div class="chart-legend">
-              <span class="legend-item"><span class="legend-box normal-band"></span> Normal Limits [LLN - ULN]</span>
-              <span class="legend-item"><span class="legend-line uln-line"></span> Upper Limit of Normal (ULN: {{ trendSummary.uln }})</span>
-              <span class="legend-item"><span class="legend-line delta-line"></span> Acute Shift Trigger (+50%)</span>
+              <span class="legend-item"
+                ><span class="legend-box normal-band" /> Normal Limits [LLN -
+                ULN]</span
+              >
+              <span class="legend-item"
+                ><span class="legend-line uln-line" /> Upper Limit of Normal
+                (ULN: {{ trendSummary.uln }})</span
+              >
+              <span class="legend-item"
+                ><span class="legend-line delta-line" /> Acute Shift Trigger
+                (+50%)</span
+              >
             </div>
           </div>
 
           <div class="svg-container">
-            <svg viewBox="0 0 800 280" class="trend-svg" role="img" aria-label="Longitudinal laboratory trend graph">
+            <svg
+              viewBox="0 0 800 280"
+              class="trend-svg"
+              role="img"
+              aria-label="Longitudinal laboratory trend graph"
+            >
               <!-- Background Grid & Reference Shading -->
-              <rect x="60" y="20" width="710" height="210" fill="#f8fafc" rx="4" />
+              <rect
+                x="60"
+                y="20"
+                width="710"
+                height="210"
+                fill="#f8fafc"
+                rx="4"
+              />
               <!-- Normal Range Band -->
               <rect
                 :x="60"
                 :y="getYCoord(trendSummary.uln)"
                 width="710"
-                :height="Math.max(4, getYCoord(trendSummary.lln) - getYCoord(trendSummary.uln))"
+                :height="
+                  Math.max(
+                    4,
+                    getYCoord(trendSummary.lln) - getYCoord(trendSummary.uln)
+                  )
+                "
                 fill="#ecfdf5"
                 opacity="0.75"
               />
@@ -630,7 +991,15 @@
                 stroke-dasharray="4,4"
                 stroke-width="1.5"
               />
-              <text x="775" :y="getYCoord(trendSummary.uln) + 4" font-size="10" fill="#059669" font-weight="bold">ULN</text>
+              <text
+                x="775"
+                :y="getYCoord(trendSummary.uln) + 4"
+                font-size="10"
+                fill="#059669"
+                font-weight="bold"
+              >
+                ULN
+              </text>
 
               <!-- LLN Boundary Line (if > 0) -->
               <line
@@ -643,7 +1012,16 @@
                 stroke-dasharray="4,4"
                 stroke-width="1.5"
               />
-              <text v-if="trendSummary.lln > 0" x="775" :y="getYCoord(trendSummary.lln) + 4" font-size="10" fill="#059669" font-weight="bold">LLN</text>
+              <text
+                v-if="trendSummary.lln > 0"
+                x="775"
+                :y="getYCoord(trendSummary.lln) + 4"
+                font-size="10"
+                fill="#059669"
+                font-weight="bold"
+              >
+                LLN
+              </text>
 
               <!-- Trend Polyline Path -->
               <polyline
@@ -716,18 +1094,47 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="obs in activeTrendData" :key="obs.visit" :class="{ 'row-critical': obs.grade >= 3 }">
-                <td><strong>{{ obs.visit }}</strong></td>
+              <tr
+                v-for="obs in activeTrendData"
+                :key="obs.visit"
+                :class="{ 'row-critical': obs.grade >= 3 }"
+              >
+                <td>
+                  <strong>{{ obs.visit }}</strong>
+                </td>
                 <td>{{ obs.date }}</td>
                 <td>
-                  <span :class="['status-pill', obs.source === 'CENTRAL' ? 'primary' : 'secondary']">
+                  <span
+                    :class="[
+                      'status-pill',
+                      obs.source === 'CENTRAL' ? 'primary' : 'secondary',
+                    ]"
+                  >
                     {{ obs.source }}
                   </span>
                 </td>
-                <td><strong class="value-highlight">{{ obs.value }} {{ trendSummary.unit }}</strong></td>
-                <td><code>{{ obs.normalizedValue }} {{ trendSummary.normalizedUnit }}</code></td>
                 <td>
-                  <span :class="['status-pill', obs.indicator === 'NORMAL' ? 'success' : obs.indicator.includes('HIGH') ? 'danger' : 'warning']">
+                  <strong class="value-highlight"
+                    >{{ obs.value }} {{ trendSummary.unit }}</strong
+                  >
+                </td>
+                <td>
+                  <code
+                    >{{ obs.normalizedValue }}
+                    {{ trendSummary.normalizedUnit }}</code
+                  >
+                </td>
+                <td>
+                  <span
+                    :class="[
+                      'status-pill',
+                      obs.indicator === 'NORMAL'
+                        ? 'success'
+                        : obs.indicator.includes('HIGH')
+                          ? 'danger'
+                          : 'warning',
+                    ]"
+                  >
                     {{ obs.indicator }}
                   </span>
                 </td>
@@ -735,16 +1142,26 @@
                   <span :class="['grade-badge', 'grade-' + obs.grade]">
                     Grade {{ obs.grade }}
                   </span>
-                  <span v-if="obs.grade >= 3" class="sub-text text-danger">Severe AE</span>
+                  <span v-if="obs.grade >= 3" class="sub-text text-danger"
+                    >Severe AE</span
+                  >
                 </td>
                 <td>
-                  <span v-if="obs.deltaPct !== null" :class="['delta-tag', obs.deltaPct >= 50 ? 'alert' : '']">
-                    {{ obs.deltaPct > 0 ? '+' : '' }}{{ obs.deltaPct }}%
+                  <span
+                    v-if="obs.deltaPct !== null"
+                    :class="['delta-tag', obs.deltaPct >= 50 ? 'alert' : '']"
+                  >
+                    {{ obs.deltaPct > 0 ? "+" : "" }}{{ obs.deltaPct }}%
                   </span>
                   <span v-else class="text-muted">Baseline</span>
                 </td>
                 <td>
-                  <span :class="['status-pill', getReviewStatusPillClass(obs.reviewStatus)]">
+                  <span
+                    :class="[
+                      'status-pill',
+                      getReviewStatusPillClass(obs.reviewStatus),
+                    ]"
+                  >
                     {{ formatReviewStatus(obs.reviewStatus) }}
                   </span>
                 </td>
@@ -756,17 +1173,30 @@
     </main>
 
     <!-- MODAL: Ingest Laboratory Batch -->
-    <div v-if="showIngestModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div
+      v-if="showIngestModal"
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+    >
       <div class="modal-box modal-lg">
         <div class="modal-header">
           <h3>Ingest Laboratory Batch Feed</h3>
-          <button class="close-btn" @click="showIngestModal = false">&times;</button>
+          <button class="close-btn" @click="showIngestModal = false">
+            &times;
+          </button>
         </div>
         <div class="modal-body">
           <div class="form-group">
             <label for="ingest-format">Feed Ingestion Format:</label>
-            <select id="ingest-format" v-model="ingestForm.format" class="select-input">
-              <option value="cdisc_lab">CDISC LAB Standard v1.0.1 (XML ODM / JSON)</option>
+            <select
+              id="ingest-format"
+              v-model="ingestForm.format"
+              class="select-input"
+            >
+              <option value="cdisc_lab">
+                CDISC LAB Standard v1.0.1 (XML ODM / JSON)
+              </option>
               <option value="csv">Delimited CSV / TSV / sFTP</option>
               <option value="hl7">HL7 v2.x (ORU^R01)</option>
               <option value="fhir">HL7 FHIR Observation JSON</option>
@@ -777,15 +1207,31 @@
           <div class="form-row">
             <div class="form-group">
               <label for="ingest-study">Study Identifier:</label>
-              <input id="ingest-study" v-model="ingestForm.study_id" type="text" class="text-input" placeholder="e.g. STUDY-101" />
+              <input
+                id="ingest-study"
+                v-model="ingestForm.study_id"
+                type="text"
+                class="text-input"
+                placeholder="e.g. STUDY-101"
+              />
             </div>
             <div class="form-group">
               <label for="ingest-site">Site Identifier (for Local Lab):</label>
-              <input id="ingest-site" v-model="ingestForm.site_id" type="text" class="text-input" placeholder="e.g. SITE-001" />
+              <input
+                id="ingest-site"
+                v-model="ingestForm.site_id"
+                type="text"
+                class="text-input"
+                placeholder="e.g. SITE-001"
+              />
             </div>
             <div class="form-group">
               <label for="ingest-source">Laboratory Source:</label>
-              <select id="ingest-source" v-model="ingestForm.lab_source" class="select-input">
+              <select
+                id="ingest-source"
+                v-model="ingestForm.lab_source"
+                class="select-input"
+              >
                 <option value="CENTRAL">CENTRAL</option>
                 <option value="LOCAL">LOCAL</option>
               </select>
@@ -793,67 +1239,141 @@
           </div>
 
           <div class="form-group">
-            <label for="ingest-payload">Raw Feed Content / XML / JSON / Delimited Payload:</label>
+            <label for="ingest-payload"
+              >Raw Feed Content / XML / JSON / Delimited Payload:</label
+            >
             <textarea
               id="ingest-payload"
               v-model="ingestForm.payload"
               rows="8"
               class="textarea-input"
               placeholder="Paste raw HL7 v2.x, CDISC LAB XML ODM, FHIR Observation, or CSV text here..."
-            ></textarea>
+            />
           </div>
 
           <div class="form-group">
             <label for="ingest-reason">GxP Reason for Ingestion:</label>
-            <input id="ingest-reason" v-model="ingestForm.reason_for_change" type="text" class="text-input" />
+            <input
+              id="ingest-reason"
+              v-model="ingestForm.reason_for_change"
+              type="text"
+              class="text-input"
+            />
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showIngestModal = false">Cancel</button>
-          <button class="btn btn-primary" @click="executeBatchIngest" :disabled="isIngesting">
-            {{ isIngesting ? 'Processing Feed...' : 'Execute Ingestion & Grade Toxicities' }}
+          <button class="btn btn-secondary" @click="showIngestModal = false">
+            Cancel
+          </button>
+          <button
+            class="btn btn-primary"
+            :disabled="isIngesting"
+            @click="executeBatchIngest"
+          >
+            {{
+              isIngesting
+                ? "Processing Feed..."
+                : "Execute Ingestion & Grade Toxicities"
+            }}
           </button>
         </div>
       </div>
     </div>
 
     <!-- MODAL: Investigator Sign-Off Action -->
-    <div v-if="showActionModal && selectedReview" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div
+      v-if="showActionModal && selectedReview"
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+    >
       <div class="modal-box">
         <div class="modal-header">
-          <h3>Investigator Sign-off: Grade {{ selectedReview.ctcae_grade }} Toxicity</h3>
-          <button class="close-btn" @click="showActionModal = false">&times;</button>
+          <h3>
+            Investigator Sign-off: Grade
+            {{ selectedReview.ctcae_grade }} Toxicity
+          </h3>
+          <button class="close-btn" @click="showActionModal = false">
+            &times;
+          </button>
         </div>
         <div class="modal-body">
           <div class="review-summary-card">
-            <p><strong>Subject:</strong> {{ selectedReview.subject_id }} | <strong>Analyte:</strong> {{ selectedReview.test_name }} ({{ selectedReview.test_code }})</p>
-            <p><strong>Observed Measurement:</strong> {{ selectedReview.lab_value }} {{ selectedReview.unit }}</p>
-            <p><strong>Severity Description:</strong> {{ selectedReview.clinical_description }}</p>
+            <p>
+              <strong>Subject:</strong> {{ selectedReview.subject_id }} |
+              <strong>Analyte:</strong> {{ selectedReview.test_name }} ({{
+                selectedReview.test_code
+              }})
+            </p>
+            <p>
+              <strong>Observed Measurement:</strong>
+              {{ selectedReview.lab_value }} {{ selectedReview.unit }}
+            </p>
+            <p>
+              <strong>Severity Description:</strong>
+              {{ selectedReview.clinical_description }}
+            </p>
           </div>
 
           <div class="form-group">
-            <label for="action-select">Investigator Clinical Determination:</label>
-            <select id="action-select" v-model="actionForm.action" class="select-input">
-              <option value="CONFIRM">Confirm as Adverse Event (Promote to Formal AE eCRF)</option>
-              <option value="DISMISS">Dismiss (Deemed Not Clinically Significant)</option>
-              <option value="ESCALATE_SAE">Escalate to Serious Adverse Event (SAE)</option>
+            <label for="action-select"
+              >Investigator Clinical Determination:</label
+            >
+            <select
+              id="action-select"
+              v-model="actionForm.action"
+              class="select-input"
+            >
+              <option value="CONFIRM">
+                Confirm as Adverse Event (Promote to Formal AE eCRF)
+              </option>
+              <option value="DISMISS">
+                Dismiss (Deemed Not Clinically Significant)
+              </option>
+              <option value="ESCALATE_SAE">
+                Escalate to Serious Adverse Event (SAE)
+              </option>
             </select>
           </div>
 
           <div class="form-group">
             <label for="action-notes">Clinical Commentary & Rationale:</label>
-            <textarea id="action-notes" v-model="actionForm.investigator_notes" rows="3" class="textarea-input" placeholder="Provide medical commentary on laboratory abnormality..."></textarea>
+            <textarea
+              id="action-notes"
+              v-model="actionForm.investigator_notes"
+              rows="3"
+              class="textarea-input"
+              placeholder="Provide medical commentary on laboratory abnormality..."
+            />
           </div>
 
           <div class="form-group">
-            <label for="action-reason">21 CFR Part 11 Reason for Determination:</label>
-            <input id="action-reason" v-model="actionForm.reason_for_change" type="text" class="text-input" placeholder="Mandatory Part 11 audit justification" />
+            <label for="action-reason"
+              >21 CFR Part 11 Reason for Determination:</label
+            >
+            <input
+              id="action-reason"
+              v-model="actionForm.reason_for_change"
+              type="text"
+              class="text-input"
+              placeholder="Mandatory Part 11 audit justification"
+            />
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showActionModal = false">Cancel</button>
-          <button class="btn btn-primary" @click="executeReviewAction" :disabled="isActioning">
-            {{ isActioning ? 'Submitting Signature...' : 'Sign & Submit Determination' }}
+          <button class="btn btn-secondary" @click="showActionModal = false">
+            Cancel
+          </button>
+          <button
+            class="btn btn-primary"
+            :disabled="isActioning"
+            @click="executeReviewAction"
+          >
+            {{
+              isActioning
+                ? "Submitting Signature..."
+                : "Sign & Submit Determination"
+            }}
           </button>
         </div>
       </div>
@@ -862,215 +1382,578 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from "vue";
 
 // Active Tab State
-const activeTab = ref('ranges')
-const currentStudyId = ref('STUDY-101')
+const activeTab = ref("ranges");
+const currentStudyId = ref("STUDY-101");
 
 // Reference Ranges State
-const ranges = ref([])
-const rangeSearch = ref('')
-const rangeSourceFilter = ref('ALL')
-const rangeSexFilter = ref('ALL')
+const ranges = ref([]);
+const rangeSearch = ref("");
+const rangeSourceFilter = ref("ALL");
+const rangeSexFilter = ref("ALL");
 
 // Staged Reviews State
-const stagedReviews = ref([])
-const reviewStatusFilter = ref('STAGED_FOR_INVESTIGATOR_REVIEW')
-const selectedReview = ref(null)
-const showActionModal = ref(false)
-const isActioning = ref(false)
+const stagedReviews = ref([]);
+const reviewStatusFilter = ref("STAGED_FOR_INVESTIGATOR_REVIEW");
+const selectedReview = ref(null);
+const showActionModal = ref(false);
+const isActioning = ref(false);
 const actionForm = ref({
-  action: 'CONFIRM',
-  investigator_notes: '',
-  reason_for_change: 'Investigator review of laboratory toxicity trigger',
-})
+  action: "CONFIRM",
+  investigator_notes: "",
+  reason_for_change: "Investigator review of laboratory toxicity trigger",
+});
 
 // Local Lab Certifications State
-const certifications = ref([])
+const certifications = ref([]);
 
 // Ingestion State
-const batches = ref([])
-const showIngestModal = ref(false)
-const isIngesting = ref(false)
+const batches = ref([]);
+const showIngestModal = ref(false);
+const isIngesting = ref(false);
 const ingestForm = ref({
-  format: 'cdisc_lab',
-  study_id: 'STUDY-101',
-  site_id: 'SITE-001',
-  lab_source: 'CENTRAL',
-  payload: '',
-  reason_for_change: 'Batch laboratory data ingestion',
-})
+  format: "cdisc_lab",
+  study_id: "STUDY-101",
+  site_id: "SITE-001",
+  lab_source: "CENTRAL",
+  payload: "",
+  reason_for_change: "Batch laboratory data ingestion",
+});
 
 // LOINC & Unit Conversion State
-const loincCatalog = ref([])
-const isConverting = ref(false)
+const loincCatalog = ref([]);
+const isConverting = ref(false);
 const conversionModel = ref({
-  test_code: 'CREAT',
+  test_code: "CREAT",
   value: 2.5,
-  from_unit: 'mg/dL',
-  to_unit: 'umol/L',
-})
-const conversionResult = ref(null)
+  from_unit: "mg/dL",
+  to_unit: "umol/L",
+});
+const conversionResult = ref(null);
 
 // Toxicity Simulation State
 const simModel = ref({
-  grading_scale: 'CTCAE_V5',
-  test_code: 'ALT',
+  grading_scale: "CTCAE_V5",
+  test_code: "ALT",
   value: 210,
-  unit: 'U/L',
+  unit: "U/L",
   ref_high: 35,
   ref_low: 5,
   baseline_value: 30,
   bili_value: 2.8,
   alkp_value: 95,
-})
-const simResult = ref(null)
+});
+const simResult = ref(null);
 
 // Longitudinal Trends State & Sample Clinical Progression Datasets
-const trendSubject = ref('SUBJ-101')
-const trendTest = ref('ALT')
+const trendSubject = ref("SUBJ-101");
+const trendTest = ref("ALT");
 
 const trendDatabase = {
-  'SUBJ-101': {
+  "SUBJ-101": {
     ALT: {
       baseline: 28.0,
       lln: 0.0,
       uln: 35.0,
-      unit: 'U/L',
-      normalizedUnit: 'U/L',
+      unit: "U/L",
+      normalizedUnit: "U/L",
       data: [
-        { visit: 'Screening', date: '2026-06-01', source: 'CENTRAL', value: 26.0, normalizedValue: 26.0, indicator: 'NORMAL', grade: 0, deltaPct: null, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Baseline (D1)', date: '2026-06-15', source: 'CENTRAL', value: 28.0, normalizedValue: 28.0, indicator: 'NORMAL', grade: 0, deltaPct: 0.0, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 1 (D15)', date: '2026-06-30', source: 'CENTRAL', value: 65.0, normalizedValue: 65.0, indicator: 'HIGH', grade: 1, deltaPct: 132.1, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 2 (D29)', date: '2026-07-15', source: 'CENTRAL', value: 145.0, normalizedValue: 145.0, indicator: 'HIGH', grade: 2, deltaPct: 417.8, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 3 (D43)', date: '2026-07-29', source: 'CENTRAL', value: 280.0, normalizedValue: 280.0, indicator: 'HIGH HIGH', grade: 3, deltaPct: 900.0, reviewStatus: 'STAGED_FOR_INVESTIGATOR_REVIEW' },
-        { visit: 'Cycle 4 (D57)', date: '2026-08-12', source: 'CENTRAL', value: 110.0, normalizedValue: 110.0, indicator: 'HIGH', grade: 1, deltaPct: 292.8, reviewStatus: 'CONFIRMED_AS_AE' },
+        {
+          visit: "Screening",
+          date: "2026-06-01",
+          source: "CENTRAL",
+          value: 26.0,
+          normalizedValue: 26.0,
+          indicator: "NORMAL",
+          grade: 0,
+          deltaPct: null,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Baseline (D1)",
+          date: "2026-06-15",
+          source: "CENTRAL",
+          value: 28.0,
+          normalizedValue: 28.0,
+          indicator: "NORMAL",
+          grade: 0,
+          deltaPct: 0.0,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 1 (D15)",
+          date: "2026-06-30",
+          source: "CENTRAL",
+          value: 65.0,
+          normalizedValue: 65.0,
+          indicator: "HIGH",
+          grade: 1,
+          deltaPct: 132.1,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 2 (D29)",
+          date: "2026-07-15",
+          source: "CENTRAL",
+          value: 145.0,
+          normalizedValue: 145.0,
+          indicator: "HIGH",
+          grade: 2,
+          deltaPct: 417.8,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 3 (D43)",
+          date: "2026-07-29",
+          source: "CENTRAL",
+          value: 280.0,
+          normalizedValue: 280.0,
+          indicator: "HIGH HIGH",
+          grade: 3,
+          deltaPct: 900.0,
+          reviewStatus: "STAGED_FOR_INVESTIGATOR_REVIEW",
+        },
+        {
+          visit: "Cycle 4 (D57)",
+          date: "2026-08-12",
+          source: "CENTRAL",
+          value: 110.0,
+          normalizedValue: 110.0,
+          indicator: "HIGH",
+          grade: 1,
+          deltaPct: 292.8,
+          reviewStatus: "CONFIRMED_AS_AE",
+        },
       ],
     },
     AST: {
       baseline: 24.0,
       lln: 0.0,
       uln: 35.0,
-      unit: 'U/L',
-      normalizedUnit: 'U/L',
+      unit: "U/L",
+      normalizedUnit: "U/L",
       data: [
-        { visit: 'Screening', date: '2026-06-01', source: 'CENTRAL', value: 22.0, normalizedValue: 22.0, indicator: 'NORMAL', grade: 0, deltaPct: null, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Baseline (D1)', date: '2026-06-15', source: 'CENTRAL', value: 24.0, normalizedValue: 24.0, indicator: 'NORMAL', grade: 0, deltaPct: 0.0, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 1 (D15)', date: '2026-06-30', source: 'CENTRAL', value: 48.0, normalizedValue: 48.0, indicator: 'HIGH', grade: 1, deltaPct: 100.0, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 2 (D29)', date: '2026-07-15', source: 'CENTRAL', value: 115.0, normalizedValue: 115.0, indicator: 'HIGH', grade: 2, deltaPct: 379.2, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 3 (D43)', date: '2026-07-29', source: 'CENTRAL', value: 195.0, normalizedValue: 195.0, indicator: 'HIGH HIGH', grade: 3, deltaPct: 712.5, reviewStatus: 'STAGED_FOR_INVESTIGATOR_REVIEW' },
-        { visit: 'Cycle 4 (D57)', date: '2026-08-12', source: 'CENTRAL', value: 85.0, normalizedValue: 85.0, indicator: 'HIGH', grade: 1, deltaPct: 254.2, reviewStatus: 'CONFIRMED_AS_AE' },
+        {
+          visit: "Screening",
+          date: "2026-06-01",
+          source: "CENTRAL",
+          value: 22.0,
+          normalizedValue: 22.0,
+          indicator: "NORMAL",
+          grade: 0,
+          deltaPct: null,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Baseline (D1)",
+          date: "2026-06-15",
+          source: "CENTRAL",
+          value: 24.0,
+          normalizedValue: 24.0,
+          indicator: "NORMAL",
+          grade: 0,
+          deltaPct: 0.0,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 1 (D15)",
+          date: "2026-06-30",
+          source: "CENTRAL",
+          value: 48.0,
+          normalizedValue: 48.0,
+          indicator: "HIGH",
+          grade: 1,
+          deltaPct: 100.0,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 2 (D29)",
+          date: "2026-07-15",
+          source: "CENTRAL",
+          value: 115.0,
+          normalizedValue: 115.0,
+          indicator: "HIGH",
+          grade: 2,
+          deltaPct: 379.2,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 3 (D43)",
+          date: "2026-07-29",
+          source: "CENTRAL",
+          value: 195.0,
+          normalizedValue: 195.0,
+          indicator: "HIGH HIGH",
+          grade: 3,
+          deltaPct: 712.5,
+          reviewStatus: "STAGED_FOR_INVESTIGATOR_REVIEW",
+        },
+        {
+          visit: "Cycle 4 (D57)",
+          date: "2026-08-12",
+          source: "CENTRAL",
+          value: 85.0,
+          normalizedValue: 85.0,
+          indicator: "HIGH",
+          grade: 1,
+          deltaPct: 254.2,
+          reviewStatus: "CONFIRMED_AS_AE",
+        },
       ],
     },
     CREAT: {
       baseline: 0.9,
       lln: 0.6,
       uln: 1.2,
-      unit: 'mg/dL',
-      normalizedUnit: 'umol/L',
+      unit: "mg/dL",
+      normalizedUnit: "umol/L",
       data: [
-        { visit: 'Screening', date: '2026-06-01', source: 'CENTRAL', value: 0.85, normalizedValue: 75.1, indicator: 'NORMAL', grade: 0, deltaPct: null, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Baseline (D1)', date: '2026-06-15', source: 'CENTRAL', value: 0.9, normalizedValue: 79.6, indicator: 'NORMAL', grade: 0, deltaPct: 0.0, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 1 (D15)', date: '2026-06-30', source: 'CENTRAL', value: 1.1, normalizedValue: 97.2, indicator: 'NORMAL', grade: 0, deltaPct: 22.2, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 2 (D29)', date: '2026-07-15', source: 'LOCAL', value: 1.4, normalizedValue: 123.8, indicator: 'HIGH', grade: 1, deltaPct: 55.6, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 3 (D43)', date: '2026-07-29', source: 'CENTRAL', value: 1.9, normalizedValue: 168.0, indicator: 'HIGH', grade: 2, deltaPct: 111.1, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 4 (D57)', date: '2026-08-12', source: 'CENTRAL', value: 1.0, normalizedValue: 88.4, indicator: 'NORMAL', grade: 0, deltaPct: 11.1, reviewStatus: 'NOT_APPLICABLE' },
+        {
+          visit: "Screening",
+          date: "2026-06-01",
+          source: "CENTRAL",
+          value: 0.85,
+          normalizedValue: 75.1,
+          indicator: "NORMAL",
+          grade: 0,
+          deltaPct: null,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Baseline (D1)",
+          date: "2026-06-15",
+          source: "CENTRAL",
+          value: 0.9,
+          normalizedValue: 79.6,
+          indicator: "NORMAL",
+          grade: 0,
+          deltaPct: 0.0,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 1 (D15)",
+          date: "2026-06-30",
+          source: "CENTRAL",
+          value: 1.1,
+          normalizedValue: 97.2,
+          indicator: "NORMAL",
+          grade: 0,
+          deltaPct: 22.2,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 2 (D29)",
+          date: "2026-07-15",
+          source: "LOCAL",
+          value: 1.4,
+          normalizedValue: 123.8,
+          indicator: "HIGH",
+          grade: 1,
+          deltaPct: 55.6,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 3 (D43)",
+          date: "2026-07-29",
+          source: "CENTRAL",
+          value: 1.9,
+          normalizedValue: 168.0,
+          indicator: "HIGH",
+          grade: 2,
+          deltaPct: 111.1,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 4 (D57)",
+          date: "2026-08-12",
+          source: "CENTRAL",
+          value: 1.0,
+          normalizedValue: 88.4,
+          indicator: "NORMAL",
+          grade: 0,
+          deltaPct: 11.1,
+          reviewStatus: "NOT_APPLICABLE",
+        },
       ],
     },
     POTASSIUM: {
       baseline: 4.2,
       lln: 3.5,
       uln: 5.0,
-      unit: 'mmol/L',
-      normalizedUnit: 'mmol/L',
+      unit: "mmol/L",
+      normalizedUnit: "mmol/L",
       data: [
-        { visit: 'Screening', date: '2026-06-01', source: 'CENTRAL', value: 4.1, normalizedValue: 4.1, indicator: 'NORMAL', grade: 0, deltaPct: null, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Baseline (D1)', date: '2026-06-15', source: 'CENTRAL', value: 4.2, normalizedValue: 4.2, indicator: 'NORMAL', grade: 0, deltaPct: 0.0, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 1 (D15)', date: '2026-06-30', source: 'CENTRAL', value: 4.5, normalizedValue: 4.5, indicator: 'NORMAL', grade: 0, deltaPct: 7.1, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 2 (D29)', date: '2026-07-15', source: 'CENTRAL', value: 5.4, normalizedValue: 5.4, indicator: 'HIGH', grade: 1, deltaPct: 28.6, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 3 (D43)', date: '2026-07-29', source: 'LOCAL', value: 6.2, normalizedValue: 6.2, indicator: 'HIGH HIGH', grade: 3, deltaPct: 47.6, reviewStatus: 'STAGED_FOR_INVESTIGATOR_REVIEW' },
-        { visit: 'Cycle 4 (D57)', date: '2026-08-12', source: 'CENTRAL', value: 4.4, normalizedValue: 4.4, indicator: 'NORMAL', grade: 0, deltaPct: 4.8, reviewStatus: 'CONFIRMED_AS_AE' },
+        {
+          visit: "Screening",
+          date: "2026-06-01",
+          source: "CENTRAL",
+          value: 4.1,
+          normalizedValue: 4.1,
+          indicator: "NORMAL",
+          grade: 0,
+          deltaPct: null,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Baseline (D1)",
+          date: "2026-06-15",
+          source: "CENTRAL",
+          value: 4.2,
+          normalizedValue: 4.2,
+          indicator: "NORMAL",
+          grade: 0,
+          deltaPct: 0.0,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 1 (D15)",
+          date: "2026-06-30",
+          source: "CENTRAL",
+          value: 4.5,
+          normalizedValue: 4.5,
+          indicator: "NORMAL",
+          grade: 0,
+          deltaPct: 7.1,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 2 (D29)",
+          date: "2026-07-15",
+          source: "CENTRAL",
+          value: 5.4,
+          normalizedValue: 5.4,
+          indicator: "HIGH",
+          grade: 1,
+          deltaPct: 28.6,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 3 (D43)",
+          date: "2026-07-29",
+          source: "LOCAL",
+          value: 6.2,
+          normalizedValue: 6.2,
+          indicator: "HIGH HIGH",
+          grade: 3,
+          deltaPct: 47.6,
+          reviewStatus: "STAGED_FOR_INVESTIGATOR_REVIEW",
+        },
+        {
+          visit: "Cycle 4 (D57)",
+          date: "2026-08-12",
+          source: "CENTRAL",
+          value: 4.4,
+          normalizedValue: 4.4,
+          indicator: "NORMAL",
+          grade: 0,
+          deltaPct: 4.8,
+          reviewStatus: "CONFIRMED_AS_AE",
+        },
       ],
     },
     HGB: {
       baseline: 14.2,
       lln: 12.0,
       uln: 16.0,
-      unit: 'g/dL',
-      normalizedUnit: 'g/L',
+      unit: "g/dL",
+      normalizedUnit: "g/L",
       data: [
-        { visit: 'Screening', date: '2026-06-01', source: 'CENTRAL', value: 14.5, normalizedValue: 145.0, indicator: 'NORMAL', grade: 0, deltaPct: null, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Baseline (D1)', date: '2026-06-15', source: 'CENTRAL', value: 14.2, normalizedValue: 142.0, indicator: 'NORMAL', grade: 0, deltaPct: 0.0, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 1 (D15)', date: '2026-06-30', source: 'CENTRAL', value: 11.2, normalizedValue: 112.0, indicator: 'LOW', grade: 1, deltaPct: -21.1, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 2 (D29)', date: '2026-07-15', source: 'CENTRAL', value: 9.4, normalizedValue: 94.0, indicator: 'LOW', grade: 2, deltaPct: -33.8, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 3 (D43)', date: '2026-07-29', source: 'CENTRAL', value: 7.6, normalizedValue: 76.0, indicator: 'LOW LOW', grade: 3, deltaPct: -46.5, reviewStatus: 'STAGED_FOR_INVESTIGATOR_REVIEW' },
-        { visit: 'Cycle 4 (D57)', date: '2026-08-12', source: 'CENTRAL', value: 11.5, normalizedValue: 115.0, indicator: 'LOW', grade: 1, deltaPct: -19.0, reviewStatus: 'CONFIRMED_AS_AE' },
+        {
+          visit: "Screening",
+          date: "2026-06-01",
+          source: "CENTRAL",
+          value: 14.5,
+          normalizedValue: 145.0,
+          indicator: "NORMAL",
+          grade: 0,
+          deltaPct: null,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Baseline (D1)",
+          date: "2026-06-15",
+          source: "CENTRAL",
+          value: 14.2,
+          normalizedValue: 142.0,
+          indicator: "NORMAL",
+          grade: 0,
+          deltaPct: 0.0,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 1 (D15)",
+          date: "2026-06-30",
+          source: "CENTRAL",
+          value: 11.2,
+          normalizedValue: 112.0,
+          indicator: "LOW",
+          grade: 1,
+          deltaPct: -21.1,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 2 (D29)",
+          date: "2026-07-15",
+          source: "CENTRAL",
+          value: 9.4,
+          normalizedValue: 94.0,
+          indicator: "LOW",
+          grade: 2,
+          deltaPct: -33.8,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 3 (D43)",
+          date: "2026-07-29",
+          source: "CENTRAL",
+          value: 7.6,
+          normalizedValue: 76.0,
+          indicator: "LOW LOW",
+          grade: 3,
+          deltaPct: -46.5,
+          reviewStatus: "STAGED_FOR_INVESTIGATOR_REVIEW",
+        },
+        {
+          visit: "Cycle 4 (D57)",
+          date: "2026-08-12",
+          source: "CENTRAL",
+          value: 11.5,
+          normalizedValue: 115.0,
+          indicator: "LOW",
+          grade: 1,
+          deltaPct: -19.0,
+          reviewStatus: "CONFIRMED_AS_AE",
+        },
       ],
     },
     PLT: {
       baseline: 240.0,
       lln: 150.0,
       uln: 450.0,
-      unit: '10^9/L',
-      normalizedUnit: '10^9/L',
+      unit: "10^9/L",
+      normalizedUnit: "10^9/L",
       data: [
-        { visit: 'Screening', date: '2026-06-01', source: 'CENTRAL', value: 250.0, normalizedValue: 250.0, indicator: 'NORMAL', grade: 0, deltaPct: null, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Baseline (D1)', date: '2026-06-15', source: 'CENTRAL', value: 240.0, normalizedValue: 240.0, indicator: 'NORMAL', grade: 0, deltaPct: 0.0, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 1 (D15)', date: '2026-06-30', source: 'CENTRAL', value: 130.0, normalizedValue: 130.0, indicator: 'LOW', grade: 1, deltaPct: -45.8, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 2 (D29)', date: '2026-07-15', source: 'CENTRAL', value: 85.0, normalizedValue: 85.0, indicator: 'LOW', grade: 2, deltaPct: -64.6, reviewStatus: 'NOT_APPLICABLE' },
-        { visit: 'Cycle 3 (D43)', date: '2026-07-29', source: 'CENTRAL', value: 42.0, normalizedValue: 42.0, indicator: 'LOW LOW', grade: 3, deltaPct: -82.5, reviewStatus: 'STAGED_FOR_INVESTIGATOR_REVIEW' },
-        { visit: 'Cycle 4 (D57)', date: '2026-08-12', source: 'CENTRAL', value: 165.0, normalizedValue: 165.0, indicator: 'NORMAL', grade: 0, deltaPct: -31.3, reviewStatus: 'CONFIRMED_AS_AE' },
+        {
+          visit: "Screening",
+          date: "2026-06-01",
+          source: "CENTRAL",
+          value: 250.0,
+          normalizedValue: 250.0,
+          indicator: "NORMAL",
+          grade: 0,
+          deltaPct: null,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Baseline (D1)",
+          date: "2026-06-15",
+          source: "CENTRAL",
+          value: 240.0,
+          normalizedValue: 240.0,
+          indicator: "NORMAL",
+          grade: 0,
+          deltaPct: 0.0,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 1 (D15)",
+          date: "2026-06-30",
+          source: "CENTRAL",
+          value: 130.0,
+          normalizedValue: 130.0,
+          indicator: "LOW",
+          grade: 1,
+          deltaPct: -45.8,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 2 (D29)",
+          date: "2026-07-15",
+          source: "CENTRAL",
+          value: 85.0,
+          normalizedValue: 85.0,
+          indicator: "LOW",
+          grade: 2,
+          deltaPct: -64.6,
+          reviewStatus: "NOT_APPLICABLE",
+        },
+        {
+          visit: "Cycle 3 (D43)",
+          date: "2026-07-29",
+          source: "CENTRAL",
+          value: 42.0,
+          normalizedValue: 42.0,
+          indicator: "LOW LOW",
+          grade: 3,
+          deltaPct: -82.5,
+          reviewStatus: "STAGED_FOR_INVESTIGATOR_REVIEW",
+        },
+        {
+          visit: "Cycle 4 (D57)",
+          date: "2026-08-12",
+          source: "CENTRAL",
+          value: 165.0,
+          normalizedValue: 165.0,
+          indicator: "NORMAL",
+          grade: 0,
+          deltaPct: -31.3,
+          reviewStatus: "CONFIRMED_AS_AE",
+        },
       ],
     },
   },
-}
+};
 
 const activeTrendData = computed(() => {
-  const subj = trendSubject.value
-  const tst = trendTest.value
+  const subj = trendSubject.value;
+  const tst = trendTest.value;
   if (trendDatabase[subj] && trendDatabase[subj][tst]) {
-    return trendDatabase[subj][tst].data
+    return trendDatabase[subj][tst].data;
   }
-  return trendDatabase['SUBJ-101']['ALT'].data
-})
+  return trendDatabase["SUBJ-101"]["ALT"].data;
+});
 
 const trendSummary = computed(() => {
-  const subj = trendSubject.value
-  const tst = trendTest.value
-  const dataset = (trendDatabase[subj] && trendDatabase[subj][tst]) ? trendDatabase[subj][tst] : trendDatabase['SUBJ-101']['ALT']
-  const data = dataset.data
-  const baseline = dataset.baseline
-  const uln = dataset.uln
-  const lln = dataset.lln
-  const unit = dataset.unit
-  const normalizedUnit = dataset.normalizedUnit
+  const subj = trendSubject.value;
+  const tst = trendTest.value;
+  const dataset =
+    trendDatabase[subj] && trendDatabase[subj][tst]
+      ? trendDatabase[subj][tst]
+      : trendDatabase["SUBJ-101"]["ALT"];
+  const data = dataset.data;
+  const baseline = dataset.baseline;
+  const uln = dataset.uln;
+  const lln = dataset.lln;
+  const unit = dataset.unit;
+  const normalizedUnit = dataset.normalizedUnit;
 
-  let peakVal = data[0].value
-  let peakVisit = data[0].visit
-  let peakGrade = data[0].grade
-  let maxDeltaPct = 0
+  let peakVal = data[0].value;
+  let peakVisit = data[0].visit;
+  let peakGrade = data[0].grade;
+  let maxDeltaPct = 0;
 
   for (const obs of data) {
     if (obs.value > peakVal) {
-      peakVal = obs.value
-      peakVisit = obs.visit
+      peakVal = obs.value;
+      peakVisit = obs.visit;
     }
     if (obs.grade > peakGrade) {
-      peakGrade = obs.grade
+      peakGrade = obs.grade;
     }
     if (obs.deltaPct && Math.abs(obs.deltaPct) > Math.abs(maxDeltaPct)) {
-      maxDeltaPct = obs.deltaPct
+      maxDeltaPct = obs.deltaPct;
     }
   }
 
   const descriptions = {
-    0: 'Within Normal Limits',
-    1: 'Mild Abnormality (> ULN - 3.0x ULN)',
-    2: 'Moderate Toxicity (> 3.0 - 5.0x ULN)',
-    3: 'Severe Adverse Event Trigger (> 5.0 - 20.0x ULN)',
-    4: 'Life-Threatening (> 20.0x ULN)',
-  }
+    0: "Within Normal Limits",
+    1: "Mild Abnormality (> ULN - 3.0x ULN)",
+    2: "Moderate Toxicity (> 3.0 - 5.0x ULN)",
+    3: "Severe Adverse Event Trigger (> 5.0 - 20.0x ULN)",
+    4: "Life-Threatening (> 20.0x ULN)",
+  };
 
   return {
     baseline,
@@ -1081,26 +1964,30 @@ const trendSummary = computed(() => {
     peakValue: peakVal,
     peakVisit,
     peakGrade,
-    peakDescription: descriptions[peakGrade] || 'CTCAE Evaluation',
+    peakDescription: descriptions[peakGrade] || "CTCAE Evaluation",
     maxDeltaPct,
-  }
-})
+  };
+});
 
 function getYCoord(val) {
-  const data = activeTrendData.value
-  const maxVal = Math.max(...data.map(d => d.value), trendSummary.value.uln * 1.25, 1)
-  const minVal = 0
-  const chartHeight = 180
-  const topMargin = 30
-  const normalized = (val - minVal) / (maxVal - minVal)
-  return topMargin + chartHeight * (1 - normalized)
+  const data = activeTrendData.value;
+  const maxVal = Math.max(
+    ...data.map((d) => d.value),
+    trendSummary.value.uln * 1.25,
+    1
+  );
+  const minVal = 0;
+  const chartHeight = 180;
+  const topMargin = 30;
+  const normalized = (val - minVal) / (maxVal - minVal);
+  return topMargin + chartHeight * (1 - normalized);
 }
 
 const trendPlotPoints = computed(() => {
-  const data = activeTrendData.value
-  const width = 680
-  const leftMargin = 80
-  const step = data.length > 1 ? width / (data.length - 1) : width
+  const data = activeTrendData.value;
+  const width = 680;
+  const leftMargin = 80;
+  const step = data.length > 1 ? width / (data.length - 1) : width;
   return data.map((d, i) => ({
     x: leftMargin + i * step,
     y: getYCoord(d.value),
@@ -1108,19 +1995,19 @@ const trendPlotPoints = computed(() => {
     visit: d.visit,
     date: d.date,
     grade: d.grade,
-  }))
-})
+  }));
+});
 
 const trendPointsString = computed(() => {
-  return trendPlotPoints.value.map(p => `${p.x},${p.y}`).join(' ')
-})
+  return trendPlotPoints.value.map((p) => `${p.x},${p.y}`).join(" ");
+});
 
 function getPointColor(grade) {
-  if (grade >= 4) return '#991b1b'
-  if (grade === 3) return '#dc2626'
-  if (grade === 2) return '#d97706'
-  if (grade === 1) return '#0284c7'
-  return '#10b981'
+  if (grade >= 4) return "#991b1b";
+  if (grade === 3) return "#dc2626";
+  if (grade === 2) return "#d97706";
+  if (grade === 1) return "#0284c7";
+  return "#10b981";
 }
 
 // Computed Filters
@@ -1129,251 +2016,258 @@ const filteredRanges = computed(() => {
     const matchesSearch =
       !rangeSearch.value ||
       r.test_code.toLowerCase().includes(rangeSearch.value.toLowerCase()) ||
-      (r.test_name && r.test_name.toLowerCase().includes(rangeSearch.value.toLowerCase()))
+      (r.test_name &&
+        r.test_name.toLowerCase().includes(rangeSearch.value.toLowerCase()));
 
     const matchesSource =
-      rangeSourceFilter.value === 'ALL' || r.source === rangeSourceFilter.value
+      rangeSourceFilter.value === "ALL" || r.source === rangeSourceFilter.value;
 
     const matchesSex =
-      rangeSexFilter.value === 'ALL' ||
+      rangeSexFilter.value === "ALL" ||
       r.sex_applicability === rangeSexFilter.value ||
-      r.sex_applicability === 'ALL'
+      r.sex_applicability === "ALL";
 
-    return matchesSearch && matchesSource && matchesSex
-  })
-})
+    return matchesSearch && matchesSource && matchesSex;
+  });
+});
 
 // Data Fetching Methods
 async function fetchRanges() {
   try {
-    const res = await fetch('/api/v1/execution/lab-ranges')
+    const res = await fetch("/api/v1/execution/lab-ranges");
     if (res.ok) {
-      ranges.value = await res.json()
+      ranges.value = await res.json();
     }
   } catch (err) {
-    console.error('Failed to load lab reference ranges', err)
+    console.error("Failed to load lab reference ranges", err);
   }
 }
 
 async function fetchStagedReviews() {
   try {
-    const url = `/api/v1/execution/labs/toxicity/review-queue?review_status=${reviewStatusFilter.value}`
-    const res = await fetch(url)
+    const url = `/api/v1/execution/labs/toxicity/review-queue?review_status=${reviewStatusFilter.value}`;
+    const res = await fetch(url);
     if (res.ok) {
-      stagedReviews.value = await res.json()
+      stagedReviews.value = await res.json();
     }
   } catch (err) {
-    console.error('Failed to load staged reviews', err)
+    console.error("Failed to load staged reviews", err);
   }
 }
 
 async function fetchCertifications() {
   try {
-    const res = await fetch('/api/v1/execution/labs/certifications')
+    const res = await fetch("/api/v1/execution/labs/certifications");
     if (res.ok) {
-      certifications.value = await res.json()
+      certifications.value = await res.json();
     }
   } catch (err) {
-    console.error('Failed to load local lab certifications', err)
+    console.error("Failed to load local lab certifications", err);
   }
 }
 
 async function fetchBatchStatuses() {
   try {
-    const res = await fetch('/api/v1/execution/labs/batch-status')
+    const res = await fetch("/api/v1/execution/labs/batch-status");
     if (res.ok) {
-      const data = await res.json()
-      batches.value = Array.isArray(data) ? data : [data]
+      const data = await res.json();
+      batches.value = Array.isArray(data) ? data : [data];
     }
   } catch (err) {
-    console.error('Failed to load batch statuses', err)
+    console.error("Failed to load batch statuses", err);
   }
 }
 
 async function fetchLoincCatalog() {
   try {
-    const res = await fetch('/api/v1/execution/labs/loinc-catalog')
+    const res = await fetch("/api/v1/execution/labs/loinc-catalog");
     if (res.ok) {
-      const data = await res.json()
-      loincCatalog.value = data.items || []
+      const data = await res.json();
+      loincCatalog.value = data.items || [];
     }
   } catch (err) {
-    console.error('Failed to load LOINC catalog', err)
+    console.error("Failed to load LOINC catalog", err);
   }
 }
 
 // Actions
 function openIngestModal() {
-  showIngestModal.value = true
+  showIngestModal.value = true;
 }
 
 function openCreateRangeModal() {
   // Placeholder or prompt for range creation
-  const testCode = prompt('Enter Test Code (e.g. ALT, CREAT, WBC):')
+  const testCode = prompt("Enter Test Code (e.g. ALT, CREAT, WBC):");
   if (testCode) {
-    alert(`To register new range for ${testCode}, use the Reference Range Authoring Dialog.`)
+    alert(
+      `To register new range for ${testCode}, use the Reference Range Authoring Dialog.`
+    );
   }
 }
 
 function openCreateCertModal() {
-  const siteId = prompt('Enter Site ID (e.g. SITE-001):')
+  const siteId = prompt("Enter Site ID (e.g. SITE-001):");
   if (siteId) {
-    alert(`Registering Local Lab for Site ${siteId}.`)
+    alert(`Registering Local Lab for Site ${siteId}.`);
   }
 }
 
 function openActionModal(review) {
-  selectedReview.value = review
-  actionForm.value.investigator_notes = ''
-  showActionModal.value = true
+  selectedReview.value = review;
+  actionForm.value.investigator_notes = "";
+  showActionModal.value = true;
 }
 
 async function executeBatchIngest() {
-  isIngesting.value = true
+  isIngesting.value = true;
   try {
-    const res = await fetch('/api/v1/execution/labs/ingest', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch("/api/v1/execution/labs/ingest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(ingestForm.value),
-    })
+    });
     if (res.ok) {
-      const result = await res.json()
-      alert(`Batch Ingest Completed! Ingested: ${result.ingested_count}, Staged AEs: ${result.staged_aes_count}, Queries: ${result.queries_raised}`)
-      showIngestModal.value = false
-      await fetchStagedReviews()
-      await fetchBatchStatuses()
+      const result = await res.json();
+      alert(
+        `Batch Ingest Completed! Ingested: ${result.ingested_count}, Staged AEs: ${result.staged_aes_count}, Queries: ${result.queries_raised}`
+      );
+      showIngestModal.value = false;
+      await fetchStagedReviews();
+      await fetchBatchStatuses();
     } else {
-      const err = await res.json()
-      alert(`Batch Ingest Error: ${err.detail || 'Ingestion failed'}`)
+      const err = await res.json();
+      alert(`Batch Ingest Error: ${err.detail || "Ingestion failed"}`);
     }
   } catch (err) {
-    alert(`Ingest Request Failed: ${err}`)
+    alert(`Ingest Request Failed: ${err}`);
   } finally {
-    isIngesting.value = false
+    isIngesting.value = false;
   }
 }
 
 async function executeReviewAction() {
-  if (!selectedReview.value) return
-  isActioning.value = true
+  if (!selectedReview.value) return;
+  isActioning.value = true;
   try {
-    const url = `/api/v1/execution/labs/toxicity/review/${selectedReview.value.id}/action`
+    const url = `/api/v1/execution/labs/toxicity/review/${selectedReview.value.id}/action`;
     const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(actionForm.value),
-    })
+    });
     if (res.ok) {
-      alert('Investigator action successfully recorded with 21 CFR Part 11 audit trail.')
-      showActionModal.value = false
-      await fetchStagedReviews()
+      alert(
+        "Investigator action successfully recorded with 21 CFR Part 11 audit trail."
+      );
+      showActionModal.value = false;
+      await fetchStagedReviews();
     } else {
-      const err = await res.json()
-      alert(`Action error: ${err.detail || 'Failed to submit determination'}`)
+      const err = await res.json();
+      alert(`Action error: ${err.detail || "Failed to submit determination"}`);
     }
   } catch (err) {
-    alert(`Action Request Failed: ${err}`)
+    alert(`Action Request Failed: ${err}`);
   } finally {
-    isActioning.value = false
+    isActioning.value = false;
   }
 }
 
 async function runUnitConversion() {
-  isConverting.value = true
+  isConverting.value = true;
   try {
-    const res = await fetch('/api/v1/execution/labs/convert-unit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch("/api/v1/execution/labs/convert-unit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(conversionModel.value),
-    })
+    });
     if (res.ok) {
-      conversionResult.value = await res.json()
+      conversionResult.value = await res.json();
     }
   } catch (err) {
-    console.error('Unit conversion failed', err)
+    console.error("Unit conversion failed", err);
   } finally {
-    isConverting.value = false
+    isConverting.value = false;
   }
 }
 
 function onConversionTestChange() {
-  const code = conversionModel.value.test_code
-  if (code === 'CREAT') {
-    conversionModel.value.from_unit = 'mg/dL'
-    conversionModel.value.to_unit = 'umol/L'
-  } else if (code === 'BILI') {
-    conversionModel.value.from_unit = 'mg/dL'
-    conversionModel.value.to_unit = 'umol/L'
-  } else if (code === 'GLUCOSE') {
-    conversionModel.value.from_unit = 'mg/dL'
-    conversionModel.value.to_unit = 'mmol/L'
-  } else if (code === 'HEMOGLOBIN') {
-    conversionModel.value.from_unit = 'g/dL'
-    conversionModel.value.to_unit = 'g/L'
-  } else if (code === 'PLATELETS' || code === 'ANC') {
-    conversionModel.value.from_unit = '10^3/uL'
-    conversionModel.value.to_unit = '10^9/L'
+  const code = conversionModel.value.test_code;
+  if (code === "CREAT") {
+    conversionModel.value.from_unit = "mg/dL";
+    conversionModel.value.to_unit = "umol/L";
+  } else if (code === "BILI") {
+    conversionModel.value.from_unit = "mg/dL";
+    conversionModel.value.to_unit = "umol/L";
+  } else if (code === "GLUCOSE") {
+    conversionModel.value.from_unit = "mg/dL";
+    conversionModel.value.to_unit = "mmol/L";
+  } else if (code === "HEMOGLOBIN") {
+    conversionModel.value.from_unit = "g/dL";
+    conversionModel.value.to_unit = "g/L";
+  } else if (code === "PLATELETS" || code === "ANC") {
+    conversionModel.value.from_unit = "10^3/uL";
+    conversionModel.value.to_unit = "10^9/L";
   }
 }
 
 async function runToxicitySimulation() {
   try {
-    const res = await fetch('/api/v1/execution/labs/toxicity/evaluate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch("/api/v1/execution/labs/toxicity/evaluate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(simModel.value),
-    })
+    });
     if (res.ok) {
-      simResult.value = await res.json()
+      simResult.value = await res.json();
     }
   } catch (err) {
-    console.error('Toxicity simulation failed', err)
+    console.error("Toxicity simulation failed", err);
   }
 }
 
 // Helpers
 function formatAgeRange(low, high) {
-  if (low !== null && high !== null) return `${low} - ${high} yrs`
-  if (low !== null) return `&ge; ${low} yrs`
-  if (high !== null) return `&le; ${high} yrs`
-  return 'All Ages'
+  if (low !== null && high !== null) return `${low} - ${high} yrs`;
+  if (low !== null) return `&ge; ${low} yrs`;
+  if (high !== null) return `&le; ${high} yrs`;
+  return "All Ages";
 }
 
 function formatDate(dtStr) {
-  if (!dtStr) return '—'
-  return new Date(dtStr).toLocaleDateString()
+  if (!dtStr) return "—";
+  return new Date(dtStr).toLocaleDateString();
 }
 
 function isCertExpired(expStr) {
-  if (!expStr) return true
-  return new Date(expStr) < new Date()
+  if (!expStr) return true;
+  return new Date(expStr) < new Date();
 }
 
 function formatReviewStatus(status) {
-  if (status === 'STAGED_FOR_INVESTIGATOR_REVIEW') return 'Staged for Review'
-  if (status === 'CONFIRMED_AS_AE') return 'Confirmed AE'
-  if (status === 'DISMISSED_NOT_CLINICALLY_SIGNIFICANT') return 'Dismissed'
-  if (status === 'ESCALATED_SAE') return 'Escalated SAE'
-  return status
+  if (status === "STAGED_FOR_INVESTIGATOR_REVIEW") return "Staged for Review";
+  if (status === "CONFIRMED_AS_AE") return "Confirmed AE";
+  if (status === "DISMISSED_NOT_CLINICALLY_SIGNIFICANT") return "Dismissed";
+  if (status === "ESCALATED_SAE") return "Escalated SAE";
+  return status;
 }
 
 function getReviewStatusPillClass(status) {
-  if (status === 'STAGED_FOR_INVESTIGATOR_REVIEW') return 'danger'
-  if (status === 'CONFIRMED_AS_AE') return 'success'
-  if (status === 'DISMISSED_NOT_CLINICALLY_SIGNIFICANT') return 'secondary'
-  if (status === 'ESCALATED_SAE') return 'primary'
-  return 'info'
+  if (status === "STAGED_FOR_INVESTIGATOR_REVIEW") return "danger";
+  if (status === "CONFIRMED_AS_AE") return "success";
+  if (status === "DISMISSED_NOT_CLINICALLY_SIGNIFICANT") return "secondary";
+  if (status === "ESCALATED_SAE") return "primary";
+  return "info";
 }
 
 onMounted(() => {
-  fetchRanges()
-  fetchStagedReviews()
-  fetchCertifications()
-  fetchBatchStatuses()
-  fetchLoincCatalog()
-  runUnitConversion()
-  runToxicitySimulation()
-})
+  fetchRanges();
+  fetchStagedReviews();
+  fetchCertifications();
+  fetchBatchStatuses();
+  fetchLoincCatalog();
+  runUnitConversion();
+  runToxicitySimulation();
+});
 </script>
 
 <style scoped>
@@ -1384,7 +2278,9 @@ onMounted(() => {
   padding: 1.5rem;
   background-color: #f8fafc;
   min-height: 100vh;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
   color: #0f172a;
 }
 
@@ -1503,7 +2399,9 @@ onMounted(() => {
   font-size: 0.85rem;
 }
 
-.text-input, .select-input, .textarea-input {
+.text-input,
+.select-input,
+.textarea-input {
   padding: 0.5rem 0.75rem;
   border: 1px solid #cbd5e1;
   border-radius: 4px;
@@ -1565,12 +2463,30 @@ onMounted(() => {
   border-radius: 9999px;
 }
 
-.status-pill.primary { background: #dbeafe; color: #1e40af; }
-.status-pill.secondary { background: #f1f5f9; color: #475569; }
-.status-pill.success { background: #dcfce7; color: #166534; }
-.status-pill.warning { background: #fef3c7; color: #92400e; }
-.status-pill.danger { background: #fee2e2; color: #991b1b; }
-.status-pill.info { background: #e0f2fe; color: #0369a1; }
+.status-pill.primary {
+  background: #dbeafe;
+  color: #1e40af;
+}
+.status-pill.secondary {
+  background: #f1f5f9;
+  color: #475569;
+}
+.status-pill.success {
+  background: #dcfce7;
+  color: #166534;
+}
+.status-pill.warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+.status-pill.danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.status-pill.info {
+  background: #e0f2fe;
+  color: #0369a1;
+}
 
 .grade-badge {
   padding: 0.25rem 0.5rem;
@@ -1579,11 +2495,28 @@ onMounted(() => {
   font-size: 0.75rem;
 }
 
-.grade-badge.grade-0 { background: #f1f5f9; color: #475569; }
-.grade-badge.grade-1 { background: #e0f2fe; color: #0369a1; }
-.grade-badge.grade-2 { background: #fef3c7; color: #92400e; }
-.grade-badge.grade-3 { background: #fee2e2; color: #991b1b; font-weight: 800; }
-.grade-badge.grade-4 { background: #991b1b; color: #ffffff; font-weight: 900; }
+.grade-badge.grade-0 {
+  background: #f1f5f9;
+  color: #475569;
+}
+.grade-badge.grade-1 {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+.grade-badge.grade-2 {
+  background: #fef3c7;
+  color: #92400e;
+}
+.grade-badge.grade-3 {
+  background: #fee2e2;
+  color: #991b1b;
+  font-weight: 800;
+}
+.grade-badge.grade-4 {
+  background: #991b1b;
+  color: #ffffff;
+  font-weight: 900;
+}
 
 .safety-tag {
   font-size: 0.75rem;
@@ -1592,8 +2525,14 @@ onMounted(() => {
   font-weight: 700;
 }
 
-.safety-tag.hys-law { background: #7f1d1d; color: #fef2f2; }
-.safety-tag.delta { background: #fef08a; color: #854d0e; }
+.safety-tag.hys-law {
+  background: #7f1d1d;
+  color: #fef2f2;
+}
+.safety-tag.delta {
+  background: #fef08a;
+  color: #854d0e;
+}
 
 .btn {
   padding: 0.5rem 0.875rem;
@@ -1604,10 +2543,23 @@ onMounted(() => {
   border: 1px solid transparent;
 }
 
-.btn-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
-.btn-primary { background: #2563eb; color: #ffffff; }
-.btn-secondary { background: #e2e8f0; color: #1e293b; }
-.btn-outline { background: transparent; border-color: #94a3b8; color: #334155; }
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+.btn-primary {
+  background: #2563eb;
+  color: #ffffff;
+}
+.btn-secondary {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+.btn-outline {
+  background: transparent;
+  border-color: #94a3b8;
+  color: #334155;
+}
 
 .converter-grid {
   display: grid;
@@ -1666,7 +2618,9 @@ onMounted(() => {
   flex-direction: column;
 }
 
-.modal-lg { width: 750px; }
+.modal-lg {
+  width: 750px;
+}
 
 .modal-header {
   display: flex;

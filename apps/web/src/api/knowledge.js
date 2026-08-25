@@ -9,7 +9,12 @@ export const DEFAULT_CATEGORIES = [
     name: "Clinical Operations",
     slug: "clinical-operations",
     description: "eCRF data capture, subject enrollment, and visit procedures.",
-    persona_visibility: ["site_crc", "cra_monitor", "data_manager", "super_admin"],
+    persona_visibility: [
+      "site_crc",
+      "cra_monitor",
+      "data_manager",
+      "super_admin",
+    ],
     parent_id: null,
     is_deleted: false,
     created_at: "2026-01-15T08:00:00Z",
@@ -19,7 +24,8 @@ export const DEFAULT_CATEGORIES = [
     id: "cat-study-authoring",
     name: "Study Authoring & MDR",
     slug: "study-authoring-mdr",
-    description: "CDISC USDM protocol authoring, SoA matrix design, and digitizer workflows.",
+    description:
+      "CDISC USDM protocol authoring, SoA matrix design, and digitizer workflows.",
     persona_visibility: ["sponsor_designer", "data_manager", "super_admin"],
     parent_id: null,
     is_deleted: false,
@@ -30,7 +36,8 @@ export const DEFAULT_CATEGORIES = [
     id: "cat-site-monitoring",
     name: "Site Monitoring & CTMS",
     slug: "site-monitoring-ctms",
-    description: "CRA monitoring visits, source data verification, and trip reports.",
+    description:
+      "CRA monitoring visits, source data verification, and trip reports.",
     persona_visibility: ["cra_monitor", "site_crc", "super_admin"],
     parent_id: null,
     is_deleted: false,
@@ -41,8 +48,14 @@ export const DEFAULT_CATEGORIES = [
     id: "cat-regulatory-compliance",
     name: "Regulatory & Quality Compliance",
     slug: "regulatory-compliance",
-    description: "21 CFR Part 11 compliance, audit trail inspection, and digital signatures.",
-    persona_visibility: ["auditor", "super_admin", "sponsor_designer", "data_manager"],
+    description:
+      "21 CFR Part 11 compliance, audit trail inspection, and digital signatures.",
+    persona_visibility: [
+      "auditor",
+      "super_admin",
+      "sponsor_designer",
+      "data_manager",
+    ],
     parent_id: null,
     is_deleted: false,
     created_at: "2026-01-15T08:00:00Z",
@@ -52,7 +65,8 @@ export const DEFAULT_CATEGORIES = [
     id: "cat-data-management",
     name: "Data Management & Coding",
     slug: "data-management-coding",
-    description: "MedDRA / WHODrug coding, query management, and data lock workflows.",
+    description:
+      "MedDRA / WHODrug coding, query management, and data lock workflows.",
     persona_visibility: ["data_manager", "sponsor_designer", "super_admin"],
     parent_id: null,
     is_deleted: false,
@@ -142,8 +156,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
         category_name: "Clinical Operations",
         author_user_id: "data_manager",
         tags: ["queries", "discrepancies", "site_crc"],
-        body_markdown: "## Query Resolution\n\nGuidelines for resolving automated and manual discrepancies within 5 business days with GxP change justifications.",
-        body_html: "<h2>Query Resolution</h2><p>Guidelines for resolving automated and manual discrepancies within 5 business days with GxP change justifications.</p>",
+        body_markdown:
+          "## Query Resolution\n\nGuidelines for resolving automated and manual discrepancies within 5 business days with GxP change justifications.",
+        body_html:
+          "<h2>Query Resolution</h2><p>Guidelines for resolving automated and manual discrepancies within 5 business days with GxP change justifications.</p>",
       },
       {
         id: "art-ecrf-adverse-events",
@@ -156,8 +172,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
         category_name: "Clinical Operations",
         author_user_id: "safety_physician",
         tags: ["safety", "sae", "expedited-reporting"],
-        body_markdown: "## SAE Reporting\n\nReport all Serious Adverse Events (SAEs) to Sponsor Safety within 24 hours of awareness.",
-        body_html: "<h2>SAE Reporting</h2><p>Report all Serious Adverse Events (SAEs) to Sponsor Safety within 24 hours of awareness.</p>",
+        body_markdown:
+          "## SAE Reporting\n\nReport all Serious Adverse Events (SAEs) to Sponsor Safety within 24 hours of awareness.",
+        body_html:
+          "<h2>SAE Reporting</h2><p>Report all Serious Adverse Events (SAEs) to Sponsor Safety within 24 hours of awareness.</p>",
       },
     ],
   },
@@ -227,8 +245,10 @@ This guidance specifies CDISC USDM v3.0 standard authoring for study encounters,
         category_name: "Study Authoring & MDR",
         author_user_id: "sponsor_study_lead",
         tags: ["digitizer", "ai", "protocol-pdf"],
-        body_markdown: "## Protocol Digitization\n\nAI ingestion and extraction of protocol PDFs into structured CDISC USDM data objects.",
-        body_html: "<h2>Protocol Digitization</h2><p>AI ingestion and extraction of protocol PDFs into structured CDISC USDM data objects.</p>",
+        body_markdown:
+          "## Protocol Digitization\n\nAI ingestion and extraction of protocol PDFs into structured CDISC USDM data objects.",
+        body_html:
+          "<h2>Protocol Digitization</h2><p>AI ingestion and extraction of protocol PDFs into structured CDISC USDM data objects.</p>",
       },
     ],
   },
@@ -296,8 +316,10 @@ Guidelines for Clinical Research Associates (CRAs) conducting site initiation, r
         category_name: "Site Monitoring & Operations",
         author_user_id: "cra_manager",
         tags: ["mvr", "trip-reports", "sponsor-signoff"],
-        body_markdown: "## Trip Reports\n\nProcedures for sponsor QA review and dual-electronic sign-off of monitoring visit reports.",
-        body_html: "<h2>Trip Reports</h2><p>Procedures for sponsor QA review and dual-electronic sign-off of monitoring visit reports.</p>",
+        body_markdown:
+          "## Trip Reports\n\nProcedures for sponsor QA review and dual-electronic sign-off of monitoring visit reports.",
+        body_html:
+          "<h2>Trip Reports</h2><p>Procedures for sponsor QA review and dual-electronic sign-off of monitoring visit reports.</p>",
       },
     ],
   },
@@ -313,7 +335,8 @@ Guidelines for Clinical Research Associates (CRAs) conducting site initiation, r
     },
     primary_article: {
       id: "art-audit-sop",
-      title: "SOP-AUD-401: 21 CFR Part 11 Audit Trail Verification & Inspection",
+      title:
+        "SOP-AUD-401: 21 CFR Part 11 Audit Trail Verification & Inspection",
       slug: "sop-aud-401-audit-trail-inspection",
       status: "PUBLISHED",
       version_index: 2,
@@ -356,7 +379,8 @@ Instructions for GxP auditors, QA leads, and regulatory inspectors reviewing com
     related_articles: [
       {
         id: "art-audit-esign",
-        title: "SOP-AUD-405: Electronic Signature Verification & PKCS#7 Handshake",
+        title:
+          "SOP-AUD-405: Electronic Signature Verification & PKCS#7 Handshake",
         slug: "sop-aud-405-esign-verification",
         status: "PUBLISHED",
         version_index: 1,
@@ -365,8 +389,10 @@ Instructions for GxP auditors, QA leads, and regulatory inspectors reviewing com
         category_name: "Regulatory & Quality Compliance",
         author_user_id: "qa_director",
         tags: ["esign", "pkcs7", "cryptography"],
-        body_markdown: "## Electronic Signatures\n\nVerifying cryptographic digital signatures and PKCS#7 certificates.",
-        body_html: "<h2>Electronic Signatures</h2><p>Verifying cryptographic digital signatures and PKCS#7 certificates.</p>",
+        body_markdown:
+          "## Electronic Signatures\n\nVerifying cryptographic digital signatures and PKCS#7 certificates.",
+        body_html:
+          "<h2>Electronic Signatures</h2><p>Verifying cryptographic digital signatures and PKCS#7 certificates.</p>",
       },
     ],
   },
@@ -416,7 +442,8 @@ Standard process for automated dictionary search and medical coder manual review
   },
   {
     id: "art-draft-amendment",
-    title: "SOP-MDR-112: Protocol Amendment Impact Assessment & Version Upgrading",
+    title:
+      "SOP-MDR-112: Protocol Amendment Impact Assessment & Version Upgrading",
     slug: "sop-mdr-112-amendment-assessment",
     status: "DRAFT",
     version_index: 1,
@@ -456,7 +483,11 @@ export function getFallbackContextualHelp(route, _persona) {
   }
 
   // Fallback to default eCRF SOP if on clinical screen
-  if (cleanRoute.includes("subject") || cleanRoute.includes("form") || cleanRoute.includes("visit")) {
+  if (
+    cleanRoute.includes("subject") ||
+    cleanRoute.includes("form") ||
+    cleanRoute.includes("visit")
+  ) {
     return JSON.parse(JSON.stringify(DEFAULT_CONTEXTUAL_SOPS["/ecrf"]));
   }
 
@@ -483,7 +514,9 @@ export const knowledgeService = {
    */
   async resolveContextualHelp({ route, persona } = {}) {
     const encodedRoute = encodeURIComponent(route || "/");
-    const personaQuery = persona ? `&persona=${encodeURIComponent(persona)}` : "";
+    const personaQuery = persona
+      ? `&persona=${encodeURIComponent(persona)}`
+      : "";
     const path = `/api/v1/knowledge/contextual-help?route=${encodedRoute}${personaQuery}`;
 
     try {
@@ -507,7 +540,9 @@ export const knowledgeService = {
     try {
       return await apiClient.get(`/api/v1/knowledge/articles/${articleId}`);
     } catch {
-      const found = memoryArticles.find((a) => a.id === articleId || a.slug === articleId);
+      const found = memoryArticles.find(
+        (a) => a.id === articleId || a.slug === articleId
+      );
       if (found) {
         return JSON.parse(JSON.stringify(found));
       }
@@ -556,7 +591,9 @@ export const knowledgeService = {
       if (Array.isArray(resp)) return resp;
       return memoryCategories;
     } catch {
-      return JSON.parse(JSON.stringify(memoryCategories.filter((c) => !c.is_deleted)));
+      return JSON.parse(
+        JSON.stringify(memoryCategories.filter((c) => !c.is_deleted))
+      );
     }
   },
 
@@ -573,7 +610,9 @@ export const knowledgeService = {
       const newCat = {
         id: `cat-${Date.now()}`,
         name: payload.name,
-        slug: payload.slug || payload.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+        slug:
+          payload.slug ||
+          payload.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
         description: payload.description || "",
         persona_visibility: payload.persona_visibility || [],
         parent_id: payload.parent_id || null,
@@ -595,9 +634,12 @@ export const knowledgeService = {
    */
   async deleteCategory(categoryId, reason = "Soft deleted") {
     try {
-      return await apiClient.delete(`/api/v1/knowledge/categories/${categoryId}`, {
-        changeReason: reason,
-      });
+      return await apiClient.delete(
+        `/api/v1/knowledge/categories/${categoryId}`,
+        {
+          changeReason: reason,
+        }
+      );
     } catch {
       const idx = memoryCategories.findIndex((c) => c.id === categoryId);
       if (idx !== -1) {
@@ -617,17 +659,25 @@ export const knowledgeService = {
     try {
       return await apiClient.post("/api/v1/knowledge/articles", payload);
     } catch {
-      const category = memoryCategories.find((c) => c.id === payload.category_id);
+      const category = memoryCategories.find(
+        (c) => c.id === payload.category_id
+      );
       const newArt = {
         id: `art-${Date.now()}`,
         title: payload.title,
-        slug: payload.slug || payload.title.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+        slug:
+          payload.slug ||
+          payload.title.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
         status: "DRAFT",
         version_index: 1,
         version_label: payload.version_label || "0.1",
         category_id: payload.category_id,
         category_name: category ? category.name : "General Guidance",
-        tags: Array.isArray(payload.tags) ? payload.tags : (payload.tags ? payload.tags.split(",").map((t) => t.trim()) : []),
+        tags: Array.isArray(payload.tags)
+          ? payload.tags
+          : payload.tags
+            ? payload.tags.split(",").map((t) => t.trim())
+            : [],
         author_user_id: "current_user",
         last_edited_by: "current_user",
         approved_by: null,
@@ -650,7 +700,10 @@ export const knowledgeService = {
    */
   async updateArticleDraft(articleId, payload) {
     try {
-      return await apiClient.put(`/api/v1/knowledge/articles/${articleId}`, payload);
+      return await apiClient.put(
+        `/api/v1/knowledge/articles/${articleId}`,
+        payload
+      );
     } catch {
       const art = memoryArticles.find((a) => a.id === articleId);
       if (!art) throw new Error("Article not found");
@@ -681,7 +734,10 @@ export const knowledgeService = {
    */
   async submitArticleReview(articleId, payload = {}) {
     try {
-      return await apiClient.post(`/api/v1/knowledge/articles/${articleId}/submit-review`, payload);
+      return await apiClient.post(
+        `/api/v1/knowledge/articles/${articleId}/submit-review`,
+        payload
+      );
     } catch {
       const art = memoryArticles.find((a) => a.id === articleId);
       if (!art) throw new Error("Article not found");
@@ -700,7 +756,10 @@ export const knowledgeService = {
    */
   async approveArticle(articleId, payload = {}) {
     try {
-      return await apiClient.post(`/api/v1/knowledge/articles/${articleId}/approve`, payload);
+      return await apiClient.post(
+        `/api/v1/knowledge/articles/${articleId}/approve`,
+        payload
+      );
     } catch {
       const art = memoryArticles.find((a) => a.id === articleId);
       if (!art) throw new Error("Article not found");
@@ -720,7 +779,10 @@ export const knowledgeService = {
    */
   async rejectArticle(articleId, payload = {}) {
     try {
-      return await apiClient.post(`/api/v1/knowledge/articles/${articleId}/reject`, payload);
+      return await apiClient.post(
+        `/api/v1/knowledge/articles/${articleId}/reject`,
+        payload
+      );
     } catch {
       const art = memoryArticles.find((a) => a.id === articleId);
       if (!art) throw new Error("Article not found");
@@ -739,7 +801,10 @@ export const knowledgeService = {
    */
   async publishArticle(articleId, payload = {}) {
     try {
-      return await apiClient.post(`/api/v1/knowledge/articles/${articleId}/publish`, payload);
+      return await apiClient.post(
+        `/api/v1/knowledge/articles/${articleId}/publish`,
+        payload
+      );
     } catch {
       const art = memoryArticles.find((a) => a.id === articleId);
       if (!art) throw new Error("Article not found");
@@ -759,7 +824,10 @@ export const knowledgeService = {
    */
   async transitionArticle(articleId, payload) {
     try {
-      return await apiClient.post(`/api/v1/knowledge/articles/${articleId}/transition`, payload);
+      return await apiClient.post(
+        `/api/v1/knowledge/articles/${articleId}/transition`,
+        payload
+      );
     } catch {
       const art = memoryArticles.find((a) => a.id === articleId);
       if (!art) throw new Error("Article not found");
@@ -777,7 +845,9 @@ export const knowledgeService = {
    */
   async listArticleVersions(articleId) {
     try {
-      return await apiClient.get(`/api/v1/knowledge/articles/${articleId}/versions`);
+      return await apiClient.get(
+        `/api/v1/knowledge/articles/${articleId}/versions`
+      );
     } catch {
       const art = memoryArticles.find((a) => a.id === articleId);
       if (!art) return [];
@@ -807,10 +877,12 @@ export const knowledgeService = {
                 status_at_snapshot: art.status,
                 body_markdown: art.body_markdown,
                 body_html: art.body_html,
-                is_locked: art.status === "PUBLISHED" || art.status === "APPROVED",
+                is_locked:
+                  art.status === "PUBLISHED" || art.status === "APPROVED",
                 created_by: art.last_edited_by || art.author_user_id,
                 created_at: art.updated_at,
-                reason_for_change: "Annual periodic review & protocol amendment alignment",
+                reason_for_change:
+                  "Annual periodic review & protocol amendment alignment",
               },
             ]
           : []),
@@ -826,7 +898,9 @@ export const knowledgeService = {
    */
   async getArticleAuditLog(articleId) {
     try {
-      return await apiClient.get(`/api/v1/knowledge/articles/${articleId}/audit-log`);
+      return await apiClient.get(
+        `/api/v1/knowledge/articles/${articleId}/audit-log`
+      );
     } catch {
       const art = memoryArticles.find((a) => a.id === articleId);
       if (!art) return [];
@@ -842,7 +916,8 @@ export const knowledgeService = {
           version_index: 1,
           version_label: "0.1",
           reason_for_change: "Initial GxP document authoring initiated",
-          sha256_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          sha256_hash:
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
           created_at: art.created_at,
         },
         {
@@ -854,7 +929,8 @@ export const knowledgeService = {
           version_index: art.version_index,
           version_label: art.version_label,
           reason_for_change: "Formal QA and regulatory approval sign-off",
-          sha256_hash: "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4",
+          sha256_hash:
+            "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4",
           created_at: art.updated_at,
         },
       ];
@@ -873,12 +949,14 @@ export const knowledgeService = {
     const all = await this.listArticles();
     return all.filter((art) => {
       const matchTitle = art.title?.toLowerCase().includes(q);
-      const matchBody = (art.body_markdown || art.body_html || "").toLowerCase().includes(q);
+      const matchBody = (art.body_markdown || art.body_html || "")
+        .toLowerCase()
+        .includes(q);
       const matchTags = Array.isArray(art.tags)
         ? art.tags.some((t) => t.toLowerCase().includes(q))
         : typeof art.tags === "string"
-        ? art.tags.toLowerCase().includes(q)
-        : false;
+          ? art.tags.toLowerCase().includes(q)
+          : false;
       const matchCategory = art.category_name?.toLowerCase().includes(q);
       return matchTitle || matchBody || matchTags || matchCategory;
     });

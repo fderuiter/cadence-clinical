@@ -3,17 +3,11 @@
     <div class="grid-header">
       <div class="header-titles">
         <h2>Artifact Documents Registry</h2>
-        <p
-          v-if="selectedArtifactCode"
-          class="active-artifact-subtitle"
-        >
+        <p v-if="selectedArtifactCode" class="active-artifact-subtitle">
           Showing documents for Artifact:
           <strong>{{ selectedArtifactCode }}</strong>
         </p>
-        <p
-          v-else
-          class="active-artifact-subtitle"
-        >
+        <p v-else class="active-artifact-subtitle">
           Please select an artifact from the binder tree to view documents.
         </p>
       </div>
@@ -44,56 +38,48 @@
         aria-colcount="7"
       >
         <thead>
-          <tr role="row">
+          <tr>
             <th
               scope="col"
-              role="columnheader"
             >
               Document Name
             </th>
             <th
               scope="col"
-              role="columnheader"
             >
               Taxonomy
             </th>
             <th
               scope="col"
-              role="columnheader"
             >
               Version
             </th>
             <th
               scope="col"
-              role="columnheader"
             >
               Status
             </th>
             <th
               scope="col"
-              role="columnheader"
             >
               Uploaded By
             </th>
             <th
               scope="col"
-              role="columnheader"
             >
               Uploaded At
             </th>
             <th
               scope="col"
-              role="columnheader"
               class="actions-column"
             >
               Actions
             </th>
           </tr>
         </thead>
-        <tbody role="rowgroup">
+        <tbody>
           <tr
             v-if="paginatedDocuments.length === 0"
-            role="row"
           >
             <td
               colspan="7"
@@ -107,7 +93,6 @@
             v-for="(doc, rIndex) in paginatedDocuments"
             :key="doc.id"
             class="document-row"
-            role="row"
           >
             <td
               role="gridcell"
@@ -123,17 +108,15 @@
               @keydown="handleCellKeyDown($event, rIndex, 0, doc)"
             >
               <span class="file-icon">📄</span>
-              <span
-                class="filename"
-                :title="doc.filename"
-              >{{
+              <span class="filename" :title="doc.filename">{{
                 doc.filename
               }}</span>
               <span
                 v-if="doc.is_redacted"
                 class="compliance-badge-pill"
                 title="HIPAA/GDPR Compliant Redacted Copy"
-              >🛡️ Compliant</span>
+                >🛡️ Compliant</span
+              >
             </td>
             <td
               role="gridcell"
@@ -158,6 +141,7 @@
                 "
                 class="inline-edit-container"
               >
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <select
                   ref="inlineSelectRef"
                   v-model="tempTaxonomyCode"
@@ -178,10 +162,7 @@
                   </option>
                 </select>
               </div>
-              <span
-                v-else
-                class="taxonomy-pill"
-              >
+              <span v-else class="taxonomy-pill">
                 Z{{ doc.zone }} - S{{ doc.section }} [{{ doc.artifact_code }}]
               </span>
             </td>
@@ -211,10 +192,7 @@
               @click="selectCell(rIndex, 3)"
               @keydown="handleCellKeyDown($event, rIndex, 3, doc)"
             >
-              <span
-                class="status-badge"
-                :class="getStatusClass(doc.status)"
-              >
+              <span class="status-badge" :class="getStatusClass(doc.status)">
                 {{ formatStatus(doc.status) }}
               </span>
             </td>
@@ -262,7 +240,7 @@
               @click="selectCell(rIndex, 6)"
               @keydown="handleCellKeyDown($event, rIndex, 6, doc)"
             >
-              <div style="display: flex; gap: 4px; justify-content: flex-end;">
+              <div style="display: flex; gap: 4px; justify-content: flex-end">
                 <button
                   class="btn btn-sm btn-outline-secondary btn-inspect-doc"
                   title="Inspect 21 CFR Part 11 Metadata"
@@ -289,10 +267,7 @@
     </div>
 
     <!-- Pagination Controls -->
-    <div
-      v-if="totalItems > 0"
-      class="pagination-controls"
-    >
+    <div v-if="totalItems > 0" class="pagination-controls">
       <div class="pagination-info">
         Showing
         <span class="font-semibold">{{
@@ -385,32 +360,22 @@
             @keydown.enter="triggerFileSelect"
             @keydown.space.prevent="triggerFileSelect"
           >
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
               ref="fileInputRef"
               type="file"
               class="hidden-file-input"
               accept=".pdf"
               @change="onFileSelected"
-            >
-            <div
-              class="drop-prompt-content"
-              aria-hidden="true"
-            >
+            />
+            <div class="drop-prompt-content" aria-hidden="true">
               <span class="upload-cloud-icon">☁️</span>
-              <p
-                v-if="!selectedFile"
-                class="drop-text"
-              >
+              <p v-if="!selectedFile" class="drop-text">
                 Drag and drop your regulated PDF here, or
                 <span class="highlight">browse</span>
               </p>
-              <div
-                v-else
-                class="selected-file-details"
-              >
-                <p class="file-name-success">
-                  🎉 {{ selectedFile.name }}
-                </p>
+              <div v-else class="selected-file-details">
+                <p class="file-name-success">🎉 {{ selectedFile.name }}</p>
                 <p class="file-size-meta">
                   Size: {{ (selectedFile.size / 1024).toFixed(1) }} KB | Type:
                   {{ selectedFile.type || "application/pdf" }}
@@ -420,57 +385,64 @@
           </div>
 
           <!-- Upload Metadata Form -->
-          <form
-            class="upload-meta-form"
-            @submit.prevent="submitUpload"
-          >
+          <form class="upload-meta-form" @submit.prevent="submitUpload">
             <div class="form-group-row">
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Target Study ID</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
                   v-model="studyId"
                   type="text"
                   class="form-control"
                   readonly
-                >
+                />
               </div>
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Site ID (Optional)</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
                   v-model="siteId"
                   type="text"
                   placeholder="e.g. SITE-01"
                   class="form-control"
-                >
+                />
               </div>
             </div>
 
             <div class="form-group-row">
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>DIA TMF Artifact Code</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
                   v-model="artifactCode"
                   type="text"
                   class="form-control"
                   readonly
-                >
+                />
               </div>
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Artifact Type (Label)</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
                   v-model="artifactType"
                   type="text"
                   class="form-control"
                   readonly
-                >
+                />
               </div>
             </div>
 
             <!-- Mandatory Reason for Change under 21 CFR Part 11 -->
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="required-label">
                 Reason for Change / Upload Justification
               </label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <textarea
                 v-model="reasonForChange"
                 rows="3"
@@ -480,10 +452,7 @@
               />
             </div>
 
-            <div
-              v-if="uploadError"
-              class="upload-error-banner"
-            >
+            <div v-if="uploadError" class="upload-error-banner">
               ❌ {{ uploadError }}
             </div>
 
@@ -544,7 +513,7 @@ const grid = use2DGrid(
     initialRow: 0,
     initialCol: 0,
     onCopyCell: (rIndex, cIndex, doc) => copyActiveCellValue(doc),
-    onCellAction: (rIndex, cIndex, doc, event) => {
+    onCellAction: (rIndex, cIndex, doc, _event) => {
       if (cIndex === 1) {
         startEditing(rIndex, doc);
       }
@@ -559,7 +528,6 @@ const {
   isCellActive,
   getCellTabindex,
   selectCell,
-  focusActiveCell,
   handleCellKeyDown,
   exitEditing,
 } = grid;

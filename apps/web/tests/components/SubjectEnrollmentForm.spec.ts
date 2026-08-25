@@ -12,7 +12,9 @@ describe("SubjectEnrollmentForm.vue - Reusable Enrollment and Screening Componen
       },
     });
 
-    expect(wrapper.find(".card-title").text()).toContain("Subject Registration & Screening");
+    expect(wrapper.find(".card-title").text()).toContain(
+      "Subject Registration & Screening"
+    );
     expect(wrapper.find(".btn-enroll-action").exists()).toBe(true);
     expect(wrapper.find(".btn-screen-action").exists()).toBe(true);
   });
@@ -93,7 +95,9 @@ describe("SubjectEnrollmentForm.vue - Reusable Enrollment and Screening Componen
     });
 
     expect(wrapper.find(".eligible-pane").exists()).toBe(true);
-    expect(wrapper.find(".screening-outcome-title").text()).toContain("Subject meets all protocol inclusion criteria");
+    expect(wrapper.find(".screening-outcome-title").text()).toContain(
+      "Subject meets all protocol inclusion criteria"
+    );
     expect(wrapper.find(".badge-success").text()).toBe("ELIGIBLE");
   });
 
@@ -102,7 +106,10 @@ describe("SubjectEnrollmentForm.vue - Reusable Enrollment and Screening Componen
       props: {
         screeningResult: {
           eligible: false,
-          failed_criteria: ["CRIT-INCL-01: Age >= 18", "CRIT-EXCL-02: Liver function"],
+          failed_criteria: [
+            "CRIT-INCL-01: Age >= 18",
+            "CRIT-EXCL-02: Liver function",
+          ],
           indeterminate_criteria: [],
         },
       },

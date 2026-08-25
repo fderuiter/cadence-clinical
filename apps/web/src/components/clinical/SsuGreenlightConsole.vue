@@ -18,7 +18,9 @@
           Country-Aware Site Activation Engine &amp; Greenlight Console
         </h2>
         <p class="console-subtitle">
-          Real-time multi-factor greenlight evaluator across the 6 operational facets with statutory jurisdiction rules, cryptographic HMAC-SHA256 tokens, and dual-signature GxP overrides.
+          Real-time multi-factor greenlight evaluator across the 6 operational
+          facets with statutory jurisdiction rules, cryptographic HMAC-SHA256
+          tokens, and dual-signature GxP overrides.
         </p>
       </div>
 
@@ -89,12 +91,16 @@
         </select>
       </div>
 
-      <div class="token-status-pill" v-if="gateData?.greenlight_token">
+      <div v-if="gateData?.greenlight_token" class="token-status-pill">
         <span class="token-label">HMAC-SHA256 Token:</span>
         <code class="token-snip" :title="gateData.greenlight_token">
-          {{ gateData.greenlight_token.slice(0, 16) }}...{{ gateData.greenlight_token.slice(-8) }}
+          {{ gateData.greenlight_token.slice(0, 16) }}...{{
+            gateData.greenlight_token.slice(-8)
+          }}
         </code>
-        <button class="btn-icon-only" title="Copy Token" @click="copyToken">📋</button>
+        <button class="btn-icon-only" title="Copy Token" @click="copyToken">
+          📋
+        </button>
       </div>
     </div>
 
@@ -106,11 +112,15 @@
           <div class="gauge-bar-outer">
             <div
               class="gauge-bar-inner"
-              :style="{ width: readinessPercentage + '%', backgroundColor: gaugeColor }"
-            ></div>
+              :style="{
+                width: readinessPercentage + '%',
+                backgroundColor: gaugeColor,
+              }"
+            />
           </div>
           <span class="gauge-text" :style="{ color: gaugeColor }">
-            {{ readinessPercentage }}% Ready ({{ passedFacetsCount }}/6 Facets Passed)
+            {{ readinessPercentage }}% Ready ({{ passedFacetsCount }}/6 Facets
+            Passed)
           </span>
         </div>
       </div>
@@ -119,16 +129,26 @@
         <!-- Facet 1: Regulatory & IRB -->
         <div
           class="facet-card"
-          :class="{ 'facet-passed': gateData?.facet_regulatory_irb, 'facet-failed': !gateData?.facet_regulatory_irb }"
+          :class="{
+            'facet-passed': gateData?.facet_regulatory_irb,
+            'facet-failed': !gateData?.facet_regulatory_irb,
+          }"
         >
           <div class="facet-header">
             <span class="facet-icon">⚖️</span>
             <div class="facet-titles">
               <span class="facet-name">Regulatory &amp; IRB / Ethics</span>
-              <span class="facet-rule-tag">{{ activeCountry }} Startup Rule</span>
+              <span class="facet-rule-tag"
+                >{{ activeCountry }} Startup Rule</span
+              >
             </div>
-            <span class="facet-status-chip" :class="gateData?.facet_regulatory_irb ? 'chip-pass' : 'chip-fail'">
-              {{ gateData?.facet_regulatory_irb ? 'PASSED' : 'ACTION REQ' }}
+            <span
+              class="facet-status-chip"
+              :class="
+                gateData?.facet_regulatory_irb ? 'chip-pass' : 'chip-fail'
+              "
+            >
+              {{ gateData?.facet_regulatory_irb ? "PASSED" : "ACTION REQ" }}
             </span>
           </div>
           <p class="facet-desc">
@@ -136,7 +156,11 @@
           </p>
           <div class="facet-footer">
             <span class="facet-meta">
-              {{ gateData?.facet_regulatory_irb ? 'Verified by Authority' : 'Pending IRB / Regulatory Approval' }}
+              {{
+                gateData?.facet_regulatory_irb
+                  ? "Verified by Authority"
+                  : "Pending IRB / Regulatory Approval"
+              }}
             </span>
           </div>
         </div>
@@ -144,7 +168,10 @@
         <!-- Facet 2: Executed CTA & Budget -->
         <div
           class="facet-card"
-          :class="{ 'facet-passed': gateData?.facet_cta_budget, 'facet-failed': !gateData?.facet_cta_budget }"
+          :class="{
+            'facet-passed': gateData?.facet_cta_budget,
+            'facet-failed': !gateData?.facet_cta_budget,
+          }"
         >
           <div class="facet-header">
             <span class="facet-icon">📝</span>
@@ -152,16 +179,24 @@
               <span class="facet-name">CTA &amp; Budget Schedule</span>
               <span class="facet-rule-tag">Legal &amp; Financial</span>
             </div>
-            <span class="facet-status-chip" :class="gateData?.facet_cta_budget ? 'chip-pass' : 'chip-fail'">
-              {{ gateData?.facet_cta_budget ? 'PASSED' : 'ACTION REQ' }}
+            <span
+              class="facet-status-chip"
+              :class="gateData?.facet_cta_budget ? 'chip-pass' : 'chip-fail'"
+            >
+              {{ gateData?.facet_cta_budget ? "PASSED" : "ACTION REQ" }}
             </span>
           </div>
           <p class="facet-desc">
-            Fully executed Clinical Trial Agreement and investigator grant payment schedules.
+            Fully executed Clinical Trial Agreement and investigator grant
+            payment schedules.
           </p>
           <div class="facet-footer">
             <span class="facet-meta">
-              {{ gateData?.facet_cta_budget ? 'Contract Fully Executed' : 'Missing Executed CTA' }}
+              {{
+                gateData?.facet_cta_budget
+                  ? "Contract Fully Executed"
+                  : "Missing Executed CTA"
+              }}
             </span>
           </div>
         </div>
@@ -169,7 +204,10 @@
         <!-- Facet 3: Certified eISF Binder -->
         <div
           class="facet-card"
-          :class="{ 'facet-passed': gateData?.facet_eisf_baseline, 'facet-failed': !gateData?.facet_eisf_baseline }"
+          :class="{
+            'facet-passed': gateData?.facet_eisf_baseline,
+            'facet-failed': !gateData?.facet_eisf_baseline,
+          }"
         >
           <div class="facet-header">
             <span class="facet-icon">📁</span>
@@ -177,16 +215,24 @@
               <span class="facet-name">Certified eISF Baseline</span>
               <span class="facet-rule-tag">DIA Zone 05 / ICH §8</span>
             </div>
-            <span class="facet-status-chip" :class="gateData?.facet_eisf_baseline ? 'chip-pass' : 'chip-fail'">
-              {{ gateData?.facet_eisf_baseline ? 'PASSED' : 'ACTION REQ' }}
+            <span
+              class="facet-status-chip"
+              :class="gateData?.facet_eisf_baseline ? 'chip-pass' : 'chip-fail'"
+            >
+              {{ gateData?.facet_eisf_baseline ? "PASSED" : "ACTION REQ" }}
             </span>
           </div>
           <p class="facet-desc">
-            Investigator CVs, medical licenses, laboratory certifications, and baseline DIA binder artifacts.
+            Investigator CVs, medical licenses, laboratory certifications, and
+            baseline DIA binder artifacts.
           </p>
           <div class="facet-footer">
             <span class="facet-meta">
-              {{ gateData?.facet_eisf_baseline ? 'Baseline Binder Certified' : 'Incomplete Essential Docs' }}
+              {{
+                gateData?.facet_eisf_baseline
+                  ? "Baseline Binder Certified"
+                  : "Incomplete Essential Docs"
+              }}
             </span>
           </div>
         </div>
@@ -194,7 +240,10 @@
         <!-- Facet 4: PI Signed DOA Log -->
         <div
           class="facet-card"
-          :class="{ 'facet-passed': gateData?.facet_doa_log, 'facet-failed': !gateData?.facet_doa_log }"
+          :class="{
+            'facet-passed': gateData?.facet_doa_log,
+            'facet-failed': !gateData?.facet_doa_log,
+          }"
         >
           <div class="facet-header">
             <span class="facet-icon">✍️</span>
@@ -202,16 +251,24 @@
               <span class="facet-name">PI Delegation of Authority</span>
               <span class="facet-rule-tag">ICH GCP E6(R2) §4.1.5</span>
             </div>
-            <span class="facet-status-chip" :class="gateData?.facet_doa_log ? 'chip-pass' : 'chip-fail'">
-              {{ gateData?.facet_doa_log ? 'PASSED' : 'ACTION REQ' }}
+            <span
+              class="facet-status-chip"
+              :class="gateData?.facet_doa_log ? 'chip-pass' : 'chip-fail'"
+            >
+              {{ gateData?.facet_doa_log ? "PASSED" : "ACTION REQ" }}
             </span>
           </div>
           <p class="facet-desc">
-            Principal Investigator signed and countersigned site personnel task delegation log.
+            Principal Investigator signed and countersigned site personnel task
+            delegation log.
           </p>
           <div class="facet-footer">
             <span class="facet-meta">
-              {{ gateData?.facet_doa_log ? 'PI Signed-off on DOA' : 'Pending PI Electronic Signature' }}
+              {{
+                gateData?.facet_doa_log
+                  ? "PI Signed-off on DOA"
+                  : "Pending PI Electronic Signature"
+              }}
             </span>
           </div>
         </div>
@@ -219,7 +276,10 @@
         <!-- Facet 5: GCP & Protocol Training -->
         <div
           class="facet-card"
-          :class="{ 'facet-passed': gateData?.facet_staff_training, 'facet-failed': !gateData?.facet_staff_training }"
+          :class="{
+            'facet-passed': gateData?.facet_staff_training,
+            'facet-failed': !gateData?.facet_staff_training,
+          }"
         >
           <div class="facet-header">
             <span class="facet-icon">🎓</span>
@@ -227,16 +287,26 @@
               <span class="facet-name">Staff GCP &amp; Protocol Training</span>
               <span class="facet-rule-tag">PRD-TRN-001 / ICH §4</span>
             </div>
-            <span class="facet-status-chip" :class="gateData?.facet_staff_training ? 'chip-pass' : 'chip-fail'">
-              {{ gateData?.facet_staff_training ? 'PASSED' : 'ACTION REQ' }}
+            <span
+              class="facet-status-chip"
+              :class="
+                gateData?.facet_staff_training ? 'chip-pass' : 'chip-fail'
+              "
+            >
+              {{ gateData?.facet_staff_training ? "PASSED" : "ACTION REQ" }}
             </span>
           </div>
           <p class="facet-desc">
-            Verified TransCelerate GCP certificates and protocol amendment training for all active site staff.
+            Verified TransCelerate GCP certificates and protocol amendment
+            training for all active site staff.
           </p>
           <div class="facet-footer">
             <span class="facet-meta">
-              {{ gateData?.facet_staff_training ? '100% Active Staff Qualified' : 'Pending Staff Training' }}
+              {{
+                gateData?.facet_staff_training
+                  ? "100% Active Staff Qualified"
+                  : "Pending Staff Training"
+              }}
             </span>
           </div>
         </div>
@@ -244,7 +314,10 @@
         <!-- Facet 6: IP Depot Release -->
         <div
           class="facet-card"
-          :class="{ 'facet-passed': gateData?.facet_ip_release, 'facet-failed': !gateData?.facet_ip_release }"
+          :class="{
+            'facet-passed': gateData?.facet_ip_release,
+            'facet-failed': !gateData?.facet_ip_release,
+          }"
         >
           <div class="facet-header">
             <span class="facet-icon">📦</span>
@@ -252,16 +325,24 @@
               <span class="facet-name">IP Depot Greenlight Release</span>
               <span class="facet-rule-tag">RTSM Supply Chain</span>
             </div>
-            <span class="facet-status-chip" :class="gateData?.facet_ip_release ? 'chip-pass' : 'chip-fail'">
-              {{ gateData?.facet_ip_release ? 'PASSED' : 'ACTION REQ' }}
+            <span
+              class="facet-status-chip"
+              :class="gateData?.facet_ip_release ? 'chip-pass' : 'chip-fail'"
+            >
+              {{ gateData?.facet_ip_release ? "PASSED" : "ACTION REQ" }}
             </span>
           </div>
           <p class="facet-desc">
-            Authorized depot greenlight release for investigational drug kit shipment and dispensing.
+            Authorized depot greenlight release for investigational drug kit
+            shipment and dispensing.
           </p>
           <div class="facet-footer">
             <span class="facet-meta">
-              {{ gateData?.facet_ip_release ? 'Depot Release Authorized' : 'Pending Depot Greenlight' }}
+              {{
+                gateData?.facet_ip_release
+                  ? "Depot Release Authorized"
+                  : "Pending Depot Greenlight"
+              }}
             </span>
           </div>
         </div>
@@ -289,7 +370,9 @@
         :class="{ active: currentTab === 'milestones' }"
         @click="currentTab = 'milestones'"
       >
-        🏛️ Regulatory Submissions &amp; Approvals ({{ regulatoryMilestones.length }})
+        🏛️ Regulatory Submissions &amp; Approvals ({{
+          regulatoryMilestones.length
+        }})
       </button>
     </div>
 
@@ -297,7 +380,10 @@
     <div v-if="currentTab === 'documents'" class="tab-panel">
       <div class="panel-header">
         <h4>Essential Startup Documents &amp; Regulatory Binder</h4>
-        <button class="btn btn-sm btn-primary" @click="showUploadDocModal = true">
+        <button
+          class="btn btn-sm btn-primary"
+          @click="showUploadDocModal = true"
+        >
           + Submit Essential Document
         </button>
       </div>
@@ -318,16 +404,23 @@
             <td>
               <span class="doc-type-badge">{{ doc.document_type }}</span>
             </td>
-            <td><strong>{{ doc.file_name }}</strong></td>
-            <td><code class="hash-code">{{ doc.file_hash.slice(0, 12) }}...</code></td>
             <td>
-              <span class="status-pill" :class="'pill-' + doc.status.toLowerCase()">
+              <strong>{{ doc.file_name }}</strong>
+            </td>
+            <td>
+              <code class="hash-code">{{ doc.file_hash.slice(0, 12) }}...</code>
+            </td>
+            <td>
+              <span
+                class="status-pill"
+                :class="'pill-' + doc.status.toLowerCase()"
+              >
                 {{ doc.status }}
               </span>
             </td>
-            <td>{{ doc.reviewed_by || '—' }}</td>
+            <td>{{ doc.reviewed_by || "—" }}</td>
             <td>
-              <div class="table-actions" v-if="doc.status !== 'APPROVED'">
+              <div v-if="doc.status !== 'APPROVED'" class="table-actions">
                 <button
                   class="btn-action btn-approve"
                   title="Approve Document"
@@ -373,18 +466,30 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="rule in countryRules" :key="rule.id || rule.criterion_code">
-            <td><code>{{ rule.criterion_code }}</code></td>
-            <td><strong>{{ rule.criterion_name }}</strong></td>
+          <tr
+            v-for="rule in countryRules"
+            :key="rule.id || rule.criterion_code"
+          >
+            <td>
+              <code>{{ rule.criterion_code }}</code>
+            </td>
+            <td>
+              <strong>{{ rule.criterion_name }}</strong>
+            </td>
             <td>
               <span class="facet-tag">{{ rule.facet }}</span>
             </td>
             <td>
-              <span class="badge" :class="rule.is_mandatory ? 'badge-mandatory' : 'badge-optional'">
-                {{ rule.is_mandatory ? 'Mandatory' : 'Optional' }}
+              <span
+                class="badge"
+                :class="
+                  rule.is_mandatory ? 'badge-mandatory' : 'badge-optional'
+                "
+              >
+                {{ rule.is_mandatory ? "Mandatory" : "Optional" }}
               </span>
             </td>
-            <td>{{ rule.description || '—' }}</td>
+            <td>{{ rule.description || "—" }}</td>
           </tr>
           <tr v-if="countryRules.length === 0">
             <td colspan="5" class="text-center empty-state">
@@ -399,7 +504,10 @@
     <div v-if="currentTab === 'milestones'" class="tab-panel">
       <div class="panel-header">
         <h4>National Regulatory Submissions Tracker</h4>
-        <button class="btn btn-sm btn-primary" @click="showAddMilestoneModal = true">
+        <button
+          class="btn btn-sm btn-primary"
+          @click="showAddMilestoneModal = true"
+        >
           + Add Regulatory Milestone
         </button>
       </div>
@@ -417,23 +525,31 @@
         </thead>
         <tbody>
           <tr v-for="ms in regulatoryMilestones" :key="ms.id">
-            <td><strong>{{ ms.country_code }}</strong></td>
+            <td>
+              <strong>{{ ms.country_code }}</strong>
+            </td>
             <td>
               <div>{{ ms.milestone_type }}</div>
               <small class="text-muted">{{ ms.authority_name }}</small>
             </td>
-            <td><code>{{ ms.approval_number || 'Pending' }}</code></td>
-            <td>{{ ms.planned_date || '—' }}</td>
-            <td>{{ ms.actual_date || '—' }}</td>
             <td>
-              <span class="status-pill" :class="'pill-' + ms.status.toLowerCase()">
+              <code>{{ ms.approval_number || "Pending" }}</code>
+            </td>
+            <td>{{ ms.planned_date || "—" }}</td>
+            <td>{{ ms.actual_date || "—" }}</td>
+            <td>
+              <span
+                class="status-pill"
+                :class="'pill-' + ms.status.toLowerCase()"
+              >
                 {{ ms.status }}
               </span>
             </td>
           </tr>
           <tr v-if="regulatoryMilestones.length === 0">
             <td colspan="6" class="text-center empty-state">
-              No regulatory milestones recorded yet for Study {{ activeStudyId }}.
+              No regulatory milestones recorded yet for Study
+              {{ activeStudyId }}.
             </td>
           </tr>
         </tbody>
@@ -449,20 +565,40 @@
         </div>
         <div class="modal-body">
           <p class="modal-intro">
-            You are formally certifying that Site <strong>{{ activeSiteId }}</strong> on Study <strong>{{ activeStudyId }}</strong> has satisfied all 6 operational startup facets under ICH GCP E6(R2) Section 8 and statutory {{ activeCountry }} regulations.
+            You are formally certifying that Site
+            <strong>{{ activeSiteId }}</strong> on Study
+            <strong>{{ activeStudyId }}</strong> has satisfied all 6 operational
+            startup facets under ICH GCP E6(R2) Section 8 and statutory
+            {{ activeCountry }} regulations.
           </p>
 
           <div class="signature-form">
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Full Legal Name:</label>
-              <input v-model="sigForm.name" type="text" class="text-input" placeholder="e.g. Dr. Jane Doe" />
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="sigForm.name"
+                type="text"
+                class="text-input"
+                placeholder="e.g. Dr. Jane Doe"
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Professional Role / Title:</label>
-              <input v-model="sigForm.role" type="text" class="text-input" placeholder="e.g. Regulatory Affairs Director" />
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="sigForm.role"
+                type="text"
+                class="text-input"
+                placeholder="e.g. Regulatory Affairs Director"
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Electronic Signature Meaning:</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 type="text"
                 class="text-input"
@@ -471,7 +607,9 @@
               />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Change Justification Reason:</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 v-model="sigForm.changeReason"
                 type="text"
@@ -482,13 +620,15 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showCertifyModal = false">Cancel</button>
+          <button class="btn btn-secondary" @click="showCertifyModal = false">
+            Cancel
+          </button>
           <button
             class="btn btn-primary"
             :disabled="!sigForm.name || !sigForm.role || isSubmitting"
             @click="executeGreenlightCertification"
           >
-            {{ isSubmitting ? 'Certifying...' : 'Sign & Certify Greenlight' }}
+            {{ isSubmitting ? "Certifying..." : "Sign & Certify Greenlight" }}
           </button>
         </div>
       </div>
@@ -499,49 +639,94 @@
       <div class="modal-card">
         <div class="modal-header">
           <h3>Executive Dual-Signature GxP Greenlight Override</h3>
-          <button class="btn-close" @click="showOverrideModal = false">✕</button>
+          <button class="btn-close" @click="showOverrideModal = false">
+            ✕
+          </button>
         </div>
         <div class="modal-body">
           <div class="alert-warning">
-            ⚠️ <strong>Executive GxP Override:</strong> Bypasses unfulfilled operational facets under dual Sponsor Executive and Medical Monitor electronic signatures in strict compliance with 21 CFR Part 11.
+            ⚠️ <strong>Executive GxP Override:</strong> Bypasses unfulfilled
+            operational facets under dual Sponsor Executive and Medical Monitor
+            electronic signatures in strict compliance with 21 CFR Part 11.
           </div>
 
           <div class="signature-form">
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Sponsor Executive User ID:</label>
-              <input v-model="overrideForm.sponsorId" type="text" class="text-input" placeholder="e.g. sponsor-exec-01" />
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="overrideForm.sponsorId"
+                type="text"
+                class="text-input"
+                placeholder="e.g. sponsor-exec-01"
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Sponsor Signature Hash / Key:</label>
-              <input v-model="overrideForm.sponsorSig" type="text" class="text-input" placeholder="Cryptographic Sponsor Signature" />
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="overrideForm.sponsorSig"
+                type="text"
+                class="text-input"
+                placeholder="Cryptographic Sponsor Signature"
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Medical Monitor User ID:</label>
-              <input v-model="overrideForm.medicalId" type="text" class="text-input" placeholder="e.g. med-monitor-02" />
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="overrideForm.medicalId"
+                type="text"
+                class="text-input"
+                placeholder="e.g. med-monitor-02"
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Medical Monitor Signature Hash / Key:</label>
-              <input v-model="overrideForm.medicalSig" type="text" class="text-input" placeholder="Cryptographic Medical Signature" />
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="overrideForm.medicalSig"
+                type="text"
+                class="text-input"
+                placeholder="Cryptographic Medical Signature"
+              />
             </div>
             <div class="form-group">
-              <label>Mandatory Regulatory Justification (Min 10 characters):</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label
+                >Mandatory Regulatory Justification (Min 10 characters):</label
+              >
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <textarea
                 v-model="overrideForm.justification"
                 class="textarea-input"
                 rows="3"
                 placeholder="Provide detailed clinical and regulatory rationale for greenlight override..."
-              ></textarea>
+              />
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showOverrideModal = false">Cancel</button>
+          <button class="btn btn-secondary" @click="showOverrideModal = false">
+            Cancel
+          </button>
           <button
             class="btn btn-override"
-            :disabled="!overrideForm.sponsorId || !overrideForm.medicalId || overrideForm.justification.length < 10 || isSubmitting"
+            :disabled="
+              !overrideForm.sponsorId ||
+              !overrideForm.medicalId ||
+              overrideForm.justification.length < 10 ||
+              isSubmitting
+            "
             @click="executeExecutiveOverride"
           >
-            {{ isSubmitting ? 'Authorizing...' : 'Authorize Executive Override' }}
+            {{
+              isSubmitting ? "Authorizing..." : "Authorize Executive Override"
+            }}
           </button>
         </div>
       </div>
@@ -552,37 +737,80 @@
       <div class="modal-card">
         <div class="modal-header">
           <h3>Submit Essential Document</h3>
-          <button class="btn-close" @click="showUploadDocModal = false">✕</button>
+          <button class="btn-close" @click="showUploadDocModal = false">
+            ✕
+          </button>
         </div>
         <div class="modal-body">
           <div class="signature-form">
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Document Type:</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <select v-model="docForm.type" class="select-input">
-                <option value="FDA_1572">Form FDA 1572 Statement of Investigator</option>
-                <option value="LOCAL_IRB_APPROVAL">Institutional Review Board (IRB) Approval</option>
-                <option value="EU_CTR_PART_I">EU CTR Part I Authorisation</option>
-                <option value="EU_CTR_PART_II_EC">EU CTR Part II &amp; Ethics Decision</option>
-                <option value="PMDA_NOTIFICATION">PMDA Clinical Trial Notification</option>
-                <option value="MHRA_AUTHORIZATION">UK MHRA Clinical Trial Authorisation</option>
-                <option value="UK_REC_APPROVAL">UK HRA &amp; REC Ethics Approval</option>
-                <option value="SITE_CONTRACT">Executed Clinical Trial Agreement (CTA)</option>
-                <option value="EISF_BASELINE_CERT">Certified eISF Regulatory Binder Baseline</option>
-                <option value="DOA_LOG">Principal Investigator Signed DOA Log</option>
-                <option value="GCP_TRAINING">GCP &amp; Protocol Amendment Training Certificate</option>
-                <option value="IP_RELEASE_AUTHORIZATION">Investigational Product Depot Release</option>
-                <option value="FINANCIAL_DISCLOSURE">Financial Disclosure Form (FDF)</option>
+                <option value="FDA_1572">
+                  Form FDA 1572 Statement of Investigator
+                </option>
+                <option value="LOCAL_IRB_APPROVAL">
+                  Institutional Review Board (IRB) Approval
+                </option>
+                <option value="EU_CTR_PART_I">
+                  EU CTR Part I Authorisation
+                </option>
+                <option value="EU_CTR_PART_II_EC">
+                  EU CTR Part II &amp; Ethics Decision
+                </option>
+                <option value="PMDA_NOTIFICATION">
+                  PMDA Clinical Trial Notification
+                </option>
+                <option value="MHRA_AUTHORIZATION">
+                  UK MHRA Clinical Trial Authorisation
+                </option>
+                <option value="UK_REC_APPROVAL">
+                  UK HRA &amp; REC Ethics Approval
+                </option>
+                <option value="SITE_CONTRACT">
+                  Executed Clinical Trial Agreement (CTA)
+                </option>
+                <option value="EISF_BASELINE_CERT">
+                  Certified eISF Regulatory Binder Baseline
+                </option>
+                <option value="DOA_LOG">
+                  Principal Investigator Signed DOA Log
+                </option>
+                <option value="GCP_TRAINING">
+                  GCP &amp; Protocol Amendment Training Certificate
+                </option>
+                <option value="IP_RELEASE_AUTHORIZATION">
+                  Investigational Product Depot Release
+                </option>
+                <option value="FINANCIAL_DISCLOSURE">
+                  Financial Disclosure Form (FDF)
+                </option>
               </select>
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>File Name:</label>
-              <input v-model="docForm.fileName" type="text" class="text-input" placeholder="e.g. FDA_1572_Signed_Site101.pdf" />
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="docForm.fileName"
+                type="text"
+                class="text-input"
+                placeholder="e.g. FDA_1572_Signed_Site101.pdf"
+              />
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showUploadDocModal = false">Cancel</button>
-          <button class="btn btn-primary" :disabled="!docForm.fileName || isSubmitting" @click="submitDoc">
+          <button class="btn btn-secondary" @click="showUploadDocModal = false">
+            Cancel
+          </button>
+          <button
+            class="btn btn-primary"
+            :disabled="!docForm.fileName || isSubmitting"
+            @click="submitDoc"
+          >
             Submit Document
           </button>
         </div>
@@ -637,7 +865,8 @@ const overrideForm = reactive({
   sponsorSig: "sig_sponsor_hmac_9942a78e",
   medicalId: "medical-monitor-02",
   medicalSig: "sig_med_monitor_hmac_3311b5df",
-  justification: "Accelerated pandemic response protocol activation under sponsor risk assessment.",
+  justification:
+    "Accelerated pandemic response protocol activation under sponsor risk assessment.",
 });
 
 const docForm = reactive({
@@ -824,7 +1053,8 @@ async function reviewDocument(docId, status) {
 async function submitDoc() {
   isSubmitting.value = true;
   try {
-    const fakeHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+    const fakeHash =
+      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
     const res = await fetch("/api/v1/ctms/startup/documents", {
       method: "POST",
       headers: {
@@ -916,7 +1146,9 @@ async function executeExecutiveOverride() {
       emit("override-authorized", gateData.value);
     } else {
       const err = await res.json();
-      alert(`Override Failed: ${err.detail || "Invalid signatures or missing justification"}`);
+      alert(
+        `Override Failed: ${err.detail || "Invalid signatures or missing justification"}`
+      );
     }
   } catch (err) {
     console.error("Error executing override:", err);

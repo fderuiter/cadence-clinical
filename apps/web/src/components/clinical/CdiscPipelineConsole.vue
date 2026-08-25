@@ -1,21 +1,36 @@
 <template>
-  <div class="cdisc-pipeline-console" role="region" aria-label="CDISC SDTM ADaM Pipeline and Compiler Console">
+  <div
+    class="cdisc-pipeline-console"
+    role="region"
+    aria-label="CDISC SDTM ADaM Pipeline and Compiler Console"
+  >
     <!-- Header Section -->
     <div class="pipeline-header">
       <div class="header-info">
         <div class="badge-row">
           <span class="badge badge-gxp">21 CFR Part 11</span>
           <span class="badge badge-cdisc">CDISC SDTM v2.0 / ADaM v2.1</span>
-          <span class="badge badge-spec">Dataset-JSON 1.1 / Define-XML 2.1</span>
+          <span class="badge badge-spec"
+            >Dataset-JSON 1.1 / Define-XML 2.1</span
+          >
         </div>
-        <h3 class="pipeline-title">Automated Continuous CDISC SDTM &amp; ADaM Pipeline</h3>
+        <h3 class="pipeline-title">
+          Automated Continuous CDISC SDTM &amp; ADaM Pipeline
+        </h3>
         <p class="pipeline-subtitle">
-          Continuous multi-domain transformation (DM, AE, CM, VS, LB, EX, DS, TU, TR, RS), ADaM biostatistical derivations (ADSL, ADAE, ADTTE, BDS), official CDISC Dataset-JSON 1.1 / 2.0 serialization, and Define-XML 2.1 metadata auto-compilation.
+          Continuous multi-domain transformation (DM, AE, CM, VS, LB, EX, DS,
+          TU, TR, RS), ADaM biostatistical derivations (ADSL, ADAE, ADTTE, BDS),
+          official CDISC Dataset-JSON 1.1 / 2.0 serialization, and Define-XML
+          2.1 metadata auto-compilation.
         </p>
       </div>
 
       <div class="header-actions">
-        <select v-model="selectedDatasetJsonVersion" class="version-select" aria-label="Dataset-JSON Version">
+        <select
+          v-model="selectedDatasetJsonVersion"
+          class="version-select"
+          aria-label="Dataset-JSON Version"
+        >
           <option value="1.1.0">Dataset-JSON 1.1.0 (CDISC Official)</option>
           <option value="2.0.0">Dataset-JSON 2.0.0 (Draft Standard)</option>
           <option value="1.0.0">Dataset-JSON 1.0.0 (Legacy)</option>
@@ -27,26 +42,63 @@
           :disabled="isRunningPipeline"
           @click="runContinuousPipeline"
         >
-          <span class="icon">{{ isRunningPipeline ? '⏳' : '⚡' }}</span>
-          {{ isRunningPipeline ? 'Transforming & Compiling...' : 'Execute Continuous Pipeline' }}
+          <span class="icon">{{ isRunningPipeline ? "⏳" : "⚡" }}</span>
+          {{
+            isRunningPipeline
+              ? "Transforming & Compiling..."
+              : "Execute Continuous Pipeline"
+          }}
         </button>
       </div>
     </div>
 
     <!-- Execution Status Alert -->
-    <div v-if="lastExecutionResult" class="execution-banner" :class="lastExecutionResult.status.toLowerCase()">
+    <div
+      v-if="lastExecutionResult"
+      class="execution-banner"
+      :class="lastExecutionResult.status.toLowerCase()"
+    >
       <div class="banner-icon">
-        {{ lastExecutionResult.status === 'COMPLETED' ? '✅' : '⚠️' }}
+        {{ lastExecutionResult.status === "COMPLETED" ? "✅" : "⚠️" }}
       </div>
       <div class="banner-content">
         <div class="banner-title">
-          Pipeline Execution {{ lastExecutionResult.execution_id }} — {{ lastExecutionResult.status }}
+          Pipeline Execution {{ lastExecutionResult.execution_id }} —
+          {{ lastExecutionResult.status }}
         </div>
         <div class="banner-details">
-          Generated <strong>{{ lastExecutionResult.total_sdtm_records }}</strong> SDTM observations across 10 domains &amp;
-          <strong>{{ lastExecutionResult.total_adam_records }}</strong> ADaM analysis records.
-          Dataset-JSON Conformance: <span class="badge-pill" :class="lastExecutionResult.dataset_json_manifest.is_valid ? 'valid' : 'invalid'">{{ lastExecutionResult.dataset_json_manifest.is_valid ? 'Valid' : 'Errors' }}</span> |
-          Define-XML 2.1 Conformance: <span class="badge-pill" :class="lastExecutionResult.define_xml_summary.is_valid ? 'valid' : 'invalid'">{{ lastExecutionResult.define_xml_summary.is_valid ? 'Valid' : 'Errors' }}</span>
+          Generated
+          <strong>{{ lastExecutionResult.total_sdtm_records }}</strong> SDTM
+          observations across 10 domains &amp;
+          <strong>{{ lastExecutionResult.total_adam_records }}</strong> ADaM
+          analysis records. Dataset-JSON Conformance:
+          <span
+            class="badge-pill"
+            :class="
+              lastExecutionResult.dataset_json_manifest.is_valid
+                ? 'valid'
+                : 'invalid'
+            "
+            >{{
+              lastExecutionResult.dataset_json_manifest.is_valid
+                ? "Valid"
+                : "Errors"
+            }}</span
+          >
+          | Define-XML 2.1 Conformance:
+          <span
+            class="badge-pill"
+            :class="
+              lastExecutionResult.define_xml_summary.is_valid
+                ? 'valid'
+                : 'invalid'
+            "
+            >{{
+              lastExecutionResult.define_xml_summary.is_valid
+                ? "Valid"
+                : "Errors"
+            }}</span
+          >
         </div>
       </div>
     </div>
@@ -83,18 +135,32 @@
     <div v-if="currentSubTab === 'domains'" class="tab-content">
       <!-- SDTM 10-Domain Section -->
       <div class="section-title-row">
-        <h4 class="section-title">CDISC SDTM v1.7 / v2.0 Domains (10 Mapped Domains)</h4>
-        <span class="section-badge">{{ sdtmTotalRecords }} Tabulation Records</span>
+        <h4 class="section-title">
+          CDISC SDTM v1.7 / v2.0 Domains (10 Mapped Domains)
+        </h4>
+        <span class="section-badge"
+          >{{ sdtmTotalRecords }} Tabulation Records</span
+        >
       </div>
 
       <div class="domain-grid">
-        <div v-for="domain in sdtmDomainCards" :key="domain.code" class="domain-card">
+        <div
+          v-for="domain in sdtmDomainCards"
+          :key="domain.code"
+          class="domain-card"
+        >
           <div class="domain-card-header">
             <span class="domain-tag">{{ domain.code }}</span>
-            <span class="record-badge">{{ getSDTMCount(domain.code) }} records</span>
+            <span class="record-badge"
+              >{{ getSDTMCount(domain.code) }} records</span
+            >
           </div>
-          <div class="domain-title">{{ domain.name }}</div>
-          <div class="domain-desc">{{ domain.description }}</div>
+          <div class="domain-title">
+            {{ domain.name }}
+          </div>
+          <div class="domain-desc">
+            {{ domain.description }}
+          </div>
           <div class="domain-meta">
             <span class="meta-label">Class:</span>
             <span class="meta-val">{{ domain.cls }}</span>
@@ -103,19 +169,31 @@
       </div>
 
       <!-- ADaM 4-Dataset Section -->
-      <div class="section-title-row" style="margin-top: 24px;">
+      <div class="section-title-row" style="margin-top: 24px">
         <h4 class="section-title">CDISC ADaM v1.3 / v2.1 Analysis Datasets</h4>
-        <span class="section-badge">{{ adamTotalRecords }} Derived Records</span>
+        <span class="section-badge"
+          >{{ adamTotalRecords }} Derived Records</span
+        >
       </div>
 
       <div class="domain-grid adam-grid">
-        <div v-for="ds in adamDatasetCards" :key="ds.code" class="domain-card adam-card">
+        <div
+          v-for="ds in adamDatasetCards"
+          :key="ds.code"
+          class="domain-card adam-card"
+        >
           <div class="domain-card-header">
             <span class="domain-tag adam-tag">{{ ds.code }}</span>
-            <span class="record-badge">{{ getADaMCount(ds.code) }} records</span>
+            <span class="record-badge"
+              >{{ getADaMCount(ds.code) }} records</span
+            >
           </div>
-          <div class="domain-title">{{ ds.name }}</div>
-          <div class="domain-desc">{{ ds.description }}</div>
+          <div class="domain-title">
+            {{ ds.name }}
+          </div>
+          <div class="domain-desc">
+            {{ ds.description }}
+          </div>
           <div class="domain-meta">
             <span class="meta-label">Structure:</span>
             <span class="meta-val">{{ ds.structure }}</span>
@@ -128,14 +206,25 @@
     <div v-if="currentSubTab === 'dataset_json'" class="tab-content">
       <div class="viewer-toolbar">
         <div class="toolbar-left">
-          <span class="spec-label">Specification: CDISC Dataset-JSON {{ selectedDatasetJsonVersion }}</span>
+          <span class="spec-label"
+            >Specification: CDISC Dataset-JSON
+            {{ selectedDatasetJsonVersion }}</span
+          >
           <span class="status-indicator valid">Schema Conformance: Passed</span>
         </div>
         <div class="toolbar-right">
-          <button type="button" class="btn btn-sm btn-secondary" @click="copyDatasetJson">
+          <button
+            type="button"
+            class="btn btn-sm btn-secondary"
+            @click="copyDatasetJson"
+          >
             📋 Copy JSON
           </button>
-          <button type="button" class="btn btn-sm btn-primary" @click="downloadDatasetJson">
+          <button
+            type="button"
+            class="btn btn-sm btn-primary"
+            @click="downloadDatasetJson"
+          >
             ⬇️ Download Dataset-JSON
           </button>
         </div>
@@ -148,14 +237,26 @@
     <div v-if="currentSubTab === 'define_xml'" class="tab-content">
       <div class="viewer-toolbar">
         <div class="toolbar-left">
-          <span class="spec-label">Specification: CDISC Define-XML v2.1.0 / ODM 1.3.2</span>
-          <span class="status-indicator valid">VLM &amp; WhereClauses Compiled</span>
+          <span class="spec-label"
+            >Specification: CDISC Define-XML v2.1.0 / ODM 1.3.2</span
+          >
+          <span class="status-indicator valid"
+            >VLM &amp; WhereClauses Compiled</span
+          >
         </div>
         <div class="toolbar-right">
-          <button type="button" class="btn btn-sm btn-secondary" @click="copyDefineXml">
+          <button
+            type="button"
+            class="btn btn-sm btn-secondary"
+            @click="copyDefineXml"
+          >
             📋 Copy XML
           </button>
-          <button type="button" class="btn btn-sm btn-primary" @click="downloadDefineXml">
+          <button
+            type="button"
+            class="btn btn-sm btn-primary"
+            @click="downloadDefineXml"
+          >
             ⬇️ Download Define-XML 2.1
           </button>
         </div>
@@ -163,39 +264,52 @@
 
       <!-- VLM & WhereClauses Summary Card -->
       <div class="vlm-summary-card">
-        <h5 class="vlm-title">Value Level Metadata (VLM) &amp; WhereClause Summary</h5>
+        <h5 class="vlm-title">
+          Value Level Metadata (VLM) &amp; WhereClause Summary
+        </h5>
         <div class="vlm-grid">
           <div class="vlm-item">
             <span class="vlm-label">LB.LBORRES:</span>
-            <span class="vlm-val">ALT, AST, BILI, GLUC, CREAT, HGB (WhereClause: EQ)</span>
+            <span class="vlm-val"
+              >ALT, AST, BILI, GLUC, CREAT, HGB (WhereClause: EQ)</span
+            >
           </div>
           <div class="vlm-item">
             <span class="vlm-label">VS.VSORRES:</span>
-            <span class="vlm-val">SYSBP, DIABP, PULSE, TEMP, WEIGHT, HEIGHT</span>
+            <span class="vlm-val"
+              >SYSBP, DIABP, PULSE, TEMP, WEIGHT, HEIGHT</span
+            >
           </div>
           <div class="vlm-item">
             <span class="vlm-label">BDS.AVAL:</span>
-            <span class="vlm-val">SYSBP, DIABP, ALT, AST (Continuous Analysis Values)</span>
+            <span class="vlm-val"
+              >SYSBP, DIABP, ALT, AST (Continuous Analysis Values)</span
+            >
           </div>
           <div class="vlm-item">
             <span class="vlm-label">Origins:</span>
-            <span class="vlm-val">Collected (EDC/Lab/IRC), Derived (MethodDef), Assigned, Protocol</span>
+            <span class="vlm-val"
+              >Collected (EDC/Lab/IRC), Derived (MethodDef), Assigned,
+              Protocol</span
+            >
           </div>
         </div>
       </div>
 
-      <pre class="code-viewer xml-viewer"><code>{{ defineXmlPreview }}</code></pre>
+      <pre
+        class="code-viewer xml-viewer"
+      ><code>{{ defineXmlPreview }}</code></pre>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref } from "vue";
 
 const props = defineProps({
   studyId: {
     type: String,
-    default: 'STUDY-901',
+    default: "STUDY-901",
   },
   snapshotId: {
     type: String,
@@ -207,13 +321,13 @@ const props = defineProps({
   },
 });
 
-const currentSubTab = ref<'domains' | 'dataset_json' | 'define_xml'>('domains');
-const selectedDatasetJsonVersion = ref('1.1.0');
+const currentSubTab = ref<"domains" | "dataset_json" | "define_xml">("domains");
+const selectedDatasetJsonVersion = ref("1.1.0");
 const isRunningPipeline = ref(false);
 
 const lastExecutionResult = ref<any>({
-  execution_id: 'EXEC-7A9B3F12',
-  status: 'COMPLETED',
+  execution_id: "EXEC-7A9B3F12",
+  status: "COMPLETED",
   total_sdtm_records: 48,
   total_adam_records: 36,
   sdtm_counts: {
@@ -236,11 +350,11 @@ const lastExecutionResult = ref<any>({
   },
   dataset_json_manifest: {
     is_valid: true,
-    datasetJSONVersion: '1.1.0',
+    datasetJSONVersion: "1.1.0",
   },
   define_xml_summary: {
     is_valid: true,
-    define_version: '2.1.0',
+    define_version: "2.1.0",
     item_group_count: 14,
     item_def_count: 120,
     vlm_count: 3,
@@ -249,33 +363,113 @@ const lastExecutionResult = ref<any>({
 });
 
 const sdtmDomainCards = [
-  { code: 'DM', name: 'Demographics', description: 'Subject baseline demographics, arm, sex, race, age', cls: 'Special Purpose' },
-  { code: 'AE', name: 'Adverse Events', description: 'Reported adverse events, severity, causality, seriousness', cls: 'Events' },
-  { code: 'CM', name: 'Concomitant Medications', description: 'Prior and concurrent medications, dosages, routes', cls: 'Interventions' },
-  { code: 'VS', name: 'Vital Signs', description: 'BP, pulse, temp, weight, baseline indicators', cls: 'Findings' },
-  { code: 'LB', name: 'Laboratory Findings', description: 'Chemistry, hematology, reference ranges, LOINC codes', cls: 'Findings' },
-  { code: 'EX', name: 'Exposure', description: 'Investigational drug administration, dosing, lots', cls: 'Interventions' },
-  { code: 'DS', name: 'Disposition', description: 'Study completion, protocol milestones, discontinuation', cls: 'Events' },
-  { code: 'TU', name: 'Tumor Identification', description: 'Target and non-target tumor lesion tracking', cls: 'Findings' },
-  { code: 'TR', name: 'Tumor Results', description: 'Lesion caliper measurements and longest diameters', cls: 'Findings' },
-  { code: 'RS', name: 'Disease Response', description: 'RECIST 1.1 overall disease response assessments', cls: 'Findings' },
+  {
+    code: "DM",
+    name: "Demographics",
+    description: "Subject baseline demographics, arm, sex, race, age",
+    cls: "Special Purpose",
+  },
+  {
+    code: "AE",
+    name: "Adverse Events",
+    description: "Reported adverse events, severity, causality, seriousness",
+    cls: "Events",
+  },
+  {
+    code: "CM",
+    name: "Concomitant Medications",
+    description: "Prior and concurrent medications, dosages, routes",
+    cls: "Interventions",
+  },
+  {
+    code: "VS",
+    name: "Vital Signs",
+    description: "BP, pulse, temp, weight, baseline indicators",
+    cls: "Findings",
+  },
+  {
+    code: "LB",
+    name: "Laboratory Findings",
+    description: "Chemistry, hematology, reference ranges, LOINC codes",
+    cls: "Findings",
+  },
+  {
+    code: "EX",
+    name: "Exposure",
+    description: "Investigational drug administration, dosing, lots",
+    cls: "Interventions",
+  },
+  {
+    code: "DS",
+    name: "Disposition",
+    description: "Study completion, protocol milestones, discontinuation",
+    cls: "Events",
+  },
+  {
+    code: "TU",
+    name: "Tumor Identification",
+    description: "Target and non-target tumor lesion tracking",
+    cls: "Findings",
+  },
+  {
+    code: "TR",
+    name: "Tumor Results",
+    description: "Lesion caliper measurements and longest diameters",
+    cls: "Findings",
+  },
+  {
+    code: "RS",
+    name: "Disease Response",
+    description: "RECIST 1.1 overall disease response assessments",
+    cls: "Findings",
+  },
 ];
 
 const adamDatasetCards = [
-  { code: 'ADSL', name: 'Subject-Level Analysis Dataset', description: 'Demographics, baseline characteristics, population flags (SAFFL, ITTFL), treatment dates', structure: 'One record per subject' },
-  { code: 'ADAE', name: 'Adverse Events Analysis Dataset', description: 'Treatment emergent flags (TRTEMFL), relative days (ASTDY), severity numbers', structure: 'One record per AE per subject' },
-  { code: 'ADTTE', name: 'Time-to-Event Analysis Dataset', description: 'Survival endpoints (OS, PFS, TTTOX, TTDISC), analysis dates, censoring flags', structure: 'One record per endpoint per subject' },
-  { code: 'BDS', name: 'Basic Data Structure (ADVS / ADLB)', description: 'Continuous parameters, baseline values, changes from baseline (CHG, PCHG)', structure: 'One record per parameter per visit' },
+  {
+    code: "ADSL",
+    name: "Subject-Level Analysis Dataset",
+    description:
+      "Demographics, baseline characteristics, population flags (SAFFL, ITTFL), treatment dates",
+    structure: "One record per subject",
+  },
+  {
+    code: "ADAE",
+    name: "Adverse Events Analysis Dataset",
+    description:
+      "Treatment emergent flags (TRTEMFL), relative days (ASTDY), severity numbers",
+    structure: "One record per AE per subject",
+  },
+  {
+    code: "ADTTE",
+    name: "Time-to-Event Analysis Dataset",
+    description:
+      "Survival endpoints (OS, PFS, TTTOX, TTDISC), analysis dates, censoring flags",
+    structure: "One record per endpoint per subject",
+  },
+  {
+    code: "BDS",
+    name: "Basic Data Structure (ADVS / ADLB)",
+    description:
+      "Continuous parameters, baseline values, changes from baseline (CHG, PCHG)",
+    structure: "One record per parameter per visit",
+  },
 ];
 
 const sdtmTotalRecords = computed(() => {
   if (!lastExecutionResult.value?.sdtm_counts) return 0;
-  return Object.values(lastExecutionResult.value.sdtm_counts).reduce((a: any, b: any) => a + b, 0);
+  return Object.values(lastExecutionResult.value.sdtm_counts).reduce(
+    (a: any, b: any) => a + b,
+    0
+  );
 });
 
 const adamTotalRecords = computed(() => {
   if (!lastExecutionResult.value?.adam_counts) return 0;
-  return Object.values(lastExecutionResult.value.adam_counts).reduce((a: any, b: any) => a + b, 0);
+  return Object.values(lastExecutionResult.value.adam_counts).reduce(
+    (a: any, b: any) => a + b,
+    0
+  );
 });
 
 function getSDTMCount(code: string): number {
@@ -292,44 +486,86 @@ const datasetJsonPreview = computed(() => {
       creationDateTime: new Date().toISOString(),
       datasetJSONVersion: selectedDatasetJsonVersion.value,
       fileOID: `FILE.${props.studyId}.DATASET-JSON`,
-      originator: 'Cadence Clinical CDR Engine',
-      sourceSystem: 'Cadence Clinical',
-      sourceSystemVersion: '2.1.0',
+      originator: "Cadence Clinical CDR Engine",
+      sourceSystem: "Cadence Clinical",
+      sourceSystemVersion: "2.1.0",
       clinicalData: {
         studyOID: props.studyId,
-        metaDataVersionOID: 'MDV.CDISC.001',
-        metaDataRef: 'define.xml',
+        metaDataVersionOID: "MDV.CDISC.001",
+        metaDataRef: "define.xml",
         itemGroupData: {
-          'IG.DM': {
-            itemGroupOID: 'IG.DM',
-            name: 'DM',
-            label: 'Demographics',
+          "IG.DM": {
+            itemGroupOID: "IG.DM",
+            name: "DM",
+            label: "Demographics",
             records: 6,
             items: [
-              { OID: 'IT.DM.STUDYID', name: 'STUDYID', label: 'Study Identifier', type: 'string' },
-              { OID: 'IT.DM.USUBJID', name: 'USUBJID', label: 'Unique Subject Identifier', type: 'string' },
-              { OID: 'IT.DM.AGE', name: 'AGE', label: 'Age', type: 'integer' },
-              { OID: 'IT.DM.SEX', name: 'SEX', label: 'Sex', type: 'string' },
-              { OID: 'IT.DM.ARM', name: 'ARM', label: 'Description of Planned Arm', type: 'string' },
+              {
+                OID: "IT.DM.STUDYID",
+                name: "STUDYID",
+                label: "Study Identifier",
+                type: "string",
+              },
+              {
+                OID: "IT.DM.USUBJID",
+                name: "USUBJID",
+                label: "Unique Subject Identifier",
+                type: "string",
+              },
+              { OID: "IT.DM.AGE", name: "AGE", label: "Age", type: "integer" },
+              { OID: "IT.DM.SEX", name: "SEX", label: "Sex", type: "string" },
+              {
+                OID: "IT.DM.ARM",
+                name: "ARM",
+                label: "Description of Planned Arm",
+                type: "string",
+              },
             ],
             itemData: [
-              [props.studyId, `${props.studyId}-001`, 54, 'M', 'Experimental Arm 100mg'],
-              [props.studyId, `${props.studyId}-002`, 61, 'F', 'Placebo Control'],
+              [
+                props.studyId,
+                `${props.studyId}-001`,
+                54,
+                "M",
+                "Experimental Arm 100mg",
+              ],
+              [
+                props.studyId,
+                `${props.studyId}-002`,
+                61,
+                "F",
+                "Placebo Control",
+              ],
             ],
           },
-          'IG.ADSL': {
-            itemGroupOID: 'IG.ADSL',
-            name: 'ADSL',
-            label: 'Subject-Level Analysis Dataset',
+          "IG.ADSL": {
+            itemGroupOID: "IG.ADSL",
+            name: "ADSL",
+            label: "Subject-Level Analysis Dataset",
             records: 6,
             items: [
-              { OID: 'IT.ADSL.USUBJID', name: 'USUBJID', label: 'Unique Subject Identifier', type: 'string' },
-              { OID: 'IT.ADSL.SAFFL', name: 'SAFFL', label: 'Safety Population Flag', type: 'string' },
-              { OID: 'IT.ADSL.BMIBL', name: 'BMIBL', label: 'Baseline BMI', type: 'float' },
+              {
+                OID: "IT.ADSL.USUBJID",
+                name: "USUBJID",
+                label: "Unique Subject Identifier",
+                type: "string",
+              },
+              {
+                OID: "IT.ADSL.SAFFL",
+                name: "SAFFL",
+                label: "Safety Population Flag",
+                type: "string",
+              },
+              {
+                OID: "IT.ADSL.BMIBL",
+                name: "BMIBL",
+                label: "Baseline BMI",
+                type: "float",
+              },
             ],
             itemData: [
-              [`${props.studyId}-001`, 'Y', 24.8],
-              [`${props.studyId}-002`, 'Y', 27.1],
+              [`${props.studyId}-001`, "Y", 24.8],
+              [`${props.studyId}-002`, "Y", 27.1],
             ],
           },
         },
@@ -390,19 +626,21 @@ const defineXmlPreview = computed(() => {
 async function runContinuousPipeline() {
   isRunningPipeline.value = true;
   try {
-    const res = await fetch('/api/v1/interop/cdr/pipeline/execute', {
-      method: 'POST',
+    const res = await fetch("/api/v1/interop/cdr/pipeline/execute", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'X-User-Id': 'biostat_01',
-        'X-User-Roles': props.isUnblinded ? 'unblinded_statistician' : 'data_manager',
-        'X-Unblinded-Access': props.isUnblinded ? 'true' : 'false',
+        "Content-Type": "application/json",
+        "X-User-Id": "biostat_01",
+        "X-User-Roles": props.isUnblinded
+          ? "unblinded_statistician"
+          : "data_manager",
+        "X-Unblinded-Access": props.isUnblinded ? "true" : "false",
       },
       body: JSON.stringify({
         study_id: props.studyId,
         snapshot_id: props.snapshotId,
         dataset_json_version: selectedDatasetJsonVersion.value,
-        reason_for_change: 'Continuous automated SDTM/ADaM compilation trigger',
+        reason_for_change: "Continuous automated SDTM/ADaM compilation trigger",
       }),
     });
     if (res.ok) {
@@ -410,7 +648,7 @@ async function runContinuousPipeline() {
       lastExecutionResult.value = data;
     }
   } catch (e) {
-    console.error('Failed to trigger CDR pipeline:', e);
+    console.error("Failed to trigger CDR pipeline:", e);
   } finally {
     isRunningPipeline.value = false;
   }
@@ -421,9 +659,11 @@ function copyDatasetJson() {
 }
 
 function downloadDatasetJson() {
-  const blob = new Blob([datasetJsonPreview.value], { type: 'application/json' });
+  const blob = new Blob([datasetJsonPreview.value], {
+    type: "application/json",
+  });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = `dataset_json_${props.studyId.toLowerCase()}.json`;
   a.click();
@@ -435,9 +675,9 @@ function copyDefineXml() {
 }
 
 function downloadDefineXml() {
-  const blob = new Blob([defineXmlPreview.value], { type: 'application/xml' });
+  const blob = new Blob([defineXmlPreview.value], { type: "application/xml" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = `define_${props.studyId.toLowerCase()}.xml`;
   a.click();

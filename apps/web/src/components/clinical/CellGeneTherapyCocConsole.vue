@@ -7,13 +7,26 @@
           <span class="badge badge-cgt">Cell &amp; Gene Therapy</span>
           <span class="badge badge-gxp">21 CFR Part 11 Regulated</span>
           <span class="badge badge-isbt">ISBT 128 Compliant</span>
-          <span v-if="cocData?.status === 'BEDSIDE_VERIFIED'" class="badge badge-unlocked">Infusion Unlocked</span>
-          <span v-else-if="cocData?.status === 'QUARANTINED'" class="badge badge-quarantine">Cryo Quarantined</span>
-          <span v-else class="badge badge-stage">{{ cocData?.current_stage || 'Awaiting Harvest' }}</span>
+          <span
+            v-if="cocData?.status === 'BEDSIDE_VERIFIED'"
+            class="badge badge-unlocked"
+            >Infusion Unlocked</span
+          >
+          <span
+            v-else-if="cocData?.status === 'QUARANTINED'"
+            class="badge badge-quarantine"
+            >Cryo Quarantined</span
+          >
+          <span v-else class="badge badge-stage">{{
+            cocData?.current_stage || "Awaiting Harvest"
+          }}</span>
         </div>
-        <h2 class="title">Vein-to-Vein Chain of Custody &amp; Identity (COC/COI)</h2>
+        <h2 class="title">
+          Vein-to-Vein Chain of Custody &amp; Identity (COC/COI)
+        </h2>
         <p class="subtitle">
-          Unbroken cryptographic identity binding, cryogenic transit temperature logging, and mandatory two-person bedside verification.
+          Unbroken cryptographic identity binding, cryogenic transit temperature
+          logging, and mandatory two-person bedside verification.
         </p>
       </div>
 
@@ -46,7 +59,7 @@
           type="text"
           placeholder="e.g. STUDY-CGT-801"
           @change="fetchTraceability"
-        >
+        />
       </div>
       <div class="filter-group">
         <label for="input-subject">Subject ID / UUID</label>
@@ -56,7 +69,7 @@
           type="text"
           placeholder="e.g. SUBJ-101-0042"
           @change="fetchTraceability"
-        >
+        />
       </div>
       <div class="filter-group action-btn-group">
         <button
@@ -77,7 +90,9 @@
         <div class="card metric-card">
           <span class="metric-label">Donation ID (ISBT 128 DIN)</span>
           <span class="metric-value code-font">{{ cocData.din }}</span>
-          <span class="metric-sub">Facility: {{ cocData.collection_site_id || 'N/A' }}</span>
+          <span class="metric-sub"
+            >Facility: {{ cocData.collection_site_id || "N/A" }}</span
+          >
         </div>
 
         <div class="card metric-card">
@@ -88,17 +103,39 @@
 
         <div class="card metric-card">
           <span class="metric-label">Manufacturing Batch</span>
-          <span class="metric-value highlight">{{ cocData.batch_id || 'Pending Synthesis' }}</span>
-          <span class="metric-sub">CMO: {{ cocData.manufacturing_facility_id || 'In Queue' }}</span>
+          <span class="metric-value highlight">{{
+            cocData.batch_id || "Pending Synthesis"
+          }}</span>
+          <span class="metric-sub"
+            >CMO: {{ cocData.manufacturing_facility_id || "In Queue" }}</span
+          >
         </div>
 
-        <div class="card metric-card" :class="{ 'card-excursion': cocData.cryo_temp_excursion_count > 0 }">
+        <div
+          class="card metric-card"
+          :class="{ 'card-excursion': cocData.cryo_temp_excursion_count > 0 }"
+        >
           <span class="metric-label">Cryogenic Integrity</span>
           <span class="metric-value">
-            {{ cocData.lowest_temp_celsius != null ? `${cocData.lowest_temp_celsius.toFixed(1)}°C` : '-196.0°C' }}
+            {{
+              cocData.lowest_temp_celsius != null
+                ? `${cocData.lowest_temp_celsius.toFixed(1)}°C`
+                : "-196.0°C"
+            }}
           </span>
-          <span class="metric-sub" :class="cocData.cryo_temp_excursion_count > 0 ? 'text-danger' : 'text-success'">
-            {{ cocData.cryo_temp_excursion_count === 0 ? 'Optimal (0 Excursions)' : `${cocData.cryo_temp_excursion_count} Excursions` }}
+          <span
+            class="metric-sub"
+            :class="
+              cocData.cryo_temp_excursion_count > 0
+                ? 'text-danger'
+                : 'text-success'
+            "
+          >
+            {{
+              cocData.cryo_temp_excursion_count === 0
+                ? "Optimal (0 Excursions)"
+                : `${cocData.cryo_temp_excursion_count} Excursions`
+            }}
           </span>
         </div>
       </section>
@@ -114,7 +151,8 @@
             :class="{
               'stage-complete': isStageComplete(st.key),
               'stage-current': cocData.current_stage === st.key,
-              'stage-pending': !isStageComplete(st.key) && cocData.current_stage !== st.key
+              'stage-pending':
+                !isStageComplete(st.key) && cocData.current_stage !== st.key,
             }"
           >
             <div class="node-circle">
@@ -128,8 +166,12 @@
       <!-- Action Toolbar -->
       <section class="card action-toolbar">
         <div class="toolbar-title-block">
-          <h4 class="toolbar-title">Chain of Custody Handover &amp; Verification Actions</h4>
-          <p class="toolbar-hint">Execute Part 11 e-signature step-up operations across the chain.</p>
+          <h4 class="toolbar-title">
+            Chain of Custody Handover &amp; Verification Actions
+          </h4>
+          <p class="toolbar-hint">
+            Execute Part 11 e-signature step-up operations across the chain.
+          </p>
         </div>
         <div class="toolbar-buttons">
           <button
@@ -150,7 +192,10 @@
           <button
             type="button"
             class="btn btn-stepup"
-            :disabled="cocData.status === 'BEDSIDE_VERIFIED' || cocData.status === 'INFUSED'"
+            :disabled="
+              cocData.status === 'BEDSIDE_VERIFIED' ||
+              cocData.status === 'INFUSED'
+            "
             @click="openBedsideModal"
           >
             Bedside Dual-Verification
@@ -158,7 +203,9 @@
           <button
             type="button"
             class="btn btn-infuse"
-            :disabled="!cocData.infusion_unlocked || cocData.status === 'INFUSED'"
+            :disabled="
+              !cocData.infusion_unlocked || cocData.status === 'INFUSED'
+            "
             @click="openInfusionModal"
           >
             Administer Infusion
@@ -178,25 +225,35 @@
         <div class="barcode-info-col">
           <h3 class="section-title">Tamper-Evident Cryptographic Barcode</h3>
           <p class="barcode-meta">
-            HMAC-SHA256 signed 2D DataMatrix payload dynamically binding Subject UUID, ISBT 128 DIN, and Manufacturing Batch.
+            HMAC-SHA256 signed 2D DataMatrix payload dynamically binding Subject
+            UUID, ISBT 128 DIN, and Manufacturing Batch.
           </p>
           <div class="hash-display">
             <span class="hash-label">Cryptographic Seal:</span>
-            <span class="hash-code">{{ cocData.barcode_signature || 'Not Generated' }}</span>
+            <span class="hash-code">{{
+              cocData.barcode_signature || "Not Generated"
+            }}</span>
           </div>
           <div class="raw-payload-box">
             <span class="raw-label">Encoded 2D Barcode Payload:</span>
-            <textarea readonly class="payload-textarea" :value="cocData.tamper_evident_barcode || ''" rows="3" />
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <textarea
+              readonly
+              class="payload-textarea"
+              :value="cocData.tamper_evident_barcode || ''"
+              rows="3"
+            />
           </div>
         </div>
         <div class="barcode-scan-simulator">
           <h4 class="scan-title">Direct Scanner Verification</h4>
+          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <input
             v-model="scanTestInput"
             type="text"
             placeholder="Scan / paste barcode payload here..."
             class="scan-input"
-          >
+          />
           <button
             type="button"
             class="btn btn-secondary btn-block"
@@ -205,16 +262,28 @@
           >
             Validate Barcode Cryptography
           </button>
-          <div v-if="scanResult" class="scan-result" :class="scanResult.is_valid ? 'scan-valid' : 'scan-invalid'">
-            <span class="result-badge">{{ scanResult.is_valid ? 'VALID SEAL' : 'TAMPER DETECTED' }}</span>
-            <span class="result-detail">{{ scanResult.failure_reason || 'Cryptographic seal and identity bindings match.' }}</span>
+          <div
+            v-if="scanResult"
+            class="scan-result"
+            :class="scanResult.is_valid ? 'scan-valid' : 'scan-invalid'"
+          >
+            <span class="result-badge">{{
+              scanResult.is_valid ? "VALID SEAL" : "TAMPER DETECTED"
+            }}</span>
+            <span class="result-detail">{{
+              scanResult.failure_reason ||
+              "Cryptographic seal and identity bindings match."
+            }}</span>
           </div>
         </div>
       </section>
 
       <!-- Milestone Ledger Table -->
       <section class="card milestone-ledger-card">
-        <h3 class="section-title">Immutable Vein-to-Vein Audit Ledger ({{ milestones.length }} Milestones)</h3>
+        <h3 class="section-title">
+          Immutable Vein-to-Vein Audit Ledger ({{ milestones.length }}
+          Milestones)
+        </h3>
         <div class="table-responsive">
           <table class="table">
             <thead>
@@ -231,30 +300,54 @@
             </thead>
             <tbody>
               <tr v-for="m in milestones" :key="m.id">
-                <td class="code-font">{{ formatDateTime(m.timestamp) }}</td>
-                <td><span class="badge badge-sm">{{ m.stage }}</span></td>
+                <td class="code-font">
+                  {{ formatDateTime(m.timestamp) }}
+                </td>
+                <td>
+                  <span class="badge badge-sm">{{ m.stage }}</span>
+                </td>
                 <td>{{ m.location_name }}</td>
                 <td class="code-font">
-                  {{ m.latitude != null && m.longitude != null ? `${m.latitude.toFixed(4)}, ${m.longitude.toFixed(4)}` : 'N/A' }}
+                  {{
+                    m.latitude != null && m.longitude != null
+                      ? `${m.latitude.toFixed(4)}, ${m.longitude.toFixed(4)}`
+                      : "N/A"
+                  }}
                 </td>
-                <td :class="m.temperature_status === 'EXCURSION' ? 'text-danger font-bold' : 'text-success'">
+                <td
+                  :class="
+                    m.temperature_status === 'EXCURSION'
+                      ? 'text-danger font-bold'
+                      : 'text-success'
+                  "
+                >
                   {{ m.temperature_celsius.toFixed(1) }}°C
                 </td>
                 <td>{{ m.custodian_name }} ({{ m.custodian_role }})</td>
                 <td>
-                  <span :class="m.seal_intact ? 'status-pill-ok' : 'status-pill-breach'">
-                    {{ m.seal_intact ? (m.seal_id || 'Intact') : 'BREACH' }}
+                  <span
+                    :class="
+                      m.seal_intact ? 'status-pill-ok' : 'status-pill-breach'
+                    "
+                  >
+                    {{ m.seal_intact ? m.seal_id || "Intact" : "BREACH" }}
                   </span>
                 </td>
                 <td>
-                  <span v-if="m.electronic_signature" class="sig-pill" title="Signed via 21 CFR Part 11">
+                  <span
+                    v-if="m.electronic_signature"
+                    class="sig-pill"
+                    title="Signed via 21 CFR Part 11"
+                  >
                     Verified
                   </span>
                   <span v-else class="text-muted">-</span>
                 </td>
               </tr>
               <tr v-if="milestones.length === 0">
-                <td colspan="8" class="text-center text-muted">No milestone logs recorded yet.</td>
+                <td colspan="8" class="text-center text-muted">
+                  No milestone logs recorded yet.
+                </td>
               </tr>
             </tbody>
           </table>
@@ -264,7 +357,10 @@
 
     <!-- Empty State -->
     <div v-else class="card empty-state">
-      <p class="empty-text">Enter a valid Study Protocol and Subject UUID above to load the Vein-to-Vein Chain of Custody ledger.</p>
+      <p class="empty-text">
+        Enter a valid Study Protocol and Subject UUID above to load the
+        Vein-to-Vein Chain of Custody ledger.
+      </p>
     </div>
 
     <!-- Modals -->
@@ -274,46 +370,97 @@
       <div class="modal-card">
         <header class="modal-header">
           <h3>Register Apheresis Cellular Harvest</h3>
-          <button type="button" class="btn-close" @click="showApheresisModal = false">&times;</button>
+          <button
+            type="button"
+            class="btn-close"
+            @click="showApheresisModal = false"
+          >
+            &times;
+          </button>
         </header>
         <form @submit.prevent="submitApheresis">
           <div class="form-grid">
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Study Protocol</label>
-              <input v-model="apheresisForm.study_id" type="text" required>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input v-model="apheresisForm.study_id" type="text" required />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Site ID</label>
-              <input v-model="apheresisForm.site_id" type="text" required>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input v-model="apheresisForm.site_id" type="text" required />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Subject UUID</label>
-              <input v-model="apheresisForm.subject_id" type="text" required>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input v-model="apheresisForm.subject_id" type="text" required />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Donation ID (ISBT 128 DIN)</label>
-              <input v-model="apheresisForm.din" type="text" placeholder="Auto-generated if empty">
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="apheresisForm.din"
+                type="text"
+                placeholder="Auto-generated if empty"
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Collector User ID</label>
-              <input v-model="apheresisForm.collector_id" type="text" required>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="apheresisForm.collector_id"
+                type="text"
+                required
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Collector Name</label>
-              <input v-model="apheresisForm.collector_name" type="text" required>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="apheresisForm.collector_name"
+                type="text"
+                required
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Initial Cryo Temp (°C)</label>
-              <input v-model.number="apheresisForm.initial_temp_celsius" type="number" step="0.1" required>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model.number="apheresisForm.initial_temp_celsius"
+                type="number"
+                step="0.1"
+                required
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Dry Shipper / Dewar ID</label>
-              <input v-model="apheresisForm.dry_shipper_id" type="text" placeholder="e.g. MVE-LN2-9901">
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="apheresisForm.dry_shipper_id"
+                type="text"
+                placeholder="e.g. MVE-LN2-9901"
+              />
             </div>
           </div>
           <footer class="modal-footer">
-            <button type="button" class="btn btn-secondary" @click="showApheresisModal = false">Cancel</button>
-            <button type="submit" class="btn btn-primary">Initialize Chain of Custody</button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="showApheresisModal = false"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary">
+              Initialize Chain of Custody
+            </button>
           </footer>
         </form>
       </div>
@@ -324,61 +471,129 @@
       <div class="modal-card modal-lg">
         <header class="modal-header">
           <h3>Bedside Two-Person Electronic Verification (Infusion Gating)</h3>
-          <button type="button" class="btn-close" @click="showBedsideModal = false">&times;</button>
+          <button
+            type="button"
+            class="btn-close"
+            @click="showBedsideModal = false"
+          >
+            &times;
+          </button>
         </header>
         <form @submit.prevent="submitBedsideVerify">
           <div class="verification-instructions alert alert-info">
-            <strong>Mandatory GxP Safety Gate:</strong> Both the Bedside Nurse and Principal Investigator must independently verify the patient wristband scan against the cell bag cryptographic barcode.
+            <strong>Mandatory GxP Safety Gate:</strong> Both the Bedside Nurse
+            and Principal Investigator must independently verify the patient
+            wristband scan against the cell bag cryptographic barcode.
           </div>
 
           <div class="form-grid">
             <div class="form-group col-full">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Scanned Patient Wristband Subject UUID</label>
-              <input v-model="bedsideForm.scanned_wristband_subject_id" type="text" required placeholder="Scan patient wristband barcode...">
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="bedsideForm.scanned_wristband_subject_id"
+                type="text"
+                required
+                placeholder="Scan patient wristband barcode..."
+              />
             </div>
             <div class="form-group col-full">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Scanned Cell Infusion Bag Cryptographic Barcode</label>
-              <textarea v-model="bedsideForm.scanned_bag_barcode" rows="2" required placeholder="Scan infusion bag DataMatrix..." />
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <textarea
+                v-model="bedsideForm.scanned_bag_barcode"
+                rows="2"
+                required
+                placeholder="Scan infusion bag DataMatrix..."
+              />
             </div>
 
             <!-- Primary Verifier (Nurse) -->
             <div class="verifier-panel col-half">
               <h4 class="verifier-title">Primary Verifier (Bedside Nurse)</h4>
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>User ID</label>
-                <input v-model="bedsideForm.primary_verifier_id" type="text" required>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input
+                  v-model="bedsideForm.primary_verifier_id"
+                  type="text"
+                  required
+                />
               </div>
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Full Name</label>
-                <input v-model="bedsideForm.primary_verifier_name" type="text" required>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input
+                  v-model="bedsideForm.primary_verifier_name"
+                  type="text"
+                  required
+                />
               </div>
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>E-Signature Step-Up Token</label>
-                <input v-model="bedsideForm.primary_signature_token" type="password" required>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input
+                  v-model="bedsideForm.primary_signature_token"
+                  type="password"
+                  required
+                />
               </div>
             </div>
 
             <!-- Secondary Verifier (PI) -->
             <div class="verifier-panel col-half">
-              <h4 class="verifier-title">Secondary Verifier (Principal Investigator)</h4>
+              <h4 class="verifier-title">
+                Secondary Verifier (Principal Investigator)
+              </h4>
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>User ID</label>
-                <input v-model="bedsideForm.secondary_verifier_id" type="text" required>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input
+                  v-model="bedsideForm.secondary_verifier_id"
+                  type="text"
+                  required
+                />
               </div>
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Full Name</label>
-                <input v-model="bedsideForm.secondary_verifier_name" type="text" required>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input
+                  v-model="bedsideForm.secondary_verifier_name"
+                  type="text"
+                  required
+                />
               </div>
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>E-Signature Step-Up Token</label>
-                <input v-model="bedsideForm.secondary_signature_token" type="password" required>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input
+                  v-model="bedsideForm.secondary_signature_token"
+                  type="password"
+                  required
+                />
               </div>
             </div>
           </div>
 
           <footer class="modal-footer">
-            <button type="button" class="btn btn-secondary" @click="showBedsideModal = false">Cancel</button>
-            <button type="submit" class="btn btn-stepup">Execute Dual Electronic Signature</button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="showBedsideModal = false"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-stepup">
+              Execute Dual Electronic Signature
+            </button>
           </footer>
         </form>
       </div>
@@ -389,86 +604,186 @@
       <div class="modal-card modal-lg">
         <header class="modal-header">
           <h3>Generate Formal Certificate of Destruction</h3>
-          <button type="button" class="btn-close" @click="showDestructionModal = false">&times;</button>
+          <button
+            type="button"
+            class="btn-close"
+            @click="showDestructionModal = false"
+          >
+            &times;
+          </button>
         </header>
         <form @submit.prevent="submitDestruction">
           <div class="form-grid">
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Study Protocol</label>
-              <input v-model="destructionForm.study_id" type="text" required>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input v-model="destructionForm.study_id" type="text" required />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Site ID</label>
-              <input v-model="destructionForm.site_id" type="text" required>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input v-model="destructionForm.site_id" type="text" required />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Lot Number</label>
-              <input v-model="destructionForm.lot_number" type="text" required>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="destructionForm.lot_number"
+                type="text"
+                required
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Kit Numbers (Comma-separated)</label>
-              <input v-model="destructionForm.kit_numbers_str" type="text" required placeholder="KIT-001, KIT-002">
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="destructionForm.kit_numbers_str"
+                type="text"
+                required
+                placeholder="KIT-001, KIT-002"
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Vial Identifiers (Comma-separated)</label>
-              <input v-model="destructionForm.vial_identifiers_str" type="text" required placeholder="VIAL-A1, VIAL-A2">
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="destructionForm.vial_identifiers_str"
+                type="text"
+                required
+                placeholder="VIAL-A1, VIAL-A2"
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Destruction Method</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <select v-model="destructionForm.destruction_method" required>
-                <option value="HIGH_TEMPERATURE_INCINERATION">High Temperature Incineration</option>
-                <option value="AUTOCLAVE_BIOHAZARD">Autoclave Biohazard Decontamination</option>
-                <option value="CHEMICAL_INACTIVATION">Chemical Inactivation</option>
-                <option value="HAZARDOUS_WASTE_FACILITY">Hazardous Waste Facility</option>
+                <option value="HIGH_TEMPERATURE_INCINERATION">
+                  High Temperature Incineration
+                </option>
+                <option value="AUTOCLAVE_BIOHAZARD">
+                  Autoclave Biohazard Decontamination
+                </option>
+                <option value="CHEMICAL_INACTIVATION">
+                  Chemical Inactivation
+                </option>
+                <option value="HAZARDOUS_WASTE_FACILITY">
+                  Hazardous Waste Facility
+                </option>
               </select>
             </div>
             <div class="form-group col-full">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Destruction Facility</label>
-              <input v-model="destructionForm.destruction_facility" type="text" required placeholder="e.g. Bio-Hazard Waste Center Alpha">
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="destructionForm.destruction_facility"
+                type="text"
+                required
+                placeholder="e.g. Bio-Hazard Waste Center Alpha"
+              />
             </div>
             <div class="form-group col-full">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Destruction Reason</label>
-              <input v-model="destructionForm.destruction_reason" type="text" required placeholder="e.g. Residual post-infusion cellular product destruction per protocol.">
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="destructionForm.destruction_reason"
+                type="text"
+                required
+                placeholder="e.g. Residual post-infusion cellular product destruction per protocol."
+              />
             </div>
 
             <!-- Witness 1 -->
             <div class="verifier-panel col-half">
               <h4 class="verifier-title">Witness 1 (Site Pharmacist / CRC)</h4>
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>User ID</label>
-                <input v-model="destructionForm.witness_1_id" type="text" required>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input
+                  v-model="destructionForm.witness_1_id"
+                  type="text"
+                  required
+                />
               </div>
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Full Name</label>
-                <input v-model="destructionForm.witness_1_name" type="text" required>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input
+                  v-model="destructionForm.witness_1_name"
+                  type="text"
+                  required
+                />
               </div>
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>E-Signature Token</label>
-                <input v-model="destructionForm.witness_1_signature_token" type="password" required>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input
+                  v-model="destructionForm.witness_1_signature_token"
+                  type="password"
+                  required
+                />
               </div>
             </div>
 
             <!-- Witness 2 -->
             <div class="verifier-panel col-half">
-              <h4 class="verifier-title">Witness 2 (Principal Investigator / QA)</h4>
+              <h4 class="verifier-title">
+                Witness 2 (Principal Investigator / QA)
+              </h4>
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>User ID</label>
-                <input v-model="destructionForm.witness_2_id" type="text" required>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input
+                  v-model="destructionForm.witness_2_id"
+                  type="text"
+                  required
+                />
               </div>
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Full Name</label>
-                <input v-model="destructionForm.witness_2_name" type="text" required>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input
+                  v-model="destructionForm.witness_2_name"
+                  type="text"
+                  required
+                />
               </div>
               <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>E-Signature Token</label>
-                <input v-model="destructionForm.witness_2_signature_token" type="password" required>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input
+                  v-model="destructionForm.witness_2_signature_token"
+                  type="password"
+                  required
+                />
               </div>
             </div>
           </div>
 
           <footer class="modal-footer">
-            <button type="button" class="btn btn-secondary" @click="showDestructionModal = false">Cancel</button>
-            <button type="submit" class="btn btn-danger">Issue Dual-Witness Certificate</button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="showDestructionModal = false"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-danger">
+              Issue Dual-Witness Certificate
+            </button>
           </footer>
         </form>
       </div>
@@ -477,7 +792,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted } from "vue";
 
 interface CGTChainOfCustody {
   id: string;
@@ -526,29 +841,31 @@ interface CGTMilestone {
 }
 
 const stagesList = [
-  { key: 'APHERESIS_COLLECTION', label: '1. Apheresis' },
-  { key: 'CRYOPRESERVATION', label: '2. Cryopreservation' },
-  { key: 'COURIER_TRANSIT_OUTBOUND', label: '3. Outbound Transit' },
-  { key: 'MANUFACTURING_PROCESSING', label: '4. Manufacturing' },
-  { key: 'COURIER_TRANSIT_RETURN', label: '5. Return Transit' },
-  { key: 'SITE_RECEIPT_AND_STORAGE', label: '6. Site Storage' },
-  { key: 'BEDSIDE_VERIFICATION', label: '7. Bedside Verify' },
-  { key: 'INFUSION_ADMINISTRATION', label: '8. Infusion' },
-  { key: 'DESTRUCTION', label: '9. Destruction' },
+  { key: "APHERESIS_COLLECTION", label: "1. Apheresis" },
+  { key: "CRYOPRESERVATION", label: "2. Cryopreservation" },
+  { key: "COURIER_TRANSIT_OUTBOUND", label: "3. Outbound Transit" },
+  { key: "MANUFACTURING_PROCESSING", label: "4. Manufacturing" },
+  { key: "COURIER_TRANSIT_RETURN", label: "5. Return Transit" },
+  { key: "SITE_RECEIPT_AND_STORAGE", label: "6. Site Storage" },
+  { key: "BEDSIDE_VERIFICATION", label: "7. Bedside Verify" },
+  { key: "INFUSION_ADMINISTRATION", label: "8. Infusion" },
+  { key: "DESTRUCTION", label: "9. Destruction" },
 ];
 
 const filters = reactive({
-  study_id: 'STUDY-CGT-801',
-  studyId: 'STUDY-CGT-801',
-  subjectId: 'SUBJ-101-0042',
+  study_id: "STUDY-CGT-801",
+  studyId: "STUDY-CGT-801",
+  subjectId: "SUBJ-101-0042",
 });
 
 const cocData = ref<CGTChainOfCustody | null>(null);
 const milestones = ref<CGTMilestone[]>([]);
 const isLoading = ref(false);
 
-const scanTestInput = ref('');
-const scanResult = ref<{ is_valid: boolean; failure_reason?: string } | null>(null);
+const scanTestInput = ref("");
+const scanResult = ref<{ is_valid: boolean; failure_reason?: string } | null>(
+  null
+);
 
 // Modal visibility flags
 const showApheresisModal = ref(false);
@@ -559,83 +876,86 @@ const _showManufacturingModal = ref(false);
 
 // Forms
 const apheresisForm = reactive({
-  study_id: 'STUDY-CGT-801',
-  site_id: 'SITE-101',
-  subject_id: 'SUBJ-101-0042',
-  din: '',
-  collector_id: 'nurse_smith',
-  collector_name: 'Sarah Smith, RN',
-  collector_role: 'Apheresis Nurse',
+  study_id: "STUDY-CGT-801",
+  site_id: "SITE-101",
+  subject_id: "SUBJ-101-0042",
+  din: "",
+  collector_id: "nurse_smith",
+  collector_name: "Sarah Smith, RN",
+  collector_role: "Apheresis Nurse",
   initial_temp_celsius: -196.0,
-  dry_shipper_id: 'DEWAR-LN2-9901',
-  seal_id: 'SEAL-4482',
+  dry_shipper_id: "DEWAR-LN2-9901",
+  seal_id: "SEAL-4482",
 });
 
 const bedsideForm = reactive({
-  scanned_wristband_subject_id: '',
-  scanned_bag_barcode: '',
-  primary_verifier_id: 'nurse_smith',
-  primary_verifier_name: 'Sarah Smith, RN',
-  primary_verifier_role: 'Bedside Nurse',
-  primary_signature_token: 'valid-nurse-sig-token-12345',
-  secondary_verifier_id: 'dr_johnson_pi',
-  secondary_verifier_name: 'Dr. Robert Johnson, MD',
-  secondary_verifier_role: 'Principal Investigator',
-  secondary_signature_token: 'valid-pi-sig-token-67890',
+  scanned_wristband_subject_id: "",
+  scanned_bag_barcode: "",
+  primary_verifier_id: "nurse_smith",
+  primary_verifier_name: "Sarah Smith, RN",
+  primary_verifier_role: "Bedside Nurse",
+  primary_signature_token: "valid-nurse-sig-token-12345",
+  secondary_verifier_id: "dr_johnson_pi",
+  secondary_verifier_name: "Dr. Robert Johnson, MD",
+  secondary_verifier_role: "Principal Investigator",
+  secondary_signature_token: "valid-pi-sig-token-67890",
 });
 
 const destructionForm = reactive({
-  study_id: 'STUDY-CGT-801',
-  site_id: 'SITE-101',
-  lot_number: 'LOT-CAR-T-2026-01',
-  kit_numbers_str: 'KIT-CGT-001',
-  vial_identifiers_str: 'VIAL-001-A',
-  destruction_reason: 'Residual post-infusion cell disposal.',
-  destruction_method: 'HIGH_TEMPERATURE_INCINERATION',
-  destruction_facility: 'Bio-Hazard Incineration Facility 1',
-  witness_1_id: 'pharmacist_lee',
-  witness_1_name: 'David Lee, PharmD',
-  witness_1_role: 'Investigational Pharmacist',
-  witness_1_signature_token: 'pharm-token-111',
-  witness_2_id: 'dr_johnson_pi',
-  witness_2_name: 'Dr. Robert Johnson, MD',
-  witness_2_role: 'Principal Investigator',
-  witness_2_signature_token: 'pi-token-222',
+  study_id: "STUDY-CGT-801",
+  site_id: "SITE-101",
+  lot_number: "LOT-CAR-T-2026-01",
+  kit_numbers_str: "KIT-CGT-001",
+  vial_identifiers_str: "VIAL-001-A",
+  destruction_reason: "Residual post-infusion cell disposal.",
+  destruction_method: "HIGH_TEMPERATURE_INCINERATION",
+  destruction_facility: "Bio-Hazard Incineration Facility 1",
+  witness_1_id: "pharmacist_lee",
+  witness_1_name: "David Lee, PharmD",
+  witness_1_role: "Investigational Pharmacist",
+  witness_1_signature_token: "pharm-token-111",
+  witness_2_id: "dr_johnson_pi",
+  witness_2_name: "Dr. Robert Johnson, MD",
+  witness_2_role: "Principal Investigator",
+  witness_2_signature_token: "pi-token-222",
 });
 
 function isStageComplete(stageKey: string): boolean {
   if (!cocData.value) return false;
-  const stageOrder = stagesList.map(s => s.key);
+  const stageOrder = stagesList.map((s) => s.key);
   const currentIdx = stageOrder.indexOf(cocData.value.current_stage);
   const targetIdx = stageOrder.indexOf(stageKey);
   return targetIdx < currentIdx;
 }
 
 function formatDateTime(isoStr?: string | null): string {
-  if (!isoStr) return '-';
+  if (!isoStr) return "-";
   const d = new Date(isoStr);
-  return d.toISOString().replace('T', ' ').substring(0, 19);
+  return d.toISOString().replace("T", " ").substring(0, 19);
 }
 
 async function fetchTraceability() {
   if (!filters.studyId || !filters.subjectId) return;
   isLoading.value = true;
   try {
-    const res = await fetch(`/api/v1/execution/rtsm/cgt/chain-of-custody/${filters.studyId}/${filters.subjectId}`);
+    const res = await fetch(
+      `/api/v1/execution/rtsm/cgt/chain-of-custody/${filters.studyId}/${filters.subjectId}`
+    );
     if (res.ok) {
       const data = await res.json();
       cocData.value = data.chain_of_custody;
       milestones.value = data.milestones || [];
       if (cocData.value) {
         bedsideForm.scanned_wristband_subject_id = cocData.value.subject_id;
-        bedsideForm.scanned_bag_barcode = cocData.value.tamper_evident_barcode || '';
+        bedsideForm.scanned_bag_barcode =
+          cocData.value.tamper_evident_barcode || "";
       }
     } else {
       cocData.value = null;
       milestones.value = [];
     }
   } catch (err) {
-    console.error('Failed to load COC traceability', err);
+    console.error("Failed to load COC traceability", err);
   } finally {
     isLoading.value = false;
   }
@@ -644,9 +964,9 @@ async function fetchTraceability() {
 async function testScanBarcode() {
   if (!scanTestInput.value) return;
   try {
-    const res = await fetch('/api/v1/execution/rtsm/cgt/verify-barcode', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch("/api/v1/execution/rtsm/cgt/verify-barcode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         barcode_payload: scanTestInput.value,
         expected_subject_id: cocData.value?.subject_id,
@@ -655,7 +975,10 @@ async function testScanBarcode() {
     });
     scanResult.value = await res.json();
   } catch {
-    scanResult.value = { is_valid: false, failure_reason: 'Verification request failed' };
+    scanResult.value = {
+      is_valid: false,
+      failure_reason: "Verification request failed",
+    };
   }
 }
 
@@ -667,9 +990,12 @@ function openApheresisModal() {
 
 async function submitApheresis() {
   try {
-    const res = await fetch('/api/v1/execution/rtsm/cgt/apheresis', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-change-justification': 'Initial apheresis harvest' },
+    const res = await fetch("/api/v1/execution/rtsm/cgt/apheresis", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-change-justification": "Initial apheresis harvest",
+      },
       body: JSON.stringify(apheresisForm),
     });
     if (res.ok) {
@@ -677,7 +1003,7 @@ async function submitApheresis() {
       await fetchTraceability();
     }
   } catch (err) {
-    console.error('Failed to initialize apheresis', err);
+    console.error("Failed to initialize apheresis", err);
   }
 }
 
@@ -688,9 +1014,12 @@ function openBedsideModal() {
 async function submitBedsideVerify() {
   if (!cocData.value) return;
   try {
-    const res = await fetch('/api/v1/execution/rtsm/cgt/bedside-verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-change-justification': 'Bedside dual verification' },
+    const res = await fetch("/api/v1/execution/rtsm/cgt/bedside-verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-change-justification": "Bedside dual verification",
+      },
       body: JSON.stringify({
         coc_id: cocData.value.id,
         ...bedsideForm,
@@ -701,7 +1030,7 @@ async function submitBedsideVerify() {
       await fetchTraceability();
     }
   } catch (err) {
-    console.error('Bedside verification failed', err);
+    console.error("Bedside verification failed", err);
   }
 }
 
@@ -714,37 +1043,49 @@ function openDestructionModal() {
 
 async function submitDestruction() {
   try {
-    const kit_numbers = destructionForm.kit_numbers_str.split(',').map(s => s.trim()).filter(Boolean);
-    const vial_identifiers = destructionForm.vial_identifiers_str.split(',').map(s => s.trim()).filter(Boolean);
-    const res = await fetch('/api/v1/execution/rtsm/cgt/destruction-certificate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-change-justification': 'Product destruction' },
-      body: JSON.stringify({
-        study_id: destructionForm.study_id,
-        site_id: destructionForm.site_id,
-        lot_number: destructionForm.lot_number,
-        kit_numbers,
-        vial_identifiers,
-        destruction_reason: destructionForm.destruction_reason,
-        destruction_method: destructionForm.destruction_method,
-        destruction_facility: destructionForm.destruction_facility,
-        witness_1_id: destructionForm.witness_1_id,
-        witness_1_name: destructionForm.witness_1_name,
-        witness_1_role: destructionForm.witness_1_role,
-        witness_1_signature_token: destructionForm.witness_1_signature_token,
-        witness_2_id: destructionForm.witness_2_id,
-        witness_2_name: destructionForm.witness_2_name,
-        witness_2_role: destructionForm.witness_2_role,
-        witness_2_signature_token: destructionForm.witness_2_signature_token,
-        coc_id: cocData.value?.id,
-      }),
-    });
+    const kit_numbers = destructionForm.kit_numbers_str
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const vial_identifiers = destructionForm.vial_identifiers_str
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const res = await fetch(
+      "/api/v1/execution/rtsm/cgt/destruction-certificate",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-change-justification": "Product destruction",
+        },
+        body: JSON.stringify({
+          study_id: destructionForm.study_id,
+          site_id: destructionForm.site_id,
+          lot_number: destructionForm.lot_number,
+          kit_numbers,
+          vial_identifiers,
+          destruction_reason: destructionForm.destruction_reason,
+          destruction_method: destructionForm.destruction_method,
+          destruction_facility: destructionForm.destruction_facility,
+          witness_1_id: destructionForm.witness_1_id,
+          witness_1_name: destructionForm.witness_1_name,
+          witness_1_role: destructionForm.witness_1_role,
+          witness_1_signature_token: destructionForm.witness_1_signature_token,
+          witness_2_id: destructionForm.witness_2_id,
+          witness_2_name: destructionForm.witness_2_name,
+          witness_2_role: destructionForm.witness_2_role,
+          witness_2_signature_token: destructionForm.witness_2_signature_token,
+          coc_id: cocData.value?.id,
+        }),
+      }
+    );
     if (res.ok) {
       showDestructionModal.value = false;
       await fetchTraceability();
     }
   } catch (err) {
-    console.error('Destruction certification failed', err);
+    console.error("Destruction certification failed", err);
   }
 }
 
@@ -1017,7 +1358,8 @@ onMounted(() => {
   font-size: 0.85rem;
 }
 
-.table th, .table td {
+.table th,
+.table td {
   padding: 0.6rem 0.75rem;
   border-bottom: 1px solid var(--color-border, #e2e8f0);
   text-align: left;
@@ -1040,12 +1382,30 @@ onMounted(() => {
   text-transform: uppercase;
 }
 
-.badge-cgt { background: #e0e7ff; color: #3730a3; }
-.badge-gxp { background: #fef3c7; color: #92400e; }
-.badge-isbt { background: #dbeafe; color: #1e40af; }
-.badge-unlocked { background: #dcfce7; color: #166534; }
-.badge-quarantine { background: #fee2e2; color: #991b1b; }
-.badge-stage { background: #f1f5f9; color: #475569; }
+.badge-cgt {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+.badge-gxp {
+  background: #fef3c7;
+  color: #92400e;
+}
+.badge-isbt {
+  background: #dbeafe;
+  color: #1e40af;
+}
+.badge-unlocked {
+  background: #dcfce7;
+  color: #166534;
+}
+.badge-quarantine {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.badge-stage {
+  background: #f1f5f9;
+  color: #475569;
+}
 
 .btn {
   padding: 0.5rem 1rem;
@@ -1057,13 +1417,37 @@ onMounted(() => {
   transition: all 0.15s ease-in-out;
 }
 
-.btn-primary { background: var(--color-primary, #3b82f6); color: #ffffff; }
-.btn-secondary { background: var(--color-surface, #ffffff); border-color: var(--color-border, #cbd5e1); color: var(--color-text-main, #0f172a); }
-.btn-outline { background: transparent; border-color: var(--color-border, #cbd5e1); color: var(--color-text-main, #0f172a); }
-.btn-stepup { background: #7c3aed; color: #ffffff; }
-.btn-infuse { background: #16a34a; color: #ffffff; }
-.btn-danger { background: #dc2626; color: #ffffff; }
-.btn-danger-outline { background: transparent; border-color: #f87171; color: #dc2626; }
+.btn-primary {
+  background: var(--color-primary, #3b82f6);
+  color: #ffffff;
+}
+.btn-secondary {
+  background: var(--color-surface, #ffffff);
+  border-color: var(--color-border, #cbd5e1);
+  color: var(--color-text-main, #0f172a);
+}
+.btn-outline {
+  background: transparent;
+  border-color: var(--color-border, #cbd5e1);
+  color: var(--color-text-main, #0f172a);
+}
+.btn-stepup {
+  background: #7c3aed;
+  color: #ffffff;
+}
+.btn-infuse {
+  background: #16a34a;
+  color: #ffffff;
+}
+.btn-danger {
+  background: #dc2626;
+  color: #ffffff;
+}
+.btn-danger-outline {
+  background: transparent;
+  border-color: #f87171;
+  color: #dc2626;
+}
 
 .modal-overlay {
   position: fixed;
@@ -1109,8 +1493,12 @@ onMounted(() => {
   gap: 1rem;
 }
 
-.col-full { grid-column: span 2; }
-.col-half { grid-column: span 1; }
+.col-full {
+  grid-column: span 2;
+}
+.col-half {
+  grid-column: span 1;
+}
 
 .form-group {
   display: flex;
@@ -1124,7 +1512,9 @@ onMounted(() => {
   color: var(--color-text-muted, #64748b);
 }
 
-.form-group input, .form-group select, .form-group textarea {
+.form-group input,
+.form-group select,
+.form-group textarea {
   padding: 0.5rem;
   border: 1px solid var(--color-border, #cbd5e1);
   border-radius: 4px;
@@ -1152,9 +1542,19 @@ onMounted(() => {
   margin-top: 1.5rem;
 }
 
-.code-font { font-family: monospace; }
-.text-danger { color: #dc2626; }
-.text-success { color: #16a34a; }
-.text-muted { color: #94a3b8; }
-.font-bold { font-weight: 700; }
+.code-font {
+  font-family: monospace;
+}
+.text-danger {
+  color: #dc2626;
+}
+.text-success {
+  color: #16a34a;
+}
+.text-muted {
+  color: #94a3b8;
+}
+.font-bold {
+  font-weight: 700;
+}
 </style>

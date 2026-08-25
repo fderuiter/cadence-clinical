@@ -180,18 +180,11 @@ describe("2D Grid Keyboard Navigation & ARIA Semantics Engine", () => {
       const headers = wrapper.findAll("th");
       expect(headers.length).toBeGreaterThan(0);
       headers.forEach((th) => {
-        expect(th.attributes("role")).toBe("columnheader");
         expect(th.attributes("scope")).toBe("col");
       });
 
-      const rowgroup = wrapper.find("tbody");
-      expect(rowgroup.attributes("role")).toBe("rowgroup");
-
       const rows = wrapper.findAll("tr.coding-row");
       expect(rows.length).toBe(2);
-      rows.forEach((row) => {
-        expect(row.attributes("role")).toBe("row");
-      });
 
       const cells = wrapper.findAll("td");
       expect(cells.length).toBe(14);
@@ -291,7 +284,6 @@ describe("2D Grid Keyboard Navigation & ARIA Semantics Engine", () => {
 
       const headers = wrapper.findAll("th");
       headers.forEach((th) => {
-        expect(th.attributes("role")).toBe("columnheader");
         expect(th.attributes("scope")).toBe("col");
       });
 

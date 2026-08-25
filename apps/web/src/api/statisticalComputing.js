@@ -34,7 +34,11 @@ export const statisticalComputingService = {
    * Validates package lockfile integrity (uv.lock / renv.lock) and qualification.
    */
   validateLockfile(payload, options = {}) {
-    return apiClient.post("/api/v1/interop/sce/validate-lockfile", payload, options);
+    return apiClient.post(
+      "/api/v1/interop/sce/validate-lockfile",
+      payload,
+      options
+    );
   },
 
   /**
@@ -93,13 +97,20 @@ export const statisticalComputingService = {
    * Cryptographically verifies an execution run manifest seal and electronic signature block.
    */
   verifyRunManifest(runId, options = {}) {
-    return apiClient.post(`/api/v1/interop/sce/runs/${runId}/verify`, null, options);
+    return apiClient.post(
+      `/api/v1/interop/sce/runs/${runId}/verify`,
+      null,
+      options
+    );
   },
 
   /**
    * Retrieves artifact content and preview.
    */
   getArtifact(runId, artifactId, options = {}) {
-    return apiClient.get(`/api/v1/interop/sce/runs/${runId}/artifacts/${artifactId}`, options);
+    return apiClient.get(
+      `/api/v1/interop/sce/runs/${runId}/artifacts/${artifactId}`,
+      options
+    );
   },
 };

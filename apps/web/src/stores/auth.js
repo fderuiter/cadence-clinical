@@ -114,14 +114,16 @@ export function normalizeRole(role) {
 export const useAuthStore = defineStore("auth", {
   state: () => {
     let saved = {};
-    if (typeof window !== "undefined" && window.sessionStorage) {
+    if (typeof window !== "undefined") {
       try {
-        const stored = window.sessionStorage.getItem("cadence_auth");
+        const stored =
+          (window.sessionStorage && window.sessionStorage.getItem("cadence_auth")) ||
+          (window.localStorage && window.localStorage.getItem("cadence_auth"));
         if (stored) {
           saved = JSON.parse(stored);
         }
       } catch (e) {
-        console.error("Failed to parse auth from sessionStorage", e);
+        console.error("Failed to parse auth from storage", e);
       }
     }
     return {

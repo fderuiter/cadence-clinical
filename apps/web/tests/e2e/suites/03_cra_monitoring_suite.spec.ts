@@ -33,8 +33,12 @@ test.describe("Suite 3: CRA Clinical Monitor Golden Path", () => {
     );
 
     // Verify CTMS Dashboard Header & KPIs
-    await expect(page.locator("h2")).toContainText("Clinical Trial Management System");
-    await expect(page.locator("#kpi-total-subjects, .stat-card").first()).toBeVisible();
+    await expect(page.locator("h2")).toContainText(
+      "Clinical Trial Management System"
+    );
+    await expect(
+      page.locator("#kpi-total-subjects, .stat-card").first()
+    ).toBeVisible();
     await demoPause(page, 500);
 
     // Navigate to Study Startup (SSU) Greenlight Console

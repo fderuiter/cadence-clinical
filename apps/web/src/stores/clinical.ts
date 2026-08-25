@@ -1181,10 +1181,16 @@ const useClinicalStoreInner = defineStore("clinical", {
       if ((result as any).status === "ENROLLED") {
         sub.status = "ENROLLED";
         sub.consentColor = "green";
-      } else if (result.eligible === true || (result as any).status === "SCREENED") {
+      } else if (
+        result.eligible === true ||
+        (result as any).status === "SCREENED"
+      ) {
         sub.status = "SCREENED";
         sub.consentColor = "green";
-      } else if (result.eligible === false || (result as any).status === "SCREEN_FAILED") {
+      } else if (
+        result.eligible === false ||
+        (result as any).status === "SCREEN_FAILED"
+      ) {
         sub.status = "SCREEN_FAILED";
         sub.consentColor = "red";
       } else {

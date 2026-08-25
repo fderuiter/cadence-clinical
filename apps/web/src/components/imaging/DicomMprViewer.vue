@@ -18,7 +18,9 @@
       </div>
 
       <div class="toolbar-group">
-        <label for="window-preset-select" class="toolbar-label">W/L Preset:</label>
+        <label for="window-preset-select" class="toolbar-label"
+          >W/L Preset:</label
+        >
         <select
           id="window-preset-select"
           v-model="selectedPreset"
@@ -74,7 +76,7 @@
           :title="isCinePlaying ? 'Pause Cine Playback' : 'Play Cine Loop'"
           @click="toggleCine"
         >
-          <span class="btn-icon">{{ isCinePlaying ? '⏸️' : '▶️' }}</span> Cine
+          <span class="btn-icon">{{ isCinePlaying ? "⏸️" : "▶️" }}</span> Cine
         </button>
         <span class="cine-speed-label">{{ cineFps }} fps</span>
       </div>
@@ -88,10 +90,15 @@
         class="viewport-card axial-card"
       >
         <div class="viewport-header">
-          <span class="plane-badge axial-badge">AXIAL (Z: {{ axialSlice + 1 }} / {{ maxSlices }})</span>
-          <span class="slice-loc-label">Loc: {{ (axialSlice * 2.5).toFixed(1) }} mm</span>
+          <span class="plane-badge axial-badge"
+            >AXIAL (Z: {{ axialSlice + 1 }} / {{ maxSlices }})</span
+          >
+          <span class="slice-loc-label"
+            >Loc: {{ (axialSlice * 2.5).toFixed(1) }} mm</span
+          >
         </div>
         <div class="canvas-wrapper">
+          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <canvas
             ref="axialCanvasRef"
             class="mpr-canvas"
@@ -101,7 +108,7 @@
             @mousemove="onCanvasMouseMove($event, 'AXIAL')"
             @mouseup="stopPanOrMeasure"
             @wheel.prevent="onWheelScroll($event, 'AXIAL')"
-          ></canvas>
+          />
         </div>
         <div class="slice-slider-box">
           <input
@@ -121,10 +128,13 @@
         class="viewport-card sagittal-card"
       >
         <div class="viewport-header">
-          <span class="plane-badge sagittal-badge">SAGITTAL (X: {{ sagittalSlice + 1 }} / 512)</span>
+          <span class="plane-badge sagittal-badge"
+            >SAGITTAL (X: {{ sagittalSlice + 1 }} / 512)</span
+          >
           <span class="slice-loc-label">Reconstructed</span>
         </div>
         <div class="canvas-wrapper">
+          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <canvas
             ref="sagittalCanvasRef"
             class="mpr-canvas"
@@ -134,7 +144,7 @@
             @mousemove="onCanvasMouseMove($event, 'SAGITTAL')"
             @mouseup="stopPanOrMeasure"
             @wheel.prevent="onWheelScroll($event, 'SAGITTAL')"
-          ></canvas>
+          />
         </div>
         <div class="slice-slider-box">
           <input
@@ -154,10 +164,13 @@
         class="viewport-card coronal-card"
       >
         <div class="viewport-header">
-          <span class="plane-badge coronal-badge">CORONAL (Y: {{ coronalSlice + 1 }} / 512)</span>
+          <span class="plane-badge coronal-badge"
+            >CORONAL (Y: {{ coronalSlice + 1 }} / 512)</span
+          >
           <span class="slice-loc-label">Reconstructed</span>
         </div>
         <div class="canvas-wrapper">
+          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <canvas
             ref="coronalCanvasRef"
             class="mpr-canvas"
@@ -167,7 +180,7 @@
             @mousemove="onCanvasMouseMove($event, 'CORONAL')"
             @mouseup="stopPanOrMeasure"
             @wheel.prevent="onWheelScroll($event, 'CORONAL')"
-          ></canvas>
+          />
         </div>
         <div class="slice-slider-box">
           <input
@@ -260,11 +273,20 @@ function toggleCine() {
 function onWheelScroll(event, plane) {
   const delta = Math.sign(event.deltaY);
   if (plane === "AXIAL") {
-    axialSlice.value = Math.max(0, Math.min(maxSlices.value - 1, axialSlice.value + delta));
+    axialSlice.value = Math.max(
+      0,
+      Math.min(maxSlices.value - 1, axialSlice.value + delta)
+    );
   } else if (plane === "SAGITTAL") {
-    sagittalSlice.value = Math.max(0, Math.min(511, sagittalSlice.value + delta * 4));
+    sagittalSlice.value = Math.max(
+      0,
+      Math.min(511, sagittalSlice.value + delta * 4)
+    );
   } else if (plane === "CORONAL") {
-    coronalSlice.value = Math.max(0, Math.min(511, coronalSlice.value + delta * 4));
+    coronalSlice.value = Math.max(
+      0,
+      Math.min(511, coronalSlice.value + delta * 4)
+    );
   }
 }
 
@@ -295,8 +317,14 @@ function onCanvasMouseMove(event, plane) {
 
   if (props.activeTool === "POINTER") {
     if (plane === "AXIAL") {
-      sagittalSlice.value = Math.max(0, Math.min(511, Math.floor((currentX / canvas.width) * 512)));
-      coronalSlice.value = Math.max(0, Math.min(511, Math.floor((currentY / canvas.height) * 512)));
+      sagittalSlice.value = Math.max(
+        0,
+        Math.min(511, Math.floor((currentX / canvas.width) * 512))
+      );
+      coronalSlice.value = Math.max(
+        0,
+        Math.min(511, Math.floor((currentY / canvas.height) * 512))
+      );
     }
   }
 }
@@ -348,7 +376,14 @@ function renderViewport(canvas, plane, sliceVal) {
   // Draw simulated anatomical structure (e.g. Thorax / Liver / Lesion)
   const centerX = w / 2;
   const centerY = h / 2;
-  const grad = ctx.createRadialGradient(centerX, centerY, 20, centerX, centerY, w * 0.45);
+  const grad = ctx.createRadialGradient(
+    centerX,
+    centerY,
+    20,
+    centerX,
+    centerY,
+    w * 0.45
+  );
 
   if (isInverted.value) {
     grad.addColorStop(0, "#1e293b");
@@ -404,7 +439,8 @@ function renderViewport(canvas, plane, sliceVal) {
   props.activeAnnotations.forEach((annot, idx) => {
     if (annot.points && annot.points.length >= 2) {
       ctx.lineWidth = 2;
-      ctx.strokeStyle = annot.lesion_type === "NEW_LESION" ? "#ef4444" : "#10b981";
+      ctx.strokeStyle =
+        annot.lesion_type === "NEW_LESION" ? "#ef4444" : "#10b981";
       ctx.beginPath();
       ctx.moveTo(annot.points[0].x, annot.points[0].y);
       ctx.lineTo(annot.points[1].x, annot.points[1].y);
@@ -422,7 +458,11 @@ function renderViewport(canvas, plane, sliceVal) {
       ctx.font = "bold 11px sans-serif";
       const midX = (annot.points[0].x + annot.points[1].x) / 2;
       const midY = (annot.points[0].y + annot.points[1].y) / 2 - 8;
-      ctx.fillText(`${annot.lesion_id || 'L' + (idx + 1)}: ${annot.longest_diameter_mm}mm`, midX, midY);
+      ctx.fillText(
+        `${annot.lesion_id || "L" + (idx + 1)}: ${annot.longest_diameter_mm}mm`,
+        midX,
+        midY
+      );
     }
   });
 }
@@ -433,9 +473,19 @@ function renderAllViewports() {
   renderViewport(coronalCanvasRef.value, "CORONAL", coronalSlice.value);
 }
 
-watch([axialSlice, sagittalSlice, coronalSlice, isInverted, isCrosshairEnabled, () => props.activeAnnotations], () => {
-  renderAllViewports();
-});
+watch(
+  [
+    axialSlice,
+    sagittalSlice,
+    coronalSlice,
+    isInverted,
+    isCrosshairEnabled,
+    () => props.activeAnnotations,
+  ],
+  () => {
+    renderAllViewports();
+  }
+);
 
 onMounted(() => {
   renderAllViewports();
@@ -503,7 +553,9 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .toolbar-btn:hover {

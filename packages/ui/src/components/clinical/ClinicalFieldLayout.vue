@@ -13,10 +13,7 @@
     <legend v-if="tag === 'fieldset'">
       {{ label }}
     </legend>
-    <label
-      v-else
-      :for="id"
-    >{{ label }}</label>
+    <label v-else :for="id">{{ label }}</label>
 
     <div
       :class="tag === 'fieldset' ? 'radio-options-wrapper' : 'input-wrapper'"

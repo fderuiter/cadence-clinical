@@ -37,8 +37,10 @@ test.describe("Suite 2: Site CRC & Clinical Data Capture Golden Path", () => {
     await demoPause(page, 500);
 
     // Verify Subject Enrollment Section is present
-    const enrollmentCard = page.locator("#subject-enrollment-form, .subject-enrollment-container, h3:has-text('Subject Enrollment')");
-    if (await enrollmentCard.count() > 0) {
+    const enrollmentCard = page.locator(
+      "#subject-enrollment-form, .subject-enrollment-container, h3:has-text('Subject Enrollment')"
+    );
+    if ((await enrollmentCard.count()) > 0) {
       await expect(enrollmentCard.first()).toBeVisible();
     }
     await demoPause(page, 400);

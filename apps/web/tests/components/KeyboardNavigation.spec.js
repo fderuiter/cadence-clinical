@@ -105,6 +105,9 @@ describe("Keyboard Navigation & Focus Accessibility Engine", () => {
         },
         global: {
           plugins: [pinia],
+          directives: {
+            "keyboard-click": vKeyboardClick,
+          },
         },
       });
 

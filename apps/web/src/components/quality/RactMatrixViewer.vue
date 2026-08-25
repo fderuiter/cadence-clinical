@@ -17,27 +17,25 @@
             TransCelerate RACT Matrix &amp; Automated KRI Linkage
           </h2>
           <p class="ract-subtitle">
-            Protocol risk assessment covering 6 clinical categories (Safety, Consent, Study Conduct, Data Integrity, IP Management, Technology) with Probability, Impact, and Detectability scoring mapped directly to automated Key Risk Indicators and Site Risk Index rankings.
+            Protocol risk assessment covering 6 clinical categories (Safety,
+            Consent, Study Conduct, Data Integrity, IP Management, Technology)
+            with Probability, Impact, and Detectability scoring mapped directly
+            to automated Key Risk Indicators and Site Risk Index rankings.
           </p>
         </div>
 
         <div class="header-meta-group">
           <div class="meta-item">
-            <label
-              for="ract-study-select"
-              class="meta-label"
-            >Active Study:</label>
+            <label for="ract-study-select" class="meta-label"
+              >Active Study:</label
+            >
             <select
               id="ract-study-select"
               v-model="selectedStudyId"
               class="ract-select"
               @change="fetchRactData"
             >
-              <option
-                v-for="s in availableStudies"
-                :key="s"
-                :value="s"
-              >
+              <option v-for="s in availableStudies" :key="s" :value="s">
                 {{ s }}
               </option>
             </select>
@@ -46,9 +44,15 @@
             <span class="meta-label">Protocol Risk Posture:</span>
             <span
               class="status-pill"
-              :class="highRiskCount > 0 ? 'status-pill-alert' : 'status-pill-nominal'"
+              :class="
+                highRiskCount > 0 ? 'status-pill-alert' : 'status-pill-nominal'
+              "
             >
-              {{ highRiskCount > 0 ? `${highRiskCount} High Risk Factors` : 'Low / Controlled Risk' }}
+              {{
+                highRiskCount > 0
+                  ? `${highRiskCount} High Risk Factors`
+                  : "Low / Controlled Risk"
+              }}
             </span>
           </div>
         </div>
@@ -92,77 +96,57 @@
 
     <!-- KPI Summary Grid -->
     <div class="kpi-grid">
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         class="kpi-card"
         :class="{ 'kpi-card-active': selectedCategory === 'ALL' }"
         @click="selectedCategory = 'ALL'"
       >
-        <div class="kpi-icon icon-total">
-          📊
-        </div>
+        <div class="kpi-icon icon-total">📊</div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ totalRiskFactors }}
           </div>
-          <div class="kpi-label">
-            Total Protocol Risks
-          </div>
+          <div class="kpi-label">Total Protocol Risks</div>
         </div>
       </div>
 
       <div class="kpi-card kpi-card-danger">
-        <div class="kpi-icon icon-high">
-          🚨
-        </div>
+        <div class="kpi-icon icon-high">🚨</div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ highRiskCount }}
           </div>
-          <div class="kpi-label">
-            High Risk Factors (Score &ge; 15)
-          </div>
+          <div class="kpi-label">High Risk Factors (Score &ge; 15)</div>
         </div>
       </div>
 
       <div class="kpi-card kpi-card-warning">
-        <div class="kpi-icon icon-med">
-          ⚠️
-        </div>
+        <div class="kpi-icon icon-med">⚠️</div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ mediumRiskCount }}
           </div>
-          <div class="kpi-label">
-            Medium Risk Factors (7 - 14)
-          </div>
+          <div class="kpi-label">Medium Risk Factors (7 - 14)</div>
         </div>
       </div>
 
       <div class="kpi-card kpi-card-success">
-        <div class="kpi-icon icon-low">
-          ✅
-        </div>
+        <div class="kpi-icon icon-low">✅</div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ lowRiskCount }}
           </div>
-          <div class="kpi-label">
-            Low Risk Factors (&le; 6)
-          </div>
+          <div class="kpi-label">Low Risk Factors (&le; 6)</div>
         </div>
       </div>
 
       <div class="kpi-card">
-        <div class="kpi-icon icon-kri">
-          🔗
-        </div>
+        <div class="kpi-icon icon-kri">🔗</div>
         <div class="kpi-content">
-          <div class="kpi-value">
-            {{ linkedKriCoverage }}%
-          </div>
-          <div class="kpi-label">
-            Automated KRI Coverage
-          </div>
+          <div class="kpi-value">{{ linkedKriCoverage }}%</div>
+          <div class="kpi-label">Automated KRI Coverage</div>
         </div>
       </div>
     </div>
@@ -183,7 +167,9 @@
         :class="{ active: selectedCategory === cat.key }"
         @click="selectedCategory = cat.key"
       >
-        <span class="tab-icon">{{ cat.icon }}</span> {{ cat.name }} ({{ getCategoryCount(cat.key) }})
+        <span class="tab-icon">{{ cat.icon }}</span> {{ cat.name }} ({{
+          getCategoryCount(cat.key)
+        }})
       </button>
     </div>
 
@@ -202,7 +188,8 @@
           :class="{ active: activeViewMode === 'sri' }"
           @click="activeViewMode = 'sri'"
         >
-          🎯 Site Risk Index (SRI) &amp; Percentiles ({{ siteProfiles.length }} Sites)
+          🎯 Site Risk Index (SRI) &amp; Percentiles ({{ siteProfiles.length }}
+          Sites)
         </button>
         <button
           class="sub-tab-btn"
@@ -214,41 +201,31 @@
       </div>
 
       <div class="view-filter-group">
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
           v-model="searchQuery"
           type="text"
           class="ract-search-input"
           placeholder="Filter risk factors, topics, or KRIs..."
-        >
+        />
       </div>
     </div>
 
     <!-- MODE 1: Interactive RACT Risk Matrix Grid -->
-    <section
-      v-if="activeViewMode === 'matrix'"
-      class="matrix-section"
-    >
-      <div
-        v-if="filteredFactors.length === 0"
-        class="empty-state-card"
-      >
-        <div class="empty-icon">
-          📋
-        </div>
+    <section v-if="activeViewMode === 'matrix'" class="matrix-section">
+      <div v-if="filteredFactors.length === 0" class="empty-state-card">
+        <div class="empty-icon">📋</div>
         <h3>No Protocol Risk Factors Found</h3>
-        <p>No risk factors match the current filter or category. Seed standard TransCelerate defaults to initialize the matrix.</p>
-        <button
-          class="ract-btn ract-btn-primary"
-          @click="seedDefaults"
-        >
+        <p>
+          No risk factors match the current filter or category. Seed standard
+          TransCelerate defaults to initialize the matrix.
+        </p>
+        <button class="ract-btn ract-btn-primary" @click="seedDefaults">
           ⚡ Seed Standard TransCelerate RACT Defaults
         </button>
       </div>
 
-      <div
-        v-else
-        class="table-container"
-      >
+      <div v-else class="table-container">
         <table class="ract-table">
           <thead>
             <tr>
@@ -278,14 +255,10 @@
               >
                 Total Score
               </th>
-              <th class="text-center">
-                Risk Tier
-              </th>
+              <th class="text-center">Risk Tier</th>
               <th>Mitigation Controls</th>
               <th>Linked KRI</th>
-              <th class="text-right">
-                Actions
-              </th>
+              <th class="text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -295,7 +268,9 @@
               :class="`row-tier-${factor.risk_tier.toLowerCase()}`"
             >
               <td>
-                <span :class="`category-badge cat-${factor.category.toLowerCase()}`">
+                <span
+                  :class="`category-badge cat-${factor.category.toLowerCase()}`"
+                >
                   {{ formatCategory(factor.category) }}
                 </span>
               </td>
@@ -314,7 +289,9 @@
                 <span class="score-badge">{{ factor.impact_score }}</span>
               </td>
               <td class="text-center">
-                <span class="score-badge">{{ factor.detectability_score }}</span>
+                <span class="score-badge">{{
+                  factor.detectability_score
+                }}</span>
               </td>
               <td class="text-center">
                 <div class="total-score-badge">
@@ -322,7 +299,9 @@
                 </div>
               </td>
               <td class="text-center">
-                <span :class="`tier-pill tier-${factor.risk_tier.toLowerCase()}`">
+                <span
+                  :class="`tier-pill tier-${factor.risk_tier.toLowerCase()}`"
+                >
                   {{ factor.risk_tier }}
                 </span>
               </td>
@@ -332,16 +311,10 @@
                 </div>
               </td>
               <td>
-                <div
-                  v-if="factor.linked_kri_code"
-                  class="kri-link-pill"
-                >
+                <div v-if="factor.linked_kri_code" class="kri-link-pill">
                   <span class="kri-code">{{ factor.linked_kri_code }}</span>
                 </div>
-                <span
-                  v-else
-                  class="text-muted"
-                >— Unlinked —</span>
+                <span v-else class="text-muted">— Unlinked —</span>
               </td>
               <td class="text-right table-actions">
                 <button
@@ -366,10 +339,7 @@
     </section>
 
     <!-- MODE 2: Site Risk Index (SRI) & Percentile Ranking League Table -->
-    <section
-      v-if="activeViewMode === 'sri'"
-      class="sri-section"
-    >
+    <section v-if="activeViewMode === 'sri'" class="sri-section">
       <div class="panel-card">
         <div class="panel-header">
           <div>
@@ -377,7 +347,9 @@
               Composite Site Risk Index (SRI) &amp; Percentile Rankings
             </h3>
             <p class="panel-subtitle">
-              Weighted composite surveillance scores synthesizing multi-metric KRI deviations, outlier Z-scores, and active protocol non-compliances.
+              Weighted composite surveillance scores synthesizing multi-metric
+              KRI deviations, outlier Z-scores, and active protocol
+              non-compliances.
             </p>
           </div>
           <button
@@ -388,15 +360,13 @@
           </button>
         </div>
 
-        <div
-          v-if="siteProfiles.length === 0"
-          class="empty-state-card"
-        >
-          <div class="empty-icon">
-            🎯
-          </div>
+        <div v-if="siteProfiles.length === 0" class="empty-state-card">
+          <div class="empty-icon">🎯</div>
           <h3>No Site Risk Profiles Computed</h3>
-          <p>Execute batch SRI calculation to rank clinical investigational sites by composite risk.</p>
+          <p>
+            Execute batch SRI calculation to rank clinical investigational sites
+            by composite risk.
+          </p>
           <button
             class="ract-btn ract-btn-primary"
             @click="computeSiteRiskProfiles"
@@ -405,30 +375,17 @@
           </button>
         </div>
 
-        <div
-          v-else
-          class="table-container"
-        >
+        <div v-else class="table-container">
           <table class="ract-table">
             <thead>
               <tr>
-                <th class="text-center">
-                  Rank
-                </th>
+                <th class="text-center">Rank</th>
                 <th>Investigational Site</th>
-                <th class="text-center">
-                  Composite SRI Score
-                </th>
+                <th class="text-center">Composite SRI Score</th>
                 <th>Cohort Percentile Rank</th>
-                <th class="text-center">
-                  Risk Classification
-                </th>
-                <th class="text-center">
-                  High-Risk KRI Breaches
-                </th>
-                <th class="text-center">
-                  Active Deviations
-                </th>
+                <th class="text-center">Risk Classification</th>
+                <th class="text-center">High-Risk KRI Breaches</th>
+                <th class="text-center">Active Deviations</th>
                 <th>Last Evaluated</th>
               </tr>
             </thead>
@@ -460,28 +417,46 @@
                       <div
                         class="progress-fill"
                         :class="`progress-fill-${(site.risk_tier || 'LOW').toLowerCase()}`"
-                        :style="{ width: `${Math.min(100, Math.max(5, site.percentile_rank))}%` }"
+                        :style="{
+                          width: `${Math.min(100, Math.max(5, site.percentile_rank))}%`,
+                        }"
                       />
                     </div>
                   </div>
                 </td>
                 <td class="text-center">
-                  <span :class="`tier-pill tier-${(site.risk_tier || 'LOW').toLowerCase()}`">
-                    {{ site.risk_tier || 'LOW' }}
+                  <span
+                    :class="`tier-pill tier-${(site.risk_tier || 'LOW').toLowerCase()}`"
+                  >
+                    {{ site.risk_tier || "LOW" }}
                   </span>
                 </td>
                 <td class="text-center">
-                  <span :class="site.high_risk_kri_count > 0 ? 'badge-alert-count' : 'badge-nominal-count'">
+                  <span
+                    :class="
+                      site.high_risk_kri_count > 0
+                        ? 'badge-alert-count'
+                        : 'badge-nominal-count'
+                    "
+                  >
                     {{ site.high_risk_kri_count }}
                   </span>
                 </td>
                 <td class="text-center">
-                  <span :class="site.active_deviations_count > 0 ? 'badge-alert-count' : 'badge-nominal-count'">
+                  <span
+                    :class="
+                      site.active_deviations_count > 0
+                        ? 'badge-alert-count'
+                        : 'badge-nominal-count'
+                    "
+                  >
                     {{ site.active_deviations_count }}
                   </span>
                 </td>
                 <td>
-                  <span class="timestamp-val">{{ formatDateTime(site.evaluation_date) }}</span>
+                  <span class="timestamp-val">{{
+                    formatDateTime(site.evaluation_date)
+                  }}</span>
                 </td>
               </tr>
             </tbody>
@@ -491,21 +466,19 @@
     </section>
 
     <!-- MODE 3: KRI Definitions & Formulas -->
-    <section
-      v-if="activeViewMode === 'kri'"
-      class="kri-section"
-    >
+    <section v-if="activeViewMode === 'kri'" class="kri-section">
       <div class="panel-card">
         <div class="panel-header">
           <div>
-            <h3 class="panel-title">
-              Automated Key Risk Indicators (KRIs)
-            </h3>
+            <h3 class="panel-title">Automated Key Risk Indicators (KRIs)</h3>
             <p class="panel-subtitle">
-              Pre-defined dynamic surveillance thresholds across TransCelerate protocol risk categories.
+              Pre-defined dynamic surveillance thresholds across TransCelerate
+              protocol risk categories.
             </p>
           </div>
-          <span class="badge badge-gxp">{{ kriDefinitions.length }} Defined KRIs</span>
+          <span class="badge badge-gxp"
+            >{{ kriDefinitions.length }} Defined KRIs</span
+          >
         </div>
 
         <div class="kri-grid-cards">
@@ -516,7 +489,9 @@
           >
             <div class="kri-def-header">
               <span class="kri-code-tag">{{ kri.code }}</span>
-              <span :class="`category-badge cat-${(kri.category || '').toLowerCase()}`">
+              <span
+                :class="`category-badge cat-${(kri.category || '').toLowerCase()}`"
+              >
                 {{ formatCategory(kri.category) }}
               </span>
             </div>
@@ -531,17 +506,17 @@
             </div>
             <div class="kri-threshold-ribbon">
               <div class="threshold-pill pill-green">
-                <span class="th-label">Green:</span> &lt; {{ kri.green_threshold }}
+                <span class="th-label">Green:</span> &lt;
+                {{ kri.green_threshold }}
               </div>
               <div class="threshold-pill pill-amber">
-                <span class="th-label">Amber:</span> {{ kri.green_threshold }} - {{ kri.red_threshold }}
+                <span class="th-label">Amber:</span> {{ kri.green_threshold }} -
+                {{ kri.red_threshold }}
               </div>
               <div class="threshold-pill pill-red">
                 <span class="th-label">Red:</span> &ge; {{ kri.red_threshold }}
               </div>
-              <div class="weight-tag">
-                Weight: {{ kri.weight }}x
-              </div>
+              <div class="weight-tag">Weight: {{ kri.weight }}x</div>
             </div>
           </div>
         </div>
@@ -549,19 +524,17 @@
     </section>
 
     <!-- MODAL 1: Add / Edit Risk Factor Modal -->
-    <div
-      v-if="isRiskModalOpen"
-      class="modal-backdrop"
-    >
+    <div v-if="isRiskModalOpen" class="modal-backdrop">
       <div class="modal-card modal-lg">
         <div class="modal-header">
           <h3 class="modal-title">
-            {{ isEditing ? 'Edit Protocol Risk Factor' : 'Define TransCelerate Protocol Risk Factor' }}
+            {{
+              isEditing
+                ? "Edit Protocol Risk Factor"
+                : "Define TransCelerate Protocol Risk Factor"
+            }}
           </h3>
-          <button
-            class="modal-close-btn"
-            @click="isRiskModalOpen = false"
-          >
+          <button class="modal-close-btn" @click="isRiskModalOpen = false">
             ✕
           </button>
         </div>
@@ -569,7 +542,9 @@
         <div class="modal-body">
           <div class="form-row">
             <div class="form-group flex-1">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Protocol Risk Category *</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <select
                 v-model="riskForm.category"
                 class="form-control"
@@ -597,18 +572,22 @@
             </div>
 
             <div class="form-group flex-2">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Risk Topic / Title *</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 v-model="riskForm.risk_topic"
                 type="text"
                 class="form-control"
                 placeholder="e.g. Ultra-Cold Chain Temperature Excursions"
-              >
+              />
             </div>
           </div>
 
           <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label class="form-label">Detailed Risk Description *</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <textarea
               v-model="riskForm.risk_description"
               class="form-control textarea"
@@ -620,60 +599,51 @@
           <!-- Scoring Matrix Section -->
           <div class="scoring-box">
             <h4 class="scoring-title">
-              TransCelerate 3-Factor Risk Scoring (Probability x Impact x Detectability)
+              TransCelerate 3-Factor Risk Scoring (Probability x Impact x
+              Detectability)
             </h4>
             <div class="scoring-row">
               <div class="score-input-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label class="score-label">Probability (1-3) *</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <select
                   v-model.number="riskForm.probability_score"
                   class="form-control"
                 >
-                  <option :value="1">
-                    1 - Low / Rare
-                  </option>
-                  <option :value="2">
-                    2 - Medium / Possible
-                  </option>
-                  <option :value="3">
-                    3 - High / Likely
-                  </option>
+                  <option :value="1">1 - Low / Rare</option>
+                  <option :value="2">2 - Medium / Possible</option>
+                  <option :value="3">3 - High / Likely</option>
                 </select>
               </div>
 
               <div class="score-input-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label class="score-label">Impact (1-3) *</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <select
                   v-model.number="riskForm.impact_score"
                   class="form-control"
                 >
-                  <option :value="1">
-                    1 - Low / Minor
-                  </option>
-                  <option :value="2">
-                    2 - Medium / Moderate
-                  </option>
-                  <option :value="3">
-                    3 - High / Critical
-                  </option>
+                  <option :value="1">1 - Low / Minor</option>
+                  <option :value="2">2 - Medium / Moderate</option>
+                  <option :value="3">3 - High / Critical</option>
                 </select>
               </div>
 
               <div class="score-input-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label class="score-label">Detectability (1-3) *</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <select
                   v-model.number="riskForm.detectability_score"
                   class="form-control"
                 >
-                  <option :value="1">
-                    1 - High / Readily Detectable
-                  </option>
+                  <option :value="1">1 - High / Readily Detectable</option>
                   <option :value="2">
                     2 - Moderate / Detectable with Effort
                   </option>
-                  <option :value="3">
-                    3 - Low / Difficult to Detect
-                  </option>
+                  <option :value="3">3 - Low / Difficult to Detect</option>
                 </select>
               </div>
 
@@ -682,7 +652,9 @@
                 <div class="preview-score-val">
                   {{ computedFormScore }} / 27
                 </div>
-                <span :class="`tier-pill tier-${computedFormTier.toLowerCase()}`">
+                <span
+                  :class="`tier-pill tier-${computedFormTier.toLowerCase()}`"
+                >
                   {{ computedFormTier }} TIER
                 </span>
               </div>
@@ -690,7 +662,11 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Mitigation Controls &amp; Operational Strategy *</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label class="form-label"
+              >Mitigation Controls &amp; Operational Strategy *</label
+            >
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <textarea
               v-model="riskForm.mitigation_strategy"
               class="form-control textarea"
@@ -700,32 +676,32 @@
           </div>
 
           <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label class="form-label">Link Directly to Automated KRI</label>
-            <select
-              v-model="riskForm.linked_kri_code"
-              class="form-control"
-            >
-              <option :value="null">
-                — None / Manual Monitoring —
-              </option>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <select v-model="riskForm.linked_kri_code" class="form-control">
+              <option :value="null">— None / Manual Monitoring —</option>
               <option
                 v-for="kri in kriDefinitions"
                 :key="kri.code"
                 :value="kri.code"
               >
-                {{ kri.code }} — {{ kri.name }} (Category: {{ formatCategory(kri.category) }})
+                {{ kri.code }} — {{ kri.name }} (Category:
+                {{ formatCategory(kri.category) }})
               </option>
             </select>
           </div>
 
           <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label class="form-label">21 CFR Part 11 Reason for Change *</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
               v-model="riskForm.reason_for_change"
               type="text"
               class="form-control"
               placeholder="e.g. Protocol amendment 3.0 risk calibration"
-            >
+            />
           </div>
         </div>
 
@@ -741,72 +717,76 @@
             :disabled="!isFormValid || isLoading"
             @click="saveRiskFactor"
           >
-            {{ isEditing ? 'Update Risk Factor' : 'Save Risk Factor' }}
+            {{ isEditing ? "Update Risk Factor" : "Save Risk Factor" }}
           </button>
         </div>
       </div>
     </div>
 
     <!-- MODAL 2: 1-Click Centralized Monitoring Inspection Dossier (21 CFR Part 11) -->
-    <div
-      v-if="isDossierModalOpen"
-      class="modal-backdrop"
-    >
+    <div v-if="isDossierModalOpen" class="modal-backdrop">
       <div class="modal-card modal-xl">
         <div class="modal-header">
           <div>
             <h3 class="modal-title">
               Centralized Monitoring Inspection Dossier Compilation
             </h3>
-            <span class="badge badge-gxp">21 CFR Part 11 Cryptographically Sealed Dossier</span>
+            <span class="badge badge-gxp"
+              >21 CFR Part 11 Cryptographically Sealed Dossier</span
+            >
           </div>
-          <button
-            class="modal-close-btn"
-            @click="isDossierModalOpen = false"
-          >
+          <button class="modal-close-btn" @click="isDossierModalOpen = false">
             ✕
           </button>
         </div>
 
         <div class="modal-body">
-          <div
-            v-if="!compiledDossier"
-            class="dossier-sign-form"
-          >
+          <div v-if="!compiledDossier" class="dossier-sign-form">
             <div class="dossier-intro-box">
               <h4>Inspection Snapshot Generator</h4>
-              <p>Compiles on-demand Centralized Monitoring Dossier synthesizing all TransCelerate protocol risk scores, KRI metrics, Site Risk Index rankings, and forensics anomalies into an immutable, cryptographically sealed regulatory audit package.</p>
+              <p>
+                Compiles on-demand Centralized Monitoring Dossier synthesizing
+                all TransCelerate protocol risk scores, KRI metrics, Site Risk
+                Index rankings, and forensics anomalies into an immutable,
+                cryptographically sealed regulatory audit package.
+              </p>
             </div>
 
             <div class="form-row">
               <div class="form-group flex-1">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label class="form-label">Signer Full Legal Name *</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
                   v-model="dossierSigner.name"
                   type="text"
                   class="form-control"
                   placeholder="e.g. Dr. Eleanor Vance, MD"
-                >
+                />
               </div>
               <div class="form-group flex-1">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label class="form-label">Signer Regulatory Role *</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
                   v-model="dossierSigner.role"
                   type="text"
                   class="form-control"
                   placeholder="e.g. Head of Quality Assurance / Lead Monitor"
-                >
+                />
               </div>
             </div>
 
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Custom Dossier Name (Optional)</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 v-model="dossierSigner.customName"
                 type="text"
                 class="form-control"
                 placeholder="e.g. CSM-Inspection-Dossier-Q3-2026"
-              >
+              />
             </div>
 
             <div class="signature-intent-box">
@@ -814,13 +794,19 @@
                 21 CFR Part 11 Electronic Signature Attestation
               </div>
               <div class="intent-text">
-                "I hereby review and formally certify this Centralized Monitoring Inspection Dossier as an accurate, complete, and immutable reflection of trial surveillance data, protocol risk classifications, and automated KRI evaluations in compliance with GCP ICH E6(R3) and 21 CFR Part 11."
+                "I hereby review and formally certify this Centralized
+                Monitoring Inspection Dossier as an accurate, complete, and
+                immutable reflection of trial surveillance data, protocol risk
+                classifications, and automated KRI evaluations in compliance
+                with GCP ICH E6(R3) and 21 CFR Part 11."
               </div>
             </div>
 
             <button
               class="ract-btn ract-btn-primary ract-btn-lg"
-              :disabled="!dossierSigner.name || !dossierSigner.role || isLoading"
+              :disabled="
+                !dossierSigner.name || !dossierSigner.role || isLoading
+              "
               @click="compileDossier"
             >
               🔒 Compile &amp; Cryptographically Sign Dossier
@@ -828,20 +814,16 @@
           </div>
 
           <!-- Compiled Dossier Preview -->
-          <div
-            v-else
-            class="dossier-view"
-          >
+          <div v-else class="dossier-view">
             <div class="dossier-seal-banner">
-              <div class="seal-icon">
-                🛡️
-              </div>
+              <div class="seal-icon">🛡️</div>
               <div class="seal-details">
                 <div class="seal-title">
                   {{ compiledDossier.dossier_name }}
                 </div>
                 <div class="seal-meta">
-                  Status: <strong>{{ compiledDossier.status }}</strong> | Merkle Root: <code>{{ compiledDossier.merkle_seal }}</code>
+                  Status: <strong>{{ compiledDossier.status }}</strong> | Merkle
+                  Root: <code>{{ compiledDossier.merkle_seal }}</code>
                 </div>
               </div>
             </div>
@@ -849,14 +831,41 @@
             <div class="dossier-sections-grid">
               <div class="dossier-section-card">
                 <h5>TransCelerate RACT Executive Summary</h5>
-                <p>Total Risk Factors: <strong>{{ compiledDossier.ract_summary?.total_risk_factors }}</strong> ({{ compiledDossier.ract_summary?.high_risk_count }} High / {{ compiledDossier.ract_summary?.medium_risk_count }} Medium / {{ compiledDossier.ract_summary?.low_risk_count }} Low)</p>
-                <p>KRI Linkage Coverage: <strong>{{ compiledDossier.ract_summary?.linked_kri_coverage_percentage }}%</strong></p>
+                <p>
+                  Total Risk Factors:
+                  <strong>{{
+                    compiledDossier.ract_summary?.total_risk_factors
+                  }}</strong>
+                  ({{ compiledDossier.ract_summary?.high_risk_count }} High /
+                  {{ compiledDossier.ract_summary?.medium_risk_count }} Medium /
+                  {{ compiledDossier.ract_summary?.low_risk_count }} Low)
+                </p>
+                <p>
+                  KRI Linkage Coverage:
+                  <strong
+                    >{{
+                      compiledDossier.ract_summary
+                        ?.linked_kri_coverage_percentage
+                    }}%</strong
+                  >
+                </p>
               </div>
 
               <div class="dossier-section-card">
                 <h5>KRI Surveillance Summary</h5>
-                <p>Active KRIs: <strong>{{ compiledDossier.kri_surveillance_summary?.total_kris_defined }}</strong></p>
-                <p>High / Critical Breach Count: <strong>{{ compiledDossier.kri_surveillance_summary?.high_or_critical_evaluations_count }}</strong></p>
+                <p>
+                  Active KRIs:
+                  <strong>{{
+                    compiledDossier.kri_surveillance_summary?.total_kris_defined
+                  }}</strong>
+                </p>
+                <p>
+                  High / Critical Breach Count:
+                  <strong>{{
+                    compiledDossier.kri_surveillance_summary
+                      ?.high_or_critical_evaluations_count
+                  }}</strong>
+                </p>
               </div>
             </div>
 
@@ -864,10 +873,30 @@
             <div class="signature-cert-box">
               <h5>21 CFR Part 11 Electronic Signature Certificate</h5>
               <div class="cert-grid">
-                <div>Signer: <strong>{{ compiledDossier.electronic_signature?.signer_name }}</strong></div>
-                <div>Role: <strong>{{ compiledDossier.electronic_signature?.signer_role }}</strong></div>
-                <div>Timestamp: <strong>{{ compiledDossier.electronic_signature?.signed_at }}</strong></div>
-                <div>Signature Hash: <code>{{ compiledDossier.electronic_signature?.signature_hash }}</code></div>
+                <div>
+                  Signer:
+                  <strong>{{
+                    compiledDossier.electronic_signature?.signer_name
+                  }}</strong>
+                </div>
+                <div>
+                  Role:
+                  <strong>{{
+                    compiledDossier.electronic_signature?.signer_role
+                  }}</strong>
+                </div>
+                <div>
+                  Timestamp:
+                  <strong>{{
+                    compiledDossier.electronic_signature?.signed_at
+                  }}</strong>
+                </div>
+                <div>
+                  Signature Hash:
+                  <code>{{
+                    compiledDossier.electronic_signature?.signature_hash
+                  }}</code>
+                </div>
               </div>
             </div>
           </div>
@@ -887,153 +916,153 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from "vue";
 
 interface RACTFactor {
-  id: string
-  study_id: string
-  category: string
-  risk_topic: string
-  risk_description: string
-  probability_score: number
-  impact_score: number
-  detectability_score: number
-  total_risk_score: number
-  risk_tier: string
-  mitigation_strategy: string
-  linked_kri_code?: string
-  is_active: boolean
-  created_at: string
-  created_by: string
-  version_index: number
-  reason_for_change: string
+  id: string;
+  study_id: string;
+  category: string;
+  risk_topic: string;
+  risk_description: string;
+  probability_score: number;
+  impact_score: number;
+  detectability_score: number;
+  total_risk_score: number;
+  risk_tier: string;
+  mitigation_strategy: string;
+  linked_kri_code?: string;
+  is_active: boolean;
+  created_at: string;
+  created_by: string;
+  version_index: number;
+  reason_for_change: string;
 }
 
 interface SiteProfile {
-  id: string
-  study_id: string
-  site_id: string
-  evaluation_date: string
-  composite_risk_score: number
-  risk_rank: number
-  percentile_rank: number
-  risk_tier: string
-  high_risk_kri_count: number
-  active_deviations_count: number
+  id: string;
+  study_id: string;
+  site_id: string;
+  evaluation_date: string;
+  composite_risk_score: number;
+  risk_rank: number;
+  percentile_rank: number;
+  risk_tier: string;
+  high_risk_kri_count: number;
+  active_deviations_count: number;
 }
 
 interface KRIDefinition {
-  id: string
-  code: string
-  name: string
-  category: string
-  description: string
-  calculation_formula: string
-  green_threshold: number
-  amber_threshold: number
-  red_threshold: number
-  weight: number
-  is_active: boolean
+  id: string;
+  code: string;
+  name: string;
+  category: string;
+  description: string;
+  calculation_formula: string;
+  green_threshold: number;
+  amber_threshold: number;
+  red_threshold: number;
+  weight: number;
+  is_active: boolean;
 }
 
 // State
 const availableStudies = ref<string[]>([
-  'STUDY-ONC-2026',
-  'STUDY-CARD-2026',
-  'STUDY-IMM-2026',
-  'STUDY-NEURO-2026',
-])
-const selectedStudyId = ref<string>('STUDY-ONC-2026')
-const selectedCategory = ref<string>('ALL')
-const activeViewMode = ref<'matrix' | 'sri' | 'kri'>('matrix')
-const searchQuery = ref<string>('')
-const isLoading = ref<boolean>(false)
+  "STUDY-ONC-2026",
+  "STUDY-CARD-2026",
+  "STUDY-IMM-2026",
+  "STUDY-NEURO-2026",
+]);
+const selectedStudyId = ref<string>("STUDY-ONC-2026");
+const selectedCategory = ref<string>("ALL");
+const activeViewMode = ref<"matrix" | "sri" | "kri">("matrix");
+const searchQuery = ref<string>("");
+const isLoading = ref<boolean>(false);
 
-const riskFactors = ref<RACTFactor[]>([])
-const siteProfiles = ref<SiteProfile[]>([])
-const kriDefinitions = ref<KRIDefinition[]>([])
+const riskFactors = ref<RACTFactor[]>([]);
+const siteProfiles = ref<SiteProfile[]>([]);
+const kriDefinitions = ref<KRIDefinition[]>([]);
 
 // Modals
-const isRiskModalOpen = ref<boolean>(false)
-const isEditing = ref<boolean>(false)
-const editingFactorId = ref<string | null>(null)
-const isDossierModalOpen = ref<boolean>(false)
-const compiledDossier = ref<any>(null)
+const isRiskModalOpen = ref<boolean>(false);
+const isEditing = ref<boolean>(false);
+const editingFactorId = ref<string | null>(null);
+const isDossierModalOpen = ref<boolean>(false);
+const compiledDossier = ref<any>(null);
 
 const riskForm = ref({
-  category: 'SAFETY',
-  risk_topic: '',
-  risk_description: '',
+  category: "SAFETY",
+  risk_topic: "",
+  risk_description: "",
   probability_score: 2,
   impact_score: 2,
   detectability_score: 2,
-  mitigation_strategy: '',
+  mitigation_strategy: "",
   linked_kri_code: null as string | null,
-  reason_for_change: 'Standard RACT risk assessment',
-})
+  reason_for_change: "Standard RACT risk assessment",
+});
 
 const dossierSigner = ref({
-  name: 'Dr. Eleanor Vance, MD',
-  role: 'Head of Clinical Quality Assurance',
-  customName: '',
-})
+  name: "Dr. Eleanor Vance, MD",
+  role: "Head of Clinical Quality Assurance",
+  customName: "",
+});
 
 const categoryList = [
-  { key: 'SAFETY', name: 'Safety', icon: '🛡️' },
-  { key: 'CONSENT', name: 'Consent', icon: '✍️' },
-  { key: 'STUDY_CONDUCT', name: 'Study Conduct', icon: '📋' },
-  { key: 'DATA_INTEGRITY', name: 'Data Integrity', icon: '🔍' },
-  { key: 'IP_MANAGEMENT', name: 'IP Management', icon: '💊' },
-  { key: 'TECHNOLOGY', name: 'Technology', icon: '💻' },
-]
+  { key: "SAFETY", name: "Safety", icon: "🛡️" },
+  { key: "CONSENT", name: "Consent", icon: "✍️" },
+  { key: "STUDY_CONDUCT", name: "Study Conduct", icon: "📋" },
+  { key: "DATA_INTEGRITY", name: "Data Integrity", icon: "🔍" },
+  { key: "IP_MANAGEMENT", name: "IP Management", icon: "💊" },
+  { key: "TECHNOLOGY", name: "Technology", icon: "💻" },
+];
 
 // Computed
-const totalRiskFactors = computed(() => riskFactors.value.length)
+const totalRiskFactors = computed(() => riskFactors.value.length);
 const highRiskCount = computed(
-  () => riskFactors.value.filter((f) => f.risk_tier === 'HIGH').length
-)
+  () => riskFactors.value.filter((f) => f.risk_tier === "HIGH").length
+);
 const mediumRiskCount = computed(
-  () => riskFactors.value.filter((f) => f.risk_tier === 'MEDIUM').length
-)
+  () => riskFactors.value.filter((f) => f.risk_tier === "MEDIUM").length
+);
 const lowRiskCount = computed(
-  () => riskFactors.value.filter((f) => f.risk_tier === 'LOW').length
-)
+  () => riskFactors.value.filter((f) => f.risk_tier === "LOW").length
+);
 const linkedKriCoverage = computed(() => {
-  if (totalRiskFactors.value === 0) return 0
-  const linked = riskFactors.value.filter((f) => f.linked_kri_code).length
-  return Math.round((linked / totalRiskFactors.value) * 100)
-})
+  if (totalRiskFactors.value === 0) return 0;
+  const linked = riskFactors.value.filter((f) => f.linked_kri_code).length;
+  return Math.round((linked / totalRiskFactors.value) * 100);
+});
 
 const filteredFactors = computed(() => {
-  let list = riskFactors.value
-  if (selectedCategory.value !== 'ALL') {
-    list = list.filter((f) => f.category === selectedCategory.value)
+  let list = riskFactors.value;
+  if (selectedCategory.value !== "ALL") {
+    list = list.filter((f) => f.category === selectedCategory.value);
   }
   if (searchQuery.value.trim()) {
-    const q = searchQuery.value.toLowerCase()
+    const q = searchQuery.value.toLowerCase();
     list = list.filter(
       (f) =>
         f.risk_topic.toLowerCase().includes(q) ||
         f.risk_description.toLowerCase().includes(q) ||
         (f.linked_kri_code && f.linked_kri_code.toLowerCase().includes(q))
-    )
+    );
   }
-  return list
-})
+  return list;
+});
 
 const computedFormScore = computed(
   () =>
     riskForm.value.probability_score *
     riskForm.value.impact_score *
     riskForm.value.detectability_score
-)
+);
 
 const computedFormTier = computed(() => {
-  const score = computedFormScore.value
-  if (score >= 15) return 'HIGH'
-  if (score >= 7) return 'MEDIUM'
-  return 'LOW'
-})
+  const score = computedFormScore.value;
+  if (score >= 15) return "HIGH";
+  if (score >= 7) return "MEDIUM";
+  return "LOW";
+});
 
 const isFormValid = computed(
   () =>
@@ -1041,55 +1070,59 @@ const isFormValid = computed(
     riskForm.value.risk_description.trim().length > 0 &&
     riskForm.value.mitigation_strategy.trim().length > 0 &&
     riskForm.value.reason_for_change.trim().length > 0
-)
+);
 
 // Helpers
 function formatCategory(cat?: string): string {
-  if (!cat) return 'General'
-  return cat.replace('_', ' ')
+  if (!cat) return "General";
+  return cat.replace("_", " ");
 }
 
 function getCategoryCount(catKey: string): number {
-  return riskFactors.value.filter((f) => f.category === catKey).length
+  return riskFactors.value.filter((f) => f.category === catKey).length;
 }
 
 function formatDateTime(isoStr?: string): string {
-  if (!isoStr) return '—'
+  if (!isoStr) return "—";
   try {
-    const d = new Date(isoStr)
-    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    const d = new Date(isoStr);
+    return (
+      d.toLocaleDateString() +
+      " " +
+      d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    );
   } catch {
-    return isoStr
+    return isoStr;
   }
 }
 
 // API Actions
 async function fetchRactData() {
-  isLoading.value = true
+  isLoading.value = true;
   try {
     // 1. Fetch RACT factors
     const res = await fetch(
       `/api/v1/quality/rbqm/ract/factors?study_id=${selectedStudyId.value}`,
       {
         headers: {
-          'X-User-Id': 'quality.lead@cadence.io',
-          'X-User-Roles': 'quality_manager,sponsor_designer',
+          "X-User-Id": "quality.lead@cadence.io",
+          "X-User-Roles": "quality_manager,sponsor_designer",
         },
       }
-    )
+    );
     if (res.ok) {
-      riskFactors.value = await res.json()
+      riskFactors.value = await res.json();
     }
 
     // 2. Fetch KRI definitions
-    const kriRes = await fetch('/api/v1/quality/rbqm/kris', {
+    const kriRes = await fetch("/api/v1/quality/rbqm/kris", {
       headers: {
-        'X-User-Id': 'quality.lead@cadence.io',
-        'X-User-Roles': 'quality_manager,sponsor_designer',
+        "X-User-Id": "quality.lead@cadence.io",
+        "X-User-Roles": "quality_manager,sponsor_designer",
       },
-    })
+    });
     if (kriRes.ok) {
-      kriDefinitions.value = await kriRes.json()
+      kriDefinitions.value = await kriRes.json();
     }
 
     // 3. Fetch Site Risk Profiles
@@ -1097,90 +1130,91 @@ async function fetchRactData() {
       `/api/v1/quality/rbqm/site-risk-profiles?study_id=${selectedStudyId.value}`,
       {
         headers: {
-          'X-User-Id': 'quality.lead@cadence.io',
-          'X-User-Roles': 'quality_manager,sponsor_designer',
+          "X-User-Id": "quality.lead@cadence.io",
+          "X-User-Roles": "quality_manager,sponsor_designer",
         },
       }
-    )
+    );
     if (siteRes.ok) {
-      siteProfiles.value = await siteRes.json()
+      siteProfiles.value = await siteRes.json();
     }
   } catch (err) {
-    console.error('Failed to load RACT data:', err)
+    console.error("Failed to load RACT data:", err);
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
 }
 
 async function seedDefaults() {
-  isLoading.value = true
+  isLoading.value = true;
   try {
     const res = await fetch(
       `/api/v1/quality/rbqm/ract/seed-default?study_id=${selectedStudyId.value}`,
       {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'X-User-Id': 'quality.lead@cadence.io',
-          'X-User-Roles': 'quality_manager,sponsor_designer',
-          'X-Change-Reason': 'Seed standard TransCelerate defaults',
+          "X-User-Id": "quality.lead@cadence.io",
+          "X-User-Roles": "quality_manager,sponsor_designer",
+          "X-Change-Reason": "Seed standard TransCelerate defaults",
         },
       }
-    )
+    );
     if (res.ok) {
-      riskFactors.value = await res.json()
+      riskFactors.value = await res.json();
     }
   } catch (err) {
-    console.error('Failed to seed RACT defaults:', err)
+    console.error("Failed to seed RACT defaults:", err);
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
 }
 
 async function computeSiteRiskProfiles() {
-  isLoading.value = true
+  isLoading.value = true;
   try {
     const res = await fetch(
       `/api/v1/quality/rbqm/site-risk-profiles/compute?study_id=${selectedStudyId.value}`,
       {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'X-User-Id': 'quality.lead@cadence.io',
-          'X-User-Roles': 'quality_manager,sponsor_designer',
-          'X-Change-Reason': 'Batch Site Risk Index calculation',
+          "X-User-Id": "quality.lead@cadence.io",
+          "X-User-Roles": "quality_manager,sponsor_designer",
+          "X-Change-Reason": "Batch Site Risk Index calculation",
         },
       }
-    )
+    );
     if (res.ok) {
-      siteProfiles.value = await res.json()
-      activeViewMode.value = 'sri'
+      siteProfiles.value = await res.json();
+      activeViewMode.value = "sri";
     }
   } catch (err) {
-    console.error('Failed to compute site risk profiles:', err)
+    console.error("Failed to compute site risk profiles:", err);
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
 }
 
 function openAddModal() {
-  isEditing.value = false
-  editingFactorId.value = null
+  isEditing.value = false;
+  editingFactorId.value = null;
   riskForm.value = {
-    category: selectedCategory.value === 'ALL' ? 'SAFETY' : selectedCategory.value,
-    risk_topic: '',
-    risk_description: '',
+    category:
+      selectedCategory.value === "ALL" ? "SAFETY" : selectedCategory.value,
+    risk_topic: "",
+    risk_description: "",
     probability_score: 2,
     impact_score: 2,
     detectability_score: 2,
-    mitigation_strategy: '',
+    mitigation_strategy: "",
     linked_kri_code: null,
-    reason_for_change: 'Define new protocol risk factor',
-  }
-  isRiskModalOpen.value = true
+    reason_for_change: "Define new protocol risk factor",
+  };
+  isRiskModalOpen.value = true;
 }
 
 function openEditModal(factor: RACTFactor) {
-  isEditing.value = true
-  editingFactorId.value = factor.id
+  isEditing.value = true;
+  editingFactorId.value = factor.id;
   riskForm.value = {
     category: factor.category,
     risk_topic: factor.risk_topic,
@@ -1190,25 +1224,25 @@ function openEditModal(factor: RACTFactor) {
     detectability_score: factor.detectability_score,
     mitigation_strategy: factor.mitigation_strategy,
     linked_kri_code: factor.linked_kri_code || null,
-    reason_for_change: 'Update RACT risk scoring',
-  }
-  isRiskModalOpen.value = true
+    reason_for_change: "Update RACT risk scoring",
+  };
+  isRiskModalOpen.value = true;
 }
 
 async function saveRiskFactor() {
-  if (!isFormValid.value) return
-  isLoading.value = true
+  if (!isFormValid.value) return;
+  isLoading.value = true;
   try {
     if (isEditing.value && editingFactorId.value) {
       const res = await fetch(
         `/api/v1/quality/rbqm/ract/factors/${editingFactorId.value}`,
         {
-          method: 'PUT',
+          method: "PUT",
           headers: {
-            'Content-Type': 'application/json',
-            'X-User-Id': 'quality.lead@cadence.io',
-            'X-User-Roles': 'quality_manager,sponsor_designer',
-            'X-Change-Reason': riskForm.value.reason_for_change,
+            "Content-Type": "application/json",
+            "X-User-Id": "quality.lead@cadence.io",
+            "X-User-Roles": "quality_manager,sponsor_designer",
+            "X-Change-Reason": riskForm.value.reason_for_change,
           },
           body: JSON.stringify({
             risk_topic: riskForm.value.risk_topic,
@@ -1220,19 +1254,19 @@ async function saveRiskFactor() {
             linked_kri_code: riskForm.value.linked_kri_code,
           }),
         }
-      )
+      );
       if (res.ok) {
-        await fetchRactData()
-        isRiskModalOpen.value = false
+        await fetchRactData();
+        isRiskModalOpen.value = false;
       }
     } else {
-      const res = await fetch('/api/v1/quality/rbqm/ract/factors', {
-        method: 'POST',
+      const res = await fetch("/api/v1/quality/rbqm/ract/factors", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'X-User-Id': 'quality.lead@cadence.io',
-          'X-User-Roles': 'quality_manager,sponsor_designer',
-          'X-Change-Reason': riskForm.value.reason_for_change,
+          "Content-Type": "application/json",
+          "X-User-Id": "quality.lead@cadence.io",
+          "X-User-Roles": "quality_manager,sponsor_designer",
+          "X-Change-Reason": riskForm.value.reason_for_change,
         },
         body: JSON.stringify({
           study_id: selectedStudyId.value,
@@ -1245,56 +1279,58 @@ async function saveRiskFactor() {
           mitigation_strategy: riskForm.value.mitigation_strategy,
           linked_kri_code: riskForm.value.linked_kri_code,
         }),
-      })
+      });
       if (res.ok) {
-        await fetchRactData()
-        isRiskModalOpen.value = false
+        await fetchRactData();
+        isRiskModalOpen.value = false;
       }
     }
   } catch (err) {
-    console.error('Failed to save risk factor:', err)
+    console.error("Failed to save risk factor:", err);
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
 }
 
 async function deleteFactor(factorId: string) {
-  if (!confirm('Are you sure you want to delete this protocol risk factor?')) return
-  isLoading.value = true
+  if (!confirm("Are you sure you want to delete this protocol risk factor?"))
+    return;
+  isLoading.value = true;
   try {
     const res = await fetch(`/api/v1/quality/rbqm/ract/factors/${factorId}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: {
-        'X-User-Id': 'quality.lead@cadence.io',
-        'X-User-Roles': 'quality_manager,sponsor_designer',
-        'X-Change-Reason': 'Decommission risk factor from matrix',
+        "X-User-Id": "quality.lead@cadence.io",
+        "X-User-Roles": "quality_manager,sponsor_designer",
+        "X-Change-Reason": "Decommission risk factor from matrix",
       },
-    })
+    });
     if (res.ok) {
-      await fetchRactData()
+      await fetchRactData();
     }
   } catch (err) {
-    console.error('Failed to delete factor:', err)
+    console.error("Failed to delete factor:", err);
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
 }
 
 function openDossierModal() {
-  compiledDossier.value = null
-  isDossierModalOpen.value = true
+  compiledDossier.value = null;
+  isDossierModalOpen.value = true;
 }
 
 async function compileDossier() {
-  isLoading.value = true
+  isLoading.value = true;
   try {
-    const res = await fetch('/api/v1/quality/rbqm/csm/dossiers/compile', {
-      method: 'POST',
+    const res = await fetch("/api/v1/quality/rbqm/csm/dossiers/compile", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'X-User-Id': 'quality.lead@cadence.io',
-        'X-User-Roles': 'quality_manager,sponsor_designer',
-        'X-Change-Reason': 'Compile 1-Click Centralized Monitoring Inspection Dossier',
+        "Content-Type": "application/json",
+        "X-User-Id": "quality.lead@cadence.io",
+        "X-User-Roles": "quality_manager,sponsor_designer",
+        "X-Change-Reason":
+          "Compile 1-Click Centralized Monitoring Inspection Dossier",
       },
       body: JSON.stringify({
         study_id: selectedStudyId.value,
@@ -1302,22 +1338,22 @@ async function compileDossier() {
         signer_name: dossierSigner.value.name,
         signer_role: dossierSigner.value.role,
         signature_meaning:
-          'I approve this Centralized Monitoring Inspection Dossier in accordance with 21 CFR Part 11 and ICH E6(R3).',
+          "I approve this Centralized Monitoring Inspection Dossier in accordance with 21 CFR Part 11 and ICH E6(R3).",
       }),
-    })
+    });
     if (res.ok) {
-      compiledDossier.value = await res.json()
+      compiledDossier.value = await res.json();
     }
   } catch (err) {
-    console.error('Failed to compile dossier:', err)
+    console.error("Failed to compile dossier:", err);
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
 }
 
 onMounted(() => {
-  fetchRactData()
-})
+  fetchRactData();
+});
 </script>
 
 <style scoped>
@@ -1524,7 +1560,9 @@ onMounted(() => {
   gap: var(--spacing-md);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   cursor: pointer;
-  transition: transform 0.1s ease, border-color 0.1s ease;
+  transition:
+    transform 0.1s ease,
+    border-color 0.1s ease;
 }
 
 .kpi-card:hover {

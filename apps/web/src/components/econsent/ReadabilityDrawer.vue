@@ -25,25 +25,43 @@
         <div class="metric-card">
           <span class="metric-label">Grade Level (FKGL)</span>
           <div class="metric-value-row">
-            <span class="metric-value">{{ metrics ? metrics.flesch_kincaid_grade_level : '--' }}</span>
+            <span class="metric-value">{{
+              metrics ? metrics.flesch_kincaid_grade_level : "--"
+            }}</span>
             <span
               v-if="metrics"
               class="badge"
-              :class="metrics.is_target_grade_level ? 'badge-success' : 'badge-warning'"
+              :class="
+                metrics.is_target_grade_level
+                  ? 'badge-success'
+                  : 'badge-warning'
+              "
             >
-              {{ metrics.is_target_grade_level ? 'Target (6th–8th)' : 'Complex' }}
+              {{
+                metrics.is_target_grade_level ? "Target (6th–8th)" : "Complex"
+              }}
             </span>
           </div>
-          <span class="metric-sub">{{ metrics ? metrics.interpretation : 'Awaiting analysis' }}</span>
+          <span class="metric-sub">{{
+            metrics ? metrics.interpretation : "Awaiting analysis"
+          }}</span>
         </div>
 
         <div class="metric-card">
           <span class="metric-label">Dale-Chall Score</span>
           <div class="metric-value-row">
-            <span class="metric-value">{{ metrics ? metrics.dale_chall_score : '--' }}</span>
-            <span class="badge badge-info">{{ metrics ? metrics.dale_chall_grade_level : '--' }}</span>
+            <span class="metric-value">{{
+              metrics ? metrics.dale_chall_score : "--"
+            }}</span>
+            <span class="badge badge-info">{{
+              metrics ? metrics.dale_chall_grade_level : "--"
+            }}</span>
           </div>
-          <span class="metric-sub">{{ metrics ? `${metrics.difficult_word_count} difficult words (${metrics.word_count} total)` : 'Standard Vocabulary' }}</span>
+          <span class="metric-sub">{{
+            metrics
+              ? `${metrics.difficult_word_count} difficult words (${metrics.word_count} total)`
+              : "Standard Vocabulary"
+          }}</span>
         </div>
       </section>
 
@@ -72,28 +90,23 @@
       <section class="suggestions-section">
         <div class="section-title-row">
           <h4>Medical Jargon Simplification Diffs</h4>
-          <span
-            v-if="substitutions.length"
-            class="count-badge"
-          >{{ substitutions.length }} Terms</span>
+          <span v-if="substitutions.length" class="count-badge"
+            >{{ substitutions.length }} Terms</span
+          >
         </div>
 
-        <div
-          v-if="substitutions.length === 0"
-          class="empty-state"
-        >
+        <div v-if="substitutions.length === 0" class="empty-state">
           <p v-if="!loading">
-            No complex medical jargon detected. Run Harmonize with AI to scan for patient-friendly term substitutions.
+            No complex medical jargon detected. Run Harmonize with AI to scan
+            for patient-friendly term substitutions.
           </p>
           <p v-else>
-            Scanning clinical clauses through AI Gateway Tier 2 for jargon simplification...
+            Scanning clinical clauses through AI Gateway Tier 2 for jargon
+            simplification...
           </p>
         </div>
 
-        <div
-          v-else
-          class="substitutions-list"
-        >
+        <div v-else class="substitutions-list">
           <div
             v-for="(sub, idx) in substitutions"
             :key="idx"
@@ -101,7 +114,10 @@
           >
             <div class="sub-header">
               <span class="category-tag">{{ sub.category }}</span>
-              <span class="confidence-tag">Confidence: {{ Math.round((sub.confidence_score || 0.95) * 100) }}%</span>
+              <span class="confidence-tag"
+                >Confidence:
+                {{ Math.round((sub.confidence_score || 0.95) * 100) }}%</span
+              >
             </div>
 
             <div class="diff-view">
@@ -154,10 +170,12 @@
             type="text"
             class="form-control"
             placeholder="e.g. Protocol Amendment v2.0"
-          >
+          />
         </div>
         <div class="form-group">
-          <label for="change-reason-input">Change Justification / Audit Reason:</label>
+          <label for="change-reason-input"
+            >Change Justification / Audit Reason:</label
+          >
           <textarea
             id="change-reason-input"
             v-model="changeReason"
@@ -194,13 +212,20 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["close", "apply-substitution", "apply-all", "update-metrics"]);
+const emit = defineEmits([
+  "close",
+  "apply-substitution",
+  "apply-all",
+  "update-metrics",
+]);
 
 const loading = ref(false);
 const metrics = ref(null);
 const substitutions = ref([]);
 const protocolVersion = ref("v2.0");
-const changeReason = ref("Readability Harmonization: Simplified medical jargon for 6th-8th grade reading level.");
+const changeReason = ref(
+  "Readability Harmonization: Simplified medical jargon for 6th-8th grade reading level."
+);
 
 async function analyzeText() {
   if (!props.text || !props.text.trim()) return;
@@ -414,7 +439,6 @@ onMounted(() => {
   color: var(--accent, #0369a1);
 }
 
-
 .action-bar {
   display: flex;
   gap: 10px;
@@ -600,7 +624,6 @@ onMounted(() => {
   border: none;
   cursor: pointer;
 }
-
 
 .btn-success:hover {
   background-color: #15803d;

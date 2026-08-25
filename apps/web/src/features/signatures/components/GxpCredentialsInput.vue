@@ -1,15 +1,8 @@
 <template>
   <div class="gxp-credentials-input">
     <!-- Username Field -->
-    <div
-      v-if="showUsername"
-      class="form-group"
-      :style="groupStyle"
-    >
-      <label
-        :for="usernameId"
-        :style="labelStyle"
-      >{{ usernameLabel }}</label>
+    <div v-if="showUsername" class="form-group" :style="groupStyle">
+      <label :for="usernameId" :style="labelStyle">{{ usernameLabel }}</label>
       <input
         :id="usernameId"
         :value="username"
@@ -19,18 +12,12 @@
         :class="usernameClass"
         :style="inputStyle"
         @input="$emit('update:username', $event.target.value)"
-      >
+      />
     </div>
 
     <!-- Password Field -->
-    <div
-      class="form-group"
-      :style="groupStyle"
-    >
-      <label
-        :for="passwordId"
-        :style="labelStyle"
-      >{{ passwordLabel }}</label>
+    <div class="form-group" :style="groupStyle">
+      <label :for="passwordId" :style="labelStyle">{{ passwordLabel }}</label>
       <input
         :id="passwordId"
         :value="password"
@@ -42,19 +29,12 @@
         :required="passwordRequired"
         @input="$emit('update:password', $event.target.value)"
         @keyup.enter="$emit('keyup-enter')"
-      >
+      />
     </div>
 
     <!-- TOTP Field -->
-    <div
-      v-if="showTotp"
-      class="form-group"
-      :style="groupStyle"
-    >
-      <label
-        :for="totpId"
-        :style="labelStyle"
-      >{{ totpLabel }}</label>
+    <div v-if="showTotp" class="form-group" :style="groupStyle">
+      <label :for="totpId" :style="labelStyle">{{ totpLabel }}</label>
       <input
         :id="totpId"
         :value="totp"
@@ -64,7 +44,7 @@
         :class="totpClass"
         :style="inputStyle"
         @input="$emit('update:totp', $event.target.value)"
-      >
+      />
     </div>
   </div>
 </template>

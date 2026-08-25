@@ -1,9 +1,7 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="drawer-backdrop"
-    @click.self="closeDrawer"
-  >
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+  <div v-if="isOpen" class="drawer-backdrop" @click.self="closeDrawer">
     <aside
       class="ehr-reconciliation-drawer"
       role="dialog"
@@ -22,8 +20,9 @@
             eSource EHR Reconciliation Drawer
           </h2>
           <p class="drawer-subtitle">
-            Side-by-side reconciliation of candidate EHR records with current eCRF fields.
-            Non-destructive review gating eliminates silent background data overwrites.
+            Side-by-side reconciliation of candidate EHR records with current
+            eCRF fields. Non-destructive review gating eliminates silent
+            background data overwrites.
           </p>
         </div>
 
@@ -41,15 +40,17 @@
       <div class="context-bar">
         <div class="context-item">
           <span class="context-label">Study:</span>
-          <span class="context-value">{{ studyId || 'STUDY-101' }}</span>
+          <span class="context-value">{{ studyId || "STUDY-101" }}</span>
         </div>
         <div class="context-item">
           <span class="context-label">Subject Pseudonym:</span>
-          <span class="context-value mono">{{ subjectPseudonym || subjectId || 'PAT-001' }}</span>
+          <span class="context-value mono">{{
+            subjectPseudonym || subjectId || "PAT-001"
+          }}</span>
         </div>
         <div class="context-item">
           <span class="context-label">Site:</span>
-          <span class="context-value">{{ siteId || 'SITE-01' }}</span>
+          <span class="context-value">{{ siteId || "SITE-01" }}</span>
         </div>
         <div class="context-actions">
           <button
@@ -90,7 +91,11 @@
       <!-- Filters & Search Toolbar -->
       <div class="toolbar">
         <!-- CDISC Domain Filter Tabs -->
-        <div class="domain-tabs" role="tablist" aria-label="CDISC Domain Filter">
+        <div
+          class="domain-tabs"
+          role="tablist"
+          aria-label="CDISC Domain Filter"
+        >
           <button
             v-for="d in domainOptions"
             :key="d.value"
@@ -139,10 +144,16 @@
           <p>Loading eSource candidate data and current eCRF mappings...</p>
         </div>
 
-        <div v-else-if="filteredCandidates.length === 0" class="state-container empty-state">
+        <div
+          v-else-if="filteredCandidates.length === 0"
+          class="state-container empty-state"
+        >
           <span class="empty-icon">📋</span>
           <h3>No Candidate Records Found</h3>
-          <p>No EHR source data items match the current filters or need reconciliation.</p>
+          <p>
+            No EHR source data items match the current filters or need
+            reconciliation.
+          </p>
         </div>
 
         <div v-else class="candidate-list">
@@ -150,20 +161,37 @@
             v-for="item in filteredCandidates"
             :key="item.id"
             class="reconciliation-card"
-            :class="[`status-${item.status.toLowerCase()}`, `disc-${item.discrepancy_type.toLowerCase()}`]"
+            :class="[
+              `status-${item.status.toLowerCase()}`,
+              `disc-${item.discrepancy_type.toLowerCase()}`,
+            ]"
           >
             <!-- Card Header: Variable & Provenance Tag -->
             <div class="card-header">
               <div class="card-meta-left">
                 <span class="domain-tag">{{ item.target_domain }}</span>
-                <span class="variable-tag mono">{{ item.target_variable }}</span>
-                <span class="test-name">{{ item.cdash_test || item.cdash_testcd }}</span>
+                <span class="variable-tag mono">{{
+                  item.target_variable
+                }}</span>
+                <span class="test-name">{{
+                  item.cdash_test || item.cdash_testcd
+                }}</span>
               </div>
               <div class="card-meta-right">
-                <span :class="['discrepancy-pill', `pill-${item.discrepancy_type.toLowerCase()}`]">
+                <span
+                  :class="[
+                    'discrepancy-pill',
+                    `pill-${item.discrepancy_type.toLowerCase()}`,
+                  ]"
+                >
                   {{ formatDiscrepancy(item.discrepancy_type) }}
                 </span>
-                <span :class="['status-pill', `status-${item.status.toLowerCase()}`]">
+                <span
+                  :class="[
+                    'status-pill',
+                    `status-${item.status.toLowerCase()}`,
+                  ]"
+                >
                   {{ formatStatus(item.status) }}
                 </span>
               </div>
@@ -178,21 +206,33 @@
                   <span class="source-badge">{{ item.ehr_system_id }}</span>
                 </div>
                 <div class="data-row-primary">
-                  <span class="val-num">{{ formatValue(item.candidate_value) }}</span>
-                  <span v-if="item.candidate_unit" class="val-unit">{{ item.candidate_unit }}</span>
+                  <span class="val-num">{{
+                    formatValue(item.candidate_value)
+                  }}</span>
+                  <span v-if="item.candidate_unit" class="val-unit">{{
+                    item.candidate_unit
+                  }}</span>
                 </div>
                 <div class="provenance-metadata">
                   <div class="meta-row">
                     <span class="lbl">Resource:</span>
-                    <span class="val mono">{{ item.fhir_resource_type }}/{{ item.fhir_resource_id }}</span>
+                    <span class="val mono"
+                      >{{ item.fhir_resource_type }}/{{
+                        item.fhir_resource_id
+                      }}</span
+                    >
                   </div>
                   <div class="meta-row">
                     <span class="lbl">Obs Timestamp:</span>
-                    <span class="val">{{ formatDate(item.source_timestamp) }}</span>
+                    <span class="val">{{
+                      formatDate(item.source_timestamp)
+                    }}</span>
                   </div>
                   <div class="meta-row">
                     <span class="lbl">Confidence:</span>
-                    <span class="val">{{ Math.round(item.confidence_score * 100) }}%</span>
+                    <span class="val"
+                      >{{ Math.round(item.confidence_score * 100) }}%</span
+                    >
                   </div>
                 </div>
               </div>
@@ -204,7 +244,13 @@
                   <span class="form-badge">{{ item.target_domain }} Form</span>
                 </div>
                 <div class="data-row-primary">
-                  <span v-if="item.current_ecrf_value !== null && item.current_ecrf_value !== undefined" class="val-num">
+                  <span
+                    v-if="
+                      item.current_ecrf_value !== null &&
+                      item.current_ecrf_value !== undefined
+                    "
+                    class="val-num"
+                  >
                     {{ formatValue(item.current_ecrf_value) }}
                   </span>
                   <span v-else class="val-empty italic">
@@ -218,22 +264,41 @@
                   </div>
                   <div class="meta-row">
                     <span class="lbl">Last Modified:</span>
-                    <span class="val">{{ item.current_ecrf_updated_at ? formatDate(item.current_ecrf_updated_at) : 'Not populated' }}</span>
+                    <span class="val">{{
+                      item.current_ecrf_updated_at
+                        ? formatDate(item.current_ecrf_updated_at)
+                        : "Not populated"
+                    }}</span>
                   </div>
                   <div class="meta-row">
                     <span class="lbl">Mapping Rule:</span>
-                    <span class="val truncate" :title="item.mapping_provenance">{{ item.mapping_provenance }}</span>
+                    <span
+                      class="val truncate"
+                      :title="item.mapping_provenance"
+                      >{{ item.mapping_provenance }}</span
+                    >
                   </div>
                 </div>
               </div>
             </div>
 
             <!-- Resolution / Audit Trail Banner (If Resolved) -->
-            <div v-if="item.status !== 'PENDING_REVIEW'" class="resolution-banner" :class="`banner-${item.status.toLowerCase()}`">
+            <div
+              v-if="item.status !== 'PENDING_REVIEW'"
+              class="resolution-banner"
+              :class="`banner-${item.status.toLowerCase()}`"
+            >
               <div class="resolution-info">
-                <strong>{{ formatResolutionAction(item.resolution_action) }}:</strong>
-                <span class="reason-text">{{ item.resolution_reason || 'No comment provided' }}</span>
-                <span class="resolved-by-tag">by {{ item.resolved_by || 'CRC Coordinator' }} at {{ formatDate(item.resolved_at) }}</span>
+                <strong
+                  >{{ formatResolutionAction(item.resolution_action) }}:</strong
+                >
+                <span class="reason-text">{{
+                  item.resolution_reason || "No comment provided"
+                }}</span>
+                <span class="resolved-by-tag"
+                  >by {{ item.resolved_by || "CRC Coordinator" }} at
+                  {{ formatDate(item.resolved_at) }}</span
+                >
               </div>
               <div v-if="item.electronic_signature" class="esign-badge">
                 ✍️ 21 CFR Part 11 eSigned
@@ -291,23 +356,40 @@
       </main>
 
       <!-- MODAL 1: Reject with Reason Dialog -->
-      <div v-if="showRejectModal" class="modal-backdrop" @click.self="closeRejectModal">
-        <div class="modal-card" role="dialog" aria-labelledby="reject-modal-title">
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <div
+        v-if="showRejectModal"
+        class="modal-backdrop"
+        @click.self="closeRejectModal"
+      >
+        <div
+          class="modal-card"
+          role="dialog"
+          aria-labelledby="reject-modal-title"
+        >
           <div class="modal-header">
             <h3 id="reject-modal-title">Reject EHR Candidate Data</h3>
-            <button type="button" class="btn-close" @click="closeRejectModal">✕</button>
+            <button type="button" class="btn-close" @click="closeRejectModal">
+              ✕
+            </button>
           </div>
           <div class="modal-body">
             <p class="modal-instruction">
-              Under GxP and FDA Electronic Source Data guidelines, a clinical justification is mandatory
-              when rejecting candidate EHR records.
+              Under GxP and FDA Electronic Source Data guidelines, a clinical
+              justification is mandatory when rejecting candidate EHR records.
             </p>
             <div class="field-summary">
-              <strong>Field:</strong> {{ activeItem?.target_variable }} ({{ activeItem?.cdash_test }})<br />
-              <strong>Candidate Value:</strong> {{ activeItem?.candidate_value }} {{ activeItem?.candidate_unit }}
+              <strong>Field:</strong> {{ activeItem?.target_variable }} ({{
+                activeItem?.cdash_test
+              }})<br />
+              <strong>Candidate Value:</strong>
+              {{ activeItem?.candidate_value }} {{ activeItem?.candidate_unit }}
             </div>
             <div class="form-group">
-              <label for="reject-reason" class="form-label">Rejection Reason: *</label>
+              <label for="reject-reason" class="form-label"
+                >Rejection Reason: *</label
+              >
               <textarea
                 id="reject-reason"
                 v-model="rejectReasonInput"
@@ -318,7 +400,13 @@
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" @click="closeRejectModal">Cancel</button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="closeRejectModal"
+            >
+              Cancel
+            </button>
             <button
               type="button"
               class="btn btn-danger"
@@ -332,24 +420,42 @@
       </div>
 
       <!-- MODAL 2: Raise Clinical Query Dialog -->
-      <div v-if="showQueryModal" class="modal-backdrop" @click.self="closeQueryModal">
-        <div class="modal-card" role="dialog" aria-labelledby="query-modal-title">
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <div
+        v-if="showQueryModal"
+        class="modal-backdrop"
+        @click.self="closeQueryModal"
+      >
+        <div
+          class="modal-card"
+          role="dialog"
+          aria-labelledby="query-modal-title"
+        >
           <div class="modal-header">
             <h3 id="query-modal-title">Raise GxP Discrepancy Query</h3>
-            <button type="button" class="btn-close" @click="closeQueryModal">✕</button>
+            <button type="button" class="btn-close" @click="closeQueryModal">
+              ✕
+            </button>
           </div>
           <div class="modal-body">
             <p class="modal-instruction">
-              Opens a formal clinical query in the study query ledger to flag a discrepancy between the EHR source
-              and the eCRF.
+              Opens a formal clinical query in the study query ledger to flag a
+              discrepancy between the EHR source and the eCRF.
             </p>
             <div class="field-summary">
-              <strong>Target Field:</strong> {{ activeItem?.target_variable }}<br />
-              <strong>EHR Source Value:</strong> {{ activeItem?.candidate_value }} {{ activeItem?.candidate_unit }}<br />
-              <strong>Current eCRF Value:</strong> {{ activeItem?.current_ecrf_value || '[Empty]' }}
+              <strong>Target Field:</strong> {{ activeItem?.target_variable
+              }}<br />
+              <strong>EHR Source Value:</strong>
+              {{ activeItem?.candidate_value }} {{ activeItem?.candidate_unit
+              }}<br />
+              <strong>Current eCRF Value:</strong>
+              {{ activeItem?.current_ecrf_value || "[Empty]" }}
             </div>
             <div class="form-group">
-              <label for="query-explanation" class="form-label">Discrepancy Explanation: *</label>
+              <label for="query-explanation" class="form-label"
+                >Discrepancy Explanation: *</label
+              >
               <textarea
                 id="query-explanation"
                 v-model="queryExplanationInput"
@@ -360,7 +466,13 @@
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" @click="closeQueryModal">Cancel</button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="closeQueryModal"
+            >
+              Cancel
+            </button>
             <button
               type="button"
               class="btn btn-primary"
@@ -374,11 +486,29 @@
       </div>
 
       <!-- MODAL 3: Source Provenance & Part 11 Audit Trail Viewer -->
-      <div v-if="showProvenanceModal" class="modal-backdrop" @click.self="closeProvenanceModal">
-        <div class="modal-card modal-lg" role="dialog" aria-labelledby="prov-modal-title">
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <div
+        v-if="showProvenanceModal"
+        class="modal-backdrop"
+        @click.self="closeProvenanceModal"
+      >
+        <div
+          class="modal-card modal-lg"
+          role="dialog"
+          aria-labelledby="prov-modal-title"
+        >
           <div class="modal-header">
-            <h3 id="prov-modal-title">FHIR Resource Provenance & Audit Trail</h3>
-            <button type="button" class="btn-close" @click="closeProvenanceModal">✕</button>
+            <h3 id="prov-modal-title">
+              FHIR Resource Provenance & Audit Trail
+            </h3>
+            <button
+              type="button"
+              class="btn-close"
+              @click="closeProvenanceModal"
+            >
+              ✕
+            </button>
           </div>
           <div class="modal-body">
             <div class="provenance-summary-grid">
@@ -388,11 +518,19 @@
               </div>
               <div class="prov-stat">
                 <span class="lbl">FHIR Resource:</span>
-                <span class="val mono">{{ activeItem?.fhir_resource_type }}/{{ activeItem?.fhir_resource_id }}</span>
+                <span class="val mono"
+                  >{{ activeItem?.fhir_resource_type }}/{{
+                    activeItem?.fhir_resource_id
+                  }}</span
+                >
               </div>
               <div class="prov-stat">
                 <span class="lbl">Observation Date:</span>
-                <span class="val">{{ activeItem?.source_timestamp ? formatDate(activeItem.source_timestamp) : '' }}</span>
+                <span class="val">{{
+                  activeItem?.source_timestamp
+                    ? formatDate(activeItem.source_timestamp)
+                    : ""
+                }}</span>
               </div>
               <div class="prov-stat">
                 <span class="lbl">CDASH Target:</span>
@@ -402,11 +540,19 @@
 
             <div class="raw-fhir-container">
               <h4 class="section-subheading">Raw FHIR JSON Payload:</h4>
-              <pre class="json-code"><code>{{ JSON.stringify(activeItem?.raw_fhir_resource, null, 2) }}</code></pre>
+              <pre
+                class="json-code"
+              ><code>{{ JSON.stringify(activeItem?.raw_fhir_resource, null, 2) }}</code></pre>
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" @click="closeProvenanceModal">Close</button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="closeProvenanceModal"
+            >
+              Close
+            </button>
           </div>
         </div>
       </div>
@@ -436,7 +582,12 @@ export interface EhrCandidate {
   candidate_unit?: string;
   current_ecrf_value?: any;
   current_ecrf_updated_at?: string;
-  discrepancy_type: "NEW_FIELD" | "EXACT_MATCH" | "VALUE_MISMATCH" | "UNIT_MISMATCH" | "DATE_MISMATCH";
+  discrepancy_type:
+    | "NEW_FIELD"
+    | "EXACT_MATCH"
+    | "VALUE_MISMATCH"
+    | "UNIT_MISMATCH"
+    | "DATE_MISMATCH";
   confidence_score: number;
   mapping_provenance: string;
   raw_fhir_resource: Record<string, any>;
@@ -490,19 +641,33 @@ const domainOptions = [
   { label: "Medications (CM)", value: "CM" },
 ];
 
-const pendingCount = computed(() => candidates.value.filter((c) => c.status === "PENDING_REVIEW").length);
-const acceptedCount = computed(() => candidates.value.filter((c) => c.status === "ACCEPTED").length);
-const rejectedCount = computed(() => candidates.value.filter((c) => c.status === "REJECTED").length);
-const queriedCount = computed(() => candidates.value.filter((c) => c.status === "QUERIED").length);
+const pendingCount = computed(
+  () => candidates.value.filter((c) => c.status === "PENDING_REVIEW").length
+);
+const acceptedCount = computed(
+  () => candidates.value.filter((c) => c.status === "ACCEPTED").length
+);
+const rejectedCount = computed(
+  () => candidates.value.filter((c) => c.status === "REJECTED").length
+);
+const queriedCount = computed(
+  () => candidates.value.filter((c) => c.status === "QUERIED").length
+);
 
 const filteredCandidates = computed(() => {
   return candidates.value.filter((item) => {
     // Domain filter
-    if (selectedDomain.value !== "ALL" && item.target_domain !== selectedDomain.value) {
+    if (
+      selectedDomain.value !== "ALL" &&
+      item.target_domain !== selectedDomain.value
+    ) {
       return false;
     }
     // Status filter
-    if (selectedStatus.value !== "ALL" && item.status !== selectedStatus.value) {
+    if (
+      selectedStatus.value !== "ALL" &&
+      item.status !== selectedStatus.value
+    ) {
       return false;
     }
     // Search query
@@ -603,7 +768,9 @@ async function submitReject() {
     };
     const resp = await interopService.rejectEhrCandidate(payload);
     if (resp.success && resp.candidate) {
-      const idx = candidates.value.findIndex((c) => c.id === activeItem.value?.id);
+      const idx = candidates.value.findIndex(
+        (c) => c.id === activeItem.value?.id
+      );
       if (idx !== -1) {
         candidates.value[idx] = resp.candidate;
       }
@@ -641,7 +808,9 @@ async function submitQuery() {
     };
     const resp = await interopService.raiseEhrClinicalQuery(payload);
     if (resp.success && resp.candidate) {
-      const idx = candidates.value.findIndex((c) => c.id === activeItem.value?.id);
+      const idx = candidates.value.findIndex(
+        (c) => c.id === activeItem.value?.id
+      );
       if (idx !== -1) {
         candidates.value[idx] = resp.candidate;
       }
@@ -820,7 +989,9 @@ function formatResolutionAction(act?: string): string {
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
-  transition: color 0.15s, background-color 0.15s;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
 }
 
 .btn-close:hover {
@@ -978,7 +1149,8 @@ function formatResolutionAction(act?: string): string {
   color: #475569;
 }
 
-.select-input, .search-input {
+.select-input,
+.search-input {
   padding: 6px 12px;
   font-size: 0.82rem;
   border: 1px solid #cbd5e1;
@@ -1039,7 +1211,9 @@ function formatResolutionAction(act?: string): string {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .reconciliation-card:hover {
@@ -1196,7 +1370,8 @@ function formatResolutionAction(act?: string): string {
   letter-spacing: 0.02em;
 }
 
-.source-badge, .form-badge {
+.source-badge,
+.form-badge {
   font-size: 0.7rem;
   font-weight: 600;
   padding: 2px 6px;
@@ -1293,7 +1468,8 @@ function formatResolutionAction(act?: string): string {
   opacity: 0.85;
 }
 
-.esign-badge, .query-badge {
+.esign-badge,
+.query-badge {
   font-size: 0.72rem;
   font-weight: 700;
   padding: 2px 6px;
@@ -1547,16 +1723,26 @@ function formatResolutionAction(act?: string): string {
 
 /* Keyframes */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideInRight {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

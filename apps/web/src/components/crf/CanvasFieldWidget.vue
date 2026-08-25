@@ -1,12 +1,16 @@
 <template>
   <div
     v-keyboard-click="selectField"
+    tabindex="0"
+    role="button"
     class="canvas-field-widget"
     :class="{
       'is-selected': isSelected,
       'has-warning': hasWarning,
     }"
     @click="selectField"
+    @keydown.enter.prevent="selectField"
+    @keydown.space.prevent="selectField"
   >
     <!-- Field Header / Metadata -->
     <div class="field-widget-top">
@@ -21,18 +25,12 @@
         </span>
         <span class="field-label-text">
           {{ field.label || "Untitled Field" }}
-          <span
-            v-if="field.required"
-            class="field-required-star"
-          >*</span>
+          <span v-if="field.required" class="field-required-star">*</span>
         </span>
       </div>
 
       <!-- SDTM Tag Badge -->
-      <span
-        v-if="field.cdash || field.sdtm"
-        class="sdtm-tag-badge"
-      >
+      <span v-if="field.cdash || field.sdtm" class="sdtm-tag-badge">
         [{{ field.cdash || field.sdtm }}]
       </span>
     </div>
@@ -40,9 +38,9 @@
     <!-- Interactive Field Preview -->
     <div
       class="field-preview-container"
-      @click.stop="selectField"
     >
       <template v-if="field.type === 'text'">
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
           type="text"
           disabled
@@ -51,10 +49,11 @@
             'touch-target-interactive': designerStore.viewport !== 'desktop',
           }"
           placeholder="Text input preview..."
-        >
+        />
       </template>
 
       <template v-else-if="field.type === 'numeric'">
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
           type="number"
           disabled
@@ -63,10 +62,11 @@
             'touch-target-interactive': designerStore.viewport !== 'desktop',
           }"
           placeholder="0.00"
-        >
+        />
       </template>
 
       <template v-else-if="field.type === 'date'">
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
           type="date"
           disabled
@@ -74,10 +74,11 @@
           :class="{
             'touch-target-interactive': designerStore.viewport !== 'desktop',
           }"
-        >
+        />
       </template>
 
       <template v-else-if="field.type === 'select'">
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <select
           disabled
           class="field-preview-input"
@@ -85,13 +86,7 @@
             'touch-target-interactive': designerStore.viewport !== 'desktop',
           }"
         >
-          <option
-            value=""
-            disabled
-            selected
-          >
-            -- Select Option --
-          </option>
+          <option value="" disabled selected>-- Select Option --</option>
           <option
             v-for="opt in field.options || []"
             :key="opt.value"
@@ -130,7 +125,7 @@
                 'touch-target-interactive':
                   designerStore.viewport !== 'desktop',
               }"
-            >
+            />
             <span>{{ opt.label }}</span>
           </label>
         </div>
@@ -159,9 +154,7 @@
                 >
                   Column 1
                 </th>
-                <th style="padding: 4px 8px; text-align: left">
-                  Column 2
-                </th>
+                <th style="padding: 4px 8px; text-align: left">Column 2</th>
               </tr>
             </thead>
             <tbody>
@@ -175,9 +168,7 @@
                 >
                   Data item A
                 </td>
-                <td style="padding: 4px 8px; color: #94a3b8">
-                  Data item B
-                </td>
+                <td style="padding: 4px 8px; color: #94a3b8">Data item B</td>
               </tr>
             </tbody>
           </table>

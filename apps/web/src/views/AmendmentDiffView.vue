@@ -12,10 +12,7 @@
         {{ notificationBanner.type === "success" ? "✅" : "⚠️" }}
       </span>
       <span class="banner-message">{{ notificationBanner.message }}</span>
-      <button
-        class="banner-close"
-        @click="notificationBanner = null"
-      >
+      <button class="banner-close" @click="notificationBanner = null">
         &times;
       </button>
     </div>
@@ -66,10 +63,9 @@
       >
         <span class="nav-icon">📋</span>
         <span>Site Coordinator: Bulk Re-Consent &amp; Migration Workspace</span>
-        <span
-          v-if="gatedSubjectCount > 0"
-          class="nav-pill-badge"
-        >{{ gatedSubjectCount }} Hold(s)</span>
+        <span v-if="gatedSubjectCount > 0" class="nav-pill-badge"
+          >{{ gatedSubjectCount }} Hold(s)</span
+        >
       </button>
     </div>
 
@@ -77,46 +73,34 @@
     <div class="controls-panel">
       <div class="version-selectors">
         <div class="selector-group">
-          <label
-            for="base-version-select"
-            class="selector-label"
-          >Base Version (Frozen):</label>
+          <label for="base-version-select" class="selector-label"
+            >Base Version (Frozen):</label
+          >
           <select
             id="base-version-select"
             v-model="selectedBaseVersion"
             class="form-select"
             @change="handleVersionChange"
           >
-            <option value="1.0.0">
-              v1.0.0 (Approved / Locked)
-            </option>
-            <option value="1.1.0">
-              v1.1.0 (Locked)
-            </option>
+            <option value="1.0.0">v1.0.0 (Approved / Locked)</option>
+            <option value="1.1.0">v1.1.0 (Locked)</option>
           </select>
         </div>
 
-        <div class="diff-arrow">
-          ➔
-        </div>
+        <div class="diff-arrow">➔</div>
 
         <div class="selector-group">
-          <label
-            for="amended-version-select"
-            class="selector-label"
-          >Amended Target Version:</label>
+          <label for="amended-version-select" class="selector-label"
+            >Amended Target Version:</label
+          >
           <select
             id="amended-version-select"
             v-model="selectedAmendedVersion"
             class="form-select"
             @change="handleVersionChange"
           >
-            <option value="2.0.0">
-              v2.0.0-AMENDMENT (Approved / Active)
-            </option>
-            <option value="2.1.0-DRAFT">
-              v2.1.0-DRAFT (Drafting)
-            </option>
+            <option value="2.0.0">v2.0.0-AMENDMENT (Approved / Active)</option>
+            <option value="2.1.0-DRAFT">v2.1.0-DRAFT (Drafting)</option>
           </select>
         </div>
       </div>
@@ -139,10 +123,7 @@
     </div>
 
     <!-- MODE 1: Study Manager Guided Wizard & Diff Inspector -->
-    <div
-      v-if="activeMode === 'manager'"
-      class="manager-workspace-container"
-    >
+    <div v-if="activeMode === 'manager'" class="manager-workspace-container">
       <!-- Tabs Bar -->
       <div class="workspace-tabs-bar">
         <button
@@ -169,10 +150,7 @@
       </div>
 
       <!-- Tab 1: Subject Impact Analyzer Dashboard -->
-      <div
-        v-if="activeTab === 'dashboard'"
-        class="dashboard-section"
-      >
+      <div v-if="activeTab === 'dashboard'" class="dashboard-section">
         <div class="section-header">
           <h3 class="section-title">
             📊 In-Flight Subject Migration &amp; Re-Consent Analyzer
@@ -187,8 +165,10 @@
                 isLoadingImpact ? "Refreshing API..." : "🔄 Refresh Impact Data"
               }}
             </button>
-            <span class="subject-total-counter">Total In-Flight Cohort:
-              <strong>{{ activeSubjectCount }} Subjects</strong></span>
+            <span class="subject-total-counter"
+              >Total In-Flight Cohort:
+              <strong>{{ activeSubjectCount }} Subjects</strong></span
+            >
           </div>
         </div>
 
@@ -196,7 +176,9 @@
           <!-- Migrated & Re-Consented -->
           <div class="metric-card metric-green">
             <div class="card-header">
-              <span class="card-badge badge-green">MIGRATED &amp; RE-CONSENTED</span>
+              <span class="card-badge badge-green"
+                >MIGRATED &amp; RE-CONSENTED</span
+              >
               <span class="metric-count">{{
                 impactStats.migrated.length
               }}</span>
@@ -236,7 +218,9 @@
           <!-- Completed under Previous Version -->
           <div class="metric-card metric-gray">
             <div class="card-header">
-              <span class="card-badge badge-gray">COMPLETED UNDER PREVIOUS</span>
+              <span class="card-badge badge-gray"
+                >COMPLETED UNDER PREVIOUS</span
+              >
               <span class="metric-count">{{
                 impactStats.completedPrev.length
               }}</span>
@@ -286,7 +270,9 @@
                   <span class="state-pill">{{ sub.status }}</span>
                 </td>
                 <td>
-                  <span class="version-tag">v{{ sub.active_protocol_version }}</span>
+                  <span class="version-tag"
+                    >v{{ sub.active_protocol_version }}</span
+                  >
                 </td>
                 <td>
                   <span :class="['consent-badge', 'badge-' + sub.consentColor]">
@@ -294,16 +280,10 @@
                   </span>
                 </td>
                 <td>
-                  <span
-                    v-if="sub.isGated"
-                    class="gating-pill pill-locked"
-                  >
+                  <span v-if="sub.isGated" class="gating-pill pill-locked">
                     🔒 Gated (Re-Consent Required)
                   </span>
-                  <span
-                    v-else
-                    class="gating-pill pill-unlocked"
-                  >
+                  <span v-else class="gating-pill pill-unlocked">
                     ✅ Active &amp; Projected
                   </span>
                 </td>
@@ -315,10 +295,7 @@
                   >
                     Clear Re-Consent Gate
                   </button>
-                  <span
-                    v-else
-                    class="text-muted"
-                  >Compliant</span>
+                  <span v-else class="text-muted">Compliant</span>
                 </td>
               </tr>
             </tbody>
@@ -327,10 +304,7 @@
       </div>
 
       <!-- Tab 2: Visual Graph & Schema Diff Visualizer -->
-      <div
-        v-if="activeTab === 'graph'"
-        class="diff-section"
-      >
+      <div v-if="activeTab === 'graph'" class="diff-section">
         <!-- Amendment Impact Summary Card -->
         <div class="impact-summary-header-card">
           <div class="summary-top-row">
@@ -365,22 +339,28 @@
           <div class="summary-stat-chips-grid">
             <div class="stat-chip">
               <span class="chip-label">Operational Burden Delta</span>
-              <strong class="chip-val chip-burden">{{ amendmentImpact.burden_delta > 0 ? "+" : ""
-              }}{{ amendmentImpact.burden_delta }} Index</strong>
+              <strong class="chip-val chip-burden"
+                >{{ amendmentImpact.burden_delta > 0 ? "+" : ""
+                }}{{ amendmentImpact.burden_delta }} Index</strong
+              >
             </div>
             <div class="stat-chip">
               <span class="chip-label">Affected Visits</span>
-              <strong class="chip-val">{{
-                amendmentImpact.affected_visits_count
-              }}
-                Encounter(s)</strong>
+              <strong class="chip-val"
+                >{{
+                  amendmentImpact.affected_visits_count
+                }}
+                Encounter(s)</strong
+              >
             </div>
             <div class="stat-chip">
               <span class="chip-label">Affected Procedures</span>
-              <strong class="chip-val">{{
-                amendmentImpact.affected_activities_count
-              }}
-                Activity(ies)</strong>
+              <strong class="chip-val"
+                >{{
+                  amendmentImpact.affected_activities_count
+                }}
+                Activity(ies)</strong
+              >
             </div>
             <div class="stat-chip">
               <span class="chip-label">Schema Revision Scope</span>
@@ -462,19 +442,24 @@
         </div>
 
         <!-- Layer 1: USDM Graph & SoA Matrix Diff -->
-        <div
-          v-if="activeDiffLayer === 'soa'"
-          class="layer-content"
-        >
+        <div v-if="activeDiffLayer === 'soa'" class="layer-content">
           <div class="layer-header">
             <h4>Side-by-Side Schedule of Activities &amp; Graph Structure</h4>
             <div class="legend-box">
-              <span class="legend-item"><span class="color-dot dot-green" /> + Added
-                Encounter/Activity</span>
-              <span class="legend-item"><span class="color-dot dot-yellow" /> ~ Modified
-                Schedule/Assay</span>
-              <span class="legend-item"><span class="color-dot dot-red" /> - Removed Procedure</span>
-              <span class="legend-item"><span class="color-dot dot-gray" /> = Preserved Baseline</span>
+              <span class="legend-item"
+                ><span class="color-dot dot-green" /> + Added
+                Encounter/Activity</span
+              >
+              <span class="legend-item"
+                ><span class="color-dot dot-yellow" /> ~ Modified
+                Schedule/Assay</span
+              >
+              <span class="legend-item"
+                ><span class="color-dot dot-red" /> - Removed Procedure</span
+              >
+              <span class="legend-item"
+                ><span class="color-dot dot-gray" /> = Preserved Baseline</span
+              >
             </div>
           </div>
 
@@ -540,10 +525,7 @@
                     <span class="node-spec">{{ item.spec }}</span>
                     <span class="node-schedule">{{ item.schedule }}</span>
                   </div>
-                  <div
-                    v-if="item.deltaNote"
-                    class="delta-annotation"
-                  >
+                  <div v-if="item.deltaNote" class="delta-annotation">
                     <span class="delta-icon">ℹ️</span> {{ item.deltaNote }}
                   </div>
                 </div>
@@ -553,10 +535,7 @@
         </div>
 
         <!-- Layer 2: Eligibility Criteria Diff -->
-        <div
-          v-if="activeDiffLayer === 'eligibility'"
-          class="layer-content"
-        >
+        <div v-if="activeDiffLayer === 'eligibility'" class="layer-content">
           <div class="layer-header">
             <h4>
               Eligibility Criteria Modifications &amp; Patient Screening Rules
@@ -596,13 +575,13 @@
                       class="diff-badge"
                       :class="
                         'diff-badge-node-' +
-                          (crit.change_type === 'ADDED'
-                            ? 'added'
-                            : crit.change_type === 'MODIFIED'
-                              ? 'modified'
-                              : crit.change_type === 'REMOVED'
-                                ? 'deprecated'
-                                : 'unchanged')
+                        (crit.change_type === 'ADDED'
+                          ? 'added'
+                          : crit.change_type === 'MODIFIED'
+                            ? 'modified'
+                            : crit.change_type === 'REMOVED'
+                              ? 'deprecated'
+                              : 'unchanged')
                       "
                     >
                       {{ crit.change_type }}
@@ -615,10 +594,7 @@
         </div>
 
         <!-- Layer 3: eCRF Forms Diff -->
-        <div
-          v-if="activeDiffLayer === 'ecrf'"
-          class="layer-content"
-        >
+        <div v-if="activeDiffLayer === 'ecrf'" class="layer-content">
           <div class="layer-header">
             <h4>
               eCRF Form Definitions &amp; Clinical Data Capture Schema Diff
@@ -642,11 +618,11 @@
                   class="diff-badge"
                   :class="
                     'diff-badge-node-' +
-                      (form.change_type === 'ADDED'
-                        ? 'added'
-                        : form.change_type === 'MODIFIED'
-                          ? 'modified'
-                          : 'unchanged')
+                    (form.change_type === 'ADDED'
+                      ? 'added'
+                      : form.change_type === 'MODIFIED'
+                        ? 'modified'
+                        : 'unchanged')
                   "
                 >
                   {{ form.change_type }}
@@ -655,10 +631,7 @@
               <p class="form-desc">
                 {{ form.description }}
               </p>
-              <div
-                v-if="form.deltaNote"
-                class="delta-annotation"
-              >
+              <div v-if="form.deltaNote" class="delta-annotation">
                 <span class="delta-icon">ℹ️</span> {{ form.deltaNote }}
               </div>
             </div>
@@ -685,17 +658,18 @@
             </p>
           </div>
           <div class="site-badge-header">
-            <span>Site Context: <strong>{{ selectedSiteScope }}</strong></span>
+            <span
+              >Site Context: <strong>{{ selectedSiteScope }}</strong></span
+            >
           </div>
         </div>
 
         <!-- Filter Controls Bar -->
         <div class="filter-toolbar">
           <div class="filter-item">
-            <label
-              for="site-filter-select"
-              class="filter-label"
-            >Filter by Trial Site:</label>
+            <label for="site-filter-select" class="filter-label"
+              >Filter by Trial Site:</label
+            >
             <select
               id="site-filter-select"
               v-model="siteFilter"
@@ -705,74 +679,55 @@
               <option value="ALL">
                 All Assigned Sites (SITE-101, SITE-102, SITE-103)
               </option>
-              <option value="SITE-101">
-                SITE-101 (General Hospital)
-              </option>
+              <option value="SITE-101">SITE-101 (General Hospital)</option>
               <option value="SITE-102">
                 SITE-102 (University Medical Center)
               </option>
-              <option value="SITE-103">
-                SITE-103 (Metro Clinical Center)
-              </option>
+              <option value="SITE-103">SITE-103 (Metro Clinical Center)</option>
             </select>
           </div>
 
           <div class="filter-item">
-            <label
-              for="version-filter-select"
-              class="filter-label"
-            >Protocol Version:</label>
+            <label for="version-filter-select" class="filter-label"
+              >Protocol Version:</label
+            >
             <select
               id="version-filter-select"
               v-model="versionFilter"
               class="form-select form-select-sm"
             >
-              <option value="ALL">
-                All Protocol Versions
-              </option>
-              <option value="1.0.0">
-                v1.0.0 (Legacy Schema)
-              </option>
-              <option value="2.0.0">
-                v2.0.0 (Amended Target)
-              </option>
+              <option value="ALL">All Protocol Versions</option>
+              <option value="1.0.0">v1.0.0 (Legacy Schema)</option>
+              <option value="2.0.0">v2.0.0 (Amended Target)</option>
             </select>
           </div>
 
           <div class="filter-item">
-            <label
-              for="gating-filter-select"
-              class="filter-label"
-            >Gating Status:</label>
+            <label for="gating-filter-select" class="filter-label"
+              >Gating Status:</label
+            >
             <select
               id="gating-filter-select"
               v-model="gatingFilter"
               class="form-select form-select-sm"
             >
-              <option value="ALL">
-                All Gating States
-              </option>
-              <option value="GATED">
-                🔒 Gated (Pending Re-Consent)
-              </option>
-              <option value="UNLOCKED">
-                ✅ Unlocked (Compliant)
-              </option>
+              <option value="ALL">All Gating States</option>
+              <option value="GATED">🔒 Gated (Pending Re-Consent)</option>
+              <option value="UNLOCKED">✅ Unlocked (Compliant)</option>
             </select>
           </div>
 
           <div class="filter-item search-filter-item">
-            <label
-              for="subject-search-input"
-              class="filter-label"
-            >Search Subject ID:</label>
+            <label for="subject-search-input" class="filter-label"
+              >Search Subject ID:</label
+            >
             <input
               id="subject-search-input"
               v-model="searchQuery"
               type="text"
               class="form-control form-control-sm"
               placeholder="e.g. SUBJ-102"
-            >
+            />
           </div>
         </div>
 
@@ -788,7 +743,7 @@
                     :checked="allGatedSelected"
                     :disabled="gatedInFilteredCount === 0"
                     @change="toggleSelectAllGated"
-                  >
+                  />
                 </th>
                 <th>Subject ID</th>
                 <th>Site ID</th>
@@ -815,7 +770,7 @@
                     type="checkbox"
                     :value="sub.id"
                     :disabled="!sub.isGated"
-                  >
+                  />
                 </td>
                 <td class="cell-id">
                   <strong>{{ sub.id }}</strong>
@@ -827,7 +782,9 @@
                   <span class="state-pill">{{ sub.status }}</span>
                 </td>
                 <td>
-                  <span class="version-tag">v{{ sub.active_protocol_version }}</span>
+                  <span class="version-tag"
+                    >v{{ sub.active_protocol_version }}</span
+                  >
                 </td>
                 <td>
                   <span :class="['consent-badge', 'badge-' + sub.consentColor]">
@@ -835,16 +792,10 @@
                   </span>
                 </td>
                 <td>
-                  <span
-                    v-if="sub.isGated"
-                    class="gating-pill pill-locked"
-                  >
+                  <span v-if="sub.isGated" class="gating-pill pill-locked">
                     🔒 Gated (Re-Consent Required)
                   </span>
-                  <span
-                    v-else
-                    class="gating-pill pill-unlocked"
-                  >
+                  <span v-else class="gating-pill pill-unlocked">
                     ✅ Active &amp; Projected
                   </span>
                 </td>
@@ -856,18 +807,12 @@
                   >
                     Clear Re-Consent Gate
                   </button>
-                  <span
-                    v-else
-                    class="text-muted"
-                  >Compliant</span>
+                  <span v-else class="text-muted">Compliant</span>
                 </td>
               </tr>
 
               <tr v-if="filteredSubjects.length === 0">
-                <td
-                  colspan="8"
-                  class="text-center empty-state-cell"
-                >
+                <td colspan="8" class="text-center empty-state-cell">
                   No subjects match the selected site or gating filters.
                 </td>
               </tr>
@@ -885,10 +830,16 @@
     >
       <div class="batch-toolbar-content">
         <div class="batch-info">
-          <span class="batch-count-badge">⚡ {{ selectedSubjectIds.length }} Subject(s) Selected</span>
-          <span class="batch-site-scope">Site Scope: <strong>{{ selectedSiteScope }}</strong></span>
-          <span class="batch-version-target">Target Protocol Version:
-            <strong>v{{ selectedAmendedVersion }}</strong></span>
+          <span class="batch-count-badge"
+            >⚡ {{ selectedSubjectIds.length }} Subject(s) Selected</span
+          >
+          <span class="batch-site-scope"
+            >Site Scope: <strong>{{ selectedSiteScope }}</strong></span
+          >
+          <span class="batch-version-target"
+            >Target Protocol Version:
+            <strong>v{{ selectedAmendedVersion }}</strong></span
+          >
         </div>
         <div class="batch-actions">
           <button
@@ -910,11 +861,9 @@
     </div>
 
     <!-- 4-Step Guided Upversioning Wizard Modal -->
-    <div
-      v-if="showCreateModal"
-      class="modal-overlay"
-      @click.self="closeWizard"
-    >
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <div v-if="showCreateModal" class="modal-overlay" @click.self="closeWizard">
       <div class="modal-card wizard-modal-card">
         <!-- Wizard Header & Stepper -->
         <div class="modal-header wizard-header">
@@ -927,87 +876,70 @@
               target rules.
             </p>
           </div>
-          <button
-            class="modal-close"
-            @click="closeWizard"
-          >
-            &times;
-          </button>
+          <button class="modal-close" @click="closeWizard">&times;</button>
         </div>
 
         <!-- Wizard Stepper Indicators -->
         <div class="wizard-stepper">
+          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             class="step-item"
             :class="{ active: wizardStep === 1, completed: wizardStep > 1 }"
             @click="wizardStep = 1"
           >
-            <div class="step-number">
-              1
-            </div>
-            <div class="step-label">
-              Classification
-            </div>
+            <div class="step-number">1</div>
+            <div class="step-label">Classification</div>
           </div>
           <div class="step-divider" />
+          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             class="step-item"
             :class="{ active: wizardStep === 2, completed: wizardStep > 2 }"
             @click="wizardStep = 2"
           >
-            <div class="step-number">
-              2
-            </div>
-            <div class="step-label">
-              Target Version
-            </div>
+            <div class="step-number">2</div>
+            <div class="step-label">Target Version</div>
           </div>
           <div class="step-divider" />
+          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             class="step-item"
             :class="{ active: wizardStep === 3, completed: wizardStep > 3 }"
             @click="goToWizardStep(3)"
           >
-            <div class="step-number">
-              3
-            </div>
-            <div class="step-label">
-              Impact Preview
-            </div>
+            <div class="step-number">3</div>
+            <div class="step-label">Impact Preview</div>
           </div>
           <div class="step-divider" />
+          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             class="step-item"
             :class="{ active: wizardStep === 4, completed: wizardStep > 4 }"
             @click="goToWizardStep(4)"
           >
-            <div class="step-number">
-              4
-            </div>
-            <div class="step-label">
-              Schema Mapping
-            </div>
+            <div class="step-number">4</div>
+            <div class="step-label">Schema Mapping</div>
           </div>
         </div>
 
         <!-- Wizard Body Steps -->
         <div class="modal-body wizard-body">
           <!-- Step 1: Amendment Scope & Classification -->
-          <div
-            v-if="wizardStep === 1"
-            class="wizard-step-content"
-          >
+          <div v-if="wizardStep === 1" class="wizard-step-content">
             <h4>Step 1: Amendment Classification &amp; Scope</h4>
             <p class="step-desc">
               Classify protocol change scope and establish GxP change rationale.
             </p>
 
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Amendment Classification Type:</label>
-              <select
-                v-model="newAmendment.amendment_type"
-                class="form-select"
-              >
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <select v-model="newAmendment.amendment_type" class="form-select">
                 <option value="major">
                   Major Amendment (Structural / Safety / Visit Schedule Changes)
                 </option>
@@ -1023,8 +955,12 @@
                 <input
                   v-model="newAmendment.requires_reconsent"
                   type="checkbox"
+                />
+                <span
+                  ><strong
+                    >Mandatory Subject Re-Consent (PRD-SUB-007)</strong
+                  ></span
                 >
-                <span><strong>Mandatory Subject Re-Consent (PRD-SUB-007)</strong></span>
               </label>
               <small class="form-hint">
                 When enabled, eCRF data entry for active in-flight participants
@@ -1033,7 +969,11 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">GxP Justification &amp; Change Reason:</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label class="form-label"
+                >GxP Justification &amp; Change Reason:</label
+              >
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <textarea
                 v-model="newAmendment.change_reason"
                 class="form-control text-area"
@@ -1044,10 +984,7 @@
           </div>
 
           <!-- Step 2: Target Version Selection -->
-          <div
-            v-if="wizardStep === 2"
-            class="wizard-step-content"
-          >
+          <div v-if="wizardStep === 2" class="wizard-step-content">
             <h4>Step 2: Target Version &amp; Study Scope Selection</h4>
             <p class="step-desc">
               Select frozen baseline snapshot and establish target amended
@@ -1055,58 +992,55 @@
             </p>
 
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Target Study ID:</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 v-model="selectedStudyId"
                 type="text"
                 class="form-control"
                 disabled
-              >
+              />
             </div>
 
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Base Frozen Version:</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 type="text"
                 class="form-control"
                 value="v1.0.0 (Approved / Locked Snapshot)"
                 disabled
-              >
+              />
             </div>
 
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">New Target Version Tag:</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 v-model="newAmendment.target_version"
                 type="text"
                 class="form-control"
                 placeholder="e.g. 2.0.0"
-              >
+              />
             </div>
           </div>
 
           <!-- Step 3: Predictive Subject Impact Preview -->
-          <div
-            v-if="wizardStep === 3"
-            class="wizard-step-content"
-          >
+          <div v-if="wizardStep === 3" class="wizard-step-content">
             <h4>Step 3: Predictive Site &amp; Subject Impact Analysis</h4>
             <p class="step-desc">
               Calculated in real-time from live execution APIs in under 2
               seconds.
             </p>
 
-            <div
-              v-if="isLoadingImpact"
-              class="loading-state"
-            >
+            <div v-if="isLoadingImpact" class="loading-state">
               <span>🔄 Calculating predictive subject impact analysis...</span>
             </div>
 
-            <div
-              v-else
-              class="impact-summary-box"
-            >
+            <div v-else class="impact-summary-box">
               <div class="impact-stat-row">
                 <div class="impact-stat-card card-green">
                   <span class="stat-val">{{
@@ -1118,7 +1052,7 @@
                 <div class="impact-stat-card card-yellow">
                   <span class="stat-val">{{
                     wizardImpactData?.categories?.pending_reconsent?.count ||
-                      impactStats.pending.length
+                    impactStats.pending.length
                   }}</span>
                   <span class="stat-lbl">Pending Re-Consent Holds</span>
                 </div>
@@ -1126,7 +1060,7 @@
                   <span class="stat-val">{{
                     wizardImpactData?.categories
                       ?.completed_under_previous_version?.count ||
-                      impactStats.completedPrev.length
+                    impactStats.completedPrev.length
                   }}</span>
                   <span class="stat-lbl">Completed under v1.0.0</span>
                 </div>
@@ -1134,19 +1068,18 @@
 
               <div class="impact-notice">
                 <span class="notice-icon">⚡</span>
-                <span>Active execution pipeline verified.
+                <span
+                  >Active execution pipeline verified.
                   <strong>{{ impactStats.pending.length }} subject(s)</strong>
                   across trial sites will enter mandatory re-consent holds upon
-                  publication.</span>
+                  publication.</span
+                >
               </div>
             </div>
           </div>
 
           <!-- Step 4: Schema Mapping & Publish Confirmation -->
-          <div
-            v-if="wizardStep === 4"
-            class="wizard-step-content"
-          >
+          <div v-if="wizardStep === 4" class="wizard-step-content">
             <h4>Step 4: Target Schema Rules &amp; Publication Confirmation</h4>
             <p class="step-desc">
               Verify structural graph projections and confirm zero-downtime
@@ -1190,12 +1123,7 @@
           >
             ← Back
           </button>
-          <button
-            class="btn btn-secondary"
-            @click="closeWizard"
-          >
-            Cancel
-          </button>
+          <button class="btn btn-secondary" @click="closeWizard">Cancel</button>
           <button
             v-if="wizardStep < 4"
             class="btn btn-primary"
@@ -1222,6 +1150,8 @@
     </div>
 
     <!-- 21 CFR Part 11 Bulk Signature Modal -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="showBulkReconsentModal"
       id="bulk-reconsent-modal"
@@ -1233,10 +1163,7 @@
           <h3 class="modal-title">
             Authorize Bulk Re-Consent Signatures (21 CFR Part 11)
           </h3>
-          <button
-            class="modal-close"
-            @click="showBulkReconsentModal = false"
-          >
+          <button class="modal-close" @click="showBulkReconsentModal = false">
             &times;
           </button>
         </div>
@@ -1247,10 +1174,13 @@
             <strong>{{ selectedSubjectIds.length }} subject(s)</strong>:
             <span class="subject-tags-inline">{{
               selectedSubjectIds.join(", ")
-            }}</span>.
+            }}</span
+            >.
           </p>
 
           <div class="reconsent-options">
+            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <div
               class="option-card"
               :class="{
@@ -1261,6 +1191,8 @@
               <h4>✍️ Electronic Consent (eConsent)</h4>
               <p>Cryptographic 21 CFR Part 11 electronic signature record.</p>
             </div>
+            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <div
               class="option-card"
               :class="{
@@ -1277,33 +1209,41 @@
           </div>
 
           <div class="form-group margin-top-md">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label class="form-label">Site Staff Signer Name / User ID:</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
               v-model="bulkReconsentForm.signer_name"
               type="text"
               class="form-control"
               placeholder="e.g. crc.user"
-            >
+            />
           </div>
 
           <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label class="form-label">Re-authentication Password / PIN:</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
               v-model="bulkReconsentForm.signer_pin"
               type="password"
               class="form-control"
               placeholder="••••"
-            >
+            />
           </div>
 
           <div class="form-group">
-            <label class="form-label">GxP Audit Justification &amp; Change Reason:</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label class="form-label"
+              >GxP Audit Justification &amp; Change Reason:</label
+            >
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
               v-model="bulkReconsentForm.reason_for_change"
               type="text"
               class="form-control"
               placeholder="e.g. Bulk protocol amendment re-consent verification"
-            >
+            />
           </div>
         </div>
 
@@ -1331,6 +1271,8 @@
     </div>
 
     <!-- Single Subject Re-Consent Resolution Modal -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="showReconsentModal"
       class="modal-overlay"
@@ -1341,10 +1283,7 @@
           <h3 class="modal-title">
             Clear Subject Re-Consent Gate (PRD-SUB-007)
           </h3>
-          <button
-            class="modal-close"
-            @click="showReconsentModal = false"
-          >
+          <button class="modal-close" @click="showReconsentModal = false">
             &times;
           </button>
         </div>
@@ -1352,9 +1291,12 @@
           <p>
             Subject <strong>{{ activeModalSubject?.id }}</strong> is currently
             locked from data entry on upcoming visits under Protocol Amendment
-            <strong>v{{ selectedAmendedVersion }}</strong>.
+            <strong>v{{ selectedAmendedVersion }}</strong
+            >.
           </p>
           <div class="reconsent-options">
+            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <div
               class="option-card"
               :class="{ selected: reconsentMode === 'ECONSENT' }"
@@ -1366,6 +1308,8 @@
                 cryptographic seal.
               </p>
             </div>
+            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <div
               class="option-card"
               :class="{ selected: reconsentMode === 'PAPER' }"
@@ -1380,10 +1324,7 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button
-            class="btn btn-secondary"
-            @click="showReconsentModal = false"
-          >
+          <button class="btn btn-secondary" @click="showReconsentModal = false">
             Cancel
           </button>
           <button

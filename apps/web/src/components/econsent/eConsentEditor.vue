@@ -2,11 +2,10 @@
   <div class="econsent-editor-container card">
     <div class="editor-header">
       <div class="header-titles">
-        <h3>{{ title || 'Informed Consent Clause Editor' }}</h3>
-        <span
-          v-if="clauseId"
-          class="clause-badge"
-        >Clause ID: {{ clauseId }}</span>
+        <h3>{{ title || "Informed Consent Clause Editor" }}</h3>
+        <span v-if="clauseId" class="clause-badge"
+          >Clause ID: {{ clauseId }}</span
+        >
       </div>
       <div class="header-badges">
         <span
@@ -14,7 +13,9 @@
           class="grade-badge"
           :class="currentMetrics.is_target_grade_level ? 'target' : 'warning'"
         >
-          FKGL: {{ currentMetrics.flesch_kincaid_grade_level }} ({{ currentMetrics.is_target_grade_level ? '6th-8th Grade' : 'Complex' }})
+          FKGL: {{ currentMetrics.flesch_kincaid_grade_level }} ({{
+            currentMetrics.is_target_grade_level ? "6th-8th Grade" : "Complex"
+          }})
         </span>
         <button
           type="button"
@@ -157,7 +158,11 @@ function replaceTermInHtml(html, originalTerm, suggestedTerm) {
       if (regex.test(node.nodeValue)) {
         node.nodeValue = node.nodeValue.replace(regex, suggestedTerm);
       }
-    } else if (node.nodeType === Node.ELEMENT_NODE && node.nodeName !== "SCRIPT" && node.nodeName !== "STYLE") {
+    } else if (
+      node.nodeType === Node.ELEMENT_NODE &&
+      node.nodeName !== "SCRIPT" &&
+      node.nodeName !== "STYLE"
+    ) {
       for (let child = node.firstChild; child; child = child.nextSibling) {
         walk(child);
       }
@@ -169,7 +174,11 @@ function replaceTermInHtml(html, originalTerm, suggestedTerm) {
 
 function onApplySubstitution({ substitution }) {
   if (!substitution) return;
-  localHtml.value = replaceTermInHtml(localHtml.value, substitution.original_term, substitution.suggested_term);
+  localHtml.value = replaceTermInHtml(
+    localHtml.value,
+    substitution.original_term,
+    substitution.suggested_term
+  );
   if (editorRef.value) {
     editorRef.value.innerHTML = localHtml.value;
   }
@@ -190,7 +199,6 @@ function onApplyAll({ substitutions }) {
 }
 
 function onUpdateMetrics(metrics) {
-
   currentMetrics.value = metrics;
 }
 

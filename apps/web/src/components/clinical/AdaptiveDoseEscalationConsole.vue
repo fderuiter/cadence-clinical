@@ -4,36 +4,56 @@
     <div class="console-header">
       <div class="header-left">
         <div class="header-badge-row">
-          <span class="badge-design" :class="`design-${designType.toLowerCase()}`">
+          <span
+            class="badge-design"
+            :class="`design-${designType.toLowerCase()}`"
+          >
             {{ designTypeLabel }}
           </span>
-          <span v-if="isActive" class="badge-status status-active">ACTIVE PROTOCOL</span>
+          <span v-if="isActive" class="badge-status status-active"
+            >ACTIVE PROTOCOL</span
+          >
           <span v-else class="badge-status status-inactive">INACTIVE</span>
         </div>
-        <h3 class="title">Adaptive Oncology Dose Escalation &amp; Randomization Console</h3>
+        <h3 class="title">
+          Adaptive Oncology Dose Escalation &amp; Randomization Console
+        </h3>
         <p class="subtitle">
-          Real-time DLT monitoring, Bayesian interval decision engine, and 21 CFR Part 11 cohort gating.
+          Real-time DLT monitoring, Bayesian interval decision engine, and 21
+          CFR Part 11 cohort gating.
         </p>
       </div>
 
       <div class="header-metrics">
         <div class="metric-box">
           <span class="metric-label">Target Toxicity (&phi;)</span>
-          <span class="metric-val">{{ (targetToxicityRate * 100).toFixed(1) }}%</span>
+          <span class="metric-val"
+            >{{ (targetToxicityRate * 100).toFixed(1) }}%</span
+          >
         </div>
         <div v-if="designType === 'BOIN'" class="metric-box">
           <span class="metric-label">BOIN Boundaries</span>
-          <span class="metric-val">&lambda;<sub>e</sub> {{ lambdaE.toFixed(3) }} | &lambda;<sub>d</sub> {{ lambdaD.toFixed(3) }}</span>
+          <span class="metric-val"
+            >&lambda;<sub>e</sub> {{ lambdaE.toFixed(3) }} | &lambda;<sub
+              >d</sub
+            >
+            {{ lambdaD.toFixed(3) }}</span
+          >
         </div>
         <div class="metric-box">
           <span class="metric-label">Current Cohort</span>
-          <span class="metric-val highlight">Cohort #{{ activeCohortNumber }}</span>
+          <span class="metric-val highlight"
+            >Cohort #{{ activeCohortNumber }}</span
+          >
         </div>
       </div>
     </div>
 
     <!-- Active Cohort Recommendation Banner -->
-    <div class="recommendation-banner" :class="`banner-${recommendationAction.toLowerCase()}`">
+    <div
+      class="recommendation-banner"
+      :class="`banner-${recommendationAction.toLowerCase()}`"
+    >
       <div class="banner-icon-col">
         <span class="action-icon">{{ actionIcon(recommendationAction) }}</span>
       </div>
@@ -41,9 +61,13 @@
         <div class="action-row">
           <span class="action-tag">RECOMMENDED ACTION:</span>
           <span class="action-name">{{ recommendationAction }}</span>
-          <span v-if="recommendedDoseName" class="rec-dose-pill">Target: {{ recommendedDoseName }}</span>
+          <span v-if="recommendedDoseName" class="rec-dose-pill"
+            >Target: {{ recommendedDoseName }}</span
+          >
         </div>
-        <p class="banner-rationale">{{ rationale || 'Awaiting cohort evaluation.' }}</p>
+        <p class="banner-rationale">
+          {{ rationale || "Awaiting cohort evaluation." }}
+        </p>
       </div>
       <div class="banner-cta">
         <button
@@ -60,7 +84,9 @@
 
     <!-- Dose Levels Table & Bayesian Toxicity Graph -->
     <div class="dose-grid-container">
-      <h4 class="section-title">Dose Level Escalation Tracker &amp; Posterior Estimates</h4>
+      <h4 class="section-title">
+        Dose Level Escalation Tracker &amp; Posterior Estimates
+      </h4>
       <div class="table-wrapper">
         <table class="dose-table">
           <thead>
@@ -88,43 +114,75 @@
               <td>
                 <span class="dose-idx-badge">{{ dose.dose_level_index }}</span>
               </td>
-              <td class="cell-bold">{{ dose.dose_name }}</td>
+              <td class="cell-bold">
+                {{ dose.dose_name }}
+              </td>
               <td>{{ dose.total_enrolled }}</td>
               <td>
-                <span :class="{'dlt-alert': dose.total_dlts > 0}">{{ dose.total_dlts }}</span>
+                <span :class="{ 'dlt-alert': dose.total_dlts > 0 }">{{
+                  dose.total_dlts
+                }}</span>
               </td>
               <td>
                 <div class="rate-bar-container">
                   <div
                     class="rate-bar"
-                    :style="{ width: `${Math.min(dose.observed_dlt_rate * 100, 100)}%` }"
+                    :style="{
+                      width: `${Math.min(dose.observed_dlt_rate * 100, 100)}%`,
+                    }"
                     :class="rateColorClass(dose.observed_dlt_rate)"
                   />
-                  <span class="rate-text">{{ (dose.observed_dlt_rate * 100).toFixed(1) }}%</span>
+                  <span class="rate-text"
+                    >{{ (dose.observed_dlt_rate * 100).toFixed(1) }}%</span
+                  >
                 </div>
               </td>
               <td>
-                <span v-if="dose.posterior_dlt_rate !== null && dose.posterior_dlt_rate !== undefined">
+                <span
+                  v-if="
+                    dose.posterior_dlt_rate !== null &&
+                    dose.posterior_dlt_rate !== undefined
+                  "
+                >
                   {{ (dose.posterior_dlt_rate * 100).toFixed(1) }}%
                 </span>
                 <span v-else class="text-muted">-</span>
               </td>
               <td>
                 <span
-                  v-if="dose.overdose_probability !== null && dose.overdose_probability !== undefined"
-                  :class="{'overdose-warning': dose.overdose_probability > 0.8}"
+                  v-if="
+                    dose.overdose_probability !== null &&
+                    dose.overdose_probability !== undefined
+                  "
+                  :class="{
+                    'overdose-warning': dose.overdose_probability > 0.8,
+                  }"
                 >
                   {{ (dose.overdose_probability * 100).toFixed(1) }}%
                 </span>
                 <span v-else class="text-muted">-</span>
               </td>
               <td>
-                <span v-if="dose.is_eliminated_for_safety" class="pill-eliminated">ELIMINATED</span>
+                <span
+                  v-if="dose.is_eliminated_for_safety"
+                  class="pill-eliminated"
+                  >ELIMINATED</span
+                >
                 <span v-else class="pill-safe">TOLERABLE</span>
               </td>
               <td>
-                <span v-if="dose.dose_level_index === currentDoseLevelIndex" class="pill-current">ACTIVE DOSE</span>
-                <span v-else-if="dose.dose_level_index === recommendedDoseLevelIndex" class="pill-target">NEXT TARGET</span>
+                <span
+                  v-if="dose.dose_level_index === currentDoseLevelIndex"
+                  class="pill-current"
+                  >ACTIVE DOSE</span
+                >
+                <span
+                  v-else-if="
+                    dose.dose_level_index === recommendedDoseLevelIndex
+                  "
+                  class="pill-target"
+                  >NEXT TARGET</span
+                >
                 <span v-else class="text-muted">STANDBY</span>
               </td>
             </tr>
@@ -136,7 +194,9 @@
     <!-- Response-Adaptive Randomization (RAR) Multi-Arm Allocator (if RAR active) -->
     <div v-if="designType === 'RAR' || rarArms.length > 0" class="rar-section">
       <div class="rar-header">
-        <h4 class="section-title">Response-Adaptive Randomization (RAR) Allocation Weights</h4>
+        <h4 class="section-title">
+          Response-Adaptive Randomization (RAR) Allocation Weights
+        </h4>
         <span class="pill highlight">{{ rarArms.length }} Treatment Arms</span>
       </div>
       <div class="rar-cards-grid">
@@ -162,13 +222,17 @@
             </div>
             <div class="arm-metric-item">
               <span class="metric-lbl">Posterior &theta;</span>
-              <span class="metric-num">{{ (arm.posterior_mean * 100).toFixed(1) }}%</span>
+              <span class="metric-num"
+                >{{ (arm.posterior_mean * 100).toFixed(1) }}%</span
+              >
             </div>
           </div>
           <div class="arm-prob-section">
             <div class="prob-label-row">
               <span class="prob-title">Dynamic Allocation Weight:</span>
-              <span class="prob-val">{{ (arm.allocation_probability * 100).toFixed(1) }}%</span>
+              <span class="prob-val"
+                >{{ (arm.allocation_probability * 100).toFixed(1) }}%</span
+              >
             </div>
             <div class="prob-track">
               <div
@@ -186,7 +250,9 @@
       <div class="modal-card">
         <div class="modal-header">
           <h4 class="modal-title">21 CFR Part 11 Cohort Transition Sign-off</h4>
-          <button type="button" class="btn-close" @click="closeTransitionModal">&times;</button>
+          <button type="button" class="btn-close" @click="closeTransitionModal">
+            &times;
+          </button>
         </div>
         <div class="modal-body">
           <div class="decision-summary-box">
@@ -200,25 +266,50 @@
             </div>
             <div class="decision-row">
               <span class="lbl">Target Dose Level:</span>
-              <span class="val">{{ selectedTargetDoseName }} (Level {{ selectedTargetDoseIndex }})</span>
+              <span class="val"
+                >{{ selectedTargetDoseName }} (Level
+                {{ selectedTargetDoseIndex }})</span
+              >
             </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="decision-action-select">Confirmed Action:</label>
-            <select id="decision-action-select" v-model="selectedAction" class="form-select">
-              <option value="ESCALATE">ESCALATE (Advance to Next Higher Dose)</option>
-              <option value="DE_ESCALATE">DE_ESCALATE (Reduce to Lower Dose)</option>
+            <label class="form-label" for="decision-action-select"
+              >Confirmed Action:</label
+            >
+            <select
+              id="decision-action-select"
+              v-model="selectedAction"
+              class="form-select"
+            >
+              <option value="ESCALATE">
+                ESCALATE (Advance to Next Higher Dose)
+              </option>
+              <option value="DE_ESCALATE">
+                DE_ESCALATE (Reduce to Lower Dose)
+              </option>
               <option value="STAY">STAY (Continue Current Dose Level)</option>
-              <option value="EXPAND_COHORT">EXPAND_COHORT (Enroll 3 Additional Subjects)</option>
-              <option value="STOP_SAFETY">STOP_SAFETY (Halt Trial for Toxicity)</option>
-              <option value="STOP_SUCCESS">STOP_SUCCESS / MTD_FOUND (Declare MTD)</option>
+              <option value="EXPAND_COHORT">
+                EXPAND_COHORT (Enroll 3 Additional Subjects)
+              </option>
+              <option value="STOP_SAFETY">
+                STOP_SAFETY (Halt Trial for Toxicity)
+              </option>
+              <option value="STOP_SUCCESS">
+                STOP_SUCCESS / MTD_FOUND (Declare MTD)
+              </option>
             </select>
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="target-dose-select">Target Dose Level Index:</label>
-            <select id="target-dose-select" v-model.number="selectedTargetDoseIndex" class="form-select">
+            <label class="form-label" for="target-dose-select"
+              >Target Dose Level Index:</label
+            >
+            <select
+              id="target-dose-select"
+              v-model.number="selectedTargetDoseIndex"
+              class="form-select"
+            >
               <option
                 v-for="dose in doseSummaries"
                 :key="dose.dose_level_index"
@@ -226,7 +317,9 @@
                 :disabled="dose.is_eliminated_for_safety"
               >
                 Level {{ dose.dose_level_index }} - {{ dose.dose_name }}
-                <template v-if="dose.is_eliminated_for_safety"> (ELIMINATED FOR SAFETY)</template>
+                <template v-if="dose.is_eliminated_for_safety">
+                  (ELIMINATED FOR SAFETY)
+                </template>
               </option>
             </select>
           </div>
@@ -261,14 +354,20 @@
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn-secondary" @click="closeTransitionModal">Cancel</button>
+          <button
+            type="button"
+            class="btn-secondary"
+            @click="closeTransitionModal"
+          >
+            Cancel
+          </button>
           <button
             type="button"
             class="btn-submit"
             :disabled="!isFormValid || isSubmitting"
             @click="submitCohortTransition"
           >
-            {{ isSubmitting ? 'Authorizing...' : 'Authorize & Advance Cohort' }}
+            {{ isSubmitting ? "Authorizing..." : "Authorize & Advance Cohort" }}
           </button>
         </div>
       </div>
@@ -277,7 +376,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref } from "vue";
 
 export interface DoseLevelSummaryDTO {
   dose_level_index: number;
@@ -322,17 +421,17 @@ const props = withDefaults(
     rarArms?: RARArmDTO[];
   }>(),
   {
-    designType: 'BOIN',
+    designType: "BOIN",
     targetToxicityRate: 0.25,
     lambdaE: 0.197,
     lambdaD: 0.298,
     activeCohortNumber: 1,
     currentDoseLevelIndex: 1,
-    currentDoseName: 'Dose 1',
-    recommendationAction: 'STAY',
+    currentDoseName: "Dose 1",
+    recommendationAction: "STAY",
     recommendedDoseLevelIndex: 1,
-    recommendedDoseName: 'Dose 1',
-    rationale: '',
+    recommendedDoseName: "Dose 1",
+    rationale: "",
     isActive: true,
     doseSummaries: () => [],
     rarArms: () => [],
@@ -341,7 +440,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (
-    e: 'transition-cohort',
+    e: "transition-cohort",
     payload: {
       study_id: string;
       cohort_number: number;
@@ -356,20 +455,22 @@ const emit = defineEmits<{
 const showTransitionModal = ref(false);
 const isSubmitting = ref(false);
 const selectedAction = ref(props.recommendationAction);
-const selectedTargetDoseIndex = ref(props.recommendedDoseLevelIndex || props.currentDoseLevelIndex);
-const overrideReason = ref('');
-const electronicSignature = ref('');
+const selectedTargetDoseIndex = ref(
+  props.recommendedDoseLevelIndex || props.currentDoseLevelIndex
+);
+const overrideReason = ref("");
+const electronicSignature = ref("");
 
 const designTypeLabel = computed(() => {
   switch (props.designType) {
-    case 'BOIN':
-      return 'Bayesian Optimal Interval (BOIN)';
-    case 'CRM':
-      return 'Continual Reassessment Method (CRM)';
-    case 'THREE_PLUS_THREE':
-      return 'Classic 3+3 Rule-Based';
-    case 'RAR':
-      return 'Response-Adaptive Randomization (RAR)';
+    case "BOIN":
+      return "Bayesian Optimal Interval (BOIN)";
+    case "CRM":
+      return "Continual Reassessment Method (CRM)";
+    case "THREE_PLUS_THREE":
+      return "Classic 3+3 Rule-Based";
+    case "RAR":
+      return "Response-Adaptive Randomization (RAR)";
     default:
       return props.designType;
   }
@@ -397,34 +498,35 @@ const isFormValid = computed(() => {
 
 function actionIcon(action: string): string {
   switch (action) {
-    case 'ESCALATE':
-      return '▲';
-    case 'DE_ESCALATE':
-      return '▼';
-    case 'STAY':
-    case 'EXPAND_COHORT':
-      return '■';
-    case 'STOP_SAFETY':
-      return '✖';
-    case 'STOP_SUCCESS':
-    case 'MTD_FOUND':
-      return '✔';
+    case "ESCALATE":
+      return "▲";
+    case "DE_ESCALATE":
+      return "▼";
+    case "STAY":
+    case "EXPAND_COHORT":
+      return "■";
+    case "STOP_SAFETY":
+      return "✖";
+    case "STOP_SUCCESS":
+    case "MTD_FOUND":
+      return "✔";
     default:
-      return '●';
+      return "●";
   }
 }
 
 function rateColorClass(rate: number): string {
-  if (rate <= props.lambdaE) return 'bar-green';
-  if (rate >= props.lambdaD) return 'bar-red';
-  return 'bar-amber';
+  if (rate <= props.lambdaE) return "bar-green";
+  if (rate >= props.lambdaD) return "bar-red";
+  return "bar-amber";
 }
 
 function openTransitionModal(): void {
   selectedAction.value = props.recommendationAction;
-  selectedTargetDoseIndex.value = props.recommendedDoseLevelIndex || props.currentDoseLevelIndex;
-  overrideReason.value = '';
-  electronicSignature.value = '';
+  selectedTargetDoseIndex.value =
+    props.recommendedDoseLevelIndex || props.currentDoseLevelIndex;
+  overrideReason.value = "";
+  electronicSignature.value = "";
   showTransitionModal.value = true;
 }
 
@@ -436,7 +538,7 @@ function submitCohortTransition(): void {
   if (!isFormValid.value) return;
   isSubmitting.value = true;
 
-  emit('transition-cohort', {
+  emit("transition-cohort", {
     study_id: props.studyId,
     cohort_number: props.activeCohortNumber,
     decision_action: selectedAction.value,
@@ -456,7 +558,14 @@ function submitCohortTransition(): void {
   border: 1px solid var(--border, #e2e8f0);
   border-radius: 8px;
   padding: 24px;
-  font-family: var(--font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  font-family: var(
+    --font-family,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif
+  );
   color: var(--text-primary, #0f172a);
 }
 
@@ -929,7 +1038,9 @@ function submitCohortTransition(): void {
   width: 100%;
   max-width: 520px;
   padding: 24px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 8px 10px -6px rgba(0, 0, 0, 0.1);
 }
 
 .modal-header {
@@ -985,7 +1096,7 @@ function submitCohortTransition(): void {
 }
 
 .required::after {
-  content: ' *';
+  content: " *";
   color: #dc2626;
 }
 

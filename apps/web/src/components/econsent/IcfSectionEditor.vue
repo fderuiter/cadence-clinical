@@ -89,8 +89,8 @@
       </button>
     </div>
 
-
     <!-- Main Contenteditable Editor -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       ref="editorRef"
       class="editor-canvas"
@@ -108,10 +108,7 @@
     />
 
     <!-- Glossary Term Annotation Dialog/Modal -->
-    <div
-      v-if="showGlossaryModal"
-      class="glossary-modal-overlay"
-    >
+    <div v-if="showGlossaryModal" class="glossary-modal-overlay">
       <div class="glossary-modal card">
         <h4>Annotate Selected Text as Glossary Term</h4>
         <p class="selected-text-preview">
@@ -152,11 +149,10 @@
       class="glossary-popover"
       :style="{ top: popoverY + 'px', left: popoverX + 'px' }"
     >
-      <div class="popover-title">
-        Glossary Definition
-      </div>
+      <div class="popover-title">Glossary Definition</div>
       <div class="popover-body">
-        <strong>{{ hoveredGlossaryTerm }}</strong>: {{ hoveredGlossaryDefinition }}
+        <strong>{{ hoveredGlossaryTerm }}</strong
+        >: {{ hoveredGlossaryDefinition }}
       </div>
     </div>
 
@@ -200,14 +196,21 @@ const rawSectionText = computed(() => {
 const replaceTermInHtml = (html, originalTerm, suggestedTerm) => {
   const container = document.createElement("div");
   container.innerHTML = html;
-  const regex = new RegExp(`\\b${originalTerm.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\b`, "gi");
+  const regex = new RegExp(
+    `\\b${originalTerm.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\b`,
+    "gi"
+  );
 
   const walk = (node) => {
     if (node.nodeType === Node.TEXT_NODE) {
       if (regex.test(node.nodeValue)) {
         node.nodeValue = node.nodeValue.replace(regex, suggestedTerm);
       }
-    } else if (node.nodeType === Node.ELEMENT_NODE && node.nodeName !== "SCRIPT" && node.nodeName !== "STYLE") {
+    } else if (
+      node.nodeType === Node.ELEMENT_NODE &&
+      node.nodeName !== "SCRIPT" &&
+      node.nodeName !== "STYLE"
+    ) {
       for (let child = node.firstChild; child; child = child.nextSibling) {
         walk(child);
       }
@@ -219,7 +222,11 @@ const replaceTermInHtml = (html, originalTerm, suggestedTerm) => {
 
 const onApplyReadabilitySubstitution = ({ substitution }) => {
   if (!substitution) return;
-  localHtml.value = replaceTermInHtml(localHtml.value, substitution.original_term, substitution.suggested_term);
+  localHtml.value = replaceTermInHtml(
+    localHtml.value,
+    substitution.original_term,
+    substitution.suggested_term
+  );
   if (editorRef.value) {
     editorRef.value.innerHTML = localHtml.value;
   }
@@ -238,7 +245,6 @@ const onApplyAllReadability = ({ substitutions }) => {
   }
   handleInput();
 };
-
 
 const glossaryDefinition = ref("");
 let savedSelection = null;

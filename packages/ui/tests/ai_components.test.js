@@ -56,8 +56,8 @@ describe("AI UI Primitives & Components (#4367)", () => {
       expect(code).toContain("normalizedUserRoles");
 
       // ARIA and accessibility
-      expect(code).toContain('aria-busy="loading ? \'true\' : \'false\'"');
-      expect(code).toContain('aria-disabled="isDisabled ? \'true\' : \'false\'"');
+      expect(code).toContain("aria-busy=\"loading ? 'true' : 'false'\"");
+      expect(code).toContain("aria-disabled=\"isDisabled ? 'true' : 'false'\"");
       expect(code).toContain("computedAriaLabel");
 
       // Design tokens & styling
@@ -126,7 +126,9 @@ describe("AI UI Primitives & Components (#4367)", () => {
       expect(code).toContain("editedValueText");
 
       // 21 CFR Part 11 Audit compliance
-      expect(code).toContain("Reason for Change (21 CFR Part 11 Audit Justification)");
+      expect(code).toContain(
+        "Reason for Change (21 CFR Part 11 Audit Justification)"
+      );
       expect(code).toContain("reasonForChange");
       expect(code).toContain("validateReason");
 
