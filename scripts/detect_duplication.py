@@ -367,6 +367,9 @@ def main() -> None:
                                     "apps/etmf/infrastructure/lock_client.py",
                                     "apps/execution/designer_client.py",
                                     "apps/execution/econsent_client.py",
+                                    "apps/safety/execution_client.py",
+                                    "apps/safety/adapters/execution_client.py",
+                                    "apps/safety/infrastructure/execution_client.py",
                                 },
                                 {
                                     "apps/safety/processor.py",

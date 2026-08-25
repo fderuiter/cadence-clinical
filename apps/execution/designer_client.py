@@ -1,14 +1,14 @@
 import logging
 import os
-import time
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 import httpx
-from fastapi import HTTPException
 
 from apps.execution.domain.acl.designer_eligibility_dto import (
     DesignerEligibilityCriterionDTO,
 )
-from packages.security.signing import generate_gateway_signature
+from packages.security.gateway_client import GatewayBaseClient
 
 logger = logging.getLogger("execution-designer-client")
 
@@ -17,6 +17,32 @@ class DesignerCriteriaClientError(Exception):
     """Base exception for Designer Criteria client errors."""
 
     pass
+
+
+_study_criteria_resolver: Callable[[str], Awaitable[list[Any]]] | None = None
+_designer_client_instance: "DesignerCriteriaClient | None" = None
+
+
+def register_study_criteria_resolver(
+    resolver: Callable[[str], Awaitable[list[Any]]] | None,
+) -> None:
+    """Registers a pluggable resolver hook for retrieving study criteria (used for isolated tests)."""
+    global _study_criteria_resolver
+    _study_criteria_resolver = resolver
+
+
+def set_designer_client(client: "DesignerCriteriaClient | None") -> None:
+    """Sets or overrides the default DesignerCriteriaClient instance."""
+    global _designer_client_instance
+    _designer_client_instance = client
+
+
+def get_designer_client() -> "DesignerCriteriaClient":
+    """Retrieves the active DesignerCriteriaClient instance."""
+    global _designer_client_instance
+    if _designer_client_instance is None:
+        _designer_client_instance = DesignerCriteriaClient()
+    return _designer_client_instance
 
 
 class DesignerCriteriaClient:
@@ -31,6 +57,7 @@ class DesignerCriteriaClient:
             base_url or os.getenv("DESIGNER_URL") or "http://localhost:8001"
         ).rstrip("/")
         self.timeout = timeout
+        self.gw_client = GatewayBaseClient(base_url=self.base_url, timeout=self.timeout)
 
     async def get_eligibility_criteria(
         self, study_id: str, client: httpx.AsyncClient | None = None
@@ -44,50 +71,37 @@ class DesignerCriteriaClient:
         Returns:
             List[DesignerEligibilityCriterionDTO]: List of deserialized eligibility criteria.
         """
-        gateway_secret_env = os.getenv(
-            "GATEWAY_SECRET", "internal-gateway-secret-12345"
-        )
-        gateway_secret = (
-            gateway_secret_env.encode("utf-8")
-            if isinstance(gateway_secret_env, str)
-            else gateway_secret_env
-        )
+        if _study_criteria_resolver is not None:
+            res = await _study_criteria_resolver(study_id)
+            return [
+                item if isinstance(item, DesignerEligibilityCriterionDTO)
+                else DesignerEligibilityCriterionDTO(**item)
+                for item in res
+            ]
 
-        user_id = "execution-service"
-        roles = "system"
-        timestamp = str(time.time())
-
-        # Generate signature
-        signature = generate_gateway_signature(
-            user_id=user_id,
-            roles=roles,
-            timestamp=timestamp,
-            secret=gateway_secret,
-            change_reason="",
-        )
-
-        headers = {
-            "X-User-Id": user_id,
-            "X-User-Roles": roles,
-            "X-Gateway-Timestamp": timestamp,
-            "X-Gateway-Signature": signature,
-            "X-Signature-Version": "2",
-            "X-Change-Reason": "",
-        }
-
-        url = f"{self.base_url}/api/v1/studies/{study_id}/eligibility-criteria"
+        path = f"/api/v1/studies/{study_id}/eligibility-criteria"
 
         try:
             if client is not None:
+                headers = self.gw_client.build_headers(
+                    user_id="execution-service",
+                    roles="system",
+                    change_reason="",
+                )
+                url = f"{self.base_url}{path}"
                 response = await client.get(url, headers=headers, timeout=self.timeout)
             else:
-                async with httpx.AsyncClient(timeout=self.timeout) as cli:
-                    response = await cli.get(url, headers=headers)
+                response = await self.gw_client.request(
+                    method="GET",
+                    path=path,
+                    user_id="execution-service",
+                    roles="system",
+                    change_reason="",
+                )
 
             if response.status_code != 200:
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"Designer service returned error status {response.status_code}: {response.text}",
+                raise DesignerCriteriaClientError(
+                    f"Designer service returned error status {response.status_code}: {response.text}"
                 )
 
             data = response.json()
@@ -104,28 +118,35 @@ class DesignerCriteriaClient:
 
             return criteria
 
+        except DesignerCriteriaClientError:
+            raise
         except httpx.RequestError as e:
             logger.error(
                 "Failed to connect to Designer service for eligibility criteria: %s", e
             )
-            raise HTTPException(
-                status_code=502,
-                detail=f"Failed to connect to Designer service: {str(e)}",
-            )
+            raise DesignerCriteriaClientError(
+                f"Failed to connect to Designer service: {str(e)}"
+            ) from e
         except Exception as e:
-            if isinstance(e, HTTPException):
-                raise e
             logger.error("Unexpected error in Designer criteria client: %s", e)
-            raise HTTPException(
-                status_code=502,
-                detail=f"Error parsing eligibility criteria: {str(e)}",
-            )
+            raise DesignerCriteriaClientError(
+                f"Error parsing eligibility criteria: {str(e)}"
+            ) from e
 
 
-# Module level helper function style modeling etmf/lock_client.py
 async def fetch_study_criteria(
     study_id: str,
 ) -> list[DesignerEligibilityCriterionDTO]:
     """Fetch eligibility criteria module-function style."""
-    client = DesignerCriteriaClient()
+    client = get_designer_client()
     return await client.get_eligibility_criteria(study_id)
+
+
+__all__ = [
+    "DesignerCriteriaClient",
+    "DesignerCriteriaClientError",
+    "fetch_study_criteria",
+    "get_designer_client",
+    "register_study_criteria_resolver",
+    "set_designer_client",
+]

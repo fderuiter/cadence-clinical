@@ -1,17 +1,17 @@
+import datetime
 import logging
 import os
-import time
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 import httpx
-from fastapi import HTTPException
 
 from apps.interop.domain.acl import (
     EligibilityCriterionDTO,
     ExpressionNodeDTO,
     parse_dsl_dto,
 )
-from packages.security.signing import generate_gateway_signature
+from packages.security.gateway_client import GatewayBaseClient
 
 EligibilityCriterion = EligibilityCriterionDTO
 ExpressionNode = ExpressionNodeDTO
@@ -20,11 +20,27 @@ parse_dsl = parse_dsl_dto
 logger = logging.getLogger("interop-designer-client")
 
 
+class InteropDesignerClientError(Exception):
+    """Domain exception raised when Interop Designer client operations fail."""
+
+    pass
+
+
+_eligibility_criteria_resolver: (
+    Callable[[str], Awaitable[list[EligibilityCriterion]]] | None
+) = None
+
+
+def register_eligibility_criteria_resolver(
+    resolver: Callable[[str], Awaitable[list[EligibilityCriterion]]] | None,
+) -> None:
+    """Registers an authoritative adapter resolver for fetching eligibility criteria."""
+    global _eligibility_criteria_resolver
+    _eligibility_criteria_resolver = resolver
+
+
 def map_db_to_criterion(db_crit: dict[str, Any]) -> EligibilityCriterion:
-    """
-    Deserializes a database or API JSON dict into the shared EligibilityCriterion model.
-    Rehydrates the nested AST condition, or re-parses dsl_source if absent.
-    """
+    """Deserializes a database or API JSON dict into the shared EligibilityCriterion model."""
     reason = (
         db_crit.get("reason_for_change")
         or db_crit.get("change_reason")
@@ -42,28 +58,26 @@ def map_db_to_criterion(db_crit: dict[str, Any]) -> EligibilityCriterion:
             "Criterion must provide a structured condition or a valid dsl_source."
         )
 
-    import datetime
-
     created_at = db_crit.get("created_at")
     if not created_at:
-        created_at = datetime.datetime.now(datetime.UTC)
+        created_at_dt = datetime.datetime.now(datetime.UTC)
     elif isinstance(created_at, str):
         try:
-            created_at = datetime.datetime.fromisoformat(
+            created_at_dt = datetime.datetime.fromisoformat(
                 created_at.replace("Z", "+00:00")
             )
         except Exception:
-            created_at = datetime.datetime.now(datetime.UTC)
+            created_at_dt = datetime.datetime.now(datetime.UTC)
     else:
         try:
             if hasattr(created_at, "isoformat"):
-                created_at = datetime.datetime.fromisoformat(
+                created_at_dt = datetime.datetime.fromisoformat(
                     created_at.isoformat().replace("Z", "+00:00")
                 )
             else:
-                created_at = datetime.datetime.now(datetime.UTC)
+                created_at_dt = datetime.datetime.now(datetime.UTC)
         except Exception:
-            created_at = datetime.datetime.now(datetime.UTC)
+            created_at_dt = datetime.datetime.now(datetime.UTC)
 
     return EligibilityCriterion(
         criterion_id=str(db_crit.get("criterion_id") or db_crit.get("id") or ""),
@@ -79,59 +93,61 @@ def map_db_to_criterion(db_crit: dict[str, Any]) -> EligibilityCriterion:
 
 
 async def fetch_eligibility_criteria(study_id: str) -> list[EligibilityCriterion]:
-    """
-    Queries the central Designer service to fetch active eligibility criteria for a study.
-    Uses Gateway signature for secure inter-service authorization.
-    """
+    """Queries the central Designer service to fetch active eligibility criteria for a study."""
+    if _eligibility_criteria_resolver is not None:
+        try:
+            return await _eligibility_criteria_resolver(study_id)
+        except Exception as e:
+            logger.error("Error in registered eligibility criteria resolver: %s", e)
+            raise InteropDesignerClientError(
+                f"Error resolving eligibility criteria: {e}"
+            ) from e
+
     designer_url = os.getenv("DESIGNER_URL", "http://localhost:8001")
-    gateway_secret_env = os.getenv(
-        "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-    )
-    gateway_secret = (
-        gateway_secret_env.encode("utf-8")
-        if isinstance(gateway_secret_env, str)
-        else gateway_secret_env
-    )
+    path = f"/api/v1/studies/{study_id}/eligibility-criteria"
 
-    user_id = "interop-service"
-    roles = "sponsor_dm"
-    timestamp = str(time.time())
+    gw_client = GatewayBaseClient(base_url=designer_url, timeout=5.0)
 
-    signature = generate_gateway_signature(
-        user_id=user_id,
-        roles=roles,
-        timestamp=timestamp,
-        secret=gateway_secret,
-        change_reason="",
-    )
-
-    headers = {
-        "X-User-Id": user_id,
-        "X-User-Roles": roles,
-        "X-Gateway-Timestamp": timestamp,
-        "X-Gateway-Signature": signature,
-        "X-Signature-Version": "2",
-        "X-Change-Reason": "",
-    }
-
-    url = f"{designer_url.rstrip('/')}/api/v1/studies/{study_id}/eligibility-criteria"
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(url, headers=headers)
-            if response.status_code == 200:
-                raw_list = response.json()
-                return [map_db_to_criterion(item) for item in raw_list]
-            if response.status_code == 404:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Study {study_id} or eligibility criteria not found in Designer service.",
-                )
-            raise HTTPException(
-                status_code=502,
-                detail=f"Failed to fetch eligibility criteria: Designer service returned {response.status_code}",
-            )
-    except httpx.RequestError as e:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Failed to connect to Designer service for eligibility criteria validation: {str(e)}",
+        response = await gw_client.request(
+            method="GET",
+            path=path,
+            user_id="interop-service",
+            roles="sponsor_dm",
+            change_reason="",
         )
+
+        if response.status_code == 200:
+            raw_list = response.json()
+            return [map_db_to_criterion(item) for item in raw_list]
+
+        if response.status_code == 404:
+            raise InteropDesignerClientError(
+                f"Study {study_id} or eligibility criteria not found in Designer service."
+            )
+
+        raise InteropDesignerClientError(
+            f"Failed to fetch eligibility criteria: Designer service returned {response.status_code}"
+        )
+
+    except InteropDesignerClientError:
+        raise
+    except httpx.RequestError as e:
+        raise InteropDesignerClientError(
+            f"Failed to connect to Designer service for eligibility criteria validation: {str(e)}"
+        ) from e
+    except Exception as e:
+        raise InteropDesignerClientError(
+            f"Unexpected error fetching eligibility criteria: {str(e)}"
+        ) from e
+
+
+__all__ = [
+    "EligibilityCriterion",
+    "ExpressionNode",
+    "InteropDesignerClientError",
+    "fetch_eligibility_criteria",
+    "map_db_to_criterion",
+    "parse_dsl",
+    "register_eligibility_criteria_resolver",
+]

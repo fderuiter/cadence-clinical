@@ -35,3 +35,10 @@ class TrialLockedError(ETMFDomainError):
     """Raised when a mutation is attempted on a locked trial."""
 
     pass
+
+
+class TrialLockClientError(ETMFDomainError):
+    """Raised when trial lock communication or validation fails."""
+
+    pass
+

@@ -1,12 +1,11 @@
 import logging
 import os
-import time
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 import httpx
-from fastapi import HTTPException
 
-from packages.security.signing import generate_gateway_signature
+from packages.security.gateway_client import GatewayBaseClient
 
 logger = logging.getLogger("safety-execution-client")
 
@@ -14,9 +13,54 @@ mock_ae_records: dict[str, Any] | None = None
 mock_meddra_resolution: dict[str, Any] | None = None
 
 
+class SafetyExecutionClientError(Exception):
+    """Domain exception raised when Safety execution client operations fail."""
+
+    pass
+
+
+_sdtm_domain_resolver: (
+    Callable[[str, str], Awaitable[dict[str, list[dict[str, Any]]]]] | None
+) = None
+_meddra_code_resolver: (
+    Callable[[str, str, str], Awaitable[dict[str, Any]]] | None
+) = None
+_execution_client_instance: "ExecutionClient | None" = None
+
+
+def register_sdtm_domain_resolver(
+    resolver: Callable[[str, str], Awaitable[dict[str, list[dict[str, Any]]]]] | None,
+) -> None:
+    """Registers a pluggable resolver hook for fetching SDTM domain data."""
+    global _sdtm_domain_resolver
+    _sdtm_domain_resolver = resolver
+
+
+def register_meddra_code_resolver(
+    resolver: Callable[[str, str, str], Awaitable[dict[str, Any]]] | None,
+) -> None:
+    """Registers a pluggable resolver hook for resolving MedDRA codes."""
+    global _meddra_code_resolver
+    _meddra_code_resolver = resolver
+
+
+def set_execution_client(client: "ExecutionClient | None") -> None:
+    """Sets or overrides the default Safety ExecutionClient instance."""
+    global _execution_client_instance
+    _execution_client_instance = client
+
+
+def get_execution_client() -> "ExecutionClient":
+    """Retrieves the active Safety ExecutionClient instance."""
+    global _execution_client_instance
+    if _execution_client_instance is None:
+        _execution_client_instance = ExecutionClient()
+    return _execution_client_instance
+
+
 class ExecutionClient:
-    """
-    Asynchronous client to retrieve AE Dataset-JSON records and resolve MedDRA codes
+    """Asynchronous client to retrieve AE Dataset-JSON records and resolve MedDRA codes
+
     from the central clinical execution service.
     """
 
@@ -29,37 +73,7 @@ class ExecutionClient:
             base_url or os.getenv("EXECUTION_URL") or "http://localhost:8002"
         ).rstrip("/")
         self.timeout = timeout
-
-    def _get_auth_headers(self, change_reason: str = "") -> dict[str, str]:
-        gateway_secret_env = os.getenv(
-            "GATEWAY_SECRET", "internal-gateway-secret-12345"
-        )
-        gateway_secret = (
-            gateway_secret_env.encode("utf-8")
-            if isinstance(gateway_secret_env, str)
-            else gateway_secret_env
-        )
-
-        user_id = "safety-service"
-        roles = "sponsor_statistician"
-        timestamp = str(time.time())
-
-        signature = generate_gateway_signature(
-            user_id=user_id,
-            roles=roles,
-            timestamp=timestamp,
-            secret=gateway_secret,
-            change_reason=change_reason,
-        )
-
-        return {
-            "X-User-Id": user_id,
-            "X-User-Roles": roles,
-            "X-Gateway-Timestamp": timestamp,
-            "X-Gateway-Signature": signature,
-            "X-Signature-Version": "2",
-            "X-Change-Reason": change_reason,
-        }
+        self.gw_client = GatewayBaseClient(base_url=self.base_url, timeout=self.timeout)
 
     async def fetch_sdtm_domain(
         self,
@@ -69,23 +83,38 @@ class ExecutionClient:
     ) -> dict[str, list[dict[str, Any]]]:
         """Fetch raw SDTM domain Dataset-JSON records (e.g. DM, MH, CM, AE, LB, VS)."""
         dom_upper = domain.strip().upper()
+
+        if _sdtm_domain_resolver is not None:
+            return await _sdtm_domain_resolver(study_id, dom_upper)
+
         if dom_upper == "AE":
             global mock_ae_records
             if mock_ae_records is not None:
                 return mock_ae_records
 
-        url = f"{self.base_url}/api/v1/execution/biostat/sdtm/{dom_upper}"
-        headers = self._get_auth_headers()
+        path = f"/api/v1/execution/biostat/sdtm/{dom_upper}"
         params = {"study_id": study_id}
 
         try:
             if client is not None:
+                headers = self.gw_client.build_headers(
+                    user_id="safety-service",
+                    roles="sponsor_statistician",
+                    change_reason="",
+                )
+                url = f"{self.base_url}{path}"
                 response = await client.get(
                     url, headers=headers, params=params, timeout=self.timeout
                 )
             else:
-                async with httpx.AsyncClient(timeout=self.timeout) as cli:
-                    response = await cli.get(url, headers=headers, params=params)
+                response = await self.gw_client.request(
+                    method="GET",
+                    path=path,
+                    user_id="safety-service",
+                    roles="sponsor_statistician",
+                    change_reason="",
+                    params=params,
+                )
 
             if response.status_code != 200:
                 logger.error(
@@ -94,9 +123,8 @@ class ExecutionClient:
                     dom_upper,
                     response.text,
                 )
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"Execution service returned error status {response.status_code} for domain {dom_upper}: {response.text}",
+                raise SafetyExecutionClientError(
+                    f"Execution service returned error status {response.status_code} for domain {dom_upper}: {response.text}"
                 )
 
             data = response.json()
@@ -121,28 +149,26 @@ class ExecutionClient:
 
             return result
 
+        except SafetyExecutionClientError:
+            raise
         except httpx.RequestError as e:
             logger.error(
                 "Failed to connect to clinical execution service for %s data: %s",
                 dom_upper,
                 e,
             )
-            raise HTTPException(
-                status_code=502,
-                detail=f"Failed to connect to execution service for domain {dom_upper}: {str(e)}",
-            )
+            raise SafetyExecutionClientError(
+                f"Failed to connect to execution service for domain {dom_upper}: {str(e)}"
+            ) from e
         except Exception as e:
-            if isinstance(e, HTTPException):
-                raise e
             logger.error(
                 "Unexpected error fetching %s data from execution service: %s",
                 dom_upper,
                 e,
             )
-            raise HTTPException(
-                status_code=502,
-                detail=f"Unexpected error fetching {dom_upper} data: {str(e)}",
-            )
+            raise SafetyExecutionClientError(
+                f"Unexpected error fetching {dom_upper} data: {str(e)}"
+            ) from e
 
     async def fetch_ae_data(
         self, study_id: str, client: httpx.AsyncClient | None = None
@@ -158,22 +184,36 @@ class ExecutionClient:
         target_level: str = "LLT",
         client: httpx.AsyncClient | None = None,
     ) -> dict[str, Any]:
+        if _meddra_code_resolver is not None:
+            return await _meddra_code_resolver(term, version, target_level)
+
         global mock_meddra_resolution
         if mock_meddra_resolution is not None:
             return mock_meddra_resolution
 
-        url = f"{self.base_url}/api/v1/dictionaries/meddra/code"
-        headers = self._get_auth_headers()
+        path = "/api/v1/dictionaries/meddra/code"
         params = {"term": term, "version": version, "target_level": target_level}
 
         try:
             if client is not None:
+                headers = self.gw_client.build_headers(
+                    user_id="safety-service",
+                    roles="sponsor_statistician",
+                    change_reason="",
+                )
+                url = f"{self.base_url}{path}"
                 response = await client.get(
                     url, headers=headers, params=params, timeout=self.timeout
                 )
             else:
-                async with httpx.AsyncClient(timeout=self.timeout) as cli:
-                    response = await cli.get(url, headers=headers, params=params)
+                response = await self.gw_client.request(
+                    method="GET",
+                    path=path,
+                    user_id="safety-service",
+                    roles="sponsor_statistician",
+                    change_reason="",
+                    params=params,
+                )
 
             if response.status_code != 200:
                 logger.error(
@@ -181,29 +221,38 @@ class ExecutionClient:
                     response.status_code,
                     response.text,
                 )
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"Execution service dictionary endpoint returned error status {response.status_code}: {response.text}",
+                raise SafetyExecutionClientError(
+                    f"Execution service dictionary endpoint returned error status {response.status_code}: {response.text}"
                 )
 
             return response.json()
 
+        except SafetyExecutionClientError:
+            raise
         except httpx.RequestError as e:
             logger.error(
                 "Failed to connect to clinical execution service for MedDRA resolution: %s",
                 e,
             )
-            raise HTTPException(
-                status_code=502,
-                detail=f"Failed to connect to execution service dictionaries: {str(e)}",
-            )
+            raise SafetyExecutionClientError(
+                f"Failed to connect to execution service dictionaries: {str(e)}"
+            ) from e
         except Exception as e:
-            if isinstance(e, HTTPException):
-                raise e
             logger.error(
                 "Unexpected error resolving MedDRA term in execution service: %s", e
             )
-            raise HTTPException(
-                status_code=502,
-                detail=f"Unexpected error resolving MedDRA term: {str(e)}",
-            )
+            raise SafetyExecutionClientError(
+                f"Unexpected error resolving MedDRA term: {str(e)}"
+            ) from e
+
+
+__all__ = [
+    "ExecutionClient",
+    "SafetyExecutionClientError",
+    "get_execution_client",
+    "mock_ae_records",
+    "mock_meddra_resolution",
+    "register_meddra_code_resolver",
+    "register_sdtm_domain_resolver",
+    "set_execution_client",
+]

@@ -11,12 +11,11 @@ Requirements:
 
 import logging
 import os
-import time
 from typing import Any
 
 import httpx
 
-from packages.security.signing import generate_gateway_signature
+from packages.security.gateway_client import GatewayBaseClient
 
 logger = logging.getLogger("quality-execution-client")
 
@@ -42,37 +41,7 @@ class QualityExecutionClient:
             base_url or os.getenv("EXECUTION_URL") or "http://localhost:8002"
         ).rstrip("/")
         self.timeout = timeout
-
-    def _get_auth_headers(self, change_reason: str = "") -> dict[str, str]:
-        gateway_secret_env = os.getenv(
-            "GATEWAY_SECRET", "internal-gateway-secret-12345"
-        )
-        gateway_secret = (
-            gateway_secret_env.encode("utf-8")
-            if isinstance(gateway_secret_env, str)
-            else gateway_secret_env
-        )
-
-        user_id = "quality-surveillance-runner"
-        roles = "quality_oversight"
-        timestamp = str(time.time())
-
-        signature = generate_gateway_signature(
-            user_id=user_id,
-            roles=roles,
-            timestamp=timestamp,
-            secret=gateway_secret,
-            change_reason=change_reason,
-        )
-
-        return {
-            "X-User-Id": user_id,
-            "X-User-Roles": roles,
-            "X-Gateway-Timestamp": timestamp,
-            "X-Gateway-Signature": signature,
-            "X-Signature-Version": "2",
-            "X-Change-Reason": change_reason,
-        }
+        self.gw_client = GatewayBaseClient(base_url=self.base_url, timeout=self.timeout)
 
     async def fetch_sdtm_domain(
         self,
@@ -88,20 +57,30 @@ class QualityExecutionClient:
         ):
             return mock_sdtm_domain_records[study_id][dom_upper]
 
-        url = f"{self.base_url}/api/v1/execution/biostat/sdtm/{dom_upper}"
-        headers = self._get_auth_headers(
-            change_reason=f"Quality surveillance harvest of SDTM {dom_upper}"
-        )
+        path = f"/api/v1/execution/biostat/sdtm/{dom_upper}"
+        reason = f"Quality surveillance harvest of SDTM {dom_upper}"
         params = {"study_id": study_id}
 
         try:
             if client is not None:
+                headers = self.gw_client.build_headers(
+                    user_id="quality-surveillance-runner",
+                    roles="quality_oversight",
+                    change_reason=reason,
+                )
+                url = f"{self.base_url}{path}"
                 response = await client.get(
                     url, headers=headers, params=params, timeout=self.timeout
                 )
             else:
-                async with httpx.AsyncClient(timeout=self.timeout) as cli:
-                    response = await cli.get(url, headers=headers, params=params)
+                response = await self.gw_client.request(
+                    method="GET",
+                    path=path,
+                    user_id="quality-surveillance-runner",
+                    roles="quality_oversight",
+                    change_reason=reason,
+                    params=params,
+                )
 
             if response.status_code != 200:
                 logger.warning(
@@ -138,7 +117,7 @@ class QualityExecutionClient:
             logger.warning(
                 "Error harvesting SDTM %s from execution service (%s): %s",
                 dom_upper,
-                url,
+                path,
                 e,
             )
             return {dom_upper: [], f"SUPP{dom_upper}": []}
@@ -152,20 +131,30 @@ class QualityExecutionClient:
         if study_id in mock_audit_events_records:
             return mock_audit_events_records[study_id]
 
-        url = f"{self.base_url}/api/v1/execution/audits"
-        headers = self._get_auth_headers(
-            change_reason="Quality surveillance audit trail harvest"
-        )
+        path = "/api/v1/execution/audits"
+        reason = "Quality surveillance audit trail harvest"
         params = {"study_id": study_id}
 
         try:
             if client is not None:
+                headers = self.gw_client.build_headers(
+                    user_id="quality-surveillance-runner",
+                    roles="quality_oversight",
+                    change_reason=reason,
+                )
+                url = f"{self.base_url}{path}"
                 response = await client.get(
                     url, headers=headers, params=params, timeout=self.timeout
                 )
             else:
-                async with httpx.AsyncClient(timeout=self.timeout) as cli:
-                    response = await cli.get(url, headers=headers, params=params)
+                response = await self.gw_client.request(
+                    method="GET",
+                    path=path,
+                    user_id="quality-surveillance-runner",
+                    roles="quality_oversight",
+                    change_reason=reason,
+                    params=params,
+                )
 
             if response.status_code == 200:
                 data = response.json()
@@ -186,20 +175,30 @@ class QualityExecutionClient:
         if study_id in mock_image_attachments_records:
             return mock_image_attachments_records[study_id]
 
-        url = f"{self.base_url}/api/v1/execution/attachments/images"
-        headers = self._get_auth_headers(
-            change_reason="Quality surveillance image perceptual hash harvest"
-        )
+        path = "/api/v1/execution/attachments/images"
+        reason = "Quality surveillance image perceptual hash harvest"
         params = {"study_id": study_id}
 
         try:
             if client is not None:
+                headers = self.gw_client.build_headers(
+                    user_id="quality-surveillance-runner",
+                    roles="quality_oversight",
+                    change_reason=reason,
+                )
+                url = f"{self.base_url}{path}"
                 response = await client.get(
                     url, headers=headers, params=params, timeout=self.timeout
                 )
             else:
-                async with httpx.AsyncClient(timeout=self.timeout) as cli:
-                    response = await cli.get(url, headers=headers, params=params)
+                response = await self.gw_client.request(
+                    method="GET",
+                    path=path,
+                    user_id="quality-surveillance-runner",
+                    roles="quality_oversight",
+                    change_reason=reason,
+                    params=params,
+                )
 
             if response.status_code == 200:
                 data = response.json()

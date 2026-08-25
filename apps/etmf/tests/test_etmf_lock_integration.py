@@ -2,9 +2,11 @@ import os
 from unittest.mock import patch
 
 import pytest
-from fastapi import HTTPException
 
 from apps.etmf.lock_client import (
+    TrialLockClientError,
+    register_trial_lock_status_resolver,
+    register_trial_lock_trigger_handler,
     trigger_global_trial_lock,
     verify_trial_lock_status,
 )
@@ -52,15 +54,15 @@ async def test_verify_trial_lock_status_locked():
 @pytest.mark.asyncio
 async def test_verify_trial_lock_status_error():
     """
-    Verify that verify_trial_lock_status raises an HTTPException (fails closed) if the execution service returns an error.
+    Verify that verify_trial_lock_status raises TrialLockClientError if the execution service returns an error.
     """
     import httpx
 
     mock_response = httpx.Response(500)
     with patch("httpx.AsyncClient.get", return_value=mock_response):
-        with pytest.raises(HTTPException) as exc_info:
+        with pytest.raises(TrialLockClientError) as exc_info:
             await verify_trial_lock_status(is_testing=False)
-        assert exc_info.value.status_code == 502
+        assert "Execution service returned 500" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
@@ -99,3 +101,31 @@ async def test_trigger_global_trial_lock():
             change_reason=reason,
         )
         assert verified is True
+
+
+@pytest.mark.asyncio
+async def test_pluggable_trial_lock_resolver_hooks():
+    """
+    Verify that pluggable resolver and trigger handler hooks allow test overrides.
+    """
+    async def custom_status_resolver():
+        return True
+
+    triggered_reasons = []
+
+    async def custom_trigger_handler(reason: str):
+        triggered_reasons.append(reason)
+
+    try:
+        register_trial_lock_status_resolver(custom_status_resolver)
+        register_trial_lock_trigger_handler(custom_trigger_handler)
+
+        status = await verify_trial_lock_status()
+        assert status is True
+
+        await trigger_global_trial_lock("Test trigger")
+        assert triggered_reasons == ["Test trigger"]
+
+    finally:
+        register_trial_lock_status_resolver(None)
+        register_trial_lock_trigger_handler(None)
