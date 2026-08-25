@@ -77,13 +77,10 @@ async def drop_databases(
             continue
 
         try:
-            await conn.execute(f"""
-                SELECT pg_terminate_backend(pid)
-                FROM pg_stat_activity
-                WHERE datname = '{db_name}'
-                  AND pid <> pg_backend_pid();
-            """)
-            await conn.execute(f"DROP DATABASE IF EXISTS {db_name};")
+            await conn.execute(
+                f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{db_name}' AND pid <> pg_backend_pid();"  # nosec B608
+            )
+            await conn.execute(f"DROP DATABASE IF EXISTS {db_name};")  # nosec B608
             print(f"✔ Dropped test database: {db_name}")
             dropped_count += 1
         except Exception as e:

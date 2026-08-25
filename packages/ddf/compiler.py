@@ -34,9 +34,22 @@ class DDFCompiler:
         self.normalizer = normalizer or USDMNormalizerStage()
         self.ir_builder = ir_builder or DDFSemanticIRBuilderStage()
         self.renderer = renderer or XmlLayoutRendererStage()
-        self.accessibility_stage = accessibility_stage or LayoutAccessibilityStage(
-            accessibility_validator
-        )
+        if accessibility_stage is not None:
+            if accessibility_stage.validator is None:
+                raise ValueError(
+                    "Accessibility validator port is uninitialized or missing. "
+                    "DDFCompiler requires an explicit AccessibilityValidatorPort instance."
+                )
+            self.accessibility_stage = accessibility_stage
+        elif accessibility_validator is not None:
+            self.accessibility_stage = LayoutAccessibilityStage(
+                accessibility_validator
+            )
+        else:
+            raise ValueError(
+                "Accessibility validator port is uninitialized or missing. "
+                "DDFCompiler requires an explicit AccessibilityValidatorPort instance."
+            )
 
     async def compile(
         self,

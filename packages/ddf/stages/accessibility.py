@@ -13,6 +13,11 @@ class LayoutAccessibilityStage:
     """Evaluates rendered form layouts against WCAG and visual layout standards."""
 
     def __init__(self, validator: AccessibilityValidatorPort | None = None) -> None:
+        if validator is None:
+            raise ValueError(
+                "Accessibility validator port is uninitialized or missing. "
+                "LayoutAccessibilityStage requires an explicit AccessibilityValidatorPort instance."
+            )
         self.validator = validator
 
     async def validate(self, openrosa_xml: str, form_hash: str) -> AccessibilityReport:
@@ -29,14 +34,8 @@ class LayoutAccessibilityStage:
             ValueError: If critical layout or accessibility violations are detected.
         """
         if self.validator is None:
-            return AccessibilityReport(
-                status="PASS",
-                form_hash=form_hash,
-                violations=[],
-                passes=[],
-                incomplete=[],
-                inapplicable=[],
-                layout_errors=[],
+            raise ValueError(
+                "Accessibility validator port is uninitialized or missing."
             )
 
         report = await self.validator.validate(openrosa_xml)

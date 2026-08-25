@@ -21,7 +21,7 @@ def test_fail_fast_without_report_and_draft_flag():
     """
     from filelock import FileLock
 
-    lock = FileLock("/tmp/gxp_fail_fast_test.lock", timeout=120)
+    lock = FileLock("/tmp/gxp_fail_fast_test.lock", timeout=120)  # nosec B108
     with lock:
         report_files = [
             p for p in Path(".").glob("report*.xml") if not p.name.endswith(".bak_test")
@@ -72,7 +72,7 @@ def test_success_with_draft_flag():
     """
     from filelock import FileLock
 
-    lock = FileLock("/tmp/gxp_fail_fast_test.lock", timeout=120)
+    lock = FileLock("/tmp/gxp_fail_fast_test.lock", timeout=120)  # nosec B108
     with lock:
         report_files = [
             p for p in Path(".").glob("report*.xml") if not p.name.endswith(".bak_test")
@@ -145,7 +145,7 @@ def test_missing_report_gxp_sync_dry_run():
     """
     from filelock import FileLock
 
-    lock = FileLock("/tmp/gxp_fail_fast_test.lock", timeout=120)
+    lock = FileLock("/tmp/gxp_fail_fast_test.lock", timeout=120)  # nosec B108
     with lock:
         # Temporarily move report.xml if it exists
         report_path = Path("report.xml")

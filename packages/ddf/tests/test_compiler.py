@@ -4,6 +4,7 @@ import pytest
 
 from packages.ddf import CompileOptions, DDFCompiler
 from packages.ddf.models import AccessibilityReport
+from packages.ddf.stages.accessibility import LayoutAccessibilityStage
 
 
 class MockAccessibilityValidator:
@@ -30,6 +31,28 @@ class MockAccessibilityValidator:
             form_hash="dummy_hash",
             passes=[{"id": "valid-layout"}],
         )
+
+
+def test_ddf_compiler_uninitialized_validator_raises():
+    """Verify that initializing DDFCompiler without an accessibility validator raises a ValueError configuration error."""
+    with pytest.raises(
+        ValueError, match="Accessibility validator port is uninitialized or missing"
+    ):
+        DDFCompiler()
+
+
+def test_layout_accessibility_stage_uninitialized_validator_raises():
+    """Verify that initializing LayoutAccessibilityStage without a validator raises ValueError."""
+    with pytest.raises(
+        ValueError, match="Accessibility validator port is uninitialized or missing"
+    ):
+        LayoutAccessibilityStage(validator=None)
+
+
+def test_compile_options_default_accessibility_validation_active():
+    """Verify that CompileOptions defaults to active accessibility auditing."""
+    opts = CompileOptions()
+    assert opts.validate_accessibility is True
 
 
 @pytest.mark.asyncio

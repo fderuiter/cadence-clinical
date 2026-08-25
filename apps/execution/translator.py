@@ -7,6 +7,7 @@ and transactional DDFJobRunner.
 from typing import Any
 
 from apps.execution.compiler.job_runner import DDFJobRunner
+from packages.ddf.ports import AccessibilityValidatorPort
 from packages.ddf.rules.compiler import (
     compile_condition_to_xpath,
     compile_to_xpath,
@@ -30,6 +31,7 @@ async def process_translation(
     user_id: str | None = None,
     change_reason: str | None = None,
     job_id: str | None = None,
+    accessibility_validator: AccessibilityValidatorPort | None = None,
 ) -> None:
     """Background worker that translates USDM payload into CDISC ODM and OpenRosa XML layouts.
 
@@ -42,6 +44,7 @@ async def process_translation(
         user_id: The user ID to attribute database modifications to.
         change_reason: The reason/justification for database modifications.
         job_id: The pre-generated UUID for the translation job.
+        accessibility_validator: Optional injected accessibility validator port adapter.
     """
     await DDFJobRunner.process_translation(
         study_id=study_id,
@@ -50,4 +53,5 @@ async def process_translation(
         user_id=user_id,
         change_reason=change_reason,
         job_id=job_id,
+        accessibility_validator=accessibility_validator,
     )
