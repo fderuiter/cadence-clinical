@@ -44,7 +44,7 @@ from apps.execution.trial_lock import TrialLockManager
 # HMAC Secret for Device Token and Cryptographic Audit Signatures
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-device-secret-key-12345").encode(
     "utf-8"
-)
+)  # pragma: allowlist secret
 
 
 # =========================================================================

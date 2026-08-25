@@ -12,7 +12,9 @@ test.describe("Clinical Workflows and ePRO Portal Tests", () => {
 
       // Verify page is loaded
       await expect(
-        page.locator(".card-title").filter({ hasText: "Subject eCRF Data Entry Form" })
+        page
+          .locator(".card-title")
+          .filter({ hasText: "Subject eCRF Data Entry Form" })
       ).toBeVisible();
 
       // Locate the query flag button next to pulse input

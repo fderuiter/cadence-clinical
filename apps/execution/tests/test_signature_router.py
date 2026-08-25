@@ -30,7 +30,7 @@ def _make_auth_headers(
     timestamp = str(time.time())
     secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(
         "utf-8"
-    )
+    )  # pragma: allowlist secret
     signature = generate_gateway_signature(
         user_id=user_id,
         roles=roles,

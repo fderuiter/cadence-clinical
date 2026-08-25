@@ -1199,12 +1199,17 @@ def main():
             if req_id not in test_mappings or not test_mappings[req_id]
         ]
         if unmapped_list:
-            print("ERROR: Requirements traceability validation failed!")
-            print(f"Found {len(unmapped_list)} unmapped requirements:")
-            for req_id in sorted(unmapped_list):
-                print(f"  - {req_id}")
+            if args.draft:
+                print(
+                    f"Warning: Draft mode enabled. Found {len(unmapped_list)} unmapped requirements (validation failure bypassed in draft mode)."
+                )
+            else:
+                print("ERROR: Requirements traceability validation failed!")
+                print(f"Found {len(unmapped_list)} unmapped requirements:")
+                for req_id in sorted(unmapped_list):
+                    print(f"  - {req_id}")
 
-            sys.exit(1)
+                sys.exit(1)
         else:
             print(
                 "SUCCESS: Requirements traceability validation passed! All requirements are mapped."

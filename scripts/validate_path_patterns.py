@@ -190,6 +190,7 @@ ALLOWED_ROOT_FILES = {
     "duplication_summary.json",
     ".python-version",
     "PROJECT.md",
+    "SECURITY.md",
     "TEST_INFRA.md",
     "CONTEXT.md",
     "REPORT.md",
