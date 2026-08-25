@@ -117,7 +117,8 @@ export const useAuthStore = defineStore("auth", {
     if (typeof window !== "undefined") {
       try {
         const stored =
-          (window.sessionStorage && window.sessionStorage.getItem("cadence_auth")) ||
+          (window.sessionStorage &&
+            window.sessionStorage.getItem("cadence_auth")) ||
           (window.localStorage && window.localStorage.getItem("cadence_auth"));
         if (stored) {
           saved = JSON.parse(stored);

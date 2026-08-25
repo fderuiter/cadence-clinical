@@ -14,6 +14,15 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+os.environ.setdefault(
+    "AUDIT_LOG_SECRET_KEY", "test-gxp-audit-secret-key-placeholder-abc"
+)
+os.environ.setdefault("GATEWAY_SECRET", "test-gateway-secret-key-placeholder-abc")
+os.environ.setdefault("SIGNING_SECRET", "test-signing-secret-key-placeholder-abc")
+os.environ.setdefault(
+    "INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-abc"
+)
+
 # Enforce Python 3.14+ runtime before loading standard modules or packages
 if sys.version_info < (3, 14):
     try:
@@ -418,8 +427,14 @@ def scan_tests(tests_dirs=None):
                                     continue
 
                             # Look for requirement tags in comments or docstrings in function body
-                            # e.g., @req:PRD-SYS-001 or @req:Trace-1
-                            tags_found = re.findall(r"@req:\s*([A-Za-z0-9_-]+)", line)
+                            # e.g., @req:PRD-SYS-001 or @req: PRD-SYS-184, PRD-CTMS-009
+                            tags_found = []
+                            for req_section in re.findall(
+                                r"@req:\s*([^\n\r#\"']+)", line
+                            ):
+                                tags_found.extend(
+                                    re.findall(r"([A-Za-z0-9_-]+)", req_section)
+                                )
                             for tag in tags_found:
                                 # Normalize Trace tags
                                 normalized_tag = tag

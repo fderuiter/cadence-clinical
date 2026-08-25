@@ -446,9 +446,15 @@ export interface DifferenceResult {
   new_value: any;
 }
 
-export type DigitizationJobStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
+export type DigitizationJobStatus =
+  "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
 
-export type DigitizationStage = "LAYOUT_PARSING" | "SOA_EXTRACTION" | "BIOMEDICAL_CONCEPT_MAPPING" | "ECRF_SYNTHESIS" | "USDM_COMPILATION";
+export type DigitizationStage =
+  | "LAYOUT_PARSING"
+  | "SOA_EXTRACTION"
+  | "BIOMEDICAL_CONCEPT_MAPPING"
+  | "ECRF_SYNTHESIS"
+  | "USDM_COMPILATION";
 
 export interface DispatchedTicketInfo {
   ticket_id: string;
@@ -460,7 +466,12 @@ export interface DispatchedTicketInfo {
   assignee_role: string;
 }
 
-export type DomainQueue = "DATA_CAPTURE_ECRF" | "SUBJECT_MANAGEMENT_RTSM" | "REGULATORY_COMPLIANCE" | "SITE_OPERATIONS" | "CLINICAL_OPERATIONS";
+export type DomainQueue =
+  | "DATA_CAPTURE_ECRF"
+  | "SUBJECT_MANAGEMENT_RTSM"
+  | "REGULATORY_COMPLIANCE"
+  | "SITE_OPERATIONS"
+  | "CLINICAL_OPERATIONS";
 
 export interface EligibilityCriterion {
   created_at?: string;
@@ -532,7 +543,12 @@ export interface ExtractedActivity {
 
 export interface ExtractedArm {
   name: string;
-  arm_type: "EXPERIMENTAL" | "ACTIVE_COMPARATOR" | "PLACEBO_COMPARATOR" | "SHAM_COMPARATOR" | "NO_INTERVENTION";
+  arm_type:
+    | "EXPERIMENTAL"
+    | "ACTIVE_COMPARATOR"
+    | "PLACEBO_COMPARATOR"
+    | "SHAM_COMPARATOR"
+    | "NO_INTERVENTION";
   description?: string | null;
   target_sample_size?: number | null;
 }
@@ -684,7 +700,11 @@ export interface LibraryObjectAmendRequest {
 
 export interface LibraryObjectListResponse {
   object?: string;
-  data: FormLibraryObjectDetail | DataElementLibraryObjectDetail | ArmLibraryObjectDetail | VisitLibraryObjectDetail[];
+  data:
+    | FormLibraryObjectDetail
+    | DataElementLibraryObjectDetail
+    | ArmLibraryObjectDetail
+    | VisitLibraryObjectDetail[];
   has_more: boolean;
   next_cursor?: string | null;
 }
@@ -694,7 +714,8 @@ export interface LibraryObjectTransitionRequest {
   change_reason: string;
 }
 
-export type LibraryStatus = "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED" | "ARCHIVED" | "REJECTED";
+export type LibraryStatus =
+  "DRAFT" | "IN_REVIEW" | "APPROVED" | "PUBLISHED" | "ARCHIVED" | "REJECTED";
 
 export interface LinkArmApplicabilityRequest {
   arm_id: string;
@@ -962,7 +983,22 @@ export interface SemanticDiffResponse {
   migration_directives?: MigrationDirective[];
 }
 
-export type SigningReason = "AUTHOR" | "REVIEW" | "APPROVAL" | "SPONSOR_APPROVAL" | "INVESTIGATOR_SIGNATURE" | "TECHNICAL_QC" | "CLINICAL_QC" | "DATA_LOCK" | "SYSTEM_SEAL" | "PROTOCOL_APPROVAL" | "REGULATORY_FORM_SIGNATURE" | "TRAINING_ACKNOWLEDGEMENT" | "SITE_VISIT_SIGN_OFF" | "ADJUDICATION_SIGN_OFF" | "ENDPOINT_ADJUDICATION";
+export type SigningReason =
+  | "AUTHOR"
+  | "REVIEW"
+  | "APPROVAL"
+  | "SPONSOR_APPROVAL"
+  | "INVESTIGATOR_SIGNATURE"
+  | "TECHNICAL_QC"
+  | "CLINICAL_QC"
+  | "DATA_LOCK"
+  | "SYSTEM_SEAL"
+  | "PROTOCOL_APPROVAL"
+  | "REGULATORY_FORM_SIGNATURE"
+  | "TRAINING_ACKNOWLEDGEMENT"
+  | "SITE_VISIT_SIGN_OFF"
+  | "ADJUDICATION_SIGN_OFF"
+  | "ENDPOINT_ADJUDICATION";
 
 export interface SoACellView {
   activity_id: string;
@@ -1142,7 +1178,8 @@ export interface TerminologyConcept {
   valid: boolean;
 }
 
-export type TerminologyEnum = "SNOMED-CT" | "LOINC" | "MedDRA" | "WHODrug" | "NCI" | "CDISC-CT";
+export type TerminologyEnum =
+  "SNOMED-CT" | "LOINC" | "MedDRA" | "WHODrug" | "NCI" | "CDISC-CT";
 
 export interface TerminologySearchResponse {
   query: string;
@@ -1355,4 +1392,3 @@ export interface apps__designer__library__UpdateVisitRequest {
   object_type?: string;
   payload: VisitPayload;
 }
-
