@@ -64,7 +64,7 @@ def python_type_to_zod(py_type: Any) -> str:
         return "z.array(z.any())"
 
     if origin is dict or py_type is dict:
-        return "z.record(z.any())"
+        return "z.record(z.string(), z.any())"
 
     if py_type is str:
         return "z.string()"
@@ -159,7 +159,7 @@ def main():
 
     lines.append('export * from "./graph-validator.js";')
     lines.append("")
-    epro_code = """export const EPROAnswersSchema = z.record(z.any()).superRefine((answers, ctx) => {
+    epro_code = """export const EPROAnswersSchema = z.record(z.string(), z.any()).superRefine((answers, ctx) => {
   if (answers == null || typeof answers !== "object") {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
