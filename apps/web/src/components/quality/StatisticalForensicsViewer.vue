@@ -17,27 +17,25 @@
             Centralized Statistical Monitoring (CSM) Forensics
           </h2>
           <p class="forensics-subtitle">
-            Cross-site digit preference surveillance (Benford's Law), terminal digit rounding bias, multivariate Mahalanobis distance matrices, and anomalous variance shrinkage sentinels for data fabrication detection.
+            Cross-site digit preference surveillance (Benford's Law), terminal
+            digit rounding bias, multivariate Mahalanobis distance matrices, and
+            anomalous variance shrinkage sentinels for data fabrication
+            detection.
           </p>
         </div>
 
         <div class="header-meta-group">
           <div class="meta-item">
-            <label
-              for="csm-study-select"
-              class="meta-label"
-            >Active Study:</label>
+            <label for="csm-study-select" class="meta-label"
+              >Active Study:</label
+            >
             <select
               id="csm-study-select"
               v-model="selectedStudyId"
               class="csm-select"
               @change="onStudyChange"
             >
-              <option
-                v-for="s in availableStudies"
-                :key="s"
-                :value="s"
-              >
+              <option v-for="s in availableStudies" :key="s" :value="s">
                 {{ s }}
               </option>
             </select>
@@ -46,9 +44,17 @@
             <span class="meta-label">Surveillance Status:</span>
             <span
               class="status-pill"
-              :class="anomalousSitesCount > 0 ? 'status-pill-critical' : 'status-pill-nominal'"
+              :class="
+                anomalousSitesCount > 0
+                  ? 'status-pill-critical'
+                  : 'status-pill-nominal'
+              "
             >
-              {{ anomalousSitesCount > 0 ? `${anomalousSitesCount} Outliers (P < 0.001)` : 'Nominal Conformity' }}
+              {{
+                anomalousSitesCount > 0
+                  ? `${anomalousSitesCount} Outliers (P < 0.001)`
+                  : "Nominal Conformity"
+              }}
             </span>
           </div>
         </div>
@@ -74,96 +80,77 @@
           :disabled="isLoading"
           @click="executeSurveillanceScan"
         >
-          <span class="btn-icon">🔍</span> {{ isLoading ? 'Analyzing Distributions...' : 'Run Statistical Scan' }}
+          <span class="btn-icon">🔍</span>
+          {{
+            isLoading ? "Analyzing Distributions..." : "Run Statistical Scan"
+          }}
         </button>
       </div>
     </header>
 
     <!-- KPI Summary Grid -->
     <div class="kpi-grid">
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         class="kpi-card"
         :class="{ 'kpi-card-alert': anomalousSitesCount > 0 }"
         @click="activeSubTab = 'overview'"
       >
-        <div class="kpi-icon">
-          🚨
-        </div>
+        <div class="kpi-icon">🚨</div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ anomalousSitesCount }} / {{ siteRecords.length || 0 }}
           </div>
-          <div class="kpi-label">
-            Anomalous Sites (P &lt; 0.001)
-          </div>
+          <div class="kpi-label">Anomalous Sites (P &lt; 0.001)</div>
         </div>
       </div>
 
-      <div
-        class="kpi-card"
-        @click="activeSubTab = 'benford'"
-      >
-        <div class="kpi-icon">
-          📊
-        </div>
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <div class="kpi-card" @click="activeSubTab = 'benford'">
+        <div class="kpi-icon">📊</div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ benfordNonConformCount }}
           </div>
-          <div class="kpi-label">
-            Benford's Law Deviations
-          </div>
+          <div class="kpi-label">Benford's Law Deviations</div>
         </div>
       </div>
 
-      <div
-        class="kpi-card"
-        @click="activeSubTab = 'rounding'"
-      >
-        <div class="kpi-icon">
-          🎯
-        </div>
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <div class="kpi-card" @click="activeSubTab = 'rounding'">
+        <div class="kpi-icon">🎯</div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ severeRoundingCount }}
           </div>
-          <div class="kpi-label">
-            Severe Rounding Bias Sites
-          </div>
+          <div class="kpi-label">Severe Rounding Bias Sites</div>
         </div>
       </div>
 
-      <div
-        class="kpi-card"
-        @click="activeSubTab = 'variance'"
-      >
-        <div class="kpi-icon">
-          🔬
-        </div>
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <div class="kpi-card" @click="activeSubTab = 'variance'">
+        <div class="kpi-icon">🔬</div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ varianceShrunkCount }}
           </div>
-          <div class="kpi-label">
-            Variance Shrinkage / Clones
-          </div>
+          <div class="kpi-label">Variance Shrinkage / Clones</div>
         </div>
       </div>
 
-      <div
-        class="kpi-card"
-        @click="activeSubTab = 'mahalanobis'"
-      >
-        <div class="kpi-icon">
-          🌐
-        </div>
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <div class="kpi-card" @click="activeSubTab = 'mahalanobis'">
+        <div class="kpi-icon">🌐</div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ maxMahalanobisDistance.toFixed(2) }}
           </div>
-          <div class="kpi-label">
-            Max Mahalanobis Distance (D_M)
-          </div>
+          <div class="kpi-label">Max Mahalanobis Distance (D_M)</div>
         </div>
       </div>
     </div>
@@ -248,28 +235,24 @@
       </button>
     </nav>
 
-
     <!-- Main Content Area -->
     <div class="tab-pane-container">
       <!-- TAB 1: Surveillance Matrix -->
-      <section
-        v-if="activeSubTab === 'overview'"
-        class="tab-pane"
-      >
+      <section v-if="activeSubTab === 'overview'" class="tab-pane">
         <div class="pane-header-row">
           <div class="pane-title-group">
             <h3 class="pane-title">
               Cross-Site Statistical Surveillance Heatmap
             </h3>
-            <span class="pane-caption">ICH E6(R2)/(R3) Risk-Based Centralized Monitoring Sentinel Grid</span>
+            <span class="pane-caption"
+              >ICH E6(R2)/(R3) Risk-Based Centralized Monitoring Sentinel
+              Grid</span
+            >
           </div>
 
           <div class="filter-actions">
             <label class="checkbox-label">
-              <input
-                v-model="showOnlyOutliers"
-                type="checkbox"
-              >
+              <input v-model="showOnlyOutliers" type="checkbox" />
               Show Anomalies Only (P &lt; 0.001)
             </label>
             <button
@@ -312,7 +295,7 @@
                     class="badge"
                     :class="getBenfordBadgeClass(site.benford.conformity)"
                   >
-                    {{ site.benford.conformity.replace('_', ' ') }}
+                    {{ site.benford.conformity.replace("_", " ") }}
                   </span>
                   <div class="sub-stat">
                     MAD: {{ site.benford.mad }} (p={{ site.benford.p_value }})
@@ -321,12 +304,21 @@
                 <td>
                   <span
                     class="badge"
-                    :class="getRoundingBadgeClass(site.terminal_digit.rounding_bias_tier)"
+                    :class="
+                      getRoundingBadgeClass(
+                        site.terminal_digit.rounding_bias_tier
+                      )
+                    "
                   >
-                    {{ site.terminal_digit.rounding_bias_tier.replace('_', ' ') }}
+                    {{
+                      site.terminal_digit.rounding_bias_tier.replace("_", " ")
+                    }}
                   </span>
                   <div class="sub-stat">
-                    0/5 Index: {{ (site.terminal_digit.zero_five_index * 100).toFixed(1) }}%
+                    0/5 Index:
+                    {{
+                      (site.terminal_digit.zero_five_index * 100).toFixed(1)
+                    }}%
                   </div>
                 </td>
                 <td>
@@ -336,7 +328,13 @@
                   </div>
                 </td>
                 <td>
-                  <span :class="site.variance_shrinkage.is_variance_shrunk ? 'text-critical' : 'text-nominal'">
+                  <span
+                    :class="
+                      site.variance_shrinkage.is_variance_shrunk
+                        ? 'text-critical'
+                        : 'text-nominal'
+                    "
+                  >
                     {{ site.variance_shrinkage.variance_ratio }}
                   </span>
                   <div class="sub-stat">
@@ -350,7 +348,9 @@
                       :style="{ width: `${site.composite_risk_score}%` }"
                       :class="getScoreColorClass(site.composite_risk_score)"
                     />
-                    <span class="score-text">{{ site.composite_risk_score }} / 100</span>
+                    <span class="score-text"
+                      >{{ site.composite_risk_score }} / 100</span
+                    >
                   </div>
                 </td>
                 <td>
@@ -373,7 +373,8 @@
                     <span
                       v-if="site.flagged_anomaly_reasons.length === 0"
                       class="text-muted"
-                    >Nominal</span>
+                      >Nominal</span
+                    >
                   </div>
                 </td>
                 <td>
@@ -391,16 +392,16 @@
       </section>
 
       <!-- TAB 2: Benford's Law Drilldown -->
-      <section
-        v-if="activeSubTab === 'benford'"
-        class="tab-pane"
-      >
+      <section v-if="activeSubTab === 'benford'" class="tab-pane">
         <div class="pane-header-row">
           <div class="pane-title-group">
             <h3 class="pane-title">
               Leading Digit Distribution against Benford's Law
             </h3>
-            <span class="pane-caption">P(d) = log10(1 + 1/d) with Chi-Square Goodness-of-Fit Testing (df = 8)</span>
+            <span class="pane-caption"
+              >P(d) = log10(1 + 1/d) with Chi-Square Goodness-of-Fit Testing (df
+              = 8)</span
+            >
           </div>
 
           <div class="site-drilldown-selector">
@@ -421,33 +422,38 @@
           </div>
         </div>
 
-        <div
-          v-if="currentDrilldownSite"
-          class="drilldown-grid"
-        >
+        <div v-if="currentDrilldownSite" class="drilldown-grid">
           <!-- Chart Visualizer -->
           <div class="chart-card">
             <div class="chart-header">
-              <h4>Observed Leading Digits vs Benford's Theoretical Distribution</h4>
+              <h4>
+                Observed Leading Digits vs Benford's Theoretical Distribution
+              </h4>
               <div class="chart-badges">
                 <span
                   class="badge"
-                  :class="getBenfordBadgeClass(currentDrilldownSite.benford.conformity)"
+                  :class="
+                    getBenfordBadgeClass(
+                      currentDrilldownSite.benford.conformity
+                    )
+                  "
                 >
                   {{ currentDrilldownSite.benford.conformity }}
                 </span>
-                <span class="stat-tag">MAD: {{ currentDrilldownSite.benford.mad }}</span>
-                <span class="stat-tag">Chi2: {{ currentDrilldownSite.benford.chi_square }} (p={{ currentDrilldownSite.benford.p_value }})</span>
+                <span class="stat-tag"
+                  >MAD: {{ currentDrilldownSite.benford.mad }}</span
+                >
+                <span class="stat-tag"
+                  >Chi2: {{ currentDrilldownSite.benford.chi_square }} (p={{
+                    currentDrilldownSite.benford.p_value
+                  }})</span
+                >
               </div>
             </div>
 
             <!-- Bar Chart (CSS-based) -->
             <div class="benford-bars-container">
-              <div
-                v-for="d in 9"
-                :key="d"
-                class="benford-col"
-              >
+              <div v-for="d in 9" :key="d" class="benford-col">
                 <div class="bars-pair">
                   <!-- Observed Bar -->
                   <div
@@ -458,7 +464,8 @@
                     <span
                       v-if="getObservedBenfordHeight(d) > 20"
                       class="bar-label"
-                    >{{ getObservedBenfordPct(d) }}%</span>
+                      >{{ getObservedBenfordPct(d) }}%</span
+                    >
                   </div>
                   <!-- Expected Benford Bar -->
                   <div
@@ -469,21 +476,22 @@
                     <span
                       v-if="getExpectedBenfordHeight(d) > 20"
                       class="bar-label"
-                    >{{ getExpectedBenfordPct(d) }}%</span>
+                      >{{ getExpectedBenfordPct(d) }}%</span
+                    >
                   </div>
                 </div>
-                <div class="digit-label">
-                  Digit {{ d }}
-                </div>
+                <div class="digit-label">Digit {{ d }}</div>
               </div>
             </div>
 
             <div class="chart-legend">
               <div class="legend-item">
-                <span class="legend-box box-observed" /> Observed Site Digit Frequency
+                <span class="legend-box box-observed" /> Observed Site Digit
+                Frequency
               </div>
               <div class="legend-item">
-                <span class="legend-box box-expected" /> Benford's Theoretical Curve
+                <span class="legend-box box-expected" /> Benford's Theoretical
+                Curve
               </div>
             </div>
           </div>
@@ -502,16 +510,27 @@
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="d in 9"
-                  :key="d"
-                >
-                  <td><strong>Digit {{ d }}</strong></td>
+                <tr v-for="d in 9" :key="d">
+                  <td>
+                    <strong>Digit {{ d }}</strong>
+                  </td>
                   <td>{{ getObservedBenfordCount(d) }}</td>
                   <td>{{ getObservedBenfordPct(d) }}%</td>
                   <td>{{ getExpectedBenfordPct(d) }}%</td>
-                  <td :class="Math.abs(getObservedBenfordPct(d) - getExpectedBenfordPct(d)) > 10 ? 'text-critical' : ''">
-                    {{ (getObservedBenfordPct(d) - getExpectedBenfordPct(d)).toFixed(1) }}%
+                  <td
+                    :class="
+                      Math.abs(
+                        getObservedBenfordPct(d) - getExpectedBenfordPct(d)
+                      ) > 10
+                        ? 'text-critical'
+                        : ''
+                    "
+                  >
+                    {{
+                      (
+                        getObservedBenfordPct(d) - getExpectedBenfordPct(d)
+                      ).toFixed(1)
+                    }}%
                   </td>
                 </tr>
               </tbody>
@@ -521,16 +540,16 @@
       </section>
 
       <!-- TAB 3: Rounding Bias Drilldown -->
-      <section
-        v-if="activeSubTab === 'rounding'"
-        class="tab-pane"
-      >
+      <section v-if="activeSubTab === 'rounding'" class="tab-pane">
         <div class="pane-header-row">
           <div class="pane-title-group">
             <h3 class="pane-title">
               Terminal Digit Uniform Distribution &amp; Rounding Bias
             </h3>
-            <span class="pane-caption">Detection of Human Rounding Preferences on Blood Pressure &amp; Vitals (0 &amp; 5 terminal digit clustering)</span>
+            <span class="pane-caption"
+              >Detection of Human Rounding Preferences on Blood Pressure &amp;
+              Vitals (0 &amp; 5 terminal digit clustering)</span
+            >
           </div>
 
           <div class="site-drilldown-selector">
@@ -551,10 +570,7 @@
           </div>
         </div>
 
-        <div
-          v-if="currentDrilldownSite"
-          class="drilldown-grid"
-        >
+        <div v-if="currentDrilldownSite" class="drilldown-grid">
           <!-- Terminal Digits Chart -->
           <div class="chart-card">
             <div class="chart-header">
@@ -562,22 +578,34 @@
               <div class="chart-badges">
                 <span
                   class="badge"
-                  :class="getRoundingBadgeClass(currentDrilldownSite.terminal_digit.rounding_bias_tier)"
+                  :class="
+                    getRoundingBadgeClass(
+                      currentDrilldownSite.terminal_digit.rounding_bias_tier
+                    )
+                  "
                 >
                   {{ currentDrilldownSite.terminal_digit.rounding_bias_tier }}
                 </span>
-                <span class="stat-tag">0/5 Index: {{ (currentDrilldownSite.terminal_digit.zero_five_index * 100).toFixed(1) }}% (Exp: 20%)</span>
-                <span class="stat-tag">Chi2: {{ currentDrilldownSite.terminal_digit.chi_square }} (p={{ currentDrilldownSite.terminal_digit.p_value }})</span>
+                <span class="stat-tag"
+                  >0/5 Index:
+                  {{
+                    (
+                      currentDrilldownSite.terminal_digit.zero_five_index * 100
+                    ).toFixed(1)
+                  }}% (Exp: 20%)</span
+                >
+                <span class="stat-tag"
+                  >Chi2:
+                  {{ currentDrilldownSite.terminal_digit.chi_square }} (p={{
+                    currentDrilldownSite.terminal_digit.p_value
+                  }})</span
+                >
               </div>
             </div>
 
             <!-- Terminal Bars -->
             <div class="terminal-bars-container">
-              <div
-                v-for="d in 10"
-                :key="d - 1"
-                class="terminal-col"
-              >
+              <div v-for="d in 10" :key="d - 1" class="terminal-col">
                 <div
                   class="terminal-bar"
                   :style="{ height: `${getTerminalDigitHeight(d - 1)}%` }"
@@ -586,7 +614,8 @@
                   <span
                     v-if="getTerminalDigitHeight(d - 1) > 20"
                     class="bar-label"
-                  >{{ getTerminalDigitPct(d - 1) }}%</span>
+                    >{{ getTerminalDigitPct(d - 1) }}%</span
+                  >
                 </div>
                 <div
                   class="digit-label"
@@ -599,11 +628,22 @@
 
             <div class="rounding-callout">
               <strong>Sentinel Finding:</strong>
-              <span v-if="currentDrilldownSite.terminal_digit.zero_five_index >= 0.45">
-                🚨 Severe rounding bias detected. {{ (currentDrilldownSite.terminal_digit.zero_five_index * 100).toFixed(1) }}% of continuous vitals end in 0 or 5, indicating clinical estimation rather than calibrated instrument measurement.
+              <span
+                v-if="
+                  currentDrilldownSite.terminal_digit.zero_five_index >= 0.45
+                "
+              >
+                🚨 Severe rounding bias detected.
+                {{
+                  (
+                    currentDrilldownSite.terminal_digit.zero_five_index * 100
+                  ).toFixed(1)
+                }}% of continuous vitals end in 0 or 5, indicating clinical
+                estimation rather than calibrated instrument measurement.
               </span>
               <span v-else>
-                🟢 Terminal digit distribution aligns with true continuous physiological measurements.
+                🟢 Terminal digit distribution aligns with true continuous
+                physiological measurements.
               </span>
             </div>
           </div>
@@ -615,8 +655,14 @@
               <div class="gauge-meter">
                 <div
                   class="gauge-fill"
-                  :style="{ width: `${currentDrilldownSite.terminal_digit.zero_five_index * 100}%` }"
-                  :class="currentDrilldownSite.terminal_digit.zero_five_index >= 0.45 ? 'gauge-critical' : 'gauge-nominal'"
+                  :style="{
+                    width: `${currentDrilldownSite.terminal_digit.zero_five_index * 100}%`,
+                  }"
+                  :class="
+                    currentDrilldownSite.terminal_digit.zero_five_index >= 0.45
+                      ? 'gauge-critical'
+                      : 'gauge-nominal'
+                  "
                 />
               </div>
               <div class="gauge-scale">
@@ -636,12 +682,17 @@
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="d in 10"
-                  :key="d - 1"
-                >
-                  <td><strong>Digit {{ d - 1 }}</strong></td>
-                  <td>{{ currentDrilldownSite.terminal_digit.observed_frequencies[String(d - 1)] || 0 }}</td>
+                <tr v-for="d in 10" :key="d - 1">
+                  <td>
+                    <strong>Digit {{ d - 1 }}</strong>
+                  </td>
+                  <td>
+                    {{
+                      currentDrilldownSite.terminal_digit.observed_frequencies[
+                        String(d - 1)
+                      ] || 0
+                    }}
+                  </td>
                   <td>{{ getTerminalDigitPct(d - 1) }}%</td>
                   <td>10.0%</td>
                 </tr>
@@ -652,16 +703,16 @@
       </section>
 
       <!-- TAB 4: Multivariate Mahalanobis & Correlation Matrices -->
-      <section
-        v-if="activeSubTab === 'mahalanobis'"
-        class="tab-pane"
-      >
+      <section v-if="activeSubTab === 'mahalanobis'" class="tab-pane">
         <div class="pane-header-row">
           <div class="pane-title-group">
             <h3 class="pane-title">
               Multivariate Observation Clusters &amp; Mahalanobis Distance
             </h3>
-            <span class="pane-caption">Assessment of Inter-Variable Correlation Structures and Site Centroid Distances</span>
+            <span class="pane-caption"
+              >Assessment of Inter-Variable Correlation Structures and Site
+              Centroid Distances</span
+            >
           </div>
 
           <div class="site-drilldown-selector">
@@ -682,10 +733,7 @@
           </div>
         </div>
 
-        <div
-          v-if="currentDrilldownSite"
-          class="drilldown-grid"
-        >
+        <div v-if="currentDrilldownSite" class="drilldown-grid">
           <div class="chart-card">
             <h4>Site Mean Vector vs Pooled Trial Population Centroid</h4>
             <table class="nested-table">
@@ -698,10 +746,13 @@
               </thead>
               <tbody>
                 <tr
-                  v-for="(val, varName) in currentDrilldownSite.multivariate.site_mean_vector"
+                  v-for="(val, varName) in currentDrilldownSite.multivariate
+                    .site_mean_vector"
                   :key="varName"
                 >
-                  <td><strong>{{ formatVarName(varName) }}</strong></td>
+                  <td>
+                    <strong>{{ formatVarName(varName) }}</strong>
+                  </td>
                   <td>{{ val }}</td>
                   <td>{{ getVariableCov(varName) }}</td>
                 </tr>
@@ -711,20 +762,29 @@
             <div class="metric-highlight-box mt-16">
               <div class="highlight-item">
                 <span class="highlight-label">Mahalanobis Distance (D_M):</span>
-                <span class="highlight-value">{{ currentDrilldownSite.multivariate.mahalanobis_distance }}</span>
+                <span class="highlight-value">{{
+                  currentDrilldownSite.multivariate.mahalanobis_distance
+                }}</span>
               </div>
               <div class="highlight-item">
                 <span class="highlight-label">Hotelling T^2 p-value:</span>
                 <span
                   class="highlight-value"
-                  :class="currentDrilldownSite.multivariate.mahalanobis_p_value < 0.001 ? 'text-critical' : ''"
+                  :class="
+                    currentDrilldownSite.multivariate.mahalanobis_p_value <
+                    0.001
+                      ? 'text-critical'
+                      : ''
+                  "
                 >
                   {{ currentDrilldownSite.multivariate.mahalanobis_p_value }}
                 </span>
               </div>
               <div class="highlight-item">
                 <span class="highlight-label">Frobenius Matrix Distance:</span>
-                <span class="highlight-value">{{ currentDrilldownSite.multivariate.correlation_matrix_distance }}</span>
+                <span class="highlight-value">{{
+                  currentDrilldownSite.multivariate.correlation_matrix_distance
+                }}</span>
               </div>
             </div>
           </div>
@@ -734,22 +794,28 @@
             <p class="section-desc">
               Cross-variable covariance matrix for site observation vectors:
             </p>
-            <pre class="json-preview">{{ JSON.stringify(currentDrilldownSite.multivariate.site_covariance_matrix, null, 2) }}</pre>
+            <pre class="json-preview">{{
+              JSON.stringify(
+                currentDrilldownSite.multivariate.site_covariance_matrix,
+                null,
+                2
+              )
+            }}</pre>
           </div>
         </div>
       </section>
 
       <!-- TAB 5: Variance Shrinkage & KL Divergence -->
-      <section
-        v-if="activeSubTab === 'variance'"
-        class="tab-pane"
-      >
+      <section v-if="activeSubTab === 'variance'" class="tab-pane">
         <div class="pane-header-row">
           <div class="pane-title-group">
             <h3 class="pane-title">
               Variance Shrinkage &amp; Data Fabrication Sentinels
             </h3>
-            <span class="pane-caption">Kullback-Leibler (KL) Divergence and Low-Standard-Deviation Fabrication Scanners</span>
+            <span class="pane-caption"
+              >Kullback-Leibler (KL) Divergence and Low-Standard-Deviation
+              Fabrication Scanners</span
+            >
           </div>
 
           <div class="site-drilldown-selector">
@@ -770,38 +836,61 @@
           </div>
         </div>
 
-        <div
-          v-if="currentDrilldownSite"
-          class="drilldown-grid"
-        >
+        <div v-if="currentDrilldownSite" class="drilldown-grid">
           <div class="chart-card">
             <h4>Site Variance vs Pooled Study Variance Ratio</h4>
             <div class="variance-gauge-box">
               <div class="ratio-display">
-                <span class="ratio-num">{{ currentDrilldownSite.variance_shrinkage.variance_ratio }}</span>
-                <span class="ratio-desc">Variance Ratio (s_site^2 / sigma_pool^2)</span>
+                <span class="ratio-num">{{
+                  currentDrilldownSite.variance_shrinkage.variance_ratio
+                }}</span>
+                <span class="ratio-desc"
+                  >Variance Ratio (s_site^2 / sigma_pool^2)</span
+                >
               </div>
               <div
                 class="status-pill"
-                :class="currentDrilldownSite.variance_shrinkage.is_variance_shrunk ? 'status-pill-critical' : 'status-pill-nominal'"
+                :class="
+                  currentDrilldownSite.variance_shrinkage.is_variance_shrunk
+                    ? 'status-pill-critical'
+                    : 'status-pill-nominal'
+                "
               >
-                {{ currentDrilldownSite.variance_shrinkage.is_variance_shrunk ? '🚨 ANOMALOUS VARIANCE SHRINKAGE' : '🟢 NORMAL VARIANCE' }}
+                {{
+                  currentDrilldownSite.variance_shrinkage.is_variance_shrunk
+                    ? "🚨 ANOMALOUS VARIANCE SHRINKAGE"
+                    : "🟢 NORMAL VARIANCE"
+                }}
               </div>
             </div>
 
             <div class="metric-highlight-box mt-16">
               <div class="highlight-item">
-                <span class="highlight-label">One-Tailed Shrinkage p-value:</span>
+                <span class="highlight-label"
+                  >One-Tailed Shrinkage p-value:</span
+                >
                 <span
                   class="highlight-value"
-                  :class="currentDrilldownSite.variance_shrinkage.variance_shrinkage_p_value < 0.001 ? 'text-critical' : ''"
+                  :class="
+                    currentDrilldownSite.variance_shrinkage
+                      .variance_shrinkage_p_value < 0.001
+                      ? 'text-critical'
+                      : ''
+                  "
                 >
-                  {{ currentDrilldownSite.variance_shrinkage.variance_shrinkage_p_value }}
+                  {{
+                    currentDrilldownSite.variance_shrinkage
+                      .variance_shrinkage_p_value
+                  }}
                 </span>
               </div>
               <div class="highlight-item">
-                <span class="highlight-label">Kullback-Leibler Divergence (D_KL):</span>
-                <span class="highlight-value">{{ currentDrilldownSite.variance_shrinkage.kl_divergence }}</span>
+                <span class="highlight-label"
+                  >Kullback-Leibler Divergence (D_KL):</span
+                >
+                <span class="highlight-value">{{
+                  currentDrilldownSite.variance_shrinkage.kl_divergence
+                }}</span>
               </div>
             </div>
 
@@ -811,7 +900,12 @@
             >
               <h4>⚠️ Fabrication Sentinel Warning</h4>
               <p>
-                This site exhibits an unnaturally low variance ratio ({{ currentDrilldownSite.variance_shrinkage.variance_ratio }} &le; 0.25). Such "too perfect" data indicates cloned observations, copy-pasting of patient records, or artificial numerical fabrication violating biological stochasticity.
+                This site exhibits an unnaturally low variance ratio ({{
+                  currentDrilldownSite.variance_shrinkage.variance_ratio
+                }}
+                &le; 0.25). Such "too perfect" data indicates cloned
+                observations, copy-pasting of patient records, or artificial
+                numerical fabrication violating biological stochasticity.
               </p>
             </div>
           </div>
@@ -820,22 +914,36 @@
             <h4>Forensic Risk Profile &amp; Anomaly Dossier</h4>
             <div class="dossier-summary">
               <div class="dossier-row">
-                <strong>Site ID:</strong> <span>{{ currentDrilldownSite.site_id }}</span>
+                <strong>Site ID:</strong>
+                <span>{{ currentDrilldownSite.site_id }}</span>
               </div>
               <div class="dossier-row">
-                <strong>Study:</strong> <span>{{ currentDrilldownSite.study_id }}</span>
+                <strong>Study:</strong>
+                <span>{{ currentDrilldownSite.study_id }}</span>
               </div>
               <div class="dossier-row">
-                <strong>Composite Risk Score:</strong> <span>{{ currentDrilldownSite.composite_risk_score }} / 100</span>
+                <strong>Composite Risk Score:</strong>
+                <span
+                  >{{ currentDrilldownSite.composite_risk_score }} / 100</span
+                >
               </div>
               <div class="dossier-row">
-                <strong>Risk Classification:</strong> <span>{{ currentDrilldownSite.risk_tier }}</span>
+                <strong>Risk Classification:</strong>
+                <span>{{ currentDrilldownSite.risk_tier }}</span>
               </div>
               <div class="dossier-row">
-                <strong>Outlier Flag:</strong> <span>{{ currentDrilldownSite.is_anomalous_outlier ? 'CRITICAL OUTLIER' : 'NOMINAL' }}</span>
+                <strong>Outlier Flag:</strong>
+                <span>{{
+                  currentDrilldownSite.is_anomalous_outlier
+                    ? "CRITICAL OUTLIER"
+                    : "NOMINAL"
+                }}</span>
               </div>
               <div class="dossier-row">
-                <strong>Active KRI Linkage:</strong> <span>{{ currentDrilldownSite.kri_evaluation_id || 'None Pending' }}</span>
+                <strong>Active KRI Linkage:</strong>
+                <span>{{
+                  currentDrilldownSite.kri_evaluation_id || "None Pending"
+                }}</span>
               </div>
             </div>
           </div>
@@ -843,17 +951,18 @@
       </section>
 
       <!-- TAB 6: Duplicate Patient Record Sentinel -->
-      <section
-        v-if="activeSubTab === 'duplicate-patients'"
-        class="tab-pane"
-      >
+      <section v-if="activeSubTab === 'duplicate-patients'" class="tab-pane">
         <div class="pane-header-row">
           <div class="pane-title-group">
             <h3 class="pane-title">
-              Cross-Site Duplicate Patient Record &amp; Vector Fingerprint Sentinel
+              Cross-Site Duplicate Patient Record &amp; Vector Fingerprint
+              Sentinel
             </h3>
             <p class="pane-description">
-              Surveillance under PRD-CSM-004 detecting identical or near-identical baseline clinical feature vectors across subjects (Demographics, 12-Lead ECG intervals, vital signs, and laboratory panels).
+              Surveillance under PRD-CSM-004 detecting identical or
+              near-identical baseline clinical feature vectors across subjects
+              (Demographics, 12-Lead ECG intervals, vital signs, and laboratory
+              panels).
             </p>
           </div>
           <div class="pane-action-group">
@@ -873,11 +982,15 @@
             <span class="metric-label">Flagged Duplicate Matches</span>
           </div>
           <div class="summary-metric">
-            <span class="metric-num text-danger">{{ crossSiteMatchesCount }}</span>
+            <span class="metric-num text-danger">{{
+              crossSiteMatchesCount
+            }}</span>
             <span class="metric-label">Cross-Site Duplications</span>
           </div>
           <div class="summary-metric">
-            <span class="metric-num text-warning">{{ (highestSimilarity * 100).toFixed(1) }}%</span>
+            <span class="metric-num text-warning"
+              >{{ (highestSimilarity * 100).toFixed(1) }}%</span
+            >
             <span class="metric-label">Max Vector Similarity</span>
           </div>
         </div>
@@ -893,14 +1006,15 @@
               <div class="finding-badge-row">
                 <span
                   class="badge"
-                  :class="match.severity === 'CRITICAL' ? 'badge-danger' : 'badge-warning'"
+                  :class="
+                    match.severity === 'CRITICAL'
+                      ? 'badge-danger'
+                      : 'badge-warning'
+                  "
                 >
                   {{ match.severity }}
                 </span>
-                <span
-                  v-if="match.is_cross_site"
-                  class="badge badge-danger"
-                >
+                <span v-if="match.is_cross_site" class="badge badge-danger">
                   CROSS-SITE MATCH
                 </span>
                 <span class="badge badge-standard">
@@ -914,9 +1028,7 @@
 
             <div class="finding-subjects-comparison">
               <div class="subject-box">
-                <div class="subject-role">
-                  Primary Subject
-                </div>
+                <div class="subject-role">Primary Subject</div>
                 <div class="subject-id-val">
                   {{ match.primary_subject_id }}
                 </div>
@@ -928,9 +1040,7 @@
                 ⮂ <span>VECTOR SIMILARITY</span> ⮃
               </div>
               <div class="subject-box">
-                <div class="subject-role">
-                  Matched Subject
-                </div>
+                <div class="subject-role">Matched Subject</div>
                 <div class="subject-id-val">
                   {{ match.matched_subject_id }}
                 </div>
@@ -950,30 +1060,57 @@
                 <div class="subscore-bar-bg">
                   <div
                     class="subscore-bar-fill"
-                    :style="{ width: `${(match.forensic_metadata?.sub_scores?.demographics || 1) * 100}%` }"
+                    :style="{
+                      width: `${(match.forensic_metadata?.sub_scores?.demographics || 1) * 100}%`,
+                    }"
                   />
                 </div>
-                <span class="subscore-val">{{ ((match.forensic_metadata?.sub_scores?.demographics || 1) * 100).toFixed(0) }}%</span>
+                <span class="subscore-val"
+                  >{{
+                    (
+                      (match.forensic_metadata?.sub_scores?.demographics || 1) *
+                      100
+                    ).toFixed(0)
+                  }}%</span
+                >
               </div>
               <div class="subscore-item">
                 <span class="subscore-label">ECG Intervals</span>
                 <div class="subscore-bar-bg">
                   <div
                     class="subscore-bar-fill"
-                    :style="{ width: `${(match.forensic_metadata?.sub_scores?.ecg_intervals || 1) * 100}%` }"
+                    :style="{
+                      width: `${(match.forensic_metadata?.sub_scores?.ecg_intervals || 1) * 100}%`,
+                    }"
                   />
                 </div>
-                <span class="subscore-val">{{ ((match.forensic_metadata?.sub_scores?.ecg_intervals || 1) * 100).toFixed(0) }}%</span>
+                <span class="subscore-val"
+                  >{{
+                    (
+                      (match.forensic_metadata?.sub_scores?.ecg_intervals ||
+                        1) * 100
+                    ).toFixed(0)
+                  }}%</span
+                >
               </div>
               <div class="subscore-item">
                 <span class="subscore-label">Lab Chemistry</span>
                 <div class="subscore-bar-bg">
                   <div
                     class="subscore-bar-fill"
-                    :style="{ width: `${(match.forensic_metadata?.sub_scores?.lab_panel || 1) * 100}%` }"
+                    :style="{
+                      width: `${(match.forensic_metadata?.sub_scores?.lab_panel || 1) * 100}%`,
+                    }"
                   />
                 </div>
-                <span class="subscore-val">{{ ((match.forensic_metadata?.sub_scores?.lab_panel || 1) * 100).toFixed(0) }}%</span>
+                <span class="subscore-val"
+                  >{{
+                    (
+                      (match.forensic_metadata?.sub_scores?.lab_panel || 1) *
+                      100
+                    ).toFixed(0)
+                  }}%</span
+                >
               </div>
             </div>
 
@@ -990,17 +1127,17 @@
       </section>
 
       <!-- TAB 7: Temporal & Behavioral Anomaly Scanner -->
-      <section
-        v-if="activeSubTab === 'temporal'"
-        class="tab-pane"
-      >
+      <section v-if="activeSubTab === 'temporal'" class="tab-pane">
         <div class="pane-header-row">
           <div class="pane-title-group">
             <h3 class="pane-title">
               Temporal &amp; Behavioral Data Entry Anomaly Scanner
             </h3>
             <p class="pane-description">
-              Surveillance under PRD-CSM-003 detecting suspicious data entry clusters during non-working hours, rapid burst submissions (&lt; 10s intervals), and identical inter-procedure elapsed intervals across subjects.
+              Surveillance under PRD-CSM-003 detecting suspicious data entry
+              clusters during non-working hours, rapid burst submissions (&lt;
+              10s intervals), and identical inter-procedure elapsed intervals
+              across subjects.
             </p>
           </div>
           <div class="pane-action-group">
@@ -1024,20 +1161,33 @@
             <div class="temporal-card-header">
               <span
                 class="badge"
-                :class="anom.severity === 'CRITICAL' ? 'badge-danger' : 'badge-warning'"
+                :class="
+                  anom.severity === 'CRITICAL'
+                    ? 'badge-danger'
+                    : 'badge-warning'
+                "
               >
                 {{ anom.anomaly_flag }}
               </span>
               <span class="site-tag">Site: {{ anom.primary_site_id }}</span>
             </div>
             <h4 class="temporal-title">
-              {{ anom.anomaly_flag === 'RAPID_BURST_SUBMISSION' ? 'Superhuman Rapid Burst Submissions' : (anom.anomaly_flag === 'IDENTICAL_PROCEDURE_INTERVALS' ? 'Identical Inter-Procedure Elapsed Intervals' : 'Off-Hours & Weekend Submission Cluster') }}
+              {{
+                anom.anomaly_flag === "RAPID_BURST_SUBMISSION"
+                  ? "Superhuman Rapid Burst Submissions"
+                  : anom.anomaly_flag === "IDENTICAL_PROCEDURE_INTERVALS"
+                    ? "Identical Inter-Procedure Elapsed Intervals"
+                    : "Off-Hours & Weekend Submission Cluster"
+              }}
             </h4>
             <p class="temporal-evidence">
               {{ anom.evidence_summary }}
             </p>
             <div class="temporal-footer">
-              <span class="confidence-text">Confidence: {{ (anom.confidence_score * 100).toFixed(0) }}%</span>
+              <span class="confidence-text"
+                >Confidence:
+                {{ (anom.confidence_score * 100).toFixed(0) }}%</span
+              >
               <button
                 class="csm-btn csm-btn-primary csm-btn-sm"
                 @click="dispatchInvestigationAlert(anom)"
@@ -1050,17 +1200,17 @@
       </section>
 
       <!-- TAB 8: Perceptual Image Hashing (pHash) Sentinel -->
-      <section
-        v-if="activeSubTab === 'phash'"
-        class="tab-pane"
-      >
+      <section v-if="activeSubTab === 'phash'" class="tab-pane">
         <div class="pane-header-row">
           <div class="pane-title-group">
             <h3 class="pane-title">
               Perceptual Image Hashing (pHash / dHash) Sentinel
             </h3>
             <p class="pane-description">
-              Surveillance under PRD-CSM-004 computing 64-bit DCT perceptual image hashes to detect reused, rotated, cropped, or brightness-adjusted radiological scans across clinical trial subjects.
+              Surveillance under PRD-CSM-004 computing 64-bit DCT perceptual
+              image hashes to detect reused, rotated, cropped, or
+              brightness-adjusted radiological scans across clinical trial
+              subjects.
             </p>
           </div>
           <div class="pane-action-group">
@@ -1083,8 +1233,13 @@
             <div class="phash-card-header">
               <div class="badge-row">
                 <span class="badge badge-danger">IMAGE REUSE DETECTED</span>
-                <span class="badge badge-warning">Transformation: {{ imgMatch.transformation_type || 'ROTATED_90' }}</span>
-                <span class="badge badge-standard">Hamming Distance: {{ imgMatch.hamming_distance }}</span>
+                <span class="badge badge-warning"
+                  >Transformation:
+                  {{ imgMatch.transformation_type || "ROTATED_90" }}</span
+                >
+                <span class="badge badge-standard"
+                  >Hamming Distance: {{ imgMatch.hamming_distance }}</span
+                >
               </div>
               <span class="similarity-score-pill">
                 {{ (imgMatch.similarity_score * 100).toFixed(1) }}% Match
@@ -1093,12 +1248,17 @@
 
             <div class="phash-comparison-view">
               <div class="image-preview-box">
-                <div class="image-mock-canvas">
-                  🩻 [CT Slice #101]
-                </div>
+                <div class="image-mock-canvas">🩻 [CT Slice #101]</div>
                 <div class="image-meta">
-                  <strong>Subject:</strong> {{ imgMatch.primary_subject_id }} ({{ imgMatch.primary_site_id }})<br>
-                  <strong>Hash:</strong> <code>{{ imgMatch.forensic_metadata?.primary_phash || 'a3f01b92c4d5e678' }}</code>
+                  <strong>Subject:</strong>
+                  {{ imgMatch.primary_subject_id }} ({{
+                    imgMatch.primary_site_id
+                  }})<br />
+                  <strong>Hash:</strong>
+                  <code>{{
+                    imgMatch.forensic_metadata?.primary_phash ||
+                    "a3f01b92c4d5e678"
+                  }}</code>
                 </div>
               </div>
 
@@ -1114,8 +1274,15 @@
                   🩻 [CT Slice #104 (Rotated)]
                 </div>
                 <div class="image-meta">
-                  <strong>Subject:</strong> {{ imgMatch.matched_subject_id }} ({{ imgMatch.matched_site_id }})<br>
-                  <strong>Hash:</strong> <code>{{ imgMatch.forensic_metadata?.matched_phash || 'a3f01b92c4d5e678' }}</code>
+                  <strong>Subject:</strong>
+                  {{ imgMatch.matched_subject_id }} ({{
+                    imgMatch.matched_site_id
+                  }})<br />
+                  <strong>Hash:</strong>
+                  <code>{{
+                    imgMatch.forensic_metadata?.matched_phash ||
+                    "a3f01b92c4d5e678"
+                  }}</code>
                 </div>
               </div>
             </div>
@@ -1137,22 +1304,12 @@
       </section>
     </div>
 
-
     <!-- Forensics Dossier Modal -->
-    <div
-      v-if="showDossierModal"
-      class="modal-backdrop"
-    >
-      <div
-        class="dossier-modal"
-        role="dialog"
-      >
+    <div v-if="showDossierModal" class="modal-backdrop">
+      <div class="dossier-modal" role="dialog">
         <div class="modal-header">
           <h3>21 CFR Part 11 Centralized Monitoring Inspection Snapshot</h3>
-          <button
-            class="close-btn"
-            @click="showDossierModal = false"
-          >
+          <button class="close-btn" @click="showDossierModal = false">
             &times;
           </button>
         </div>
@@ -1162,19 +1319,29 @@
           </div>
           <p><strong>Study:</strong> {{ selectedStudyId }}</p>
           <p><strong>Surveillance Run ID:</strong> {{ activeRun?.id }}</p>
-          <p><strong>Analysis Timestamp:</strong> {{ activeRun?.analysis_timestamp }}</p>
-          <p><strong>Total Sites:</strong> {{ activeRun?.total_sites }} | <strong>Total Observations:</strong> {{ activeRun?.total_observations }}</p>
-          <p><strong>Flagged Anomalous Sites (P &lt; 0.001):</strong> {{ activeRun?.anomalous_sites_count }}</p>
+          <p>
+            <strong>Analysis Timestamp:</strong>
+            {{ activeRun?.analysis_timestamp }}
+          </p>
+          <p>
+            <strong>Total Sites:</strong> {{ activeRun?.total_sites }} |
+            <strong>Total Observations:</strong>
+            {{ activeRun?.total_observations }}
+          </p>
+          <p>
+            <strong>Flagged Anomalous Sites (P &lt; 0.001):</strong>
+            {{ activeRun?.anomalous_sites_count }}
+          </p>
 
-          <h4 class="mt-16">
-            Flagged Outlier Summary
-          </h4>
+          <h4 class="mt-16">Flagged Outlier Summary</h4>
           <ul class="dossier-list">
             <li
-              v-for="site in siteRecords.filter(s => s.is_anomalous_outlier)"
+              v-for="site in siteRecords.filter((s) => s.is_anomalous_outlier)"
               :key="site.site_id"
             >
-              <strong>{{ site.site_id }}</strong> (Score: {{ site.composite_risk_score }}): {{ site.flagged_anomaly_reasons.join(', ') }}
+              <strong>{{ site.site_id }}</strong> (Score:
+              {{ site.composite_risk_score }}):
+              {{ site.flagged_anomaly_reasons.join(", ") }}
             </li>
           </ul>
         </div>
@@ -1198,15 +1365,19 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from "vue";
 
-const availableStudies = ref(['STUDY-ONC-2026', 'STUDY-CSM-2026', 'STUDY-CARDIO-401']);
-const selectedStudyId = ref('STUDY-CSM-2026');
-const activeSubTab = ref('overview');
+const availableStudies = ref([
+  "STUDY-ONC-2026",
+  "STUDY-CSM-2026",
+  "STUDY-CARDIO-401",
+]);
+const selectedStudyId = ref("STUDY-CSM-2026");
+const activeSubTab = ref("overview");
 const isLoading = ref(false);
 const showOnlyOutliers = ref(false);
 const showDossierModal = ref(false);
-const selectedDrilldownSiteId = ref('');
+const selectedDrilldownSiteId = ref("");
 
 const activeRun = ref(null);
 const siteRecords = ref([]);
@@ -1216,80 +1387,94 @@ const imageDuplicates = ref([]);
 
 // Computed KPIs
 const anomalousSitesCount = computed(() => {
-  return siteRecords.value.filter(s => s.is_anomalous_outlier).length;
+  return siteRecords.value.filter((s) => s.is_anomalous_outlier).length;
 });
 
 const crossSiteMatchesCount = computed(() => {
-  return duplicateMatches.value.filter(m => m.is_cross_site).length;
+  return duplicateMatches.value.filter((m) => m.is_cross_site).length;
 });
 
 const highestSimilarity = computed(() => {
   if (duplicateMatches.value.length === 0) return 0;
-  return Math.max(...duplicateMatches.value.map(m => m.similarity_score || 0));
+  return Math.max(
+    ...duplicateMatches.value.map((m) => m.similarity_score || 0)
+  );
 });
 
 const benfordNonConformCount = computed(() => {
-  return siteRecords.value.filter(s => s.benford?.conformity === 'NON_CONFORMING').length;
+  return siteRecords.value.filter(
+    (s) => s.benford?.conformity === "NON_CONFORMING"
+  ).length;
 });
 
-
 const severeRoundingCount = computed(() => {
-  return siteRecords.value.filter(s => s.terminal_digit?.rounding_bias_tier === 'SEVERE_ROUNDING').length;
+  return siteRecords.value.filter(
+    (s) => s.terminal_digit?.rounding_bias_tier === "SEVERE_ROUNDING"
+  ).length;
 });
 
 const varianceShrunkCount = computed(() => {
-  return siteRecords.value.filter(s => s.variance_shrinkage?.is_variance_shrunk).length;
+  return siteRecords.value.filter(
+    (s) => s.variance_shrinkage?.is_variance_shrunk
+  ).length;
 });
 
 const maxMahalanobisDistance = computed(() => {
   if (siteRecords.value.length === 0) return 0;
-  return Math.max(...siteRecords.value.map(s => s.multivariate?.mahalanobis_distance || 0));
+  return Math.max(
+    ...siteRecords.value.map((s) => s.multivariate?.mahalanobis_distance || 0)
+  );
 });
 
 const filteredSites = computed(() => {
   if (!showOnlyOutliers.value) return siteRecords.value;
-  return siteRecords.value.filter(s => s.is_anomalous_outlier);
+  return siteRecords.value.filter((s) => s.is_anomalous_outlier);
 });
 
 const currentDrilldownSite = computed(() => {
   if (!selectedDrilldownSiteId.value && siteRecords.value.length > 0) {
     return siteRecords.value[0];
   }
-  return siteRecords.value.find(s => s.site_id === selectedDrilldownSiteId.value) || siteRecords.value[0];
+  return (
+    siteRecords.value.find(
+      (s) => s.site_id === selectedDrilldownSiteId.value
+    ) || siteRecords.value[0]
+  );
 });
 
 // Helper formatting functions
 function getBenfordBadgeClass(conf) {
-  if (conf === 'CLOSE_CONFORMITY') return 'badge-success';
-  if (conf === 'ACCEPTABLE_CONFORMITY') return 'badge-info';
-  if (conf === 'MARGINAL_CONFORMITY') return 'badge-warning';
-  return 'badge-danger';
+  if (conf === "CLOSE_CONFORMITY") return "badge-success";
+  if (conf === "ACCEPTABLE_CONFORMITY") return "badge-info";
+  if (conf === "MARGINAL_CONFORMITY") return "badge-warning";
+  return "badge-danger";
 }
 
 function getRoundingBadgeClass(tier) {
-  if (tier === 'NORMAL') return 'badge-success';
-  if (tier === 'MODERATE_ROUNDING') return 'badge-warning';
-  return 'badge-danger';
+  if (tier === "NORMAL") return "badge-success";
+  if (tier === "MODERATE_ROUNDING") return "badge-warning";
+  return "badge-danger";
 }
 
 function getScoreColorClass(score) {
-  if (score >= 60) return 'score-critical';
-  if (score >= 35) return 'score-high';
-  if (score >= 15) return 'score-medium';
-  return 'score-low';
+  if (score >= 60) return "score-critical";
+  if (score >= 35) return "score-high";
+  if (score >= 15) return "score-medium";
+  return "score-low";
 }
 
 function formatFlagName(flag) {
-  return flag.replace(/_/g, ' ');
+  return flag.replace(/_/g, " ");
 }
 
 function formatVarName(name) {
-  return name.replace(/_/g, ' ').toUpperCase();
+  return name.replace(/_/g, " ").toUpperCase();
 }
 
 function getVariableCov(varName) {
-  const covMap = currentDrilldownSite.value?.multivariate?.site_covariance_matrix;
-  if (!covMap || !covMap[varName]) return 'N/A';
+  const covMap =
+    currentDrilldownSite.value?.multivariate?.site_covariance_matrix;
+  if (!covMap || !covMap[varName]) return "N/A";
   const val = covMap[varName][varName];
   return Math.sqrt(Math.max(val, 0)).toFixed(2);
 }
@@ -1298,7 +1483,9 @@ function getVariableCov(varName) {
 const theoreticalBenford = [30.1, 17.6, 12.5, 9.7, 7.9, 6.7, 5.8, 5.1, 4.6];
 
 function getObservedBenfordCount(d) {
-  return currentDrilldownSite.value?.benford?.observed_frequencies?.[String(d)] || 0;
+  return (
+    currentDrilldownSite.value?.benford?.observed_frequencies?.[String(d)] || 0
+  );
 }
 
 function getObservedBenfordPct(d) {
@@ -1323,7 +1510,10 @@ function getExpectedBenfordHeight(d) {
 
 // Terminal digit chart helpers
 function getTerminalDigitPct(d) {
-  const count = currentDrilldownSite.value?.terminal_digit?.observed_frequencies?.[String(d)] || 0;
+  const count =
+    currentDrilldownSite.value?.terminal_digit?.observed_frequencies?.[
+      String(d)
+    ] || 0;
   const total = currentDrilldownSite.value?.terminal_digit?.sample_size || 1;
   return Number(((count / total) * 100).toFixed(1));
 }
@@ -1335,7 +1525,7 @@ function getTerminalDigitHeight(d) {
 
 function drilldownSite(site) {
   selectedDrilldownSiteId.value = site.site_id;
-  activeSubTab.value = 'benford';
+  activeSubTab.value = "benford";
 }
 
 function onStudyChange() {
@@ -1352,35 +1542,85 @@ function generateSimulatedDataset() {
   setTimeout(() => {
     const mockSites = [
       {
-        id: 'rec-101',
-        run_id: 'run-001',
+        id: "rec-101",
+        run_id: "run-001",
         study_id: selectedStudyId.value,
-        site_id: 'SITE-101',
+        site_id: "SITE-101",
         sample_size: 60,
         benford: {
           sample_size: 60,
           chi_square: 4.2,
           p_value: 0.838,
           mad: 0.0052,
-          conformity: 'CLOSE_CONFORMITY',
-          observed_frequencies: { '1': 19, '2': 11, '3': 8, '4': 6, '5': 5, '6': 4, '7': 3, '8': 2, '9': 2 },
-          expected_frequencies: { '1': 18.06, '2': 10.57, '3': 7.5, '4': 5.81, '5': 4.75, '6': 4.02, '7': 3.48, '8': 3.07, '9': 2.75 },
+          conformity: "CLOSE_CONFORMITY",
+          observed_frequencies: {
+            1: 19,
+            2: 11,
+            3: 8,
+            4: 6,
+            5: 5,
+            6: 4,
+            7: 3,
+            8: 2,
+            9: 2,
+          },
+          expected_frequencies: {
+            1: 18.06,
+            2: 10.57,
+            3: 7.5,
+            4: 5.81,
+            5: 4.75,
+            6: 4.02,
+            7: 3.48,
+            8: 3.07,
+            9: 2.75,
+          },
         },
         terminal_digit: {
           sample_size: 180,
           chi_square: 2.4,
           p_value: 0.983,
           zero_five_index: 0.21,
-          rounding_bias_tier: 'NORMAL',
-          observed_frequencies: { '0': 19, '1': 18, '2': 17, '3': 19, '4': 18, '5': 19, '6': 18, '7': 17, '8': 18, '9': 17 },
-          expected_frequencies: { '0': 18, '1': 18, '2': 18, '3': 18, '4': 18, '5': 18, '6': 18, '7': 18, '8': 18, '9': 18 },
+          rounding_bias_tier: "NORMAL",
+          observed_frequencies: {
+            0: 19,
+            1: 18,
+            2: 17,
+            3: 19,
+            4: 18,
+            5: 19,
+            6: 18,
+            7: 17,
+            8: 18,
+            9: 17,
+          },
+          expected_frequencies: {
+            0: 18,
+            1: 18,
+            2: 18,
+            3: 18,
+            4: 18,
+            5: 18,
+            6: 18,
+            7: 18,
+            8: 18,
+            9: 18,
+          },
         },
         multivariate: {
           mahalanobis_distance: 0.45,
           mahalanobis_p_value: 0.892,
           correlation_matrix_distance: 0.12,
-          site_mean_vector: { systolic_bp: 121.5, diastolic_bp: 79.2, heart_rate: 71.8, lab_creatinine: 1.12 },
-          site_covariance_matrix: { systolic_bp: { systolic_bp: 144.0, diastolic_bp: 78.0 }, diastolic_bp: { diastolic_bp: 42.0 } },
+          site_mean_vector: {
+            systolic_bp: 121.5,
+            diastolic_bp: 79.2,
+            heart_rate: 71.8,
+            lab_creatinine: 1.12,
+          },
+          site_covariance_matrix: {
+            systolic_bp: { systolic_bp: 144.0, diastolic_bp: 78.0 },
+            diastolic_bp: { diastolic_bp: 42.0 },
+          },
         },
         variance_shrinkage: {
           variance_ratio: 0.94,
@@ -1389,39 +1629,86 @@ function generateSimulatedDataset() {
           is_variance_shrunk: false,
         },
         composite_risk_score: 5.0,
-        risk_tier: 'LOW',
+        risk_tier: "LOW",
         is_anomalous_outlier: false,
         flagged_anomaly_reasons: [],
       },
       {
-        id: 'rec-102',
-        run_id: 'run-001',
+        id: "rec-102",
+        run_id: "run-001",
         study_id: selectedStudyId.value,
-        site_id: 'SITE-BENFORD-ANOMALY',
+        site_id: "SITE-BENFORD-ANOMALY",
         sample_size: 60,
         benford: {
           sample_size: 60,
           chi_square: 337.4,
           p_value: 0.00001,
           mad: 0.1878,
-          conformity: 'NON_CONFORMING',
-          observed_frequencies: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 18, '8': 21, '9': 21 },
-          expected_frequencies: { '1': 18.06, '2': 10.57, '3': 7.5, '4': 5.81, '5': 4.75, '6': 4.02, '7': 3.48, '8': 3.07, '9': 2.75 },
+          conformity: "NON_CONFORMING",
+          observed_frequencies: {
+            1: 0,
+            2: 0,
+            3: 0,
+            4: 0,
+            5: 0,
+            6: 0,
+            7: 18,
+            8: 21,
+            9: 21,
+          },
+          expected_frequencies: {
+            1: 18.06,
+            2: 10.57,
+            3: 7.5,
+            4: 5.81,
+            5: 4.75,
+            6: 4.02,
+            7: 3.48,
+            8: 3.07,
+            9: 2.75,
+          },
         },
         terminal_digit: {
           sample_size: 180,
           chi_square: 3.1,
-          p_value: 0.960,
+          p_value: 0.96,
           zero_five_index: 0.19,
-          rounding_bias_tier: 'NORMAL',
-          observed_frequencies: { '0': 18, '1': 19, '2': 18, '3': 17, '4': 19, '5': 16, '6': 18, '7': 19, '8': 18, '9': 18 },
-          expected_frequencies: { '0': 18, '1': 18, '2': 18, '3': 18, '4': 18, '5': 18, '6': 18, '7': 18, '8': 18, '9': 18 },
+          rounding_bias_tier: "NORMAL",
+          observed_frequencies: {
+            0: 18,
+            1: 19,
+            2: 18,
+            3: 17,
+            4: 19,
+            5: 16,
+            6: 18,
+            7: 19,
+            8: 18,
+            9: 18,
+          },
+          expected_frequencies: {
+            0: 18,
+            1: 18,
+            2: 18,
+            3: 18,
+            4: 18,
+            5: 18,
+            6: 18,
+            7: 18,
+            8: 18,
+            9: 18,
+          },
         },
         multivariate: {
           mahalanobis_distance: 1.25,
           mahalanobis_p_value: 0.152,
           correlation_matrix_distance: 0.35,
-          site_mean_vector: { systolic_bp: 122.0, diastolic_bp: 80.1, heart_rate: 72.0, lab_creatinine: 8.2 },
+          site_mean_vector: {
+            systolic_bp: 122.0,
+            diastolic_bp: 80.1,
+            heart_rate: 72.0,
+            lab_creatinine: 8.2,
+          },
           site_covariance_matrix: { systolic_bp: { systolic_bp: 140.0 } },
         },
         variance_shrinkage: {
@@ -1431,81 +1718,178 @@ function generateSimulatedDataset() {
           is_variance_shrunk: false,
         },
         composite_risk_score: 65.0,
-        risk_tier: 'CRITICAL',
+        risk_tier: "CRITICAL",
         is_anomalous_outlier: true,
-        flagged_anomaly_reasons: ['BENFORD_NON_CONFORMANCE', 'DATA_FABRICATION_SUSPICION'],
+        flagged_anomaly_reasons: [
+          "BENFORD_NON_CONFORMANCE",
+          "DATA_FABRICATION_SUSPICION",
+        ],
       },
       {
-        id: 'rec-103',
-        run_id: 'run-001',
+        id: "rec-103",
+        run_id: "run-001",
         study_id: selectedStudyId.value,
-        site_id: 'SITE-ROUNDING-BIAS',
+        site_id: "SITE-ROUNDING-BIAS",
         sample_size: 60,
         benford: {
           sample_size: 60,
           chi_square: 8.5,
           p_value: 0.386,
           mad: 0.0105,
-          conformity: 'ACCEPTABLE_CONFORMITY',
-          observed_frequencies: { '1': 17, '2': 11, '3': 8, '4': 6, '5': 5, '6': 4, '7': 3, '8': 3, '9': 3 },
-          expected_frequencies: { '1': 18.06, '2': 10.57, '3': 7.5, '4': 5.81, '5': 4.75, '6': 4.02, '7': 3.48, '8': 3.07, '9': 2.75 },
+          conformity: "ACCEPTABLE_CONFORMITY",
+          observed_frequencies: {
+            1: 17,
+            2: 11,
+            3: 8,
+            4: 6,
+            5: 5,
+            6: 4,
+            7: 3,
+            8: 3,
+            9: 3,
+          },
+          expected_frequencies: {
+            1: 18.06,
+            2: 10.57,
+            3: 7.5,
+            4: 5.81,
+            5: 4.75,
+            6: 4.02,
+            7: 3.48,
+            8: 3.07,
+            9: 2.75,
+          },
         },
         terminal_digit: {
           sample_size: 180,
           chi_square: 727.1,
           p_value: 0.00001,
           zero_five_index: 0.95,
-          rounding_bias_tier: 'SEVERE_ROUNDING',
-          observed_frequencies: { '0': 82, '1': 0, '2': 0, '3': 0, '4': 0, '5': 98, '6': 0, '7': 0, '8': 0, '9': 0 },
-          expected_frequencies: { '0': 18, '1': 18, '2': 18, '3': 18, '4': 18, '5': 18, '6': 18, '7': 18, '8': 18, '9': 18 },
+          rounding_bias_tier: "SEVERE_ROUNDING",
+          observed_frequencies: {
+            0: 82,
+            1: 0,
+            2: 0,
+            3: 0,
+            4: 0,
+            5: 98,
+            6: 0,
+            7: 0,
+            8: 0,
+            9: 0,
+          },
+          expected_frequencies: {
+            0: 18,
+            1: 18,
+            2: 18,
+            3: 18,
+            4: 18,
+            5: 18,
+            6: 18,
+            7: 18,
+            8: 18,
+            9: 18,
+          },
         },
         multivariate: {
           mahalanobis_distance: 0.88,
-          mahalanobis_p_value: 0.620,
+          mahalanobis_p_value: 0.62,
           correlation_matrix_distance: 0.28,
-          site_mean_vector: { systolic_bp: 125.0, diastolic_bp: 80.0, heart_rate: 75.0, lab_creatinine: 1.15 },
+          site_mean_vector: {
+            systolic_bp: 125.0,
+            diastolic_bp: 80.0,
+            heart_rate: 75.0,
+            lab_creatinine: 1.15,
+          },
           site_covariance_matrix: { systolic_bp: { systolic_bp: 135.0 } },
         },
         variance_shrinkage: {
           variance_ratio: 0.85,
-          variance_shrinkage_p_value: 0.280,
+          variance_shrinkage_p_value: 0.28,
           kl_divergence: 0.32,
           is_variance_shrunk: false,
         },
         composite_risk_score: 55.0,
-        risk_tier: 'HIGH',
+        risk_tier: "HIGH",
         is_anomalous_outlier: true,
-        flagged_anomaly_reasons: ['TERMINAL_DIGIT_ROUNDING_BIAS'],
+        flagged_anomaly_reasons: ["TERMINAL_DIGIT_ROUNDING_BIAS"],
       },
       {
-        id: 'rec-104',
-        run_id: 'run-001',
+        id: "rec-104",
+        run_id: "run-001",
         study_id: selectedStudyId.value,
-        site_id: 'SITE-VARIANCE-SHRINKAGE',
+        site_id: "SITE-VARIANCE-SHRINKAGE",
         sample_size: 60,
         benford: {
           sample_size: 60,
           chi_square: 6.2,
           p_value: 0.625,
           mad: 0.0082,
-          conformity: 'ACCEPTABLE_CONFORMITY',
-          observed_frequencies: { '1': 18, '2': 11, '3': 7, '4': 6, '5': 5, '6': 4, '7': 4, '8': 3, '9': 2 },
-          expected_frequencies: { '1': 18.06, '2': 10.57, '3': 7.5, '4': 5.81, '5': 4.75, '6': 4.02, '7': 3.48, '8': 3.07, '9': 2.75 },
+          conformity: "ACCEPTABLE_CONFORMITY",
+          observed_frequencies: {
+            1: 18,
+            2: 11,
+            3: 7,
+            4: 6,
+            5: 5,
+            6: 4,
+            7: 4,
+            8: 3,
+            9: 2,
+          },
+          expected_frequencies: {
+            1: 18.06,
+            2: 10.57,
+            3: 7.5,
+            4: 5.81,
+            5: 4.75,
+            6: 4.02,
+            7: 3.48,
+            8: 3.07,
+            9: 2.75,
+          },
         },
         terminal_digit: {
           sample_size: 180,
           chi_square: 4.8,
           p_value: 0.778,
           zero_five_index: 0.22,
-          rounding_bias_tier: 'NORMAL',
-          observed_frequencies: { '0': 20, '1': 18, '2': 18, '3': 17, '4': 18, '5': 19, '6': 18, '7': 17, '8': 18, '9': 17 },
-          expected_frequencies: { '0': 18, '1': 18, '2': 18, '3': 18, '4': 18, '5': 18, '6': 18, '7': 18, '8': 18, '9': 18 },
+          rounding_bias_tier: "NORMAL",
+          observed_frequencies: {
+            0: 20,
+            1: 18,
+            2: 18,
+            3: 17,
+            4: 18,
+            5: 19,
+            6: 18,
+            7: 17,
+            8: 18,
+            9: 17,
+          },
+          expected_frequencies: {
+            0: 18,
+            1: 18,
+            2: 18,
+            3: 18,
+            4: 18,
+            5: 18,
+            6: 18,
+            7: 18,
+            8: 18,
+            9: 18,
+          },
         },
         multivariate: {
           mahalanobis_distance: 0.62,
           mahalanobis_p_value: 0.812,
           correlation_matrix_distance: 0.21,
-          site_mean_vector: { systolic_bp: 120.0, diastolic_bp: 80.0, heart_rate: 72.0, lab_creatinine: 1.05 },
+          site_mean_vector: {
+            systolic_bp: 120.0,
+            diastolic_bp: 80.0,
+            heart_rate: 72.0,
+            lab_creatinine: 1.05,
+          },
           site_covariance_matrix: { systolic_bp: { systolic_bp: 0.16 } },
         },
         variance_shrinkage: {
@@ -1515,9 +1899,12 @@ function generateSimulatedDataset() {
           is_variance_shrunk: true,
         },
         composite_risk_score: 70.0,
-        risk_tier: 'CRITICAL',
+        risk_tier: "CRITICAL",
         is_anomalous_outlier: true,
-        flagged_anomaly_reasons: ['ANOMALOUS_VARIANCE_SHRINKAGE', 'DATA_FABRICATION_SUSPICION'],
+        flagged_anomaly_reasons: [
+          "ANOMALOUS_VARIANCE_SHRINKAGE",
+          "DATA_FABRICATION_SUSPICION",
+        ],
       },
     ];
 
@@ -1526,33 +1913,35 @@ function generateSimulatedDataset() {
 
     duplicateMatches.value = [
       {
-        primary_subject_id: 'SUBJ-101-001',
-        primary_site_id: 'SITE-101',
-        matched_subject_id: 'SUBJ-104-099',
-        matched_site_id: 'SITE-104',
+        primary_subject_id: "SUBJ-101-001",
+        primary_site_id: "SITE-101",
+        matched_subject_id: "SUBJ-104-099",
+        matched_site_id: "SITE-104",
         is_cross_site: true,
         similarity_score: 0.985,
         confidence_score: 0.98,
-        severity: 'CRITICAL',
-        evidence_summary: 'Cross-Site duplicate clinical vector match between SUBJ-101-001 (SITE-101) and SUBJ-104-099 (SITE-104) with 98.5% composite vector similarity (100% ECG intervals & Lab panels).',
+        severity: "CRITICAL",
+        evidence_summary:
+          "Cross-Site duplicate clinical vector match between SUBJ-101-001 (SITE-101) and SUBJ-104-099 (SITE-104) with 98.5% composite vector similarity (100% ECG intervals & Lab panels).",
         forensic_metadata: {
           sub_scores: {
             demographics: 0.96,
-            ecg_intervals: 1.00,
-            lab_panel: 1.00,
+            ecg_intervals: 1.0,
+            lab_panel: 1.0,
           },
         },
       },
       {
-        primary_subject_id: 'SUBJ-102-008',
-        primary_site_id: 'SITE-102',
-        matched_subject_id: 'SUBJ-102-014',
-        matched_site_id: 'SITE-102',
+        primary_subject_id: "SUBJ-102-008",
+        primary_site_id: "SITE-102",
+        matched_subject_id: "SUBJ-102-014",
+        matched_site_id: "SITE-102",
         is_cross_site: false,
         similarity_score: 0.892,
         confidence_score: 0.89,
-        severity: 'MAJOR',
-        evidence_summary: 'Intra-Site potential duplicate subject record detected with 89.2% baseline feature similarity.',
+        severity: "MAJOR",
+        evidence_summary:
+          "Intra-Site potential duplicate subject record detected with 89.2% baseline feature similarity.",
         forensic_metadata: {
           sub_scores: {
             demographics: 0.88,
@@ -1565,42 +1954,46 @@ function generateSimulatedDataset() {
 
     temporalAnomalies.value = [
       {
-        primary_site_id: 'SITE-TEMPORAL-ANOMALY',
-        anomaly_flag: 'OFF_HOURS_BURST_ANOMALY',
-        severity: 'CRITICAL',
+        primary_site_id: "SITE-TEMPORAL-ANOMALY",
+        anomaly_flag: "OFF_HOURS_BURST_ANOMALY",
+        severity: "CRITICAL",
         confidence_score: 0.95,
-        evidence_summary: "Site 'SITE-TEMPORAL-ANOMALY' exhibits 78.4% off-hours entries, 8 weekend submissions, and 6 midnight entries.",
+        evidence_summary:
+          "Site 'SITE-TEMPORAL-ANOMALY' exhibits 78.4% off-hours entries, 8 weekend submissions, and 6 midnight entries.",
       },
       {
-        primary_site_id: 'SITE-TEMPORAL-ANOMALY',
-        anomaly_flag: 'RAPID_BURST_SUBMISSION',
-        severity: 'CRITICAL',
+        primary_site_id: "SITE-TEMPORAL-ANOMALY",
+        anomaly_flag: "RAPID_BURST_SUBMISSION",
+        severity: "CRITICAL",
         confidence_score: 0.92,
-        evidence_summary: "Site 'SITE-TEMPORAL-ANOMALY' triggered rapid burst submission sentinel: 10 entries submitted at < 4.0s intervals, indicating scripted bot entry.",
+        evidence_summary:
+          "Site 'SITE-TEMPORAL-ANOMALY' triggered rapid burst submission sentinel: 10 entries submitted at < 4.0s intervals, indicating scripted bot entry.",
       },
       {
-        primary_site_id: 'SITE-IDENTICAL-INTERVALS',
-        anomaly_flag: 'IDENTICAL_PROCEDURE_INTERVALS',
-        severity: 'CRITICAL',
+        primary_site_id: "SITE-IDENTICAL-INTERVALS",
+        anomaly_flag: "IDENTICAL_PROCEDURE_INTERVALS",
+        severity: "CRITICAL",
         confidence_score: 0.98,
-        evidence_summary: "Site 'SITE-IDENTICAL-INTERVALS' recorded identical procedure elapsed interval of 870s (14m 30s) across 5 different subjects for 'VITALS_TO_BLOOD_DRAW'.",
+        evidence_summary:
+          "Site 'SITE-IDENTICAL-INTERVALS' recorded identical procedure elapsed interval of 870s (14m 30s) across 5 different subjects for 'VITALS_TO_BLOOD_DRAW'.",
       },
     ];
 
     imageDuplicates.value = [
       {
-        primary_subject_id: 'SUBJ-101-001',
-        primary_site_id: 'SITE-101',
-        matched_subject_id: 'SUBJ-104-099',
-        matched_site_id: 'SITE-104',
+        primary_subject_id: "SUBJ-101-001",
+        primary_site_id: "SITE-101",
+        matched_subject_id: "SUBJ-104-099",
+        matched_site_id: "SITE-104",
         hamming_distance: 2,
         similarity_score: 0.969,
-        transformation_type: 'ROTATED_90',
-        severity: 'CRITICAL',
-        evidence_summary: "Medical image duplication detected (CHEST_CT): Image 'IMG-101-BL' for Subject 'SUBJ-101-001' (SITE-101) matches Image 'IMG-104-099' for Subject 'SUBJ-104-099' (SITE-104) with Hamming distance 2 (96.9% similarity, 90-deg rotation).",
+        transformation_type: "ROTATED_90",
+        severity: "CRITICAL",
+        evidence_summary:
+          "Medical image duplication detected (CHEST_CT): Image 'IMG-101-BL' for Subject 'SUBJ-101-001' (SITE-101) matches Image 'IMG-104-099' for Subject 'SUBJ-104-099' (SITE-104) with Hamming distance 2 (96.9% similarity, 90-deg rotation).",
         forensic_metadata: {
-          primary_phash: 'd4e5f60123456789',
-          matched_phash: 'd4e5f6012345678b',
+          primary_phash: "d4e5f60123456789",
+          matched_phash: "d4e5f6012345678b",
         },
       },
     ];
@@ -1612,7 +2005,8 @@ function generateSimulatedDataset() {
       analysis_timestamp: new Date().toISOString(),
       total_sites: mockSites.length,
       total_observations: mockSites.length * 60,
-      anomalous_sites_count: mockSites.filter(s => s.is_anomalous_outlier).length,
+      anomalous_sites_count: mockSites.filter((s) => s.is_anomalous_outlier)
+        .length,
     };
     isLoading.value = false;
   }, 400);
@@ -1626,7 +2020,9 @@ function runDuplicatePatientScan() {
   isLoading.value = true;
   setTimeout(() => {
     isLoading.value = false;
-    alert('Duplicate Patient Record Scan completed: 2 matches identified (1 cross-site CRITICAL).');
+    alert(
+      "Duplicate Patient Record Scan completed: 2 matches identified (1 cross-site CRITICAL)."
+    );
   }, 350);
 }
 
@@ -1634,7 +2030,9 @@ function runTemporalScan() {
   isLoading.value = true;
   setTimeout(() => {
     isLoading.value = false;
-    alert('Temporal & Behavioral Anomaly Scan completed: 3 timing anomalies detected.');
+    alert(
+      "Temporal & Behavioral Anomaly Scan completed: 3 timing anomalies detected."
+    );
   }, 350);
 }
 
@@ -1642,22 +2040,27 @@ function runImagePhashScan() {
   isLoading.value = true;
   setTimeout(() => {
     isLoading.value = false;
-    alert('Perceptual Image Hashing (pHash) Scan completed: 1 rotated duplicate scan detected across sites.');
+    alert(
+      "Perceptual Image Hashing (pHash) Scan completed: 1 rotated duplicate scan detected across sites."
+    );
   }, 350);
 }
 
 function dispatchInvestigationAlert(item) {
-  alert(`Dispatched 21 CFR Part 11 Data Integrity Investigation Deviation for ${item.primary_subject_id || item.primary_site_id} with full cryptographic audit trail.`);
+  alert(
+    `Dispatched 21 CFR Part 11 Data Integrity Investigation Deviation for ${item.primary_subject_id || item.primary_site_id} with full cryptographic audit trail.`
+  );
 }
 
 function dispatchAllKriAlerts() {
-  alert(`Successfully dispatched automated KRI breach events for ${anomalousSitesCount.value} outlier sites under ICH E6(R2)/(R3).`);
+  alert(
+    `Successfully dispatched automated KRI breach events for ${anomalousSitesCount.value} outlier sites under ICH E6(R2)/(R3).`
+  );
 }
 
 onMounted(() => {
   generateSimulatedDataset();
 });
-
 </script>
 
 <style scoped>
@@ -1672,7 +2075,14 @@ onMounted(() => {
   gap: 20px;
   width: 100%;
   color: var(--primary, #0f172a);
-  font-family: var(--font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  font-family: var(
+    --font,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif
+  );
 }
 
 /* Header */
@@ -1891,7 +2301,9 @@ onMounted(() => {
   align-items: center;
   gap: 14px;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .kpi-card:hover {
@@ -2161,7 +2573,8 @@ onMounted(() => {
   }
 }
 
-.chart-card, .metrics-card {
+.chart-card,
+.metrics-card {
   background-color: #f8fafc;
   border: 1px solid var(--border, #e2e8f0);
   border-radius: 10px;
@@ -2879,4 +3292,3 @@ onMounted(() => {
   color: #64748b;
 }
 </style>
-

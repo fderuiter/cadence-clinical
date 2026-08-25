@@ -58,9 +58,14 @@ describe("Clinical Store & Auth Store - Subject Screening & CRC Gating Specifica
       criterion_evaluations: [],
     });
 
-    const result = await store.screenSubject("SUBJ-SCREEN-1", { study_id: "CADENCE-101" });
+    const result = await store.screenSubject("SUBJ-SCREEN-1", {
+      study_id: "CADENCE-101",
+    });
 
-    expect(executionService.screenSubject).toHaveBeenCalledWith("SUBJ-SCREEN-1", { study_id: "CADENCE-101" });
+    expect(executionService.screenSubject).toHaveBeenCalledWith(
+      "SUBJ-SCREEN-1",
+      { study_id: "CADENCE-101" }
+    );
     expect(result.eligible).toBe(true);
 
     const subject = store.subjects.find((s) => s.id === "SUBJ-SCREEN-1");
@@ -69,7 +74,9 @@ describe("Clinical Store & Auth Store - Subject Screening & CRC Gating Specifica
     expect(subject?.consentColor).toBe("green");
 
     // Verify ledger block was added
-    const screenBlock = store.ledgerBlocks.find((b) => b.action === "SUBJECT_SCREEN");
+    const screenBlock = store.ledgerBlocks.find(
+      (b) => b.action === "SUBJECT_SCREEN"
+    );
     expect(screenBlock).toBeDefined();
     expect((screenBlock?.details as any)?.subject_id).toBe("SUBJ-SCREEN-1");
     expect((screenBlock?.details as any)?.eligible).toBe(true);
@@ -85,7 +92,9 @@ describe("Clinical Store & Auth Store - Subject Screening & CRC Gating Specifica
       criterion_evaluations: [],
     });
 
-    const result = await store.screenSubject("SUBJ-SCREEN-2", { study_id: "CADENCE-101" });
+    const result = await store.screenSubject("SUBJ-SCREEN-2", {
+      study_id: "CADENCE-101",
+    });
 
     expect(result.eligible).toBe(false);
 

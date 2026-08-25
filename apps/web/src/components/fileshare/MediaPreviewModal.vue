@@ -1,4 +1,6 @@
 <template>
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div
     ref="modalRef"
     class="modal-backdrop"
@@ -7,24 +9,20 @@
     :aria-label="'Secure Media Preview: ' + (fileRecord?.filename || 'File')"
     @click.self="$emit('close')"
   >
-    <div
-      class="modal-card media-preview-modal"
-      @contextmenu.prevent
-    >
+    <div class="modal-card media-preview-modal" @contextmenu.prevent>
       <!-- Header -->
       <div class="modal-header">
         <div class="header-details">
           <h3>
-            <span
-              class="secure-icon"
-              aria-hidden="true"
-            >🔒</span>
+            <span class="secure-icon" aria-hidden="true">🔒</span>
             Secure Regulated Viewer — {{ fileRecord?.filename }}
           </h3>
           <p class="gxp-tracking-subtitle">
             System ID: <code>{{ fileRecord?.id }}</code> | Version:
             <strong>v{{ fileRecord?.version_index || 1 }}.0</strong> | MIME:
-            <code>{{ fileRecord?.mime_type || "application/octet-stream" }}</code>
+            <code>{{
+              fileRecord?.mime_type || "application/octet-stream"
+            }}</code>
           </p>
         </div>
         <div class="header-actions">
@@ -53,10 +51,9 @@
           >
             <span class="badge-icon">✅</span>
             <span class="badge-label">Approved</span>
-            <span
-              v-if="fileRecord?.approved_by"
-              class="badge-signer font-mono"
-            >by {{ fileRecord.approved_by }}</span>
+            <span v-if="fileRecord?.approved_by" class="badge-signer font-mono"
+              >by {{ fileRecord.approved_by }}</span
+            >
           </div>
           <button
             v-if="canApprove && !isApproved"
@@ -100,22 +97,26 @@
               <span
                 class="meta-value font-mono"
                 :title="fileRecord?.filename"
-              >{{ fileRecord?.filename }}</span>
+                >{{ fileRecord?.filename }}</span
+              >
             </div>
             <div class="meta-row">
               <span class="meta-label">Study ID:</span>
-              <span class="meta-value font-mono">{{ fileRecord?.study_id }}</span>
+              <span class="meta-value font-mono">{{
+                fileRecord?.study_id
+              }}</span>
             </div>
-            <div
-              v-if="fileRecord?.site_id"
-              class="meta-row"
-            >
+            <div v-if="fileRecord?.site_id" class="meta-row">
               <span class="meta-label">Site ID:</span>
-              <span class="meta-value font-mono">{{ fileRecord?.site_id }}</span>
+              <span class="meta-value font-mono">{{
+                fileRecord?.site_id
+              }}</span>
             </div>
             <div class="meta-row">
               <span class="meta-label">File Size:</span>
-              <span class="meta-value">{{ formatFileSize(fileRecord?.size_bytes) }}</span>
+              <span class="meta-value">{{
+                formatFileSize(fileRecord?.size_bytes)
+              }}</span>
             </div>
             <div class="meta-row">
               <span class="meta-label">Status:</span>
@@ -128,11 +129,15 @@
             </div>
             <div class="meta-row">
               <span class="meta-label">Uploaded By:</span>
-              <span class="meta-value font-mono">{{ fileRecord?.uploaded_by || fileRecord?.created_by }}</span>
+              <span class="meta-value font-mono">{{
+                fileRecord?.uploaded_by || fileRecord?.created_by
+              }}</span>
             </div>
             <div class="meta-row">
               <span class="meta-label">Uploaded At:</span>
-              <span class="meta-value">{{ formatDate(fileRecord?.uploaded_at || fileRecord?.created_at) }}</span>
+              <span class="meta-value">{{
+                formatDate(fileRecord?.uploaded_at || fileRecord?.created_at)
+              }}</span>
             </div>
           </div>
 
@@ -142,16 +147,19 @@
             <div class="change-reason-block">
               <h5>Change Justification:</h5>
               <p class="reason-text">
-                {{ fileRecord?.reason_for_change || "Standard regulated file ingestion." }}
+                {{
+                  fileRecord?.reason_for_change ||
+                  "Standard regulated file ingestion."
+                }}
               </p>
             </div>
             <div class="checksum-block">
               <h5>SHA-256 Digest:</h5>
-              <code
-                class="checksum-text"
-                :title="fileRecord?.checksum_sha256"
-              >
-                {{ fileRecord?.checksum_sha256 || "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" }}
+              <code class="checksum-text" :title="fileRecord?.checksum_sha256">
+                {{
+                  fileRecord?.checksum_sha256 ||
+                  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }}
               </code>
             </div>
           </div>
@@ -160,18 +168,19 @@
           <div class="meta-section border-top">
             <h4>Security Context</h4>
             <div class="manifest-card signed">
-              <p class="sign-status">
-                🛡️ PROTECTED VIEW ENFORCED
-              </p>
+              <p class="sign-status">🛡️ PROTECTED VIEW ENFORCED</p>
               <p class="signer-meta">
                 Viewer: <strong>{{ currentUserId }}</strong>
               </p>
               <p class="signer-meta">
-                Role Context: <span>{{ activeUserRoles.join(", ") || "Authenticated" }}</span>
+                Role Context:
+                <span>{{ activeUserRoles.join(", ") || "Authenticated" }}</span>
               </p>
               <p class="signer-meta">
                 Download:
-                <strong>{{ canDownload ? "Permitted" : "Restricted (View-Only)" }}</strong>
+                <strong>{{
+                  canDownload ? "Permitted" : "Restricted (View-Only)"
+                }}</strong>
               </p>
             </div>
           </div>
@@ -184,25 +193,16 @@
           >
             <h4>Document Approval</h4>
             <div class="manifest-card approved">
-              <p class="sign-status text-success font-bold">
-                ✅ Approved
+              <p class="sign-status text-success font-bold">✅ Approved</p>
+              <p v-if="fileRecord?.approved_by" class="signer-meta">
+                Signer:
+                <strong class="font-mono">{{ fileRecord.approved_by }}</strong>
               </p>
-              <p
-                v-if="fileRecord?.approved_by"
-                class="signer-meta"
-              >
-                Signer: <strong class="font-mono">{{ fileRecord.approved_by }}</strong>
+              <p v-if="fileRecord?.approved_at" class="signer-meta">
+                Approved At:
+                <span>{{ formatDate(fileRecord.approved_at) }}</span>
               </p>
-              <p
-                v-if="fileRecord?.approved_at"
-                class="signer-meta"
-              >
-                Approved At: <span>{{ formatDate(fileRecord.approved_at) }}</span>
-              </p>
-              <p
-                v-if="fileRecord?.approval_reason"
-                class="signer-meta"
-              >
+              <p v-if="fileRecord?.approval_reason" class="signer-meta">
                 Meaning: <em>{{ fileRecord.approval_reason }}</em>
               </p>
             </div>
@@ -210,20 +210,10 @@
         </aside>
 
         <!-- Viewer Workspace -->
-        <main
-          class="viewer-workspace"
-          aria-label="Media Canvas Workspace"
-        >
+        <main class="viewer-workspace" aria-label="Media Canvas Workspace">
           <!-- Watermark Overlay (Pointer events none, subtle rotating diagonal text) -->
-          <div
-            class="watermark-overlay-container"
-            aria-hidden="true"
-          >
-            <div
-              v-for="n in 4"
-              :key="n"
-              class="diagonal-watermark-row"
-            >
+          <div class="watermark-overlay-container" aria-hidden="true">
+            <div v-for="n in 4" :key="n" class="diagonal-watermark-row">
               <span class="watermark-text">{{ watermarkText }}</span>
             </div>
           </div>
@@ -237,18 +227,25 @@
             >
               <!-- 1. Transcode Pending / In-Progress Placeholder -->
               <div
-                v-if="transcodeStatus === 'PENDING' || transcodeStatus === 'IN_PROGRESS'"
+                v-if="
+                  transcodeStatus === 'PENDING' ||
+                  transcodeStatus === 'IN_PROGRESS'
+                "
                 class="video-processing-card"
                 role="status"
                 aria-live="polite"
               >
-                <div class="spinner-circle" aria-hidden="true"></div>
-                <h4 class="processing-title">Processing video — check back soon</h4>
+                <div class="spinner-circle" aria-hidden="true" />
+                <h4 class="processing-title">
+                  Processing video — check back soon
+                </h4>
                 <p class="processing-subtitle">
-                  Generating HLS adaptive bitrate streams for secure clinical inspection.
+                  Generating HLS adaptive bitrate streams for secure clinical
+                  inspection.
                 </p>
                 <p class="polling-status font-mono">
-                  Status: <strong>{{ transcodeStatus }}</strong> (Attempt {{ pollCount }}/{{ maxPollAttempts }})
+                  Status: <strong>{{ transcodeStatus }}</strong> (Attempt
+                  {{ pollCount }}/{{ maxPollAttempts }})
                 </p>
               </div>
 
@@ -258,10 +255,16 @@
                 class="video-processing-card timeout-card"
                 role="alert"
               >
-                <span class="processing-icon warning-icon" aria-hidden="true">⏱️</span>
-                <h4 class="processing-title">Video processing is taking longer than expected — try again later</h4>
+                <span class="processing-icon warning-icon" aria-hidden="true"
+                  >⏱️</span
+                >
+                <h4 class="processing-title">
+                  Video processing is taking longer than expected — try again
+                  later
+                </h4>
                 <p class="processing-subtitle">
-                  The transcode task is still in progress. Please check again shortly or reopen the viewer later.
+                  The transcode task is still in progress. Please check again
+                  shortly or reopen the viewer later.
                 </p>
                 <button
                   class="btn btn-sm btn-outline-light"
@@ -277,10 +280,15 @@
                 class="video-processing-card error-card"
                 role="alert"
               >
-                <span class="processing-icon error-icon" aria-hidden="true">⚠️</span>
+                <span class="processing-icon error-icon" aria-hidden="true"
+                  >⚠️</span
+                >
                 <h4 class="processing-title">Video Transcoding Failed</h4>
                 <p class="processing-subtitle font-mono">
-                  {{ transcodeError || "An unexpected error occurred during HLS stream processing." }}
+                  {{
+                    transcodeError ||
+                    "An unexpected error occurred during HLS stream processing."
+                  }}
                 </p>
                 <button
                   class="btn btn-sm btn-outline-light"
@@ -291,10 +299,7 @@
               </div>
 
               <!-- 4. Video Player Ready State -->
-              <div
-                v-else
-                class="video-player-wrapper"
-              >
+              <div v-else class="video-player-wrapper">
                 <video
                   ref="videoPlayerRef"
                   controls
@@ -315,7 +320,9 @@
                   v-if="qualityLevels.length > 0"
                   class="video-quality-overlay"
                 >
-                  <label for="quality-select" class="quality-label">Quality:</label>
+                  <label for="quality-select" class="quality-label"
+                    >Quality:</label
+                  >
                   <select
                     id="quality-select"
                     class="quality-select"
@@ -336,7 +343,11 @@
 
               <div class="media-meta-badge">
                 🎬 Regulated Video Stream ({{ fileRecord?.filename }})
-                <span v-if="selectedQualityLabel && transcodeStatus === 'READY'" class="quality-badge font-mono">[{{ selectedQualityLabel }}]</span>
+                <span
+                  v-if="selectedQualityLabel && transcodeStatus === 'READY'"
+                  class="quality-badge font-mono"
+                  >[{{ selectedQualityLabel }}]</span
+                >
               </div>
             </div>
 
@@ -346,9 +357,7 @@
               class="media-player-container audio-container"
             >
               <div class="audio-player-card">
-                <div class="audio-icon-display">
-                  🎙️
-                </div>
+                <div class="audio-icon-display">🎙️</div>
                 <h4 class="audio-filename">
                   {{ fileRecord?.filename }}
                 </h4>
@@ -377,14 +386,11 @@
                 :alt="fileRecord?.filename || 'Clinical Image'"
                 class="preview-image-element"
                 @error="onImageError"
-              >
+              />
             </div>
 
             <!-- PDF / Document Page Canvas View -->
-            <div
-              v-else
-              class="media-player-container pdf-container"
-            >
+            <div v-else class="media-player-container pdf-container">
               <div class="pdf-document-sheet">
                 <div class="doc-sheet-header">
                   <div class="header-logo">
@@ -400,32 +406,50 @@
                     {{ fileRecord?.filename }}
                   </h2>
                   <p class="doc-display-subtitle">
-                    Study Scope: {{ fileRecord?.study_id }} | Site Scope: {{ fileRecord?.site_id || "All Sites" }} | Version: v{{ fileRecord?.version_index || 1 }}.0
+                    Study Scope: {{ fileRecord?.study_id }} | Site Scope:
+                    {{ fileRecord?.site_id || "All Sites" }} | Version: v{{
+                      fileRecord?.version_index || 1
+                    }}.0
                   </p>
-                  <hr class="doc-divider">
+                  <hr class="doc-divider" />
 
                   <section class="doc-text-section">
                     <h4>1. ELECTRONIC RECORD INTEGRITY & CLASSIFICATION</h4>
                     <p>
-                      This electronic record has been indexed within the Cadence Clinical Digital Data Flow and Fileshare platform in full conformance with FDA 21 CFR Part 11 and EU Annex 11 standards. Cryptographic checksums and immutable audit metadata have been recorded in the central compliance ledger.
+                      This electronic record has been indexed within the Cadence
+                      Clinical Digital Data Flow and Fileshare platform in full
+                      conformance with FDA 21 CFR Part 11 and EU Annex 11
+                      standards. Cryptographic checksums and immutable audit
+                      metadata have been recorded in the central compliance
+                      ledger.
                     </p>
                   </section>
 
                   <section class="doc-text-section">
                     <h4>2. CLINICAL METADATA SUMMARY</h4>
                     <p>
-                      <strong>Parent Study:</strong> {{ fileRecord?.study_id }}<br>
-                      <strong>Site Code:</strong> {{ fileRecord?.site_id || "Global Study Level" }}<br>
-                      <strong>Originator:</strong> {{ fileRecord?.uploaded_by || fileRecord?.created_by }}<br>
-                      <strong>MIME Specification:</strong> {{ fileRecord?.mime_type }}<br>
-                      <strong>Reason for Ingestion:</strong> {{ fileRecord?.reason_for_change }}
+                      <strong>Parent Study:</strong> {{ fileRecord?.study_id
+                      }}<br />
+                      <strong>Site Code:</strong>
+                      {{ fileRecord?.site_id || "Global Study Level" }}<br />
+                      <strong>Originator:</strong>
+                      {{ fileRecord?.uploaded_by || fileRecord?.created_by
+                      }}<br />
+                      <strong>MIME Specification:</strong>
+                      {{ fileRecord?.mime_type }}<br />
+                      <strong>Reason for Ingestion:</strong>
+                      {{ fileRecord?.reason_for_change }}
                     </p>
                   </section>
 
                   <section class="doc-text-section">
                     <h4>3. REGULATORY PREVIEW WATERMARK NOTICE</h4>
                     <p>
-                      This document is being inspected in a protected viewer session with real-time watermark placement rendering the viewing identity and timestamp dynamically. Unauthorized reproduction, screen capture, or distribution is prohibited.
+                      This document is being inspected in a protected viewer
+                      session with real-time watermark placement rendering the
+                      viewing identity and timestamp dynamically. Unauthorized
+                      reproduction, screen capture, or distribution is
+                      prohibited.
                     </p>
                   </section>
                 </div>
@@ -549,18 +573,23 @@ async function handleApproveConfirm({ credential, signing_reason }) {
       signing_reason,
     });
     isReAuthOpen.value = false;
-    emit("approved", updated || {
-      ...props.fileRecord,
-      approval_status: "APPROVED",
-      approved_by: updated?.approved_by || currentUserId.value,
-      approved_at: updated?.approved_at || new Date().toISOString(),
-      approval_reason: updated?.approval_reason || signing_reason,
-      signature_manifestation: updated?.signature_manifestation,
-    });
+    emit(
+      "approved",
+      updated || {
+        ...props.fileRecord,
+        approval_status: "APPROVED",
+        approved_by: updated?.approved_by || currentUserId.value,
+        approved_at: updated?.approved_at || new Date().toISOString(),
+        approval_reason: updated?.approval_reason || signing_reason,
+        signature_manifestation: updated?.signature_manifestation,
+      }
+    );
   } catch (err) {
     console.error("Document approval failed:", err);
     approvalError.value =
-      err.response?.data?.detail || err.message || "Failed to approve document.";
+      err.response?.data?.detail ||
+      err.message ||
+      "Failed to approve document.";
   } finally {
     isApproving.value = false;
   }
@@ -577,13 +606,32 @@ const mediaType = computed(() => {
   const mime = (props.fileRecord?.mime_type || "").toLowerCase();
   const filename = (props.fileRecord?.filename || "").toLowerCase();
 
-  if (mime.startsWith("video/") || filename.endsWith(".mp4") || filename.endsWith(".webm") || filename.endsWith(".mov")) {
+  if (
+    mime.startsWith("video/") ||
+    filename.endsWith(".mp4") ||
+    filename.endsWith(".webm") ||
+    filename.endsWith(".mov")
+  ) {
     return "video";
   }
-  if (mime.startsWith("audio/") || filename.endsWith(".mp3") || filename.endsWith(".wav") || filename.endsWith(".m4a") || filename.endsWith(".ogg")) {
+  if (
+    mime.startsWith("audio/") ||
+    filename.endsWith(".mp3") ||
+    filename.endsWith(".wav") ||
+    filename.endsWith(".m4a") ||
+    filename.endsWith(".ogg")
+  ) {
     return "audio";
   }
-  if (mime.startsWith("image/") || filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".webp") || filename.endsWith(".svg") || filename.endsWith(".gif")) {
+  if (
+    mime.startsWith("image/") ||
+    filename.endsWith(".png") ||
+    filename.endsWith(".jpg") ||
+    filename.endsWith(".jpeg") ||
+    filename.endsWith(".webp") ||
+    filename.endsWith(".svg") ||
+    filename.endsWith(".gif")
+  ) {
     return "image";
   }
   return "pdf";
@@ -594,7 +642,9 @@ const mediaSourceUrl = computed(() => {
 });
 
 const selectedQualityLabel = computed(() => {
-  const current = qualityLevels.value.find((l) => l.index === selectedQuality.value);
+  const current = qualityLevels.value.find(
+    (l) => l.index === selectedQuality.value
+  );
   return current ? current.label : "Auto";
 });
 
@@ -621,7 +671,10 @@ function handleDownload() {
 
 // Protected-view hotkey interception (Ctrl+S / Cmd+S, Ctrl+P / Cmd+P)
 function handleProtectedKeydown(e) {
-  if ((e.ctrlKey || e.metaKey) && (e.key === "s" || e.key === "S" || e.key === "p" || e.key === "P")) {
+  if (
+    (e.ctrlKey || e.metaKey) &&
+    (e.key === "s" || e.key === "S" || e.key === "p" || e.key === "P")
+  ) {
     e.preventDefault();
     console.warn("Protected view: browser save/print operation intercepted.");
   }
@@ -640,7 +693,10 @@ async function sendPlaybackAudit(eventType) {
     event: eventType,
     source: props.isGuestView ? "guest_link" : "internal",
     session_id: sessionId.value,
-    guest_token: props.guestToken || (props.isGuestView ? props.fileRecord?.guest_token : null) || null,
+    guest_token:
+      props.guestToken ||
+      (props.isGuestView ? props.fileRecord?.guest_token : null) ||
+      null,
     reason_for_change: `Video playback checkpoint ${eventType} telemetry`,
   };
 
@@ -661,7 +717,8 @@ function onVideoPlaying() {
 
 function onVideoTimeUpdate(e) {
   const video = e.target;
-  if (!video || !video.duration || isNaN(video.duration) || video.duration <= 0) return;
+  if (!video || !video.duration || isNaN(video.duration) || video.duration <= 0)
+    return;
   const progress = (video.currentTime / video.duration) * 100;
 
   if (progress >= 25 && !reportedCheckpoints.value.has("PLAY_25")) {
@@ -709,7 +766,9 @@ async function setupVideoPlayer(manifestUrl) {
           { index: -1, label: "Auto" },
           ...data.levels.map((lvl, index) => ({
             index,
-            label: lvl.height ? `${lvl.height}p` : `${Math.round((lvl.bitrate || 0) / 1000)}k`,
+            label: lvl.height
+              ? `${lvl.height}p`
+              : `${Math.round((lvl.bitrate || 0) / 1000)}k`,
           })),
         ];
       } else {
@@ -734,7 +793,10 @@ async function setupVideoPlayer(manifestUrl) {
         }
       }
     });
-  } else if (video.canPlayType && video.canPlayType("application/vnd.apple.mpegurl")) {
+  } else if (
+    video.canPlayType &&
+    video.canPlayType("application/vnd.apple.mpegurl")
+  ) {
     video.src = manifestUrl;
     qualityLevels.value = [{ index: -1, label: "Auto (Native)" }];
     selectedQuality.value = -1;
@@ -764,7 +826,11 @@ async function fetchStreamUrl() {
       streamUrl.value = res.stream_url;
       clearPolling();
       await setupVideoPlayer(res.stream_url);
-    } else if (res && (res.transcode_status === "PENDING" || res.transcode_status === "IN_PROGRESS")) {
+    } else if (
+      res &&
+      (res.transcode_status === "PENDING" ||
+        res.transcode_status === "IN_PROGRESS")
+    ) {
       transcodeStatus.value = res.transcode_status;
       startPolling();
     } else if (res && res.transcode_status === "FAILED") {
@@ -781,7 +847,10 @@ async function fetchStreamUrl() {
       }
     }
   } catch (err) {
-    if (err.status === 409 || (err.data && err.data.detail && err.data.detail.includes("failed"))) {
+    if (
+      err.status === 409 ||
+      (err.data && err.data.detail && err.data.detail.includes("failed"))
+    ) {
       transcodeStatus.value = "FAILED";
       transcodeError.value = err.data?.detail || "Video transcoding failed.";
       clearPolling();
@@ -794,7 +863,10 @@ async function fetchStreamUrl() {
         await setupVideoPlayer(fallbackUrl);
       }
     } else {
-      console.warn("Failed to retrieve stream URL, polling transcode readiness:", err);
+      console.warn(
+        "Failed to retrieve stream URL, polling transcode readiness:",
+        err
+      );
       transcodeStatus.value = "PENDING";
       startPolling();
     }
@@ -854,7 +926,10 @@ onMounted(() => {
   document.addEventListener("keydown", handleProtectedKeydown);
   if (mediaType.value === "video") {
     // If pre-marked as pending or no direct ready manifest, fetch/poll stream url
-    if (props.fileRecord?.transcode_status === "PENDING" || props.fileRecord?.transcode_status === "IN_PROGRESS") {
+    if (
+      props.fileRecord?.transcode_status === "PENDING" ||
+      props.fileRecord?.transcode_status === "IN_PROGRESS"
+    ) {
       transcodeStatus.value = props.fileRecord.transcode_status;
       startPolling();
     }
@@ -914,7 +989,8 @@ function formatDate(dateStr) {
 
 function getStatusClass(status) {
   const s = (status || "").toLowerCase();
-  if (s.includes("approved") || s.includes("active") || s.includes("verified")) return "text-success";
+  if (s.includes("approved") || s.includes("active") || s.includes("verified"))
+    return "text-success";
   if (s.includes("review") || s.includes("pending")) return "text-warning";
   if (s.includes("hold") || s.includes("archive")) return "text-danger";
   return "text-muted";
@@ -1023,10 +1099,18 @@ function getStatusClass(status) {
   font-weight: 700;
 }
 
-.text-muted { color: #64748b; }
-.text-warning { color: #d97706; }
-.text-success { color: #16a34a; }
-.text-danger { color: #dc2626; }
+.text-muted {
+  color: #64748b;
+}
+.text-warning {
+  color: #d97706;
+}
+.text-success {
+  color: #16a34a;
+}
+.text-danger {
+  color: #dc2626;
+}
 
 .change-reason-block h5,
 .checksum-block h5 {
@@ -1130,7 +1214,9 @@ function getStatusClass(status) {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .btn-approve:hover:not(:disabled) {
@@ -1297,8 +1383,12 @@ function getStatusClass(status) {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .processing-icon {

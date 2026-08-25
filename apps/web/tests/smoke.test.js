@@ -121,8 +121,9 @@ describe("Vue SPA Smoke Tests", () => {
       },
     });
 
-    expect(wrapper.html()).toContain("Medical Imaging &amp; Oncologic Adjudication Console");
+    expect(wrapper.html()).toContain(
+      "Medical Imaging &amp; Oncologic Adjudication Console"
+    );
     expect(wrapper.html()).toContain("Longitudinal Tumor Response Trajectory");
   });
 });
-

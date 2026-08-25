@@ -40,7 +40,8 @@ const props = defineProps({
   },
   unauthorizedTooltip: {
     type: String,
-    default: "Your role does not permit AI actions for this clinical workspace.",
+    default:
+      "Your role does not permit AI actions for this clinical workspace.",
   },
   ariaLabel: {
     type: String,
@@ -139,7 +140,9 @@ const handleClick = (e) => {
 }
 
 .ai-action-btn:focus-visible {
-  box-shadow: 0 0 0 2px var(--color-surface, #ffffff), 0 0 0 4px var(--color-primary, #026597);
+  box-shadow:
+    0 0 0 2px var(--color-surface, #ffffff),
+    0 0 0 4px var(--color-primary, #026597);
 }
 
 /* Sizes */
@@ -221,8 +224,12 @@ const handleClick = (e) => {
 }
 
 @keyframes ai-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .ai-icon {

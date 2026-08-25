@@ -673,9 +673,16 @@ async function startQuestionnaire(assignmentId) {
       const isNumeric = field.type === "numeric" || field.type === "number";
       const inputAttrs = {
         type: isNumeric ? "number" : "text",
-        ...(isNumeric ? { inputmode: "numeric" } : {})
+        ...(isNumeric ? { inputmode: "numeric" } : {}),
       };
-      formHtml += createClinicalInput(id, field.label, "", null, 12, inputAttrs);
+      formHtml += createClinicalInput(
+        id,
+        field.label,
+        "",
+        null,
+        12,
+        inputAttrs
+      );
     }
   });
 
@@ -2966,11 +2973,13 @@ function createClinicalInput(
   gridSpan = 12,
   attributes = {}
 ) {
-  const isNumeric = attributes.type === "numeric" || attributes.type === "number";
-  const inputType = isNumeric ? "number" : (attributes.type || "text");
-  const inputModeAttr = (attributes.inputmode || (isNumeric ? "numeric" : ""))
-    ? ` inputmode="${attributes.inputmode || "numeric"}"`
-    : "";
+  const isNumeric =
+    attributes.type === "numeric" || attributes.type === "number";
+  const inputType = isNumeric ? "number" : attributes.type || "text";
+  const inputModeAttr =
+    attributes.inputmode || (isNumeric ? "numeric" : "")
+      ? ` inputmode="${attributes.inputmode || "numeric"}"`
+      : "";
 
   const containerAttrs = Object.entries(attributes)
     .filter(([k]) => k !== "type" && k !== "inputmode")

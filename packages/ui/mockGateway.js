@@ -213,7 +213,8 @@ export async function validateGatewayRequest(req, options = {}) {
   const secret = options.secret || GATEWAY_SECRET;
 
   // Extract URL & path
-  let urlStr = typeof req.url === "string" ? req.url : req.url?.toString() || "";
+  let urlStr =
+    typeof req.url === "string" ? req.url : req.url?.toString() || "";
   let methodUpper = (req.method || "GET").toUpperCase();
 
   let url;

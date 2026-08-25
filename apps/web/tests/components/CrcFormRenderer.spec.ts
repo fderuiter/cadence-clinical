@@ -58,8 +58,17 @@ describe("CrcFormRenderer.vue", () => {
         plugins: [pinia],
         stubs: {
           ClinicalFormField: {
-            template: '<div class="clinical-form-field-stub" :data-field-id="field.id">Field: {{ field.label }}</div>',
-            props: ["field", "modelValue", "query", "error", "lookupStatus", "canManageQueries", "queryLabel"],
+            template:
+              '<div class="clinical-form-field-stub" :data-field-id="field.id">Field: {{ field.label }}</div>',
+            props: [
+              "field",
+              "modelValue",
+              "query",
+              "error",
+              "lookupStatus",
+              "canManageQueries",
+              "queryLabel",
+            ],
           },
         },
       },
@@ -75,7 +84,7 @@ describe("CrcFormRenderer.vue", () => {
     // 1. Mount with SUBJ-101 (active_protocol_version: "2.0.0")
     const wrapperV2 = createWrapper({ selectedSubjectId: "SUBJ-101" });
     expect(wrapperV2.text()).toContain("Protocol Schema v2.0.0");
-    
+
     // v2.0.0 includes amended fields (vs_temp, lb_wbc, lb_gluc, lb_alt)
     const stubsV2 = wrapperV2.findAll(".clinical-form-field-stub");
     const fieldIdsV2 = stubsV2.map((s) => s.attributes("data-field-id"));
@@ -110,7 +119,9 @@ describe("CrcFormRenderer.vue", () => {
     await wrapper.find("#enroll-site-id").setValue("SITE-102");
     await wrapper.find("#enroll-consent-date").setValue("2026-08-19");
     await wrapper.find("#enroll-arm-id").setValue("ARM-A");
-    await wrapper.find("#enroll-change-reason").setValue("Test enrollment for cohort");
+    await wrapper
+      .find("#enroll-change-reason")
+      .setValue("Test enrollment for cohort");
 
     // Submit enrollment
     await wrapper.find("#btn-confirm-enroll").trigger("click");
@@ -121,10 +132,14 @@ describe("CrcFormRenderer.vue", () => {
     // Verify modal is closed and event emitted
     expect(wrapper.find("#enroll-subject-modal").exists()).toBe(false);
     expect(wrapper.emitted("enroll-subject")).toBeTruthy();
-    expect(wrapper.emitted("update:selectedSubjectId")?.[0][0]).toBe("SUBJ-101-099");
+    expect(wrapper.emitted("update:selectedSubjectId")?.[0][0]).toBe(
+      "SUBJ-101-099"
+    );
 
     // Verify subject is in the store
-    const enrolledSub = clinicalStore.subjects.find((s: any) => s.id === "SUBJ-101-099");
+    const enrolledSub = clinicalStore.subjects.find(
+      (s: any) => s.id === "SUBJ-101-099"
+    );
     expect(enrolledSub).toBeDefined();
     expect(enrolledSub?.siteId).toBe("SITE-102");
     expect(enrolledSub?.armId).toBe("ARM-A");
@@ -157,7 +172,9 @@ describe("CrcFormRenderer.vue", () => {
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find(".badge-discrepancy").exists()).toBe(true);
-    expect(wrapper.text()).toContain("Diastolic BP (135 mmHg) cannot equal or exceed Systolic BP (120 mmHg)");
+    expect(wrapper.text()).toContain(
+      "Diastolic BP (135 mmHg) cannot equal or exceed Systolic BP (120 mmHg)"
+    );
 
     // 3. Click 'Raise Query' button from edit check banner
     const raiseBtn = wrapper.find(".btn-raise-query");
@@ -186,7 +203,9 @@ describe("CrcFormRenderer.vue", () => {
     // Attempting to click submit button triggers blocking modal
     await wrapper.find("#btn-submit-ecrf").trigger("click");
     expect(wrapper.find("#reconsent-gate-modal").exists()).toBe(true);
-    expect(wrapper.find("#reconsent-gate-modal").text()).toContain("Re-Consent Gate Active");
+    expect(wrapper.find("#reconsent-gate-modal").text()).toContain(
+      "Re-Consent Gate Active"
+    );
     expect(wrapper.find("#reconsent-gate-modal").text()).toContain("SUBJ-102");
   });
 });

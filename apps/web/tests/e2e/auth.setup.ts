@@ -6,33 +6,32 @@ setup("authenticate as admin", async ({ page }) => {
   // Navigate to login page under the /cadence-clinical/ base path
   await page.goto("/cadence-clinical/login");
 
-  // Inject authentication state directly into localStorage to simulate OIDC session
+  // Inject authentication state directly into sessionStorage and localStorage to simulate OIDC session
   await page.evaluate(() => {
-    window.localStorage.setItem(
-      "cadence_auth",
-      JSON.stringify({
-        isAuthenticated: true,
-        accessToken: "mock-access-token-xyz-123",
-        idToken: "mock-id-token-abc",
-        refreshToken: "mock-refresh-token-pqr",
-        user: {
-          username: "admin@cadence.clinical",
-          email: "admin@cadence.clinical",
-          firstName: "Admin",
-          lastName: "Cadence",
-          id: "admin-id-123",
-        },
-        rawRoles: [
-          "Sponsor Admin",
-          "Sponsor Designer",
-          "CRA",
-          "Data Manager",
-          "Site Investigator",
-          "Auditor",
-        ],
-        isDemoMode: true,
-      })
-    );
+    const authData = {
+      isAuthenticated: true,
+      accessToken: "mock-access-token-xyz-123",
+      idToken: "mock-id-token-abc",
+      refreshToken: "mock-refresh-token-pqr",
+      user: {
+        username: "admin@cadence.clinical",
+        email: "admin@cadence.clinical",
+        firstName: "Admin",
+        lastName: "Cadence",
+        id: "admin-id-123",
+      },
+      rawRoles: [
+        "Sponsor Admin",
+        "Sponsor Designer",
+        "CRA",
+        "Data Manager",
+        "Site Investigator",
+        "Auditor",
+      ],
+      isDemoMode: true,
+    };
+    window.sessionStorage.setItem("cadence_auth", JSON.stringify(authData));
+    window.localStorage.setItem("cadence_auth", JSON.stringify(authData));
   });
 
   // Navigate to main workspace page

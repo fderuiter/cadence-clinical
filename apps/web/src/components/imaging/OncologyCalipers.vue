@@ -91,7 +91,9 @@
             <option value="LIVER">Liver</option>
             <option value="LUNG_RIGHT">Right Lung</option>
             <option value="LUNG_LEFT">Left Lung</option>
-            <option value="LYMPH_NODE_MEDIASTINAL">Mediastinal Lymph Node</option>
+            <option value="LYMPH_NODE_MEDIASTINAL">
+              Mediastinal Lymph Node
+            </option>
             <option value="LYMPH_NODE_CERVICAL">Cervical Lymph Node</option>
             <option value="BRAIN">Brain</option>
             <option value="BONE">Bone</option>
@@ -101,7 +103,9 @@
         </div>
 
         <div v-if="criteria === 'LUGANO_2014'" class="form-group">
-          <label for="deauville-select" class="field-label">PET Deauville:</label>
+          <label for="deauville-select" class="field-label"
+            >PET Deauville:</label
+          >
           <select
             id="deauville-select"
             v-model.number="newLesionForm.deauvilleScore"
@@ -121,7 +125,9 @@
     <!-- Active Annotations List -->
     <div class="annotations-list-section">
       <div class="section-header-row">
-        <span class="section-subtitle">Active Calipers ({{ annotations.length }})</span>
+        <span class="section-subtitle"
+          >Active Calipers ({{ annotations.length }})</span
+        >
         <button
           v-if="annotations.length > 0"
           type="button"
@@ -154,7 +160,9 @@
               :key="a.id"
               :class="{ 'row-new-lesion': a.lesion_type === 'NEW_LESION' }"
             >
-              <td class="font-bold">{{ a.lesion_id }}</td>
+              <td class="font-bold">
+                {{ a.lesion_id }}
+              </td>
               <td>{{ a.organ_site }}</td>
               <td>
                 <span class="type-pill" :class="a.lesion_type.toLowerCase()">
@@ -162,7 +170,7 @@
                 </span>
               </td>
               <td>{{ a.longest_diameter_mm }}</td>
-              <td>{{ a.perpendicular_diameter_mm || '-' }}</td>
+              <td>{{ a.perpendicular_diameter_mm || "-" }}</td>
               <td>
                 <button
                   type="button"
@@ -183,23 +191,32 @@
     <div class="derivation-summary-card">
       <div class="summary-header">
         <span class="summary-title">
-          {{ criteria === 'RECIST_1_1' ? 'RECIST 1.1 Derivation' : 'Lugano 2014 Derivation' }}
+          {{
+            criteria === "RECIST_1_1"
+              ? "RECIST 1.1 Derivation"
+              : "Lugano 2014 Derivation"
+          }}
         </span>
-        <span
-          class="response-pill"
-          :class="overallResponseClass"
-        >
-          {{ derivedResponse.overall_response || 'SD' }}
+        <span class="response-pill" :class="overallResponseClass">
+          {{ derivedResponse.overall_response || "SD" }}
         </span>
       </div>
 
       <div class="metrics-grid">
         <div class="metric-item">
           <span class="metric-label">
-            {{ criteria === 'RECIST_1_1' ? 'Sum of Diameters (SLD)' : 'Sum of Products (SPD)' }}
+            {{
+              criteria === "RECIST_1_1"
+                ? "Sum of Diameters (SLD)"
+                : "Sum of Products (SPD)"
+            }}
           </span>
           <span class="metric-value">
-            {{ criteria === 'RECIST_1_1' ? (derivedResponse.current_sld_mm || 0) + ' mm' : (derivedResponse.current_spd_mm2 || 0) + ' mm²' }}
+            {{
+              criteria === "RECIST_1_1"
+                ? (derivedResponse.current_sld_mm || 0) + " mm"
+                : (derivedResponse.current_spd_mm2 || 0) + " mm²"
+            }}
           </span>
         </div>
 
@@ -209,7 +226,8 @@
             class="metric-value"
             :class="pctChangeClass(derivedResponse.pct_change_baseline)"
           >
-            {{ (derivedResponse.pct_change_baseline || 0) > 0 ? '+' : '' }}{{ derivedResponse.pct_change_baseline || 0 }}%
+            {{ (derivedResponse.pct_change_baseline || 0) > 0 ? "+" : ""
+            }}{{ derivedResponse.pct_change_baseline || 0 }}%
           </span>
         </div>
 
@@ -219,13 +237,18 @@
             class="metric-value"
             :class="pctChangeClass(derivedResponse.pct_change_nadir)"
           >
-            {{ (derivedResponse.pct_change_nadir || 0) > 0 ? '+' : '' }}{{ derivedResponse.pct_change_nadir || 0 }}%
+            {{ (derivedResponse.pct_change_nadir || 0) > 0 ? "+" : ""
+            }}{{ derivedResponse.pct_change_nadir || 0 }}%
           </span>
         </div>
 
         <div class="metric-item">
           <span class="metric-label">Target Response</span>
-          <span class="metric-value">{{ derivedResponse.target_response || derivedResponse.ct_response || 'SD' }}</span>
+          <span class="metric-value">{{
+            derivedResponse.target_response ||
+            derivedResponse.ct_response ||
+            "SD"
+          }}</span>
         </div>
       </div>
     </div>
@@ -237,24 +260,37 @@
         class="btn-primary-signoff"
         @click="openSignoffModal"
       >
-        <span class="btn-icon">✍️</span> 21 CFR Part 11 Step-Up Sign-Off &amp; Lock
+        <span class="btn-icon">✍️</span> 21 CFR Part 11 Step-Up Sign-Off &amp;
+        Lock
       </button>
     </div>
 
     <!-- Part 11 Re-Auth Modal -->
-    <div v-if="isModalOpen" class="modal-overlay" role="dialog" aria-modal="true">
+    <div
+      v-if="isModalOpen"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+    >
       <div class="modal-card">
         <div class="modal-header">
-          <h4 class="modal-title">Electronic Signature - Tumor Assessment Sign-off</h4>
-          <button type="button" class="btn-close" @click="isModalOpen = false">✕</button>
+          <h4 class="modal-title">
+            Electronic Signature - Tumor Assessment Sign-off
+          </h4>
+          <button type="button" class="btn-close" @click="isModalOpen = false">
+            ✕
+          </button>
         </div>
         <div class="modal-body">
           <p class="modal-disclaimer">
-            Under 21 CFR Part 11, entering your clinical credential confirms and seals
-            the oncologic caliper measurements and calculated response classification.
+            Under 21 CFR Part 11, entering your clinical credential confirms and
+            seals the oncologic caliper measurements and calculated response
+            classification.
           </p>
           <div class="form-group">
-            <label for="change-reason-input" class="field-label">Reason for Assessment / Change:</label>
+            <label for="change-reason-input" class="field-label"
+              >Reason for Assessment / Change:</label
+            >
             <input
               id="change-reason-input"
               v-model="signoffReason"
@@ -264,7 +300,9 @@
             />
           </div>
           <div class="form-group">
-            <label for="signature-input" class="field-label">Electronic Signature (Full Name / PIN):</label>
+            <label for="signature-input" class="field-label"
+              >Electronic Signature (Full Name / PIN):</label
+            >
             <input
               id="signature-input"
               v-model="signaturePin"
@@ -275,7 +313,13 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn-secondary" @click="isModalOpen = false">Cancel</button>
+          <button
+            type="button"
+            class="btn-secondary"
+            @click="isModalOpen = false"
+          >
+            Cancel
+          </button>
           <button
             type="button"
             class="btn-confirm-sign"

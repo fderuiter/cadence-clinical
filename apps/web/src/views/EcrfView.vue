@@ -1,8 +1,5 @@
 <template>
-  <div
-    id="section-ecrf"
-    class="dashboard-section active"
-  >
+  <div id="section-ecrf" class="dashboard-section active">
     <div class="section-header">
       <h2>eCRF Runtime Renderer</h2>
       <p>
@@ -37,7 +34,8 @@
             border-radius: 4px;
             font-weight: bold;
           "
-        >{{ activeUserRole.toUpperCase() }}</span>
+          >{{ activeUserRole.toUpperCase() }}</span
+        >
       </div>
 
       <!-- Demo role tester select & EHR Reconciliation Drawer toggle -->
@@ -71,7 +69,8 @@
         <label
           for="role-tester-select"
           style="font-size: 0.8rem; font-weight: bold"
-        >Demo Role Toggle:</label>
+          >Demo Role Toggle:</label
+        >
         <select
           id="role-tester-select"
           v-model="demoRole"
@@ -81,29 +80,25 @@
             border: 1px solid var(--border);
           "
         >
-          <option value="site_investigator">
-            Site Coordinator / CRC
-          </option>
-          <option value="cra">
-            CRA Monitor (SDV Enabled)
-          </option>
+          <option value="site_investigator">Site Coordinator / CRC</option>
+          <option value="cra">CRA Monitor (SDV Enabled)</option>
         </select>
       </div>
     </div>
-
 
     <div
       class="ecrf-workspace-layout"
       style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap"
     >
       <!-- Left Column: CRC Persona Component & CRA Verification Bar Slot -->
-      <div
-        class="ecrf-form-column"
-        style="flex: 1 1 580px; min-width: 0"
-      >
+      <div class="ecrf-form-column" style="flex: 1 1 580px; min-width: 0">
         <!-- CRC Persona Component: Reusable Subject Registration & Screening Card -->
         <SubjectEnrollmentForm
-          :can-enroll="authStore.isCrc || activeUserRole === 'site_investigator' || activeUserRole === 'crc'"
+          :can-enroll="
+            authStore.isCrc ||
+            activeUserRole === 'site_investigator' ||
+            activeUserRole === 'crc'
+          "
           :screening-result="screeningResult"
           :is-screening="isScreening"
           :is-enrolling="isEnrolling"
@@ -186,8 +181,7 @@
           :reauth-error="reauthError"
           @submit-signoff="handleSignOffSubmit"
           @cancel-reauth="cancelReauth"
-          @confirm-reauth="confirmReauth"
-        /><!-- pragma: allowlist secret -->
+          @confirm-reauth="confirmReauth"/><!-- pragma: allowlist secret -->
 
         <!-- Live Form State & CDASH Meta Card -->
         <div
@@ -195,9 +189,7 @@
           style="display: flex; flex-direction: column; gap: 16px"
         >
           <div>
-            <div class="card-title">
-              CDASH Metadata Specification
-            </div>
+            <div class="card-title">CDASH Metadata Specification</div>
             <p style="font-size: 0.85rem; color: #475569; margin-bottom: 8px">
               The fields on the left are dynamically rendered using structural
               CDASH metadata tags (e.g. <code>DM.BRTHDT</code>,
@@ -369,7 +361,6 @@ const authStore = useAuthStore();
 const route = useRoute();
 
 const showEhrReconciliationDrawer = ref(false);
-
 
 // Selected Subject & Visit State
 const selectedSubjectId = ref("SUBJ-001");

@@ -4,7 +4,10 @@ import { createPinia, setActivePinia } from "pinia";
 import { router } from "../src/router/index.js";
 import { useAuthStore } from "../src/stores/auth.js";
 import { useKnowledgeStore } from "../src/stores/knowledge.js";
-import { knowledgeService, getFallbackContextualHelp } from "../src/api/knowledge.js";
+import {
+  knowledgeService,
+  getFallbackContextualHelp,
+} from "../src/api/knowledge.js";
 import ContextualHelpDrawer from "../src/components/ContextualHelpDrawer.vue";
 import AppShell from "../src/components/AppShell.vue";
 import App from "../src/App.vue";
@@ -34,7 +37,8 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       tags: ["ecrf", "enrollment", "site-sop"],
       category_name: "Clinical Operations",
       body_markdown: "## Purpose & Scope\n\nSubject enrollment guidelines.",
-      body_html: "<h2>Purpose & Scope</h2><p>Subject enrollment guidelines.</p>",
+      body_html:
+        "<h2>Purpose & Scope</h2><p>Subject enrollment guidelines.</p>",
     },
     primary_version: {
       id: "ver-test-01",
@@ -73,7 +77,9 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
     it("returns correct fallback SOPs for /ecrf, /mdr, /ctms, and /audit", () => {
       const ecrfHelp = getFallbackContextualHelp("/ecrf", "site_crc");
       expect(ecrfHelp.primary_article.title).toContain("SOP-ECRF-201");
-      expect(ecrfHelp.section_anchor).toBe("#subject-enrollment-and-visit-entry");
+      expect(ecrfHelp.section_anchor).toBe(
+        "#subject-enrollment-and-visit-entry"
+      );
 
       const mdrHelp = getFallbackContextualHelp("/mdr", "sponsor_designer");
       expect(mdrHelp.primary_article.title).toContain("SOP-MDR-104");
@@ -86,7 +92,10 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
     });
 
     it("returns empty structure for unknown unmapped routes", () => {
-      const emptyHelp = getFallbackContextualHelp("/unknown/unmapped/path", "site_crc");
+      const emptyHelp = getFallbackContextualHelp(
+        "/unknown/unmapped/path",
+        "site_crc"
+      );
       expect(emptyHelp.primary_article).toBeNull();
       expect(emptyHelp.related_articles).toEqual([]);
     });
@@ -103,14 +112,18 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
 
   describe("2. Pinia Knowledge Store State & Actions", () => {
     it("updates store state when fetchContextualHelp resolves", async () => {
-      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(mockResolvedSop);
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+        mockResolvedSop
+      );
 
       await knowledgeStore.fetchContextualHelp("/ecrf/subjects", "site_crc");
 
       expect(knowledgeStore.currentRoute).toBe("/ecrf/subjects");
       expect(knowledgeStore.activePersona).toBe("site_crc");
       expect(knowledgeStore.primaryArticle.id).toBe("art-test-01");
-      expect(knowledgeStore.sectionAnchor).toBe("#subject-enrollment-and-visit-entry");
+      expect(knowledgeStore.sectionAnchor).toBe(
+        "#subject-enrollment-and-visit-entry"
+      );
       expect(knowledgeStore.relatedArticles.length).toBe(1);
       expect(knowledgeStore.hasGuidance).toBe(true);
     });
@@ -128,7 +141,11 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       expect(knowledgeStore.isArticleBodyExpanded).toBe(false);
 
       // Select related article
-      const related = { id: "rel-01", title: "Related SOP", body_html: "<p>Related</p>" };
+      const related = {
+        id: "rel-01",
+        title: "Related SOP",
+        body_html: "<p>Related</p>",
+      };
       knowledgeStore.selectArticle(related);
       expect(knowledgeStore.displayedArticle.id).toBe("rel-01");
       expect(knowledgeStore.isArticleBodyExpanded).toBe(true);
@@ -149,7 +166,9 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       expect(payload.description).toContain("SOP-ECRF-201");
       expect(payload.description).toContain("site_crc");
       expect(payload.category).toBe("PROTOCOL_DEVIATION");
-      expect(payload.reason_for_change).toContain("Escalated to Support Ticket");
+      expect(payload.reason_for_change).toContain(
+        "Escalated to Support Ticket"
+      );
 
       knowledgeStore.cancelEscalation();
       expect(knowledgeStore.isEscalating).toBe(false);
@@ -159,7 +178,9 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
 
   describe("3. ContextualHelpDrawer.vue Component Rendering & Interactions", () => {
     it("renders drawer when isOpen is true, displaying route, persona, and SOP content", async () => {
-      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(mockResolvedSop);
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+        mockResolvedSop
+      );
       await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
       knowledgeStore.openDrawer();
 
@@ -173,14 +194,18 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       expect(wrapper.text()).toContain("Clinical Guidance & SOPs");
       expect(wrapper.text()).toContain("/ecrf");
       expect(wrapper.text()).toContain("Site Coordinator / CRC");
-      expect(wrapper.text()).toContain("SOP-ECRF-201: Subject Enrollment & eCRF Data Capture");
+      expect(wrapper.text()).toContain(
+        "SOP-ECRF-201: Subject Enrollment & eCRF Data Capture"
+      );
       expect(wrapper.text()).toContain("v2.1");
       expect(wrapper.text()).toContain("#subject-enrollment-and-visit-entry");
       expect(wrapper.text()).toContain("Subject enrollment guidelines.");
     });
 
     it("toggles article body collapse when button is clicked", async () => {
-      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(mockResolvedSop);
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+        mockResolvedSop
+      );
       await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
       knowledgeStore.openDrawer();
 
@@ -204,7 +229,9 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
     });
 
     it("displays related articles and allows selecting one to view", async () => {
-      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(mockResolvedSop);
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+        mockResolvedSop
+      );
       await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
       knowledgeStore.openDrawer();
 
@@ -229,7 +256,9 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
     });
 
     it("triggers ticket escalation modal with pre-populated initial data", async () => {
-      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(mockResolvedSop);
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+        mockResolvedSop
+      );
       await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
       knowledgeStore.openDrawer();
 
@@ -249,7 +278,9 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
 
       expect(wrapper.find(".ticket-create-modal").exists()).toBe(true);
       expect(wrapper.find("#ticket-title").element.value).toContain("/ecrf");
-      expect(wrapper.find("#ticket-desc").element.value).toContain("SOP-ECRF-201");
+      expect(wrapper.find("#ticket-desc").element.value).toContain(
+        "SOP-ECRF-201"
+      );
     });
 
     it("supports search input and displays matching articles", async () => {

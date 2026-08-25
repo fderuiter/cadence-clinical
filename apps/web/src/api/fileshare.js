@@ -14,7 +14,8 @@ export const fileshareService = {
     if (params.site_id) query.append("site_id", params.site_id);
     if (params.q) query.append("q", params.q);
     if (params.page !== undefined) query.append("page", String(params.page));
-    if (params.page_size !== undefined) query.append("page_size", String(params.page_size));
+    if (params.page_size !== undefined)
+      query.append("page_size", String(params.page_size));
 
     const queryString = query.toString();
     const path = queryString
@@ -61,7 +62,8 @@ export const fileshareService = {
    */
   async createShareGrant(fileId, payload) {
     return apiClient.post(`/api/v1/fileshare/files/${fileId}/grants`, payload, {
-      changeReason: payload.reason_for_change || "Delegating internal file access",
+      changeReason:
+        payload.reason_for_change || "Delegating internal file access",
     });
   },
 
@@ -69,7 +71,8 @@ export const fileshareService = {
    * Revoke an internal share grant.
    */
   async deleteShareGrant(fileId, grantId, options = {}) {
-    const reason = options.reason_for_change || "Revoking share grant delegation";
+    const reason =
+      options.reason_for_change || "Revoking share grant delegation";
     const query = new URLSearchParams({ reason_for_change: reason });
     return apiClient.delete(
       `/api/v1/fileshare/files/${fileId}/grants/${grantId}?${query.toString()}`,
@@ -88,9 +91,14 @@ export const fileshareService = {
    * Create an external time-bounded guest link.
    */
   async createGuestLink(fileId, payload) {
-    return apiClient.post(`/api/v1/fileshare/files/${fileId}/guest-links`, payload, {
-      changeReason: payload.reason_for_change || "Generating external guest link",
-    });
+    return apiClient.post(
+      `/api/v1/fileshare/files/${fileId}/guest-links`,
+      payload,
+      {
+        changeReason:
+          payload.reason_for_change || "Generating external guest link",
+      }
+    );
   },
 
   /**
@@ -125,7 +133,8 @@ export const fileshareService = {
    */
   async setHold(fileId, payload) {
     return apiClient.post(`/api/v1/fileshare/files/${fileId}/hold`, payload, {
-      changeReason: payload.reason_for_change || "Placing file on retention hold",
+      changeReason:
+        payload.reason_for_change || "Placing file on retention hold",
     });
   },
 
@@ -135,9 +144,12 @@ export const fileshareService = {
   async clearHold(fileId, payload = {}) {
     const reason = payload.reason_for_change || "Removing retention hold";
     const query = new URLSearchParams({ reason_for_change: reason });
-    return apiClient.delete(`/api/v1/fileshare/files/${fileId}/hold?${query.toString()}`, {
-      changeReason: reason,
-    });
+    return apiClient.delete(
+      `/api/v1/fileshare/files/${fileId}/hold?${query.toString()}`,
+      {
+        changeReason: reason,
+      }
+    );
   },
 
   /**
@@ -146,9 +158,12 @@ export const fileshareService = {
   async deleteFile(fileId, options = {}) {
     const reason = options.reason_for_change || "Deleting file record";
     const query = new URLSearchParams({ reason_for_change: reason });
-    return apiClient.delete(`/api/v1/fileshare/files/${fileId}?${query.toString()}`, {
-      changeReason: reason,
-    });
+    return apiClient.delete(
+      `/api/v1/fileshare/files/${fileId}?${query.toString()}`,
+      {
+        changeReason: reason,
+      }
+    );
   },
 
   /**
@@ -171,7 +186,8 @@ export const fileshareService = {
    */
   async recordPlaybackAudit(payload) {
     return apiClient.post("/api/v1/fileshare/audit/playback", payload, {
-      changeReason: payload.reason_for_change || "Video playback checkpoint audit event",
+      changeReason:
+        payload.reason_for_change || "Video playback checkpoint audit event",
     });
   },
 
@@ -179,9 +195,14 @@ export const fileshareService = {
    * Formally approve a document with electronic signature and re-authentication (21 CFR Part 11).
    */
   async approveFile(fileId, payload) {
-    return apiClient.post(`/api/v1/fileshare/files/${fileId}/approve`, payload, {
-      changeReason: payload.signing_reason || "Electronic signature document approval",
-    });
+    return apiClient.post(
+      `/api/v1/fileshare/files/${fileId}/approve`,
+      payload,
+      {
+        changeReason:
+          payload.signing_reason || "Electronic signature document approval",
+      }
+    );
   },
 
   /**
@@ -197,18 +218,28 @@ export const fileshareService = {
    * Rescind a previous document approval (requires super_admin).
    */
   async rescindApproval(fileId, payload) {
-    return apiClient.post(`/api/v1/fileshare/files/${fileId}/rescind-approval`, payload, {
-      changeReason: payload.reason_for_change || "Rescinding document approval",
-    });
+    return apiClient.post(
+      `/api/v1/fileshare/files/${fileId}/rescind-approval`,
+      payload,
+      {
+        changeReason:
+          payload.reason_for_change || "Rescinding document approval",
+      }
+    );
   },
 
   /**
    * Initiate upload of a new version/revision for a file record.
    */
   async uploadRevision(fileId, payload) {
-    return apiClient.post(`/api/v1/fileshare/files/${fileId}/upload-revision`, payload, {
-      changeReason: payload.reason_for_change || "Uploading document revision",
-    });
+    return apiClient.post(
+      `/api/v1/fileshare/files/${fileId}/upload-revision`,
+      payload,
+      {
+        changeReason:
+          payload.reason_for_change || "Uploading document revision",
+      }
+    );
   },
 
   /**
@@ -220,7 +251,8 @@ export const fileshareService = {
     if (params.from_date) query.append("from_date", params.from_date);
     if (params.to_date) query.append("to_date", params.to_date);
     if (params.page !== undefined) query.append("page", String(params.page));
-    if (params.page_size !== undefined) query.append("page_size", String(params.page_size));
+    if (params.page_size !== undefined)
+      query.append("page_size", String(params.page_size));
 
     const qs = query.toString();
     const path = qs
@@ -229,6 +261,3 @@ export const fileshareService = {
     return apiClient.get(path);
   },
 };
-
-
-

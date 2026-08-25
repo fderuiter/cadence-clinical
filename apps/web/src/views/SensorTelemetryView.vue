@@ -5,12 +5,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useRoute } from 'vue-router';
-import SensorTelemetryConsole from '../components/clinical/SensorTelemetryConsole.vue';
+import { computed } from "vue";
+import { useRoute } from "vue-router";
+import SensorTelemetryConsole from "../components/clinical/SensorTelemetryConsole.vue";
 
 const route = useRoute();
-const studyId = computed(() => (route.query.study_id as string) || 'STUDY-901');
+const studyId = computed(() => (route.query.study_id as string) || "STUDY-901");
 </script>
 
 <style scoped>

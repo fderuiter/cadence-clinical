@@ -213,11 +213,19 @@ export const econsentService = {
 
   // --- Readability & Jargon Harmonization ---
   analyzeReadability(body, options = {}) {
-    return apiClient.post("/api/v1/econsent/readability/analyze", body, options);
+    return apiClient.post(
+      "/api/v1/econsent/readability/analyze",
+      body,
+      options
+    );
   },
 
   harmonizeReadability(body, options = {}) {
-    return apiClient.post("/api/v1/econsent/readability/harmonize", body, options);
+    return apiClient.post(
+      "/api/v1/econsent/readability/harmonize",
+      body,
+      options
+    );
   },
 
   harmonizeClause(clauseId, body, options = {}) {
@@ -228,4 +236,3 @@ export const econsentService = {
     );
   },
 };
-

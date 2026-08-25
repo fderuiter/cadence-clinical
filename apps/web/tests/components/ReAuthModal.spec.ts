@@ -61,7 +61,9 @@ describe("ReAuthModal.vue", () => {
     const reasonSelect = wrapper.find("#reauth-signing-reason");
     await reasonSelect.setValue("SPONSOR_APPROVAL");
 
-    const confirmBtn = wrapper.findAll("button").find((b) => b.text().includes("Confirm & Sign"));
+    const confirmBtn = wrapper
+      .findAll("button")
+      .find((b) => b.text().includes("Confirm & Sign"));
     expect(confirmBtn).toBeDefined();
     await confirmBtn?.trigger("click");
 
@@ -88,7 +90,9 @@ describe("ReAuthModal.vue", () => {
       },
     });
 
-    const cancelBtn = wrapper.findAll("button").find((b) => b.text().includes("Cancel"));
+    const cancelBtn = wrapper
+      .findAll("button")
+      .find((b) => b.text().includes("Cancel"));
     await cancelBtn?.trigger("click");
 
     expect(wrapper.emitted("cancel")).toBeTruthy();

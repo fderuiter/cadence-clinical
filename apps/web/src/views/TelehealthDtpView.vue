@@ -5,12 +5,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useRoute } from 'vue-router';
-import TelehealthDtpConsole from '../components/clinical/TelehealthDtpConsole.vue';
+import { computed } from "vue";
+import { useRoute } from "vue-router";
+import TelehealthDtpConsole from "../components/clinical/TelehealthDtpConsole.vue";
 
 const route = useRoute();
-const studyId = computed(() => (route.query.study_id as string) || 'STUDY-DCT-001');
+const studyId = computed(
+  () => (route.query.study_id as string) || "STUDY-DCT-001"
+);
 </script>
 
 <style scoped>

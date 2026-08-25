@@ -1,8 +1,5 @@
 <template>
-  <div
-    id="section-study-training"
-    class="dashboard-section active"
-  >
+  <div id="section-study-training" class="dashboard-section active">
     <!-- Header -->
     <div class="section-header">
       <div class="header-content-group">
@@ -12,11 +9,11 @@
           <span class="badge badge-standard">DIA TMF Zone 5 (05.02.04)</span>
           <span class="badge badge-standard">Automated EDC Write-Gating</span>
         </div>
-        <h2 class="view-title">
-          Study Training &amp; Qualification Hub
-        </h2>
+        <h2 class="view-title">Study Training &amp; Qualification Hub</h2>
         <p class="view-subtitle">
-          Automated delta-curricula for protocol amendments, interactive time-on-page tracking, comprehension quizzes (&ge;80%), 21 CFR Part 11 electronic signatures, and real-time EDC write-permission gating.
+          Automated delta-curricula for protocol amendments, interactive
+          time-on-page tracking, comprehension quizzes (&ge;80%), 21 CFR Part 11
+          electronic signatures, and real-time EDC write-permission gating.
         </p>
       </div>
     </div>
@@ -24,58 +21,40 @@
     <!-- Metric KPI Summary Cards -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon alert-icon">
-          📚
-        </div>
+        <div class="stat-icon alert-icon">📚</div>
         <div class="stat-details">
           <div class="stat-value">
             {{ activeCurriculaCount }}
           </div>
-          <div class="stat-label">
-            Active Protocol Curricula
-          </div>
+          <div class="stat-label">Active Protocol Curricula</div>
         </div>
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon capa-icon">
-          ✅
-        </div>
+        <div class="stat-icon capa-icon">✅</div>
         <div class="stat-details">
           <div class="stat-value text-success">
             {{ completedQualificationsCount }}
           </div>
-          <div class="stat-label">
-            Verified Qualifications
-          </div>
+          <div class="stat-label">Verified Qualifications</div>
         </div>
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon rbqm-icon">
-          🔒
-        </div>
+        <div class="stat-icon rbqm-icon">🔒</div>
         <div class="stat-details">
           <div class="stat-value text-warning">
             {{ pendingGatedCount }}
           </div>
-          <div class="stat-label">
-            Gated Staff Assignments
-          </div>
+          <div class="stat-label">Gated Staff Assignments</div>
         </div>
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon">
-          🎯
-        </div>
+        <div class="stat-icon">🎯</div>
         <div class="stat-details">
-          <div class="stat-value">
-            80%
-          </div>
-          <div class="stat-label">
-            Min Quiz Threshold
-          </div>
+          <div class="stat-value">80%</div>
+          <div class="stat-label">Min Quiz Threshold</div>
         </div>
       </div>
     </div>
@@ -88,9 +67,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import ProtocolTrainingConsole from '../components/clinical/ProtocolTrainingConsole.vue';
-import { trainingApi } from '../api/training';
+import { ref, onMounted } from "vue";
+import ProtocolTrainingConsole from "../components/clinical/ProtocolTrainingConsole.vue";
+import { trainingApi } from "../api/training";
 
 const activeCurriculaCount = ref(1);
 const completedQualificationsCount = ref(0);
@@ -102,10 +81,14 @@ onMounted(async () => {
     activeCurriculaCount.value = curricula.length || 1;
 
     const assignments = await trainingApi.listAssignments();
-    completedQualificationsCount.value = assignments.filter((a) => a.status === 'COMPLETED').length;
-    pendingGatedCount.value = assignments.filter((a) => a.status !== 'COMPLETED').length;
+    completedQualificationsCount.value = assignments.filter(
+      (a) => a.status === "COMPLETED"
+    ).length;
+    pendingGatedCount.value = assignments.filter(
+      (a) => a.status !== "COMPLETED"
+    ).length;
   } catch (err) {
-    console.error('Failed to load training metrics:', err);
+    console.error("Failed to load training metrics:", err);
   }
 });
 </script>

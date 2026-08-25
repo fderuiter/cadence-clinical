@@ -67,10 +67,17 @@ export default [
       ],
       "no-undef": "off",
       "vue/multi-word-component-names": "off",
-      "vuejs-accessibility/label-has-for": "warn",
-      "vuejs-accessibility/click-events-have-key-events": "warn",
-      "vuejs-accessibility/no-static-element-interactions": "warn",
-      "vuejs-accessibility/form-control-has-label": "warn",
+      "vuejs-accessibility/label-has-for": [
+        "error",
+        {
+          required: {
+            some: ["nesting", "id"],
+          },
+        },
+      ],
+      "vuejs-accessibility/click-events-have-key-events": "error",
+      "vuejs-accessibility/no-static-element-interactions": "error",
+      "vuejs-accessibility/form-control-has-label": "error",
     },
     files: [
       "apps/**/*.js",

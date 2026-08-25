@@ -9,11 +9,14 @@
           <span class="badge badge-standard">RECIST 1.1 / Lugano 2014</span>
           <span class="badge badge-standard">Zero-Footprint Web MPR</span>
         </div>
-        <h2 class="view-title">Medical Imaging &amp; Oncologic Adjudication Console</h2>
+        <h2 class="view-title">
+          Medical Imaging &amp; Oncologic Adjudication Console
+        </h2>
         <p class="view-subtitle">
-          High-performance browser-native multi-planar reconstruction (MPR) DICOM viewer
-          with calibrated oncologic caliper measurement tools, sum of longest diameters (SLD),
-          and automatic tumor response derivations (RECIST 1.1 and Lugano classification).
+          High-performance browser-native multi-planar reconstruction (MPR)
+          DICOM viewer with calibrated oncologic caliper measurement tools, sum
+          of longest diameters (SLD), and automatic tumor response derivations
+          (RECIST 1.1 and Lugano classification).
         </p>
       </div>
 
@@ -27,9 +30,15 @@
             class="header-select"
             @change="loadSubjectData"
           >
-            <option value="SUBJ-ONC-001">Subject: SUBJ-ONC-001 (NSCLC Cohort)</option>
-            <option value="SUBJ-ONC-002">Subject: SUBJ-ONC-002 (Lymphoma Cohort)</option>
-            <option value="SUBJ-ONC-003">Subject: SUBJ-ONC-003 (Glioma Cohort)</option>
+            <option value="SUBJ-ONC-001">
+              Subject: SUBJ-ONC-001 (NSCLC Cohort)
+            </option>
+            <option value="SUBJ-ONC-002">
+              Subject: SUBJ-ONC-002 (Lymphoma Cohort)
+            </option>
+            <option value="SUBJ-ONC-003">
+              Subject: SUBJ-ONC-003 (Glioma Cohort)
+            </option>
           </select>
         </div>
 
@@ -73,6 +82,8 @@
           <span class="panel-heading">Series Envelope</span>
         </div>
         <div class="series-list">
+          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             v-for="s in availableSeries"
             :key="s.seriesUid"
@@ -82,7 +93,9 @@
           >
             <div class="series-thumb">🖼️</div>
             <div class="series-meta">
-              <div class="series-title">{{ s.description }}</div>
+              <div class="series-title">
+                {{ s.description }}
+              </div>
               <div class="series-tags">
                 <span class="modality-tag">{{ s.modality }}</span>
                 <span class="slices-tag">{{ s.instancesCount }} slices</span>
@@ -145,7 +158,9 @@
     <section class="trajectory-section">
       <div class="trajectory-header">
         <h3 class="trajectory-title">Longitudinal Tumor Response Trajectory</h3>
-        <span class="trajectory-count">{{ trajectoryHistory.length }} Locked Timepoint Assessments</span>
+        <span class="trajectory-count"
+          >{{ trajectoryHistory.length }} Locked Timepoint Assessments</span
+        >
       </div>
 
       <div class="trajectory-table-wrapper">
@@ -166,24 +181,46 @@
           </thead>
           <tbody>
             <tr v-for="t in trajectoryHistory" :key="t.id">
-              <td class="font-bold">{{ t.timepoint_name }}</td>
+              <td class="font-bold">
+                {{ t.timepoint_name }}
+              </td>
               <td>{{ t.assessment_criteria }}</td>
-              <td>{{ t.current_sld_mm ? t.current_sld_mm + ' mm' : (t.current_spd_mm2 ? t.current_spd_mm2 + ' mm²' : '-') }}</td>
-              <td :class="t.pct_change_baseline <= -30 ? 'text-success' : (t.pct_change_baseline >= 20 ? 'text-danger' : '')">
-                {{ t.pct_change_baseline > 0 ? '+' : '' }}{{ t.pct_change_baseline }}%
+              <td>
+                {{
+                  t.current_sld_mm
+                    ? t.current_sld_mm + " mm"
+                    : t.current_spd_mm2
+                      ? t.current_spd_mm2 + " mm²"
+                      : "-"
+                }}
+              </td>
+              <td
+                :class="
+                  t.pct_change_baseline <= -30
+                    ? 'text-success'
+                    : t.pct_change_baseline >= 20
+                      ? 'text-danger'
+                      : ''
+                "
+              >
+                {{ t.pct_change_baseline > 0 ? "+" : ""
+                }}{{ t.pct_change_baseline }}%
               </td>
               <td :class="t.pct_change_nadir >= 20 ? 'text-danger' : ''">
-                {{ t.pct_change_nadir > 0 ? '+' : '' }}{{ t.pct_change_nadir }}%
+                {{ t.pct_change_nadir > 0 ? "+" : "" }}{{ t.pct_change_nadir }}%
               </td>
               <td>{{ t.target_response }}</td>
               <td>
-                <span class="table-response-pill" :class="'resp-' + (t.overall_response || '').toLowerCase()">
+                <span
+                  class="table-response-pill"
+                  :class="'resp-' + (t.overall_response || '').toLowerCase()"
+                >
                   {{ t.overall_response }}
                 </span>
               </td>
               <td class="font-mono text-xs">🔒 Sealed</td>
               <td>{{ t.reader_id }}</td>
-              <td>{{ t.created_at || '2026-08-23 04:15 UTC' }}</td>
+              <td>{{ t.created_at || "2026-08-23 04:15 UTC" }}</td>
             </tr>
           </tbody>
         </table>
@@ -227,7 +264,10 @@ const currentAnnotations = ref([
     lesion_type: "TARGET",
     longest_diameter_mm: 24.5,
     perpendicular_diameter_mm: 18.0,
-    points: [{ x: 140, y: 150 }, { x: 172, y: 150 }],
+    points: [
+      { x: 140, y: 150 },
+      { x: 172, y: 150 },
+    ],
   },
   {
     id: "annot-002",
@@ -236,7 +276,10 @@ const currentAnnotations = ref([
     lesion_type: "TARGET",
     longest_diameter_mm: 15.5,
     perpendicular_diameter_mm: 12.0,
-    points: [{ x: 220, y: 180 }, { x: 240, y: 180 }],
+    points: [
+      { x: 220, y: 180 },
+      { x: 240, y: 180 },
+    ],
   },
 ]);
 
@@ -258,13 +301,24 @@ const trajectoryHistory = ref([
 ]);
 
 const derivedResponse = computed(() => {
-  const targetLesions = currentAnnotations.value.filter((a) => a.lesion_type === "TARGET");
-  const currentSld = targetLesions.reduce((acc, l) => acc + (l.longest_diameter_mm || 0), 0);
+  const targetLesions = currentAnnotations.value.filter(
+    (a) => a.lesion_type === "TARGET"
+  );
+  const currentSld = targetLesions.reduce(
+    (acc, l) => acc + (l.longest_diameter_mm || 0),
+    0
+  );
   const baselineSld = 65.0;
   const nadirSld = 65.0;
 
-  const pctBaseline = baselineSld > 0 ? Number((((currentSld - baselineSld) / baselineSld) * 100).toFixed(1)) : 0;
-  const pctNadir = nadirSld > 0 ? Number((((currentSld - nadirSld) / nadirSld) * 100).toFixed(1)) : 0;
+  const pctBaseline =
+    baselineSld > 0
+      ? Number((((currentSld - baselineSld) / baselineSld) * 100).toFixed(1))
+      : 0;
+  const pctNadir =
+    nadirSld > 0
+      ? Number((((currentSld - nadirSld) / nadirSld) * 100).toFixed(1))
+      : 0;
 
   let resp = "SD";
   if (pctBaseline <= -30) {
@@ -301,7 +355,9 @@ function handleCaliperCreated(event) {
 }
 
 function handleDeleteAnnotation(id) {
-  currentAnnotations.value = currentAnnotations.value.filter((a) => a.id !== id);
+  currentAnnotations.value = currentAnnotations.value.filter(
+    (a) => a.id !== id
+  );
 }
 
 function handleAssessmentSigned(_event) {
@@ -317,7 +373,8 @@ function handleAssessmentSigned(_event) {
     target_response: derivedResponse.value.target_response,
     overall_response: derivedResponse.value.overall_response,
     reader_id: "dr.current.user",
-    created_at: new Date().toISOString().replace("T", " ").substring(0, 19) + " UTC",
+    created_at:
+      new Date().toISOString().replace("T", " ").substring(0, 19) + " UTC",
   });
 }
 
@@ -346,7 +403,8 @@ function handleAdjudicationCompleted(_event) {
     target_response: "PR",
     overall_response: "PR",
     reader_id: "chair_dr_smith (IRC Chair)",
-    created_at: new Date().toISOString().replace("T", " ").substring(0, 19) + " UTC",
+    created_at:
+      new Date().toISOString().replace("T", " ").substring(0, 19) + " UTC",
   });
 }
 </script>
@@ -636,22 +694,26 @@ function handleAdjudicationCompleted(_event) {
   border-radius: 999px;
 }
 
-.resp-cr, .resp-cmr {
+.resp-cr,
+.resp-cmr {
   background-color: #d1fae5;
   color: #065f46;
 }
 
-.resp-pr, .resp-pmr {
+.resp-pr,
+.resp-pmr {
   background-color: #e0f2fe;
   color: #0369a1;
 }
 
-.resp-sd, .resp-nmr {
+.resp-sd,
+.resp-nmr {
   background-color: #fef3c7;
   color: #92400e;
 }
 
-.resp-pd, .resp-pmd {
+.resp-pd,
+.resp-pmd {
   background-color: #fee2e2;
   color: #991b1b;
 }

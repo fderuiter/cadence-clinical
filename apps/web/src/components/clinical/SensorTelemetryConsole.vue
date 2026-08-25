@@ -1,5 +1,9 @@
 <template>
-  <div class="sensor-console" role="region" aria-label="Continuous Biometric IoT Sensor Telemetry and DCT Console">
+  <div
+    class="sensor-console"
+    role="region"
+    aria-label="Continuous Biometric IoT Sensor Telemetry and DCT Console"
+  >
     <!-- Header -->
     <header class="console-header">
       <div class="header-main">
@@ -8,9 +12,14 @@
           <span class="badge badge-standard">Open mHealth &amp; HL7 FHIR</span>
           <span class="badge badge-stream">Continuous Biometric Telemetry</span>
         </div>
-        <h2 class="console-title">Continuous Biometric IoT Sensor Telemetry &amp; DCT Ingestion</h2>
+        <h2 class="console-title">
+          Continuous Biometric IoT Sensor Telemetry &amp; DCT Ingestion
+        </h2>
         <p class="console-subtitle">
-          Real-time high-frequency streaming ingestion for Continuous Glucose Monitors (CGM), Actigraphy, Spirometry, and Blood Pressure cuffs with automated pseudonymization, clock drift correction, daily Time-in-Range (TIR) calculations, and safety threshold alerts.
+          Real-time high-frequency streaming ingestion for Continuous Glucose
+          Monitors (CGM), Actigraphy, Spirometry, and Blood Pressure cuffs with
+          automated pseudonymization, clock drift correction, daily
+          Time-in-Range (TIR) calculations, and safety threshold alerts.
         </p>
       </div>
 
@@ -50,8 +59,12 @@
         </div>
         <div class="metric-content">
           <span class="metric-label">Ingested Readings</span>
-          <span class="metric-value">{{ metrics.total_readings_ingested.toLocaleString() }}</span>
-          <span class="metric-sub">{{ metrics.total_streams_ingested }} batches processed</span>
+          <span class="metric-value">{{
+            metrics.total_readings_ingested.toLocaleString()
+          }}</span>
+          <span class="metric-sub"
+            >{{ metrics.total_streams_ingested }} batches processed</span
+          >
         </div>
       </div>
 
@@ -61,7 +74,11 @@
         </div>
         <div class="metric-content">
           <span class="metric-label">Mean CGM Time-in-Range</span>
-          <span class="metric-value">{{ metrics.mean_time_in_range_percent !== null ? metrics.mean_time_in_range_percent + '%' : '78.4%' }}</span>
+          <span class="metric-value">{{
+            metrics.mean_time_in_range_percent !== null
+              ? metrics.mean_time_in_range_percent + "%"
+              : "78.4%"
+          }}</span>
           <span class="metric-sub">Target 70–180 mg/dL</span>
         </div>
       </div>
@@ -72,8 +89,14 @@
         </div>
         <div class="metric-content">
           <span class="metric-label">Mean Daily Steps</span>
-          <span class="metric-value">{{ metrics.mean_daily_steps !== null ? metrics.mean_daily_steps.toLocaleString() : '8,420' }}</span>
-          <span class="metric-sub">Resting HR: {{ metrics.mean_resting_hr_bpm || 64 }} bpm</span>
+          <span class="metric-value">{{
+            metrics.mean_daily_steps !== null
+              ? metrics.mean_daily_steps.toLocaleString()
+              : "8,420"
+          }}</span>
+          <span class="metric-sub"
+            >Resting HR: {{ metrics.mean_resting_hr_bpm || 64 }} bpm</span
+          >
         </div>
       </div>
 
@@ -83,8 +106,12 @@
         </div>
         <div class="metric-content">
           <span class="metric-label">Safety Threshold Alerts</span>
-          <span class="metric-value text-danger">{{ safetyAlerts.filter(a => !a.is_acknowledged).length }}</span>
-          <span class="metric-sub">{{ safetyAlerts.length }} total triggered</span>
+          <span class="metric-value text-danger">{{
+            safetyAlerts.filter((a) => !a.is_acknowledged).length
+          }}</span>
+          <span class="metric-sub"
+            >{{ safetyAlerts.length }} total triggered</span
+          >
         </div>
       </div>
     </section>
@@ -106,7 +133,9 @@
         @click="activeTab = 'alerts'"
       >
         🚨 Automated Safety Alerts ({{ safetyAlerts.length }})
-        <span v-if="unacknowledgedCount > 0" class="badge-count">{{ unacknowledgedCount }}</span>
+        <span v-if="unacknowledgedCount > 0" class="badge-count">{{
+          unacknowledgedCount
+        }}</span>
       </button>
       <button
         role="tab"
@@ -132,24 +161,57 @@
         <!-- CGM Time in Range Card -->
         <div class="card summary-card">
           <div class="card-header">
-            <h3 class="card-title">🩸 Continuous Glucose Monitoring (CGM) Consensus</h3>
+            <h3 class="card-title">
+              🩸 Continuous Glucose Monitoring (CGM) Consensus
+            </h3>
             <span class="badge badge-success">ATTD Standards</span>
           </div>
           <div class="card-body">
             <div class="tir-visualizer">
               <div class="tir-bar-container">
-                <div class="tir-segment tbr2" style="width: 5%" title="Severe Hypo (<54 mg/dL): 5%"></div>
-                <div class="tir-segment tbr1" style="width: 5%" title="Hypo (54-69 mg/dL): 5%"></div>
-                <div class="tir-segment in-range" style="width: 78%" title="In Range (70-180 mg/dL): 78%"></div>
-                <div class="tir-segment tar1" style="width: 9%" title="Hyper (181-250 mg/dL): 9%"></div>
-                <div class="tir-segment tar2" style="width: 3%" title="Severe Hyper (>250 mg/dL): 3%"></div>
+                <div
+                  class="tir-segment tbr2"
+                  style="width: 5%"
+                  title="Severe Hypo (<54 mg/dL): 5%"
+                />
+                <div
+                  class="tir-segment tbr1"
+                  style="width: 5%"
+                  title="Hypo (54-69 mg/dL): 5%"
+                />
+                <div
+                  class="tir-segment in-range"
+                  style="width: 78%"
+                  title="In Range (70-180 mg/dL): 78%"
+                />
+                <div
+                  class="tir-segment tar1"
+                  style="width: 9%"
+                  title="Hyper (181-250 mg/dL): 9%"
+                />
+                <div
+                  class="tir-segment tar2"
+                  style="width: 3%"
+                  title="Severe Hyper (>250 mg/dL): 3%"
+                />
               </div>
               <div class="tir-legend">
-                <span class="legend-item"><span class="legend-dot dot-tbr2"></span> &lt;54 mg/dL (5%)</span>
-                <span class="legend-item"><span class="legend-dot dot-tbr1"></span> 54–69 mg/dL (5%)</span>
-                <span class="legend-item font-bold"><span class="legend-dot dot-target"></span> 70–180 mg/dL (78% TIR)</span>
-                <span class="legend-item"><span class="legend-dot dot-tar1"></span> 181–250 mg/dL (9%)</span>
-                <span class="legend-item"><span class="legend-dot dot-tar2"></span> &gt;250 mg/dL (3%)</span>
+                <span class="legend-item"
+                  ><span class="legend-dot dot-tbr2" /> &lt;54 mg/dL (5%)</span
+                >
+                <span class="legend-item"
+                  ><span class="legend-dot dot-tbr1" /> 54–69 mg/dL (5%)</span
+                >
+                <span class="legend-item font-bold"
+                  ><span class="legend-dot dot-target" /> 70–180 mg/dL (78%
+                  TIR)</span
+                >
+                <span class="legend-item"
+                  ><span class="legend-dot dot-tar1" /> 181–250 mg/dL (9%)</span
+                >
+                <span class="legend-item"
+                  ><span class="legend-dot dot-tar2" /> &gt;250 mg/dL (3%)</span
+                >
               </div>
             </div>
 
@@ -178,7 +240,9 @@
         <div class="card table-card">
           <div class="card-header">
             <h3 class="card-title">Daily Aggregate Endpoints Ledger</h3>
-            <span class="badge badge-muted">{{ dailySummaries.length }} days</span>
+            <span class="badge badge-muted"
+              >{{ dailySummaries.length }} days</span
+            >
           </div>
           <div class="table-container">
             <table class="data-table">
@@ -195,18 +259,50 @@
               </thead>
               <tbody>
                 <tr v-if="dailySummaries.length === 0">
-                  <td colspan="7" class="empty-state">No daily summary endpoints recorded yet. Ingest telemetry stream batches to compute endpoints.</td>
+                  <td colspan="7" class="empty-state">
+                    No daily summary endpoints recorded yet. Ingest telemetry
+                    stream batches to compute endpoints.
+                  </td>
                 </tr>
                 <tr v-for="sum in dailySummaries" :key="sum.summary_id">
-                  <td><code>{{ sum.subject_id }}</code></td>
-                  <td>{{ formatDate(sum.summary_date) }}</td>
-                  <td><span class="device-pill">{{ sum.device_type }}</span></td>
-                  <td><code>{{ sum.device_token }}</code></td>
                   <td>
-                    <span v-if="sum.cgm">TIR: <strong>{{ sum.cgm.tir_percentage }}%</strong> (Mean: {{ sum.cgm.mean_glucose_mg_dl }} mg/dL)</span>
-                    <span v-else-if="sum.actigraphy">Steps: <strong>{{ sum.actigraphy.total_steps.toLocaleString() }}</strong> (RHR: {{ sum.actigraphy.resting_heart_rate_bpm }} bpm)</span>
-                    <span v-else-if="sum.spirometry">FEV1: <strong>{{ sum.spirometry.best_fev1_liters }} L</strong> ({{ sum.spirometry.fev1_percent_predicted }}% pred)</span>
-                    <span v-else-if="sum.blood_pressure">BP: <strong>{{ sum.blood_pressure.mean_systolic_mmhg }}/{{ sum.blood_pressure.mean_diastolic_mmhg }}</strong> mmHg</span>
+                    <code>{{ sum.subject_id }}</code>
+                  </td>
+                  <td>{{ formatDate(sum.summary_date) }}</td>
+                  <td>
+                    <span class="device-pill">{{ sum.device_type }}</span>
+                  </td>
+                  <td>
+                    <code>{{ sum.device_token }}</code>
+                  </td>
+                  <td>
+                    <span v-if="sum.cgm"
+                      >TIR:
+                      <strong>{{ sum.cgm.tir_percentage }}%</strong> (Mean:
+                      {{ sum.cgm.mean_glucose_mg_dl }} mg/dL)</span
+                    >
+                    <span v-else-if="sum.actigraphy"
+                      >Steps:
+                      <strong>{{
+                        sum.actigraphy.total_steps.toLocaleString()
+                      }}</strong>
+                      (RHR:
+                      {{ sum.actigraphy.resting_heart_rate_bpm }} bpm)</span
+                    >
+                    <span v-else-if="sum.spirometry"
+                      >FEV1:
+                      <strong>{{ sum.spirometry.best_fev1_liters }} L</strong>
+                      ({{ sum.spirometry.fev1_percent_predicted }}% pred)</span
+                    >
+                    <span v-else-if="sum.blood_pressure"
+                      >BP:
+                      <strong
+                        >{{ sum.blood_pressure.mean_systolic_mmhg }}/{{
+                          sum.blood_pressure.mean_diastolic_mmhg
+                        }}</strong
+                      >
+                      mmHg</span
+                    >
                     <span v-else>—</span>
                   </td>
                   <td><span class="badge badge-success">Valid GxP</span></td>
@@ -225,8 +321,12 @@
     <div v-if="activeTab === 'alerts'" class="tab-panel" role="tabpanel">
       <div class="card table-card">
         <div class="card-header">
-          <h3 class="card-title">Automated Safety Threshold Alerts &amp; Clinical Gating</h3>
-          <span class="badge badge-danger">{{ unacknowledgedCount }} Unacknowledged</span>
+          <h3 class="card-title">
+            Automated Safety Threshold Alerts &amp; Clinical Gating
+          </h3>
+          <span class="badge badge-danger"
+            >{{ unacknowledgedCount }} Unacknowledged</span
+          >
         </div>
         <div class="table-container">
           <table class="data-table">
@@ -244,23 +344,46 @@
             </thead>
             <tbody>
               <tr v-if="safetyAlerts.length === 0">
-                <td colspan="8" class="empty-state">No safety threshold alerts triggered. All sensor streams within nominal protocol bounds.</td>
-              </tr>
-              <tr v-for="alert in safetyAlerts" :key="alert.alert_id" :class="{ 'row-unack': !alert.is_acknowledged }">
-                <td><code>{{ alert.alert_id }}</code></td>
-                <td>
-                  <span :class="['severity-badge', alert.severity.toLowerCase()]">{{ alert.severity }}</span>
+                <td colspan="8" class="empty-state">
+                  No safety threshold alerts triggered. All sensor streams
+                  within nominal protocol bounds.
                 </td>
-                <td><code>{{ alert.subject_id }}</code></td>
+              </tr>
+              <tr
+                v-for="alert in safetyAlerts"
+                :key="alert.alert_id"
+                :class="{ 'row-unack': !alert.is_acknowledged }"
+              >
+                <td>
+                  <code>{{ alert.alert_id }}</code>
+                </td>
+                <td>
+                  <span
+                    :class="['severity-badge', alert.severity.toLowerCase()]"
+                    >{{ alert.severity }}</span
+                  >
+                </td>
+                <td>
+                  <code>{{ alert.subject_id }}</code>
+                </td>
                 <td>{{ alert.device_type }}</td>
                 <td>
-                  <strong>{{ alert.parameter_name }}</strong>:
-                  <span class="text-danger font-bold">{{ alert.observed_value }} {{ alert.unit }}</span>
-                  <span class="threshold-sub">(Threshold: {{ alert.threshold_value }} {{ alert.unit }})</span>
+                  <strong>{{ alert.parameter_name }}</strong
+                  >:
+                  <span class="text-danger font-bold"
+                    >{{ alert.observed_value }} {{ alert.unit }}</span
+                  >
+                  <span class="threshold-sub"
+                    >(Threshold: {{ alert.threshold_value }}
+                    {{ alert.unit }})</span
+                  >
                 </td>
                 <td>{{ formatDate(alert.triggered_at) }}</td>
                 <td>
-                  <span v-if="alert.is_acknowledged" class="badge badge-success">
+                  <span
+                    v-if="alert.is_acknowledged"
+                    class="badge badge-success"
+                  >
                     ✔ Acknowledged by {{ alert.acknowledged_by }}
                   </span>
                   <span v-else class="badge badge-danger">
@@ -276,7 +399,9 @@
                   >
                     ✍ Acknowledge Alert
                   </button>
-                  <span v-else class="text-muted text-sm">{{ alert.acknowledgment_notes }}</span>
+                  <span v-else class="text-muted text-sm">{{
+                    alert.acknowledgment_notes
+                  }}</span>
                 </td>
               </tr>
             </tbody>
@@ -289,8 +414,14 @@
     <div v-if="activeTab === 'devices'" class="tab-panel" role="tabpanel">
       <div class="card table-card">
         <div class="card-header">
-          <h3 class="card-title">Approved Medical IoT Device Registry &amp; UDI / MAC Mapping</h3>
-          <button type="button" class="btn btn-sm btn-primary" @click="openRegisterDeviceModal">
+          <h3 class="card-title">
+            Approved Medical IoT Device Registry &amp; UDI / MAC Mapping
+          </h3>
+          <button
+            type="button"
+            class="btn btn-sm btn-primary"
+            @click="openRegisterDeviceModal"
+          >
             + Register Device
           </button>
         </div>
@@ -310,17 +441,34 @@
             </thead>
             <tbody>
               <tr v-if="devices.length === 0">
-                <td colspan="8" class="empty-state">No medical IoT devices registered yet. Click '+ Register Device' to pair an approved sensor.</td>
+                <td colspan="8" class="empty-state">
+                  No medical IoT devices registered yet. Click '+ Register
+                  Device' to pair an approved sensor.
+                </td>
               </tr>
               <tr v-for="dev in devices" :key="dev.device_id">
-                <td><code>{{ dev.device_token }}</code></td>
-                <td><span class="device-pill">{{ dev.device_type }}</span></td>
-                <td><strong>{{ dev.vendor }}</strong> {{ dev.model_name }}</td>
-                <td><code>{{ dev.subject_id }}</code></td>
-                <td><code>{{ dev.udi_di }}</code></td>
-                <td><code>{{ dev.mac_address_masked || '—' }}</code></td>
                 <td>
-                  <span class="badge badge-success">{{ dev.calibration_status }}</span>
+                  <code>{{ dev.device_token }}</code>
+                </td>
+                <td>
+                  <span class="device-pill">{{ dev.device_type }}</span>
+                </td>
+                <td>
+                  <strong>{{ dev.vendor }}</strong> {{ dev.model_name }}
+                </td>
+                <td>
+                  <code>{{ dev.subject_id }}</code>
+                </td>
+                <td>
+                  <code>{{ dev.udi_di }}</code>
+                </td>
+                <td>
+                  <code>{{ dev.mac_address_masked || "—" }}</code>
+                </td>
+                <td>
+                  <span class="badge badge-success">{{
+                    dev.calibration_status
+                  }}</span>
                 </td>
                 <td>
                   <span class="badge badge-active">Active</span>
@@ -337,7 +485,9 @@
       <div class="standards-inspector">
         <div class="card">
           <div class="card-header">
-            <h3 class="card-title">🌐 Open mHealth (OMH) 1.0 JSON Schema Standard</h3>
+            <h3 class="card-title">
+              🌐 Open mHealth (OMH) 1.0 JSON Schema Standard
+            </h3>
             <span class="badge badge-standard">omh:blood-glucose</span>
           </div>
           <div class="card-body">
@@ -347,7 +497,9 @@
 
         <div class="card">
           <div class="card-header">
-            <h3 class="card-title">🩺 HL7 FHIR R4 Observation Resource Standard</h3>
+            <h3 class="card-title">
+              🩺 HL7 FHIR R4 Observation Resource Standard
+            </h3>
             <span class="badge badge-standard">LOINC 2339-0</span>
           </div>
           <div class="card-body">
@@ -358,116 +510,244 @@
     </div>
 
     <!-- MODAL: Acknowledge Safety Alert -->
-    <div v-if="showAckModal && selectedAlert" class="modal-backdrop" @click.self="showAckModal = false">
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <div
+      v-if="showAckModal && selectedAlert"
+      class="modal-backdrop"
+      @click.self="showAckModal = false"
+    >
       <div class="modal-dialog">
         <div class="modal-header">
-          <h3 class="modal-title">Acknowledge Safety Alert: {{ selectedAlert.alert_id }}</h3>
-          <button type="button" class="modal-close" @click="showAckModal = false">×</button>
+          <h3 class="modal-title">
+            Acknowledge Safety Alert: {{ selectedAlert.alert_id }}
+          </h3>
+          <button
+            type="button"
+            class="modal-close"
+            @click="showAckModal = false"
+          >
+            ×
+          </button>
         </div>
         <div class="modal-body">
           <div class="alert-detail-box">
-            <p><strong>Subject:</strong> <code>{{ selectedAlert.subject_id }}</code></p>
-            <p><strong>Parameter:</strong> {{ selectedAlert.parameter_name }} = <span class="text-danger">{{ selectedAlert.observed_value }} {{ selectedAlert.unit }}</span></p>
-            <p><strong>Threshold Breached:</strong> {{ selectedAlert.threshold_value }} {{ selectedAlert.unit }}</p>
-            <p><strong>Triggered Time:</strong> {{ formatDate(selectedAlert.triggered_at) }}</p>
+            <p>
+              <strong>Subject:</strong>
+              <code>{{ selectedAlert.subject_id }}</code>
+            </p>
+            <p>
+              <strong>Parameter:</strong> {{ selectedAlert.parameter_name }} =
+              <span class="text-danger"
+                >{{ selectedAlert.observed_value }}
+                {{ selectedAlert.unit }}</span
+              >
+            </p>
+            <p>
+              <strong>Threshold Breached:</strong>
+              {{ selectedAlert.threshold_value }} {{ selectedAlert.unit }}
+            </p>
+            <p>
+              <strong>Triggered Time:</strong>
+              {{ formatDate(selectedAlert.triggered_at) }}
+            </p>
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="ack-notes">Clinical Justification &amp; Action Notes *</label>
+            <label class="form-label" for="ack-notes"
+              >Clinical Justification &amp; Action Notes *</label
+            >
             <textarea
               id="ack-notes"
               v-model="ackNotes"
               class="form-control textarea"
               rows="3"
               placeholder="Describe clinical intervention, subject contact, or protocol procedures undertaken..."
-            ></textarea>
+            />
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" @click="showAckModal = false">Cancel</button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="showAckModal = false"
+          >
+            Cancel
+          </button>
           <button
             type="button"
             class="btn btn-danger"
             :disabled="!ackNotes.trim() || isSubmitting"
             @click="submitAcknowledgment"
           >
-            {{ isSubmitting ? 'Signing...' : '✍ Confirm 21 CFR Part 11 Sign-off' }}
+            {{
+              isSubmitting ? "Signing..." : "✍ Confirm 21 CFR Part 11 Sign-off"
+            }}
           </button>
         </div>
       </div>
     </div>
 
     <!-- MODAL: Register Medical IoT Device -->
-    <div v-if="showRegisterModal" class="modal-backdrop" @click.self="showRegisterModal = false">
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <div
+      v-if="showRegisterModal"
+      class="modal-backdrop"
+      @click.self="showRegisterModal = false"
+    >
       <div class="modal-dialog">
         <div class="modal-header">
           <h3 class="modal-title">Register Medical IoT Device</h3>
-          <button type="button" class="modal-close" @click="showRegisterModal = false">×</button>
+          <button
+            type="button"
+            class="modal-close"
+            @click="showRegisterModal = false"
+          >
+            ×
+          </button>
         </div>
         <div class="modal-body">
           <div class="form-grid">
             <div class="form-group">
-              <label class="form-label" for="dev-category">Device Category *</label>
-              <select id="dev-category" v-model="registerForm.device_type" class="form-control">
+              <label class="form-label" for="dev-category"
+                >Device Category *</label
+              >
+              <select
+                id="dev-category"
+                v-model="registerForm.device_type"
+                class="form-control"
+              >
                 <option value="CGM">Continuous Glucose Monitor (CGM)</option>
-                <option value="ACTIGRAPHY">Actigraphy / Sleep &amp; Steps Tracker</option>
+                <option value="ACTIGRAPHY">
+                  Actigraphy / Sleep &amp; Steps Tracker
+                </option>
                 <option value="SPIROMETRY">Digital Spirometer (FEV1)</option>
-                <option value="BLOOD_PRESSURE">Bluetooth Blood Pressure Cuff</option>
+                <option value="BLOOD_PRESSURE">
+                  Bluetooth Blood Pressure Cuff
+                </option>
               </select>
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="dev-vendor">Manufacturer / Vendor *</label>
-              <input id="dev-vendor" v-model="registerForm.vendor" type="text" class="form-control" placeholder="e.g. Dexcom, Abbott, ActiGraph" />
+              <label class="form-label" for="dev-vendor"
+                >Manufacturer / Vendor *</label
+              >
+              <input
+                id="dev-vendor"
+                v-model="registerForm.vendor"
+                type="text"
+                class="form-control"
+                placeholder="e.g. Dexcom, Abbott, ActiGraph"
+              />
             </div>
 
             <div class="form-group">
               <label class="form-label" for="dev-model">Model Name *</label>
-              <input id="dev-model" v-model="registerForm.model_name" type="text" class="form-control" placeholder="e.g. G7, FreeStyle Libre 3, wGT3X-BT" />
+              <input
+                id="dev-model"
+                v-model="registerForm.model_name"
+                type="text"
+                class="form-control"
+                placeholder="e.g. G7, FreeStyle Libre 3, wGT3X-BT"
+              />
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="dev-subject">Assigned Subject ID *</label>
-              <input id="dev-subject" v-model="registerForm.subject_id" type="text" class="form-control" placeholder="e.g. SUBJ-101" />
+              <label class="form-label" for="dev-subject"
+                >Assigned Subject ID *</label
+              >
+              <input
+                id="dev-subject"
+                v-model="registerForm.subject_id"
+                type="text"
+                class="form-control"
+                placeholder="e.g. SUBJ-101"
+              />
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="dev-mac">Bluetooth MAC Address</label>
-              <input id="dev-mac" v-model="registerForm.mac_address" type="text" class="form-control" placeholder="00:1A:7D:DA:71:13" />
+              <label class="form-label" for="dev-mac"
+                >Bluetooth MAC Address</label
+              >
+              <input
+                id="dev-mac"
+                v-model="registerForm.mac_address"
+                type="text"
+                class="form-control"
+                placeholder="00:1A:7D:DA:71:13"
+              />
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="dev-udi">FDA UDI Barcode / DI</label>
-              <input id="dev-udi" v-model="registerForm.device_udi" type="text" class="form-control" placeholder="(01)00850012345678(21)SN123" />
+              <label class="form-label" for="dev-udi"
+                >FDA UDI Barcode / DI</label
+              >
+              <input
+                id="dev-udi"
+                v-model="registerForm.device_udi"
+                type="text"
+                class="form-control"
+                placeholder="(01)00850012345678(21)SN123"
+              />
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" @click="showRegisterModal = false">Cancel</button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="showRegisterModal = false"
+          >
+            Cancel
+          </button>
           <button
             type="button"
             class="btn btn-primary"
-            :disabled="!registerForm.vendor || !registerForm.model_name || !registerForm.subject_id || isSubmitting"
+            :disabled="
+              !registerForm.vendor ||
+              !registerForm.model_name ||
+              !registerForm.subject_id ||
+              isSubmitting
+            "
             @click="submitDeviceRegistration"
           >
-            {{ isSubmitting ? 'Registering...' : 'Register & Map Device' }}
+            {{ isSubmitting ? "Registering..." : "Register & Map Device" }}
           </button>
         </div>
       </div>
     </div>
 
     <!-- MODAL: Ingest Stream Batch Simulator -->
-    <div v-if="showSimulateModal" class="modal-backdrop" @click.self="showSimulateModal = false">
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <div
+      v-if="showSimulateModal"
+      class="modal-backdrop"
+      @click.self="showSimulateModal = false"
+    >
       <div class="modal-dialog">
         <div class="modal-header">
           <h3 class="modal-title">Simulate Biometric Telemetry Ingestion</h3>
-          <button type="button" class="modal-close" @click="showSimulateModal = false">×</button>
+          <button
+            type="button"
+            class="modal-close"
+            @click="showSimulateModal = false"
+          >
+            ×
+          </button>
         </div>
         <div class="modal-body">
           <div class="form-grid">
             <div class="form-group">
-              <label class="form-label" for="sim-dev-type">Stream Category *</label>
-              <select id="sim-dev-type" v-model="simulateForm.device_type" class="form-control">
+              <label class="form-label" for="sim-dev-type"
+                >Stream Category *</label
+              >
+              <select
+                id="sim-dev-type"
+                v-model="simulateForm.device_type"
+                class="form-control"
+              >
                 <option value="CGM">Continuous Glucose Monitor (CGM)</option>
                 <option value="ACTIGRAPHY">Actigraphy &amp; Heart Rate</option>
                 <option value="SPIROMETRY">Digital Spirometry</option>
@@ -477,29 +757,56 @@
 
             <div class="form-group">
               <label class="form-label" for="sim-subject">Subject ID *</label>
-              <input id="sim-subject" v-model="simulateForm.subject_id" type="text" class="form-control" />
+              <input
+                id="sim-subject"
+                v-model="simulateForm.subject_id"
+                type="text"
+                class="form-control"
+              />
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="sim-drift">Simulated Clock Drift (ms)</label>
-              <input id="sim-drift" v-model.number="simulateForm.drift_ms" type="number" class="form-control" />
+              <label class="form-label" for="sim-drift"
+                >Simulated Clock Drift (ms)</label
+              >
+              <input
+                id="sim-drift"
+                v-model.number="simulateForm.drift_ms"
+                type="number"
+                class="form-control"
+              />
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="sim-samples">Number of Samples</label>
-              <input id="sim-samples" v-model.number="simulateForm.sample_count" type="number" class="form-control" min="1" max="288" />
+              <label class="form-label" for="sim-samples"
+                >Number of Samples</label
+              >
+              <input
+                id="sim-samples"
+                v-model.number="simulateForm.sample_count"
+                type="number"
+                class="form-control"
+                min="1"
+                max="288"
+              />
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" @click="showSimulateModal = false">Cancel</button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="showSimulateModal = false"
+          >
+            Cancel
+          </button>
           <button
             type="button"
             class="btn btn-accent"
             :disabled="isSubmitting"
             @click="submitSimulatedIngestion"
           >
-            {{ isSubmitting ? 'Ingesting...' : '⚡ Ingest Telemetry Stream' }}
+            {{ isSubmitting ? "Ingesting..." : "⚡ Ingest Telemetry Stream" }}
           </button>
         </div>
       </div>
@@ -508,8 +815,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { interopService } from '../../api/interop';
+import { computed, onMounted, ref } from "vue";
+import { interopService } from "../../api/interop";
 
 export interface DeviceEntity {
   device_id: string;
@@ -577,11 +884,13 @@ const props = withDefaults(
     studyId?: string;
   }>(),
   {
-    studyId: 'STUDY-901',
+    studyId: "STUDY-901",
   }
 );
 
-const activeTab = ref<'telemetry' | 'alerts' | 'devices' | 'standards'>('telemetry');
+const activeTab = ref<"telemetry" | "alerts" | "devices" | "standards">(
+  "telemetry"
+);
 const isLoading = ref(false);
 const isSubmitting = ref(false);
 const showAckModal = ref(false);
@@ -592,7 +901,7 @@ const devices = ref<DeviceEntity[]>([]);
 const dailySummaries = ref<DailySummaryEntity[]>([]);
 const safetyAlerts = ref<SafetyAlertEntity[]>([]);
 const selectedAlert = ref<SafetyAlertEntity | null>(null);
-const ackNotes = ref('');
+const ackNotes = ref("");
 
 const metrics = ref({
   total_streams_ingested: 14,
@@ -610,20 +919,20 @@ const unacknowledgedCount = computed(() => {
 
 const registerForm = ref({
   study_id: props.studyId,
-  site_id: 'SITE-101',
-  subject_id: 'SUBJ-101',
-  device_type: 'CGM',
-  vendor: 'Dexcom',
-  model_name: 'G7',
-  mac_address: '00:1A:7D:DA:71:13',
-  device_udi: '(01)00850012345678(21)SN12345',
-  serial_number: 'SN12345',
-  firmware_version: 'v2.1.0',
+  site_id: "SITE-101",
+  subject_id: "SUBJ-101",
+  device_type: "CGM",
+  vendor: "Dexcom",
+  model_name: "G7",
+  mac_address: "00:1A:7D:DA:71:13",
+  device_udi: "(01)00850012345678(21)SN12345",
+  serial_number: "SN12345",
+  firmware_version: "v2.1.0",
 });
 
 const simulateForm = ref({
-  device_type: 'CGM',
-  subject_id: 'SUBJ-101',
+  device_type: "CGM",
+  subject_id: "SUBJ-101",
   drift_ms: 1250,
   sample_count: 24,
 });
@@ -637,23 +946,23 @@ const sampleOmhJson = computed(() => {
         schema_id: {
           namespace: "omh",
           name: "blood-glucose",
-          version: "1.0"
+          version: "1.0",
         },
         acquisition_provenance: {
           source_name: "Cadence-Dexcom-G7",
-          modality: "sensed"
-        }
+          modality: "sensed",
+        },
       },
       body: {
         blood_glucose: {
           value: 115.0,
-          unit: "mg/dL"
+          unit: "mg/dL",
         },
         effective_time_frame: {
-          date_time: "2026-08-23T12:00:00Z"
+          date_time: "2026-08-23T12:00:00Z",
         },
-        specimen_source: "interstitial fluid"
-      }
+        specimen_source: "interstitial fluid",
+      },
     },
     null,
     2
@@ -670,32 +979,33 @@ const sampleFhirJson = computed(() => {
         {
           coding: [
             {
-              system: "http://terminology.hl7.org/CodeSystem/observation-category",
+              system:
+                "http://terminology.hl7.org/CodeSystem/observation-category",
               code: "laboratory",
-              display: "Laboratory"
-            }
-          ]
-        }
+              display: "Laboratory",
+            },
+          ],
+        },
       ],
       code: {
         coding: [
           {
             system: "http://loinc.org",
             code: "2339-0",
-            display: "Glucose [Mass/volume] in Blood"
-          }
+            display: "Glucose [Mass/volume] in Blood",
+          },
         ],
-        text: "Continuous Glucose Monitor Reading"
+        text: "Continuous Glucose Monitor Reading",
       },
       subject: {
-        reference: "Patient/SUBJ-PSEUDO-8899AA"
+        reference: "Patient/SUBJ-PSEUDO-8899AA",
       },
       valueQuantity: {
         value: 115.0,
         unit: "mg/dL",
         system: "http://unitsofmeasure.org",
-        code: "mg/dL"
-      }
+        code: "mg/dL",
+      },
     },
     null,
     2
@@ -703,10 +1013,10 @@ const sampleFhirJson = computed(() => {
 });
 
 function formatDate(iso: string | null | undefined): string {
-  if (!iso) return '—';
+  if (!iso) return "—";
   try {
     const d = new Date(iso);
-    return d.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+    return d.toISOString().replace("T", " ").slice(0, 19) + " UTC";
   } catch {
     return iso;
   }
@@ -722,20 +1032,20 @@ async function refreshData() {
       interopService.getSensorMetrics(props.studyId),
     ]);
 
-    if (devRes.status === 'fulfilled' && devRes.value?.data?.devices) {
+    if (devRes.status === "fulfilled" && devRes.value?.data?.devices) {
       devices.value = devRes.value.data.devices;
     }
-    if (sumRes.status === 'fulfilled' && sumRes.value?.data?.summaries) {
+    if (sumRes.status === "fulfilled" && sumRes.value?.data?.summaries) {
       dailySummaries.value = sumRes.value.data.summaries;
     }
-    if (alertRes.status === 'fulfilled' && alertRes.value?.data?.alerts) {
+    if (alertRes.status === "fulfilled" && alertRes.value?.data?.alerts) {
       safetyAlerts.value = alertRes.value.data.alerts;
     }
-    if (metricRes.status === 'fulfilled' && metricRes.value?.data?.metrics) {
+    if (metricRes.status === "fulfilled" && metricRes.value?.data?.metrics) {
       metrics.value = metricRes.value.data.metrics;
     }
   } catch (err) {
-    console.error('Error refreshing sensor telemetry data:', err);
+    console.error("Error refreshing sensor telemetry data:", err);
   } finally {
     isLoading.value = false;
   }
@@ -751,7 +1061,7 @@ function openSimulateIngestModal() {
 
 function openAcknowledgeModal(alert: SafetyAlertEntity) {
   selectedAlert.value = alert;
-  ackNotes.value = '';
+  ackNotes.value = "";
   showAckModal.value = true;
 }
 
@@ -766,7 +1076,7 @@ async function submitAcknowledgment() {
     showAckModal.value = false;
     await refreshData();
   } catch (err) {
-    console.error('Error acknowledging safety alert:', err);
+    console.error("Error acknowledging safety alert:", err);
   } finally {
     isSubmitting.value = false;
   }
@@ -779,7 +1089,7 @@ async function submitDeviceRegistration() {
     showRegisterModal.value = false;
     await refreshData();
   } catch (err) {
-    console.error('Error registering device:', err);
+    console.error("Error registering device:", err);
   } finally {
     isSubmitting.value = false;
   }
@@ -794,30 +1104,36 @@ async function submitSimulatedIngestion() {
       const sampleTime = new Date(now.getTime() - i * 5 * 60 * 1000);
       readings.push({
         timestamp: sampleTime.toISOString(),
-        metric_name: simulateForm.value.device_type === 'CGM' ? 'glucose' : 'step_count',
-        value: simulateForm.value.device_type === 'CGM' ? 120.0 + (Math.random() * 40 - 20) : 500,
-        unit: simulateForm.value.device_type === 'CGM' ? 'mg/dL' : 'steps',
+        metric_name:
+          simulateForm.value.device_type === "CGM" ? "glucose" : "step_count",
+        value:
+          simulateForm.value.device_type === "CGM"
+            ? 120.0 + (Math.random() * 40 - 20)
+            : 500,
+        unit: simulateForm.value.device_type === "CGM" ? "mg/dL" : "steps",
       });
     }
 
     await interopService.ingestSensorTelemetry({
       study_id: props.studyId,
-      site_id: 'SITE-101',
+      site_id: "SITE-101",
       subject_id: simulateForm.value.subject_id,
       device_type: simulateForm.value.device_type,
-      vendor: simulateForm.value.device_type === 'CGM' ? 'Dexcom' : 'ActiGraph',
-      model_name: simulateForm.value.device_type === 'CGM' ? 'G7' : 'wGT3X-BT',
-      device_sync_timestamp: new Date(now.getTime() - simulateForm.value.drift_ms).toISOString(),
+      vendor: simulateForm.value.device_type === "CGM" ? "Dexcom" : "ActiGraph",
+      model_name: simulateForm.value.device_type === "CGM" ? "G7" : "wGT3X-BT",
+      device_sync_timestamp: new Date(
+        now.getTime() - simulateForm.value.drift_ms
+      ).toISOString(),
       gateway_receive_timestamp: now.toISOString(),
       readings,
       feed_to_lakehouse: true,
-      reason_for_change: 'Interactive UI telemetry simulation ingestion',
+      reason_for_change: "Interactive UI telemetry simulation ingestion",
     });
 
     showSimulateModal.value = false;
     await refreshData();
   } catch (err) {
-    console.error('Error ingesting simulated stream:', err);
+    console.error("Error ingesting simulated stream:", err);
   } finally {
     isSubmitting.value = false;
   }
@@ -906,10 +1222,18 @@ onMounted(() => {
   font-size: 20px;
 }
 
-.bg-blue { background: #eff6ff; }
-.bg-green { background: #f0fdf4; }
-.bg-purple { background: #f5f3ff; }
-.bg-red { background: #fef2f2; }
+.bg-blue {
+  background: #eff6ff;
+}
+.bg-green {
+  background: #f0fdf4;
+}
+.bg-purple {
+  background: #f5f3ff;
+}
+.bg-red {
+  background: #fef2f2;
+}
 
 .metric-content {
   display: flex;
@@ -1033,11 +1357,21 @@ onMounted(() => {
   height: 100%;
 }
 
-.tbr2 { background: #b91c1c; }
-.tbr1 { background: #f59e0b; }
-.in-range { background: #10b981; }
-.tar1 { background: #f97316; }
-.tar2 { background: #7c3aed; }
+.tbr2 {
+  background: #b91c1c;
+}
+.tbr1 {
+  background: #f59e0b;
+}
+.in-range {
+  background: #10b981;
+}
+.tar1 {
+  background: #f97316;
+}
+.tar2 {
+  background: #7c3aed;
+}
 
 .tir-legend {
   display: flex;
@@ -1058,11 +1392,21 @@ onMounted(() => {
   border-radius: 50%;
 }
 
-.dot-tbr2 { background: #b91c1c; }
-.dot-tbr1 { background: #f59e0b; }
-.dot-target { background: #10b981; }
-.dot-tar1 { background: #f97316; }
-.dot-tar2 { background: #7c3aed; }
+.dot-tbr2 {
+  background: #b91c1c;
+}
+.dot-tbr1 {
+  background: #f59e0b;
+}
+.dot-target {
+  background: #10b981;
+}
+.dot-tar1 {
+  background: #f97316;
+}
+.dot-tar2 {
+  background: #7c3aed;
+}
 
 .metric-subgrid {
   display: grid;
@@ -1150,13 +1494,34 @@ onMounted(() => {
   border-radius: 4px;
 }
 
-.badge-gxp { background: #fef3c7; color: #92400e; }
-.badge-standard { background: #e0f2fe; color: #0369a1; }
-.badge-stream { background: #ede9fe; color: #6b21a8; }
-.badge-success { background: #dcfce7; color: #166534; }
-.badge-danger { background: #fee2e2; color: #991b1b; }
-.badge-muted { background: #f1f5f9; color: #475569; }
-.badge-active { background: #dcfce7; color: #15803d; }
+.badge-gxp {
+  background: #fef3c7;
+  color: #92400e;
+}
+.badge-standard {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+.badge-stream {
+  background: #ede9fe;
+  color: #6b21a8;
+}
+.badge-success {
+  background: #dcfce7;
+  color: #166534;
+}
+.badge-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.badge-muted {
+  background: #f1f5f9;
+  color: #475569;
+}
+.badge-active {
+  background: #dcfce7;
+  color: #15803d;
+}
 
 .severity-badge {
   font-size: 11px;
@@ -1166,9 +1531,18 @@ onMounted(() => {
   text-transform: uppercase;
 }
 
-.severity-badge.critical { background: #dc2626; color: #ffffff; }
-.severity-badge.warning { background: #f59e0b; color: #ffffff; }
-.severity-badge.info { background: #0284c7; color: #ffffff; }
+.severity-badge.critical {
+  background: #dc2626;
+  color: #ffffff;
+}
+.severity-badge.warning {
+  background: #f59e0b;
+  color: #ffffff;
+}
+.severity-badge.info {
+  background: #0284c7;
+  color: #ffffff;
+}
 
 .device-pill {
   background: #f1f5f9;
@@ -1200,11 +1574,27 @@ onMounted(() => {
   transition: background 0.15s ease;
 }
 
-.btn-primary { background: var(--primary); color: #ffffff; }
-.btn-secondary { background: var(--surface); border-color: var(--border); color: var(--text-main); }
-.btn-accent { background: #7c3aed; color: #ffffff; }
-.btn-danger { background: var(--danger); color: #ffffff; }
-.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+}
+.btn-secondary {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text-main);
+}
+.btn-accent {
+  background: #7c3aed;
+  color: #ffffff;
+}
+.btn-danger {
+  background: var(--danger);
+  color: #ffffff;
+}
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
 
 /* Modals */
 .modal-backdrop {
@@ -1303,9 +1693,21 @@ onMounted(() => {
   margin-bottom: 14px;
 }
 
-.text-danger { color: #dc2626; }
-.text-success { color: #16a34a; }
-.font-bold { font-weight: 700; }
-.text-sm { font-size: 12px; }
-.threshold-sub { font-size: 11px; color: var(--text-muted); margin-left: 4px; }
+.text-danger {
+  color: #dc2626;
+}
+.text-success {
+  color: #16a34a;
+}
+.font-bold {
+  font-weight: 700;
+}
+.text-sm {
+  font-size: 12px;
+}
+.threshold-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
 </style>

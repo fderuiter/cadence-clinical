@@ -1,9 +1,7 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="modal-backdrop"
-    @click.self="close"
-  >
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+  <div v-if="isOpen" class="modal-backdrop" @click.self="close">
     <div
       class="modal-dialog ticket-create-modal"
       role="dialog"
@@ -11,14 +9,9 @@
       aria-labelledby="create-modal-title"
     >
       <div class="modal-header">
-        <div class="modal-header-icon">
-          🎫
-        </div>
+        <div class="modal-header-icon">🎫</div>
         <div>
-          <h3
-            id="create-modal-title"
-            class="modal-title"
-          >
+          <h3 id="create-modal-title" class="modal-title">
             Log Clinical Issue / Ticket
           </h3>
           <p class="modal-subtitle">
@@ -39,10 +32,9 @@
       <div class="modal-body">
         <div class="form-row">
           <div class="form-group flex-2">
-            <label
-              for="ticket-title"
-              class="form-label"
-            >Issue Title <span class="text-danger">*</span></label>
+            <label for="ticket-title" class="form-label"
+              >Issue Title <span class="text-danger">*</span></label
+            >
             <input
               id="ticket-title"
               v-model="form.title"
@@ -50,58 +42,46 @@
               class="form-control"
               placeholder="e.g. Temperature Excursion in IP Storage Room 102"
               required
-            >
+            />
           </div>
           <div class="form-group flex-1">
-            <label
-              for="ticket-category"
-              class="form-label"
-            >ICH GCP Category <span class="text-danger">*</span></label>
+            <label for="ticket-category" class="form-label"
+              >ICH GCP Category <span class="text-danger">*</span></label
+            >
             <select
               id="ticket-category"
               v-model="form.category"
               class="form-control"
             >
-              <option value="PROTOCOL_DEVIATION">
-                Protocol Deviation
-              </option>
-              <option value="DATA_QUERY">
-                Data Query / Discrepancy
-              </option>
+              <option value="PROTOCOL_DEVIATION">Protocol Deviation</option>
+              <option value="DATA_QUERY">Data Query / Discrepancy</option>
               <option value="SAFETY_ADVERSE_EVENT">
                 Safety &amp; SAE Event
               </option>
               <option value="SUPPLY_EXCURSION">
                 Supply &amp; Temp Excursion
               </option>
-              <option value="SITE_OPERATIONS">
-                Site Operations
-              </option>
+              <option value="SITE_OPERATIONS">Site Operations</option>
               <option value="MONITORING_FINDING">
                 Monitoring Finding (MVR)
               </option>
-              <option value="TECHNICAL_SYSTEM">
-                Technical / System Bug
-              </option>
+              <option value="TECHNICAL_SYSTEM">Technical / System Bug</option>
               <option value="ACCESS_CONTROL">
                 Access &amp; Role Provisioning
               </option>
               <option value="REGULATORY_QUERY">
                 Regulatory &amp; Ethics Query
               </option>
-              <option value="SYSTEM_SUPPORT">
-                System Support
-              </option>
+              <option value="SYSTEM_SUPPORT">System Support</option>
             </select>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group flex-1">
-            <label
-              for="ticket-severity"
-              class="form-label"
-            >GxP Severity Rating <span class="text-danger">*</span></label>
+            <label for="ticket-severity" class="form-label"
+              >GxP Severity Rating <span class="text-danger">*</span></label
+            >
             <select
               id="ticket-severity"
               v-model="form.gxp_severity"
@@ -119,37 +99,25 @@
             </select>
           </div>
           <div class="form-group flex-1">
-            <label
-              for="ticket-priority"
-              class="form-label"
-            >Priority</label>
+            <label for="ticket-priority" class="form-label">Priority</label>
             <select
               id="ticket-priority"
               v-model="form.priority"
               class="form-control"
             >
-              <option value="LOW">
-                Low
-              </option>
-              <option value="MEDIUM">
-                Medium
-              </option>
-              <option value="HIGH">
-                High
-              </option>
-              <option value="CRITICAL">
-                Critical
-              </option>
+              <option value="LOW">Low</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HIGH">High</option>
+              <option value="CRITICAL">Critical</option>
             </select>
           </div>
         </div>
 
         <div class="form-group">
-          <label
-            for="ticket-desc"
-            class="form-label"
-          >Clinical Narrative &amp; Description
-            <span class="text-danger">*</span></label>
+          <label for="ticket-desc" class="form-label"
+            >Clinical Narrative &amp; Description
+            <span class="text-danger">*</span></label
+          >
           <textarea
             id="ticket-desc"
             v-model="form.description"
@@ -162,104 +130,76 @@
 
         <div class="form-row">
           <div class="form-group flex-1">
-            <label
-              for="ticket-study"
-              class="form-label"
-            >Study ID</label>
+            <label for="ticket-study" class="form-label">Study ID</label>
             <input
               id="ticket-study"
               v-model="form.study_id"
               type="text"
               class="form-control"
               placeholder="e.g. STUDY-ONC-202"
-            >
+            />
           </div>
           <div class="form-group flex-1">
-            <label
-              for="ticket-site"
-              class="form-label"
-            >Site ID</label>
+            <label for="ticket-site" class="form-label">Site ID</label>
             <input
               id="ticket-site"
               v-model="form.site_id"
               type="text"
               class="form-control"
               placeholder="e.g. SITE-101"
-            >
+            />
           </div>
           <div class="form-group flex-1">
-            <label
-              for="ticket-subject"
-              class="form-label"
-            >Subject ID</label>
+            <label for="ticket-subject" class="form-label">Subject ID</label>
             <input
               id="ticket-subject"
               v-model="form.subject_id"
               type="text"
               class="form-control"
               placeholder="e.g. SUBJ-8812"
-            >
+            />
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group flex-1">
-            <label
-              for="ticket-entity-type"
-              class="form-label"
-            >Linked Entity Type</label>
+            <label for="ticket-entity-type" class="form-label"
+              >Linked Entity Type</label
+            >
             <select
               id="ticket-entity-type"
               v-model="form.entity_type"
               class="form-control"
             >
-              <option value="">
-                None / General
-              </option>
-              <option value="SUBJECT">
-                Clinical Subject
-              </option>
-              <option value="CRF_FORM">
-                eCRF Form Submission
-              </option>
-              <option value="SAE_CASE">
-                Safety SAE Case
-              </option>
-              <option value="CAPA_ACTION">
-                Quality CAPA Record
-              </option>
-              <option value="TMF_DOCUMENT">
-                eTMF Document
-              </option>
-              <option value="MVR_VISIT">
-                Monitoring Visit Finding
-              </option>
-              <option value="SUPPLY_KIT">
-                Investigational Product Kit
-              </option>
+              <option value="">None / General</option>
+              <option value="SUBJECT">Clinical Subject</option>
+              <option value="CRF_FORM">eCRF Form Submission</option>
+              <option value="SAE_CASE">Safety SAE Case</option>
+              <option value="CAPA_ACTION">Quality CAPA Record</option>
+              <option value="TMF_DOCUMENT">eTMF Document</option>
+              <option value="MVR_VISIT">Monitoring Visit Finding</option>
+              <option value="SUPPLY_KIT">Investigational Product Kit</option>
             </select>
           </div>
           <div class="form-group flex-2">
-            <label
-              for="ticket-entity-id"
-              class="form-label"
-            >Linked Entity ID</label>
+            <label for="ticket-entity-id" class="form-label"
+              >Linked Entity ID</label
+            >
             <input
               id="ticket-entity-id"
               v-model="form.entity_id"
               type="text"
               class="form-control"
               placeholder="e.g. FORM-AE-001 or CAPA-2026-09"
-            >
+            />
           </div>
         </div>
 
         <div class="form-group">
-          <label
-            for="ticket-reason"
-            class="form-label"
-          >GxP Justification / Reason for Creation
-            <span class="text-danger">*</span></label>
+          <label for="ticket-reason" class="form-label"
+            >GxP Justification / Reason for Creation
+            <span class="text-danger">*</span></label
+          >
           <input
             id="ticket-reason"
             v-model="form.reason_for_change"
@@ -267,13 +207,10 @@
             class="form-control"
             placeholder="Mandatory 21 CFR Part 11 audit reason..."
             required
-          >
+          />
         </div>
 
-        <div
-          v-if="errorMessage"
-          class="error-banner"
-        >
+        <div v-if="errorMessage" class="error-banner">
           ⚠️ {{ errorMessage }}
         </div>
       </div>
@@ -293,10 +230,7 @@
           :disabled="loading || !isFormValid"
           @click="handleSubmit"
         >
-          <span
-            v-if="loading"
-            class="spinner"
-          />
+          <span v-if="loading" class="spinner" />
           <span v-else>🚀 Log Issue</span>
         </button>
       </div>
@@ -357,7 +291,8 @@ function applyInitialData() {
   form.subject_id = init.subject_id || "";
   form.entity_type = init.entity_type || "";
   form.entity_id = init.entity_id || "";
-  form.reason_for_change = init.reason_for_change || "Initial clinical issue logged";
+  form.reason_for_change =
+    init.reason_for_change || "Initial clinical issue logged";
 }
 
 watch(

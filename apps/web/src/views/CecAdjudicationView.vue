@@ -5,7 +5,7 @@
 </template>
 
 <script setup>
-import CecAdjudicationConsole from '../components/clinical/CecAdjudicationConsole.vue'
+import CecAdjudicationConsole from "../components/clinical/CecAdjudicationConsole.vue";
 </script>
 
 <style scoped>

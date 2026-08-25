@@ -146,7 +146,10 @@ const getParsedFinalValue = () => {
     return props.suggestedValue;
   }
   const text = editedValueText.value.trim();
-  if (typeof props.suggestedValue === "object" && props.suggestedValue !== null) {
+  if (
+    typeof props.suggestedValue === "object" &&
+    props.suggestedValue !== null
+  ) {
     try {
       return JSON.parse(text);
     } catch {
@@ -158,7 +161,8 @@ const getParsedFinalValue = () => {
 
 const validateReason = () => {
   if (props.requireReason && !reasonForChange.value.trim()) {
-    validationError.value = "21 CFR Part 11 compliance requires a reason for change before acceptance.";
+    validationError.value =
+      "21 CFR Part 11 compliance requires a reason for change before acceptance.";
     return false;
   }
   validationError.value = "";
@@ -221,7 +225,9 @@ const toggleEdit = () => {
           <div class="ai-drawer-title-group">
             <div class="ai-header-badge-row">
               <span class="ai-drawer-sparkle" aria-hidden="true">✨</span>
-              <h2 class="ai-drawer-title">{{ title }}</h2>
+              <h2 class="ai-drawer-title">
+                {{ title }}
+              </h2>
               <ConfidenceBadge
                 v-if="confidenceScore !== null && confidenceScore !== undefined"
                 :score="confidenceScore"
@@ -229,7 +235,11 @@ const toggleEdit = () => {
               />
             </div>
             <p v-if="entityName || fieldLabel" class="ai-drawer-subtitle">
-              Target: <strong>{{ entityName ? `${entityName} › ` : '' }}{{ fieldLabel || 'Clinical Field' }}</strong>
+              Target:
+              <strong
+                >{{ entityName ? `${entityName} › ` : ""
+                }}{{ fieldLabel || "Clinical Field" }}</strong
+              >
             </p>
           </div>
           <button
@@ -243,7 +253,10 @@ const toggleEdit = () => {
         </header>
 
         <!-- Provenance Info Banner -->
-        <div v-if="modelIdentifier || promptSummary" class="ai-provenance-banner">
+        <div
+          v-if="modelIdentifier || promptSummary"
+          class="ai-provenance-banner"
+        >
           <div v-if="modelIdentifier" class="ai-provenance-item">
             <span class="ai-provenance-label">Model:</span>
             <code class="ai-provenance-val">{{ modelIdentifier }}</code>
@@ -263,12 +276,17 @@ const toggleEdit = () => {
                 <span class="ai-diff-tag">Original Baseline</span>
               </div>
               <div class="ai-diff-content">
-                <pre class="ai-diff-pre">{{ formatDisplayValue(originalValue) }}</pre>
+                <pre class="ai-diff-pre">{{
+                  formatDisplayValue(originalValue)
+                }}</pre>
               </div>
             </div>
 
             <!-- AI Suggested Section -->
-            <div class="ai-diff-box ai-diff-suggested" :class="{ 'is-editing': isEditing }">
+            <div
+              class="ai-diff-box ai-diff-suggested"
+              :class="{ 'is-editing': isEditing }"
+            >
               <div class="ai-diff-header">
                 <span class="ai-diff-tag ai-tag-ai">AI Proposed</span>
                 <button
@@ -276,7 +294,7 @@ const toggleEdit = () => {
                   class="ai-edit-toggle-btn"
                   @click="toggleEdit"
                 >
-                  {{ isEditing ? '👁 View Structured' : '✏️ Edit Suggestion' }}
+                  {{ isEditing ? "👁 View Structured" : "✏️ Edit Suggestion" }}
                 </button>
               </div>
               <div class="ai-diff-content">
@@ -287,7 +305,9 @@ const toggleEdit = () => {
                   aria-label="Edit AI proposed value"
                   rows="6"
                 ></textarea>
-                <pre v-else class="ai-diff-pre ai-pre-highlight">{{ formatDisplayValue(suggestedValue) }}</pre>
+                <pre v-else class="ai-diff-pre ai-pre-highlight">{{
+                  formatDisplayValue(suggestedValue)
+                }}</pre>
               </div>
             </div>
           </div>
@@ -338,7 +358,9 @@ const toggleEdit = () => {
               :disabled="isApproving || isRejecting"
               @click="handleAccept"
             >
-              <span v-if="isApproving" class="ai-spinner" aria-hidden="true">⏳</span>
+              <span v-if="isApproving" class="ai-spinner" aria-hidden="true"
+                >⏳</span
+              >
               <span v-else>Accept & Apply</span>
             </button>
           </div>
@@ -671,7 +693,11 @@ code.ai-provenance-val {
 }
 
 @keyframes ai-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 </style>

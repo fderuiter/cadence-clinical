@@ -16,6 +16,8 @@
     </main>
 
     <!-- Document Metadata Inspection Drawer -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="inspectedDoc"
       class="metadata-drawer-overlay"
@@ -26,8 +28,16 @@
           <div style="display: flex; align-items: center; gap: 8px">
             <span style="font-size: 20px">📋</span>
             <div>
-              <h3 style="margin: 0; font-size: 16px">Document Metadata &amp; 21 CFR Part 11 Manifest</h3>
-              <p style="margin: 2px 0 0 0; font-size: 11px; color: var(--text-muted)">
+              <h3 style="margin: 0; font-size: 16px">
+                Document Metadata &amp; 21 CFR Part 11 Manifest
+              </h3>
+              <p
+                style="
+                  margin: 2px 0 0 0;
+                  font-size: 11px;
+                  color: var(--text-muted);
+                "
+              >
                 {{ inspectedDoc.filename }}
               </p>
             </div>
@@ -49,19 +59,29 @@
             <div class="meta-grid">
               <div class="meta-item">
                 <span class="meta-label">Artifact Code</span>
-                <span class="meta-val font-mono">{{ inspectedDoc.artifact_code || inspectedDoc.taxonomy_code || "01.01.01" }}</span>
+                <span class="meta-val font-mono">{{
+                  inspectedDoc.artifact_code ||
+                  inspectedDoc.taxonomy_code ||
+                  "01.01.01"
+                }}</span>
               </div>
               <div class="meta-item">
                 <span class="meta-label">Zone &amp; Section</span>
-                <span class="meta-val">Zone {{ inspectedDoc.zone_id || 1 }} - Trial Management</span>
+                <span class="meta-val"
+                  >Zone {{ inspectedDoc.zone_id || 1 }} - Trial Management</span
+                >
               </div>
               <div class="meta-item">
                 <span class="meta-label">Version</span>
-                <span class="meta-val badge status-review">v{{ inspectedDoc.version_index || 1 }}.0</span>
+                <span class="meta-val badge status-review"
+                  >v{{ inspectedDoc.version_index || 1 }}.0</span
+                >
               </div>
               <div class="meta-item">
                 <span class="meta-label">Lifecycle Status</span>
-                <span class="meta-val badge status-approved">{{ inspectedDoc.status || "DRAFT" }}</span>
+                <span class="meta-val badge status-approved">{{
+                  inspectedDoc.status || "DRAFT"
+                }}</span>
               </div>
             </div>
           </div>
@@ -72,17 +92,29 @@
             <div class="reason-box">
               <strong>Mandatory Reason for Change:</strong>
               <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text)">
-                {{ inspectedDoc.reason_for_change || inspectedDoc.reason || "Standard clinical document ingestion and lifecycle management." }}
+                {{
+                  inspectedDoc.reason_for_change ||
+                  inspectedDoc.reason ||
+                  "Standard clinical document ingestion and lifecycle management."
+                }}
               </p>
             </div>
             <div class="meta-grid" style="margin-top: 10px">
               <div class="meta-item">
                 <span class="meta-label">Uploaded By</span>
-                <span class="meta-val font-mono">{{ inspectedDoc.created_by || inspectedDoc.uploaded_by || "crc.user" }}</span>
+                <span class="meta-val font-mono">{{
+                  inspectedDoc.created_by ||
+                  inspectedDoc.uploaded_by ||
+                  "crc.user"
+                }}</span>
               </div>
               <div class="meta-item">
                 <span class="meta-label">Uploaded At</span>
-                <span class="meta-val font-mono">{{ inspectedDoc.formattedCreatedAt || inspectedDoc.created_at || new Date().toISOString() }}</span>
+                <span class="meta-val font-mono">{{
+                  inspectedDoc.formattedCreatedAt ||
+                  inspectedDoc.created_at ||
+                  new Date().toISOString()
+                }}</span>
               </div>
             </div>
           </div>
@@ -91,11 +123,24 @@
           <div class="drawer-section">
             <h4 class="section-heading">Cryptographic Integrity</h4>
             <div class="crypto-seal-card">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px">
-                <span style="font-size: 11px; font-weight: 600">SHA-256 Checksum Digest</span>
-                <span class="badge status-approved" style="font-size: 9px">LEDGER SEALED</span>
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: 6px;
+                "
+              >
+                <span style="font-size: 11px; font-weight: 600"
+                  >SHA-256 Checksum Digest</span
+                >
+                <span class="badge status-approved" style="font-size: 9px"
+                  >LEDGER SEALED</span
+                >
               </div>
-              <code class="sha256-hash-display">{{ getDocSha256(inspectedDoc) }}</code>
+              <code class="sha256-hash-display">{{
+                getDocSha256(inspectedDoc)
+              }}</code>
             </div>
           </div>
 
@@ -103,7 +148,10 @@
           <div class="drawer-section">
             <h4 class="section-heading">HIPAA / GDPR De-identification</h4>
             <div class="redaction-info">
-              <span v-if="inspectedDoc.is_redacted" class="badge status-approved">
+              <span
+                v-if="inspectedDoc.is_redacted"
+                class="badge status-approved"
+              >
                 🛡️ De-Identified Copy (PHI/PII Scrubber Applied)
               </span>
               <span v-else class="badge status-draft">
@@ -116,36 +164,74 @@
           <div class="drawer-section">
             <h4 class="section-heading">🤖 DIA Document Intelligence</h4>
             <div class="intelligence-card">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
-                <span style="font-size: 12px; font-weight: 600">DIA Classifier Confidence</span>
-                <span class="badge status-approved" style="font-size: 10px; font-weight: bold">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: 8px;
+                "
+              >
+                <span style="font-size: 12px; font-weight: 600"
+                  >DIA Classifier Confidence</span
+                >
+                <span
+                  class="badge status-approved"
+                  style="font-size: 10px; font-weight: bold"
+                >
                   {{ getDocConfidence(inspectedDoc) }}
                 </span>
               </div>
               <div class="meta-grid">
                 <div class="meta-item">
                   <span class="meta-label">Detected Modality</span>
-                  <span class="meta-val">{{ getDocModality(inspectedDoc) }}</span>
+                  <span class="meta-val">{{
+                    getDocModality(inspectedDoc)
+                  }}</span>
                 </div>
                 <div class="meta-item">
                   <span class="meta-label">Signature Verification</span>
-                  <span class="meta-val" :class="getSigStatusClass(inspectedDoc)">
+                  <span
+                    class="meta-val"
+                    :class="getSigStatusClass(inspectedDoc)"
+                  >
                     {{ getSigStatusText(inspectedDoc) }}
                   </span>
                 </div>
-                <div class="meta-item" v-if="getExtractedInvestigator(inspectedDoc)">
+                <div
+                  v-if="getExtractedInvestigator(inspectedDoc)"
+                  class="meta-item"
+                >
                   <span class="meta-label">Investigator</span>
-                  <span class="meta-val font-mono">{{ getExtractedInvestigator(inspectedDoc) }}</span>
+                  <span class="meta-val font-mono">{{
+                    getExtractedInvestigator(inspectedDoc)
+                  }}</span>
                 </div>
-                <div class="meta-item" v-if="getExtractedProtocol(inspectedDoc)">
+                <div
+                  v-if="getExtractedProtocol(inspectedDoc)"
+                  class="meta-item"
+                >
                   <span class="meta-label">Protocol #</span>
-                  <span class="meta-val font-mono">{{ getExtractedProtocol(inspectedDoc) }}</span>
+                  <span class="meta-val font-mono">{{
+                    getExtractedProtocol(inspectedDoc)
+                  }}</span>
                 </div>
               </div>
-              <div v-if="inspectedDoc.status === 'TECHNICAL_QC' || inspectedDoc.status === 'DRAFT'" style="margin-top: 10px; display: flex; gap: 8px">
+              <div
+                v-if="
+                  inspectedDoc.status === 'TECHNICAL_QC' ||
+                  inspectedDoc.status === 'DRAFT'
+                "
+                style="margin-top: 10px; display: flex; gap: 8px"
+              >
                 <button
                   class="btn btn-secondary"
-                  style="flex: 1; padding: 6px 10px; font-size: 11px; cursor: pointer"
+                  style="
+                    flex: 1;
+                    padding: 6px 10px;
+                    font-size: 11px;
+                    cursor: pointer;
+                  "
                   @click="handleAcceptClassification(inspectedDoc)"
                 >
                   ✓ Accept AI Classification
@@ -225,7 +311,11 @@ function getIntelligenceReport(doc) {
 
 function getDocConfidence(doc) {
   const report = getIntelligenceReport(doc);
-  if (report && report.primary_classification && report.primary_classification.confidence) {
+  if (
+    report &&
+    report.primary_classification &&
+    report.primary_classification.confidence
+  ) {
     return `${Math.round(report.primary_classification.confidence * 100)}% High Confidence`;
   }
   return "95% High Confidence";
@@ -234,7 +324,9 @@ function getDocConfidence(doc) {
 function getDocModality(doc) {
   const report = getIntelligenceReport(doc);
   if (report && report.modality) return report.modality;
-  return doc.mime_type && doc.mime_type.includes("pdf") ? "PDF_BINARY" : "STRUCTURED_FORM";
+  return doc.mime_type && doc.mime_type.includes("pdf")
+    ? "PDF_BINARY"
+    : "STRUCTURED_FORM";
 }
 
 function getSigStatusText(doc) {
@@ -257,14 +349,19 @@ function getSigStatusClass(doc) {
   if (report && report.signature_analysis) {
     const status = report.signature_analysis.status;
     if (status === "FULLY_SIGNED") return "text-success";
-    if (status === "PARTIALLY_SIGNED" || status === "UNSIGNED") return "text-warning";
+    if (status === "PARTIALLY_SIGNED" || status === "UNSIGNED")
+      return "text-warning";
   }
   return "text-success";
 }
 
 function getExtractedInvestigator(doc) {
   const report = getIntelligenceReport(doc);
-  if (report && report.extracted_metadata && report.extracted_metadata.investigator_name) {
+  if (
+    report &&
+    report.extracted_metadata &&
+    report.extracted_metadata.investigator_name
+  ) {
     return report.extracted_metadata.investigator_name;
   }
   return doc.document_owner_id || null;
@@ -272,7 +369,11 @@ function getExtractedInvestigator(doc) {
 
 function getExtractedProtocol(doc) {
   const report = getIntelligenceReport(doc);
-  if (report && report.extracted_metadata && report.extracted_metadata.protocol_number) {
+  if (
+    report &&
+    report.extracted_metadata &&
+    report.extracted_metadata.protocol_number
+  ) {
     return report.extracted_metadata.protocol_number;
   }
   return doc.study_id || null;

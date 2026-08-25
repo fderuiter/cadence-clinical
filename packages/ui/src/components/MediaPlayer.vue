@@ -113,7 +113,8 @@ const isMuted = ref(false);
 const playbackRate = ref(1);
 
 const togglePlayPause = () => {
-  const mediaEl = mediaCategory.value === "video" ? videoRef.value : audioRef.value;
+  const mediaEl =
+    mediaCategory.value === "video" ? videoRef.value : audioRef.value;
   if (!mediaEl) return;
 
   if (isPlaying.value) {
@@ -143,7 +144,8 @@ const onEnded = () => {
 const seekMedia = (e) => {
   const val = parseFloat(e.target.value);
   currentTime.value = val;
-  const mediaEl = mediaCategory.value === "video" ? videoRef.value : audioRef.value;
+  const mediaEl =
+    mediaCategory.value === "video" ? videoRef.value : audioRef.value;
   if (mediaEl) {
     mediaEl.currentTime = val;
   }
@@ -151,7 +153,8 @@ const seekMedia = (e) => {
 
 const setPlaybackRate = (rate) => {
   playbackRate.value = rate;
-  const mediaEl = mediaCategory.value === "video" ? videoRef.value : audioRef.value;
+  const mediaEl =
+    mediaCategory.value === "video" ? videoRef.value : audioRef.value;
   if (mediaEl) {
     mediaEl.playbackRate = rate;
   }
@@ -159,7 +162,8 @@ const setPlaybackRate = (rate) => {
 
 const toggleMute = () => {
   isMuted.value = !isMuted.value;
-  const mediaEl = mediaCategory.value === "video" ? videoRef.value : audioRef.value;
+  const mediaEl =
+    mediaCategory.value === "video" ? videoRef.value : audioRef.value;
   if (mediaEl) {
     mediaEl.muted = isMuted.value;
   }
@@ -218,10 +222,7 @@ onUnmounted(() => {
     <!-- Header Bar -->
     <div class="player-header">
       <div class="media-title-wrapper">
-        <span
-          class="media-badge"
-          :class="`badge-${mediaCategory}`"
-        >
+        <span class="media-badge" :class="`badge-${mediaCategory}`">
           {{ mediaCategory.toUpperCase() }}
         </span>
         <h3 class="media-title">
@@ -287,11 +288,7 @@ onUnmounted(() => {
         aria-hidden="true"
         data-testid="watermark-overlay"
       >
-        <div
-          v-for="n in 16"
-          :key="n"
-          class="watermark-label"
-        >
+        <div v-for="n in 16" :key="n" class="watermark-label">
           {{ watermarkText }}
         </div>
       </div>
@@ -324,7 +321,9 @@ onUnmounted(() => {
           >
             ‹
           </button>
-          <span class="page-counter">Page {{ pdfPage }} of {{ pdfTotalPages }}</span>
+          <span class="page-counter"
+            >Page {{ pdfPage }} of {{ pdfTotalPages }}</span
+          >
           <button
             class="control-btn"
             :disabled="pdfPage >= pdfTotalPages"
@@ -349,7 +348,8 @@ onUnmounted(() => {
           data-testid="pannable-image"
           :style="{
             transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel}) rotate(${rotation}deg)`,
-            cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default',
+            cursor:
+              zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default',
           }"
           draggable="false"
         />
@@ -373,10 +373,7 @@ onUnmounted(() => {
         </audio>
 
         <div class="waveform-box">
-          <div
-            class="waveform-bars"
-            :class="{ 'is-playing': isPlaying }"
-          >
+          <div class="waveform-bars" :class="{ 'is-playing': isPlaying }">
             <span
               v-for="bar in 32"
               :key="bar"
@@ -489,19 +486,11 @@ onUnmounted(() => {
       </div>
 
       <!-- 5. Unsupported Media Fallback -->
-      <div
-        v-else
-        class="unsupported-viewer"
-        data-testid="unsupported-viewer"
-      >
+      <div v-else class="unsupported-viewer" data-testid="unsupported-viewer">
         <p class="unsupported-msg">
           Unsupported media format ({{ mimeType || "unknown" }}).
         </p>
-        <a
-          :href="src"
-          download
-          class="btn btn-secondary"
-        >Download Raw File</a>
+        <a :href="src" download class="btn btn-secondary">Download Raw File</a>
       </div>
     </div>
   </div>

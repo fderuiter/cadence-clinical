@@ -28,7 +28,9 @@ describe("Subject Portal MSW Mock Gateway Interceptor Integration Tests", () => 
   };
 
   it("intercepts requests with invalid path prefixes, logs error, and returns 400", async () => {
-    const response = await runHandler("http://localhost:8000/invalid-prefix/subjects");
+    const response = await runHandler(
+      "http://localhost:8000/invalid-prefix/subjects"
+    );
     expect(response).not.toBeNull();
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -68,9 +70,13 @@ describe("Subject Portal MSW Mock Gateway Interceptor Integration Tests", () => 
     expect(response).not.toBeNull();
     expect(response.status).toBe(403);
     const data = await response.json();
-    expect(data.detail).toContain("Access denied: Subject principal is not authorized");
+    expect(data.detail).toContain(
+      "Access denied: Subject principal is not authorized"
+    );
     expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("403 Forbidden: Subject role attempted to access administrative route")
+      expect.stringContaining(
+        "403 Forbidden: Subject role attempted to access administrative route"
+      )
     );
   });
 
@@ -90,7 +96,9 @@ describe("Subject Portal MSW Mock Gateway Interceptor Integration Tests", () => 
     const data = await response.json();
     expect(data.detail).toBe("REAUTHENTICATION_REQUIRED");
     expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Missing or invalid e-signature header (X-Sig-Token)")
+      expect.stringContaining(
+        "Missing or invalid e-signature header (X-Sig-Token)"
+      )
     );
   });
 });

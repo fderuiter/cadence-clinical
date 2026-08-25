@@ -79,7 +79,9 @@ describe("feat(fileshare): 09 — HLS Adaptive Streaming in Media Player (#4316)
 
     await flushPromises();
 
-    expect(fileshareService.getStreamUrl).toHaveBeenCalledWith("file-video-001");
+    expect(fileshareService.getStreamUrl).toHaveBeenCalledWith(
+      "file-video-001"
+    );
     expect(wrapper.find(".video-player-wrapper").exists()).toBe(true);
     expect(wrapper.find("video.video-element").exists()).toBe(true);
 
@@ -105,10 +107,14 @@ describe("feat(fileshare): 09 — HLS Adaptive Streaming in Media Player (#4316)
 
     await flushPromises();
 
-    expect(fileshareService.getStreamUrl).toHaveBeenCalledWith("file-video-001");
+    expect(fileshareService.getStreamUrl).toHaveBeenCalledWith(
+      "file-video-001"
+    );
     const video = wrapper.find("video.video-element");
     expect(video.exists()).toBe(true);
-    expect(video.attributes("src") || video.element.src).toContain("master.m3u8");
+    expect(video.attributes("src") || video.element.src).toContain(
+      "master.m3u8"
+    );
 
     Hls.isSupported = originalIsSupported;
     HTMLMediaElement.prototype.canPlayType = originalCanPlayType;
@@ -182,7 +188,9 @@ describe("feat(fileshare): 09 — HLS Adaptive Streaming in Media Player (#4316)
 
     const timeoutCard = wrapper.find(".timeout-card");
     expect(timeoutCard.exists()).toBe(true);
-    expect(timeoutCard.text()).toContain("Video processing is taking longer than expected — try again later");
+    expect(timeoutCard.text()).toContain(
+      "Video processing is taking longer than expected — try again later"
+    );
     expect(timeoutCard.find("button").text()).toContain("Check Again");
 
     wrapper.unmount();
@@ -191,7 +199,9 @@ describe("feat(fileshare): 09 — HLS Adaptive Streaming in Media Player (#4316)
   it("displays error card when transcoding fails", async () => {
     fileshareService.getStreamUrl.mockRejectedValueOnce({
       status: 409,
-      data: { detail: "Video transcoding failed: Corrupt MOOV atom in input stream." },
+      data: {
+        detail: "Video transcoding failed: Corrupt MOOV atom in input stream.",
+      },
     });
 
     const wrapper = mount(MediaPreviewModal, {
@@ -282,8 +292,15 @@ describe("feat(fileshare): 09 — HLS Adaptive Streaming in Media Player (#4316)
     );
 
     // 2. Time update to 30% -> PLAY_25
-    Object.defineProperty(video.element, "duration", { value: 100, configurable: true });
-    Object.defineProperty(video.element, "currentTime", { value: 30, configurable: true, writable: true });
+    Object.defineProperty(video.element, "duration", {
+      value: 100,
+      configurable: true,
+    });
+    Object.defineProperty(video.element, "currentTime", {
+      value: 30,
+      configurable: true,
+      writable: true,
+    });
     await video.trigger("timeupdate");
 
     expect(fileshareService.recordPlaybackAudit).toHaveBeenCalledWith(

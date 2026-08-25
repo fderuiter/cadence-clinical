@@ -574,6 +574,66 @@ jobs:
           name: junit-report-qualification
           path: report-qualification.xml
 
+  accessibility-e2e:
+    name: Parallel E2E Accessibility Testing
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright Browsers
+        run: |
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+            echo "Playwright cache hit detected. Installing system dependencies and verifying browser binary..."
+            pnpm exec playwright install-deps chromium
+            pnpm exec playwright install chromium
+          else
+            echo "Playwright cache miss. Performing full browser installation..."
+            for i in {1..3}; do
+              pnpm exec playwright install chromium --with-deps && break || {
+                echo "Playwright install failed on attempt $i, retrying in 10s..."
+                sleep 10
+              }
+            done
+          fi
+
+      - name: Build UI package
+        run: pnpm --filter ui build
+
+      - name: Run Subject Portal E2E Accessibility Tests
+        run: pnpm --filter subject-portal test:e2e
+
+      - name: Run Web Application E2E Accessibility Tests
+        run: pnpm --filter web test:e2e
+
   compliance:
     name: GxP Compliance & Qualification Reporting
     runs-on: ubuntu-latest
@@ -761,7 +821,7 @@ jobs:
   automerge:
     name: Approve and Automerge
     needs:
-      [classify, style, security, unit-tests, integration-tests, compliance]
+      [classify, style, security, unit-tests, integration-tests, compliance, accessibility-e2e]
     if: github.event_name == 'pull_request' && needs.classify.outputs.is_safe == 'true'
     runs-on: ubuntu-latest
     permissions:
