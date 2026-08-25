@@ -51,7 +51,10 @@ def build_auth_headers(
 
 
 def test_verified_multi_step_synthesis_in_draft_state():
-    """Verify that multi-step reasoning with verified protocol chunks generates grounded citations and stages into draft state."""
+    """Verify that multi-step reasoning with verified protocol chunks generates grounded citations and stages into draft state.
+
+    @req:PRD-SYS-051
+    """
     headers = build_auth_headers()
 
     chunks = [
@@ -114,7 +117,10 @@ def test_verified_multi_step_synthesis_in_draft_state():
 
 
 def test_low_citation_confidence_fails_closed():
-    """Verify that multi-step reasoning outputs with < 85% citation confidence generate an error response and suppress draft staging."""
+    """Verify that multi-step reasoning outputs with < 85% citation confidence generate an error response and suppress draft staging.
+
+    @req:PRD-SYS-051
+    """
     headers = build_auth_headers()
 
     # Pass empty or unapproved protocol chunks -> fails closed (< 85% confidence threshold)
@@ -139,7 +145,10 @@ def test_low_citation_confidence_fails_closed():
 
 
 def test_in_flight_phi_masking_with_surrogate_tokens():
-    """Verify that intermediate reasoning steps automatically mask sensitive patient identifiers using surrogate tokens and re-hydrate final draft output."""
+    """Verify that intermediate reasoning steps automatically mask sensitive patient identifiers using surrogate tokens and re-hydrate final draft output.
+
+    @req:PRD-SYS-051
+    """
     headers = build_auth_headers()
 
     chunks = [
@@ -204,7 +213,10 @@ def test_in_flight_phi_masking_with_surrogate_tokens():
 
 
 def test_missing_tenant_context_rejected():
-    """Verify that requests without valid tenant context are rejected before execution starts."""
+    """Verify that requests without valid tenant context are rejected before execution starts.
+
+    @req:PRD-SYS-051
+    """
     headers = build_auth_headers()
     headers.pop("X-Tenant-Id", None)
 
@@ -224,7 +236,10 @@ def test_missing_tenant_context_rejected():
 
 
 def test_stateless_execution_with_caller_managed_state():
-    """Verify that the service executes multi-step queries without retaining internal database session state across requests."""
+    """Verify that the service executes multi-step queries without retaining internal database session state across requests.
+
+    @req:PRD-SYS-051
+    """
     headers = build_auth_headers()
 
     chunks = [

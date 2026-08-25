@@ -9,6 +9,7 @@ description = "Cadence Clinical Centralized Test Infrastructure & Domain Factori
 requires-python = ">=3.14"
 dependencies = [
     "pydantic>=2.6.0",
+    "packages-ddf",
     "packages-hexagonal",
     "packages-security",
     "packages-storage",

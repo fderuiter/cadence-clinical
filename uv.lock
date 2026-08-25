@@ -2494,6 +2494,7 @@ name = "packages-testing"
 version = "0.1.0"
 source = { editable = "packages/testing" }
 dependencies = [
+    { name = "packages-ddf" },
     { name = "packages-hexagonal" },
     { name = "packages-security" },
     { name = "packages-storage" },
@@ -2502,6 +2503,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "packages-ddf", editable = "packages/ddf" },
     { name = "packages-hexagonal", editable = "packages/hexagonal" },
     { name = "packages-security", editable = "packages/security" },
     { name = "packages-storage", editable = "packages/storage" },

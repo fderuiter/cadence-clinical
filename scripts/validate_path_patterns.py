@@ -173,6 +173,7 @@ ALLOWED_ROOT_FILES = {
     "README.md",
     "AGENTS.md",
     "SUPPORT.md",
+    "SECURITY.md",
     "LICENSE",
     "Makefile",
     "package.json",
