@@ -71,6 +71,7 @@ if str(REPO_ROOT) not in sys.path:
 
 # Common developer tools/executables we whitelist even if not natively installed
 ALLOWED_COMMON_TOOLS = {
+    "brew",
     "git",
     "docker",
     "docker-compose",

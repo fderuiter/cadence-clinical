@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-In order to transition toward a modern Vue SPA CRA Monitoring and SDV Workspace, the backend endpoints for Source Data Verification (SDV) and Targeted SDV (TSDV) need to be extracted from `apps/execution/main.py` into a modular router `apps/execution/routers/sdv.py`. Concurrently, coarse-grained role-based checks (e.g., checking for raw "CRA" or "Data Manager" strings) must be replaced with fine-grained RBAC permission checking (`Depends(require_permission("sdv:*"))`) and study-scoped visibility guards (`require_study_scope()`). This enforces 21 CFR Part 11 compliance and ensures secure data isolation across studies and roles.
+In order to transition toward a modern Vue SPA CRA Monitoring and SDV Workspace, the backend endpoints for Source Data Verification (SDV) and Targeted SDV (TSDV) need to be extracted from `apps/execution/main.py` into a modular router `apps/execution/presentation/routers/sdv.py`. Concurrently, coarse-grained role-based checks (e.g., checking for raw "CRA" or "Data Manager" strings) must be replaced with fine-grained RBAC permission checking (`Depends(require_permission("sdv:*"))`) and study-scoped visibility guards (`require_study_scope()`). This enforces 21 CFR Part 11 compliance and ensures secure data isolation across studies and roles.
 
 This ADR specifically relates to requirements under **PRD-QRY-005**, **PRD-QRY-006**, and **PRD-QRY-007**.
 
@@ -34,7 +34,7 @@ This ADR specifically relates to requirements under **PRD-QRY-005**, **PRD-QRY-0
 
 ### Option 2: Modular Router Extraction with Finer-Grained RBAC & Local Study Scope Guards [Selected]
 
-- **Overview:** Move all four SDV/TSDV endpoints and their associated Pydantic v2 schemas to `apps/execution/routers/sdv.py`. Implement granular permissions (`sdv:read`, `sdv:create`, `sdv:update`) and map them correctly inside `packages/security/rbac.py`. Integrate a local `StudyScopeChecker` / `require_study_scope()` that extracts `study_id` from route path parameters, query parameters, header keys, or JSON body payloads securely.
+- **Overview:** Move all four SDV/TSDV endpoints and their associated Pydantic v2 schemas to `apps/execution/presentation/routers/sdv.py`. Implement granular permissions (`sdv:read`, `sdv:create`, `sdv:update`) and map them correctly inside `packages/security/rbac.py`. Integrate a local `StudyScopeChecker` / `require_study_scope()` that extracts `study_id` from route path parameters, query parameters, header keys, or JSON body payloads securely.
 - **Pros:**
   - ✅ Extremely clean, testable, and robust routing layout mirroring other decoupled services.
   - ✅ Centralized permission matrix dictates access, resolving RBAC checks dynamically.
@@ -60,7 +60,7 @@ This ADR specifically relates to requirements under **PRD-QRY-005**, **PRD-QRY-0
 
 - **Affected Repositories / Services:**
   - `apps/execution/main.py`
-  - `apps/execution/routers/sdv.py`
+  - `apps/execution/presentation/routers/sdv.py`
   - `packages/security/rbac.py`
 - **Verification Plan:**
   - Executed unit and persistence tests locally: `uv run pytest tests/test_sdv.py tests/test_tsdv.py tests/test_sdv_tsdv_persistence.py tests/test_rbac.py --no-cov`.

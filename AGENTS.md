@@ -469,7 +469,7 @@ Agents must run the duplication scanner locally to verify changes before pushing
 - **Targeted Scan (Changed Files Mode):**
   Pass specific target files as arguments to run the scanner in a faster, incremental mode:
   ```bash
-  uv run python scripts/detect_duplication.py apps/execution/main.py apps/execution/routers/sdv.py
+  uv run python scripts/detect_duplication.py apps/execution/main.py apps/execution/presentation/routers/sdv.py
   ```
   To dynamically run against all staged and unstaged modified files from Git:
   ```bash
