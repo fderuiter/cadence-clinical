@@ -24,8 +24,8 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(vitest@4.1.10)
       axe-core:
-        specifier: ^4.12.1
-        version: 4.12.1
+        specifier: ^4.13.0
+        version: 4.13.0
       concurrently:
         specifier: ^10.0.4
         version: 10.0.4
@@ -207,8 +207,8 @@ importers:
   packages/ui:
     dependencies:
       axe-core:
-        specifier: ^4.12.1
-        version: 4.12.1
+        specifier: ^4.13.0
+        version: 4.13.0
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: ^6.0.8
