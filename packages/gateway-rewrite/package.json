@@ -9,7 +9,7 @@
     "build": "tsc"
   },
   "devDependencies": {
-    "@nestjs/common": "^11.1.29",
+    "@nestjs/common": "^11.2.1",
     "@nestjs/core": "^11.1.29",
     "@types/node": "^26.2.0",
     "reflect-metadata": "^0.2.2",
