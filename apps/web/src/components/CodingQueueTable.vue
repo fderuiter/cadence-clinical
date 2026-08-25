@@ -60,54 +60,124 @@
     <!-- Queue Table -->
     <div
       v-else
+      ref="containerRef"
       class="table-responsive"
     >
-      <table class="data-table coding-table">
+      <table
+        class="data-table coding-table"
+        role="grid"
+        aria-label="Medical Coding Queue Table"
+        :aria-rowcount="codingStore.filteredAssignments.length"
+        aria-colcount="7"
+      >
         <thead>
-          <tr>
-            <th class="col-checkbox">
+          <tr role="row">
+            <th
+              scope="col"
+              role="columnheader"
+              class="col-checkbox"
+            >
               <input
                 type="checkbox"
                 :checked="isAllSelected"
                 :indeterminate="isIndeterminate"
                 title="Select all filtered items"
+                aria-label="Select all filtered items"
                 @change="toggleSelectAll"
               >
             </th>
-            <th>Status</th>
-            <th>Verbatim Term &amp; Source</th>
-            <th>Dictionary</th>
-            <th>Coded Code &amp; Term</th>
-            <th>Match / Suggestions</th>
-            <th class="col-actions">
+            <th
+              scope="col"
+              role="columnheader"
+            >
+              Status
+            </th>
+            <th
+              scope="col"
+              role="columnheader"
+            >
+              Verbatim Term &amp; Source
+            </th>
+            <th
+              scope="col"
+              role="columnheader"
+            >
+              Dictionary
+            </th>
+            <th
+              scope="col"
+              role="columnheader"
+            >
+              Coded Code &amp; Term
+            </th>
+            <th
+              scope="col"
+              role="columnheader"
+            >
+              Match / Suggestions
+            </th>
+            <th
+              scope="col"
+              role="columnheader"
+              class="col-actions"
+            >
               Actions
             </th>
           </tr>
         </thead>
-        <tbody>
+        <tbody role="rowgroup">
           <tr
-            v-for="item in codingStore.filteredAssignments"
+            v-for="(item, rIndex) in codingStore.filteredAssignments"
             :key="item.id"
+            class="coding-row"
             :class="{ 'row-selected': isSelected(item.id) }"
+            role="row"
           >
             <!-- Checkbox -->
-            <td class="col-checkbox">
+            <td
+              role="gridcell"
+              class="col-checkbox"
+              :tabindex="getCellTabindex(rIndex, 0)"
+              :class="{ 'cell-active': isCellActive(rIndex, 0) }"
+              :data-row="rIndex"
+              :data-col="0"
+              @click="selectCell(rIndex, 0)"
+              @keydown="handleCellKeyDown($event, rIndex, 0, item)"
+            >
               <input
                 type="checkbox"
                 :checked="isSelected(item.id)"
+                aria-label="Select assignment"
+                tabindex="-1"
                 @change="codingStore.toggleSelect(item.id)"
               >
             </td>
 
             <!-- Status Badge -->
-            <td>
+            <td
+              role="gridcell"
+              :tabindex="getCellTabindex(rIndex, 1)"
+              :class="{ 'cell-active': isCellActive(rIndex, 1) }"
+              :data-row="rIndex"
+              :data-col="1"
+              @click="selectCell(rIndex, 1)"
+              @keydown="handleCellKeyDown($event, rIndex, 1, item)"
+            >
               <span :class="getStatusBadgeClass(item.status)">
                 {{ formatStatus(item.status) }}
               </span>
             </td>
 
             <!-- Verbatim & Field -->
-            <td>
+            <td
+              role="gridcell"
+              :tabindex="getCellTabindex(rIndex, 2)"
+              :class="{ 'cell-active': isCellActive(rIndex, 2) }"
+              :data-row="rIndex"
+              :data-col="2"
+              @click="selectCell(rIndex, 2)"
+              @keydown="handleCellKeyDown($event, rIndex, 2, item)"
+            >
               <div class="verbatim-title">
                 {{ item.verbatim_text }}
               </div>
@@ -132,7 +202,15 @@
             </td>
 
             <!-- Dictionary & Version -->
-            <td>
+            <td
+              role="gridcell"
+              :tabindex="getCellTabindex(rIndex, 3)"
+              :class="{ 'cell-active': isCellActive(rIndex, 3) }"
+              :data-row="rIndex"
+              :data-col="3"
+              @click="selectCell(rIndex, 3)"
+              @keydown="handleCellKeyDown($event, rIndex, 3, item)"
+            >
               <div class="dict-label">
                 {{ item.dictionary_type }}
               </div>
@@ -142,7 +220,15 @@
             </td>
 
             <!-- Coded Term & Code -->
-            <td>
+            <td
+              role="gridcell"
+              :tabindex="getCellTabindex(rIndex, 4)"
+              :class="{ 'cell-active': isCellActive(rIndex, 4) }"
+              :data-row="rIndex"
+              :data-col="4"
+              @click="selectCell(rIndex, 4)"
+              @keydown="handleCellKeyDown($event, rIndex, 4, item)"
+            >
               <div
                 v-if="item.coded_code"
                 class="coded-result-box"
@@ -170,7 +256,15 @@
             </td>
 
             <!-- Match / Suggestions -->
-            <td>
+            <td
+              role="gridcell"
+              :tabindex="getCellTabindex(rIndex, 5)"
+              :class="{ 'cell-active': isCellActive(rIndex, 5) }"
+              :data-row="rIndex"
+              :data-col="5"
+              @click="selectCell(rIndex, 5)"
+              @keydown="handleCellKeyDown($event, rIndex, 5, item)"
+            >
               <!-- If Suggestions Exist -->
               <div
                 v-if="
@@ -204,6 +298,7 @@
                       class="btn btn-sm btn-primary btn-1click-approve btn-icon-accept"
                       style="padding: 2px 6px; font-size: 11px; cursor: pointer;"
                       title="1-Click MedDRA Coding Approval"
+                      tabindex="-1"
                       @click="acceptSuggestion(item, sIdx, sug)"
                     >
                       ✓ Approve
@@ -234,12 +329,22 @@
             </td>
 
             <!-- Actions -->
-            <td class="col-actions">
+            <td
+              role="gridcell"
+              class="col-actions"
+              :tabindex="getCellTabindex(rIndex, 6)"
+              :class="{ 'cell-active': isCellActive(rIndex, 6) }"
+              :data-row="rIndex"
+              :data-col="6"
+              @click="selectCell(rIndex, 6)"
+              @keydown="handleCellKeyDown($event, rIndex, 6, item)"
+            >
               <div class="action-buttons-group">
                 <button
                   type="button"
                   class="btn btn-sm btn-primary-outline"
                   title="Open Dictionary Browser Modal"
+                  tabindex="-1"
                   @click="openBrowser(item)"
                 >
                   🔍 Browse
@@ -248,6 +353,7 @@
                   type="button"
                   class="btn btn-sm btn-warning-outline"
                   title="Raise Discrepancy Query"
+                  tabindex="-1"
                   @click="promptRaiseQuery(item)"
                 >
                   ❓ Query
@@ -421,8 +527,82 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useCodingStore } from "../stores/coding";
+import { use2DGrid } from "../composables/use2DGrid";
 
 const codingStore = useCodingStore();
+const containerRef = ref(null);
+
+const grid = use2DGrid(
+  () => codingStore.filteredAssignments.length,
+  7,
+  {
+    containerRef,
+    initialRow: 0,
+    initialCol: 0,
+    onCopyCell: (rIndex, cIndex, item) => copyCodingCellValue(rIndex, cIndex, item),
+    onCellAction: (rIndex, cIndex, item, event) => handleCodingCellAction(rIndex, cIndex, item, event),
+  }
+);
+
+const {
+  activeRowIndex,
+  activeColIndex,
+  isEditing,
+  isCellActive,
+  getCellTabindex,
+  selectCell,
+  focusActiveCell,
+  handleCellKeyDown,
+} = grid;
+
+function copyCodingCellValue(rIndex, cIndex, item) {
+  if (!item) return;
+  let val = "";
+  switch (cIndex) {
+    case 0:
+      val = isSelected(item.id) ? "Selected" : "Unselected";
+      break;
+    case 1:
+      val = formatStatus(item.status);
+      break;
+    case 2:
+      val = item.verbatim_text || "";
+      break;
+    case 3:
+      val = `${item.dictionary_type || ""} v${item.dictionary_version || ""}`;
+      break;
+    case 4:
+      val = item.coded_code ? `${item.coded_term || ""} (${item.coded_code})` : "Uncoded";
+      break;
+    case 5:
+      val = item.suggestions && item.suggestions.length > 0
+        ? `${getSuggestionPt(item.suggestions[0])} (${getSuggestionCode(item.suggestions[0])})`
+        : item.score
+        ? `${Math.round(item.score * 100)}%`
+        : "No suggestions";
+      break;
+    case 6:
+      val = "Actions";
+      break;
+  }
+
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+    navigator.clipboard.writeText(val).catch((err) => console.error("Copy failed", err));
+  }
+}
+
+function handleCodingCellAction(rIndex, cIndex, item, event) {
+  if (!item) return;
+  if (cIndex === 0) {
+    codingStore.toggleSelect(item.id);
+  } else if (cIndex === 5) {
+    if (item.suggestions && item.suggestions.length > 0) {
+      acceptSuggestion(item, 0, item.suggestions[0]);
+    }
+  } else if (cIndex === 6) {
+    openBrowser(item);
+  }
+}
 
 // Discrepancy Query State
 const isQueryModalOpen = ref(false);
@@ -704,6 +884,14 @@ async function acceptAllSuggestions() {
   padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+}
+
+.coding-table td:focus,
+.coding-table td.cell-active {
+  outline: 2px solid var(--primary, #026597) !important;
+  outline-offset: -2px;
+  background-color: rgba(2, 101, 151, 0.08) !important;
+  box-shadow: inset 0 0 0 1px var(--primary, #026597);
 }
 
 .coding-table tr:hover {
