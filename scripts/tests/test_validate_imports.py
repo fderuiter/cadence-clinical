@@ -1,15 +1,28 @@
+"""Unit tests for AST cross-service and package import boundary validator.
+
+@req:PRD-SYS-001
+"""
+
 from pathlib import Path
 
 from scripts.validate_imports import APPS_DIR, check_file_imports, get_service_name
 
 
-def test_get_service_name():
+def test_get_service_name() -> None:
+    """Verify get_service_name correctly parses microservice directory names.
+
+    @req:PRD-SYS-001
+    """
     assert get_service_name(APPS_DIR / "etmf" / "main.py") == "etmf"
     assert get_service_name(APPS_DIR / "execution" / "trial_lock.py") == "execution"
     assert get_service_name(Path("/tmp/foo.py")) == ""  # nosec B108
 
 
-def test_check_file_imports_same_service(tmp_path):
+def test_check_file_imports_same_service(tmp_path: Path) -> None:
+    """Verify internal imports within the same service generate no violations.
+
+    @req:PRD-SYS-001
+    """
     # Set up a mock structure: apps/etmf/main.py
     etmf_dir = tmp_path / "apps" / "etmf"
     etmf_dir.mkdir(parents=True, exist_ok=True)
@@ -33,7 +46,11 @@ def test_check_file_imports_same_service(tmp_path):
         scripts.validate_imports.APPS_DIR = original_apps_dir
 
 
-def test_check_file_imports_shared_packages(tmp_path):
+def test_check_file_imports_shared_packages(tmp_path: Path) -> None:
+    """Verify shared package imports from apps generate no violations.
+
+    @req:PRD-SYS-001
+    """
     # Set up a mock structure: apps/etmf/main.py
     etmf_dir = tmp_path / "apps" / "etmf"
     etmf_dir.mkdir(parents=True, exist_ok=True)
@@ -57,7 +74,11 @@ def test_check_file_imports_shared_packages(tmp_path):
         scripts.validate_imports.APPS_DIR = original_apps_dir
 
 
-def test_check_file_imports_cross_service_violation(tmp_path):
+def test_check_file_imports_cross_service_violation(tmp_path: Path) -> None:
+    """Verify direct cross-service imports generate violations.
+
+    @req:PRD-SYS-001
+    """
     # Set up a mock structure: apps/etmf/main.py
     etmf_dir = tmp_path / "apps" / "etmf"
     etmf_dir.mkdir(parents=True, exist_ok=True)
@@ -82,7 +103,11 @@ def test_check_file_imports_cross_service_violation(tmp_path):
         scripts.validate_imports.APPS_DIR = original_apps_dir
 
 
-def test_check_file_imports_relative_same_service(tmp_path):
+def test_check_file_imports_relative_same_service(tmp_path: Path) -> None:
+    """Verify relative imports within the same service generate no violations.
+
+    @req:PRD-SYS-001
+    """
     # Set up apps/etmf/sub/file.py
     sub_dir = tmp_path / "apps" / "etmf" / "sub"
     sub_dir.mkdir(parents=True, exist_ok=True)
@@ -107,7 +132,11 @@ def test_check_file_imports_relative_same_service(tmp_path):
         scripts.validate_imports.ROOT_DIR = original_root_dir
 
 
-def test_check_file_imports_relative_cross_service(tmp_path):
+def test_check_file_imports_relative_cross_service(tmp_path: Path) -> None:
+    """Verify relative imports resolving cross-service generate violations.
+
+    @req:PRD-SYS-001
+    """
     # Set up apps/etmf/sub/file.py
     sub_dir = tmp_path / "apps" / "etmf" / "sub"
     sub_dir.mkdir(parents=True, exist_ok=True)
@@ -131,7 +160,11 @@ def test_check_file_imports_relative_cross_service(tmp_path):
         scripts.validate_imports.ROOT_DIR = original_root_dir
 
 
-def test_check_file_imports_invalid_syntax(tmp_path):
+def test_check_file_imports_invalid_syntax(tmp_path: Path) -> None:
+    """Verify invalid Python syntax emits parse error violation.
+
+    @req:PRD-SYS-001
+    """
     etmf_dir = tmp_path / "apps" / "etmf"
     etmf_dir.mkdir(parents=True, exist_ok=True)
 
@@ -151,7 +184,11 @@ def test_check_file_imports_invalid_syntax(tmp_path):
         scripts.validate_imports.APPS_DIR = original_apps_dir
 
 
-def test_check_file_imports_package_to_package_declared(tmp_path):
+def test_check_file_imports_package_to_package_declared(tmp_path: Path) -> None:
+    """Verify package-to-package imports generate no violation if declared in pyproject.toml.
+
+    @req:PRD-SYS-001
+    """
     # Set up a mock structure: packages/compliance/phi.py
     compliance_dir = tmp_path / "packages" / "compliance"
     compliance_dir.mkdir(parents=True, exist_ok=True)
@@ -187,7 +224,11 @@ def test_check_file_imports_package_to_package_declared(tmp_path):
         scripts.validate_imports._PACKAGE_DEPS_CACHE.clear()
 
 
-def test_check_file_imports_package_to_package_undeclared(tmp_path):
+def test_check_file_imports_package_to_package_undeclared(tmp_path: Path) -> None:
+    """Verify package-to-package imports generate violation if undeclared in pyproject.toml.
+
+    @req:PRD-SYS-001
+    """
     # Set up a mock structure: packages/compliance/phi.py
     compliance_dir = tmp_path / "packages" / "compliance"
     compliance_dir.mkdir(parents=True, exist_ok=True)
@@ -224,7 +265,11 @@ def test_check_file_imports_package_to_package_undeclared(tmp_path):
         scripts.validate_imports._PACKAGE_DEPS_CACHE.clear()
 
 
-def test_check_file_imports_database_to_security_prohibited(tmp_path):
+def test_check_file_imports_database_to_security_prohibited(tmp_path: Path) -> None:
+    """Verify packages/database direct imports from packages/security generate violation.
+
+    @req:PRD-SYS-001
+    """
     database_dir = tmp_path / "packages" / "database"
     database_dir.mkdir(parents=True, exist_ok=True)
 
@@ -251,14 +296,22 @@ def test_check_file_imports_database_to_security_prohibited(tmp_path):
     try:
         violations = check_file_imports(file_path)
         assert len(violations) == 1
-        assert "prohibited from importing directly from security package" in violations[0]
+        assert (
+            "prohibited from importing directly from security package" in violations[0]
+        )
     finally:
         scripts.validate_imports.PACKAGES_DIR = original_packages_dir
         scripts.validate_imports.ROOT_DIR = original_root_dir
         scripts.validate_imports._PACKAGE_DEPS_CACHE.clear()
 
 
-def test_check_file_imports_test_files_enforced_unless_exempt(tmp_path):
+def test_check_file_imports_test_files_enforced_unless_exempt(
+    tmp_path: Path,
+) -> None:
+    """Verify test files are validated unless explicitly listed in exemption map.
+
+    @req:PRD-SYS-001
+    """
     # Set up a mock structure: apps/etmf/tests/test_foo.py (non-exempt) and apps/etmf/tests/test_exempt.py (exempt)
     etmf_tests_dir = tmp_path / "apps" / "etmf" / "tests"
     etmf_tests_dir.mkdir(parents=True, exist_ok=True)

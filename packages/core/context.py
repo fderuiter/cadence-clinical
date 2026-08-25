@@ -35,7 +35,7 @@ def audit_context(
     change_reason: str | None = None,
     ip_address: str | None = None,
     timestamp: datetime | None = None,
-    signature_context: Any | None = None,
+    signature_context: object | None = None,
     site_id: str | None = None,
     sponsor_id: str | None = None,
     unblinded_access: bool = False,
@@ -52,7 +52,11 @@ def audit_context(
         change_reason (str | None): The justification or reason for change.
         ip_address (str | None): The network IP address of the client.
         timestamp (datetime | None): The timestamp of the operation.
-        signature_context (Any | None): Optional electronic signature manifestation context.
+        signature_context (object | None): Optional electronic signature manifestation context.
+        site_id (str | None): Optional clinical site identifier.
+        sponsor_id (str | None): Optional study sponsor identifier.
+        unblinded_access (bool): Flag indicating unblinded access rights.
+        tenant_id (str | None): Optional tenant identifier.
 
     Yields:
         None
@@ -89,17 +93,20 @@ def audit_context_decorator(
     user_id_getter: Callable[..., str | None] | None = None,
     change_reason_getter: Callable[..., str | None] | None = None,
     ip_address_getter: Callable[..., str | None] | None = None,
-    signature_context_getter: Callable[..., Any | None] | None = None,
+    signature_context_getter: Callable[..., object | None] | None = None,
     tenant_id_getter: Callable[..., str | None] | None = None,
-):
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Decorator to automatically apply audit context to a function execution.
 
     Args:
-        user_id_getter (Callable): A function that extracts the user ID from the decorated function's arguments.
-        change_reason_getter (Callable): A function that extracts the change reason from the decorated function's arguments.
-        ip_address_getter (Callable): A function that extracts the IP address from the decorated function's arguments.
-        signature_context_getter (Callable): A function that extracts the signature context from the decorated function's arguments.
-        tenant_id_getter (Callable): A function that extracts the tenant ID from the decorated function's arguments.
+        user_id_getter (Callable[..., str | None] | None): Function extracting user ID from decorated function arguments.
+        change_reason_getter (Callable[..., str | None] | None): Function extracting change reason from arguments.
+        ip_address_getter (Callable[..., str | None] | None): Function extracting IP address from arguments.
+        signature_context_getter (Callable[..., object | None] | None): Function extracting signature context.
+        tenant_id_getter (Callable[..., str | None] | None): Function extracting tenant ID from arguments.
+
+    Returns:
+        Callable[[Callable[..., Any]], Callable[..., Any]]: The wrapped decorator function.
     """
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -163,7 +170,15 @@ def service_audit_context(
     service_name: str,
     change_reason: str,
 ) -> Generator[None]:
-    """Lightweight context manager wrapper around audit_context to bind a service identity and change reason."""
+    """Lightweight context manager wrapper around audit_context to bind a service identity and change reason.
+
+    Args:
+        service_name (str): The name of the service initiating the action.
+        change_reason (str): The reason or justification for the service action.
+
+    Yields:
+        None
+    """
     with audit_context(user_id=service_name, change_reason=change_reason):
         yield
 
