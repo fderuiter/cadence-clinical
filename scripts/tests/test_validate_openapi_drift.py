@@ -18,7 +18,10 @@ from scripts.validate_openapi_drift import check_openapi_drift
 
 @patch("subprocess.run")
 def test_check_openapi_drift_success(mock_run: MagicMock) -> None:
-    """Test check_openapi_drift returns True when all scripts succeed and no drift is found."""
+    """Test check_openapi_drift returns True when all scripts succeed and no drift is found.
+
+    @req:PRD-SYS-001
+    """
     mock_run.side_effect = [
         MagicMock(
             returncode=0, stdout="Schema validation passed", stderr=""
@@ -36,7 +39,10 @@ def test_check_openapi_drift_success(mock_run: MagicMock) -> None:
 
 @patch("subprocess.run")
 def test_check_openapi_drift_schema_validation_failure(mock_run: MagicMock) -> None:
-    """Test check_openapi_drift returns False when schema validation fails."""
+    """Test check_openapi_drift returns False when schema validation fails.
+
+    @req:PRD-SYS-001
+    """
     mock_run.side_effect = [
         MagicMock(returncode=1, stdout="", stderr="Import failure in microservice"),
     ]
@@ -48,7 +54,10 @@ def test_check_openapi_drift_schema_validation_failure(mock_run: MagicMock) -> N
 
 @patch("subprocess.run")
 def test_check_openapi_drift_sync_spec_failure(mock_run: MagicMock) -> None:
-    """Test check_openapi_drift returns False when sync_openapi_spec fails."""
+    """Test check_openapi_drift returns False when sync_openapi_spec fails.
+
+    @req:PRD-SYS-001
+    """
     mock_run.side_effect = [
         MagicMock(returncode=0, stdout="Schema validation passed", stderr=""),
         MagicMock(returncode=1, stdout="", stderr="Markdown section missing"),
@@ -61,7 +70,10 @@ def test_check_openapi_drift_sync_spec_failure(mock_run: MagicMock) -> None:
 
 @patch("subprocess.run")
 def test_check_openapi_drift_detected_and_reverted(mock_run: MagicMock) -> None:
-    """Test check_openapi_drift detects drift, runs non-destructive cleanup, and returns False."""
+    """Test check_openapi_drift detects drift, runs non-destructive cleanup, and returns False.
+
+    @req:PRD-SYS-001
+    """
     mock_run.side_effect = [
         MagicMock(returncode=0, stdout="Schema validation passed", stderr=""),  # Step 1
         MagicMock(returncode=0, stdout="Sync spec passed", stderr=""),  # Step 2

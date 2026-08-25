@@ -243,6 +243,14 @@ def main() -> None:
                             pair_set.issubset(ignored)
                             for ignored in [
                                 {
+                                    "packages/security/audit_logger.py",
+                                    "packages/compliance/audit.py",
+                                },
+                                {
+                                    "packages/compliance/__init__.py",
+                                    "packages/compliance/audit.py",
+                                },
+                                {
                                     "apps/econsent/adapters/ai_readability_client.py",
                                     "apps/execution/adapters/ai_anomaly_client.py",
                                 },

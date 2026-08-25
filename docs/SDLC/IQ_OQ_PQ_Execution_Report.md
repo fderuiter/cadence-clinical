@@ -14,12 +14,12 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 3785
-- **Passed:** 3731 🟢
-- **Unverified (Draft):** 24 ⚪
-- **Failed/Errors:** 0 🔴
-- **Skipped:** 30 ⚪
-- **Overall Operational Pass Rate:** 98.57%
+- **Total Automated Test Cases Run:** 3814
+- **Passed:** 3630 🟢
+- **Unverified (Draft):** 129 ⚪
+- **Failed/Errors:** 16 🔴
+- **Skipped:** 39 ⚪
+- **Overall Operational Pass Rate:** 95.18%
 
 ## 2. Installation Qualification (IQ)
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
@@ -324,7 +324,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_normalize_and_validate_staff_role_invalid` | `apps.ctms.tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_and_validate_staff_role_valid` | `apps.ctms.tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_request_staff_roles_empty` | `apps.ctms.tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_protocol_deviation_lifecycle_and_capa_escalation` | `apps.ctms.tests.test_deviations_and_issues` | PRD-CTMS-006 | 🟢 PASSED | < 1s |
+| `test_protocol_deviation_lifecycle_and_capa_escalation` | `apps.ctms.tests.test_deviations_and_issues` | PRD-CTMS-004, PRD-CTMS-006 | 🟢 PASSED | < 1s |
 | `test_doa_historical_audit_trail_logging` | `apps.ctms.tests.test_doa_audit_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_assignment_record_creation` | `apps.ctms.tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_delegation_record_defaults` | `apps.ctms.tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -333,65 +333,66 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_ctms_doa_rbac_violations` | `apps.ctms.tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_manager_service_class_interface` | `apps.ctms.tests.test_doa_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_task_delegation_and_esignature_lifecycle` | `apps.ctms.tests.test_doa_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_etmf_artifact_synchronization` | `apps.ctms.tests.test_etmf_integration` | PRD-CTMS-010 | 🟢 PASSED | < 1s |
+| `test_etmf_artifact_synchronization` | `apps.ctms.tests.test_etmf_integration` | PRD-CTMS-004, PRD-CTMS-010 | 🟢 PASSED | < 1s |
 | `test_ctms_approve_unassigned_site` | `apps.ctms.tests.test_federated_resupply` | PRD-SYS-184 | 🟢 PASSED | < 1s |
 | `test_ctms_approve_unreachable_downstream` | `apps.ctms.tests.test_federated_resupply` | PRD-SYS-184 | 🟢 PASSED | < 1s |
 | `test_ctms_list_resupply_events_blocked_read_only` | `apps.ctms.tests.test_federated_resupply` | PRD-SYS-184 | 🟢 PASSED | < 1s |
 | `test_ctms_list_resupply_events_success` | `apps.ctms.tests.test_federated_resupply` | PRD-SYS-184 | 🟢 PASSED | < 1s |
 | `test_execution_approve_reject_resupply_events` | `apps.ctms.tests.test_federated_resupply` | PRD-SYS-184 | 🟢 PASSED | < 1s |
 | `test_execution_list_resupply_events` | `apps.ctms.tests.test_federated_resupply` | PRD-SYS-184 | 🟢 PASSED | < 1s |
-| `test_procedure_financials_and_invoice_disbursement` | `apps.ctms.tests.test_financials_auto_payables` | PRD-CTMS-008 | 🟢 PASSED | < 1s |
-| `test_budget_adjustments_passthrough_and_penalties` | `apps.ctms.tests.test_financials_fee_matrix_engine` | ADR-2200 | 🟢 PASSED | < 1s |
-| `test_contract_amendments_and_historical_fee_schedule_preservation` | `apps.ctms.tests.test_financials_fee_matrix_engine` | ADR-2200 | 🟢 PASSED | < 1s |
-| `test_multi_currency_exchange_rates_and_conversion` | `apps.ctms.tests.test_financials_fee_matrix_engine` | ADR-2200 | 🟢 PASSED | < 1s |
-| `test_multi_tier_budget_templates` | `apps.ctms.tests.test_financials_fee_matrix_engine` | ADR-2200 | 🟢 PASSED | < 1s |
-| `test_rbac_access_control` | `apps.ctms.tests.test_financials_fee_matrix_engine` | ADR-2200 | 🟢 PASSED | < 1s |
-| `test_template_application_and_fee_matrix_grid` | `apps.ctms.tests.test_financials_fee_matrix_engine` | ADR-2200 | 🟢 PASSED | < 1s |
-| `test_visit_payable_calculation_with_overhead_and_stipends` | `apps.ctms.tests.test_financials_fee_matrix_engine` | ADR-2200 | 🟢 PASSED | < 1s |
-| `test_ip_shipment_receipt_dispensation_and_reconciliation` | `apps.ctms.tests.test_ip_accountability` | PRD-SYS-184 | 🟢 PASSED | < 1s |
-| `test_rbqm_kri_breach_detection_and_adaptive_risk_scoring` | `apps.ctms.tests.test_rbqm_kri` | PRD-CTMS-007 | 🟢 PASSED | < 1s |
+| `test_procedure_financials_and_invoice_disbursement` | `apps.ctms.tests.test_financials_auto_payables` | PRD-CTMS-004, PRD-CTMS-008 | 🟢 PASSED | < 1s |
+| `test_budget_adjustments_passthrough_and_penalties` | `apps.ctms.tests.test_financials_fee_matrix_engine` | ADR-2200, PRD-PAY-001, PRD-PAY-005 | 🟢 PASSED | < 1s |
+| `test_contract_amendments_and_historical_fee_schedule_preservation` | `apps.ctms.tests.test_financials_fee_matrix_engine` | ADR-2200, PRD-PAY-001, PRD-PAY-005 | 🟢 PASSED | < 1s |
+| `test_multi_currency_exchange_rates_and_conversion` | `apps.ctms.tests.test_financials_fee_matrix_engine` | ADR-2200, PRD-PAY-001, PRD-PAY-005 | 🟢 PASSED | < 1s |
+| `test_multi_tier_budget_templates` | `apps.ctms.tests.test_financials_fee_matrix_engine` | ADR-2200, PRD-PAY-001, PRD-PAY-005 | 🟢 PASSED | < 1s |
+| `test_rbac_access_control` | `apps.ctms.tests.test_financials_fee_matrix_engine` | ADR-2200, PRD-PAY-001, PRD-PAY-005 | 🟢 PASSED | < 1s |
+| `test_template_application_and_fee_matrix_grid` | `apps.ctms.tests.test_financials_fee_matrix_engine` | ADR-2200, PRD-PAY-001, PRD-PAY-005 | 🟢 PASSED | < 1s |
+| `test_visit_payable_calculation_with_overhead_and_stipends` | `apps.ctms.tests.test_financials_fee_matrix_engine` | ADR-2200, PRD-PAY-001, PRD-PAY-005 | 🟢 PASSED | < 1s |
+| `test_ip_shipment_receipt_dispensation_and_reconciliation` | `apps.ctms.tests.test_ip_accountability` | PRD-CTMS-004, PRD-CTMS-009, PRD-SYS-184 | 🟢 PASSED | < 1s |
+| `test_rbqm_kri_breach_detection_and_adaptive_risk_scoring` | `apps.ctms.tests.test_rbqm_kri` | PRD-CTMS-004, PRD-CTMS-007 | 🟢 PASSED | < 1s |
 | `test_generate_self_billing_invoice_calculation` | `apps.ctms.tests.test_self_billing_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_tax_treatment_cross_border_eu_reverse_charge` | `apps.ctms.tests.test_self_billing_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_tax_treatment_cross_border_non_eu_exempt` | `apps.ctms.tests.test_self_billing_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_tax_treatment_domestic_uk` | `apps.ctms.tests.test_self_billing_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_tax_treatment_domestic_us` | `apps.ctms.tests.test_self_billing_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_site_greenlight_gatekeeper_workflow` | `apps.ctms.tests.test_site_startup` | PRD-CTMS-005 | 🟢 PASSED | < 1s |
-| `test_site_startup_and_regulatory_milestones` | `apps.ctms.tests.test_site_startup` | PRD-CTMS-005 | 🟢 PASSED | < 1s |
-| `test_dual_signature_executive_gxp_override` | `apps.ctms.tests.test_ssu_country_greenlight_activation` | PRD-SYS-183 | 🟢 PASSED | < 1s |
-| `test_hmac_sha256_cryptographic_token_generation_and_verification` | `apps.ctms.tests.test_ssu_country_greenlight_activation` | PRD-SYS-183 | 🟢 PASSED | < 1s |
-| `test_jurisdiction_rule_presets_and_configuration` | `apps.ctms.tests.test_ssu_country_greenlight_activation` | PRD-SYS-183 | 🟢 PASSED | < 1s |
-| `test_jurisdiction_specific_startup_criteria` | `apps.ctms.tests.test_ssu_country_greenlight_activation` | PRD-SYS-183 | 🟢 PASSED | < 1s |
-| `test_multi_factor_6_facet_greenlight_evaluator` | `apps.ctms.tests.test_ssu_country_greenlight_activation` | PRD-SYS-183 | 🟢 PASSED | < 1s |
-| `test_transactional_outbox_site_greenlight_approved_event` | `apps.ctms.tests.test_ssu_country_greenlight_activation` | PRD-SYS-183 | 🟢 PASSED | < 1s |
+| `test_site_greenlight_gatekeeper_workflow` | `apps.ctms.tests.test_site_startup` | PRD-CTMS-004, PRD-CTMS-005 | 🟢 PASSED | < 1s |
+| `test_site_startup_and_regulatory_milestones` | `apps.ctms.tests.test_site_startup` | PRD-CTMS-004, PRD-CTMS-005 | 🟢 PASSED | < 1s |
+| `test_dual_signature_executive_gxp_override` | `apps.ctms.tests.test_ssu_country_greenlight_activation` | 11, 21, ADR-2202, CFR, PRD-SSU-002, PRD-SYS-183, Part | 🟢 PASSED | < 1s |
+| `test_hmac_sha256_cryptographic_token_generation_and_verification` | `apps.ctms.tests.test_ssu_country_greenlight_activation` | 11, 21, ADR-2202, CFR, PRD-SSU-003, PRD-SYS-183, Part | 🟢 PASSED | < 1s |
+| `test_jurisdiction_rule_presets_and_configuration` | `apps.ctms.tests.test_ssu_country_greenlight_activation` | 8, ADR-2199, E6, GCP, ICH, PRD-SSU-001, PRD-SYS-183, R2, Section | 🟢 PASSED | < 1s |
+| `test_jurisdiction_specific_startup_criteria` | `apps.ctms.tests.test_ssu_country_greenlight_activation` | ADR-2202, PRD-SSU-001, PRD-SSU-002, PRD-SYS-183 | 🟢 PASSED | < 1s |
+| `test_multi_factor_6_facet_greenlight_evaluator` | `apps.ctms.tests.test_ssu_country_greenlight_activation` | 11, 21, 8, ADR-2202, CFR, E6, GCP, ICH, PRD-SSU-002, PRD-SSU-003, PRD-SYS-183, Part, R2, Section | 🟢 PASSED | < 1s |
+| `test_transactional_outbox_site_greenlight_approved_event` | `apps.ctms.tests.test_ssu_country_greenlight_activation` | ADR-2202, PRD-SSU-003, PRD-SYS-121, PRD-SYS-183 | 🟢 PASSED | < 1s |
 | `test_adversarial_concurrent_multi_study_ingestion` | `apps.designer.tests.test_adversarial_usdm` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_adversarial_cypher_injection_and_special_characters` | `apps.designer.tests.test_adversarial_usdm` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_adversarial_cypher_injection_and_special_characters` | `apps.designer.tests.test_adversarial_usdm` | PRD-DDF-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_adversarial_database_disconnection_mid_transaction` | `apps.designer.tests.test_adversarial_usdm` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_adversarial_deadlock_and_failing_commit` | `apps.designer.tests.test_adversarial_usdm` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_adversarial_direct_usdmstudy_object_input` | `apps.designer.tests.test_adversarial_usdm` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_adversarial_direct_usdmstudy_object_input` | `apps.designer.tests.test_adversarial_usdm` | PRD-DDF-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_adversarial_empty_and_missing_id_payloads` | `apps.designer.tests.test_adversarial_usdm` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_adversarial_large_scale_protocol_stress_harness` | `apps.designer.tests.test_adversarial_usdm` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_adversarial_legacy_and_hybrid_schema_aliases` | `apps.designer.tests.test_adversarial_usdm` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_adversarial_large_scale_protocol_stress_harness` | `apps.designer.tests.test_adversarial_usdm` | PRD-DDF-001, PRD-MDR-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_adversarial_legacy_and_hybrid_schema_aliases` | `apps.designer.tests.test_adversarial_usdm` | PRD-DDF-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_adversarial_malformed_type_structures` | `apps.designer.tests.test_adversarial_usdm` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_adversarial_rollback_itself_fails_gracefully` | `apps.designer.tests.test_adversarial_usdm` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_adversarial_sync_wrapper_with_db_failure` | `apps.designer.tests.test_adversarial_usdm` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_adversarial_zero_designs_warning` | `apps.designer.tests.test_adversarial_usdm` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_api_extract_and_commit_endpoints` | `apps.designer.tests.test_ai_usdm_digitization` | PRD-DDF-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_api_extract_and_commit_endpoints` | `apps.designer.tests.test_ai_usdm_digitization` | PRD-DDF-001, PRD-SYS-001, req | 🟢 PASSED | < 1s |
 | `test_cycle_detection_on_extracted_rules` | `apps.designer.tests.test_ai_usdm_digitization` | PRD-CRF-005 | 🟢 PASSED | < 1s |
 | `test_end_to_end_synthesis_time` | `apps.designer.tests.test_ai_usdm_digitization` | PRD-DDF-001 | 🟢 PASSED | < 1s |
 | `test_missing_change_reason_rejected` | `apps.designer.tests.test_ai_usdm_digitization` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_neo4j_usdm_graph_integrity` | `apps.designer.tests.test_ai_usdm_digitization` | PRD-DDF-001 | 🟢 PASSED | < 1s |
 | `test_protocol_entity_extraction` | `apps.designer.tests.test_ai_usdm_digitization` | PRD-DDF-001 | 🟢 PASSED | < 1s |
-| `test_designer_amendments_api_endpoints` | `apps.designer.tests.test_amendment_ripple_analyzer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_operational_tickets_generation_and_action_plans` | `apps.designer.tests.test_amendment_ripple_analyzer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_reconsent_gating_plan_flags_active_cohort_subjects` | `apps.designer.tests.test_amendment_ripple_analyzer` | PRD-SUB-007 | 🟢 PASSED | < 1s |
-| `test_ripple_analyzer_domain_manifests` | `apps.designer.tests.test_amendment_ripple_analyzer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_ripple_analyzer_graph_and_soa_deltas` | `apps.designer.tests.test_amendment_ripple_analyzer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_ripple_analyzer_narrative_deltas_and_safety_triggers` | `apps.designer.tests.test_amendment_ripple_analyzer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_tickets_client_dispatch_integration` | `apps.designer.tests.test_amendment_ripple_analyzer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_designer_amendment_branching_success` | `apps.designer.tests.test_amendments` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_designer_amendments_api_endpoints` | `apps.designer.tests.test_amendment_ripple_analyzer` | PRD-SUB-007, PRD-SYS-001, PRD-SYS-051 | 🟢 PASSED | < 1s |
+| `test_operational_tickets_generation_and_action_plans` | `apps.designer.tests.test_amendment_ripple_analyzer` | PRD-SUB-007, PRD-SYS-001, PRD-SYS-051 | 🟢 PASSED | < 1s |
+| `test_reconsent_gating_plan_flags_active_cohort_subjects` | `apps.designer.tests.test_amendment_ripple_analyzer` | PRD-SUB-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_ripple_analyzer_domain_manifests` | `apps.designer.tests.test_amendment_ripple_analyzer` | PRD-SUB-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_ripple_analyzer_graph_and_soa_deltas` | `apps.designer.tests.test_amendment_ripple_analyzer` | PRD-SUB-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_ripple_analyzer_narrative_deltas_and_safety_triggers` | `apps.designer.tests.test_amendment_ripple_analyzer` | PRD-SUB-007, PRD-SYS-001, PRD-SYS-051 | 🟢 PASSED | < 1s |
+| `test_tickets_client_dispatch_integration` | `apps.designer.tests.test_amendment_ripple_analyzer` | PRD-SYS-001, PRD-SYS-051 | 🟢 PASSED | < 1s |
+| `test_designer_amendment_branching_success` | `apps.designer.tests.test_amendments` | PRD-SUB-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_designer_amendment_branching_unapproved_baseline_rejection` | `apps.designer.tests.test_amendments` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_designer_amendment_impact_endpoint_direct` | `apps.designer.tests.test_amendments` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_designer_semantic_diff_and_impact_summary` | `apps.designer.tests.test_amendments` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_designer_semantic_diff_and_impact_summary` | `apps.designer.tests.test_amendments` | PRD-SUB-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_designer_semantic_diff_removed_and_modified_entities` | `apps.designer.tests.test_amendments` | PRD-SUB-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_cdisc_cache_purge_expired` | `apps.designer.tests.test_cdisc_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cdisc_cache_save_and_get` | `apps.designer.tests.test_cdisc_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cdisc_cache_ttl_expiration` | `apps.designer.tests.test_cdisc_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -401,31 +402,31 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_cdisc_library_client_local_fallback_products` | `apps.designer.tests.test_cdisc_library_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cdisc_library_client_mock_api_key_auth` | `apps.designer.tests.test_cdisc_library_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cdisc_library_config_defaults` | `apps.designer.tests.test_cdisc_library_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_adversarial_concept_deduplication_and_multiple_references` | `apps.designer.tests.test_challenger_usdm_adversarial` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_adversarial_cypher_query_validation_and_safety` | `apps.designer.tests.test_challenger_usdm_adversarial` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_adversarial_empty_protocol_and_missing_optional_fields` | `apps.designer.tests.test_challenger_usdm_adversarial` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_adversarial_entity_counts_complex_multi_arm_protocol` | `apps.designer.tests.test_challenger_usdm_adversarial` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_adversarial_concept_deduplication_and_multiple_references` | `apps.designer.tests.test_challenger_usdm_adversarial` | PRD-MDR-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_adversarial_cypher_query_validation_and_safety` | `apps.designer.tests.test_challenger_usdm_adversarial` | PRD-DDF-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_adversarial_empty_protocol_and_missing_optional_fields` | `apps.designer.tests.test_challenger_usdm_adversarial` | PRD-DDF-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_adversarial_entity_counts_complex_multi_arm_protocol` | `apps.designer.tests.test_challenger_usdm_adversarial` | PRD-DDF-001, PRD-MDR-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_adversarial_injection_resistance_and_special_characters` | `apps.designer.tests.test_challenger_usdm_adversarial` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_adversarial_relational_edge_semantics_and_directions` | `apps.designer.tests.test_challenger_usdm_adversarial` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_adversarial_relational_edge_semantics_and_directions` | `apps.designer.tests.test_challenger_usdm_adversarial` | PRD-MDR-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_adversarial_transaction_rollback_on_query_failure` | `apps.designer.tests.test_challenger_usdm_adversarial` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_check_dict_for_value` | `apps.designer.tests.test_concept_locks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_concept_mutations_locked_active_recruiting` | `apps.designer.tests.test_concept_locks` | PRD-MDR-002 | 🟢 PASSED | < 1s |
 | `test_concept_mutations_unreferenced` | `apps.designer.tests.test_concept_locks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_is_concept_referenced_by_active_recruiting_study` | `apps.designer.tests.test_concept_locks` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_cdash_usdm_csv_mapping_fidelity` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-006, PRD-CRF-007, Trace-24, Trace-25 | 🟢 PASSED | < 1s |
-| `test_collaborative_workspace_review_workflow` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-003, PRD-CRF-004, Trace-21, Trace-22 | 🟢 PASSED | < 1s |
-| `test_crf_authoring_and_global_library_instantiation` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-001, PRD-CRF-002, Trace-19, Trace-20 | 🟢 PASSED | < 1s |
-| `test_declarative_rule_generation_edit_checks` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-004, PRD-CRF-005, Trace-22, Trace-23 | 🟢 PASSED | < 1s |
-| `test_failure_recovery_high_availability` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-014, Trace-32 | 🟢 PASSED | < 1s |
-| `test_fhir_esource_readiness_prefill` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-007, PRD-CRF-008, Trace-25, Trace-26 | 🟢 PASSED | < 1s |
-| `test_gxp_change_reason_justification` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-010, PRD-CRF-011, Trace-28, Trace-29 | 🟢 PASSED | < 1s |
-| `test_immutable_audit_attribution` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-011, PRD-CRF-012, Trace-29, Trace-30 | 🟢 PASSED | < 1s |
-| `test_real_time_contextual_preview` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-002, PRD-CRF-003, Trace-20, Trace-21 | 🟢 PASSED | < 1s |
-| `test_regulatory_protocol_document_export` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-008, PRD-CRF-009, Trace-26, Trace-27 | 🟢 PASSED | < 1s |
-| `test_role_based_authorization_gates` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-009, PRD-CRF-010, Trace-27, Trace-28 | 🟢 PASSED | < 1s |
-| `test_simulation_dry_run_cycle_detection` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-005, PRD-CRF-006, Trace-23, Trace-24 | 🟢 PASSED | < 1s |
-| `test_site_tenant_data_isolation` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-013, PRD-CRF-014, Trace-31, Trace-32 | 🟢 PASSED | < 1s |
-| `test_version_pinning_and_lock_enforcement` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-012, PRD-CRF-013, Trace-30, Trace-31 | 🟢 PASSED | < 1s |
+| `test_cdash_usdm_csv_mapping_fidelity` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-006, PRD-CRF-007, Trace-24, Trace-25 | ⚪ UNVERIFIED | N/A |
+| `test_collaborative_workspace_review_workflow` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-003, PRD-CRF-004, Trace-21, Trace-22 | ⚪ UNVERIFIED | N/A |
+| `test_crf_authoring_and_global_library_instantiation` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-001, PRD-CRF-002, Trace-19, Trace-20 | ⚪ UNVERIFIED | N/A |
+| `test_declarative_rule_generation_edit_checks` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-004, PRD-CRF-005, Trace-22, Trace-23 | ⚪ UNVERIFIED | N/A |
+| `test_failure_recovery_high_availability` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-014, Trace-32 | ⚪ UNVERIFIED | N/A |
+| `test_fhir_esource_readiness_prefill` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-007, PRD-CRF-008, Trace-25, Trace-26 | ⚪ UNVERIFIED | N/A |
+| `test_gxp_change_reason_justification` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-010, PRD-CRF-011, Trace-28, Trace-29 | ⚪ UNVERIFIED | N/A |
+| `test_immutable_audit_attribution` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-011, PRD-CRF-012, Trace-29, Trace-30 | ⚪ UNVERIFIED | N/A |
+| `test_real_time_contextual_preview` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-002, PRD-CRF-003, Trace-20, Trace-21 | ⚪ UNVERIFIED | N/A |
+| `test_regulatory_protocol_document_export` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-008, PRD-CRF-009, Trace-26, Trace-27 | ⚪ UNVERIFIED | N/A |
+| `test_role_based_authorization_gates` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-009, PRD-CRF-010, Trace-27, Trace-28 | ⚪ UNVERIFIED | N/A |
+| `test_simulation_dry_run_cycle_detection` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-005, PRD-CRF-006, Trace-23, Trace-24 | ⚪ UNVERIFIED | N/A |
+| `test_site_tenant_data_isolation` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-013, PRD-CRF-014, Trace-31, Trace-32 | ⚪ UNVERIFIED | N/A |
+| `test_version_pinning_and_lock_enforcement` | `apps.designer.tests.test_crf_builder_compliance` | PRD-CRF-012, PRD-CRF-013, Trace-30, Trace-31 | ⚪ UNVERIFIED | N/A |
 | `test_candidate_item_review_transitions` | `apps.designer.tests.test_crf_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_docx_ingestion_success` | `apps.designer.tests.test_crf_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_low_confidence_classification` | `apps.designer.tests.test_crf_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -433,20 +434,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_pdf_ingestion_success` | `apps.designer.tests.test_crf_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_promotion_gates_and_draft_creation` | `apps.designer.tests.test_crf_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unauthorized_upload` | `apps.designer.tests.test_crf_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_cdash_usdm_csv_mapping_fidelity` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-006, Trace-22 | 🟢 PASSED | < 1s |
-| `test_collaborative_workspace_review_workflow` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-003, Trace-19 | 🟢 PASSED | < 1s |
-| `test_crf_authoring_global_library_instantiation` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-001, Trace-17 | 🟢 PASSED | < 1s |
-| `test_declarative_rule_generation_and_edit_checks` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-004, Trace-20 | 🟢 PASSED | < 1s |
-| `test_failure_recovery_and_high_availability` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-014, Trace-30 | 🟢 PASSED | < 1s |
-| `test_fhir_esource_readiness_cdash_pre_fill` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-007, Trace-23 | 🟢 PASSED | < 1s |
-| `test_gxp_change_reason_justification` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-010, Trace-26 | 🟢 PASSED | < 1s |
-| `test_immutable_audit_attribution` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-011, Trace-27 | 🟢 PASSED | < 1s |
-| `test_real_time_contextual_preview` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-002, Trace-18 | 🟢 PASSED | < 1s |
-| `test_regulatory_and_protocol_document_export` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-008, Trace-24 | 🟢 PASSED | < 1s |
-| `test_role_based_authorization_gates` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-009, Trace-25 | 🟢 PASSED | < 1s |
-| `test_simulation_and_dry_run_cycle_detection` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-005, Trace-21 | 🟢 PASSED | < 1s |
-| `test_site_and_tenant_data_isolation` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-013, Trace-29 | 🟢 PASSED | < 1s |
-| `test_version_pinning_and_lock_enforcement` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-012, Trace-28 | 🟢 PASSED | < 1s |
+| `test_crf_authoring_global_library_instantiation` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-001, Trace-17 | ⚪ UNVERIFIED | N/A |
+| `test_declarative_rule_generation_and_edit_checks` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-004, Trace-20 | ⚪ UNVERIFIED | N/A |
+| `test_failure_recovery_and_high_availability` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-014, Trace-30 | ⚪ UNVERIFIED | N/A |
+| `test_fhir_esource_readiness_cdash_pre_fill` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-007, Trace-23 | ⚪ UNVERIFIED | N/A |
+| `test_regulatory_and_protocol_document_export` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-008, Trace-24 | ⚪ UNVERIFIED | N/A |
+| `test_simulation_and_dry_run_cycle_detection` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-005, Trace-21 | ⚪ UNVERIFIED | N/A |
+| `test_site_and_tenant_data_isolation` | `apps.designer.tests.test_crf_requirements_mapping` | PRD-CRF-013, Trace-29 | ⚪ UNVERIFIED | N/A |
 | `test_crf_synthesizer_class_service` | `apps.designer.tests.test_crf_synthesizer` | PRD-CRF-004 | 🟢 PASSED | < 1s |
 | `test_synthesize_from_raw_dictionary_and_list` | `apps.designer.tests.test_crf_synthesizer` | PRD-DDF-001 | 🟢 PASSED | < 1s |
 | `test_synthesize_from_usdm_study_model` | `apps.designer.tests.test_crf_synthesizer` | PRD-CRF-004, PRD-DDF-001 | 🟢 PASSED | < 1s |
@@ -513,15 +507,15 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_designer_signing_raises_runtime_error_if_secret_missing` | `apps.designer.tests.test_designer_version_diff` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_version_diff_success` | `apps.designer.tests.test_designer_version_diff` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_version_diff_unrelated_or_nonexistent` | `apps.designer.tests.test_designer_version_diff` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_api_compile_usdm_from_dag_job_endpoint` | `apps.designer.tests.test_digitization_stage_dag` | PRD-DDF-001, PRD-MDR-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_api_compile_usdm_from_dag_job_endpoint` | `apps.designer.tests.test_digitization_stage_dag` | PRD-DDF-001, PRD-MDR-007, PRD-SYS-001, req | 🟢 PASSED | < 1s |
 | `test_api_compile_usdm_incomplete_job_rejected` | `apps.designer.tests.test_digitization_stage_dag` | PRD-DDF-001 | 🟢 PASSED | < 1s |
 | `test_api_compile_usdm_requires_change_reason` | `apps.designer.tests.test_digitization_stage_dag` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_api_get_dag_job_status_endpoint` | `apps.designer.tests.test_digitization_stage_dag` | PRD-DDF-001 | 🟢 PASSED | < 1s |
 | `test_api_resume_dag_job_endpoint` | `apps.designer.tests.test_digitization_stage_dag` | PRD-DDF-001 | 🟢 PASSED | < 1s |
-| `test_api_start_dag_job_endpoint` | `apps.designer.tests.test_digitization_stage_dag` | PRD-DDF-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_api_start_dag_job_endpoint` | `apps.designer.tests.test_digitization_stage_dag` | PRD-DDF-001, PRD-SYS-001, req | 🟢 PASSED | < 1s |
 | `test_dag_job_initialization_and_store` | `apps.designer.tests.test_digitization_stage_dag` | PRD-DDF-001 | 🟢 PASSED | < 1s |
 | `test_dag_job_resumption_from_stage` | `apps.designer.tests.test_digitization_stage_dag` | PRD-DDF-001 | 🟢 PASSED | < 1s |
-| `test_end_to_end_dag_pipeline_execution` | `apps.designer.tests.test_digitization_stage_dag` | PRD-DDF-001, PRD-MDR-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_end_to_end_dag_pipeline_execution` | `apps.designer.tests.test_digitization_stage_dag` | PRD-DDF-001, PRD-MDR-007, PRD-SYS-001, req | 🟢 PASSED | < 1s |
 | `test_schema_validation_gate_failure_stops_pipeline` | `apps.designer.tests.test_digitization_stage_dag` | PRD-DDF-001 | 🟢 PASSED | < 1s |
 | `test_client_configuration_env_vars` | `apps.designer.tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_client_configuration_overrides` | `apps.designer.tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -702,29 +696,29 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_visit_neo4j` | `apps.designer.tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_with_transaction_retry_failure_exceeded` | `apps.designer.tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_with_transaction_retry_success_after_retries` | `apps.designer.tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_designer_startup_matrix_presets_and_jurisdictions` | `apps.designer.tests.test_startup_matrix` | PRD-SSU-001 | 🟢 PASSED | < 1s |
-| `test_designer_startup_matrix_template_generation` | `apps.designer.tests.test_startup_matrix` | PRD-SSU-001 | 🟢 PASSED | < 1s |
-| `test_api_protocol_amendment_concurrency_race` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_api_protocol_amendment_invalid_signature_rejected` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_api_protocol_amendment_invalid_study_404` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_api_protocol_amendment_minor_and_major_bumps` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_api_protocol_approval_and_immutability` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_api_study_version_creation_and_guards` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_assert_graph_mutable_library_object_permits_active` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_assert_graph_mutable_library_object_rejects_frozen` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_assert_graph_mutable_permits_draft_active` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_assert_graph_mutable_rejects_frozen_states` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_bump_version_edge_cases` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_create_library_object_version_guards` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_mock_study_version_creation_and_immutability` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_neo4j_create_study_version_duplicate_raises_conflict` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_neo4j_create_study_version_success` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_update_study_properties_guards` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_verify_version_signature_edge_cases` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_synopsis_export_invalid_format_returns_400` | `apps.designer.tests.test_synopsis_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_synopsis_export_post_docx` | `apps.designer.tests.test_synopsis_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_synopsis_export_post_html` | `apps.designer.tests.test_synopsis_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_synopsis_render_get_download` | `apps.designer.tests.test_synopsis_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_designer_startup_matrix_presets_and_jurisdictions` | `apps.designer.tests.test_startup_matrix` | ADR-2199, PRD-SSU-001, PRD-SYS-121 | 🟢 PASSED | < 1s |
+| `test_designer_startup_matrix_template_generation` | `apps.designer.tests.test_startup_matrix` | ADR-2199, PRD-SSU-001, PRD-SYS-121 | 🟢 PASSED | < 1s |
+| `test_api_protocol_amendment_concurrency_race` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_api_protocol_amendment_invalid_signature_rejected` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_api_protocol_amendment_invalid_study_404` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_api_protocol_amendment_minor_and_major_bumps` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_api_protocol_approval_and_immutability` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_api_study_version_creation_and_guards` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_assert_graph_mutable_library_object_permits_active` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_assert_graph_mutable_library_object_rejects_frozen` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_assert_graph_mutable_permits_draft_active` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_assert_graph_mutable_rejects_frozen_states` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_bump_version_edge_cases` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_create_library_object_version_guards` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_mock_study_version_creation_and_immutability` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_neo4j_create_study_version_duplicate_raises_conflict` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_neo4j_create_study_version_success` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_update_study_properties_guards` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_verify_version_signature_edge_cases` | `apps.designer.tests.test_study_versions` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_synopsis_export_invalid_format_returns_400` | `apps.designer.tests.test_synopsis_router` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_synopsis_export_post_docx` | `apps.designer.tests.test_synopsis_router` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_synopsis_export_post_html` | `apps.designer.tests.test_synopsis_router` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_synopsis_render_get_download` | `apps.designer.tests.test_synopsis_router` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_terminology_cache_capacity_eviction` | `apps.designer.tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_hit_and_expiration` | `apps.designer.tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_thread_safety` | `apps.designer.tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -771,10 +765,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_linear_scaling_and_no_timeout_on_large_payload` | `apps.designer.tests.test_transactional_usdm_ingest` | PRD-DDF-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_mock_state_unchanged_on_transaction_failure` | `apps.designer.tests.test_transactional_usdm_ingest` | PRD-MDR-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_pydantic_domain_models` | `apps.designer.tests.test_usdm_graph_importer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_usdm_graph_importer_in_memory_state_sync` | `apps.designer.tests.test_usdm_graph_importer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_usdm_graph_importer_in_memory_state_sync` | `apps.designer.tests.test_usdm_graph_importer` | PRD-DDF-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_usdm_graph_importer_sync_wrapper` | `apps.designer.tests.test_usdm_graph_importer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_usdm_graph_importer_transactional_rollback` | `apps.designer.tests.test_usdm_graph_importer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_usdm_graph_importer_v4_ingestion` | `apps.designer.tests.test_usdm_graph_importer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_usdm_graph_importer_v4_ingestion` | `apps.designer.tests.test_usdm_graph_importer` | PRD-DDF-001, PRD-MDR-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_usdm_importer_alias_compatibility` | `apps.designer.tests.test_usdm_graph_importer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_usdm_importer_warning_unknown_concepts` | `apps.designer.tests.test_usdm_graph_importer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_usdm_model_immutability` | `apps.designer.tests.test_usdm_immutability` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1026,7 +1020,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_mock_signature_bypass` | `apps.etmf.tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_extraction_formats` | `apps.etmf.tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_requirement_rules` | `apps.etmf.tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_tampering_detection_and_lockout_propagation` | `apps.etmf.tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_tampering_detection_and_lockout_propagation` | `apps.etmf.tests.test_etmf_compliance` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_custom_milestones_and_backward_compatibility` | `apps.etmf.tests.test_etmf_edl_seeding` | PRD-TMF-001 | 🟢 PASSED | < 1s |
 | `test_live_async_session_edl_seeding_and_idempotency` | `apps.etmf.tests.test_etmf_edl_seeding` | PRD-TMF-001, Trace-4 | 🟢 PASSED | < 1s |
 | `test_offline_in_memory_edl_seeding_all_zones` | `apps.etmf.tests.test_etmf_edl_seeding` | PRD-EDL-001, PRD-TMF-001 | 🟢 PASSED | < 1s |
@@ -1082,8 +1076,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_qc_history_api_not_found` | `apps.etmf.tests.test_etmf_qc` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_qc_transitions_missing_doc` | `apps.etmf.tests.test_etmf_qc` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_role_based_access_controls_and_gates` | `apps.etmf.tests.test_etmf_qc` | PRD-QC-003 | 🟢 PASSED | < 1s |
-| `test_migration_clean_path` | `apps.etmf.tests.test_etmf_qc_invariants` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_migration_upgrade_and_backfill_path` | `apps.etmf.tests.test_etmf_qc_invariants` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_migration_clean_path` | `apps.etmf.tests.test_etmf_qc_invariants` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_migration_upgrade_and_backfill_path` | `apps.etmf.tests.test_etmf_qc_invariants` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_automated_redaction_basic` | `apps.etmf.tests.test_etmf_redaction` | PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_automated_redaction_errors` | `apps.etmf.tests.test_etmf_redaction` | PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_automated_redaction_profile_scopes` | `apps.etmf.tests.test_etmf_redaction` | PRD-TMF-005 | 🟢 PASSED | < 1s |
@@ -1118,13 +1112,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_unauthorized_role_denied_on_all_paths` | `apps.etmf.tests.test_etmf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_to_etmf_e2e_boundaries` | `apps.etmf.tests.test_etmf_sync_provenance` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_redaction_derivative_safety` | `apps.etmf.tests.test_etmf_sync_provenance` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_sealer_retains_and_validates_reason_for_change` | `apps.etmf.tests.test_etmf_sync_provenance` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sealer_retains_and_validates_reason_for_change` | `apps.etmf.tests.test_etmf_sync_provenance` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_auto_file_endpoint` | `apps.etmf.tests.test_etmf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_classification_service_direct` | `apps.etmf.tests.test_etmf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_classify_endpoints` | `apps.etmf.tests.test_etmf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_taxonomy_endpoint` | `apps.etmf.tests.test_etmf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_resolve_document_type_helper` | `apps.etmf.tests.test_etmf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_etmf_triggers_immutability` | `apps.etmf.tests.test_etmf_triggers_compliance` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_etmf_triggers_immutability` | `apps.etmf.tests.test_etmf_triggers_compliance` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_bulk_archive_use_case` | `apps.etmf.tests.test_etmf_use_cases` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_completeness_readiness_and_export_use_cases` | `apps.etmf.tests.test_etmf_use_cases` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_electronic_signature_and_redaction_use_cases` | `apps.etmf.tests.test_etmf_use_cases` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1198,10 +1192,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_scan_phi_post_endpoint` | `apps.execution.tests.test_anonymization_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_abstract_consent_client_interface_and_graceful_network_failure` | `apps.execution.tests.test_audit_metadata_filtering` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_shared_session_coexistence_auditing` | `apps.execution.tests.test_audit_metadata_filtering` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_batch_sign_off_all_locks` | `apps.execution.tests.test_batch_sign_off` | Trace-14 | 🟢 PASSED | < 1s |
+| `test_batch_sign_off_all_locks` | `apps.execution.tests.test_batch_sign_off` | Trace-14 | 🔴 FAILED | < 1s |
 | `test_batch_sign_off_audit_manifestation_capture` | `apps.execution.tests.test_batch_sign_off` | Trace-14 | 🟢 PASSED | < 1s |
 | `test_batch_sign_off_happy_path_form` | `apps.execution.tests.test_batch_sign_off` | Trace-14, Trace-17 | 🟢 PASSED | < 1s |
-| `test_batch_sign_off_locks_and_atomic_rollback` | `apps.execution.tests.test_batch_sign_off` | Trace-14 | 🟢 PASSED | < 1s |
+| `test_batch_sign_off_locks_and_atomic_rollback` | `apps.execution.tests.test_batch_sign_off` | Trace-14 | 🔴 FAILED | < 1s |
 | `test_batch_sign_off_mismatched_bindings_and_no_write` | `apps.execution.tests.test_batch_sign_off` | Trace-14, Trace-17 | 🟢 PASSED | < 1s |
 | `test_batch_sign_off_non_lock_rollback` | `apps.execution.tests.test_batch_sign_off` | Trace-14 | 🟢 PASSED | < 1s |
 | `test_batch_sign_off_pi_only` | `apps.execution.tests.test_batch_sign_off` | Trace-14 | 🟢 PASSED | < 1s |
@@ -1306,21 +1300,21 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_gateway_auth_middleware_tenant_fallback` | `apps.execution.tests.test_cdisc_export_authorization_primitives` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_permission_enum_export_sdtm` | `apps.execution.tests.test_cdisc_export_authorization_primitives` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_require_study_scope_resolution_order` | `apps.execution.tests.test_cdisc_export_authorization_primitives` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_cec_api_http_workflow_integration` | `apps.execution.tests.test_cec_adjudication` | ADR-2199, PRD-CEC-001, PRD-CEC-002, PRD-CEC-003, PRD-SYS-172, PRD-SYS-173 | 🟢 PASSED | < 1s |
-| `test_cec_charter_voting_rules_and_quorum_edge_cases` | `apps.execution.tests.test_cec_adjudication` | PRD-SYS-124, PRD-SYS-173 | 🟢 PASSED | < 1s |
-| `test_cec_custom_chair_determination_workflow` | `apps.execution.tests.test_cec_adjudication` | ADR-2199, PRD-CEC-002, PRD-SYS-124, PRD-SYS-173 | 🟢 PASSED | < 1s |
-| `test_cec_dossier_deidentification_deep_scrub` | `apps.execution.tests.test_cec_adjudication` | ADR-2199, PRD-CEC-001, PRD-SYS-172 | 🟢 PASSED | < 1s |
-| `test_cec_edc_writeback_and_sdtm_suppce_mapping` | `apps.execution.tests.test_cec_adjudication` | PRD-CEC-003, PRD-SYS-001, PRD-SYS-173 | 🟢 PASSED | < 1s |
-| `test_cec_unauthorized_and_invalid_reader_rejection` | `apps.execution.tests.test_cec_adjudication` | ADR-2199, PRD-SYS-172, PRD-SYS-173 | 🟢 PASSED | < 1s |
-| `test_blinded_reader_isolation_unit` | `apps.execution.tests.test_cec_endpoint_adjudication_suite` | ADR-2199, PRD-CEC-002, PRD-SYS-172 | 🟢 PASSED | < 1s |
-| `test_cec_api_charter_and_meeting_quorum` | `apps.execution.tests.test_cec_endpoint_adjudication_suite` | PRD-SYS-124, PRD-SYS-173 | 🟢 PASSED | < 1s |
-| `test_cec_api_discordance_and_chair_tiebreaker` | `apps.execution.tests.test_cec_endpoint_adjudication_suite` | ADR-2199, PRD-CEC-002, PRD-SYS-124, PRD-SYS-173 | 🟢 PASSED | < 1s |
-| `test_cec_api_dossier_lifecycle_and_blinding` | `apps.execution.tests.test_cec_endpoint_adjudication_suite` | ADR-2199, PRD-CEC-001, PRD-CEC-002, PRD-CEC-003, PRD-SYS-172, PRD-SYS-173 | 🟢 PASSED | < 1s |
-| `test_charter_governance_and_quorum_tracking_unit` | `apps.execution.tests.test_cec_endpoint_adjudication_suite` | PRD-SYS-124, PRD-SYS-173 | 🟢 PASSED | < 1s |
-| `test_concordant_consensus_auto_finalization_unit` | `apps.execution.tests.test_cec_endpoint_adjudication_suite` | ADR-2199, PRD-CEC-002, PRD-CEC-003, PRD-SYS-172, PRD-SYS-173 | 🟢 PASSED | < 1s |
-| `test_discordance_detection_and_chair_tiebreaker_unit` | `apps.execution.tests.test_cec_endpoint_adjudication_suite` | ADR-2199, PRD-CEC-002, PRD-SYS-124, PRD-SYS-173 | 🟢 PASSED | < 1s |
-| `test_dossier_packaging_and_phi_masking_unit` | `apps.execution.tests.test_cec_endpoint_adjudication_suite` | ADR-2199, PRD-CEC-001, PRD-SYS-124, PRD-SYS-172 | 🟢 PASSED | < 1s |
-| `test_sdtm_ce_domain_model_compilation_unit` | `apps.execution.tests.test_cec_endpoint_adjudication_suite` | PRD-CEC-003, PRD-SYS-001, PRD-SYS-173 | 🟢 PASSED | < 1s |
+| `test_cec_api_http_workflow_integration` | `apps.execution.tests.test_cec_adjudication` | ADR-2199, PRD-CEC-001, PRD-CEC-002, PRD-CEC-003, PRD-SYS-172, PRD-SYS-173, req | 🟢 PASSED | < 1s |
+| `test_cec_charter_voting_rules_and_quorum_edge_cases` | `apps.execution.tests.test_cec_adjudication` | PRD-SYS-124, PRD-SYS-173, req | 🟢 PASSED | < 1s |
+| `test_cec_custom_chair_determination_workflow` | `apps.execution.tests.test_cec_adjudication` | ADR-2199, PRD-CEC-002, PRD-SYS-124, PRD-SYS-173, req | 🟢 PASSED | < 1s |
+| `test_cec_dossier_deidentification_deep_scrub` | `apps.execution.tests.test_cec_adjudication` | ADR-2199, PRD-CEC-001, PRD-SYS-172, req | 🟢 PASSED | < 1s |
+| `test_cec_edc_writeback_and_sdtm_suppce_mapping` | `apps.execution.tests.test_cec_adjudication` | PRD-CEC-003, PRD-SYS-001, PRD-SYS-173, req | 🟢 PASSED | < 1s |
+| `test_cec_unauthorized_and_invalid_reader_rejection` | `apps.execution.tests.test_cec_adjudication` | ADR-2199, PRD-SYS-172, PRD-SYS-173, req | 🟢 PASSED | < 1s |
+| `test_blinded_reader_isolation_unit` | `apps.execution.tests.test_cec_endpoint_adjudication_suite` | ADR-2199, PRD-CEC-002, PRD-SYS-172, req | 🟢 PASSED | < 1s |
+| `test_cec_api_charter_and_meeting_quorum` | `apps.execution.tests.test_cec_endpoint_adjudication_suite` | PRD-SYS-124, PRD-SYS-173, req | 🟢 PASSED | < 1s |
+| `test_cec_api_discordance_and_chair_tiebreaker` | `apps.execution.tests.test_cec_endpoint_adjudication_suite` | ADR-2199, PRD-CEC-002, PRD-SYS-124, PRD-SYS-173, req | 🟢 PASSED | < 1s |
+| `test_cec_api_dossier_lifecycle_and_blinding` | `apps.execution.tests.test_cec_endpoint_adjudication_suite` | ADR-2199, PRD-CEC-001, PRD-CEC-002, PRD-CEC-003, PRD-SYS-172, PRD-SYS-173, req | 🟢 PASSED | < 1s |
+| `test_charter_governance_and_quorum_tracking_unit` | `apps.execution.tests.test_cec_endpoint_adjudication_suite` | PRD-SYS-124, PRD-SYS-173, req | 🟢 PASSED | < 1s |
+| `test_concordant_consensus_auto_finalization_unit` | `apps.execution.tests.test_cec_endpoint_adjudication_suite` | ADR-2199, PRD-CEC-002, PRD-CEC-003, PRD-SYS-172, PRD-SYS-173, req | 🟢 PASSED | < 1s |
+| `test_discordance_detection_and_chair_tiebreaker_unit` | `apps.execution.tests.test_cec_endpoint_adjudication_suite` | ADR-2199, PRD-CEC-002, PRD-SYS-124, PRD-SYS-173, req | 🟢 PASSED | < 1s |
+| `test_dossier_packaging_and_phi_masking_unit` | `apps.execution.tests.test_cec_endpoint_adjudication_suite` | ADR-2199, PRD-CEC-001, PRD-SYS-124, PRD-SYS-172, req | 🟢 PASSED | < 1s |
+| `test_sdtm_ce_domain_model_compilation_unit` | `apps.execution.tests.test_cec_endpoint_adjudication_suite` | PRD-CEC-003, PRD-SYS-001, PRD-SYS-173, req | 🟢 PASSED | < 1s |
 | `test_data_lock_6_tier_hierarchy_and_mutation_blocking` | `apps.execution.tests.test_challenger_1_empirical_verification` | PRD-MDR-002, PRD-SYS-001, PRD-SYS-002, Trace-1, Trace-13 | 🟢 PASSED | < 1s |
 | `test_lab_ingestion_parsers_and_delimiter_sniffing` | `apps.execution.tests.test_challenger_1_empirical_verification` | PRD-LAB-001, PRD-MDR-001, Trace-15 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_selection_and_critical_sae_alerts` | `apps.execution.tests.test_challenger_1_empirical_verification` | PRD-LAB-001, PRD-MDR-001, PRD-QRY-001, Trace-15 | 🟢 PASSED | < 1s |
@@ -1349,7 +1343,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_candidate_creation_and_opening_workflow` | `apps.execution.tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_queries_sync_endpoint` | `apps.execution.tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_query_creation_with_all_audited_fields` | `apps.execution.tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_clinical_query_trial_lock_enforcement_at_visit_level` | `apps.execution.tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_clinical_query_trial_lock_enforcement_at_visit_level` | `apps.execution.tests.test_clinical_queries` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_create_clinical_query_authorization_failures` | `apps.execution.tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_create_clinical_query_success` | `apps.execution.tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_database_events_prevent_deletions` | `apps.execution.tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1534,12 +1528,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_screening_endpoint_ineligible_transition_and_audit` | `apps.execution.tests.test_execution_eligibility` | PRD-ELIGIBILITY-013, PRD-MDR-007 | 🟢 PASSED | < 1s |
 | `test_execution_lifespan_production_mode_lifecycle` | `apps.execution.tests.test_execution_lifespan` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_execution_lifespan_test_mode_bypass` | `apps.execution.tests.test_execution_lifespan` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_form_submission_approval_audit_manifestation` | `apps.execution.tests.test_form_submissions` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_form_submission_audit_logging` | `apps.execution.tests.test_form_submissions` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_form_submission_invalid_transitions` | `apps.execution.tests.test_form_submissions` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_form_submission_lifecycle_happy_path` | `apps.execution.tests.test_form_submissions` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_form_submission_locks` | `apps.execution.tests.test_form_submissions` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_form_submission_validation` | `apps.execution.tests.test_form_submissions` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_form_submission_approval_audit_manifestation` | `apps.execution.tests.test_form_submissions` | PRD-EDC-005, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_form_submission_audit_logging` | `apps.execution.tests.test_form_submissions` | PRD-EDC-005, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_form_submission_invalid_transitions` | `apps.execution.tests.test_form_submissions` | PRD-EDC-005, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_form_submission_lifecycle_happy_path` | `apps.execution.tests.test_form_submissions` | PRD-EDC-005, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_form_submission_locks` | `apps.execution.tests.test_form_submissions` | PRD-EDC-005, PRD-SYS-001 | 🔴 FAILED | < 1s |
+| `test_form_submission_validation` | `apps.execution.tests.test_form_submissions` | PRD-EDC-005, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_granular_locking_end_to_end_audit_flow` | `apps.execution.tests.test_granular_locking` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_absent_and_malformed_roles` | `apps.execution.tests.test_granular_locks_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_allowed_roles_matrix` | `apps.execution.tests.test_granular_locks_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1553,11 +1547,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_subject_lock_and_unlock_lifecycle` | `apps.execution.tests.test_granular_locks_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trial_lock_and_unlock_lifecycle` | `apps.execution.tests.test_granular_locks_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_visit_lock_and_unlock_lifecycle` | `apps.execution.tests.test_granular_locks_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_ecrf_visit_creation_gating_blocks_non_greenlight_site` | `apps.execution.tests.test_greenlight_gating` | PRD-SYS-183 | 🟢 PASSED | < 1s |
-| `test_execution_gating_blocks_non_greenlight_site` | `apps.execution.tests.test_greenlight_gating` | PRD-SYS-183 | 🟢 PASSED | < 1s |
-| `test_execution_gating_cryptographic_token_bypass` | `apps.execution.tests.test_greenlight_gating` | PRD-SYS-183 | 🟢 PASSED | < 1s |
-| `test_execution_gating_ungates_approved_and_overridden_sites` | `apps.execution.tests.test_greenlight_gating` | PRD-SYS-183 | 🟢 PASSED | < 1s |
-| `test_randomization_gating_blocks_non_greenlight_site` | `apps.execution.tests.test_greenlight_gating` | PRD-SYS-183 | 🟢 PASSED | < 1s |
+| `test_ecrf_visit_creation_gating_blocks_non_greenlight_site` | `apps.execution.tests.test_greenlight_gating` | 8, ADR-2202, E6, GCP, ICH, PRD-SSU-003, PRD-SYS-183, R2, Section | 🟢 PASSED | < 1s |
+| `test_execution_gating_blocks_non_greenlight_site` | `apps.execution.tests.test_greenlight_gating` | 8, ADR-2202, E6, GCP, ICH, PRD-SSU-003, PRD-SYS-183, R2, Section | 🟢 PASSED | < 1s |
+| `test_execution_gating_cryptographic_token_bypass` | `apps.execution.tests.test_greenlight_gating` | 11, 21, ADR-2202, CFR, PRD-SSU-003, PRD-SYS-183, Part | 🟢 PASSED | < 1s |
+| `test_execution_gating_ungates_approved_and_overridden_sites` | `apps.execution.tests.test_greenlight_gating` | ADR-2202, PRD-SSU-002, PRD-SSU-003, PRD-SYS-183 | 🟢 PASSED | < 1s |
+| `test_randomization_gating_blocks_non_greenlight_site` | `apps.execution.tests.test_greenlight_gating` | 8, ADR-2202, E6, GCP, ICH, PRD-SSU-003, PRD-SYS-183, R2, Section | 🟢 PASSED | < 1s |
 | `test_fda_gudid_lookup_and_udi_verification` | `apps.execution.tests.test_ivd_specimen` | PRD-SYS-053, PRD-SYS-188 | 🟢 PASSED | < 1s |
 | `test_ivd_assay_performance_metrics_calculation` | `apps.execution.tests.test_ivd_specimen` | PRD-SYS-053, PRD-SYS-188 | 🟢 PASSED | < 1s |
 | `test_ivd_freeze_thaw_cycles_and_max_limit_quarantine` | `apps.execution.tests.test_ivd_specimen` | PRD-SYS-053, PRD-SYS-188 | 🟢 PASSED | < 1s |
@@ -1698,6 +1692,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_neutrophil_anc_grading` | `apps.execution.tests.test_lab_toxicity_engine` | PRD-LBM-003, PRD-SYS-171 | 🟢 PASSED | < 1s |
 | `test_renal_creatinine_grading_and_delta_check` | `apps.execution.tests.test_lab_toxicity_engine` | PRD-LBM-003, PRD-SYS-171 | 🟢 PASSED | < 1s |
 | `test_in_memory_accessibility_auditing` | `apps.execution.tests.test_layout_validator_compliance` | PRD-CRF-015, Trace-33 | 🟢 PASSED | < 1s |
+| `test_injected_accessibility_validator_records_audit_log` | `apps.execution.tests.test_layout_validator_compliance` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lock_enforcement_field_level_blocked` | `apps.execution.tests.test_lock_enforcement` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lock_enforcement_form_level_blocked` | `apps.execution.tests.test_lock_enforcement` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_data_lock_record_creation` | `apps.execution.tests.test_lock_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1800,8 +1795,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_pdf_redaction_engine_purges_metadata_and_fields` | `apps.execution.tests.test_pdf_redactor` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_pdf_redaction_overlay_generation` | `apps.execution.tests.test_pdf_redactor` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_zero_phi_leak_in_redacted_pdf` | `apps.execution.tests.test_phi_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_concurrent_connection_isolation_and_no_weakref_errors` | `apps.execution.tests.test_pool_state_eviction` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_pool_connection_state_eviction` | `apps.execution.tests.test_pool_state_eviction` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_concurrent_connection_isolation_and_no_weakref_errors` | `apps.execution.tests.test_pool_state_eviction` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
+| `test_pool_connection_state_eviction` | `apps.execution.tests.test_pool_state_eviction` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
 | `test_manual_physical_paper_consent_override` | `apps.execution.tests.test_pubsub_auto_enrollment` | PRD-SUB-007 | 🟢 PASSED | < 1s |
 | `test_pubsub_auto_enrollment_screening` | `apps.execution.tests.test_pubsub_auto_enrollment` | PRD-SUB-007 | 🟢 PASSED | < 1s |
 | `test_site_activation_compliance_validation` | `apps.execution.tests.test_pubsub_auto_enrollment` | PRD-SUB-007 | 🟢 PASSED | < 1s |
@@ -2007,19 +2002,19 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_signature_sign_and_verify_lifecycle_success` | `apps.execution.tests.test_signature_router` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_signature_verify_mock_fails` | `apps.execution.tests.test_signature_router` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_signature_verify_tampered_fails` | `apps.execution.tests.test_signature_router` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_fastapi_endpoints_integrate_with_consolidated_gatekeeper` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-121 | 🟢 PASSED | < 1s |
-| `test_gatekeeper_allows_fully_authorized_and_greenlighted_site` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-121 | 🟢 PASSED | < 1s |
-| `test_gatekeeper_allows_principal_investigator_universal_authority` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-121 | 🟢 PASSED | < 1s |
-| `test_gatekeeper_blocks_mismatched_doa_task_delegation` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-121 | 🟢 PASSED | < 1s |
-| `test_gatekeeper_blocks_non_greenlight_site` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-121 | 🟢 PASSED | < 1s |
-| `test_gatekeeper_blocks_unauthorized_or_unsigned_doa_record` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-121 | 🟢 PASSED | < 1s |
-| `test_gatekeeper_blocks_untrained_user_for_protocol_version` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-121 | 🟢 PASSED | < 1s |
-| `test_gatekeeper_cryptographic_greenlight_token_fast_path` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-121 | 🟢 PASSED | < 1s |
-| `test_gatekeeper_ctms_network_timeout_fails_closed` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-121 | 🟢 PASSED | < 1s |
-| `test_gatekeeper_handles_multi_pillar_simultaneous_rejections` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-121 | 🟢 PASSED | < 1s |
-| `test_gatekeeper_rejects_empty_or_missing_site_id` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-121 | 🟢 PASSED | < 1s |
-| `test_gatekeeper_service_accounts_undergo_verified_delegation_log_checks` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-121 | 🟢 PASSED | < 1s |
-| `test_gatekeeper_system_service_account_bypass` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-121 | 🟢 PASSED | < 1s |
+| `test_fastapi_endpoints_integrate_with_consolidated_gatekeeper` | `apps.execution.tests.test_site_execution_gatekeeper` | ADR-2199, ADR-2202, PRD-SSU-003, PRD-SYS-001, PRD-SYS-121, PRD-TRN-002 | 🟢 PASSED | < 1s |
+| `test_gatekeeper_allows_fully_authorized_and_greenlighted_site` | `apps.execution.tests.test_site_execution_gatekeeper` | ADR-2199, ADR-2202, PRD-SSU-003, PRD-SYS-001, PRD-SYS-121, PRD-TRN-002 | 🟢 PASSED | < 1s |
+| `test_gatekeeper_allows_principal_investigator_universal_authority` | `apps.execution.tests.test_site_execution_gatekeeper` | ADR-2199, PRD-SYS-001, PRD-SYS-121 | 🟢 PASSED | < 1s |
+| `test_gatekeeper_blocks_mismatched_doa_task_delegation` | `apps.execution.tests.test_site_execution_gatekeeper` | ADR-2199, PRD-SYS-001, PRD-SYS-121 | 🟢 PASSED | < 1s |
+| `test_gatekeeper_blocks_non_greenlight_site` | `apps.execution.tests.test_site_execution_gatekeeper` | ADR-2202, PRD-SSU-003, PRD-SYS-121 | 🟢 PASSED | < 1s |
+| `test_gatekeeper_blocks_unauthorized_or_unsigned_doa_record` | `apps.execution.tests.test_site_execution_gatekeeper` | ADR-2199, PRD-SYS-001, PRD-SYS-121 | 🟢 PASSED | < 1s |
+| `test_gatekeeper_blocks_untrained_user_for_protocol_version` | `apps.execution.tests.test_site_execution_gatekeeper` | ADR-2199, PRD-SYS-121, PRD-TRN-002 | 🟢 PASSED | < 1s |
+| `test_gatekeeper_cryptographic_greenlight_token_fast_path` | `apps.execution.tests.test_site_execution_gatekeeper` | 11, 21, ADR-2202, CFR, PRD-SSU-003, PRD-SYS-121, Part | 🟢 PASSED | < 1s |
+| `test_gatekeeper_ctms_network_timeout_fails_closed` | `apps.execution.tests.test_site_execution_gatekeeper` | ADR-2202, PRD-SSU-003, PRD-SYS-121 | 🟢 PASSED | < 1s |
+| `test_gatekeeper_handles_multi_pillar_simultaneous_rejections` | `apps.execution.tests.test_site_execution_gatekeeper` | ADR-2199, ADR-2202, PRD-SSU-003, PRD-SYS-001, PRD-SYS-121, PRD-TRN-002 | 🟢 PASSED | < 1s |
+| `test_gatekeeper_rejects_empty_or_missing_site_id` | `apps.execution.tests.test_site_execution_gatekeeper` | PRD-SYS-001, PRD-SYS-121 | 🟢 PASSED | < 1s |
+| `test_gatekeeper_service_accounts_undergo_verified_delegation_log_checks` | `apps.execution.tests.test_site_execution_gatekeeper` | ADR-2199, PRD-SYS-001, PRD-SYS-121 | 🟢 PASSED | < 1s |
+| `test_gatekeeper_system_service_account_bypass` | `apps.execution.tests.test_site_execution_gatekeeper` | ADR-2199, PRD-SYS-121 | 🟢 PASSED | < 1s |
 | `test_protocol_capture_and_reconciliation_lifecycle` | `apps.execution.tests.test_study_migration` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_db_migration_cloning_and_sealing` | `apps.execution.tests.test_subject_migration` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_migrate_subject_submissions_field_remapping` | `apps.execution.tests.test_subject_migration` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2460,7 +2455,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_fhir_physical_examination_pe_ingestion` | `apps.interop.tests.test_esource_smart_fhir_reconciliation` | ADR-2199, PRD-ESR-001, PRD-SYS-185, PRD-SYS-186 | 🟢 PASSED | < 1s |
 | `test_fhir_procedure_and_encounter_ingestion` | `apps.interop.tests.test_esource_smart_fhir_reconciliation` | ADR-2199, PRD-ESR-001, PRD-SYS-185, PRD-SYS-186 | 🟢 PASSED | < 1s |
 | `test_fhir_vital_signs_vs_ingestion_and_multi_components` | `apps.interop.tests.test_esource_smart_fhir_reconciliation` | ADR-2199, PRD-ESR-001, PRD-SYS-185, PRD-SYS-186 | 🟢 PASSED | < 1s |
-| `test_non_destructive_review_guarantee_no_silent_overwrites` | `apps.interop.tests.test_esource_smart_fhir_reconciliation` | ADR-2199, FDA, PRD-ESR-002, PRD-ESR-003, PRD-SYS-185, PRD-SYS-186 | 🟢 PASSED | < 1s |
+| `test_non_destructive_review_guarantee_no_silent_overwrites` | `apps.interop.tests.test_esource_smart_fhir_reconciliation` | ADR-2199, FDA, Guidance, PRD-ESR-002, PRD-ESR-003, PRD-SYS-185, PRD-SYS-186 | 🟢 PASSED | < 1s |
 | `test_smart_app_launch_flow_and_pkce_generation` | `apps.interop.tests.test_esource_smart_fhir_reconciliation` | ADR-2199, PRD-ESR-001, PRD-SYS-185, PRD-SYS-186 | 🟢 PASSED | < 1s |
 | `test_smart_backend_services_assertion_security_validations` | `apps.interop.tests.test_esource_smart_fhir_reconciliation` | ADR-2199, PRD-ESR-001, PRD-SYS-122, PRD-SYS-185, PRD-SYS-186 | 🟢 PASSED | < 1s |
 | `test_smart_backend_services_asymmetric_jwt_lifecycle` | `apps.interop.tests.test_esource_smart_fhir_reconciliation` | ADR-2199, PRD-ESR-001, PRD-SYS-122, PRD-SYS-185, PRD-SYS-186 | 🟢 PASSED | < 1s |
@@ -2545,8 +2540,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_audit_trail_sha256_digest_chain` | `apps.knowledge.tests.test_auditor_read_and_inspection_ledger` | PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002 | 🟢 PASSED | < 1s |
 | `test_automatic_emission_of_auditor_read_event` | `apps.knowledge.tests.test_auditor_read_and_inspection_ledger` | PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002 | 🟢 PASSED | < 1s |
 | `test_historical_version_snapshot_trail` | `apps.knowledge.tests.test_auditor_read_and_inspection_ledger` | PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002 | 🟢 PASSED | < 1s |
-| `test_immutability_hook_rejects_audit_log_deletion` | `apps.knowledge.tests.test_auditor_read_and_inspection_ledger` | PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002 | 🟢 PASSED | < 1s |
-| `test_immutability_hook_rejects_audit_log_modification` | `apps.knowledge.tests.test_auditor_read_and_inspection_ledger` | PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002 | 🟢 PASSED | < 1s |
+| `test_immutability_hook_rejects_audit_log_deletion` | `apps.knowledge.tests.test_auditor_read_and_inspection_ledger` | PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002 | 🔴 FAILED | < 1s |
+| `test_immutability_hook_rejects_audit_log_modification` | `apps.knowledge.tests.test_auditor_read_and_inspection_ledger` | PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002 | 🔴 FAILED | < 1s |
 | `test_immutability_hook_rejects_locked_version_deletion` | `apps.knowledge.tests.test_auditor_read_and_inspection_ledger` | PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002 | 🟢 PASSED | < 1s |
 | `test_immutability_hook_rejects_locked_version_modification` | `apps.knowledge.tests.test_auditor_read_and_inspection_ledger` | PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002 | 🟢 PASSED | < 1s |
 | `test_verify_audit_chain_endpoint` | `apps.knowledge.tests.test_auditor_read_and_inspection_ledger` | PRD-KNB-001, PRD-SYS-KH-001, PRD-SYS-KH-002 | 🟢 PASSED | < 1s |
@@ -2609,25 +2604,25 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_query_aging_generates_notification` | `apps.notifications.tests.test_clinical_workflow_notifications_integration` | PRD-QRY-002 | 🟢 PASSED | < 1s |
 | `test_sdv_drop_generates_notification` | `apps.notifications.tests.test_clinical_workflow_notifications_integration` | PRD-QRY-006 | 🟢 PASSED | < 1s |
 | `test_trial_lock_generates_notification` | `apps.notifications.tests.test_clinical_workflow_notifications_integration` | PRD-SYS-003, PRD-SYS-004 | 🟢 PASSED | < 1s |
-| `test_start_stop_notification_worker_integration` | `apps.notifications.tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_worker_gxp_exponential_retry_and_dlq` | `apps.notifications.tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_worker_resolves_cra_for_document_expiry` | `apps.notifications.tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_worker_resolves_crc_for_edc_query` | `apps.notifications.tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_worker_resolves_safety_officer_for_sae_flag` | `apps.notifications.tests.test_notification_worker` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_direct_transition_open_to_resolved` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_email_delivery_channel_failure_and_exhaustion` | `apps.notifications.tests.test_notifications` | PRD-SYS-003 | 🟢 PASSED | < 1s |
-| `test_email_delivery_channel_success` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_lifecycle_transitions_and_justifications` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_missing_diary_alert_rendering` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_multi_channel_edge_case_in_app_succeeds_email_exhausts` | `apps.notifications.tests.test_notifications` | PRD-SYS-003 | 🟢 PASSED | < 1s |
-| `test_notification_creation_and_auditing` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_notification_detail_visibility` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_notification_list_visibility_and_filtering` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_notifications_database_schema_creation` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_notifications_health_check` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_notifications_negative_security_paths` | `apps.notifications.tests.test_notifications` | PRD-SYS-004 | 🟢 PASSED | < 1s |
-| `test_webhook_delivery_channel_failure_and_retry_backoff` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_webhook_delivery_channel_success` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_start_stop_notification_worker_integration` | `apps.notifications.tests.test_notification_worker` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_worker_gxp_exponential_retry_and_dlq` | `apps.notifications.tests.test_notification_worker` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_worker_resolves_cra_for_document_expiry` | `apps.notifications.tests.test_notification_worker` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_worker_resolves_crc_for_edc_query` | `apps.notifications.tests.test_notification_worker` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_worker_resolves_safety_officer_for_sae_flag` | `apps.notifications.tests.test_notification_worker` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_direct_transition_open_to_resolved` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_email_delivery_channel_failure_and_exhaustion` | `apps.notifications.tests.test_notifications` | PRD-SYS-003 | ⚪ UNVERIFIED | N/A |
+| `test_email_delivery_channel_success` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_lifecycle_transitions_and_justifications` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_missing_diary_alert_rendering` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_multi_channel_edge_case_in_app_succeeds_email_exhausts` | `apps.notifications.tests.test_notifications` | PRD-SYS-003 | ⚪ UNVERIFIED | N/A |
+| `test_notification_creation_and_auditing` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_notification_detail_visibility` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_notification_list_visibility_and_filtering` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_notifications_database_schema_creation` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_notifications_health_check` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_notifications_negative_security_paths` | `apps.notifications.tests.test_notifications` | PRD-SYS-004 | ⚪ UNVERIFIED | N/A |
+| `test_webhook_delivery_channel_failure_and_retry_backoff` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_webhook_delivery_channel_success` | `apps.notifications.tests.test_notifications` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_reconsent_template_mapping_and_rendering` | `apps.notifications.tests.test_reconsent_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reconsent_worker_recipient_resolution` | `apps.notifications.tests.test_reconsent_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_complete_doa_workflow_lifecycle` | `apps.org.tests.test_doa_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -2693,8 +2688,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_rbac_financial_permissions_and_auditor_isolation` | `apps.payments.tests.test_payments_trigger_split` | ADR-2199, PRD-PAY-002, PRD-SYS-161 | 🟢 PASSED | < 1s |
 | `test_real_time_ecrf_submission_trigger_and_split_allocation` | `apps.payments.tests.test_payments_trigger_split` | ADR-2199, PRD-PAY-002, PRD-PAY-003, PRD-PAY-006, PRD-SYS-161, PRD-SYS-162 | 🟢 PASSED | < 1s |
 | `test_split_payee_validation_failure_on_invalid_percentage` | `apps.payments.tests.test_payments_trigger_split` | PRD-PAY-003, PRD-SYS-162 | 🟢 PASSED | < 1s |
-| `test_audit_engagement_lifecycle` | `apps.quality.tests.test_audit_service` | PRD-QLT-006 | 🟢 PASSED | < 1s |
-| `test_audit_findings_and_one_click_capa_promotion` | `apps.quality.tests.test_audit_service` | PRD-QLT-006 | 🟢 PASSED | < 1s |
+| `test_audit_engagement_lifecycle` | `apps.quality.tests.test_audit_service` | PRD-QLT-006 | 🔴 FAILED | < 1s |
+| `test_audit_findings_and_one_click_capa_promotion` | `apps.quality.tests.test_audit_service` | PRD-QLT-006 | 🔴 FAILED | < 1s |
 | `test_inspection_readiness_dossier_compilation_and_tamper_seal` | `apps.quality.tests.test_audit_service` | PRD-QLT-008 | 🟢 PASSED | < 1s |
 | `test_automated_quality_event_ingestion_api` | `apps.quality.tests.test_eqms_comprehensive` | PRD-QLT-001 | 🟢 PASSED | < 1s |
 | `test_capa_action_items_and_effectiveness_evaluations` | `apps.quality.tests.test_eqms_comprehensive` | PRD-QLT-003 | 🟢 PASSED | < 1s |
@@ -2702,7 +2697,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_benford_law_first_digit_goodness_of_fit` | `apps.quality.tests.test_fraud_detection` | PRD-SYS-174 | 🟢 PASSED | < 1s |
 | `test_cross_site_patient_record_cloning_detection` | `apps.quality.tests.test_fraud_detection` | PRD-SYS-175 | 🟢 PASSED | < 1s |
 | `test_cross_site_variance_shrinkage_and_kl_divergence` | `apps.quality.tests.test_fraud_detection` | PRD-SYS-174 | 🟢 PASSED | < 1s |
-| `test_full_rest_api_forensics_surveillance_pipeline` | `apps.quality.tests.test_fraud_detection` | PRD-SYS-174 | 🟢 PASSED | < 1s |
+| `test_full_rest_api_forensics_surveillance_pipeline` | `apps.quality.tests.test_fraud_detection` | PRD-SYS-174, PRD-SYS-175 | 🟢 PASSED | < 1s |
 | `test_multivariate_mahalanobis_and_correlation_distance` | `apps.quality.tests.test_fraud_detection` | PRD-SYS-174 | 🟢 PASSED | < 1s |
 | `test_perceptual_image_hashing_phash_and_transformations` | `apps.quality.tests.test_fraud_detection` | PRD-SYS-175 | 🟢 PASSED | < 1s |
 | `test_sample_gating_under_ich_e6_r3` | `apps.quality.tests.test_fraud_detection` | PRD-SYS-174 | 🟢 PASSED | < 1s |
@@ -2714,7 +2709,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_database_manager_uninitialized_raises_exception` | `apps.quality.tests.test_quality` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_deviation_lifecycle_and_traceability_fields` | `apps.quality.tests.test_quality` | PRD-QLT-001 | 🟢 PASSED | < 1s |
 | `test_deviation_not_found_404` | `apps.quality.tests.test_quality` | PRD-QLT-001 | 🟢 PASSED | < 1s |
-| `test_deviation_rca_capa_relationships_and_cascading` | `apps.quality.tests.test_quality` | PRD-QLT-002 | 🟢 PASSED | < 1s |
+| `test_deviation_rca_capa_relationships_and_cascading` | `apps.quality.tests.test_quality` | PRD-QLT-002, PRD-QLT-003 | 🟢 PASSED | < 1s |
 | `test_endpoint_change_reason_check_via_mock` | `apps.quality.tests.test_quality` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_lifespan_coverage` | `apps.quality.tests.test_quality` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_list_deviations_filters` | `apps.quality.tests.test_quality` | PRD-QLT-001 | 🟢 PASSED | < 1s |
@@ -2725,42 +2720,42 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_sqlite_foreign_key_constraints` | `apps.quality.tests.test_quality` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_sqlite_pragma_exception_handling` | `apps.quality.tests.test_quality` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_client` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
-| `test_cross_site_duplicate_patient_scan_detection` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-004 | 🟢 PASSED | < 1s |
-| `test_cross_subject_image_phash_scan` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-004 | 🟢 PASSED | < 1s |
-| `test_dct_2d_and_phash_deterministic_computation` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-004 | 🟢 PASSED | < 1s |
-| `test_duplicate_patient_vector_similarity_calculations` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-004 | 🟢 PASSED | < 1s |
-| `test_image_phash_rotation_and_transformation_invariance` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-004 | 🟢 PASSED | < 1s |
-| `test_rest_duplicate_patient_scan_endpoint` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-004 | 🟢 PASSED | < 1s |
-| `test_rest_image_phash_scan_endpoint` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-004 | 🟢 PASSED | < 1s |
-| `test_rest_list_runs_and_dispatch_investigation` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-003 | 🟢 PASSED | < 1s |
-| `test_rest_simulation_endpoint` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-003 | 🟢 PASSED | < 1s |
-| `test_rest_temporal_anomaly_scan_endpoint` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-003 | 🟢 PASSED | < 1s |
-| `test_rest_unauthorized_write_returns_forbidden` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_service_execute_comprehensive_scan_with_investigation_dispatch` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-003 | 🟢 PASSED | < 1s |
-| `test_subject_fingerprint_deterministic_sha256` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-004 | 🟢 PASSED | < 1s |
-| `test_temporal_off_hours_and_weekend_clustering` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-003 | 🟢 PASSED | < 1s |
-| `test_temporal_rapid_burst_and_identical_elapsed_intervals` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | PRD-CSM-003 | 🟢 PASSED | < 1s |
-| `test_amendment_impact_and_cost_estimation` | `apps.quality.tests.test_quality_sentinel` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_block_eligibility_soa_inconsistencies` | `apps.quality.tests.test_quality_sentinel` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_burden_tracing_with_invasiveness_modifiers` | `apps.quality.tests.test_quality_sentinel` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_pluggable_fixture_patient_attrition` | `apps.quality.tests.test_quality_sentinel` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_quality_sentinel_complete_protocol` | `apps.quality.tests.test_quality_sentinel` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_quality_sentinel_incomplete_protocol_detects_errors` | `apps.quality.tests.test_quality_sentinel` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_quality_sentinel_router_endpoint` | `apps.quality.tests.test_quality_sentinel` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_quality_sentinel_router_endpoint_dependency_override` | `apps.quality.tests.test_quality_sentinel` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_readability_metrics_and_scoring` | `apps.quality.tests.test_quality_sentinel` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_cross_site_duplicate_patient_scan_detection` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | ADR-2199, PRD-CSM-004 | 🟢 PASSED | < 1s |
+| `test_cross_subject_image_phash_scan` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | ADR-2199, PRD-CSM-004 | 🟢 PASSED | < 1s |
+| `test_dct_2d_and_phash_deterministic_computation` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | ADR-2199, PRD-CSM-004 | 🟢 PASSED | < 1s |
+| `test_duplicate_patient_vector_similarity_calculations` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | ADR-2199, PRD-CSM-004 | 🟢 PASSED | < 1s |
+| `test_image_phash_rotation_and_transformation_invariance` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | ADR-2199, PRD-CSM-004 | 🟢 PASSED | < 1s |
+| `test_rest_duplicate_patient_scan_endpoint` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | ADR-2199, PRD-CSM-004 | 🟢 PASSED | < 1s |
+| `test_rest_image_phash_scan_endpoint` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | ADR-2199, PRD-CSM-004 | 🟢 PASSED | < 1s |
+| `test_rest_list_runs_and_dispatch_investigation` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | ADR-2199, PRD-CSM-003, PRD-CSM-004, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_rest_simulation_endpoint` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | ADR-2199, PRD-CSM-003, PRD-CSM-004 | 🟢 PASSED | < 1s |
+| `test_rest_temporal_anomaly_scan_endpoint` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | ADR-2199, PRD-CSM-003 | 🟢 PASSED | < 1s |
+| `test_rest_unauthorized_write_returns_forbidden` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | ADR-2199, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_service_execute_comprehensive_scan_with_investigation_dispatch` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | ADR-2199, PRD-CSM-003, PRD-CSM-004, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_subject_fingerprint_deterministic_sha256` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | ADR-2199, PRD-CSM-004, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_temporal_off_hours_and_weekend_clustering` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | ADR-2199, PRD-CSM-003 | 🟢 PASSED | < 1s |
+| `test_temporal_rapid_burst_and_identical_elapsed_intervals` | `apps.quality.tests.test_quality_duplicate_patient_phash_sentinel` | ADR-2199, PRD-CSM-003 | 🟢 PASSED | < 1s |
+| `test_amendment_impact_and_cost_estimation` | `apps.quality.tests.test_quality_sentinel` | PRD-QLT-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_block_eligibility_soa_inconsistencies` | `apps.quality.tests.test_quality_sentinel` | PRD-QLT-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_burden_tracing_with_invasiveness_modifiers` | `apps.quality.tests.test_quality_sentinel` | PRD-QLT-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_pluggable_fixture_patient_attrition` | `apps.quality.tests.test_quality_sentinel` | PRD-QLT-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_quality_sentinel_complete_protocol` | `apps.quality.tests.test_quality_sentinel` | PRD-QLT-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_quality_sentinel_incomplete_protocol_detects_errors` | `apps.quality.tests.test_quality_sentinel` | PRD-QLT-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_quality_sentinel_router_endpoint` | `apps.quality.tests.test_quality_sentinel` | PRD-QLT-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_quality_sentinel_router_endpoint_dependency_override` | `apps.quality.tests.test_quality_sentinel` | PRD-QLT-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_readability_metrics_and_scoring` | `apps.quality.tests.test_quality_sentinel` | PRD-QLT-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_syllable_counter_deterministic` | `apps.quality.tests.test_quality_sentinel` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_benford_law_goodness_of_fit_compliant_and_non_compliant` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-001 | 🟢 PASSED | < 1s |
-| `test_chi_square_distribution_accuracy` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-001 | 🟢 PASSED | < 1s |
-| `test_forensics_rest_api_full_surveillance_and_kri_breach_alerts` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-001 | 🟢 PASSED | < 1s |
-| `test_multivariate_mahalanobis_distance_and_correlation_matrices` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-002 | 🟢 PASSED | < 1s |
-| `test_simulation_dataset_generator` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-001 | 🟢 PASSED | < 1s |
-| `test_terminal_digit_uniform_distribution_and_rounding_bias` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-001 | 🟢 PASSED | < 1s |
-| `test_variance_shrinkage_and_kullback_leibler_divergence` | `apps.quality.tests.test_quality_statistical_forensics_benford` | PRD-CSM-002 | 🟢 PASSED | < 1s |
-| `test_surveillance_router_endpoint_post_run` | `apps.quality.tests.test_quality_surveillance_runner` | PRD-CSM-001 | 🟢 PASSED | < 1s |
-| `test_surveillance_runner_e2e_autonomous_harvest` | `apps.quality.tests.test_quality_surveillance_runner` | PRD-CSM-001 | 🟢 PASSED | < 1s |
-| `test_surveillance_runner_idempotent_deviation_logging` | `apps.quality.tests.test_quality_surveillance_runner` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_surveillance_runner_sample_gating_ich_e6_r3` | `apps.quality.tests.test_quality_surveillance_runner` | PRD-CSM-001 | 🟢 PASSED | < 1s |
+| `test_benford_law_goodness_of_fit_compliant_and_non_compliant` | `apps.quality.tests.test_quality_statistical_forensics_benford` | ADR-2199, PRD-CSM-001 | 🟢 PASSED | < 1s |
+| `test_chi_square_distribution_accuracy` | `apps.quality.tests.test_quality_statistical_forensics_benford` | ADR-2199, PRD-CSM-001 | 🟢 PASSED | < 1s |
+| `test_forensics_rest_api_full_surveillance_and_kri_breach_alerts` | `apps.quality.tests.test_quality_statistical_forensics_benford` | ADR-2199, PRD-CSM-001, PRD-CSM-002, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_multivariate_mahalanobis_distance_and_correlation_matrices` | `apps.quality.tests.test_quality_statistical_forensics_benford` | ADR-2199, PRD-CSM-002 | 🟢 PASSED | < 1s |
+| `test_simulation_dataset_generator` | `apps.quality.tests.test_quality_statistical_forensics_benford` | ADR-2199, PRD-CSM-001, PRD-CSM-002 | 🟢 PASSED | < 1s |
+| `test_terminal_digit_uniform_distribution_and_rounding_bias` | `apps.quality.tests.test_quality_statistical_forensics_benford` | ADR-2199, PRD-CSM-001 | 🟢 PASSED | < 1s |
+| `test_variance_shrinkage_and_kullback_leibler_divergence` | `apps.quality.tests.test_quality_statistical_forensics_benford` | ADR-2199, PRD-CSM-002 | 🟢 PASSED | < 1s |
+| `test_surveillance_router_endpoint_post_run` | `apps.quality.tests.test_quality_surveillance_runner` | ADR-2213, PRD-CSM-001, PRD-CSM-004, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_surveillance_runner_e2e_autonomous_harvest` | `apps.quality.tests.test_quality_surveillance_runner` | ADR-2213, PRD-CSM-001, PRD-CSM-002, PRD-CSM-003, PRD-CSM-004, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_surveillance_runner_idempotent_deviation_logging` | `apps.quality.tests.test_quality_surveillance_runner` | ADR-2213, PRD-CSM-004, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_surveillance_runner_sample_gating_ich_e6_r3` | `apps.quality.tests.test_quality_surveillance_runner` | ADR-2213, PRD-CSM-001, PRD-CSM-002, PRD-CSM-004 | 🟢 PASSED | < 1s |
 | `test_automated_kri_definitions_and_statistical_evaluations` | `apps.quality.tests.test_quality_transcelerate_ract_kri` | PRD-CSM-005 | 🟢 PASSED | < 1s |
 | `test_composite_site_risk_index_and_percentile_rankings` | `apps.quality.tests.test_quality_transcelerate_ract_kri` | PRD-CSM-005 | 🟢 PASSED | < 1s |
 | `test_one_click_centralized_monitoring_inspection_dossier_compilation` | `apps.quality.tests.test_quality_transcelerate_ract_kri` | PRD-CSM-006, PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -2769,12 +2764,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_ract_validation_errors_and_unauthorized_access` | `apps.quality.tests.test_quality_transcelerate_ract_kri` | PRD-CSM-005, PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_transcelerate_six_categories_and_kri_linkage` | `apps.quality.tests.test_quality_transcelerate_ract_kri` | PRD-CSM-005 | 🟢 PASSED | < 1s |
 | `test_audit_log_endpoint_properties` | `apps.quality.tests.test_quality_workflow` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_capa_approval_closure_requires_quality_oversight` | `apps.quality.tests.test_quality_workflow` | PRD-QLT-003 | 🟢 PASSED | < 1s |
-| `test_capa_creation_validations` | `apps.quality.tests.test_quality_workflow` | PRD-QLT-003 | 🟢 PASSED | < 1s |
-| `test_capa_lifecycle_transitions` | `apps.quality.tests.test_quality_workflow` | PRD-QLT-003 | 🟢 PASSED | < 1s |
-| `test_capa_updates_and_concurrency` | `apps.quality.tests.test_quality_workflow` | PRD-QLT-003 | 🟢 PASSED | < 1s |
-| `test_create_and_list_deviations` | `apps.quality.tests.test_quality_workflow` | PRD-QLT-001 | 🟢 PASSED | < 1s |
-| `test_create_and_update_rca` | `apps.quality.tests.test_quality_workflow` | PRD-QLT-002 | 🟢 PASSED | < 1s |
+| `test_capa_approval_closure_requires_quality_oversight` | `apps.quality.tests.test_quality_workflow` | PRD-QLT-003, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_capa_creation_validations` | `apps.quality.tests.test_quality_workflow` | PRD-QLT-003, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_capa_lifecycle_transitions` | `apps.quality.tests.test_quality_workflow` | PRD-QLT-003, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_capa_updates_and_concurrency` | `apps.quality.tests.test_quality_workflow` | PRD-QLT-003, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_create_and_list_deviations` | `apps.quality.tests.test_quality_workflow` | PRD-QLT-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_create_and_update_rca` | `apps.quality.tests.test_quality_workflow` | PRD-QLT-002, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_mutation_without_change_reason_rejected` | `apps.quality.tests.test_quality_workflow` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_permission_failure_leaves_no_misleading_audit_entry` | `apps.quality.tests.test_quality_workflow` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_read_only_roles_forbidden` | `apps.quality.tests.test_quality_workflow` | PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -2832,7 +2827,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_api_evaluate_and_get_evaluation` | `apps.safety.tests.test_expedited_safety_rules` | ADR-2199, PRD-PVG-001, PRD-SYS-167 | 🟢 PASSED | < 1s |
 | `test_api_list_evaluations_and_countdown_alerts` | `apps.safety.tests.test_expedited_safety_rules` | ADR-2199, PRD-PVG-001, PRD-SYS-167 | 🟢 PASSED | < 1s |
 | `test_api_sign_evaluation_gated_workflow` | `apps.safety.tests.test_expedited_safety_rules` | ADR-2199, PRD-PVG-001, PRD-PVG-008, PRD-SYS-167 | 🟢 PASSED | < 1s |
-| `test_audit_log_immutability_enforcement` | `apps.safety.tests.test_expedited_safety_rules` | ADR-2199, PRD-PVG-001, PRD-PVG-008, PRD-SYS-167 | 🟢 PASSED | < 1s |
+| `test_audit_log_immutability_enforcement` | `apps.safety.tests.test_expedited_safety_rules` | ADR-2199, PRD-PVG-001, PRD-PVG-008, PRD-SYS-167 | 🔴 FAILED | < 1s |
 | `test_ema_eudravigilance_rules_evaluation` | `apps.safety.tests.test_expedited_safety_rules` | ADR-2199, PRD-PVG-001, PRD-SYS-167 | 🟢 PASSED | < 1s |
 | `test_fda_15_day_serious_unexpected_susar_evaluation` | `apps.safety.tests.test_expedited_safety_rules` | ADR-2199, PRD-PVG-001, PRD-SYS-167 | 🟢 PASSED | < 1s |
 | `test_fda_7_day_fatal_susar_evaluation` | `apps.safety.tests.test_expedited_safety_rules` | ADR-2199, PRD-PVG-001, PRD-SYS-167 | 🟢 PASSED | < 1s |
@@ -2851,17 +2846,17 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_as2_mdn_receipt_verification_and_tamper_detection` | `apps.safety.tests.test_regulatory_audit_ledger` | ADR-2199, PRD-AGG-001, PRD-PVG-002, PRD-SYS-001, PRD-SYS-125, PRD-SYS-169 | 🟢 PASSED | < 1s |
 | `test_as2_mic_calculation_and_envelope_sealing` | `apps.safety.tests.test_regulatory_audit_ledger` | ADR-2199, PRD-AGG-001, PRD-PVG-002, PRD-SYS-001, PRD-SYS-125, PRD-SYS-169 | 🟢 PASSED | < 1s |
 | `test_canonical_digest_determinism_and_key_sorting` | `apps.safety.tests.test_regulatory_audit_ledger` | ADR-2199, PRD-AGG-001, PRD-SYS-125, PRD-SYS-169 | 🟢 PASSED | < 1s |
-| `test_device_adjudication_and_mir_report_sealing` | `apps.safety.tests.test_regulatory_audit_ledger` | 21, ADR-2199, ADR-2209, PRD-AGG-001, PRD-DEV-004, PRD-SYS-125, PRD-SYS-126, PRD-SYS-169 | 🟢 PASSED | < 1s |
-| `test_device_safety_service_end_to_end_lifecycle` | `apps.safety.tests.test_regulatory_audit_ledger` | 21, ADR-2199, ADR-2209, PRD-AGG-001, PRD-DEV-003, PRD-DEV-004, PRD-SYS-125, PRD-SYS-126, PRD-SYS-169 | 🟢 PASSED | < 1s |
+| `test_device_adjudication_and_mir_report_sealing` | `apps.safety.tests.test_regulatory_audit_ledger` | 11, 21, ADR-2199, ADR-2209, CFR, PRD-AGG-001, PRD-DEV-004, PRD-SYS-125, PRD-SYS-126, PRD-SYS-169, Part | 🟢 PASSED | < 1s |
+| `test_device_safety_service_end_to_end_lifecycle` | `apps.safety.tests.test_regulatory_audit_ledger` | 11, 21, ADR-2199, ADR-2209, CFR, PRD-AGG-001, PRD-DEV-003, PRD-DEV-004, PRD-SYS-125, PRD-SYS-126, PRD-SYS-169, Part | 🟢 PASSED | < 1s |
 | `test_device_vigilance_deadline_calculation` | `apps.safety.tests.test_regulatory_audit_ledger` | ADR-2199, ADR-2209, PRD-AGG-001, PRD-DEV-003, PRD-SYS-125, PRD-SYS-126, PRD-SYS-169 | 🟢 PASSED | < 1s |
 | `test_merkle_tree_dataset_digest_calculation` | `apps.safety.tests.test_regulatory_audit_ledger` | ADR-2199, PRD-AGG-001, PRD-SYS-125, PRD-SYS-169 | 🟢 PASSED | < 1s |
 | `test_merkle_tree_edge_cases_empty_and_single_leaf` | `apps.safety.tests.test_regulatory_audit_ledger` | ADR-2199, PRD-AGG-001, PRD-SYS-125, PRD-SYS-169 | 🟢 PASSED | < 1s |
 | `test_regulatory_snapshot_creation_and_reproducibility` | `apps.safety.tests.test_regulatory_audit_ledger` | ADR-2199, PRD-AGG-001, PRD-SYS-125, PRD-SYS-169 | 🟢 PASSED | < 1s |
 | `test_regulatory_snapshot_manager_delegates_to_regulatory_audit_ledger` | `apps.safety.tests.test_regulatory_audit_ledger` | ADR-2199, PRD-AGG-001, PRD-SYS-125, PRD-SYS-169 | 🟢 PASSED | < 1s |
 | `test_regulatory_snapshot_tamper_detection` | `apps.safety.tests.test_regulatory_audit_ledger` | ADR-2199, PRD-AGG-001, PRD-SYS-125, PRD-SYS-169 | 🟢 PASSED | < 1s |
-| `test_seal_electronic_signature_generic_and_role_gating` | `apps.safety.tests.test_regulatory_audit_ledger` | 21, ADR-2199, PRD-AGG-001, PRD-PVG-008, PRD-SYS-125, PRD-SYS-169 | 🟢 PASSED | < 1s |
-| `test_seal_qppv_signoff_authorization_and_manifest` | `apps.safety.tests.test_regulatory_audit_ledger` | 21, ADR-2199, PRD-AGG-001, PRD-AGG-003, PRD-PVG-008, PRD-SYS-125, PRD-SYS-169 | 🟢 PASSED | < 1s |
-| `test_verify_snapshot_manifest_structured_response` | `apps.safety.tests.test_regulatory_audit_ledger` | 21, ADR-2199, PRD-AGG-001, PRD-SYS-125, PRD-SYS-169 | 🟢 PASSED | < 1s |
+| `test_seal_electronic_signature_generic_and_role_gating` | `apps.safety.tests.test_regulatory_audit_ledger` | 11, 21, ADR-2199, CFR, PRD-AGG-001, PRD-PVG-008, PRD-SYS-125, PRD-SYS-169, Part | 🟢 PASSED | < 1s |
+| `test_seal_qppv_signoff_authorization_and_manifest` | `apps.safety.tests.test_regulatory_audit_ledger` | 11, 21, ADR-2199, CFR, PRD-AGG-001, PRD-AGG-003, PRD-PVG-008, PRD-SYS-125, PRD-SYS-169, Part | 🟢 PASSED | < 1s |
+| `test_verify_snapshot_manifest_structured_response` | `apps.safety.tests.test_regulatory_audit_ledger` | 11, 21, ADR-2199, CFR, PRD-AGG-001, PRD-SYS-125, PRD-SYS-169, Part | 🟢 PASSED | < 1s |
 | `test_icsr_version_metadata` | `apps.safety.tests.test_sae_icsr` | ADR-2199, PRD-PVG-001, PRD-SYS-167 | 🟢 PASSED | < 1s |
 | `test_invalid_icsr_drug_role` | `apps.safety.tests.test_sae_icsr` | ADR-2199, PRD-PVG-001, PRD-SYS-167 | 🟢 PASSED | < 1s |
 | `test_invalid_icsr_patient_age_negative` | `apps.safety.tests.test_sae_icsr` | ADR-2199, PRD-PVG-001, PRD-SYS-167 | 🟢 PASSED | < 1s |
@@ -2909,7 +2904,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_ack_c_authority_center_rejection` | `apps.safety.tests.test_safety_as2_e2b_mdn` | ADR-2199, PRD-PVG-002, PRD-SYS-168 | 🟢 PASSED | < 1s |
 | `test_as2_client_inbound_ack_b_and_ack_c_lifecycle` | `apps.safety.tests.test_safety_as2_e2b_mdn` | ADR-2199, PRD-PVG-002, PRD-SYS-168 | 🟢 PASSED | < 1s |
 | `test_as2_client_outbound_transmission_with_sync_mdn` | `apps.safety.tests.test_safety_as2_e2b_mdn` | ADR-2199, PRD-PVG-002, PRD-SYS-168 | 🟢 PASSED | < 1s |
-| `test_as2_transmission_audit_log_immutability_invariant` | `apps.safety.tests.test_safety_as2_e2b_mdn` | ADR-2199, PRD-PVG-002, PRD-SYS-168 | 🟢 PASSED | < 1s |
+| `test_as2_transmission_audit_log_immutability_invariant` | `apps.safety.tests.test_safety_as2_e2b_mdn` | ADR-2199, PRD-PVG-002, PRD-SYS-168 | 🔴 FAILED | < 1s |
 | `test_calculate_mic_canonical_formatting` | `apps.safety.tests.test_safety_as2_e2b_mdn` | ADR-2199, PRD-PVG-002, PRD-SYS-168 | 🟢 PASSED | < 1s |
 | `test_mdn_parser_disposition_failure_handling` | `apps.safety.tests.test_safety_as2_e2b_mdn` | ADR-2199, PRD-PVG-002, PRD-SYS-168 | 🟢 PASSED | < 1s |
 | `test_mdn_parser_mic_mismatch_detection` | `apps.safety.tests.test_safety_as2_e2b_mdn` | ADR-2199, PRD-PVG-002, PRD-SYS-168 | 🟢 PASSED | < 1s |
@@ -2949,7 +2944,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_missing_change_reason_fails_mutations` | `apps.safety.tests.test_safety_service` | ADR-2199, PRD-PVG-001, PRD-PVG-002, PRD-SYS-167, PRD-SYS-168 | 🟢 PASSED | < 1s |
 | `test_missing_v2_headers_or_change_reason_fails` | `apps.safety.tests.test_safety_service` | ADR-2199, PRD-PVG-001, PRD-PVG-002, PRD-SYS-167, PRD-SYS-168 | 🟢 PASSED | < 1s |
 | `test_nonexistent_resources_return_404` | `apps.safety.tests.test_safety_service` | ADR-2199, PRD-PVG-001, PRD-PVG-002, PRD-SYS-167, PRD-SYS-168 | 🟢 PASSED | < 1s |
-| `test_safety_audit_log_immutable_ledger` | `apps.safety.tests.test_safety_service` | ADR-2199, PRD-PVG-001, PRD-PVG-002, PRD-SYS-167, PRD-SYS-168 | 🟢 PASSED | < 1s |
+| `test_safety_audit_log_immutable_ledger` | `apps.safety.tests.test_safety_service` | ADR-2199, PRD-PVG-001, PRD-PVG-002, PRD-SYS-167, PRD-SYS-168 | 🔴 FAILED | < 1s |
 | `test_safety_case_lifecycle` | `apps.safety.tests.test_safety_service` | ADR-2199, PRD-PVG-001, PRD-PVG-002, PRD-SYS-167, PRD-SYS-168 | 🟢 PASSED | < 1s |
 | `test_safety_database_schema_creation` | `apps.safety.tests.test_safety_service` | ADR-2199, PRD-PVG-001, PRD-PVG-002, PRD-SYS-167, PRD-SYS-168 | 🟢 PASSED | < 1s |
 | `test_safety_export_job_lifecycle` | `apps.safety.tests.test_safety_service` | ADR-2199, PRD-PVG-001, PRD-PVG-002, PRD-SYS-167, PRD-SYS-168 | 🟢 PASSED | < 1s |
@@ -3007,7 +3002,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_list_ticket_audit_logs_endpoint` | `apps.tickets.tests.test_tickets_service` | Trace-16 | 🟢 PASSED | < 1s |
 | `test_missing_change_reason_fails_mutations` | `apps.tickets.tests.test_tickets_service` | Trace-16 | 🟢 PASSED | < 1s |
 | `test_nonexistent_resources_return_404` | `apps.tickets.tests.test_tickets_service` | Trace-16 | 🟢 PASSED | < 1s |
-| `test_ticket_audit_log_immutable_ledger` | `apps.tickets.tests.test_tickets_service` | Trace-16 | 🟢 PASSED | < 1s |
+| `test_ticket_audit_log_immutable_ledger` | `apps.tickets.tests.test_tickets_service` | Trace-16 | 🔴 FAILED | < 1s |
 | `test_ticket_concurrent_reference_generation` | `apps.tickets.tests.test_tickets_service` | Trace-16 | 🟢 PASSED | < 1s |
 | `test_ticket_scoped_audit_logs` | `apps.tickets.tests.test_tickets_service` | Trace-16 | 🟢 PASSED | < 1s |
 | `test_tickets_audit_logs_pagination` | `apps.tickets.tests.test_tickets_service` | Trace-16 | 🟢 PASSED | < 1s |
@@ -3031,24 +3026,24 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_evaluate_sla_status_amber_warning_and_breach` | `apps.tickets.tests.test_tickets_sla_advanced` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sla_target_calculation_with_multipliers` | `apps.tickets.tests.test_tickets_sla_advanced` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ticket_sla_pause_and_resume_lifecycle` | `apps.tickets.tests.test_tickets_sla_advanced` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_web_amendment_branching_and_diff_contracts` | `apps.web.tests.test_amendment_diff` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_web_execution_reconsent_gating_and_subject_impact` | `apps.web.tests.test_amendment_diff` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_web_amendment_branching_and_diff_contracts` | `apps.web.tests.test_amendment_diff` | PRD-SUB-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_web_execution_reconsent_gating_and_subject_impact` | `apps.web.tests.test_amendment_diff` | PRD-SUB-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_audit_ledger_domain_model_integrity` | `apps.web.tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_audit_record_part11_fields_and_sha256` | `apps.web.tests.test_audit` | PRD-DOC-001, PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_audit_trail_filtering_by_entity_and_date_range` | `apps.web.tests.test_audit` | PRD-DOC-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_audit_trail_filtering_by_user_and_action` | `apps.web.tests.test_audit` | PRD-SYS-001, PRD-SYS-003 | 🟢 PASSED | < 1s |
-| `test_cra_batch_sdv_bulk_signoff_with_gxp_reason` | `apps.web.tests.test_ctms` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_cra_verification_console_field_level_sdv` | `apps.web.tests.test_ctms` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_ctms_dashboard_live_kpis` | `apps.web.tests.test_ctms` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_delegation_of_authority_matrix_staff_certs_and_pi_signoff` | `apps.web.tests.test_ctms` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_delegation_revocation_and_gxp_pdf_export` | `apps.web.tests.test_ctms` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_query_discrepancy_lifecycle_open_answered_closed` | `apps.web.tests.test_ctms` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_cra_batch_sdv_bulk_signoff_with_gxp_reason` | `apps.web.tests.test_ctms` | PRD-QRY-006, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_cra_verification_console_field_level_sdv` | `apps.web.tests.test_ctms` | PRD-QRY-005, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_ctms_dashboard_live_kpis` | `apps.web.tests.test_ctms` | PRD-CTMS-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_delegation_of_authority_matrix_staff_certs_and_pi_signoff` | `apps.web.tests.test_ctms` | PRD-CTMS-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_delegation_revocation_and_gxp_pdf_export` | `apps.web.tests.test_ctms` | PRD-CTMS-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_query_discrepancy_lifecycle_open_answered_closed` | `apps.web.tests.test_ctms` | PRD-QRY-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_21_cfr_part_11_dual_credential_signature_capture` | `apps.web.tests.test_econsent` | PRD-SYS-042 | 🟢 PASSED | < 1s |
 | `test_comprehension_quiz_evaluation_and_threshold_enforcement` | `apps.web.tests.test_econsent` | PRD-SYS-043 | 🟢 PASSED | < 1s |
 | `test_icf_builder_modular_clauses_linked_to_protocol_version` | `apps.web.tests.test_econsent` | PRD-SYS-042 | 🟢 PASSED | < 1s |
-| `test_form_submission_persists_observations_with_part11_audit_fields` | `apps.web.tests.test_ecrf_renderer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_reconsent_gating_blocks_data_entry_and_unlocks_on_reconsent` | `apps.web.tests.test_ecrf_renderer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_subject_enrollment_modal_and_consent_assignment` | `apps.web.tests.test_ecrf_renderer` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_form_submission_persists_observations_with_part11_audit_fields` | `apps.web.tests.test_ecrf_renderer` | PRD-EDC-005, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_reconsent_gating_blocks_data_entry_and_unlocks_on_reconsent` | `apps.web.tests.test_ecrf_renderer` | PRD-SUB-007, PRD-SYS-001 | 🔴 FAILED | < 1s |
+| `test_subject_enrollment_modal_and_consent_assignment` | `apps.web.tests.test_ecrf_renderer` | PRD-SUB-007, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_cli_cdisc_export_json` | `packages.cli.tests.test_cadence_cli` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_cli_db_seed_json` | `packages.cli.tests.test_cadence_cli` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_cli_db_snapshot_and_restore` | `packages.cli.tests.test_cadence_cli` | PRD-SYS-001 | 🟢 PASSED | < 1s |
@@ -3114,6 +3109,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_revocation_blocks_when_serial_matches` | `packages.compliance.tests.test_esignature_verifier_revocation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_revocation_exact_match_prevents_false_positives` | `packages.compliance.tests.test_esignature_verifier_revocation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_revoked_certs_normalization_helper` | `packages.compliance.tests.test_esignature_verifier_revocation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_log_record_immutability_enforcement` | `packages.compliance.tests.test_standardized_compliance_framework` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_crypto_digest_chain_generation_and_verification` | `packages.compliance.tests.test_standardized_compliance_framework` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_change_justification_raises_compliance_error` | `packages.compliance.tests.test_standardized_compliance_framework` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_standardized_compliance_router_endpoints` | `packages.compliance.tests.test_standardized_compliance_framework` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clean_neo4j_graph_calls_run` | `packages.database.tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clean_postgres_databases_calls_truncate` | `packages.database.tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_live_db_halt_when_neo4j_unreachable` | `packages.database.tests.test_asgi_live_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3165,11 +3164,17 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_reset_db_safety_guard_non_local` | `packages.database.tests.test_reset_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reset_db_safety_guard_production` | `packages.database.tests.test_reset_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reset_db_success_offline` | `packages.database.tests.test_reset_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_compile_options_default_accessibility_validation_active` | `packages.ddf.tests.test_compiler` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ddf_compiler_accessibility_failure_raises` | `packages.ddf.tests.test_compiler` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ddf_compiler_end_to_end_success` | `packages.ddf.tests.test_compiler` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_ir_builder_processes_items_and_rules` | `packages.ddf.tests.test_normalizer_and_ir` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_normalizer_missing_protocol_raises` | `packages.ddf.tests.test_normalizer_and_ir` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_normalizer_synthesizes_fallbacks` | `packages.ddf.tests.test_normalizer_and_ir` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ddf_compiler_uninitialized_validator_raises` | `packages.ddf.tests.test_compiler` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_accessibility_stage_uninitialized_validator_raises` | `packages.ddf.tests.test_compiler` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ir_builder_processes_items_and_rules` | `packages.ddf.tests.test_normalizer_and_ir` | PRD-DDF-002 | 🟢 PASSED | < 1s |
+| `test_ir_builder_skip_logic_and_narratives` | `packages.ddf.tests.test_normalizer_and_ir` | PRD-DDF-002 | 🟢 PASSED | < 1s |
+| `test_normalizer_duplicate_ids_raises` | `packages.ddf.tests.test_normalizer_and_ir` | PRD-DDF-001 | 🟢 PASSED | < 1s |
+| `test_normalizer_empty_or_non_dict_raises` | `packages.ddf.tests.test_normalizer_and_ir` | PRD-DDF-001 | 🟢 PASSED | < 1s |
+| `test_normalizer_missing_protocol_raises` | `packages.ddf.tests.test_normalizer_and_ir` | PRD-DDF-001 | 🟢 PASSED | < 1s |
+| `test_normalizer_synthesizes_fallbacks` | `packages.ddf.tests.test_normalizer_and_ir` | PRD-DDF-001 | 🟢 PASSED | < 1s |
 | `test_compile_condition_to_xpath_constants` | `packages.ddf.tests.test_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compile_condition_to_xpath_field_ref` | `packages.ddf.tests.test_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compile_condition_to_xpath_functions` | `packages.ddf.tests.test_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3258,14 +3263,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_application_layer_isolation[tickets]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_decoupled_api_routers_have_no_direct_db_imports` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_decoupled_api_routers_have_no_direct_db_imports[ai_gateway]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
-| `test_decoupled_api_routers_have_no_direct_db_imports[ctms]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_decoupled_api_routers_have_no_direct_db_imports[designer]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_decoupled_api_routers_have_no_direct_db_imports[ctms]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_decoupled_api_routers_have_no_direct_db_imports[designer]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_decoupled_api_routers_have_no_direct_db_imports[econsent]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
-| `test_decoupled_api_routers_have_no_direct_db_imports[eisf]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_decoupled_api_routers_have_no_direct_db_imports[etmf]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_decoupled_api_routers_have_no_direct_db_imports[execution]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_decoupled_api_routers_have_no_direct_db_imports[fileshare]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_decoupled_api_routers_have_no_direct_db_imports[gateway]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_decoupled_api_routers_have_no_direct_db_imports[eisf]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_decoupled_api_routers_have_no_direct_db_imports[etmf]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_decoupled_api_routers_have_no_direct_db_imports[execution]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_decoupled_api_routers_have_no_direct_db_imports[fileshare]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_decoupled_api_routers_have_no_direct_db_imports[gateway]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_decoupled_api_routers_have_no_direct_db_imports[imaging]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_decoupled_api_routers_have_no_direct_db_imports[interop]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_decoupled_api_routers_have_no_direct_db_imports[knowledge]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
@@ -3315,6 +3320,25 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_main_entrypoint_is_thin[safety]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_entrypoint_is_thin[tickets]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_entrypoints_count_integrity` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_legacy_top_level_routers_directory` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_no_legacy_top_level_routers_directory[ai_gateway]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_legacy_top_level_routers_directory[ctms]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_legacy_top_level_routers_directory[designer]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_legacy_top_level_routers_directory[econsent]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_legacy_top_level_routers_directory[eisf]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_legacy_top_level_routers_directory[etmf]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_legacy_top_level_routers_directory[execution]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_legacy_top_level_routers_directory[fileshare]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_legacy_top_level_routers_directory[gateway]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_legacy_top_level_routers_directory[imaging]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_legacy_top_level_routers_directory[interop]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_legacy_top_level_routers_directory[knowledge]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_legacy_top_level_routers_directory[notifications]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_legacy_top_level_routers_directory[org]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_legacy_top_level_routers_directory[payments]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_legacy_top_level_routers_directory[quality]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_legacy_top_level_routers_directory[safety]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_legacy_top_level_routers_directory[tickets]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_no_singular_adapter_directory` | `packages.hexagonal.tests.test_hexagonal_architecture` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
 | `test_no_singular_adapter_directory[ai_gateway]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_no_singular_adapter_directory[ctms]` | `packages.hexagonal.tests.test_hexagonal_architecture` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3389,14 +3413,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_value_object_equality` | `packages.hexagonal.tests.test_hexagonal_kernel` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_routers_contain_no_direct_db_calls` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
 | `test_api_routers_contain_no_direct_db_calls[ai_gateway]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
-| `test_api_routers_contain_no_direct_db_calls[ctms]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_api_routers_contain_no_direct_db_calls[designer]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_routers_contain_no_direct_db_calls[ctms]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_api_routers_contain_no_direct_db_calls[designer]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_api_routers_contain_no_direct_db_calls[econsent]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
-| `test_api_routers_contain_no_direct_db_calls[eisf]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_api_routers_contain_no_direct_db_calls[etmf]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_api_routers_contain_no_direct_db_calls[execution]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_api_routers_contain_no_direct_db_calls[fileshare]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_api_routers_contain_no_direct_db_calls[gateway]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_routers_contain_no_direct_db_calls[eisf]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_api_routers_contain_no_direct_db_calls[etmf]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_api_routers_contain_no_direct_db_calls[execution]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_api_routers_contain_no_direct_db_calls[fileshare]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_api_routers_contain_no_direct_db_calls[gateway]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_api_routers_contain_no_direct_db_calls[imaging]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_api_routers_contain_no_direct_db_calls[interop]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
 | `test_api_routers_contain_no_direct_db_calls[knowledge]` | `packages.hexagonal.tests.test_hexagonal_ports_adapters` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
@@ -3522,7 +3546,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_has_permission_checks` | `packages.security.tests.test_rbac_permissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_role_name` | `packages.security.tests.test_rbac_permissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_permission_matrix_enum_values` | `packages.security.tests.test_rbac_permissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_role_enum_canonical_names` | `packages.security.tests.test_rbac_permissions` | PRD-SYS-001, PRD-SYS-050 | 🟢 PASSED | < 1s |
+| `test_role_enum_canonical_names` | `packages.security.tests.test_rbac_permissions` | PRD-SYS-001, PRD-SYS-050, req | 🟢 PASSED | < 1s |
 | `test_soa_permissions_definitions` | `packages.security.tests.test_rbac_permissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_soa_permissions_matrix_mapping` | `packages.security.tests.test_rbac_permissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unknown_role_returns_empty_permissions` | `packages.security.tests.test_rbac_permissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3710,13 +3734,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_fail_fast_without_report_and_draft_flag` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_missing_report_gxp_sync_dry_run` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_success_with_draft_flag` | `scripts.tests.test_gxp_fail_fast` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_layout_gating_approved_and_logged` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_gating_missing_justification_rejected` | `scripts.tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_integration` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
-| `test_layout_validation_invisible` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
-| `test_layout_validation_overlap` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
-| `test_layout_validation_scrambled_sequence` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
-| `test_layout_validation_valid` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ SKIPPED | < 1s |
+| `test_layout_gating_approved_and_logged` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_layout_gating_missing_justification_rejected` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_layout_validation_integration` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_layout_validation_invisible` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_layout_validation_overlap` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_layout_validation_scrambled_sequence` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_layout_validation_valid` | `scripts.tests.test_layout_validator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_aggregate_eligibility_evaluation_scenarios` | `scripts.tests.test_m4_challenger1_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_document_renderer_fallback` | `scripts.tests.test_m4_challenger1_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_sync_reconciliation_signature_enforcement_errors` | `scripts.tests.test_m4_challenger1_stress` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3796,6 +3820,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_pq_test_missing_draft_mode` | `scripts.tests.test_rtm_generation_pq_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_pq_test_missing_fail_fast` | `scripts.tests.test_rtm_generation_pq_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_pq_test_skipped` | `scripts.tests.test_rtm_generation_pq_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_enforce_python_runtime_auto_reexec_delegates_to_uv` | `scripts.tests.test_runtime_guard` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_enforce_python_runtime_fails_on_outdated_version` | `scripts.tests.test_runtime_guard` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_enforce_python_runtime_matrix` | `scripts.tests.test_runtime_guard` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_enforce_python_runtime_matrix[outdated_version0-3.7.0]` | `scripts.tests.test_runtime_guard` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3855,21 +3880,21 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_terminology_cache_prevents_db_queries` | `scripts.tests.test_transformers` | PRD-MDR-001 | 🟢 PASSED | < 1s |
 | `test_usdm_endpoint_returns_nested_schema_and_fast` | `scripts.tests.test_transformers` | PRD-MDR-003, PRD-MDR-004 | 🟢 PASSED | < 1s |
 | `test_usdm_validation_error_on_invalid_data` | `scripts.tests.test_transformers` | PRD-MDR-001 | 🟢 PASSED | < 1s |
-| `test_audited_fallbacks_and_warning_propagation` | `scripts.tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_security_gate_unauthenticated_requests` | `scripts.tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_translation_error_status_and_rollback` | `scripts.tests.test_translation_recovery` | Trace-12 | 🟢 PASSED | < 1s |
-| `test_translation_status_and_listing_success` | `scripts.tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_worker_context_and_session_cleanup` | `scripts.tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_audit_safe_context_binds_and_cleans_up` | `scripts.tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_audit_safe_context_cleans_up_on_error` | `scripts.tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_background_translation_records_user_audit` | `scripts.tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_identifier_sanitization_during_translation` | `scripts.tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_multi_language_localization_and_hint_system` | `scripts.tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_rules_compilation_and_artifact_generation` | `scripts.tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_study_published_event_triggers_translation` | `scripts.tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_study_published_expired_timestamp_rejection` | `scripts.tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_study_published_invalid_signature_rejection` | `scripts.tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_translation_validation_failure` | `scripts.tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audited_fallbacks_and_warning_propagation` | `scripts.tests.test_translation_recovery` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_security_gate_unauthenticated_requests` | `scripts.tests.test_translation_recovery` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_translation_error_status_and_rollback` | `scripts.tests.test_translation_recovery` | Trace-12 | ⚪ UNVERIFIED | N/A |
+| `test_translation_status_and_listing_success` | `scripts.tests.test_translation_recovery` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_worker_context_and_session_cleanup` | `scripts.tests.test_translation_recovery` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_audit_safe_context_binds_and_cleans_up` | `scripts.tests.test_translator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_audit_safe_context_cleans_up_on_error` | `scripts.tests.test_translator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_background_translation_records_user_audit` | `scripts.tests.test_translator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_identifier_sanitization_during_translation` | `scripts.tests.test_translator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_multi_language_localization_and_hint_system` | `scripts.tests.test_translator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_rules_compilation_and_artifact_generation` | `scripts.tests.test_translator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_study_published_event_triggers_translation` | `scripts.tests.test_translator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_study_published_expired_timestamp_rejection` | `scripts.tests.test_translator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_study_published_invalid_signature_rejection` | `scripts.tests.test_translator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_translation_validation_failure` | `scripts.tests.test_translator` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 | `test_adr_compliance_validation_logic` | `scripts.tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_check_architectural_changes_require_adr_missing_adr` | `scripts.tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_check_architectural_changes_require_adr_no_changes` | `scripts.tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3898,6 +3923,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_check_file_imports_shared_packages` | `scripts.tests.test_validate_imports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_check_file_imports_test_files_enforced_unless_exempt` | `scripts.tests.test_validate_imports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_service_name` | `scripts.tests.test_validate_imports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_check_openapi_drift_detected_and_reverted` | `scripts.tests.test_validate_openapi_drift` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_check_openapi_drift_schema_validation_failure` | `scripts.tests.test_validate_openapi_drift` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_check_openapi_drift_success` | `scripts.tests.test_validate_openapi_drift` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_check_openapi_drift_sync_spec_failure` | `scripts.tests.test_validate_openapi_drift` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_designer_validation_error_rfc7807` | `scripts.tests.test_validation_problem_details` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_execution_validation_error_rfc7807` | `scripts.tests.test_validation_problem_details` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_alignment_report` | `scripts.tests.test_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -3971,7 +4000,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_tier3_pairwise01_form_lock_then_medical_coding` | `tests.e2e.test_phase1_e2e_suite` | PRD-MDR-002, PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
 | `test_tier3_pairwise02_out_of_range_lab_then_subject_lock` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, PRD-MDR-002, PRD-QRY-001 | 🟢 PASSED | < 1s |
 | `test_tier3_pairwise03_batch_coding_then_biostat_export` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_tier3_pairwise04_subject_lock_followed_by_lab_ingestion` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, PRD-MDR-002 | 🟢 PASSED | < 1s |
+| `test_tier3_pairwise04_subject_lock_followed_by_lab_ingestion` | `tests.e2e.test_phase1_e2e_suite` | PRD-LAB-001, PRD-MDR-002 | 🔴 FAILED | < 1s |
 | `test_tier3_pairwise05_upversioning_impact_then_query_escalation` | `tests.e2e.test_phase1_e2e_suite` | PRD-QRY-001, PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_tier3_pairwise06_hard_lock_step_up_then_unlock_and_export` | `tests.e2e.test_phase1_e2e_suite` | PRD-CRF-008, Trace-1, Trace-17 | 🟢 PASSED | < 1s |
 | `test_tier4_scenario01_oncology_trial_multisite_lock` | `tests.e2e.test_phase1_e2e_suite` | PRD-MDR-002, Trace-1, Trace-13, Trace-17 | 🟢 PASSED | < 1s |
@@ -4031,22 +4060,22 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_setup_wizard_bash_syntax` | `tests.test_setup_credentials` | PRD-SYS-WIZARD-001 | 🟢 PASSED | < 1s |
 | `test_setup_wizard_dev_execution` | `tests.test_setup_credentials` | PRD-SYS-WIZARD-001 | 🟢 PASSED | < 1s |
 | `test_setup_wizard_idempotency` | `tests.test_setup_credentials` | PRD-SYS-WIZARD-001 | 🟢 PASSED | < 1s |
-| `test_catalog_cross_version_integrity` | `tests.validation.dia_tmf_validation_suite` | PRD-TMF-001 | 🟢 PASSED | < 1s |
-| `test_milestone_mandatory_artifacts` | `tests.validation.dia_tmf_validation_suite` | PRD-TMF-004 | 🟢 PASSED | < 1s |
-| `test_site_level_classification_drift` | `tests.validation.dia_tmf_validation_suite` | PRD-TMF-001, PRD-TMF-003 | 🟢 PASSED | < 1s |
-| `test_gxp_compliance_drifts_identified` | `tests.validation.gxp_compliance_suite` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_feature_matrix_validation_ignoring_helper_and_excluded_services` | `tests.validation.test_feature_matrix_gating` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_feature_matrix_validation_missing_service` | `tests.validation.test_feature_matrix_gating` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_feature_matrix_validation_success` | `tests.validation.test_feature_matrix_gating` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_committed_typescript_schema_is_up_to_date` | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_formatting_and_whitespace_immunity` | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_pending_delta_schema_drift` | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_simulated_field_name_rename_drift` | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_simulated_type_mismatch_drift` | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_submissions_schema_drift` | `tests.validation.test_offline_schema_drift.TestOfflineSchemaDrift` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_environment_integrity_assertions` | `tests.validation.test_path_boundary_linter` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_linter_negative_cases` | `tests.validation.test_path_boundary_linter` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_linter_positive_cases` | `tests.validation.test_path_boundary_linter` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_catalog_cross_version_integrity` | `tests.validation.dia_tmf_validation_suite` | PRD-TMF-001 | ⚪ UNVERIFIED | N/A |
+| `test_milestone_mandatory_artifacts` | `tests.validation.dia_tmf_validation_suite` | PRD-TMF-004 | ⚪ UNVERIFIED | N/A |
+| `test_site_level_classification_drift` | `tests.validation.dia_tmf_validation_suite` | PRD-TMF-001, PRD-TMF-003 | ⚪ UNVERIFIED | N/A |
+| `test_gxp_compliance_drifts_identified` | `tests.validation.gxp_compliance_suite` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
+| `test_feature_matrix_validation_ignoring_helper_and_excluded_services` | `tests.validation.test_feature_matrix_gating` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_feature_matrix_validation_missing_service` | `tests.validation.test_feature_matrix_gating` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_feature_matrix_validation_success` | `tests.validation.test_feature_matrix_gating` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_committed_typescript_schema_is_up_to_date` | `tests.validation.test_offline_schema_drift` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_formatting_and_whitespace_immunity` | `tests.validation.test_offline_schema_drift` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
+| `test_pending_delta_schema_drift` | `tests.validation.test_offline_schema_drift` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
+| `test_simulated_field_name_rename_drift` | `tests.validation.test_offline_schema_drift` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
+| `test_simulated_type_mismatch_drift` | `tests.validation.test_offline_schema_drift` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
+| `test_submissions_schema_drift` | `tests.validation.test_offline_schema_drift` | PRD-SYS-001 | ⚪ UNVERIFIED | N/A |
+| `test_environment_integrity_assertions` | `tests.validation.test_path_boundary_linter` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_linter_negative_cases` | `tests.validation.test_path_boundary_linter` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
+| `test_linter_positive_cases` | `tests.validation.test_path_boundary_linter` | *Regression/Helper* | ⚪ UNVERIFIED | N/A |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 Performance Qualification documents the verification of end-to-end clinical workflow scenarios defined in Section 5 of the QA & Validation Plan.
@@ -4054,7 +4083,7 @@ Performance Qualification documents the verification of end-to-end clinical work
 ### TC-VAL-LOG-001: Protocol Version Locking & Immutability Rejection
 - **Target Requirements:** PRD-MDR-001, PRD-UNI-003
 - **Description:** Verifies that locked study version nodes in Neo4j are completely immutable, and direct database manipulations are rejected.
-- **Verification Status:** ✅ Verified Compliant via Automated Integration Suite
+- **Verification Status:** ⚪ Unverified (Draft Mode)
 
 ### TC-VAL-LOG-002: Stratification Factor Re-randomization Rejections
 - **Target Requirements:** PRD-SUB-002, PRD-SUB-001
@@ -4082,31 +4111,31 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 
 ## Electronic Signature Block
 
-- **Signer Identity:** fred
+- **Signer Identity:** jules
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** 2443ae66f5a6755e9d29c355de05f22eff8d5f5a77e3b4130960e5f41fbff084
+- **Cryptographic Hash (SHA-256):** c03e60019a5a0c04b3d73e79cac8606d5f1a2dfd100d8a95e9b57e29cf8d22cc
 
 -----BEGIN CERTIFICATE-----
-MIIDMjCCAhqgAwIBAgIUKlVtf2Mw1k8WLpSeSV5WX/l5wNEwDQYJKoZIhvcNAQEL
-BQAwUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGZy
-ZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5pY2FsIFNvZnR3YXJlMB4XDTI2MDgy
-MzIxMDkxMloXDTI3MDgyNDIxMDkxMlowUzEtMCsGA1UEAwwkQ2FkZW5jZSBHeFAg
-VmFsaWRhdGlvbiBSdW5uZXIgKGZyZWQpMSIwIAYDVQQKDBlDYWRlbmNlIENsaW5p
-Y2FsIFNvZnR3YXJlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtdVE
-bLG//mqz4SG1Kl32q1pW/DrCsWaYCvSJ6b0hq42F9paigtwVZbSzQ2Ig+e2t/Kr1
-ZGreQ4sOVv2aV/ZYu8OfXuDCIiVswcVrm3BoF90a7lh3hhxKa8l6EiN50VibH0FT
-+XpVhteUIaVQOU6+odpyXAHmPwc3nUQGMoj02U8ACBzTmMIJQvCoezMXjTvfMrK8
-5ayiEMwPOmAXNEvF/pjLu/c8jV0DM0uj4Na3gglmX8UxLNTA+CccCd6q+O4cSPZy
-T83hhifhvLZas9v4HH+tRE+/DNgDOOk8ijU91dfLguC2XXycn/FpkRijpBlbWEAJ
-gyhv0jFFhYwgvC9rCwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQCAdAadcvcg/vcw
-7ydPPqF0IPbjUn7gn/FwDWr6RaXpUQxUcYqfGQU9kGQut+ctejSjmHHGAlqzIJPV
-NI6SvytnPlfay/mUGgrJrHrDGtnPXyA2KzXv6XXB63VufXXUF4FCnBLF6qKcoKyK
-7mxV3lWGyiU0P3NTwI0nlP7tVV/r++MKY6mvnkbF6WlEdobdKBM9zI8XWE7cfo1l
-bqqXvaGjpAr8VrBbsdBhxjnWjIlXjhwn0fkUPTT52tXdjdqb8PUfHbgCXOeKYze0
-VgzsMuwqHQy3J4DGumH7MpnTh8pB4A3sqnOSX1CLD/J1xoNp7nt8pvaB8vwN7c0j
-4ccK35uR
+MIIDNDCCAhygAwIBAgIUElIWa3MSA0LRq/EVAWU8qH/ANq0wDQYJKoZIhvcNAQEL
+BQAwVDEuMCwGA1UEAwwlQ2FkZW5jZSBHeFAgVmFsaWRhdGlvbiBSdW5uZXIgKGp1
+bGVzKTEiMCAGA1UECgwZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTAeFw0yNjA4
+MjQxNzIwMTFaFw0yNzA4MjUxNzIwMTFaMFQxLjAsBgNVBAMMJUNhZGVuY2UgR3hQ
+IFZhbGlkYXRpb24gUnVubmVyIChqdWxlcykxIjAgBgNVBAoMGUNhZGVuY2UgQ2xp
+bmljYWwgU29mdHdhcmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCz
+WoI5vVC6GFfkh82KH+mtJj8X6Eu6FEM51hHOYAwFPCw69U8rG5bLhxfRegETZ4xp
+3zN4rx7tAEgJ1wxEeCQQlYVahr1Nxt1B1wJZmGJC4YNULswD1coFn6hQX0ArLiL5
++9tsAoIBRSQBOm+iJmGf3EvScAFoelnYNYNziVf3UtYI3l5BsrcN5k4ZwC6cbowF
+wvop0sQNvGYrAzXOwpx/YPl0Y3yIDejSIWZKlsUGe/rn0JRd8DESxwoXFu/6lleZ
+Ck2nPWRumvbSuiO4wzpjR63lGqmfm4huz5uYEYIW6I54pBQbJo7wmBCAzm2OjIRP
+EF4aAfOaXiaYNBvma7yTAgMBAAEwDQYJKoZIhvcNAQELBQADggEBAFE0yXdORRId
+Ablf/mCLDgjqYnXYDWCm40kANdrGxTbBAFvSeAYH6nYdGShOcEZqROP6v3uNvmQ7
+Gjpq/poFUXT0WthG3AKwCMv/GOHee+io6XrA781t6ol0e4fFwcqAVifydV3g4kCO
+w5cwWwrwyASbqbp0Cg1jqpYHCmeNJX7jtXJMVd8SURZxSHJxCTFQ9XOVjSqrmzah
+aV1rEp/nMRngCGyQfz7wBBCFrhCDfGk6BDOZdgydJq7ZU/gUTVoBZh5uppREYyJY
+or6mndhCGvAmxE4GDiqg4LVnbYgJZCBMaURMt//4FC3i0ODiQJB9PzTqH/dyAPfw
+l46gCnyQg5c=
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-BW/Q2CZYJxHGQJpjt2vvx6AoWZFGCFoB3KDdN1uLm7qhjbD+dXuBGzA9CcRmdBiaIkC73tys+HtEChRuXzfQr1E28MsEwgDoi6KbXhCUsL60YHiIelW6kRW1y76y0uSS9Q7OyugxmE3kaYNoJ76vrLXfo2/XV24LMD6hq8krmXyhl26mB0J9xnNJKQoLwWTkHzs7F0eHVxnIGbWus3XSYOGGa/dme2DUQ8m/IYwJYGoSGKsmW4YNlba8DgeX8tNd1lujPsjXRyPKrKYnFGUAlgW8vQNdrewpnv8mPdUBfCsEkKlE7WIUhldAJzWnmVV3roXzhwhdpx1svuSe7h1nxQ==
+mTpH2RpOm1c0JeX9ZncAVXI3S5zpscGxET0yYXDe7OJbUAFvmMnmyyIlpG3pzgYnavtE+L0CkVIW+EW6wb0Lu8Krch/gLiRXT4RG5ezizDrNSviiBOEdQzY6yA1lFLgC8TObum+LeyUkqH07/jT3YiW8vFbroFc4Ko1UerSU7mTTgb6XjMv7GZKBVlG9fVzVo22l72qCkQ2TlKq5+rERSZiCbv6bdCB5Dh65y3o7kNBCxFNyvMXsDmEUSc7BKSH4F6vVOINynd2oerT2dHHcWEBlTJPnfs7ck0IfJ8ldIuHaYkKVkA0gVFxwk63MKRNXovh+yEvJ9sxMYmhV44YM4Q==
 -----END SIGNATURE-----

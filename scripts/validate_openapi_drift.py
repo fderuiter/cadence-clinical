@@ -168,6 +168,7 @@ def check_openapi_drift() -> bool:
 
 
 def main() -> None:
+    """Execute OpenAPI drift check CLI entry point."""
     success = check_openapi_drift()
     sys.exit(0 if success else 1)
 
