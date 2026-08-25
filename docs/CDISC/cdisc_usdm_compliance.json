@@ -54835,7 +54835,7 @@
               "label": "Designer / MDR - Study",
               "conceptCode": "SCHEMA_DESIGNER_STUDY",
               "displayName": "Study (designer)",
-              "definition": "Core USDM clinical trial representation detailing high-level protocol specifications, title, and study-wide status constraints.",
+              "definition": "Root USDM protocol study specification container.",
               "cdashDomain": "designer",
               "cdashVariable": "STUDY",
               "dataType": "Graph Node",
@@ -54858,12 +54858,12 @@
                   }
                 },
                 {
-                  "id": "prop_designer_Study_title",
-                  "name": "title",
-                  "label": "title (String)",
-                  "cdashVariable": "TITLE",
+                  "id": "prop_designer_Study_name",
+                  "name": "name",
+                  "label": "name (String)",
+                  "cdashVariable": "NAME",
                   "dataType": "String",
-                  "mandatory": true,
+                  "mandatory": false,
                   "config": {
                     "primary_key": false,
                     "foreign_keys": [],
@@ -54875,12 +54875,12 @@
                   }
                 },
                 {
-                  "id": "prop_designer_Study_current_version",
-                  "name": "current_version",
-                  "label": "current_version (String)",
-                  "cdashVariable": "CURRENT_VERSION",
+                  "id": "prop_designer_Study_protocolTitle",
+                  "name": "protocolTitle",
+                  "label": "protocolTitle (String)",
+                  "cdashVariable": "PROTOCOLTITLE",
                   "dataType": "String",
-                  "mandatory": true,
+                  "mandatory": false,
                   "config": {
                     "primary_key": false,
                     "foreign_keys": [],
@@ -54892,16 +54892,16 @@
                   }
                 },
                 {
-                  "id": "prop_designer_Study_status",
-                  "name": "status",
-                  "label": "status (String (Active-Recruiting, Locked, etc.))",
-                  "cdashVariable": "STATUS",
-                  "dataType": "String (Active-Recruiting, Locked, etc.)",
-                  "mandatory": true,
+                  "id": "prop_designer_Study_protocolId",
+                  "name": "protocolId",
+                  "label": "protocolId (String)",
+                  "cdashVariable": "PROTOCOLID",
+                  "dataType": "String",
+                  "mandatory": false,
                   "config": {
                     "primary_key": false,
                     "foreign_keys": [],
-                    "gxp_highlight": true,
+                    "gxp_highlight": false,
                     "service": "designer",
                     "db_type": "Neo4j Graph Database",
                     "gxp_audited": true,
@@ -54909,11 +54909,96 @@
                   }
                 },
                 {
-                  "id": "prop_designer_Study_desc",
-                  "name": "desc",
-                  "label": "desc (String)",
-                  "cdashVariable": "DESC",
+                  "id": "prop_designer_Study_phase",
+                  "name": "phase",
+                  "label": "phase (String)",
+                  "cdashVariable": "PHASE",
                   "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_Study_therapeuticArea",
+                  "name": "therapeuticArea",
+                  "label": "therapeuticArea (String)",
+                  "cdashVariable": "THERAPEUTICAREA",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_Study_usdmVersion",
+                  "name": "usdmVersion",
+                  "label": "usdmVersion (String)",
+                  "cdashVariable": "USDMVERSION",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_Study_studyVersions",
+                  "name": "studyVersions",
+                  "label": "studyVersions (Array)",
+                  "cdashVariable": "STUDYVERSIONS",
+                  "dataType": "Array",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_Study_studyDesigns",
+                  "name": "studyDesigns",
+                  "label": "studyDesigns (Array)",
+                  "cdashVariable": "STUDYDESIGNS",
+                  "dataType": "Array",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_Study_biomedicalConcepts",
+                  "name": "biomedicalConcepts",
+                  "label": "biomedicalConcepts (Array)",
+                  "cdashVariable": "BIOMEDICALCONCEPTS",
+                  "dataType": "Array",
                   "mandatory": false,
                   "config": {
                     "primary_key": false,
@@ -54933,7 +55018,7 @@
               "label": "Designer / MDR - StudyVersion",
               "conceptCode": "SCHEMA_DESIGNER_STUDYVERSION",
               "displayName": "StudyVersion (designer)",
-              "definition": "A snapshot version of the study protocol incorporating cryptographic signatures to guarantee GxP audit-trail integrity for FDA 21 CFR Part 11.",
+              "definition": "Study version containing version metadata and study designs.",
               "cdashDomain": "designer",
               "cdashVariable": "STUDYVERSION",
               "dataType": "Graph Node",
@@ -54956,33 +55041,16 @@
                   }
                 },
                 {
-                  "id": "prop_designer_StudyVersion_version_tag",
-                  "name": "version_tag",
-                  "label": "version_tag (String)",
-                  "cdashVariable": "VERSION_TAG",
+                  "id": "prop_designer_StudyVersion_versionTag",
+                  "name": "versionTag",
+                  "label": "versionTag (String)",
+                  "cdashVariable": "VERSIONTAG",
                   "dataType": "String",
-                  "mandatory": true,
+                  "mandatory": false,
                   "config": {
                     "primary_key": false,
                     "foreign_keys": [],
                     "gxp_highlight": false,
-                    "service": "designer",
-                    "db_type": "Neo4j Graph Database",
-                    "gxp_audited": true,
-                    "immutable": true
-                  }
-                },
-                {
-                  "id": "prop_designer_StudyVersion_version_index",
-                  "name": "version_index",
-                  "label": "version_index (Integer)",
-                  "cdashVariable": "VERSION_INDEX",
-                  "dataType": "Integer",
-                  "mandatory": true,
-                  "config": {
-                    "primary_key": false,
-                    "foreign_keys": [],
-                    "gxp_highlight": true,
                     "service": "designer",
                     "db_type": "Neo4j Graph Database",
                     "gxp_audited": true,
@@ -54995,7 +55063,7 @@
                   "label": "status (String)",
                   "cdashVariable": "STATUS",
                   "dataType": "String",
-                  "mandatory": true,
+                  "mandatory": false,
                   "config": {
                     "primary_key": false,
                     "foreign_keys": [],
@@ -55007,16 +55075,16 @@
                   }
                 },
                 {
-                  "id": "prop_designer_StudyVersion_created_by",
-                  "name": "created_by",
-                  "label": "created_by (String)",
-                  "cdashVariable": "CREATED_BY",
-                  "dataType": "String",
-                  "mandatory": true,
+                  "id": "prop_designer_StudyVersion_versionIndex",
+                  "name": "versionIndex",
+                  "label": "versionIndex (Integer)",
+                  "cdashVariable": "VERSIONINDEX",
+                  "dataType": "Integer",
+                  "mandatory": false,
                   "config": {
                     "primary_key": false,
                     "foreign_keys": [],
-                    "gxp_highlight": true,
+                    "gxp_highlight": false,
                     "service": "designer",
                     "db_type": "Neo4j Graph Database",
                     "gxp_audited": true,
@@ -55024,33 +55092,16 @@
                   }
                 },
                 {
-                  "id": "prop_designer_StudyVersion_created_at",
-                  "name": "created_at",
-                  "label": "created_at (Datetime (UTC))",
-                  "cdashVariable": "CREATED_AT",
-                  "dataType": "Datetime (UTC)",
-                  "mandatory": true,
+                  "id": "prop_designer_StudyVersion_studyDesigns",
+                  "name": "studyDesigns",
+                  "label": "studyDesigns (Array)",
+                  "cdashVariable": "STUDYDESIGNS",
+                  "dataType": "Array",
+                  "mandatory": false,
                   "config": {
                     "primary_key": false,
                     "foreign_keys": [],
-                    "gxp_highlight": true,
-                    "service": "designer",
-                    "db_type": "Neo4j Graph Database",
-                    "gxp_audited": true,
-                    "immutable": true
-                  }
-                },
-                {
-                  "id": "prop_designer_StudyVersion_signature",
-                  "name": "signature",
-                  "label": "signature (String (HMAC-SHA256))",
-                  "cdashVariable": "SIGNATURE",
-                  "dataType": "String (HMAC-SHA256)",
-                  "mandatory": true,
-                  "config": {
-                    "primary_key": false,
-                    "foreign_keys": [],
-                    "gxp_highlight": true,
+                    "gxp_highlight": false,
                     "service": "designer",
                     "db_type": "Neo4j Graph Database",
                     "gxp_audited": true,
@@ -55065,7 +55116,7 @@
               "label": "Designer / MDR - Epoch",
               "conceptCode": "SCHEMA_DESIGNER_EPOCH",
               "displayName": "Epoch (designer)",
-              "definition": "A trial subdivision describing periods of conduct such as Screening, Treatment, or Follow-Up.",
+              "definition": "Study epoch definition.",
               "cdashDomain": "designer",
               "cdashVariable": "EPOCH",
               "dataType": "Graph Node",
@@ -55105,12 +55156,46 @@
                   }
                 },
                 {
-                  "id": "prop_designer_Epoch_order",
-                  "name": "order",
-                  "label": "order (Integer)",
-                  "cdashVariable": "ORDER",
+                  "id": "prop_designer_Epoch_epochType",
+                  "name": "epochType",
+                  "label": "epochType (String)",
+                  "cdashVariable": "EPOCHTYPE",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_Epoch_sequenceNumber",
+                  "name": "sequenceNumber",
+                  "label": "sequenceNumber (Integer)",
+                  "cdashVariable": "SEQUENCENUMBER",
                   "dataType": "Integer",
-                  "mandatory": true,
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_Epoch_sequenceIndex",
+                  "name": "sequenceIndex",
+                  "label": "sequenceIndex (Integer)",
+                  "cdashVariable": "SEQUENCEINDEX",
+                  "dataType": "Integer",
+                  "mandatory": false,
                   "config": {
                     "primary_key": false,
                     "foreign_keys": [],
@@ -55129,7 +55214,7 @@
               "label": "Designer / MDR - Activity",
               "conceptCode": "SCHEMA_DESIGNER_ACTIVITY",
               "displayName": "Activity (designer)",
-              "definition": "An action performed on clinical study subjects (e.g., Blood Draw, Vitals).",
+              "definition": "Study activity or procedure definition.",
               "cdashDomain": "designer",
               "cdashVariable": "ACTIVITY",
               "dataType": "Graph Node",
@@ -55167,6 +55252,142 @@
                     "gxp_audited": true,
                     "immutable": false
                   }
+                },
+                {
+                  "id": "prop_designer_Activity_description",
+                  "name": "description",
+                  "label": "description (String)",
+                  "cdashVariable": "DESCRIPTION",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_Activity_cdashDomain",
+                  "name": "cdashDomain",
+                  "label": "cdashDomain (String)",
+                  "cdashVariable": "CDASHDOMAIN",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_Activity_biomedicalConceptCode",
+                  "name": "biomedicalConceptCode",
+                  "label": "biomedicalConceptCode (String)",
+                  "cdashVariable": "BIOMEDICALCONCEPTCODE",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_Activity_biomedicalConceptIds",
+                  "name": "biomedicalConceptIds",
+                  "label": "biomedicalConceptIds (String)",
+                  "cdashVariable": "BIOMEDICALCONCEPTIDS",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_Activity_biomedicalConcepts",
+                  "name": "biomedicalConcepts",
+                  "label": "biomedicalConcepts (Array)",
+                  "cdashVariable": "BIOMEDICALCONCEPTS",
+                  "dataType": "Array",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_Activity_assignedVisitNames",
+                  "name": "assignedVisitNames",
+                  "label": "assignedVisitNames (String)",
+                  "cdashVariable": "ASSIGNEDVISITNAMES",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_Activity_assignedEncounterIds",
+                  "name": "assignedEncounterIds",
+                  "label": "assignedEncounterIds (String)",
+                  "cdashVariable": "ASSIGNEDENCOUNTERIDS",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_Activity_definedProcedures",
+                  "name": "definedProcedures",
+                  "label": "definedProcedures (String)",
+                  "cdashVariable": "DEFINEDPROCEDURES",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
                 }
               ]
             },
@@ -55176,16 +55397,16 @@
               "label": "Designer / MDR - TreatmentArm",
               "conceptCode": "SCHEMA_DESIGNER_TREATMENTARM",
               "displayName": "TreatmentArm (designer)",
-              "definition": "A standardized treatment path designating study arms.",
+              "definition": "Study arm definition.",
               "cdashDomain": "designer",
               "cdashVariable": "TREATMENTARM",
               "dataType": "Graph Node",
               "properties": [
                 {
-                  "id": "prop_designer_TreatmentArm_arm_id",
-                  "name": "arm_id",
-                  "label": "arm_id (String (UUID))",
-                  "cdashVariable": "ARM_ID",
+                  "id": "prop_designer_TreatmentArm_id",
+                  "name": "id",
+                  "label": "id (String (UUID))",
+                  "cdashVariable": "ID",
                   "dataType": "String (UUID)",
                   "mandatory": true,
                   "config": {
@@ -55216,11 +55437,45 @@
                   }
                 },
                 {
-                  "id": "prop_designer_TreatmentArm_type_concept_id",
-                  "name": "type_concept_id",
-                  "label": "type_concept_id (String (NCI Concept))",
-                  "cdashVariable": "TYPE_CONCEPT_ID",
-                  "dataType": "String (NCI Concept)",
+                  "id": "prop_designer_TreatmentArm_armType",
+                  "name": "armType",
+                  "label": "armType (String)",
+                  "cdashVariable": "ARMTYPE",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_TreatmentArm_description",
+                  "name": "description",
+                  "label": "description (String)",
+                  "cdashVariable": "DESCRIPTION",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_TreatmentArm_targetSampleSize",
+                  "name": "targetSampleSize",
+                  "label": "targetSampleSize (Integer)",
+                  "cdashVariable": "TARGETSAMPLESIZE",
+                  "dataType": "Integer",
                   "mandatory": false,
                   "config": {
                     "primary_key": false,
@@ -55240,16 +55495,16 @@
               "label": "Designer / MDR - ScheduledVisit",
               "conceptCode": "SCHEMA_DESIGNER_SCHEDULEDVISIT",
               "displayName": "ScheduledVisit (designer)",
-              "definition": "A planned encounter or visit within the clinical study.",
+              "definition": "Study encounter / visit definition.",
               "cdashDomain": "designer",
               "cdashVariable": "SCHEDULEDVISIT",
               "dataType": "Graph Node",
               "properties": [
                 {
-                  "id": "prop_designer_ScheduledVisit_visit_id",
-                  "name": "visit_id",
-                  "label": "visit_id (String (UUID))",
-                  "cdashVariable": "VISIT_ID",
+                  "id": "prop_designer_ScheduledVisit_id",
+                  "name": "id",
+                  "label": "id (String (UUID))",
+                  "cdashVariable": "ID",
                   "dataType": "String (UUID)",
                   "mandatory": true,
                   "config": {
@@ -55280,11 +55535,181 @@
                   }
                 },
                 {
-                  "id": "prop_designer_ScheduledVisit_visit_type_concept_id",
-                  "name": "visit_type_concept_id",
-                  "label": "visit_type_concept_id (String (NCI Concept))",
-                  "cdashVariable": "VISIT_TYPE_CONCEPT_ID",
-                  "dataType": "String (NCI Concept)",
+                  "id": "prop_designer_ScheduledVisit_encounterType",
+                  "name": "encounterType",
+                  "label": "encounterType (String)",
+                  "cdashVariable": "ENCOUNTERTYPE",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_ScheduledVisit_targetDay",
+                  "name": "targetDay",
+                  "label": "targetDay (Integer)",
+                  "cdashVariable": "TARGETDAY",
+                  "dataType": "Integer",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_ScheduledVisit_windowLower",
+                  "name": "windowLower",
+                  "label": "windowLower (Integer)",
+                  "cdashVariable": "WINDOWLOWER",
+                  "dataType": "Integer",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_ScheduledVisit_windowUpper",
+                  "name": "windowUpper",
+                  "label": "windowUpper (Integer)",
+                  "cdashVariable": "WINDOWUPPER",
+                  "dataType": "Integer",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_ScheduledVisit_windowLowerDays",
+                  "name": "windowLowerDays",
+                  "label": "windowLowerDays (Integer)",
+                  "cdashVariable": "WINDOWLOWERDAYS",
+                  "dataType": "Integer",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_ScheduledVisit_windowUpperDays",
+                  "name": "windowUpperDays",
+                  "label": "windowUpperDays (Integer)",
+                  "cdashVariable": "WINDOWUPPERDAYS",
+                  "dataType": "Integer",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_ScheduledVisit_isMandatory",
+                  "name": "isMandatory",
+                  "label": "isMandatory (Boolean)",
+                  "cdashVariable": "ISMANDATORY",
+                  "dataType": "Boolean",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_ScheduledVisit_epochId",
+                  "name": "epochId",
+                  "label": "epochId (String)",
+                  "cdashVariable": "EPOCHID",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_ScheduledVisit_epochName",
+                  "name": "epochName",
+                  "label": "epochName (String)",
+                  "cdashVariable": "EPOCHNAME",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_ScheduledVisit_startDate",
+                  "name": "startDate",
+                  "label": "startDate (String)",
+                  "cdashVariable": "STARTDATE",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_ScheduledVisit_endDate",
+                  "name": "endDate",
+                  "label": "endDate (String)",
+                  "cdashVariable": "ENDDATE",
+                  "dataType": "String",
                   "mandatory": false,
                   "config": {
                     "primary_key": false,
@@ -55304,7 +55729,7 @@
               "label": "Designer / MDR - LibraryObject",
               "conceptCode": "SCHEMA_DESIGNER_LIBRARYOBJECT",
               "displayName": "LibraryObject (designer)",
-              "definition": "CDISC Terminology and study element templates.",
+              "definition": "Base response model exposing audit trail, tenant, version, and status metadata.",
               "cdashDomain": "designer",
               "cdashVariable": "LIBRARYOBJECT",
               "dataType": "Graph Node",
@@ -55327,28 +55752,11 @@
                   }
                 },
                 {
-                  "id": "prop_designer_LibraryObject_name",
-                  "name": "name",
-                  "label": "name (String)",
-                  "cdashVariable": "NAME",
-                  "dataType": "String",
-                  "mandatory": true,
-                  "config": {
-                    "primary_key": false,
-                    "foreign_keys": [],
-                    "gxp_highlight": false,
-                    "service": "designer",
-                    "db_type": "Neo4j Graph Database",
-                    "gxp_audited": true,
-                    "immutable": false
-                  }
-                },
-                {
                   "id": "prop_designer_LibraryObject_version",
                   "name": "version",
-                  "label": "version (Integer)",
+                  "label": "version (String)",
                   "cdashVariable": "VERSION",
-                  "dataType": "Integer",
+                  "dataType": "String",
                   "mandatory": true,
                   "config": {
                     "primary_key": false,
@@ -55376,6 +55784,142 @@
                     "gxp_audited": true,
                     "immutable": false
                   }
+                },
+                {
+                  "id": "prop_designer_LibraryObject_sponsor_id",
+                  "name": "sponsor_id",
+                  "label": "sponsor_id (String)",
+                  "cdashVariable": "SPONSOR_ID",
+                  "dataType": "String",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_LibraryObject_tenant_id",
+                  "name": "tenant_id",
+                  "label": "tenant_id (String)",
+                  "cdashVariable": "TENANT_ID",
+                  "dataType": "String",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_LibraryObject_created_at",
+                  "name": "created_at",
+                  "label": "created_at (String)",
+                  "cdashVariable": "CREATED_AT",
+                  "dataType": "String",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_LibraryObject_created_by",
+                  "name": "created_by",
+                  "label": "created_by (String)",
+                  "cdashVariable": "CREATED_BY",
+                  "dataType": "String",
+                  "mandatory": true,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_LibraryObject_updated_at",
+                  "name": "updated_at",
+                  "label": "updated_at (String)",
+                  "cdashVariable": "UPDATED_AT",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_LibraryObject_updated_by",
+                  "name": "updated_by",
+                  "label": "updated_by (String)",
+                  "cdashVariable": "UPDATED_BY",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_LibraryObject_reason_for_change",
+                  "name": "reason_for_change",
+                  "label": "reason_for_change (String)",
+                  "cdashVariable": "REASON_FOR_CHANGE",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": true,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_LibraryObject_prior_status",
+                  "name": "prior_status",
+                  "label": "prior_status (String)",
+                  "cdashVariable": "PRIOR_STATUS",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
                 }
               ]
             },
@@ -55385,7 +55929,7 @@
               "label": "Designer / MDR - EligibilityCriterion",
               "conceptCode": "SCHEMA_DESIGNER_ELIGIBILITYCRITERION",
               "displayName": "EligibilityCriterion (designer)",
-              "definition": "Structured criteria used to gauge subject eligibility.",
+              "definition": "Eligibility criterion (Inclusion or Exclusion).",
               "cdashDomain": "designer",
               "cdashVariable": "ELIGIBILITYCRITERION",
               "dataType": "Graph Node",
@@ -55413,7 +55957,7 @@
                   "label": "name (String)",
                   "cdashVariable": "NAME",
                   "dataType": "String",
-                  "mandatory": true,
+                  "mandatory": false,
                   "config": {
                     "primary_key": false,
                     "foreign_keys": [],
@@ -55425,12 +55969,12 @@
                   }
                 },
                 {
-                  "id": "prop_designer_EligibilityCriterion_expression",
-                  "name": "expression",
-                  "label": "expression (String (Boolean logic))",
-                  "cdashVariable": "EXPRESSION",
-                  "dataType": "String (Boolean logic)",
-                  "mandatory": true,
+                  "id": "prop_designer_EligibilityCriterion_criterionType",
+                  "name": "criterionType",
+                  "label": "criterionType (String)",
+                  "cdashVariable": "CRITERIONTYPE",
+                  "dataType": "String",
+                  "mandatory": false,
                   "config": {
                     "primary_key": false,
                     "foreign_keys": [],
@@ -55442,16 +55986,101 @@
                   }
                 },
                 {
-                  "id": "prop_designer_EligibilityCriterion_is_deleted",
-                  "name": "is_deleted",
-                  "label": "is_deleted (Boolean)",
-                  "cdashVariable": "IS_DELETED",
-                  "dataType": "Boolean",
-                  "mandatory": true,
+                  "id": "prop_designer_EligibilityCriterion_identifier",
+                  "name": "identifier",
+                  "label": "identifier (String)",
+                  "cdashVariable": "IDENTIFIER",
+                  "dataType": "String",
+                  "mandatory": false,
                   "config": {
                     "primary_key": false,
                     "foreign_keys": [],
-                    "gxp_highlight": true,
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_EligibilityCriterion_category",
+                  "name": "category",
+                  "label": "category (String)",
+                  "cdashVariable": "CATEGORY",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_EligibilityCriterion_text",
+                  "name": "text",
+                  "label": "text (String)",
+                  "cdashVariable": "TEXT",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_EligibilityCriterion_textExpression",
+                  "name": "textExpression",
+                  "label": "textExpression (String)",
+                  "cdashVariable": "TEXTEXPRESSION",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_EligibilityCriterion_logicalExpression",
+                  "name": "logicalExpression",
+                  "label": "logicalExpression (String)",
+                  "cdashVariable": "LOGICALEXPRESSION",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
+                    "service": "designer",
+                    "db_type": "Neo4j Graph Database",
+                    "gxp_audited": true,
+                    "immutable": false
+                  }
+                },
+                {
+                  "id": "prop_designer_EligibilityCriterion_template",
+                  "name": "template",
+                  "label": "template (String)",
+                  "cdashVariable": "TEMPLATE",
+                  "dataType": "String",
+                  "mandatory": false,
+                  "config": {
+                    "primary_key": false,
+                    "foreign_keys": [],
+                    "gxp_highlight": false,
                     "service": "designer",
                     "db_type": "Neo4j Graph Database",
                     "gxp_audited": true,
@@ -110289,7 +110918,7 @@
           "label": "Designer / MDR - Study",
           "conceptCode": "SCHEMA_DESIGNER_STUDY",
           "displayName": "Study (designer)",
-          "definition": "Core USDM clinical trial representation detailing high-level protocol specifications, title, and study-wide status constraints.",
+          "definition": "Root USDM protocol study specification container.",
           "cdashDomain": "designer",
           "cdashVariable": "STUDY",
           "dataType": "Graph Node",
@@ -110312,12 +110941,12 @@
               }
             },
             {
-              "id": "prop_designer_Study_title",
-              "name": "title",
-              "label": "title (String)",
-              "cdashVariable": "TITLE",
+              "id": "prop_designer_Study_name",
+              "name": "name",
+              "label": "name (String)",
+              "cdashVariable": "NAME",
               "dataType": "String",
-              "mandatory": true,
+              "mandatory": false,
               "config": {
                 "primary_key": false,
                 "foreign_keys": [],
@@ -110329,12 +110958,12 @@
               }
             },
             {
-              "id": "prop_designer_Study_current_version",
-              "name": "current_version",
-              "label": "current_version (String)",
-              "cdashVariable": "CURRENT_VERSION",
+              "id": "prop_designer_Study_protocolTitle",
+              "name": "protocolTitle",
+              "label": "protocolTitle (String)",
+              "cdashVariable": "PROTOCOLTITLE",
               "dataType": "String",
-              "mandatory": true,
+              "mandatory": false,
               "config": {
                 "primary_key": false,
                 "foreign_keys": [],
@@ -110346,16 +110975,16 @@
               }
             },
             {
-              "id": "prop_designer_Study_status",
-              "name": "status",
-              "label": "status (String (Active-Recruiting, Locked, etc.))",
-              "cdashVariable": "STATUS",
-              "dataType": "String (Active-Recruiting, Locked, etc.)",
-              "mandatory": true,
+              "id": "prop_designer_Study_protocolId",
+              "name": "protocolId",
+              "label": "protocolId (String)",
+              "cdashVariable": "PROTOCOLID",
+              "dataType": "String",
+              "mandatory": false,
               "config": {
                 "primary_key": false,
                 "foreign_keys": [],
-                "gxp_highlight": true,
+                "gxp_highlight": false,
                 "service": "designer",
                 "db_type": "Neo4j Graph Database",
                 "gxp_audited": true,
@@ -110363,11 +110992,96 @@
               }
             },
             {
-              "id": "prop_designer_Study_desc",
-              "name": "desc",
-              "label": "desc (String)",
-              "cdashVariable": "DESC",
+              "id": "prop_designer_Study_phase",
+              "name": "phase",
+              "label": "phase (String)",
+              "cdashVariable": "PHASE",
               "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_Study_therapeuticArea",
+              "name": "therapeuticArea",
+              "label": "therapeuticArea (String)",
+              "cdashVariable": "THERAPEUTICAREA",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_Study_usdmVersion",
+              "name": "usdmVersion",
+              "label": "usdmVersion (String)",
+              "cdashVariable": "USDMVERSION",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_Study_studyVersions",
+              "name": "studyVersions",
+              "label": "studyVersions (Array)",
+              "cdashVariable": "STUDYVERSIONS",
+              "dataType": "Array",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_Study_studyDesigns",
+              "name": "studyDesigns",
+              "label": "studyDesigns (Array)",
+              "cdashVariable": "STUDYDESIGNS",
+              "dataType": "Array",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_Study_biomedicalConcepts",
+              "name": "biomedicalConcepts",
+              "label": "biomedicalConcepts (Array)",
+              "cdashVariable": "BIOMEDICALCONCEPTS",
+              "dataType": "Array",
               "mandatory": false,
               "config": {
                 "primary_key": false,
@@ -110387,7 +111101,7 @@
           "label": "Designer / MDR - StudyVersion",
           "conceptCode": "SCHEMA_DESIGNER_STUDYVERSION",
           "displayName": "StudyVersion (designer)",
-          "definition": "A snapshot version of the study protocol incorporating cryptographic signatures to guarantee GxP audit-trail integrity for FDA 21 CFR Part 11.",
+          "definition": "Study version containing version metadata and study designs.",
           "cdashDomain": "designer",
           "cdashVariable": "STUDYVERSION",
           "dataType": "Graph Node",
@@ -110410,33 +111124,16 @@
               }
             },
             {
-              "id": "prop_designer_StudyVersion_version_tag",
-              "name": "version_tag",
-              "label": "version_tag (String)",
-              "cdashVariable": "VERSION_TAG",
+              "id": "prop_designer_StudyVersion_versionTag",
+              "name": "versionTag",
+              "label": "versionTag (String)",
+              "cdashVariable": "VERSIONTAG",
               "dataType": "String",
-              "mandatory": true,
+              "mandatory": false,
               "config": {
                 "primary_key": false,
                 "foreign_keys": [],
                 "gxp_highlight": false,
-                "service": "designer",
-                "db_type": "Neo4j Graph Database",
-                "gxp_audited": true,
-                "immutable": true
-              }
-            },
-            {
-              "id": "prop_designer_StudyVersion_version_index",
-              "name": "version_index",
-              "label": "version_index (Integer)",
-              "cdashVariable": "VERSION_INDEX",
-              "dataType": "Integer",
-              "mandatory": true,
-              "config": {
-                "primary_key": false,
-                "foreign_keys": [],
-                "gxp_highlight": true,
                 "service": "designer",
                 "db_type": "Neo4j Graph Database",
                 "gxp_audited": true,
@@ -110449,7 +111146,7 @@
               "label": "status (String)",
               "cdashVariable": "STATUS",
               "dataType": "String",
-              "mandatory": true,
+              "mandatory": false,
               "config": {
                 "primary_key": false,
                 "foreign_keys": [],
@@ -110461,16 +111158,16 @@
               }
             },
             {
-              "id": "prop_designer_StudyVersion_created_by",
-              "name": "created_by",
-              "label": "created_by (String)",
-              "cdashVariable": "CREATED_BY",
-              "dataType": "String",
-              "mandatory": true,
+              "id": "prop_designer_StudyVersion_versionIndex",
+              "name": "versionIndex",
+              "label": "versionIndex (Integer)",
+              "cdashVariable": "VERSIONINDEX",
+              "dataType": "Integer",
+              "mandatory": false,
               "config": {
                 "primary_key": false,
                 "foreign_keys": [],
-                "gxp_highlight": true,
+                "gxp_highlight": false,
                 "service": "designer",
                 "db_type": "Neo4j Graph Database",
                 "gxp_audited": true,
@@ -110478,33 +111175,16 @@
               }
             },
             {
-              "id": "prop_designer_StudyVersion_created_at",
-              "name": "created_at",
-              "label": "created_at (Datetime (UTC))",
-              "cdashVariable": "CREATED_AT",
-              "dataType": "Datetime (UTC)",
-              "mandatory": true,
+              "id": "prop_designer_StudyVersion_studyDesigns",
+              "name": "studyDesigns",
+              "label": "studyDesigns (Array)",
+              "cdashVariable": "STUDYDESIGNS",
+              "dataType": "Array",
+              "mandatory": false,
               "config": {
                 "primary_key": false,
                 "foreign_keys": [],
-                "gxp_highlight": true,
-                "service": "designer",
-                "db_type": "Neo4j Graph Database",
-                "gxp_audited": true,
-                "immutable": true
-              }
-            },
-            {
-              "id": "prop_designer_StudyVersion_signature",
-              "name": "signature",
-              "label": "signature (String (HMAC-SHA256))",
-              "cdashVariable": "SIGNATURE",
-              "dataType": "String (HMAC-SHA256)",
-              "mandatory": true,
-              "config": {
-                "primary_key": false,
-                "foreign_keys": [],
-                "gxp_highlight": true,
+                "gxp_highlight": false,
                 "service": "designer",
                 "db_type": "Neo4j Graph Database",
                 "gxp_audited": true,
@@ -110519,7 +111199,7 @@
           "label": "Designer / MDR - Epoch",
           "conceptCode": "SCHEMA_DESIGNER_EPOCH",
           "displayName": "Epoch (designer)",
-          "definition": "A trial subdivision describing periods of conduct such as Screening, Treatment, or Follow-Up.",
+          "definition": "Study epoch definition.",
           "cdashDomain": "designer",
           "cdashVariable": "EPOCH",
           "dataType": "Graph Node",
@@ -110559,12 +111239,46 @@
               }
             },
             {
-              "id": "prop_designer_Epoch_order",
-              "name": "order",
-              "label": "order (Integer)",
-              "cdashVariable": "ORDER",
+              "id": "prop_designer_Epoch_epochType",
+              "name": "epochType",
+              "label": "epochType (String)",
+              "cdashVariable": "EPOCHTYPE",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_Epoch_sequenceNumber",
+              "name": "sequenceNumber",
+              "label": "sequenceNumber (Integer)",
+              "cdashVariable": "SEQUENCENUMBER",
               "dataType": "Integer",
-              "mandatory": true,
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_Epoch_sequenceIndex",
+              "name": "sequenceIndex",
+              "label": "sequenceIndex (Integer)",
+              "cdashVariable": "SEQUENCEINDEX",
+              "dataType": "Integer",
+              "mandatory": false,
               "config": {
                 "primary_key": false,
                 "foreign_keys": [],
@@ -110583,7 +111297,7 @@
           "label": "Designer / MDR - Activity",
           "conceptCode": "SCHEMA_DESIGNER_ACTIVITY",
           "displayName": "Activity (designer)",
-          "definition": "An action performed on clinical study subjects (e.g., Blood Draw, Vitals).",
+          "definition": "Study activity or procedure definition.",
           "cdashDomain": "designer",
           "cdashVariable": "ACTIVITY",
           "dataType": "Graph Node",
@@ -110621,6 +111335,142 @@
                 "gxp_audited": true,
                 "immutable": false
               }
+            },
+            {
+              "id": "prop_designer_Activity_description",
+              "name": "description",
+              "label": "description (String)",
+              "cdashVariable": "DESCRIPTION",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_Activity_cdashDomain",
+              "name": "cdashDomain",
+              "label": "cdashDomain (String)",
+              "cdashVariable": "CDASHDOMAIN",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_Activity_biomedicalConceptCode",
+              "name": "biomedicalConceptCode",
+              "label": "biomedicalConceptCode (String)",
+              "cdashVariable": "BIOMEDICALCONCEPTCODE",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_Activity_biomedicalConceptIds",
+              "name": "biomedicalConceptIds",
+              "label": "biomedicalConceptIds (String)",
+              "cdashVariable": "BIOMEDICALCONCEPTIDS",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_Activity_biomedicalConcepts",
+              "name": "biomedicalConcepts",
+              "label": "biomedicalConcepts (Array)",
+              "cdashVariable": "BIOMEDICALCONCEPTS",
+              "dataType": "Array",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_Activity_assignedVisitNames",
+              "name": "assignedVisitNames",
+              "label": "assignedVisitNames (String)",
+              "cdashVariable": "ASSIGNEDVISITNAMES",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_Activity_assignedEncounterIds",
+              "name": "assignedEncounterIds",
+              "label": "assignedEncounterIds (String)",
+              "cdashVariable": "ASSIGNEDENCOUNTERIDS",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_Activity_definedProcedures",
+              "name": "definedProcedures",
+              "label": "definedProcedures (String)",
+              "cdashVariable": "DEFINEDPROCEDURES",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
             }
           ]
         },
@@ -110630,16 +111480,16 @@
           "label": "Designer / MDR - TreatmentArm",
           "conceptCode": "SCHEMA_DESIGNER_TREATMENTARM",
           "displayName": "TreatmentArm (designer)",
-          "definition": "A standardized treatment path designating study arms.",
+          "definition": "Study arm definition.",
           "cdashDomain": "designer",
           "cdashVariable": "TREATMENTARM",
           "dataType": "Graph Node",
           "properties": [
             {
-              "id": "prop_designer_TreatmentArm_arm_id",
-              "name": "arm_id",
-              "label": "arm_id (String (UUID))",
-              "cdashVariable": "ARM_ID",
+              "id": "prop_designer_TreatmentArm_id",
+              "name": "id",
+              "label": "id (String (UUID))",
+              "cdashVariable": "ID",
               "dataType": "String (UUID)",
               "mandatory": true,
               "config": {
@@ -110670,11 +111520,45 @@
               }
             },
             {
-              "id": "prop_designer_TreatmentArm_type_concept_id",
-              "name": "type_concept_id",
-              "label": "type_concept_id (String (NCI Concept))",
-              "cdashVariable": "TYPE_CONCEPT_ID",
-              "dataType": "String (NCI Concept)",
+              "id": "prop_designer_TreatmentArm_armType",
+              "name": "armType",
+              "label": "armType (String)",
+              "cdashVariable": "ARMTYPE",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_TreatmentArm_description",
+              "name": "description",
+              "label": "description (String)",
+              "cdashVariable": "DESCRIPTION",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_TreatmentArm_targetSampleSize",
+              "name": "targetSampleSize",
+              "label": "targetSampleSize (Integer)",
+              "cdashVariable": "TARGETSAMPLESIZE",
+              "dataType": "Integer",
               "mandatory": false,
               "config": {
                 "primary_key": false,
@@ -110694,16 +111578,16 @@
           "label": "Designer / MDR - ScheduledVisit",
           "conceptCode": "SCHEMA_DESIGNER_SCHEDULEDVISIT",
           "displayName": "ScheduledVisit (designer)",
-          "definition": "A planned encounter or visit within the clinical study.",
+          "definition": "Study encounter / visit definition.",
           "cdashDomain": "designer",
           "cdashVariable": "SCHEDULEDVISIT",
           "dataType": "Graph Node",
           "properties": [
             {
-              "id": "prop_designer_ScheduledVisit_visit_id",
-              "name": "visit_id",
-              "label": "visit_id (String (UUID))",
-              "cdashVariable": "VISIT_ID",
+              "id": "prop_designer_ScheduledVisit_id",
+              "name": "id",
+              "label": "id (String (UUID))",
+              "cdashVariable": "ID",
               "dataType": "String (UUID)",
               "mandatory": true,
               "config": {
@@ -110734,11 +111618,181 @@
               }
             },
             {
-              "id": "prop_designer_ScheduledVisit_visit_type_concept_id",
-              "name": "visit_type_concept_id",
-              "label": "visit_type_concept_id (String (NCI Concept))",
-              "cdashVariable": "VISIT_TYPE_CONCEPT_ID",
-              "dataType": "String (NCI Concept)",
+              "id": "prop_designer_ScheduledVisit_encounterType",
+              "name": "encounterType",
+              "label": "encounterType (String)",
+              "cdashVariable": "ENCOUNTERTYPE",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_ScheduledVisit_targetDay",
+              "name": "targetDay",
+              "label": "targetDay (Integer)",
+              "cdashVariable": "TARGETDAY",
+              "dataType": "Integer",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_ScheduledVisit_windowLower",
+              "name": "windowLower",
+              "label": "windowLower (Integer)",
+              "cdashVariable": "WINDOWLOWER",
+              "dataType": "Integer",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_ScheduledVisit_windowUpper",
+              "name": "windowUpper",
+              "label": "windowUpper (Integer)",
+              "cdashVariable": "WINDOWUPPER",
+              "dataType": "Integer",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_ScheduledVisit_windowLowerDays",
+              "name": "windowLowerDays",
+              "label": "windowLowerDays (Integer)",
+              "cdashVariable": "WINDOWLOWERDAYS",
+              "dataType": "Integer",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_ScheduledVisit_windowUpperDays",
+              "name": "windowUpperDays",
+              "label": "windowUpperDays (Integer)",
+              "cdashVariable": "WINDOWUPPERDAYS",
+              "dataType": "Integer",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_ScheduledVisit_isMandatory",
+              "name": "isMandatory",
+              "label": "isMandatory (Boolean)",
+              "cdashVariable": "ISMANDATORY",
+              "dataType": "Boolean",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_ScheduledVisit_epochId",
+              "name": "epochId",
+              "label": "epochId (String)",
+              "cdashVariable": "EPOCHID",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_ScheduledVisit_epochName",
+              "name": "epochName",
+              "label": "epochName (String)",
+              "cdashVariable": "EPOCHNAME",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_ScheduledVisit_startDate",
+              "name": "startDate",
+              "label": "startDate (String)",
+              "cdashVariable": "STARTDATE",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_ScheduledVisit_endDate",
+              "name": "endDate",
+              "label": "endDate (String)",
+              "cdashVariable": "ENDDATE",
+              "dataType": "String",
               "mandatory": false,
               "config": {
                 "primary_key": false,
@@ -110758,7 +111812,7 @@
           "label": "Designer / MDR - LibraryObject",
           "conceptCode": "SCHEMA_DESIGNER_LIBRARYOBJECT",
           "displayName": "LibraryObject (designer)",
-          "definition": "CDISC Terminology and study element templates.",
+          "definition": "Base response model exposing audit trail, tenant, version, and status metadata.",
           "cdashDomain": "designer",
           "cdashVariable": "LIBRARYOBJECT",
           "dataType": "Graph Node",
@@ -110781,28 +111835,11 @@
               }
             },
             {
-              "id": "prop_designer_LibraryObject_name",
-              "name": "name",
-              "label": "name (String)",
-              "cdashVariable": "NAME",
-              "dataType": "String",
-              "mandatory": true,
-              "config": {
-                "primary_key": false,
-                "foreign_keys": [],
-                "gxp_highlight": false,
-                "service": "designer",
-                "db_type": "Neo4j Graph Database",
-                "gxp_audited": true,
-                "immutable": false
-              }
-            },
-            {
               "id": "prop_designer_LibraryObject_version",
               "name": "version",
-              "label": "version (Integer)",
+              "label": "version (String)",
               "cdashVariable": "VERSION",
-              "dataType": "Integer",
+              "dataType": "String",
               "mandatory": true,
               "config": {
                 "primary_key": false,
@@ -110830,6 +111867,142 @@
                 "gxp_audited": true,
                 "immutable": false
               }
+            },
+            {
+              "id": "prop_designer_LibraryObject_sponsor_id",
+              "name": "sponsor_id",
+              "label": "sponsor_id (String)",
+              "cdashVariable": "SPONSOR_ID",
+              "dataType": "String",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_LibraryObject_tenant_id",
+              "name": "tenant_id",
+              "label": "tenant_id (String)",
+              "cdashVariable": "TENANT_ID",
+              "dataType": "String",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_LibraryObject_created_at",
+              "name": "created_at",
+              "label": "created_at (String)",
+              "cdashVariable": "CREATED_AT",
+              "dataType": "String",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_LibraryObject_created_by",
+              "name": "created_by",
+              "label": "created_by (String)",
+              "cdashVariable": "CREATED_BY",
+              "dataType": "String",
+              "mandatory": true,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_LibraryObject_updated_at",
+              "name": "updated_at",
+              "label": "updated_at (String)",
+              "cdashVariable": "UPDATED_AT",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_LibraryObject_updated_by",
+              "name": "updated_by",
+              "label": "updated_by (String)",
+              "cdashVariable": "UPDATED_BY",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_LibraryObject_reason_for_change",
+              "name": "reason_for_change",
+              "label": "reason_for_change (String)",
+              "cdashVariable": "REASON_FOR_CHANGE",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": true,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_LibraryObject_prior_status",
+              "name": "prior_status",
+              "label": "prior_status (String)",
+              "cdashVariable": "PRIOR_STATUS",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
             }
           ]
         },
@@ -110839,7 +112012,7 @@
           "label": "Designer / MDR - EligibilityCriterion",
           "conceptCode": "SCHEMA_DESIGNER_ELIGIBILITYCRITERION",
           "displayName": "EligibilityCriterion (designer)",
-          "definition": "Structured criteria used to gauge subject eligibility.",
+          "definition": "Eligibility criterion (Inclusion or Exclusion).",
           "cdashDomain": "designer",
           "cdashVariable": "ELIGIBILITYCRITERION",
           "dataType": "Graph Node",
@@ -110867,7 +112040,7 @@
               "label": "name (String)",
               "cdashVariable": "NAME",
               "dataType": "String",
-              "mandatory": true,
+              "mandatory": false,
               "config": {
                 "primary_key": false,
                 "foreign_keys": [],
@@ -110879,12 +112052,12 @@
               }
             },
             {
-              "id": "prop_designer_EligibilityCriterion_expression",
-              "name": "expression",
-              "label": "expression (String (Boolean logic))",
-              "cdashVariable": "EXPRESSION",
-              "dataType": "String (Boolean logic)",
-              "mandatory": true,
+              "id": "prop_designer_EligibilityCriterion_criterionType",
+              "name": "criterionType",
+              "label": "criterionType (String)",
+              "cdashVariable": "CRITERIONTYPE",
+              "dataType": "String",
+              "mandatory": false,
               "config": {
                 "primary_key": false,
                 "foreign_keys": [],
@@ -110896,16 +112069,101 @@
               }
             },
             {
-              "id": "prop_designer_EligibilityCriterion_is_deleted",
-              "name": "is_deleted",
-              "label": "is_deleted (Boolean)",
-              "cdashVariable": "IS_DELETED",
-              "dataType": "Boolean",
-              "mandatory": true,
+              "id": "prop_designer_EligibilityCriterion_identifier",
+              "name": "identifier",
+              "label": "identifier (String)",
+              "cdashVariable": "IDENTIFIER",
+              "dataType": "String",
+              "mandatory": false,
               "config": {
                 "primary_key": false,
                 "foreign_keys": [],
-                "gxp_highlight": true,
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_EligibilityCriterion_category",
+              "name": "category",
+              "label": "category (String)",
+              "cdashVariable": "CATEGORY",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_EligibilityCriterion_text",
+              "name": "text",
+              "label": "text (String)",
+              "cdashVariable": "TEXT",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_EligibilityCriterion_textExpression",
+              "name": "textExpression",
+              "label": "textExpression (String)",
+              "cdashVariable": "TEXTEXPRESSION",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_EligibilityCriterion_logicalExpression",
+              "name": "logicalExpression",
+              "label": "logicalExpression (String)",
+              "cdashVariable": "LOGICALEXPRESSION",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
+                "service": "designer",
+                "db_type": "Neo4j Graph Database",
+                "gxp_audited": true,
+                "immutable": false
+              }
+            },
+            {
+              "id": "prop_designer_EligibilityCriterion_template",
+              "name": "template",
+              "label": "template (String)",
+              "cdashVariable": "TEMPLATE",
+              "dataType": "String",
+              "mandatory": false,
+              "config": {
+                "primary_key": false,
+                "foreign_keys": [],
+                "gxp_highlight": false,
                 "service": "designer",
                 "db_type": "Neo4j Graph Database",
                 "gxp_audited": true,
@@ -165732,7 +166990,7 @@
       "label": "Designer / MDR - Study",
       "conceptCode": "SCHEMA_DESIGNER_STUDY",
       "displayName": "Study (designer)",
-      "definition": "Core USDM clinical trial representation detailing high-level protocol specifications, title, and study-wide status constraints.",
+      "definition": "Root USDM protocol study specification container.",
       "cdashDomain": "designer",
       "cdashVariable": "STUDY",
       "dataType": "Graph Node",
@@ -165755,12 +167013,12 @@
           }
         },
         {
-          "id": "prop_designer_Study_title",
-          "name": "title",
-          "label": "title (String)",
-          "cdashVariable": "TITLE",
+          "id": "prop_designer_Study_name",
+          "name": "name",
+          "label": "name (String)",
+          "cdashVariable": "NAME",
           "dataType": "String",
-          "mandatory": true,
+          "mandatory": false,
           "config": {
             "primary_key": false,
             "foreign_keys": [],
@@ -165772,12 +167030,12 @@
           }
         },
         {
-          "id": "prop_designer_Study_current_version",
-          "name": "current_version",
-          "label": "current_version (String)",
-          "cdashVariable": "CURRENT_VERSION",
+          "id": "prop_designer_Study_protocolTitle",
+          "name": "protocolTitle",
+          "label": "protocolTitle (String)",
+          "cdashVariable": "PROTOCOLTITLE",
           "dataType": "String",
-          "mandatory": true,
+          "mandatory": false,
           "config": {
             "primary_key": false,
             "foreign_keys": [],
@@ -165789,16 +167047,16 @@
           }
         },
         {
-          "id": "prop_designer_Study_status",
-          "name": "status",
-          "label": "status (String (Active-Recruiting, Locked, etc.))",
-          "cdashVariable": "STATUS",
-          "dataType": "String (Active-Recruiting, Locked, etc.)",
-          "mandatory": true,
+          "id": "prop_designer_Study_protocolId",
+          "name": "protocolId",
+          "label": "protocolId (String)",
+          "cdashVariable": "PROTOCOLID",
+          "dataType": "String",
+          "mandatory": false,
           "config": {
             "primary_key": false,
             "foreign_keys": [],
-            "gxp_highlight": true,
+            "gxp_highlight": false,
             "service": "designer",
             "db_type": "Neo4j Graph Database",
             "gxp_audited": true,
@@ -165806,11 +167064,96 @@
           }
         },
         {
-          "id": "prop_designer_Study_desc",
-          "name": "desc",
-          "label": "desc (String)",
-          "cdashVariable": "DESC",
+          "id": "prop_designer_Study_phase",
+          "name": "phase",
+          "label": "phase (String)",
+          "cdashVariable": "PHASE",
           "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_Study_therapeuticArea",
+          "name": "therapeuticArea",
+          "label": "therapeuticArea (String)",
+          "cdashVariable": "THERAPEUTICAREA",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_Study_usdmVersion",
+          "name": "usdmVersion",
+          "label": "usdmVersion (String)",
+          "cdashVariable": "USDMVERSION",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_Study_studyVersions",
+          "name": "studyVersions",
+          "label": "studyVersions (Array)",
+          "cdashVariable": "STUDYVERSIONS",
+          "dataType": "Array",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_Study_studyDesigns",
+          "name": "studyDesigns",
+          "label": "studyDesigns (Array)",
+          "cdashVariable": "STUDYDESIGNS",
+          "dataType": "Array",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_Study_biomedicalConcepts",
+          "name": "biomedicalConcepts",
+          "label": "biomedicalConcepts (Array)",
+          "cdashVariable": "BIOMEDICALCONCEPTS",
+          "dataType": "Array",
           "mandatory": false,
           "config": {
             "primary_key": false,
@@ -165830,7 +167173,7 @@
       "label": "Designer / MDR - StudyVersion",
       "conceptCode": "SCHEMA_DESIGNER_STUDYVERSION",
       "displayName": "StudyVersion (designer)",
-      "definition": "A snapshot version of the study protocol incorporating cryptographic signatures to guarantee GxP audit-trail integrity for FDA 21 CFR Part 11.",
+      "definition": "Study version containing version metadata and study designs.",
       "cdashDomain": "designer",
       "cdashVariable": "STUDYVERSION",
       "dataType": "Graph Node",
@@ -165853,33 +167196,16 @@
           }
         },
         {
-          "id": "prop_designer_StudyVersion_version_tag",
-          "name": "version_tag",
-          "label": "version_tag (String)",
-          "cdashVariable": "VERSION_TAG",
+          "id": "prop_designer_StudyVersion_versionTag",
+          "name": "versionTag",
+          "label": "versionTag (String)",
+          "cdashVariable": "VERSIONTAG",
           "dataType": "String",
-          "mandatory": true,
+          "mandatory": false,
           "config": {
             "primary_key": false,
             "foreign_keys": [],
             "gxp_highlight": false,
-            "service": "designer",
-            "db_type": "Neo4j Graph Database",
-            "gxp_audited": true,
-            "immutable": true
-          }
-        },
-        {
-          "id": "prop_designer_StudyVersion_version_index",
-          "name": "version_index",
-          "label": "version_index (Integer)",
-          "cdashVariable": "VERSION_INDEX",
-          "dataType": "Integer",
-          "mandatory": true,
-          "config": {
-            "primary_key": false,
-            "foreign_keys": [],
-            "gxp_highlight": true,
             "service": "designer",
             "db_type": "Neo4j Graph Database",
             "gxp_audited": true,
@@ -165892,7 +167218,7 @@
           "label": "status (String)",
           "cdashVariable": "STATUS",
           "dataType": "String",
-          "mandatory": true,
+          "mandatory": false,
           "config": {
             "primary_key": false,
             "foreign_keys": [],
@@ -165904,16 +167230,16 @@
           }
         },
         {
-          "id": "prop_designer_StudyVersion_created_by",
-          "name": "created_by",
-          "label": "created_by (String)",
-          "cdashVariable": "CREATED_BY",
-          "dataType": "String",
-          "mandatory": true,
+          "id": "prop_designer_StudyVersion_versionIndex",
+          "name": "versionIndex",
+          "label": "versionIndex (Integer)",
+          "cdashVariable": "VERSIONINDEX",
+          "dataType": "Integer",
+          "mandatory": false,
           "config": {
             "primary_key": false,
             "foreign_keys": [],
-            "gxp_highlight": true,
+            "gxp_highlight": false,
             "service": "designer",
             "db_type": "Neo4j Graph Database",
             "gxp_audited": true,
@@ -165921,33 +167247,16 @@
           }
         },
         {
-          "id": "prop_designer_StudyVersion_created_at",
-          "name": "created_at",
-          "label": "created_at (Datetime (UTC))",
-          "cdashVariable": "CREATED_AT",
-          "dataType": "Datetime (UTC)",
-          "mandatory": true,
+          "id": "prop_designer_StudyVersion_studyDesigns",
+          "name": "studyDesigns",
+          "label": "studyDesigns (Array)",
+          "cdashVariable": "STUDYDESIGNS",
+          "dataType": "Array",
+          "mandatory": false,
           "config": {
             "primary_key": false,
             "foreign_keys": [],
-            "gxp_highlight": true,
-            "service": "designer",
-            "db_type": "Neo4j Graph Database",
-            "gxp_audited": true,
-            "immutable": true
-          }
-        },
-        {
-          "id": "prop_designer_StudyVersion_signature",
-          "name": "signature",
-          "label": "signature (String (HMAC-SHA256))",
-          "cdashVariable": "SIGNATURE",
-          "dataType": "String (HMAC-SHA256)",
-          "mandatory": true,
-          "config": {
-            "primary_key": false,
-            "foreign_keys": [],
-            "gxp_highlight": true,
+            "gxp_highlight": false,
             "service": "designer",
             "db_type": "Neo4j Graph Database",
             "gxp_audited": true,
@@ -165962,7 +167271,7 @@
       "label": "Designer / MDR - Epoch",
       "conceptCode": "SCHEMA_DESIGNER_EPOCH",
       "displayName": "Epoch (designer)",
-      "definition": "A trial subdivision describing periods of conduct such as Screening, Treatment, or Follow-Up.",
+      "definition": "Study epoch definition.",
       "cdashDomain": "designer",
       "cdashVariable": "EPOCH",
       "dataType": "Graph Node",
@@ -166002,12 +167311,46 @@
           }
         },
         {
-          "id": "prop_designer_Epoch_order",
-          "name": "order",
-          "label": "order (Integer)",
-          "cdashVariable": "ORDER",
+          "id": "prop_designer_Epoch_epochType",
+          "name": "epochType",
+          "label": "epochType (String)",
+          "cdashVariable": "EPOCHTYPE",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_Epoch_sequenceNumber",
+          "name": "sequenceNumber",
+          "label": "sequenceNumber (Integer)",
+          "cdashVariable": "SEQUENCENUMBER",
           "dataType": "Integer",
-          "mandatory": true,
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_Epoch_sequenceIndex",
+          "name": "sequenceIndex",
+          "label": "sequenceIndex (Integer)",
+          "cdashVariable": "SEQUENCEINDEX",
+          "dataType": "Integer",
+          "mandatory": false,
           "config": {
             "primary_key": false,
             "foreign_keys": [],
@@ -166026,7 +167369,7 @@
       "label": "Designer / MDR - Activity",
       "conceptCode": "SCHEMA_DESIGNER_ACTIVITY",
       "displayName": "Activity (designer)",
-      "definition": "An action performed on clinical study subjects (e.g., Blood Draw, Vitals).",
+      "definition": "Study activity or procedure definition.",
       "cdashDomain": "designer",
       "cdashVariable": "ACTIVITY",
       "dataType": "Graph Node",
@@ -166064,6 +167407,142 @@
             "gxp_audited": true,
             "immutable": false
           }
+        },
+        {
+          "id": "prop_designer_Activity_description",
+          "name": "description",
+          "label": "description (String)",
+          "cdashVariable": "DESCRIPTION",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_Activity_cdashDomain",
+          "name": "cdashDomain",
+          "label": "cdashDomain (String)",
+          "cdashVariable": "CDASHDOMAIN",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_Activity_biomedicalConceptCode",
+          "name": "biomedicalConceptCode",
+          "label": "biomedicalConceptCode (String)",
+          "cdashVariable": "BIOMEDICALCONCEPTCODE",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_Activity_biomedicalConceptIds",
+          "name": "biomedicalConceptIds",
+          "label": "biomedicalConceptIds (String)",
+          "cdashVariable": "BIOMEDICALCONCEPTIDS",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_Activity_biomedicalConcepts",
+          "name": "biomedicalConcepts",
+          "label": "biomedicalConcepts (Array)",
+          "cdashVariable": "BIOMEDICALCONCEPTS",
+          "dataType": "Array",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_Activity_assignedVisitNames",
+          "name": "assignedVisitNames",
+          "label": "assignedVisitNames (String)",
+          "cdashVariable": "ASSIGNEDVISITNAMES",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_Activity_assignedEncounterIds",
+          "name": "assignedEncounterIds",
+          "label": "assignedEncounterIds (String)",
+          "cdashVariable": "ASSIGNEDENCOUNTERIDS",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_Activity_definedProcedures",
+          "name": "definedProcedures",
+          "label": "definedProcedures (String)",
+          "cdashVariable": "DEFINEDPROCEDURES",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
         }
       ]
     },
@@ -166073,16 +167552,16 @@
       "label": "Designer / MDR - TreatmentArm",
       "conceptCode": "SCHEMA_DESIGNER_TREATMENTARM",
       "displayName": "TreatmentArm (designer)",
-      "definition": "A standardized treatment path designating study arms.",
+      "definition": "Study arm definition.",
       "cdashDomain": "designer",
       "cdashVariable": "TREATMENTARM",
       "dataType": "Graph Node",
       "properties": [
         {
-          "id": "prop_designer_TreatmentArm_arm_id",
-          "name": "arm_id",
-          "label": "arm_id (String (UUID))",
-          "cdashVariable": "ARM_ID",
+          "id": "prop_designer_TreatmentArm_id",
+          "name": "id",
+          "label": "id (String (UUID))",
+          "cdashVariable": "ID",
           "dataType": "String (UUID)",
           "mandatory": true,
           "config": {
@@ -166113,11 +167592,45 @@
           }
         },
         {
-          "id": "prop_designer_TreatmentArm_type_concept_id",
-          "name": "type_concept_id",
-          "label": "type_concept_id (String (NCI Concept))",
-          "cdashVariable": "TYPE_CONCEPT_ID",
-          "dataType": "String (NCI Concept)",
+          "id": "prop_designer_TreatmentArm_armType",
+          "name": "armType",
+          "label": "armType (String)",
+          "cdashVariable": "ARMTYPE",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_TreatmentArm_description",
+          "name": "description",
+          "label": "description (String)",
+          "cdashVariable": "DESCRIPTION",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_TreatmentArm_targetSampleSize",
+          "name": "targetSampleSize",
+          "label": "targetSampleSize (Integer)",
+          "cdashVariable": "TARGETSAMPLESIZE",
+          "dataType": "Integer",
           "mandatory": false,
           "config": {
             "primary_key": false,
@@ -166137,16 +167650,16 @@
       "label": "Designer / MDR - ScheduledVisit",
       "conceptCode": "SCHEMA_DESIGNER_SCHEDULEDVISIT",
       "displayName": "ScheduledVisit (designer)",
-      "definition": "A planned encounter or visit within the clinical study.",
+      "definition": "Study encounter / visit definition.",
       "cdashDomain": "designer",
       "cdashVariable": "SCHEDULEDVISIT",
       "dataType": "Graph Node",
       "properties": [
         {
-          "id": "prop_designer_ScheduledVisit_visit_id",
-          "name": "visit_id",
-          "label": "visit_id (String (UUID))",
-          "cdashVariable": "VISIT_ID",
+          "id": "prop_designer_ScheduledVisit_id",
+          "name": "id",
+          "label": "id (String (UUID))",
+          "cdashVariable": "ID",
           "dataType": "String (UUID)",
           "mandatory": true,
           "config": {
@@ -166177,11 +167690,181 @@
           }
         },
         {
-          "id": "prop_designer_ScheduledVisit_visit_type_concept_id",
-          "name": "visit_type_concept_id",
-          "label": "visit_type_concept_id (String (NCI Concept))",
-          "cdashVariable": "VISIT_TYPE_CONCEPT_ID",
-          "dataType": "String (NCI Concept)",
+          "id": "prop_designer_ScheduledVisit_encounterType",
+          "name": "encounterType",
+          "label": "encounterType (String)",
+          "cdashVariable": "ENCOUNTERTYPE",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_ScheduledVisit_targetDay",
+          "name": "targetDay",
+          "label": "targetDay (Integer)",
+          "cdashVariable": "TARGETDAY",
+          "dataType": "Integer",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_ScheduledVisit_windowLower",
+          "name": "windowLower",
+          "label": "windowLower (Integer)",
+          "cdashVariable": "WINDOWLOWER",
+          "dataType": "Integer",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_ScheduledVisit_windowUpper",
+          "name": "windowUpper",
+          "label": "windowUpper (Integer)",
+          "cdashVariable": "WINDOWUPPER",
+          "dataType": "Integer",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_ScheduledVisit_windowLowerDays",
+          "name": "windowLowerDays",
+          "label": "windowLowerDays (Integer)",
+          "cdashVariable": "WINDOWLOWERDAYS",
+          "dataType": "Integer",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_ScheduledVisit_windowUpperDays",
+          "name": "windowUpperDays",
+          "label": "windowUpperDays (Integer)",
+          "cdashVariable": "WINDOWUPPERDAYS",
+          "dataType": "Integer",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_ScheduledVisit_isMandatory",
+          "name": "isMandatory",
+          "label": "isMandatory (Boolean)",
+          "cdashVariable": "ISMANDATORY",
+          "dataType": "Boolean",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_ScheduledVisit_epochId",
+          "name": "epochId",
+          "label": "epochId (String)",
+          "cdashVariable": "EPOCHID",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_ScheduledVisit_epochName",
+          "name": "epochName",
+          "label": "epochName (String)",
+          "cdashVariable": "EPOCHNAME",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_ScheduledVisit_startDate",
+          "name": "startDate",
+          "label": "startDate (String)",
+          "cdashVariable": "STARTDATE",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_ScheduledVisit_endDate",
+          "name": "endDate",
+          "label": "endDate (String)",
+          "cdashVariable": "ENDDATE",
+          "dataType": "String",
           "mandatory": false,
           "config": {
             "primary_key": false,
@@ -166201,7 +167884,7 @@
       "label": "Designer / MDR - LibraryObject",
       "conceptCode": "SCHEMA_DESIGNER_LIBRARYOBJECT",
       "displayName": "LibraryObject (designer)",
-      "definition": "CDISC Terminology and study element templates.",
+      "definition": "Base response model exposing audit trail, tenant, version, and status metadata.",
       "cdashDomain": "designer",
       "cdashVariable": "LIBRARYOBJECT",
       "dataType": "Graph Node",
@@ -166224,28 +167907,11 @@
           }
         },
         {
-          "id": "prop_designer_LibraryObject_name",
-          "name": "name",
-          "label": "name (String)",
-          "cdashVariable": "NAME",
-          "dataType": "String",
-          "mandatory": true,
-          "config": {
-            "primary_key": false,
-            "foreign_keys": [],
-            "gxp_highlight": false,
-            "service": "designer",
-            "db_type": "Neo4j Graph Database",
-            "gxp_audited": true,
-            "immutable": false
-          }
-        },
-        {
           "id": "prop_designer_LibraryObject_version",
           "name": "version",
-          "label": "version (Integer)",
+          "label": "version (String)",
           "cdashVariable": "VERSION",
-          "dataType": "Integer",
+          "dataType": "String",
           "mandatory": true,
           "config": {
             "primary_key": false,
@@ -166273,6 +167939,142 @@
             "gxp_audited": true,
             "immutable": false
           }
+        },
+        {
+          "id": "prop_designer_LibraryObject_sponsor_id",
+          "name": "sponsor_id",
+          "label": "sponsor_id (String)",
+          "cdashVariable": "SPONSOR_ID",
+          "dataType": "String",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_LibraryObject_tenant_id",
+          "name": "tenant_id",
+          "label": "tenant_id (String)",
+          "cdashVariable": "TENANT_ID",
+          "dataType": "String",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_LibraryObject_created_at",
+          "name": "created_at",
+          "label": "created_at (String)",
+          "cdashVariable": "CREATED_AT",
+          "dataType": "String",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_LibraryObject_created_by",
+          "name": "created_by",
+          "label": "created_by (String)",
+          "cdashVariable": "CREATED_BY",
+          "dataType": "String",
+          "mandatory": true,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_LibraryObject_updated_at",
+          "name": "updated_at",
+          "label": "updated_at (String)",
+          "cdashVariable": "UPDATED_AT",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_LibraryObject_updated_by",
+          "name": "updated_by",
+          "label": "updated_by (String)",
+          "cdashVariable": "UPDATED_BY",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_LibraryObject_reason_for_change",
+          "name": "reason_for_change",
+          "label": "reason_for_change (String)",
+          "cdashVariable": "REASON_FOR_CHANGE",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": true,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_LibraryObject_prior_status",
+          "name": "prior_status",
+          "label": "prior_status (String)",
+          "cdashVariable": "PRIOR_STATUS",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
         }
       ]
     },
@@ -166282,7 +168084,7 @@
       "label": "Designer / MDR - EligibilityCriterion",
       "conceptCode": "SCHEMA_DESIGNER_ELIGIBILITYCRITERION",
       "displayName": "EligibilityCriterion (designer)",
-      "definition": "Structured criteria used to gauge subject eligibility.",
+      "definition": "Eligibility criterion (Inclusion or Exclusion).",
       "cdashDomain": "designer",
       "cdashVariable": "ELIGIBILITYCRITERION",
       "dataType": "Graph Node",
@@ -166310,7 +168112,7 @@
           "label": "name (String)",
           "cdashVariable": "NAME",
           "dataType": "String",
-          "mandatory": true,
+          "mandatory": false,
           "config": {
             "primary_key": false,
             "foreign_keys": [],
@@ -166322,12 +168124,12 @@
           }
         },
         {
-          "id": "prop_designer_EligibilityCriterion_expression",
-          "name": "expression",
-          "label": "expression (String (Boolean logic))",
-          "cdashVariable": "EXPRESSION",
-          "dataType": "String (Boolean logic)",
-          "mandatory": true,
+          "id": "prop_designer_EligibilityCriterion_criterionType",
+          "name": "criterionType",
+          "label": "criterionType (String)",
+          "cdashVariable": "CRITERIONTYPE",
+          "dataType": "String",
+          "mandatory": false,
           "config": {
             "primary_key": false,
             "foreign_keys": [],
@@ -166339,16 +168141,101 @@
           }
         },
         {
-          "id": "prop_designer_EligibilityCriterion_is_deleted",
-          "name": "is_deleted",
-          "label": "is_deleted (Boolean)",
-          "cdashVariable": "IS_DELETED",
-          "dataType": "Boolean",
-          "mandatory": true,
+          "id": "prop_designer_EligibilityCriterion_identifier",
+          "name": "identifier",
+          "label": "identifier (String)",
+          "cdashVariable": "IDENTIFIER",
+          "dataType": "String",
+          "mandatory": false,
           "config": {
             "primary_key": false,
             "foreign_keys": [],
-            "gxp_highlight": true,
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_EligibilityCriterion_category",
+          "name": "category",
+          "label": "category (String)",
+          "cdashVariable": "CATEGORY",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_EligibilityCriterion_text",
+          "name": "text",
+          "label": "text (String)",
+          "cdashVariable": "TEXT",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_EligibilityCriterion_textExpression",
+          "name": "textExpression",
+          "label": "textExpression (String)",
+          "cdashVariable": "TEXTEXPRESSION",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_EligibilityCriterion_logicalExpression",
+          "name": "logicalExpression",
+          "label": "logicalExpression (String)",
+          "cdashVariable": "LOGICALEXPRESSION",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
+            "service": "designer",
+            "db_type": "Neo4j Graph Database",
+            "gxp_audited": true,
+            "immutable": false
+          }
+        },
+        {
+          "id": "prop_designer_EligibilityCriterion_template",
+          "name": "template",
+          "label": "template (String)",
+          "cdashVariable": "TEMPLATE",
+          "dataType": "String",
+          "mandatory": false,
+          "config": {
+            "primary_key": false,
+            "foreign_keys": [],
+            "gxp_highlight": false,
             "service": "designer",
             "db_type": "Neo4j Graph Database",
             "gxp_audited": true,

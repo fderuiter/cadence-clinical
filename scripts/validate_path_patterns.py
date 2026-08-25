@@ -174,6 +174,7 @@ ALLOWED_ROOT_FILES = {
     "AGENTS.md",
     "SECURITY.md",
     "SUPPORT.md",
+    "SECURITY.md",
     "LICENSE",
     "Makefile",
     "package.json",

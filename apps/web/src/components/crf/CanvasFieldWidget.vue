@@ -36,9 +36,7 @@
     </div>
 
     <!-- Interactive Field Preview -->
-    <div
-      class="field-preview-container"
-    >
+    <div class="field-preview-container">
       <template v-if="field.type === 'text'">
         <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
