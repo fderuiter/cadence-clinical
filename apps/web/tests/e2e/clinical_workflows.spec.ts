@@ -11,9 +11,9 @@ test.describe("Clinical Workflows and ePRO Portal Tests", () => {
       await page.goto("ecrf");
 
       // Verify page is loaded
-      await expect(page.locator(".card-title").first()).toContainText(
-        "Subject eCRF Data Entry Form"
-      );
+      await expect(
+        page.locator(".card-title", { hasText: "Subject eCRF Data Entry Form" })
+      ).toBeVisible();
 
       // Locate the query flag button next to pulse input
       const queryFlag = page.locator("#query-flag-pulse");
@@ -49,10 +49,10 @@ test.describe("Clinical Workflows and ePRO Portal Tests", () => {
       await expect(queryFlag).toHaveClass(/query-status-answered/);
 
       // Verify we can close/resolve the query
-      if (!(await page.locator("button:has-text('Close Query')").isVisible())) {
+      if (!(await page.locator(".btn-close-query").isVisible())) {
         await queryFlag.click();
       }
-      await page.click("button:has-text('Close Query')");
+      await page.click(".btn-close-query");
 
       // Handle Re-authentication step-up PIN signature modal
       const reauthModal = page.locator("#reauth-modal");

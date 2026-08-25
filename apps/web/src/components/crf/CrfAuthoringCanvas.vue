@@ -102,6 +102,7 @@
           <div
             v-for="warning in layoutWarnings"
             :key="warning.fieldId"
+            class="warning-item"
             style="
               border: 1px solid #fef08a;
               background-color: #fefce8;

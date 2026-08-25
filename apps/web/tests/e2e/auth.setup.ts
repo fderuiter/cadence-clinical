@@ -32,6 +32,8 @@ setup("authenticate as admin", async ({ page }) => {
     };
     window.sessionStorage.setItem("cadence_auth", JSON.stringify(authData));
     window.localStorage.setItem("cadence_auth", JSON.stringify(authData));
+    window.localStorage.setItem("onboarding_disabled", "true");
+    window.localStorage.setItem("onboarding_is_active", "false");
   });
 
   // Navigate to main workspace page
