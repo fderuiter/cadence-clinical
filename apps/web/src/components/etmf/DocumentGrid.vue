@@ -38,56 +38,48 @@
         aria-colcount="7"
       >
         <thead>
-          <tr role="row">
+          <tr>
             <th
               scope="col"
-              role="columnheader"
             >
               Document Name
             </th>
             <th
               scope="col"
-              role="columnheader"
             >
               Taxonomy
             </th>
             <th
               scope="col"
-              role="columnheader"
             >
               Version
             </th>
             <th
               scope="col"
-              role="columnheader"
             >
               Status
             </th>
             <th
               scope="col"
-              role="columnheader"
             >
               Uploaded By
             </th>
             <th
               scope="col"
-              role="columnheader"
             >
               Uploaded At
             </th>
             <th
               scope="col"
-              role="columnheader"
               class="actions-column"
             >
               Actions
             </th>
           </tr>
         </thead>
-        <tbody role="rowgroup">
+        <tbody>
           <tr
             v-if="paginatedDocuments.length === 0"
-            role="row"
           >
             <td
               colspan="7"
@@ -101,7 +93,6 @@
             v-for="(doc, rIndex) in paginatedDocuments"
             :key="doc.id"
             class="document-row"
-            role="row"
           >
             <td
               role="gridcell"
@@ -522,7 +513,7 @@ const grid = use2DGrid(
     initialRow: 0,
     initialCol: 0,
     onCopyCell: (rIndex, cIndex, doc) => copyActiveCellValue(doc),
-    onCellAction: (rIndex, cIndex, doc, event) => {
+    onCellAction: (rIndex, cIndex, doc, _event) => {
       if (cIndex === 1) {
         startEditing(rIndex, doc);
       }
@@ -537,7 +528,6 @@ const {
   isCellActive,
   getCellTabindex,
   selectCell,
-  focusActiveCell,
   handleCellKeyDown,
   exitEditing,
 } = grid;

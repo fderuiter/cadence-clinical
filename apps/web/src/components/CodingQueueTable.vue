@@ -63,10 +63,9 @@
         aria-colcount="7"
       >
         <thead>
-          <tr role="row">
+          <tr>
             <th
               scope="col"
-              role="columnheader"
               class="col-checkbox"
             >
               <input
@@ -80,50 +79,43 @@
             </th>
             <th
               scope="col"
-              role="columnheader"
             >
               Status
             </th>
             <th
               scope="col"
-              role="columnheader"
             >
               Verbatim Term &amp; Source
             </th>
             <th
               scope="col"
-              role="columnheader"
             >
               Dictionary
             </th>
             <th
               scope="col"
-              role="columnheader"
             >
               Coded Code &amp; Term
             </th>
             <th
               scope="col"
-              role="columnheader"
             >
               Match / Suggestions
             </th>
             <th
               scope="col"
-              role="columnheader"
               class="col-actions"
             >
               Actions
             </th>
           </tr>
         </thead>
-        <tbody role="rowgroup">
+        <tbody>
           <tr
             v-for="(item, rIndex) in codingStore.filteredAssignments"
             :key="item.id"
             class="coding-row"
             :class="{ 'row-selected': isSelected(item.id) }"
-            role="row"
           >
             <!-- Checkbox -->
             <td
@@ -558,13 +550,9 @@ const grid = use2DGrid(
 );
 
 const {
-  activeRowIndex,
-  activeColIndex,
-  isEditing,
   isCellActive,
   getCellTabindex,
   selectCell,
-  focusActiveCell,
   handleCellKeyDown,
 } = grid;
 
@@ -604,7 +592,7 @@ function copyCodingCellValue(rIndex, cIndex, item) {
   }
 }
 
-function handleCodingCellAction(rIndex, cIndex, item, event) {
+function handleCodingCellAction(rIndex, cIndex, item, _event) {
   if (!item) return;
   if (cIndex === 0) {
     codingStore.toggleSelect(item.id);
