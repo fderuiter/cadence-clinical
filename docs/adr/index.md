@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-25: Extract Core Workspace Package and Isolate Datetime Primitives](2026-08-25-extract-core-workspace-package-and-isolate-datetime-primitives.md)
 - [2026-08-25: Targeted Schema Provenance and Post Synthesis Faithfulness Scoring](2026-08-25-targeted-schema-provenance-and-post-synthesis-faithfulness-scoring.md)
 - [2026-08-23: Automated Golden Path Video Recording and GDrive Sync](2026-08-23-automated-golden-path-video-recording-and-gdrive-sync.md)
 - [2026-08-23: Medical Device and IVD Investigation Suite with UDI and Malfunction Quarantine](2026-08-23-medical-device-and-ivd-investigation-suite-with-udi-and-malfunction-quarantine.md)

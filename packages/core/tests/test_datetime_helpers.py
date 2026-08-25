@@ -14,6 +14,10 @@ class SampleModel(BaseModel):
 
 
 def test_serialize_utc_z():
+    """Validate UTC Z datetime serialization format.
+
+    @req:PRD-SYS-001
+    """
     dt = datetime.datetime(2026, 8, 25, 12, 0, 0, tzinfo=datetime.UTC)
     res = serialize_utc_z(dt)
     assert res == "2026-08-25T12:00:00Z"
@@ -26,6 +30,10 @@ def test_serialize_utc_z():
 
 
 def test_aware_datetime_pydantic_validation():
+    """Validate Pydantic v2 AwareDatetime validation rules and naive rejection.
+
+    @req:PRD-SYS-001
+    """
     # Valid timezone-aware datetime
     m = SampleModel(
         timestamp=datetime.datetime(2026, 8, 25, 12, 0, 0, tzinfo=datetime.UTC)
@@ -38,6 +46,10 @@ def test_aware_datetime_pydantic_validation():
 
 
 def test_aware_datetime_json_serialization():
+    """Validate JSON serialization of AwareDatetime fields with Z suffix.
+
+    @req:PRD-SYS-001
+    """
     m = SampleModel(
         timestamp=datetime.datetime(2026, 8, 25, 12, 0, 0, tzinfo=datetime.UTC)
     )
