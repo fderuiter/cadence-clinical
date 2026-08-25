@@ -1,5 +1,5 @@
 // Auto-generated from OpenAPI schema definition
-// Generated on: 2026-08-25T18:27:59.698Z
+// Generated on: 2026-08-25T21:24:51.722Z
 
 export interface ActivityAssignmentRequest {
   visit_id: string;
@@ -194,6 +194,49 @@ export interface CascadedFormTemplate {
 
 export type CodeValidationState = "VALID" | "INVALID" | "DEGRADED";
 
+export interface CohortFeasibilityJob {
+  job_id: string;
+  study_id: string;
+  cohort_id: string | null;
+  status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "DUPLICATE_LOCKED";
+  created_at: string;
+  report?: CohortFeasibilityReport | null;
+}
+
+export interface CohortFeasibilityReport {
+  job_id: string;
+  study_id: string;
+  cohort_id?: string | null;
+  status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "DUPLICATE_LOCKED";
+  starting_cohort_size: number;
+  eligible_count: number;
+  ineligible_count: number;
+  indeterminate_count: number;
+  overall_eligibility_rate: number;
+  estimated_fit_percentage: number;
+  sub_cohort_recommendations?: SubCohortRecommendation[];
+  node_explanations?: NodeFitExplanation[];
+  synthetic_simulation_summary?: SyntheticSimulationSummary | null;
+  deid_applied?: boolean;
+  deid_tokens_count?: number;
+  advisory_lock_acquired?: boolean;
+  execution_time_seconds?: number;
+  error_message?: string | null;
+}
+
+export interface CohortFeasibilityRequest {
+  analysis_id?: string | null;
+  study_id: string;
+  cohort_id?: string | null;
+  unstructured_protocol_text?: string | ProtocolRAGContextChunk[] | null;
+  structured_criteria?: EligibilityCriterion_Input[];
+  patient_profiles?: Record<string, any>[] | null;
+  synthetic_simulation_count?: number;
+  missing_data_scenarios?: string[] | null;
+  is_async?: boolean;
+  compliance_profile?: string;
+}
+
 export interface Comment {
   comment_id: string;
   thread_id: string;
@@ -365,7 +408,7 @@ export interface CreateProcedureRequest {
 
 export interface CreateRuleRequest {
   type: "skip_logic" | "constraint" | "cross_form_check";
-  condition: ExpressionNode_Input;
+  condition: packages__ddf__rules__ast__ExpressionNode;
   action?: "show" | "hide" | null;
   target_field?: string | null;
   target_form?: string | null;
@@ -390,6 +433,17 @@ export interface CreateTimingWindowRequest {
   id: string;
   properties: TimingWindowProperties;
   change_reason?: string;
+}
+
+export interface CriteriaBreakdownSummary {
+  criterion_id: string;
+  identifier: string;
+  human_readable_text: string;
+  criterion_type: "inclusion" | "exclusion";
+  passed_count?: number;
+  failed_count?: number;
+  indeterminate_count?: number;
+  pass_rate_percentage?: number;
 }
 
 export interface DAGJobStatusResponse {
@@ -464,7 +518,25 @@ export interface DispatchedTicketInfo {
 
 export type DomainQueue = "DATA_CAPTURE_ECRF" | "SUBJECT_MANAGEMENT_RTSM" | "REGULATORY_COMPLIANCE" | "SITE_OPERATIONS" | "CLINICAL_OPERATIONS";
 
-export interface EligibilityCriterion {
+export interface EligibilityCriterion_Input {
+  created_at?: string;
+  created_by: string;
+  reason_for_change: string;
+  version_index?: number;
+  id?: string;
+  criterion_type: "inclusion" | "exclusion";
+  identifier?: string;
+  human_readable_text?: string;
+  dsl_expression_string?: string;
+  structured_expression_tree?: apps__designer__domain__eligibility__models__ExpressionNode_Input;
+  expected_outcome?: boolean;
+  criterion_id?: string;
+  description?: string;
+  dsl_source?: string;
+  condition?: apps__designer__domain__eligibility__models__ExpressionNode_Input;
+}
+
+export interface EligibilityCriterion_Output {
   created_at?: string;
   created_by: string;
   reason_for_change: string;
@@ -507,14 +579,6 @@ export interface EpochReorderItem {
 
 export interface EpochReorderRequest {
   epochs: EpochReorderItem[];
-}
-
-export interface ExpressionNode_Input {
-  type: "logical" | "comparison" | "function" | "field_ref" | "constant";
-  operator?: string | null;
-  operands?: ExpressionNode_Input[] | null;
-  value?: any | null;
-  field_ref?: FieldReference_Input | null;
 }
 
 export interface ExpressionNode_Output {
@@ -578,13 +642,6 @@ export interface FeasibilityReport {
   final_eligible_count: number;
   overall_eligibility_rate: number;
   attrition_steps?: AttritionStep[];
-}
-
-export interface FieldReference_Input {
-  field_id: string;
-  form_id?: string | null;
-  visit_id?: string | null;
-  visit_relative?: string | null;
 }
 
 export interface FieldReference_Output {
@@ -752,6 +809,25 @@ export interface NarrativeDelta {
   safety_risk_impact?: boolean;
 }
 
+export interface NodeEvaluation {
+  node_type: string;
+  operator?: string | null;
+  value?: any | null;
+  is_indeterminate?: boolean;
+  explanation: string;
+  children?: NodeEvaluation[];
+}
+
+export interface NodeFitExplanation {
+  subject_id: string;
+  criterion_id: string;
+  criterion_name: string;
+  result_status: "TRUE" | "FALSE" | "INDETERMINATE";
+  node_trace: NodeEvaluation;
+  missing_fields?: string[];
+  explanation: string;
+}
+
 export type ObjectType = "FORM" | "DATA_ELEMENT" | "ARM" | "VISIT";
 
 export interface OperationalTicketBlueprint {
@@ -842,6 +918,16 @@ export interface ProtocolQualityScore {
   burden_details?: BurdenTraceReport | null;
   amendment_impact?: AmendmentImpactReport | null;
   feasibility?: FeasibilityReport | null;
+}
+
+export interface ProtocolRAGContextChunk {
+  chunk_id: string;
+  protocol_version: string;
+  section_number?: string | null;
+  section_title?: string | null;
+  page_number: number;
+  chunk_text: string;
+  is_approved?: boolean;
 }
 
 export interface PublishStudyVersionRequest {
@@ -1091,6 +1177,15 @@ export interface StudyTerminologyValidationReport {
   concepts: ConceptValidationReport[];
 }
 
+export interface SubCohortRecommendation {
+  sub_cohort_id: string;
+  name: string;
+  description: string;
+  estimated_fit_percentage: number;
+  criteria_breakdown?: CriteriaBreakdownSummary[];
+  sample_patient_ids?: string[];
+}
+
 export interface SubjectManagementRtsmImpact {
   cohort_adjustments_count?: number;
   affected_arms?: string[];
@@ -1153,6 +1248,15 @@ export interface SynthesizedECRFForm {
   section_number?: string | null;
   page_number?: number | null;
   citation_marker?: string | null;
+}
+
+export interface SyntheticSimulationSummary {
+  simulated_subject_count: number;
+  complete_data_fit_rate: number;
+  partial_data_fit_rate: number;
+  missing_data_fit_rate: number;
+  indeterminate_rate: number;
+  high_risk_missing_fields?: string[];
 }
 
 export interface TerminologyConcept {
@@ -1350,6 +1454,20 @@ export interface VisitToEpochAssignmentRequest {
   visit_ids: string[];
 }
 
+export interface apps__designer__domain__eligibility__models__ExpressionNode_Input {
+  type: "logical" | "comparison" | "field_ref" | "constant";
+  operator?: ComparisonOperator | LogicalOperator | string | null;
+  operands?: apps__designer__domain__eligibility__models__ExpressionNode_Input[] | null;
+  value?: any | null;
+  field_ref?: apps__designer__domain__eligibility__models__FieldReference | null;
+}
+
+export interface apps__designer__domain__eligibility__models__FieldReference {
+  raw_reference: string;
+  domain: string;
+  variable: string;
+}
+
 export interface apps__designer__domain__protocol_authoring__soa__CreateVisitRequest {
   id: string;
   properties: VisitProperties;
@@ -1375,5 +1493,20 @@ export interface apps__designer__library__UpdateVisitRequest {
   reason_for_change: string;
   object_type?: string;
   payload: VisitPayload;
+}
+
+export interface packages__ddf__rules__ast__ExpressionNode {
+  type: "logical" | "comparison" | "function" | "field_ref" | "constant";
+  operator?: string | null;
+  operands?: packages__ddf__rules__ast__ExpressionNode[] | null;
+  value?: any | null;
+  field_ref?: packages__ddf__rules__ast__FieldReference | null;
+}
+
+export interface packages__ddf__rules__ast__FieldReference {
+  field_id: string;
+  form_id?: string | null;
+  visit_id?: string | null;
+  visit_relative?: string | null;
 }
 
