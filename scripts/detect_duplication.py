@@ -263,6 +263,14 @@ def main() -> None:
                                     "packages/core-models/protocol_rag/__init__.py",
                                 },
                                 {
+                                    "packages/compliance/audit.py",
+                                    "packages/security/audit_logger.py",
+                                },
+                                {
+                                    "packages/compliance/audit.py",
+                                    "packages/compliance/__init__.py",
+                                },
+                                {
                                     "apps/ctms/src/domain/acl/document_renderer_dto.py",
                                     "apps/designer/src/domain/document_renderer.py",
                                 },

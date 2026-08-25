@@ -24,10 +24,17 @@ INSECURE_FALLBACKS = {
 def assert_secure_secrets(
     service_name: str, required_secrets: dict[str, str | None]
 ) -> None:
-    """
-    Validate required environment secrets on process startup.
-    Immediately crashes the service with an informative error message across all environments
-    if any critical secret is missing or uses an insecure fallback value.
+    """Validate required environment secrets on process startup.
+
+    Immediately crashes the service with an informative error message across all
+    environments if any critical secret is missing or uses an insecure fallback value.
+
+    Args:
+        service_name: Name of the service invoking secret validation.
+        required_secrets: Mapping of secret variable names to their active values.
+
+    Raises:
+        RuntimeError: If any critical secret is missing, empty, or matches an insecure fallback value.
     """
     invalid_secrets = []
     for name, value in required_secrets.items():
@@ -62,10 +69,17 @@ def assert_secure_secrets(
 
 
 def validate_branding(service_name: str, is_gateway: bool = False) -> None:
-    """
-    Validate branding, domain, and authentication configurations on startup.
+    """Validate branding, domain, and authentication configurations on startup.
+
     Halts the boot sequence by raising a RuntimeError if legacy or default domain
     or unconfigured values are detected in production or staging environments.
+
+    Args:
+        service_name: Name of the service invoking branding validation.
+        is_gateway: True if the calling service is the central API gateway.
+
+    Raises:
+        RuntimeError: If branding or domain configuration uses default legacy values in non-dev environments.
     """
     app_env = os.getenv("APP_ENV", "").strip().lower()
     is_prod_or_staging = app_env not in ("development", "dev", "test", "")

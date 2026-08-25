@@ -172,6 +172,7 @@ ALLOWED_ROOT_FILES = {
     "CONTRIBUTING.md",
     "README.md",
     "AGENTS.md",
+    "SECURITY.md",
     "SUPPORT.md",
     "SECURITY.md",
     "LICENSE",
