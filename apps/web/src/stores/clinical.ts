@@ -1362,7 +1362,7 @@ const useClinicalStoreInner = defineStore("clinical", {
       if (!res.success) {
         console.error(
           `USDM validation failure for type [${type}]:`,
-          res.error.errors
+          res.error.issues || res.error.errors
         );
         return { success: false, error: res.error };
       }
@@ -1378,8 +1378,9 @@ const useClinicalStoreInner = defineStore("clinical", {
       // Validate prior to local queuing, persistence, or API submission!
       const validation = this.validateModel(type, { id, ...properties });
       if (!validation.success) {
-        const errorMsg = `Local payload mutation rejected. Shared Zod Schema violation: ${validation
-          .error!.errors.map(
+        const issues = validation.error?.issues || validation.error?.errors || [];
+        const errorMsg = `Local payload mutation rejected. Shared Zod Schema violation: ${issues
+          .map(
             (e: { path: (string | number)[]; message: string }) =>
               `${e.path.join(".") || "field"}: ${e.message}`
           )

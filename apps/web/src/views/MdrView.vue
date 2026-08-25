@@ -2394,7 +2394,8 @@ function queueMutation(mutation) {
   if (payloadToValidate) {
     const validation = store.validateModel(validationType, payloadToValidate);
     if (!validation.success) {
-      const errorMsg = `Instant Schema Validation Error: ${validation.error.errors
+      const issues = validation.error?.issues || validation.error?.errors || [];
+      const errorMsg = `Instant Schema Validation Error: ${issues
         .map((e) => `${e.path.join(".") || "field"}: ${e.message}`)
         .join(", ")}`;
       alert(errorMsg);
@@ -2987,8 +2988,9 @@ function validateUsdmPayload() {
           "Missing protocol structure (arms, epochs, encounters/visits, or activities)."
         );
       if (schemaResult.error) {
+        const issuesList = schemaResult.error.issues || schemaResult.error.errors || [];
         issues.push(
-          ...schemaResult.error.errors.map(
+          ...issuesList.map(
             (e) => `${e.path.join(".") || "root"}: ${e.message}`
           )
         );
