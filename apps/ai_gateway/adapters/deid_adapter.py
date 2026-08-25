@@ -83,28 +83,60 @@ class DeidentifiedAIEngineAdapter(AIEnginePort):
                 else None
             )
 
+            sanitized_tool_responses = None
+            if request.tool_responses:
+                sanitized_tool_responses = []
+                for tr in request.tool_responses:
+                    sanitized_content = vault.deidentify_structured_data(
+                        tr.content,
+                        profile=profile,
+                        custom_terms=request.custom_terms,
+                    )
+                    sanitized_tool_responses.append(
+                        tr.model_copy(update={"content": sanitized_content})
+                    )
+
             sanitized_request = request.model_copy(
                 update={
                     "prompt": sanitized_prompt,
                     "messages": sanitized_messages,
+                    "tool_responses": sanitized_tool_responses,
                 }
             )
 
             # Execute model inference with sanitized prompts
             raw_response = await self._inner_engine.generate(sanitized_request)
 
-            # Re-hydrate response content and structured JSON data in memory
+            # Re-hydrate response content, structured JSON data, and tool calls in memory
             if vault.has_surrogates:
-                rehydrated_content = vault.rehydrate_text(raw_response.content)
+                rehydrated_content = (
+                    vault.rehydrate_text(raw_response.content)
+                    if raw_response.content is not None
+                    else None
+                )
                 rehydrated_structured_data = (
                     vault.rehydrate_structured_data(raw_response.structured_data)
                     if raw_response.structured_data is not None
                     else None
                 )
+                rehydrated_tool_calls = None
+                if raw_response.tool_calls:
+                    rehydrated_tool_calls = []
+                    for tc in raw_response.tool_calls:
+                        rehydrated_args = vault.rehydrate_structured_data(
+                            tc.function.arguments
+                        )
+                        rehydrated_func = tc.function.model_copy(
+                            update={"arguments": rehydrated_args}
+                        )
+                        rehydrated_tool_calls.append(
+                            tc.model_copy(update={"function": rehydrated_func})
+                        )
                 return raw_response.model_copy(
                     update={
                         "content": rehydrated_content,
                         "structured_data": rehydrated_structured_data,
+                        "tool_calls": rehydrated_tool_calls,
                         "deid_applied": True,
                         "deid_tokens_count": vault.surrogate_count,
                     }

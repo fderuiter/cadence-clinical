@@ -9,7 +9,12 @@ from apps.ai_gateway.adapters.litellm_adapter import LiteLLMAdapter
 from apps.ai_gateway.domain.models import (
     ChatMessage,
     EmbeddingRequest,
+    FunctionDefinition,
     GenerationRequest,
+    ToolCall,
+    ToolCallFunction,
+    ToolDefinition,
+    ToolResponse,
 )
 from apps.ai_gateway.domain.ports import AIEnginePort
 from apps.ai_gateway.presentation.dtos import (
@@ -19,6 +24,8 @@ from apps.ai_gateway.presentation.dtos import (
     GenerationResponseDTO,
     TierInfoDTO,
     TokenUsageDTO,
+    ToolCallDTO,
+    ToolCallFunctionDTO,
 )
 
 router = APIRouter(prefix="/api/v1/ai", tags=["Inference"])
@@ -54,21 +61,74 @@ async def generate_completion(
     Raises:
         HTTPException: If payload is missing prompt/messages or inference fails.
     """
-    if not payload.prompt and not payload.messages:
+    if not payload.prompt and not payload.messages and not payload.tool_responses:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="Either 'prompt' or 'messages' must be provided.",
+            detail="Either 'prompt', 'messages', or 'tool_responses' must be provided.",
         )
 
     messages = (
-        [ChatMessage(role=m.role, content=m.content) for m in payload.messages]
+        [
+            ChatMessage(
+                role=m.role,
+                content=m.content,
+                tool_calls=[
+                    ToolCall(
+                        id=tc.id,
+                        type=tc.type,
+                        function=ToolCallFunction(
+                            name=tc.function.name,
+                            arguments=tc.function.arguments,
+                        ),
+                    )
+                    for tc in m.tool_calls
+                ]
+                if m.tool_calls
+                else None,
+                tool_call_id=m.tool_call_id,
+                name=m.name,
+            )
+            for m in payload.messages
+        ]
         if payload.messages
+        else None
+    )
+
+    tools = (
+        [
+            ToolDefinition(
+                type=t.type,
+                function=FunctionDefinition(
+                    name=t.function.name,
+                    description=t.function.description,
+                    parameters=t.function.parameters,
+                ),
+            )
+            for t in payload.tools
+        ]
+        if payload.tools
+        else None
+    )
+
+    tool_responses = (
+        [
+            ToolResponse(
+                tool_call_id=tr.tool_call_id,
+                content=tr.content,
+                name=tr.name,
+            )
+            for tr in payload.tool_responses
+        ]
+        if payload.tool_responses
         else None
     )
 
     domain_request = GenerationRequest(
         prompt=payload.prompt,
         messages=messages,
+        tools=tools,
+        tool_choice=payload.tool_choice,
+        tool_responses=tool_responses,
         tier=payload.tier,
         model_override=payload.model_override,
         temperature=payload.temperature,
@@ -94,9 +154,26 @@ async def generate_completion(
             detail=f"AI generation failed: {err}",
         ) from err
 
+    tool_calls = (
+        [
+            ToolCallDTO(
+                id=tc.id,
+                type=tc.type,
+                function=ToolCallFunctionDTO(
+                    name=tc.function.name,
+                    arguments=tc.function.arguments,
+                ),
+            )
+            for tc in response.tool_calls
+        ]
+        if response.tool_calls
+        else None
+    )
+
     return GenerationResponseDTO(
         content=response.content,
         structured_data=response.structured_data,
+        tool_calls=tool_calls,
         model=response.model,
         tier=response.tier,
         usage=TokenUsageDTO(

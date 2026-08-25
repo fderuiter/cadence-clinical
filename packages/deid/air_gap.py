@@ -4,6 +4,7 @@ PRD-SYS-051: Privacy air-gap interceptor replacing patient identifiers with
 ephemeral surrogate tokens and re-hydrating completion responses in memory.
 """
 
+import json
 from collections.abc import Sequence
 from copy import deepcopy
 from typing import Any, Self
@@ -100,6 +101,57 @@ class DeidAirGapVault:
 
         return "".join(parts)
 
+    def deidentify_structured_data(
+        self,
+        data: Any,
+        profile: ComplianceProfile = ComplianceProfile.HIPAA,
+        custom_terms: list[str] | None = None,
+    ) -> Any:
+        """Recursively de-identify string fields in structured dictionaries and lists.
+
+        Args:
+            data: Arbitrary structured data payload (dict, list, primitive, or None).
+            profile: ComplianceProfile for PHI detection.
+            custom_terms: Optional custom terms/names to redact.
+
+        Returns:
+            Sanitized structured data with nested string values de-identified.
+        """
+        if data is None:
+            return data
+
+        if isinstance(data, dict):
+            return {
+                k: self.deidentify_structured_data(
+                    v, profile=profile, custom_terms=custom_terms
+                )
+                for k, v in data.items()
+            }
+        if isinstance(data, list):
+            return [
+                self.deidentify_structured_data(
+                    item, profile=profile, custom_terms=custom_terms
+                )
+                for item in data
+            ]
+        if isinstance(data, str):
+            stripped = data.strip()
+            if (stripped.startswith("{") and stripped.endswith("}")) or (
+                stripped.startswith("[") and stripped.endswith("]")
+            ):
+                try:
+                    parsed = json.loads(data)
+                    sanitized_parsed = self.deidentify_structured_data(
+                        parsed, profile=profile, custom_terms=custom_terms
+                    )
+                    return json.dumps(sanitized_parsed)
+                except Exception:
+                    pass
+            return self.deidentify_text(
+                data, profile=profile, custom_terms=custom_terms
+            )
+        return data
+
     def deidentify_messages[T](
         self,
         messages: Sequence[T],
@@ -120,26 +172,74 @@ class DeidAirGapVault:
         for msg in messages:
             if isinstance(msg, dict):
                 msg_copy = deepcopy(msg)
-                msg_copy["content"] = self.deidentify_text(
-                    text=msg.get("content", ""),
-                    profile=profile,
-                    custom_terms=custom_terms,
-                )
+                if msg_copy.get("content") is not None:
+                    msg_copy["content"] = self.deidentify_structured_data(
+                        msg_copy.get("content"),
+                        profile=profile,
+                        custom_terms=custom_terms,
+                    )
+                if msg_copy.get("tool_calls"):
+                    sanitized_tcs = []
+                    for tc in msg_copy["tool_calls"]:
+                        if (
+                            isinstance(tc, dict)
+                            and "function" in tc
+                            and "arguments" in tc["function"]
+                        ):
+                            tc_c = deepcopy(tc)
+                            tc_c["function"]["arguments"] = (
+                                self.deidentify_structured_data(
+                                    tc_c["function"]["arguments"],
+                                    profile=profile,
+                                    custom_terms=custom_terms,
+                                )
+                            )
+                            sanitized_tcs.append(tc_c)
+                        else:
+                            sanitized_tcs.append(tc)
+                    msg_copy["tool_calls"] = sanitized_tcs
                 sanitized_messages.append(msg_copy)  # type: ignore[arg-type]
-            elif hasattr(msg, "model_copy") and hasattr(msg, "content"):
-                sanitized_content = self.deidentify_text(
-                    text=getattr(msg, "content", ""),
-                    profile=profile,
-                    custom_terms=custom_terms,
+            elif hasattr(msg, "model_copy"):
+                raw_content = getattr(msg, "content", None)
+                sanitized_content = (
+                    self.deidentify_structured_data(
+                        raw_content, profile=profile, custom_terms=custom_terms
+                    )
+                    if raw_content is not None
+                    else None
                 )
+                updates: dict[str, Any] = {"content": sanitized_content}
+                if hasattr(msg, "tool_calls") and getattr(msg, "tool_calls", None):
+                    sanitized_tcs = []
+                    for tc in getattr(msg, "tool_calls"):
+                        if hasattr(tc, "function") and hasattr(
+                            tc.function, "arguments"
+                        ):
+                            sanitized_args = self.deidentify_structured_data(
+                                tc.function.arguments,
+                                profile=profile,
+                                custom_terms=custom_terms,
+                            )
+                            sanitized_fn = tc.function.model_copy(
+                                update={"arguments": sanitized_args}
+                            )
+                            sanitized_tcs.append(
+                                tc.model_copy(update={"function": sanitized_fn})
+                            )
+                        else:
+                            sanitized_tcs.append(tc)
+                    updates["tool_calls"] = sanitized_tcs
                 sanitized_messages.append(
-                    msg.model_copy(update={"content": sanitized_content})  # type: ignore[union-attr]
+                    msg.model_copy(update=updates)  # type: ignore[union-attr]
                 )
             elif hasattr(msg, "role") and hasattr(msg, "content"):
-                sanitized_content = self.deidentify_text(
-                    text=getattr(msg, "content", ""),
-                    profile=profile,
-                    custom_terms=custom_terms,
+                raw_content = getattr(msg, "content", None)
+                sanitized_content = (
+                    self.deidentify_structured_data(
+                        raw_content, profile=profile, custom_terms=custom_terms
+                    )
+                    if raw_content is not None
+                    else None
                 )
                 sanitized_messages.append(
                     msg.__class__(role=getattr(msg, "role"), content=sanitized_content)  # type: ignore[call-arg]

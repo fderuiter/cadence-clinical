@@ -11,6 +11,8 @@ from apps.ai_gateway.domain.models import (
     ModelTier,
     TierInfo,
     TokenUsage,
+    ToolCall,
+    ToolCallFunction,
 )
 from apps.ai_gateway.domain.ports import AIEnginePort
 
@@ -22,10 +24,17 @@ class MockAIEngineAdapter(AIEnginePort):
         self.generation_calls: list[GenerationRequest] = []
         self.embedding_calls: list[EmbeddingRequest] = []
         self.custom_responses: dict[str, str] = {}
+        self.custom_tool_calls: dict[str, list[ToolCall]] = {}
 
     def set_mock_response(self, prompt_substring: str, response: str) -> None:
         """Register a canned response triggered by a prompt substring."""
         self.custom_responses[prompt_substring] = response
+
+    def set_mock_tool_calls(
+        self, prompt_substring: str, tool_calls: list[ToolCall]
+    ) -> None:
+        """Register canned tool call selections triggered by a prompt substring."""
+        self.custom_tool_calls[prompt_substring] = tool_calls
 
     async def generate(self, request: GenerationRequest) -> GenerationResponse:
         """Return a simulated generation response."""
@@ -33,14 +42,61 @@ class MockAIEngineAdapter(AIEnginePort):
 
         # Check for custom matching response
         content = "Simulated clinical AI completion."
-        prompt_text = request.prompt or (
-            request.messages[-1].content if request.messages else ""
+        prompt_text = (
+            request.prompt
+            if request.prompt is not None
+            else (
+                " ".join(m.content for m in request.messages if m.content)
+                if request.messages
+                else ""
+            )
         )
 
         for key, value in self.custom_responses.items():
             if key in prompt_text:
                 content = value
                 break
+
+        # Check for custom or synthesized tool calls
+        tool_calls: list[ToolCall] | None = None
+        for key, tc_list in self.custom_tool_calls.items():
+            if key in prompt_text:
+                tool_calls = tc_list
+                break
+
+        if tool_calls is None and request.tools:
+            first_tool = request.tools[0]
+            synth_args: dict[str, Any] = {}
+            if (
+                first_tool.function.parameters
+                and "properties" in first_tool.function.parameters
+            ):
+                for (
+                    p_name,
+                    p_def,
+                ) in first_tool.function.parameters["properties"].items():
+                    p_type = p_def.get("type", "string")
+                    if p_type == "string":
+                        synth_args[p_name] = f"mock_{p_name}"
+                    elif p_type in ("integer", "number"):
+                        synth_args[p_name] = 101
+                    elif p_type == "boolean":
+                        synth_args[p_name] = True
+                    else:
+                        synth_args[p_name] = "mock_val"
+            else:
+                synth_args = {"query": "mock_query"}
+
+            tool_calls = [
+                ToolCall(
+                    id="call_mock_12345",
+                    type="function",
+                    function=ToolCallFunction(
+                        name=first_tool.function.name,
+                        arguments=synth_args,
+                    ),
+                )
+            ]
 
         # If a structured schema is requested and no custom content matched, synthesize JSON
         structured_data: dict[str, Any] | None = None
@@ -74,6 +130,7 @@ class MockAIEngineAdapter(AIEnginePort):
         return GenerationResponse(
             content=content,
             structured_data=structured_data,
+            tool_calls=tool_calls,
             model=model_name,
             tier=request.tier,
             usage=TokenUsage(
