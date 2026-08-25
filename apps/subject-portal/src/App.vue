@@ -56,6 +56,7 @@
       :class="{ active: state.isSyncDrawerOpen }"
       role="button"
       tabindex="0"
+      aria-label="Close drawer overlay"
       @click="toggleSyncDrawer"
       @keydown.enter="toggleSyncDrawer"
     />
