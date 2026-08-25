@@ -24,8 +24,8 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(vitest@4.1.10)
       axe-core:
-        specifier: ^4.12.1
-        version: 4.12.1
+        specifier: ^4.13.0
+        version: 4.13.0
       concurrently:
         specifier: ^10.0.4
         version: 10.0.4
@@ -207,8 +207,8 @@ importers:
   packages/ui:
     dependencies:
       axe-core:
-        specifier: ^4.12.1
-        version: 4.12.1
+        specifier: ^4.13.0
+        version: 4.13.0
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: ^6.0.8
@@ -237,7 +237,7 @@ importers:
     devDependencies:
       vitest:
         specifier: ^4.1.10
-        version: 4.1.10(@types/node@26.2.0)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(msw@2.15.0(@types/node@26.2.0)(typescript@5.9.3))(vite@8.2.0(@types/node@26.2.0)(yaml@2.9.0))
+        version: 4.1.10(@types/node@26.2.0)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(msw@2.15.0(@types/node@26.2.0)(typescript@7.0.2))(vite@8.2.0(@types/node@26.2.0)(yaml@2.9.0))
 
 packages:
 
@@ -1675,6 +1675,10 @@ packages:
 
   axe-core@4.12.1:
     resolution: {integrity: sha512-s7iGf5GaVMxEG0ENN9x+xTr7GFZCb1ZP/1uATUpCEK2X78nDB3RwbtFCo9pGAf9ru+VwoQ464DkaLEeRM08wJA==}
+    engines: {node: '>=4'}
+
+  axe-core@4.13.0:
+    resolution: {integrity: sha512-UzGt8zg7Ny8djbYMhxl2zuEevVa7r2gJjYY5Lwr1xM7+XU2nd6CkIWFTVcCIbAP63vSz71NaVyyuSk9lHKcy0A==}
     engines: {node: '>=4'}
 
   balanced-match@1.0.2:
@@ -4565,7 +4569,7 @@ snapshots:
       obug: 2.1.4
       std-env: 4.2.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.10(@types/node@26.2.0)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(msw@2.15.0(@types/node@26.2.0)(typescript@7.0.2))(vite@8.2.0(@types/node@26.2.0)(yaml@2.9.0))
+      vitest: 4.1.10(@types/node@26.2.0)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(msw@2.15.0(@types/node@26.2.0)(typescript@5.9.3))(vite@8.2.0(@types/node@26.2.0)(yaml@2.9.0))
 
   '@vitest/expect@4.1.10':
     dependencies:
@@ -4823,6 +4827,8 @@ snapshots:
   atomic-sleep@1.0.0: {}
 
   axe-core@4.12.1: {}
+
+  axe-core@4.13.0: {}
 
   balanced-match@1.0.2: {}
 
