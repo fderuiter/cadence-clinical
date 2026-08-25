@@ -51,9 +51,7 @@ from packages.security.signing import (
 
 router = APIRouter(tags=["Organization Directory"])
 
-GATEWAY_SECRET = os.getenv(
-    "GATEWAY_SECRET", "internal-gateway-secret-12345"
-).encode()  # pragma: allowlist secret
+GATEWAY_SECRET = (os.getenv("GATEWAY_SECRET") or "").encode()
 
 get_db_session = DatabaseSessionDependency(db_manager)
 

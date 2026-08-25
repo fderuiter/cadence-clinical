@@ -17,9 +17,9 @@ from apps.ctms.main import app
 from apps.ctms.models import Base
 from packages.testing.security import generate_signature
 
-GATEWAY_SECRET = os.getenv(
-    "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-).encode("utf-8")  # pragma: allowlist secret
+GATEWAY_SECRET = (
+    os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
+).encode("utf-8")
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -71,7 +71,9 @@ def get_ctms_auth_headers(
             "exp": time.time() + 300.0,
         }
         headers["X-Sig-Token"] = jwt.encode(
-            sig_payload, "internal-gateway-secret-12345", algorithm="HS256"
+            sig_payload,
+            os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026",
+            algorithm="HS256",
         )
     return headers
 

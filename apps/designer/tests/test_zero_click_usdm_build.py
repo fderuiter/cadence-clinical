@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import os
 import time
 from typing import Any
 
@@ -82,7 +83,7 @@ def get_gateway_auth_headers(
         Dictionary of gateway authentication headers.
     """
     timestamp = str(time.time())
-    secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
+    secret = os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026")
     payload = {
         "change_reason": change_reason,
         "roles": roles,

@@ -37,7 +37,7 @@ from apps.execution.services.lab_toxicity_engine import (
 )
 from packages.security.rbac_helpers import build_gateway_headers
 
-GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # nosec B105
+GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026")  # nosec B105
 
 
 def get_auth_headers(

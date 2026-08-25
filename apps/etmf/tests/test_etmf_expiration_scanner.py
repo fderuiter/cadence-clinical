@@ -418,7 +418,7 @@ async def test_dispatch_successful_owner_routing():
         from packages.security.signing import verify_gateway_signature
 
         gateway_secret = os.getenv(
-            "GATEWAY_SECRET", "internal-gateway-secret-12345"
+            "GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"
         ).encode("utf-8")
         is_valid = verify_gateway_signature(
             user_id=headers["X-User-Id"],

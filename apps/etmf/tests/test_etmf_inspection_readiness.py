@@ -16,7 +16,7 @@ from apps.etmf.adapters.models import Base
 from apps.etmf.main import app
 from packages.testing.security import generate_signature
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
+GATEWAY_SECRET = "valid-test-gateway-secret-key-2026"  # pragma: allowlist secret
 
 
 @pytest.fixture(autouse=True)

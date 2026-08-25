@@ -51,9 +51,7 @@ class DCTService:
 
     def __init__(self, repository: IDCTRepositoryPort) -> None:
         self.repository = repository
-        self.secret_key = os.getenv(
-            "GATEWAY_SECRET", "cadence-clinical-gxp-secret-key-2026"
-        )
+        self.secret_key = os.getenv("GATEWAY_SECRET") or ""
 
     # =========================================================================
     # WebRTC Telehealth Video Consultations

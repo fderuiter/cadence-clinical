@@ -104,9 +104,7 @@ async def send_webhook_notification(notification: Any) -> None:
     Sends a webhook notification payload using httpx.
     """
     webhook_url = os.getenv("WEBHOOK_URL", "http://localhost:8080/webhook")
-    webhook_signing_secret = os.getenv(
-        "WEBHOOK_SIGNING_SECRET", default="default_secret"
-    )
+    webhook_signing_secret = os.getenv("WEBHOOK_SIGNING_SECRET") or ""
     webhook_timeout = float(os.getenv("WEBHOOK_TIMEOUT", "10.0"))
 
     payload = {

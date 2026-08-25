@@ -48,9 +48,9 @@ def serialize_to_csv(
     if not records:
         return ""
 
-    actual_salt = salt or os.getenv(
-        "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
-    )  # pragma: allowlist secret
+    actual_salt = salt or os.getenv("BIOSTAT_EXPORT_SALT") or ""
+    if not actual_salt:
+        raise ValueError("BIOSTAT_EXPORT_SALT environment variable is not configured")
 
     raw_dicts = [_to_dict(r) for r in records]
 
@@ -130,9 +130,9 @@ def serialize_bundle_to_csv_zip(
     Returns:
         bytes: Binary ZIP archive content.
     """
-    actual_salt = salt or os.getenv(
-        "BIOSTAT_EXPORT_SALT", "secure-clinical-salt-98765"
-    )  # pragma: allowlist secret
+    actual_salt = salt or os.getenv("BIOSTAT_EXPORT_SALT") or ""
+    if not actual_salt:
+        raise ValueError("BIOSTAT_EXPORT_SALT environment variable is not configured")
 
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(

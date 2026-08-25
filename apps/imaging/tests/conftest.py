@@ -64,7 +64,7 @@ async def client(test_env) -> AsyncGenerator[AsyncClient]:
         roles=["Site Investigator / CRC"],
         tenant_id="tenant_clinical_test",
         change_reason="Imaging test upload and review",
-        secret=os.getenv("GATEWAY_SECRET", "test-gateway-secret-12345").encode(),
+        secret=(os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026").encode(),
     )
     async with AsyncClient(
         transport=transport, base_url="http://test", headers=headers

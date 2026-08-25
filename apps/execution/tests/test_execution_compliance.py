@@ -200,7 +200,7 @@ def test_cryptographic_tamper_evident_safeguards():
 
 
 GATEWAY_SECRET = os.getenv(
-    "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    "GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"
 )  # pragma: allowlist secret
 
 

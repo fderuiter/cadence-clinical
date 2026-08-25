@@ -13,7 +13,7 @@ from apps.execution.main import app
 from packages.security.signing import generate_gateway_signature
 
 GATEWAY_SECRET = os.getenv(
-    "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    "GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"
 )  # pragma: allowlist secret
 
 
@@ -81,7 +81,7 @@ def get_sig_token(
     }
     return jwt.encode(
         payload,
-        os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345"),  # nosec B105: mock test fallback
+        os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"),  # nosec B105: mock test fallback
         algorithm="HS256",
     )
 

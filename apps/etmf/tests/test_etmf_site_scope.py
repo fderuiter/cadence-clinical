@@ -333,7 +333,7 @@ async def test_site_scoping_on_redactions_and_signatures():
             "action": f"/api/v1/etmf/documents/{doc_beta_id}/sign-off",
             "exp": time.time() + 3600,
         },
-        "internal-gateway-secret-12345",
+        "valid-test-gateway-secret-key-2026",
         algorithm="HS256",
     )
     alpha_sign_headers = dict(alpha_headers)

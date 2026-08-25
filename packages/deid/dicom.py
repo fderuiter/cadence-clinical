@@ -212,9 +212,7 @@ class DicomDeidentifier:
     def __init__(self, signing_secret: bytes | None = None) -> None:
         self.signing_secret = (
             signing_secret
-            or os.getenv(
-                "AUDIT_LOG_SECRET_KEY", "cadence-imaging-deid-secret-12345"
-            ).encode()
+            or (os.getenv("AUDIT_LOG_SECRET_KEY") or "").encode()
         )
 
     def _generate_uid(self, original_uid: str, namespace_salt: str) -> str:

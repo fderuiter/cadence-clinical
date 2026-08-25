@@ -4,6 +4,7 @@ Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 """
 
 import logging
+import os
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -94,7 +95,7 @@ class OfflineSyncEngine:
                 "device_id": batch.device_id,
                 "deltas": [delta.model_dump() for delta in batch.deltas],
             }
-            secret = b"internal-gateway-secret-12345"
+            secret = (os.getenv("GATEWAY_SECRET") or "").encode()
             is_valid = verify_canonical_signature(
                 payload_to_verify, batch.signature, secret
             )

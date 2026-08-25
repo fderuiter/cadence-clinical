@@ -233,9 +233,12 @@ async def export_sdtm_domain(
         )
 
     fmt_clean = format.strip().lower()
-    actual_salt: str = (
-        salt or os.getenv("BIOSTAT_EXPORT_SALT") or "secure-clinical-salt-98765"
-    )  # pragma: allowlist secret
+    actual_salt: str = salt or os.getenv("BIOSTAT_EXPORT_SALT") or ""
+    if not actual_salt:
+        raise HTTPException(
+            status_code=400,
+            detail="BIOSTAT_EXPORT_SALT environment variable is not configured",
+        )
 
     try:
         records, supp_records = await run_sdtm_extraction(session, study_id, dom_upper)
@@ -403,9 +406,12 @@ async def export_adam_dataset(
         )
 
     fmt_clean = format.strip().lower()
-    actual_salt: str = (
-        salt or os.getenv("BIOSTAT_EXPORT_SALT") or "secure-clinical-salt-98765"
-    )  # pragma: allowlist secret
+    actual_salt: str = salt or os.getenv("BIOSTAT_EXPORT_SALT") or ""
+    if not actual_salt:
+        raise HTTPException(
+            status_code=400,
+            detail="BIOSTAT_EXPORT_SALT environment variable is not configured",
+        )
 
     try:
         records = await run_adam_derivation(session, study_id, ds_upper)
@@ -558,9 +564,12 @@ async def export_biostat_bundle(
 ) -> Any:
     """Exports all SDTM domains and ADaM datasets bundled in Dataset-JSON, CSV ZIP, or ODM-XML."""
     fmt_clean = format.strip().lower()
-    actual_salt: str = (
-        salt or os.getenv("BIOSTAT_EXPORT_SALT") or "secure-clinical-salt-98765"
-    )  # pragma: allowlist secret
+    actual_salt: str = salt or os.getenv("BIOSTAT_EXPORT_SALT") or ""
+    if not actual_salt:
+        raise HTTPException(
+            status_code=400,
+            detail="BIOSTAT_EXPORT_SALT environment variable is not configured",
+        )
 
     try:
         bundle_data = {}
@@ -706,11 +715,12 @@ async def execute_export_wizard(
         domains = ["DM", "AE", "VS", "LB", "MH", "CM"]
         datasets = ["ADSL", "ADAE", "ADVS"]
 
-    actual_salt: str = (
-        request_data.salt
-        or os.getenv("BIOSTAT_EXPORT_SALT")
-        or "secure-clinical-salt-98765"
-    )  # pragma: allowlist secret
+    actual_salt: str = request_data.salt or os.getenv("BIOSTAT_EXPORT_SALT") or ""
+    if not actual_salt:
+        raise HTTPException(
+            status_code=400,
+            detail="BIOSTAT_EXPORT_SALT environment variable is not configured",
+        )
 
     try:
         bundle_data: dict[str, list[dict]] = {}

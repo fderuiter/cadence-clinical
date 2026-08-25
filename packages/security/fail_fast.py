@@ -9,6 +9,16 @@ INSECURE_FALLBACKS = {
     "default_secret",
     "gxp-audit-secret-key-cadence-2026",
     "dev-default-secret-inbound-email-hmac",
+    "default-guest-secret",
+    "cadence-dev-secret-change-in-prod",
+    "internal-device-secret-key-12345",
+    "internal-cgt-crypto-secret-key-12345",
+    "default-master-secret-change-me-in-production",
+    "secure-clinical-salt-98765",
+    "mock_secret",
+    "cadence_secret_pass",
+    "cadence-imaging-deid-secret-12345",
+    "cadence-clinical-gxp-secret-key-2026",
 }
 
 
@@ -17,43 +27,43 @@ def assert_secure_secrets(
 ) -> None:
     """
     Validate required environment secrets on process startup.
-    Immediately crashes the service with an informative error message if running in
-    staging or production environments, and any critical secret is missing or uses
-    an insecure fallback value.
+    Immediately crashes the service with an informative error message across all environments
+    if any critical secret is missing or uses an insecure fallback value.
     """
-    app_env = os.getenv("APP_ENV", "").strip().lower()
+    invalid_secrets = []
+    for name, value in required_secrets.items():
+        if not value or not str(value).strip():
+            invalid_secrets.append((name, "Missing override (empty or None)"))
+            continue
 
-    # Non-development environments (e.g. production or staging)
-    if app_env and app_env not in ("development", "dev", "test"):
-        invalid_secrets = []
-        for name, value in required_secrets.items():
-            if not value:
-                invalid_secrets.append((name, "Missing override (empty or None)"))
-                continue
+        # Check for insecure fallbacks
+        normalized_value = str(value).strip()
+        is_insecure = (
+            normalized_value in INSECURE_FALLBACKS
+            or "internal-gateway-secret" in normalized_value
+            or normalized_value.startswith("internal-g")
+            or "secure-clinical-salt" in normalized_value
+            or "internal-cgt-crypto-secret" in normalized_value
+            or "internal-device-secret" in normalized_value
+            or "cadence_secret" in normalized_value
+            or normalized_value == "mock_secret"
+        )
+        if is_insecure:
+            invalid_secrets.append((name, "Uses insecure fallback value"))
 
-            # Check for insecure fallbacks
-            normalized_value = value.strip()
-            is_insecure = (
-                normalized_value in INSECURE_FALLBACKS
-                or "internal-gateway-secret" in normalized_value
-                or normalized_value.startswith("internal-g")
-            )
-            if is_insecure:
-                invalid_secrets.append((name, "Uses insecure fallback value"))
-
-        if invalid_secrets:
-            # Format detailed error message identifying the specific environment variables
-            details = "; ".join(
-                f"{name} ({reason})" for name, reason in invalid_secrets
-            )
-            error_msg = (
-                f"FATAL STARTUP ERROR: [{service_name}] Environment configuration validation failed "
-                f"for non-development environment '{app_env}'. Critical secrets must have secure overrides. "
-                f"Issues detected: {details}."
-            )
-            # Write to stderr
-            print(error_msg, file=sys.stderr)
-            raise RuntimeError(error_msg)
+    if invalid_secrets:
+        # Format detailed error message identifying the specific environment variables
+        details = "; ".join(
+            f"{name} ({reason})" for name, reason in invalid_secrets
+        )
+        error_msg = (
+            f"FATAL STARTUP ERROR: [{service_name}] Environment configuration validation failed. "
+            f"Critical secrets must have secure overrides. "
+            f"Issues detected: {details}."
+        )
+        # Write to stderr
+        print(error_msg, file=sys.stderr)
+        raise RuntimeError(error_msg)
 
 
 def validate_branding(service_name: str, is_gateway: bool = False) -> None:

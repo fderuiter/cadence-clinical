@@ -40,13 +40,13 @@ from apps.tickets.presentation.routers.tickets import (
     router as tickets_router,
 )
 from packages.database import get_relational_db_lifespan
-from packages.security import validate_branding
+from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("TICKETS_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
 
-
+assert_secure_secrets("tickets", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
 validate_branding("tickets")
 app = FastAPI(
     title=f"{BRAND_NAME} - Tickets Service",

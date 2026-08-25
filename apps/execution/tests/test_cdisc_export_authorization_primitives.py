@@ -131,7 +131,7 @@ async def test_gateway_auth_middleware_tenant_fallback():
 
     client = TestClient(app)
 
-    gateway_secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
+    gateway_secret = "valid-test-gateway-secret-key-2026"  # pragma: allowlist secret
     user_id = "test_user"
     roles = "sponsor_dm"
     timestamp = str(time.time())

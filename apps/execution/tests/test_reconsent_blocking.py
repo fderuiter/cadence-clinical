@@ -14,7 +14,7 @@ from apps.execution.database.models import AuditLog, Base
 from apps.execution.main import app
 
 GATEWAY_SECRET = os.getenv(
-    "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    "GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"
 )  # pragma: allowlist secret
 
 

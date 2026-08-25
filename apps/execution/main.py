@@ -3541,9 +3541,7 @@ async def post_batch_sign_off(
             skipped_submission_ids = []
             targets_with_approvals = set()
 
-            secret = os.getenv(
-                "GATEWAY_SECRET", "internal-gateway-secret-12345"
-            ).encode()
+            secret = (os.getenv("GATEWAY_SECRET") or "").encode()
 
             for sub in resolved_subs:
                 if sub.is_readonly or not sub.is_active:

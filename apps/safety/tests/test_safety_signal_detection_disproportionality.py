@@ -73,7 +73,7 @@ async def setup_signal_db():
 
 def make_sig_token(user_id: str, action: str = "") -> str:
     """Creates a mock 21 CFR Part 11 signature token JWT."""
-    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+    secret = os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
     claims = {
         "sub": user_id,
         "action": action,

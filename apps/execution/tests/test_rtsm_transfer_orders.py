@@ -68,14 +68,14 @@ def get_gateway_headers(
             "exp": time.time() + 300.0,
         }
         sig_token = jwt.encode(
-            sig_payload, b"internal-gateway-secret-12345", algorithm="HS256"
+            sig_payload, b"valid-test-gateway-secret-key-2026", algorithm="HS256"
         )
 
     sig = generate_gateway_signature(
         user_id=user_id,
         roles=roles,
         timestamp=timestamp,
-        secret=b"internal-gateway-secret-12345",  # pragma: allowlist secret
+        secret=b"valid-test-gateway-secret-key-2026",  # pragma: allowlist secret
         change_reason=change_reason,
         site_id=site_id,
         sig_token=sig_token,

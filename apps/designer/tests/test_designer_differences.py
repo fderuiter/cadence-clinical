@@ -12,12 +12,13 @@ from apps.designer.main import app as designer_app
 
 def get_auth_headers():
     import json
+    import os
 
     timestamp = str(time.time())
     user_id = "123"
     roles = "sponsor_designer"
     change_reason = "system_operation"
-    secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
+    secret = os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
     payload = {
         "change_reason": change_reason,
         "roles": roles,

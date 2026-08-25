@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import os
 import time
 from unittest.mock import patch
 
@@ -39,7 +40,7 @@ def get_test_auth_headers(
 ) -> dict[str, str]:
     """Generates canonical v2 gateway HMAC signature headers for testing."""
     timestamp = str(time.time())
-    secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
+    secret = os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
     payload = {
         "change_reason": change_reason,
         "roles": roles,

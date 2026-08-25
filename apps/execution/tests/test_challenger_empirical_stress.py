@@ -66,11 +66,11 @@ from apps.execution.trial_lock import TrialLockManager
 from apps.execution.ucum import convert_unit
 from packages.security.sig_token_verifier import token_consumption_cache
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
+GATEWAY_SECRET = "valid-test-gateway-secret-key-2026"  # pragma: allowlist secret
 
 
 def generate_test_sig_token(
-    user_id: str, secret: str = "internal-gateway-secret-12345"
+    user_id: str, secret: str = "valid-test-gateway-secret-key-2026"
 ) -> str:
     sig_payload = {
         "sub": user_id,

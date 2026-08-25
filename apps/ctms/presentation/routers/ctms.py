@@ -1460,9 +1460,7 @@ async def update_grant(
             sig_token = request.headers.get("X-Sig-Token") or request.headers.get(
                 "x-sig-token"
             )
-            secret = os.getenv(
-                "GATEWAY_SECRET", "internal-gateway-secret-12345"
-            ).encode()  # pragma: allowlist secret
+            secret = (os.getenv("GATEWAY_SECRET") or "").encode()
 
             success, result_auth = verify_sig_token(
                 sig_token=sig_token,
@@ -2081,9 +2079,7 @@ async def process_visit_sync(
         metadata=metadata,
     )
 
-    gateway_secret_str = os.getenv(
-        "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-    )
+    gateway_secret_str = os.getenv("GATEWAY_SECRET") or ""
     secret_bytes = gateway_secret_str.encode("utf-8")
 
     signature_status = "SKIPPED"

@@ -25,7 +25,7 @@ from apps.execution.database.models import (
 from apps.execution.main import app as exec_app
 from apps.execution.migration_rules import reconcile_observations
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
+GATEWAY_SECRET = "valid-test-gateway-secret-key-2026"  # pragma: allowlist secret
 
 
 def get_exec_auth_headers(

@@ -15,7 +15,9 @@ from apps.designer.db import (
 )
 from apps.designer.main import app as designer_app
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
+import os
+
+GATEWAY_SECRET = os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
 
 
 def get_designer_auth_headers(

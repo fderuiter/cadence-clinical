@@ -23,7 +23,7 @@ from apps.execution.outliers import (
 from apps.execution.ucum import convert_unit, get_normalized_representation
 
 GATEWAY_SECRET = os.getenv(
-    "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    "GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"
 )  # pragma: allowlist secret
 
 

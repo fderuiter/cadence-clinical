@@ -36,7 +36,7 @@ async def setup_db():
     """
     original_secret = os.environ.get("GATEWAY_SECRET")
     os.environ["GATEWAY_SECRET"] = (
-        "internal-gateway-secret-12345"  # pragma: allowlist secret
+        "valid-test-gateway-secret-key-2026"  # pragma: allowlist secret
     )
 
     db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)

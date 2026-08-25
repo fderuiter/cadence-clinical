@@ -252,7 +252,8 @@ def test_gateway_raises_runtime_error_if_secret_missing(monkeypatch):
     try:
         with pytest.raises(RuntimeError) as exc_info:
             importlib.import_module("apps.gateway.main")
-        assert "GATEWAY_SECRET environment variable is missing" in str(exc_info.value)
+        assert "GATEWAY_SECRET" in str(exc_info.value)
+        assert "Missing override" in str(exc_info.value)
     finally:
         if original_module is not None:
             sys.modules["apps.gateway.main"] = original_module
@@ -355,12 +356,12 @@ def test_signing_raises_runtime_error_if_email_secret_missing(monkeypatch):
 
 
 def test_assert_secure_secrets_validation(monkeypatch):
-    """Verify that assert_secure_secrets raises RuntimeError on insecure fallbacks in production/staging but permits them in dev."""
+    """Verify that assert_secure_secrets raises RuntimeError on insecure fallbacks and missing secrets across all environments (prod, dev, test, unset)."""
     import pytest
 
     from packages.security.fail_fast import assert_secure_secrets
 
-    # Case 1: Non-dev env with insecure fallback should raise RuntimeError
+    # Case 1: Production env with insecure fallback should raise RuntimeError
     monkeypatch.setenv("APP_ENV", "production")
     with pytest.raises(RuntimeError) as exc_info:
         assert_secure_secrets(
@@ -372,25 +373,49 @@ def test_assert_secure_secrets_validation(monkeypatch):
     assert "GATEWAY_SECRET" in str(exc_info.value)
     assert "Uses insecure fallback value" in str(exc_info.value)
 
-    # Case 2: Non-dev env with missing/empty secret should raise RuntimeError
+    # Case 2: Production env with missing/empty secret should raise RuntimeError
     with pytest.raises(RuntimeError) as exc_info:
         assert_secure_secrets("test-service", {"GATEWAY_SECRET": ""})
     assert "GATEWAY_SECRET" in str(exc_info.value)
     assert "Missing override" in str(exc_info.value)
 
-    # Case 3: Dev env should permit insecure fallback value without raising error
+    # Case 3: Development env with insecure fallback should raise RuntimeError
     monkeypatch.setenv("APP_ENV", "development")
-    assert_secure_secrets(
-        "test-service",
-        {"GATEWAY_SECRET": "internal-gateway-secret-12345"},  # pragma: allowlist secret
-    )
+    with pytest.raises(RuntimeError) as exc_info:
+        assert_secure_secrets(
+            "test-service",
+            {"GATEWAY_SECRET": "internal-gateway-secret-12345"},  # pragma: allowlist secret
+        )
+    assert "Uses insecure fallback value" in str(exc_info.value)
 
-    # Case 4: Missing/unset APP_ENV should permit fallback (local developer mode)
+    # Case 4: Test env with insecure fallback should raise RuntimeError
+    monkeypatch.setenv("APP_ENV", "test")
+    with pytest.raises(RuntimeError) as exc_info:
+        assert_secure_secrets(
+            "test-service",
+            {"GATEWAY_SECRET": "internal-gateway-secret-12345"},  # pragma: allowlist secret
+        )
+    assert "Uses insecure fallback value" in str(exc_info.value)
+
+    # Case 5: Unset APP_ENV with insecure fallback should raise RuntimeError
     monkeypatch.delenv("APP_ENV", raising=False)
-    assert_secure_secrets(
-        "test-service",
-        {"GATEWAY_SECRET": "internal-gateway-secret-12345"},  # pragma: allowlist secret
-    )
+    with pytest.raises(RuntimeError) as exc_info:
+        assert_secure_secrets(
+            "test-service",
+            {"GATEWAY_SECRET": "internal-gateway-secret-12345"},  # pragma: allowlist secret
+        )
+    assert "Uses insecure fallback value" in str(exc_info.value)
+
+    # Case 6: Valid secure secrets pass across all environments
+    for env in ("production", "development", "test", ""):
+        if env:
+            monkeypatch.setenv("APP_ENV", env)
+        else:
+            monkeypatch.delenv("APP_ENV", raising=False)
+        assert_secure_secrets(
+            "test-service",
+            {"GATEWAY_SECRET": "valid-secure-key-32-bytes-long-for-testing-2026"},
+        )
 
 
 def test_global_scanner_with_opt_out(tmp_path):

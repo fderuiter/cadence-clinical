@@ -44,9 +44,7 @@ class QualityExecutionClient:
         self.timeout = timeout
 
     def _get_auth_headers(self, change_reason: str = "") -> dict[str, str]:
-        gateway_secret_env = os.getenv(
-            "GATEWAY_SECRET", "internal-gateway-secret-12345"
-        )
+        gateway_secret_env = os.getenv("GATEWAY_SECRET") or ""
         gateway_secret = (
             gateway_secret_env.encode("utf-8")
             if isinstance(gateway_secret_env, str)

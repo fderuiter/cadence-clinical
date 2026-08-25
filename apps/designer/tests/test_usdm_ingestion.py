@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import os
 import time
 
 import pytest
@@ -29,8 +30,9 @@ def get_auth_headers():
         "user_id": user_id,
     }
     serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    secret = os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026").encode()
     signature = hmac.new(
-        b"internal-gateway-secret-12345", serialized.encode(), hashlib.sha256
+        secret, serialized.encode(), hashlib.sha256
     ).hexdigest()
     return {
         "X-User-Id": user_id,

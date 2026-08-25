@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import os
 import time
 from unittest.mock import AsyncMock, MagicMock
 
@@ -23,7 +24,7 @@ from apps.designer.delta import (
 )
 from apps.designer.main import app
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
+GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026")
 
 
 def get_auth_headers(

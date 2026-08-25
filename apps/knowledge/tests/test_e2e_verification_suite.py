@@ -40,7 +40,7 @@ from packages.testing.security import create_test_auth_headers
 # Test Personas & Security Helpers
 # ---------------------------------------------------------------------------
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
+GATEWAY_SECRET = "valid-test-gateway-secret-key-2026"  # pragma: allowlist secret
 
 PERSONA_SUPER_ADMIN = "admin@cadence.clinical"  # deid-ignore
 PERSONA_SPONSOR_DESIGNER = "designer@sponsor.pharma"  # deid-ignore

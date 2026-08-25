@@ -1106,9 +1106,7 @@ async def propagate_to_etmf(
     user_id = "eisf_sync_service"
     roles = "system"
     timestamp = str(time.time())
-    secret = os.getenv(
-        "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-    ).encode()
+    secret = (os.getenv("GATEWAY_SECRET") or "").encode()
 
     resolved_change_reason = reason_for_change
     if not resolved_change_reason:
@@ -1544,8 +1542,10 @@ async def eisf_analyze_document_endpoint(
         user_id=principal.user_id,
         roles=forward_roles_str,
         timestamp=timestamp,
-        secret=os.environ.get(
-            "GATEWAY_INTERNAL_SECRET", "cadence-dev-secret-change-in-prod"
+        secret=(
+            os.environ.get("GATEWAY_INTERNAL_SECRET")
+            or os.getenv("GATEWAY_SECRET")
+            or ""
         ).encode("utf-8"),
         change_reason="eISF document intelligence analysis",
         site_id=payload.site_id,
@@ -1648,8 +1648,10 @@ async def eisf_analyze_existing_document_endpoint(
         user_id=principal.user_id,
         roles=forward_roles_str,
         timestamp=timestamp,
-        secret=os.environ.get(
-            "GATEWAY_INTERNAL_SECRET", "cadence-dev-secret-change-in-prod"
+        secret=(
+            os.environ.get("GATEWAY_INTERNAL_SECRET")
+            or os.getenv("GATEWAY_SECRET")
+            or ""
         ).encode("utf-8"),
         change_reason="eISF document intelligence analysis",
         site_id=site_id,

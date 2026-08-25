@@ -80,9 +80,7 @@ class LLMSemanticReasoner(LLMSemanticReasonerPort):
         self, text: str, study_id: str
     ) -> list[SemanticMappedItem]:
         """Call AI Gateway structured generation endpoint with gateway authentication."""
-        gateway_secret = os.getenv(
-            "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-        )
+        gateway_secret = os.getenv("GATEWAY_SECRET") or ""
         headers = generate_gateway_signature(
             user_id="interop-service",
             roles=["sponsor_dm", "sysadmin"],

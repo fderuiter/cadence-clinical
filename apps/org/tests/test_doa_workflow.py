@@ -48,7 +48,7 @@ def get_scope_auth_headers(
     Generates fully compliant, scope-aware gateway authentication headers.
     """
     timestamp = str(time.time())
-    secret = b"internal-gateway-secret-12345"
+    secret = b"valid-test-gateway-secret-key-2026"
     signature = generate_gateway_signature(
         user_id=user_id,
         roles=roles,
@@ -77,7 +77,7 @@ def generate_sig_token(user_id: str, action: str) -> str:
     """
     Generates a mock Part 11 step-up re-authentication token (X-Sig-Token).
     """
-    secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
+    secret = "valid-test-gateway-secret-key-2026"  # pragma: allowlist secret
     payload = {
         "sub": user_id,
         "action": action,

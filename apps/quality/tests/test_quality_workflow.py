@@ -1,3 +1,4 @@
+import os
 import time
 
 import pytest
@@ -15,7 +16,7 @@ def make_step_up_token(
     user_id: str,
     action: str,
     semantic_action: str,
-    secret: str = "internal-gateway-secret-12345",
+    secret: str | None = None,
     expired: bool = False,
     wrong_user: bool = False,
     wrong_action: bool = False,
@@ -23,6 +24,8 @@ def make_step_up_token(
 ) -> str:
 
     from jose import jwt
+
+    secret = secret or os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026")
 
     now = time.time()
     payload = {

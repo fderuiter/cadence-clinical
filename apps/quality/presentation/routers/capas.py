@@ -221,9 +221,7 @@ async def transition_capa(
         sig_token = request.headers.get("X-Sig-Token") or request.headers.get(
             "x-sig-token"
         )
-        secret = os.getenv(
-            "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-        ).encode()
+        secret = (os.getenv("GATEWAY_SECRET") or "").encode()
         expected_semantic = (
             SemanticAction.CAPA_CLOSE
             if payload.to_status == CAPAStatus.CLOSED

@@ -71,9 +71,9 @@ class AllocationKeyManager:
 
     def _derive_key_from_secret_and_salt(self, salt: str) -> bytes:
         """Derives a Fernet key deterministically from master secret + salt using PBKDF2/SHA256."""
-        master_secret = os.getenv(
-            "RTSM_MASTER_SECRET", "default-master-secret-change-me-in-production"
-        )
+        master_secret = os.getenv("RTSM_MASTER_SECRET")
+        if not master_secret:
+            raise RuntimeError("RTSM_MASTER_SECRET environment variable is missing or unconfigured")
         salt_bytes = salt.encode("utf-8")
         derived = hashlib.pbkdf2_hmac(
             "sha256", master_secret.encode("utf-8"), salt_bytes, 100000, 32

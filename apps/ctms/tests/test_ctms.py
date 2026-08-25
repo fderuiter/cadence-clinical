@@ -1,3 +1,4 @@
+import os
 import time
 from datetime import UTC, datetime, timedelta
 
@@ -63,7 +64,9 @@ def get_auth_headers(
             "exp": time.time() + 300.0,
         }
         headers["X-Sig-Token"] = jwt.encode(
-            sig_payload, "internal-gateway-secret-12345", algorithm="HS256"
+            sig_payload,
+            os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026",
+            algorithm="HS256",
         )
     return headers
 
@@ -1382,7 +1385,11 @@ async def test_grant_approve_sig_token_matrix():
             "semantic_action": semantic_action,
             "sig_ver": "v3",
         }
-        return jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+        return jwt.encode(
+            payload,
+            os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026",
+            algorithm="HS256",
+        )
 
     # 1. Missing token -> 401
     res_missing = client.put(

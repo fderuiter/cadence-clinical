@@ -26,7 +26,7 @@ def generate_signature(
 ) -> str:
     from packages.security.signing import generate_gateway_signature
 
-    secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
+    secret = "valid-test-gateway-secret-key-2026"  # pragma: allowlist secret
     return generate_gateway_signature(
         user_id=user_id,
         roles=roles,

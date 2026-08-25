@@ -25,11 +25,12 @@ from apps.ai_gateway.presentation.routers.rag import (
 from apps.ai_gateway.presentation.routers.reasoning import (
     router as reasoning_router,
 )
-from packages.security import validate_branding
+from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
 BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
 
+assert_secure_secrets("ai-gateway", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
 validate_branding("ai-gateway")
 
 app = FastAPI(

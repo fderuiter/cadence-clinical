@@ -25,12 +25,13 @@ from apps.knowledge.presentation.routers.training import (
     router as training_router,
 )
 from packages.database import get_relational_db_lifespan
-from packages.security import validate_branding
+from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("KNOWLEDGE_DATABASE_URL", "sqlite+aiosqlite:///./knowledge.db")
 BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
 
+assert_secure_secrets("knowledge", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
 validate_branding("knowledge")
 
 app = FastAPI(

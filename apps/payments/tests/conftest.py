@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 os.environ["BRAND_NAME"] = "Cadence Clinical"
 os.environ["BRAND_DOMAIN"] = "cadenceclinical.com"
-os.environ["GATEWAY_SECRET"] = "internal-gateway-secret-12345"
+os.environ["GATEWAY_SECRET"] = "valid-test-gateway-secret-key-2026"
 os.environ["AUDIT_LOG_SECRET_KEY"] = "test-payments-audit-secret-key-999"
 os.environ["ALLOW_MOCK_SIGNATURES"] = "1"
 
@@ -72,7 +72,9 @@ def get_auth_headers(
             "exp": time.time() + 300.0,
         }
         headers["X-Sig-Token"] = jwt.encode(
-            sig_payload, "internal-gateway-secret-12345", algorithm="HS256"
+            sig_payload,
+            os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"),
+            algorithm="HS256",
         )
     return headers
 

@@ -63,7 +63,7 @@ def get_auth_headers_v2(
 ) -> dict:
     """Generate signed gateway V2 headers using standard signing."""
     timestamp = str(time.time())
-    secret = b"internal-gateway-secret-12345"
+    secret = (os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026").encode("utf-8")
     sig = generate_gateway_signature(
         user_id=user_id,
         roles=roles,

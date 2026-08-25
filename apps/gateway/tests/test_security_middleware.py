@@ -544,7 +544,7 @@ def test_downstream_signature_gated_endpoint_valid_sig_token() -> None:
         "iat": time.time(),
         "exp": time.time() + 60.0,
     }
-    sig_token = jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+    sig_token = jwt.encode(payload, "valid-test-gateway-secret-key-2026", algorithm="HS256")
 
     headers = {
         "X-User-Id": user_id,
@@ -587,7 +587,7 @@ def test_downstream_signature_gated_endpoint_expired_token() -> None:
         "iat": time.time() - 70.0,
         "exp": time.time() - 10.0,
     }
-    sig_token = jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+    sig_token = jwt.encode(payload, "valid-test-gateway-secret-key-2026", algorithm="HS256")
 
     headers = {
         "X-User-Id": user_id,
@@ -630,7 +630,7 @@ def test_downstream_signature_gated_endpoint_mismatched_action() -> None:
         "iat": time.time(),
         "exp": time.time() + 60.0,
     }
-    sig_token = jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+    sig_token = jwt.encode(payload, "valid-test-gateway-secret-key-2026", algorithm="HS256")
 
     headers = {
         "X-User-Id": user_id,
@@ -673,7 +673,7 @@ def test_downstream_signature_gated_endpoint_replay_blocked() -> None:
         "iat": time.time(),
         "exp": time.time() + 60.0,
     }
-    sig_token = jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+    sig_token = jwt.encode(payload, "valid-test-gateway-secret-key-2026", algorithm="HS256")
 
     headers = {
         "X-User-Id": user_id,

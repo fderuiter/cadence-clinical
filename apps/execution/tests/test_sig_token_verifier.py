@@ -9,7 +9,7 @@ from packages.security.sig_token_verifier import (
     verify_and_consume_sig_token,
 )
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
+GATEWAY_SECRET = "valid-test-gateway-secret-key-2026"  # pragma: allowlist secret
 
 
 def test_verify_and_consume_sig_token_success() -> None:

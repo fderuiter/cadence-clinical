@@ -307,7 +307,7 @@ def get_auth_headers(
 ) -> dict:
     """Helper to generate signed gateway authentication headers."""
     timestamp = str(time.time())
-    secret = b"internal-gateway-secret-12345"
+    secret = b"valid-test-gateway-secret-key-2026"
     signature = generate_gateway_signature(
         user_id=user_id,
         roles=roles,

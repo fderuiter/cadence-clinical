@@ -90,8 +90,8 @@ def test_fda_compliant_pdf_generation_protocol():
         protocol_doc.close()
 
 
-GATEWAY_SECRET = os.getenv(
-    "GATEWAY_SECRET", default="internal-gateway-secret-12345"
+GATEWAY_SECRET = (
+    os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
 ).encode("utf-8")
 
 

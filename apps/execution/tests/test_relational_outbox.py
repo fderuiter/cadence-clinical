@@ -17,7 +17,7 @@ from apps.execution.main import app
 from apps.execution.trial_lock import TrialLockManager
 from apps.execution.workers.outbox_worker import poll_and_dispatch
 
-GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # nosec B105: mock fallback secret for testing
+GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026")  # nosec B105: mock fallback secret for testing
 
 
 def get_auth_headers(

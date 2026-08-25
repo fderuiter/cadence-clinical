@@ -44,7 +44,7 @@ ACTOR_APPROVER = "approver@cadence.clinical"  # deid-ignore
 ACTOR_AUDITOR = "auditor@regulatory.agency"  # deid-ignore
 ACTOR_TMF_AUDITOR = "tmf.inspector@ema.europa.eu"  # deid-ignore
 ACTOR_CRC = "crc@site-101.org"  # deid-ignore
-GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
+GATEWAY_SECRET = "valid-test-gateway-secret-key-2026"  # pragma: allowlist secret
 
 
 def get_auth_headers_with_sig(

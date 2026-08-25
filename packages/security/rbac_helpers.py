@@ -21,9 +21,7 @@ def build_gateway_headers(
     timestamp = str(time.time())
 
     # Secrets Management: Safe retrieval of GATEWAY_SECRET
-    secret_str = os.getenv("GATEWAY_SECRET")
-    if not secret_str:
-        secret_str = "internal-gateway-secret-12345"  # pragma: allowlist secret
+    secret_str = os.getenv("GATEWAY_SECRET") or ""
     secret = secret_str.encode()
 
     sig = generate_gateway_signature(

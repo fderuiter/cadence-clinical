@@ -16,9 +16,7 @@ from packages.database import get_relational_db_lifespan
 from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
-GATEWAY_SECRET = os.getenv(
-    "GATEWAY_SECRET", "internal-gateway-secret-12345"
-).encode()  # pragma: allowlist secret
+GATEWAY_SECRET = (os.getenv("GATEWAY_SECRET") or "").encode()
 
 DATABASE_URL = os.getenv("ORG_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 

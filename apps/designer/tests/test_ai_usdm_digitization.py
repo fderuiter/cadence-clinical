@@ -6,6 +6,7 @@ Requirements: PRD-DDF-001, PRD-SYS-001, PRD-MDR-007, PRD-CRF-004, PRD-CRF-005
 import hashlib
 import hmac
 import json
+import os
 import time
 
 import pytest
@@ -36,7 +37,7 @@ def get_designer_auth_headers(
 ) -> dict[str, str]:
     """Generates v2 gateway HMAC signature headers for the given roles and change reason."""
     timestamp = str(time.time())
-    secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
+    secret = os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
     payload = {
         "change_reason": change_reason,
         "roles": roles,

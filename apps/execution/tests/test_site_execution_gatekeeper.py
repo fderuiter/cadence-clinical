@@ -68,7 +68,7 @@ def _make_site_auth_headers(
     study_id: str | None = None,
 ) -> dict[str, str]:
     timestamp = str(time.time())
-    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(
+    secret = (os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026").encode(
         "utf-8"
     )
     sig = generate_gateway_signature(

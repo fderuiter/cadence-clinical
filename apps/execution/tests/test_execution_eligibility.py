@@ -31,7 +31,7 @@ from apps.execution.domain.acl.designer_eligibility_dto import (
 from apps.execution.eligibility_context import build_eligibility_context
 from apps.execution.main import app
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
+GATEWAY_SECRET = "valid-test-gateway-secret-key-2026"  # pragma: allowlist secret
 
 
 @pytest_asyncio.fixture(autouse=True)

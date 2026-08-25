@@ -425,7 +425,7 @@ async def test_discordance_detection_and_chair_tiebreaker_unit():
             adjudication_rationale="Emergency EMS telemetry clearly demonstrates primary ventricular fibrillation.",
             signer_name="Dr. Evelyn Reed, MD, FACC",
             signature_meaning="I confirm this clinical endpoint adjudication determination is final, complete, and accurate per charter guidelines",
-            password="SecureChairPassword123!",
+            password="SecureChairPassword123!",  # pragma: allowlist secret
         )
         await session.commit()
         await session.refresh(record)

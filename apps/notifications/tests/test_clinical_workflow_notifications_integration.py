@@ -31,7 +31,7 @@ from apps.notifications.models import Notification, NotificationAuditLog
 from packages.security.context import audit_context
 from packages.security.signing import generate_gateway_signature
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
+GATEWAY_SECRET = "valid-test-gateway-secret-key-2026"  # pragma: allowlist secret
 
 
 def get_v2_auth_headers(
@@ -75,7 +75,7 @@ def get_sig_token(
         "exp": time.time() + 60.0,
     }
     return jwt.encode(
-        payload, "internal-gateway-secret-12345", algorithm="HS256"
+        payload, "valid-test-gateway-secret-key-2026", algorithm="HS256"
     )  # pragma: allowlist secret
 
 

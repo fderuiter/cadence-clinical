@@ -464,10 +464,11 @@ def test_api_block_crud_with_rbac():
 
     # Helper to generate HMAC headers
     def get_auth_headers(roles="sponsor_designer", change_reason="REST Action"):
+        import os
         import time
 
         timestamp = str(time.time())
-        secret = b"internal-gateway-secret-12345"
+        secret = (os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026").encode()
         sig = generate_gateway_signature(
             user_id="user_admin",
             roles=roles,

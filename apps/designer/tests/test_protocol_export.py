@@ -19,9 +19,11 @@ from apps.designer.rendering import (
 
 
 def get_custom_auth_headers(change_reason="system_operation", roles="admin"):
+    import os
+
     timestamp = str(time.time())
     user_id = "123"
-    secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
+    secret = os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
     payload = {
         "change_reason": change_reason,
         "roles": roles,

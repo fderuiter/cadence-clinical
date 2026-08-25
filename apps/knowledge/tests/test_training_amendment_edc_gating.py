@@ -522,7 +522,7 @@ async def test_rest_api_training_endpoints(client: AsyncClient):
         "jti": str(uuid.uuid4()),
     }
     sig_token = jwt.encode(
-        sig_payload, "internal-gateway-secret-12345", algorithm="HS256"
+        sig_payload, "valid-test-gateway-secret-key-2026", algorithm="HS256"
     )
     sign_headers = create_test_auth_headers(
         user_id="test_investigator_01",

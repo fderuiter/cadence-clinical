@@ -43,7 +43,7 @@ from apps.execution.workers.anomaly_worker import (
     stop_anomaly_worker,
 )
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
+GATEWAY_SECRET = "valid-test-gateway-secret-key-2026"  # pragma: allowlist secret
 
 
 def get_v2_auth_headers(

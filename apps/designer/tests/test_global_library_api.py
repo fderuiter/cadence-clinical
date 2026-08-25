@@ -1,3 +1,4 @@
+import os
 import time
 
 import httpx
@@ -6,7 +7,7 @@ import pytest
 from apps.designer.db import MOCK_LIBRARY_OBJECTS
 from apps.designer.main import app
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
+GATEWAY_SECRET = os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
 
 
 def get_auth_headers(

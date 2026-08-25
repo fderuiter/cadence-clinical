@@ -1285,7 +1285,7 @@ def test_gateway_startup_production_with_test_secret() -> None:
     env = {
         "APP_ENV": "production",
         "JWT_TEST_SECRET": "some_test_secret",  # pragma: allowlist secret
-        "GATEWAY_SECRET": "internal-gateway-secret-12345",  # pragma: allowlist secret
+        "GATEWAY_SECRET": "valid-test-gateway-secret-key-2026",  # pragma: allowlist secret
         "AUDIT_LOG_SECRET_KEY": "test-gxp-audit-secret-key-placeholder-abc",  # pragma: allowlist secret
         "INBOUND_EMAIL_HMAC_SECRET": "test-email-hmac-secret-placeholder-xyz",  # pragma: allowlist secret
     }
@@ -1311,7 +1311,7 @@ def test_gateway_startup_production_with_unverified_jwt() -> None:
     env = {
         "APP_ENV": "production",
         "ALLOW_UNVERIFIED_JWT_FOR_TEST": "true",
-        "GATEWAY_SECRET": "internal-gateway-secret-12345",  # pragma: allowlist secret
+        "GATEWAY_SECRET": "valid-test-gateway-secret-key-2026",  # pragma: allowlist secret
         "AUDIT_LOG_SECRET_KEY": "test-gxp-audit-secret-key-placeholder-abc",  # pragma: allowlist secret
         "INBOUND_EMAIL_HMAC_SECRET": "test-email-hmac-secret-placeholder-xyz",  # pragma: allowlist secret
     }
@@ -1337,7 +1337,7 @@ def test_gateway_startup_production_with_skip_jwks() -> None:
     env = {
         "APP_ENV": "production",
         "SKIP_JWKS_FETCH": "true",
-        "GATEWAY_SECRET": "internal-gateway-secret-12345",  # pragma: allowlist secret
+        "GATEWAY_SECRET": "valid-test-gateway-secret-key-2026",  # pragma: allowlist secret
         "AUDIT_LOG_SECRET_KEY": "test-gxp-audit-secret-key-placeholder-abc",  # pragma: allowlist secret
         "INBOUND_EMAIL_HMAC_SECRET": "test-email-hmac-secret-placeholder-xyz",  # pragma: allowlist secret
     }
@@ -1365,7 +1365,7 @@ def test_gateway_startup_development_with_bypass_configs() -> None:
         "JWT_TEST_SECRET": "some_secret",  # pragma: allowlist secret
         "ALLOW_UNVERIFIED_JWT_FOR_TEST": "true",
         "SKIP_JWKS_FETCH": "true",
-        "GATEWAY_SECRET": "internal-gateway-secret-12345",  # pragma: allowlist secret
+        "GATEWAY_SECRET": "valid-test-gateway-secret-key-2026",  # pragma: allowlist secret
         "AUDIT_LOG_SECRET_KEY": "test-gxp-audit-secret-key-placeholder-abc",  # pragma: allowlist secret
         "INBOUND_EMAIL_HMAC_SECRET": "test-email-hmac-secret-placeholder-xyz",  # pragma: allowlist secret
     }
@@ -1711,7 +1711,7 @@ def test_gateway_scope_extraction_and_verification_integrity(
         signature = sent_request.headers.get("X-Gateway-Signature")
         tenant_id = sent_request.headers.get("X-Tenant-Id") or "tenant_default"
 
-        gateway_secret = b"internal-gateway-secret-12345"
+        gateway_secret = b"valid-test-gateway-secret-key-2026"
 
         # Run normalization on the forwarded headers
         site_id, sponsor_id, unblinded_access = normalize_scope_values(
@@ -2118,7 +2118,7 @@ def test_gateway_startup_production_no_bypass_configs() -> None:
 
     env = {
         "APP_ENV": "production",
-        "GATEWAY_SECRET": "internal-gateway-secret-12345",  # pragma: allowlist secret
+        "GATEWAY_SECRET": "valid-test-gateway-secret-key-2026",  # pragma: allowlist secret
         "AUDIT_LOG_SECRET_KEY": "test-gxp-audit-secret-key-placeholder-abc",  # pragma: allowlist secret
         "INBOUND_EMAIL_HMAC_SECRET": "test-email-hmac-secret-placeholder-xyz",  # pragma: allowlist secret
         "BRAND_NAME": "My Custom Brand",
@@ -2569,7 +2569,7 @@ def test_gateway_startup_staging_fails_with_bypass_configs() -> None:
     env = {
         "APP_ENV": "staging",
         "JWT_TEST_SECRET": "some_test_secret",  # pragma: allowlist secret
-        "GATEWAY_SECRET": "internal-gateway-secret-12345",  # pragma: allowlist secret
+        "GATEWAY_SECRET": "valid-test-gateway-secret-key-2026",  # pragma: allowlist secret
         "AUDIT_LOG_SECRET_KEY": "test-gxp-audit-secret-key-placeholder-abc",  # pragma: allowlist secret
         "INBOUND_EMAIL_HMAC_SECRET": "test-email-hmac-secret-placeholder-xyz",  # pragma: allowlist secret
     }

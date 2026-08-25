@@ -21,7 +21,7 @@ from apps.execution.services.offline_sync import OfflineSyncEngine
 from packages.security.signing import generate_canonical_signature
 
 GATEWAY_SECRET = os.getenv(
-    "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    "GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"
 )  # pragma: allowlist secret
 
 
@@ -296,7 +296,7 @@ async def test_offline_sync_cryptographic_verification():
     }
 
     # Generate valid signature
-    secret = b"internal-gateway-secret-12345"
+    secret = os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026").encode()
     sig = generate_canonical_signature(batch_data, secret)
 
     # Attach signature

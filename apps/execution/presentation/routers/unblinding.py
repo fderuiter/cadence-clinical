@@ -180,9 +180,7 @@ async def unblind_subject(
         "allocation_reference": allocation_reference,
     }
 
-    secret = os.getenv(
-        "GATEWAY_SECRET", "internal-gateway-secret-12345"
-    ).encode()  # pragma: allowlist secret
+    secret = (os.getenv("GATEWAY_SECRET") or "").encode()
     signature = generate_canonical_signature(decision_payload, secret)
 
     # Capture actual pre-unblind state *before* calling subject.unblind()

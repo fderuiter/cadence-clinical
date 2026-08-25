@@ -58,7 +58,7 @@ def setup_credential_verifier():
     set_credential_verifier(None)
 
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
+GATEWAY_SECRET = "valid-test-gateway-secret-key-2026"  # pragma: allowlist secret
 
 
 def get_auth_headers_with_sig(

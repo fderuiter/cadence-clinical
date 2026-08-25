@@ -26,7 +26,7 @@ from apps.execution.database.models import (
 )
 from apps.execution.main import app as execution_app
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
+GATEWAY_SECRET = "valid-test-gateway-secret-key-2026"  # pragma: allowlist secret
 
 
 @pytest_asyncio.fixture(autouse=True)

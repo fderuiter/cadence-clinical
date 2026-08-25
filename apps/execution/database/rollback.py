@@ -17,7 +17,7 @@ os.environ.setdefault(
 os.environ.setdefault(
     "INBOUND_EMAIL_HMAC_SECRET", "test-email-hmac-secret-placeholder-xyz"
 )
-os.environ.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
+os.environ.setdefault("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026")
 os.environ.setdefault("SIGNING_SECRET", "designer-amendment-secure-key-12345")
 
 from sqlalchemy import inspect, text

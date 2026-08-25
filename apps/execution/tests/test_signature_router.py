@@ -16,7 +16,7 @@ from packages.security.signing import generate_gateway_signature
 
 client = TestClient(app)
 GATEWAY_SECRET = os.getenv(
-    "GATEWAY_SECRET", default="internal-gateway-secret-12345"
+    "GATEWAY_SECRET", default="valid-test-gateway-secret-key-2026"
 ).encode("utf-8")  # pragma: allowlist secret
 
 
@@ -28,7 +28,7 @@ def _make_auth_headers(
     payload: dict | None = None,
 ) -> dict:
     timestamp = str(time.time())
-    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(
+    secret = (os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026").encode(
         "utf-8"
     )
     signature = generate_gateway_signature(

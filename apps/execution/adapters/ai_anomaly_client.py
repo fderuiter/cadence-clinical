@@ -53,9 +53,7 @@ class AIAnomalyGatewayClient:
             return []
 
         url = f"{self.base_url}/api/v1/ai/generate"
-        gateway_secret_env = os.getenv(
-            "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-        )
+        gateway_secret_env = os.getenv("GATEWAY_SECRET") or ""
         gateway_secret = (
             gateway_secret_env.encode("utf-8")
             if isinstance(gateway_secret_env, str)

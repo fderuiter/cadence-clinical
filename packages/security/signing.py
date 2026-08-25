@@ -472,9 +472,7 @@ def generate_greenlight_token(
     import time
 
     if secret is None:
-        raw_secret = os.getenv("GATEWAY_SECRET")
-        if not raw_secret:
-            raw_secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
+        raw_secret = os.getenv("GATEWAY_SECRET") or ""
         secret = (
             raw_secret.encode("utf-8") if isinstance(raw_secret, str) else raw_secret
         )
@@ -513,9 +511,7 @@ def verify_greenlight_token(
         return None
 
     if secret is None:
-        raw_secret = os.getenv("GATEWAY_SECRET")
-        if not raw_secret:
-            raw_secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
+        raw_secret = os.getenv("GATEWAY_SECRET") or ""
         secret = (
             raw_secret.encode("utf-8") if isinstance(raw_secret, str) else raw_secret
         )

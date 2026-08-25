@@ -118,11 +118,7 @@ def verify_and_consume_sig_token(
         )
 
     if secret is None:
-        secret = os.getenv(
-            "GATEWAY_SECRET", "internal-gateway-secret-12345"
-        ).encode(  # pragma: allowlist secret
-            "utf-8"
-        )
+        secret = (os.getenv("GATEWAY_SECRET") or "").encode("utf-8")
 
     try:
         payload = jwt.decode(sig_token, secret, algorithms=["HS256"])

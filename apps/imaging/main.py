@@ -14,12 +14,13 @@ from apps.imaging.adapters.database import db_manager, get_db_session
 from apps.imaging.infrastructure.models import Base
 from apps.imaging.presentation.routers.imaging import router as imaging_router
 from packages.database import get_relational_db_lifespan
-from packages.security import validate_branding
+from packages.security import assert_secure_secrets, validate_branding
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("IMAGING_DATABASE_URL", "sqlite+aiosqlite:///./imaging.db")
 BRAND_NAME = os.getenv("BRAND_NAME", "Cadence Clinical")
 
+assert_secure_secrets("imaging", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
 validate_branding("imaging")
 
 app = FastAPI(

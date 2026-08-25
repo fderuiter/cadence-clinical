@@ -26,7 +26,9 @@ from apps.tickets.adapters.database import db_manager as tickets_db_manager
 from apps.tickets.adapters.models import Base as TicketsBase
 from apps.tickets.main import app as tickets_app
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
+import os
+
+GATEWAY_SECRET = os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
 
 
 def get_designer_auth_headers(

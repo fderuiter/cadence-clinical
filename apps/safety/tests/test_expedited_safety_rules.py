@@ -58,7 +58,7 @@ async def setup_rules_db():
 def make_sig_token(user_id: str, action: str = "") -> str:
     """Creates a mock 21 CFR Part 11 signature token JWT."""
     secret = os.getenv(
-        "GATEWAY_SECRET", "internal-gateway-secret-12345"
+        "GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"
     )  # pragma: allowlist secret
     payload = {
         "sub": user_id,

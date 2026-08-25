@@ -15,8 +15,13 @@ from neo4j.exceptions import TransientError
 # Ensure offline terminology fallback is active for test isolation and speed
 os.environ.setdefault("TERMINOLOGY_OFFLINE", "true")
 os.environ.setdefault("ALLOW_MOCK_SIGNATURES", "1")
-os.environ.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
+os.environ.setdefault("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026")
 os.environ.setdefault("SIGNING_SECRET", "designer-amendment-secure-key-12345")
+os.environ.setdefault("RTSM_MASTER_SECRET", "valid-test-rtsm-master-secret-key-2026")
+os.environ.setdefault("BIOSTAT_EXPORT_SALT", "valid-test-biostat-export-salt-2026")
+os.environ.setdefault("WEBHOOK_SIGNING_SECRET", "valid-test-webhook-signing-secret-2026")
+os.environ.setdefault("PSEUDONYMIZATION_SALT", "valid-test-pseudonymization-salt-2026")
+os.environ.setdefault("SAFETY_SALT", "valid-test-safety-salt-2026")
 os.environ.setdefault(
     "AUDIT_LOG_SECRET_KEY", "test-gxp-audit-secret-key-placeholder-abc"
 )

@@ -33,9 +33,7 @@ from apps.execution.domain.rtsm_models import (
 from apps.execution.trial_lock import TrialLockManager
 
 # Standard secret for HMAC signatures in CGT barcode & unlock token generation
-CGT_CRYPTO_SECRET = os.getenv(
-    "GATEWAY_SECRET", "internal-cgt-crypto-secret-key-12345"
-).encode("utf-8")
+CGT_CRYPTO_SECRET = (os.getenv("GATEWAY_SECRET") or "").encode("utf-8")
 
 
 def _assert_unlocked(study_id: str | None = None, site_id: str | None = None) -> None:

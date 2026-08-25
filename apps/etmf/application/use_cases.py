@@ -361,8 +361,8 @@ class RedactionUseCase:
             source_version="v" + str(doc.version_index),
             target_version="v" + str(new_version_index),
         )
-        secret_key = os.getenv(
-            "REDACTION_SIGNING_SECRET", "internal-gateway-secret-12345"
+        secret_key = (
+            os.getenv("REDACTION_SIGNING_SECRET") or os.getenv("GATEWAY_SECRET") or ""
         ).encode("utf-8")
         signed_manifest = sign_manifest_symmetric(manifest, secret_key)
         manifest_data = signed_manifest.model_dump()

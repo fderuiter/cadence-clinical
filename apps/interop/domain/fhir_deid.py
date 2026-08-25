@@ -27,7 +27,7 @@ def deidentify_free_text(
 
 def pseudonymize_identifier(identifier: str) -> str:
     """Create deterministic irreversible HMAC-SHA256 pseudonym for an identifier."""
-    salt = os.getenv("PSEUDONYMIZATION_SALT", default="secure-clinical-salt-98765")
+    salt = os.getenv("PSEUDONYMIZATION_SALT") or os.getenv("GATEWAY_SECRET") or ""
     return hmac.new(salt.encode(), identifier.encode(), hashlib.sha256).hexdigest()
 
 

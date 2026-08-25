@@ -42,9 +42,7 @@ from apps.execution.domain.device_models import (
 from apps.execution.trial_lock import TrialLockManager
 
 # HMAC Secret for Device Token and Cryptographic Audit Signatures
-GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-device-secret-key-12345").encode(
-    "utf-8"
-)
+GATEWAY_SECRET = (os.getenv("GATEWAY_SECRET") or "").encode("utf-8")
 
 
 # =========================================================================

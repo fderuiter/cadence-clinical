@@ -76,7 +76,7 @@ from packages.security.sig_token_verifier import (
     verify_and_consume_sig_token,
 )
 
-GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")  # nosec B105: mock test fallback
+GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026")  # nosec B105: mock test fallback
 
 
 def get_auth_headers(

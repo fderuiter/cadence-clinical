@@ -23,14 +23,15 @@ from apps.etmf.domain.tmf_reference_model import get_active_catalog
 from packages.security.rbac import Principal
 
 
-def deterministic_mask(val: str, secret: str = "internal-gateway-secret-12345") -> str:
+def deterministic_mask(val: str, secret: str | None = None) -> str:
     """Computes a deterministic, HMAC-SHA256-based keyed mask for the given string value.
 
     This protects sensitive identity fields (like user_id) in exported audit summaries.
     """
     if not val:
         return ""
-    h = hmac.new(secret.encode("utf-8"), val.encode("utf-8"), hashlib.sha256)
+    effective_secret = secret or os.getenv("GATEWAY_SECRET") or ""
+    h = hmac.new(effective_secret.encode("utf-8"), val.encode("utf-8"), hashlib.sha256)
     return f"MASKED_{h.hexdigest()[:12].upper()}"
 
 

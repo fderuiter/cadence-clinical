@@ -132,7 +132,7 @@ def test_gateway_proxying_v2_studies(monkeypatch: pytest.MonkeyPatch) -> None:
         return httpx.Response(200, json={"status": "success"})
 
     monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
-    monkeypatch.setenv("JWT_TEST_SECRET", "internal-gateway-secret-12345")
+    monkeypatch.setenv("JWT_TEST_SECRET", "valid-test-gateway-secret-key-2026")
 
     claims = {
         "sub": "test-user-gateway",
@@ -140,7 +140,7 @@ def test_gateway_proxying_v2_studies(monkeypatch: pytest.MonkeyPatch) -> None:
         "realm_access": {"roles": ["sponsor_designer"]},
         "exp": time.time() + 3600,
     }
-    token = jwt.encode(claims, "internal-gateway-secret-12345", algorithm="HS256")
+    token = jwt.encode(claims, "valid-test-gateway-secret-key-2026", algorithm="HS256")
 
     with TestClient(gateway_app) as gateway_client:
         response = gateway_client.get(

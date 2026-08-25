@@ -24,7 +24,7 @@ from apps.execution.main import app
 from apps.execution.trial_lock import TrialLockManager
 from packages.security.context import audit_context
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
+GATEWAY_SECRET = "valid-test-gateway-secret-key-2026"  # pragma: allowlist secret
 
 
 def get_v2_auth_headers(

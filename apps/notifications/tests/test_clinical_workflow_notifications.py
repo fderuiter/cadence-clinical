@@ -16,7 +16,7 @@ from apps.execution.trial_lock import NotificationRouter
 from packages.security.signing import generate_gateway_signature
 
 GATEWAY_SECRET = os.getenv(
-    "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    "GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"
 )  # pragma: allowlist secret
 
 
@@ -83,7 +83,7 @@ def get_sig_token(
         "iat": time.time(),
         "exp": time.time() + 60.0,
     }
-    return jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+    return jwt.encode(payload, "valid-test-gateway-secret-key-2026", algorithm="HS256")
 
 
 @pytest_asyncio.fixture(autouse=True)

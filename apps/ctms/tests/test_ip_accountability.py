@@ -11,8 +11,8 @@ from apps.ctms.adapters.models import Base
 from apps.ctms.main import app
 from packages.testing.security import generate_signature
 
-GATEWAY_SECRET = os.getenv(
-    "GATEWAY_SECRET", default="internal-gateway-secret-12345"
+GATEWAY_SECRET = (
+    os.getenv("GATEWAY_SECRET") or "valid-test-gateway-secret-key-2026"
 ).encode("utf-8")
 
 

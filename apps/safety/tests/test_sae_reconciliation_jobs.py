@@ -31,7 +31,7 @@ async def setup_jobs_db():
     # Provide a deterministic test secret — not a real credential
     original_secret = os.environ.get("GATEWAY_SECRET")
     os.environ["GATEWAY_SECRET"] = (
-        "internal-gateway-secret-12345"  # pragma: allowlist secret
+        "valid-test-gateway-secret-key-2026"  # pragma: allowlist secret
     )
 
     db_uri = f"sqlite+aiosqlite:///file:memdb_sae_jobs_{uuid.uuid4().hex}?mode=memory&cache=shared&uri=true"

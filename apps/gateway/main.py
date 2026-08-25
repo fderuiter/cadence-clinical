@@ -21,7 +21,7 @@ import packages  # noqa: F401
 from apps.gateway.presentation.routers.cdisc import router as cdisc_router
 from apps.gateway.presentation.routers.ecoa import router as ecoa_router
 from apps.gateway.presentation.routers.usdm import router as usdm_router
-from packages.security import validate_branding
+from packages.security import assert_secure_secrets, validate_branding
 
 
 def validate_environment() -> None:
@@ -29,6 +29,7 @@ def validate_environment() -> None:
     Validate that no test bypass configurations are enabled in production or staging environments.
     Crashes the application immediately if any bypass variables are active.
     """
+    assert_secure_secrets("gateway", {"GATEWAY_SECRET": os.getenv("GATEWAY_SECRET")})
     app_env = os.getenv("APP_ENV", "").strip().lower()
     # Non-development environments (e.g. production or staging)
     if app_env and app_env not in ("development", "dev", "test"):

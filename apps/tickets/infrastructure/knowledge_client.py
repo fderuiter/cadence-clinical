@@ -20,8 +20,8 @@ from packages.security.signing import generate_gateway_signature
 logger = logging.getLogger("tickets-knowledge-client")
 
 KNOWLEDGE_SERVICE_URL = os.environ.get("KNOWLEDGE_SERVICE_URL", "http://127.0.0.1:8006")
-INTERNAL_SECRET = os.environ.get(
-    "GATEWAY_INTERNAL_SECRET", "cadence-dev-secret-change-in-prod"
+INTERNAL_SECRET = (
+    os.environ.get("GATEWAY_INTERNAL_SECRET") or os.environ.get("GATEWAY_SECRET") or ""
 ).encode("utf-8")
 
 _IN_PROCESS_SEARCH_PROVIDER: Callable[..., Any] | None = None

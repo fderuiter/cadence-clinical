@@ -2401,7 +2401,7 @@ async def test_archived_document_retrieval_and_immutability():
         "jti": f"jti-{time.time()}-{hash(action_path)}-{time.process_time()}",
     }
     sig_token = jwt.encode(
-        sig_payload, "internal-gateway-secret-12345", algorithm="HS256"
+        sig_payload, "valid-test-gateway-secret-key-2026", algorithm="HS256"
     )
     sig_headers = get_auth_headers(roles="admin", change_reason="Sign-off Form 1572")
     sig_headers["X-Sig-Token"] = sig_token

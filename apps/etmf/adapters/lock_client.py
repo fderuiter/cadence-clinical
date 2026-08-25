@@ -58,9 +58,7 @@ async def verify_trial_lock_status(is_testing: bool | None = None) -> bool:
         return False
 
     execution_url = os.getenv("EXECUTION_URL", "http://localhost:8002")
-    gateway_secret_env = os.getenv(
-        "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-    )
+    gateway_secret_env = os.getenv("GATEWAY_SECRET") or ""
     gateway_secret = (
         gateway_secret_env.encode("utf-8")
         if isinstance(gateway_secret_env, str)
@@ -126,9 +124,7 @@ async def trigger_global_trial_lock(
         return
 
     execution_url = os.getenv("EXECUTION_URL", "http://localhost:8002")
-    gateway_secret_env = os.getenv(
-        "GATEWAY_SECRET", default="internal-gateway-secret-12345"
-    )
+    gateway_secret_env = os.getenv("GATEWAY_SECRET") or ""
     gateway_secret = (
         gateway_secret_env.encode("utf-8")
         if isinstance(gateway_secret_env, str)
