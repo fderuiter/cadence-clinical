@@ -554,8 +554,8 @@ const scanResult = ref<{ is_valid: boolean; failure_reason?: string } | null>(nu
 const showApheresisModal = ref(false);
 const showBedsideModal = ref(false);
 const showDestructionModal = ref(false);
-const showMilestoneModal = ref(false);
-const showManufacturingModal = ref(false);
+const _showMilestoneModal = ref(false);
+const _showManufacturingModal = ref(false);
 
 // Forms
 const apheresisForm = reactive({
@@ -654,7 +654,7 @@ async function testScanBarcode() {
       }),
     });
     scanResult.value = await res.json();
-  } catch (err) {
+  } catch {
     scanResult.value = { is_valid: false, failure_reason: 'Verification request failed' };
   }
 }

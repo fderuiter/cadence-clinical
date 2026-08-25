@@ -130,7 +130,7 @@
                   <span :class="{ 'metric-alert': item.is_prr_signal }">
                     {{ item.prr.toFixed(2) }}
                   </span>
-                  <span class="ci-bounds">[{{ item.prr_ci_lower.toFixed(2)}, {{ item.prr_ci_upper.toFixed(2) }}]</span>
+                  <span class="ci-bounds">[{{ item.prr_ci_lower.toFixed(2) }}, {{ item.prr_ci_upper.toFixed(2) }}]</span>
                 </td>
                 <td>
                   <span :class="{ 'metric-alert': item.chi_square_yates >= 4.0 }">
@@ -141,13 +141,13 @@
                   <span :class="{ 'metric-alert': item.is_ror_signal }">
                     {{ item.ror.toFixed(2) }}
                   </span>
-                  <span class="ci-bounds">[{{ item.ror_ci_lower.toFixed(2)}, {{ item.ror_ci_upper.toFixed(2) }}]</span>
+                  <span class="ci-bounds">[{{ item.ror_ci_lower.toFixed(2) }}, {{ item.ror_ci_upper.toFixed(2) }}]</span>
                 </td>
                 <td>
                   <span :class="{ 'metric-alert': item.is_ebgm_signal }">
                     {{ item.ebgm.toFixed(2) }}
                   </span>
-                  <span class="ci-bounds">({{ item.eb05.toFixed(2)} - {{ item.eb95.toFixed(2)}})</span>
+                  <span class="ci-bounds">({{ item.eb05.toFixed(2) }} - {{ item.eb95.toFixed(2) }})</span>
                 </td>
                 <td>
                   <span :class="['strength-pill', item.signal_strength.toLowerCase()]">
@@ -400,7 +400,7 @@ interface PeriodicReport {
   approved_by_user_id: string | null
 }
 
-const props = withDefaults(
+const _props = withDefaults(
   defineProps<{
     targetDrug?: string
     studyId?: string
@@ -602,7 +602,7 @@ function openCompileReportModal() {
   activeTab.value = 'reports'
 }
 
-function triggerManualAlert(item: DisproportionalityMetric) {
+function triggerManualAlert(_item: DisproportionalityMetric) {
   activeTab.value = 'alerts'
 }
 

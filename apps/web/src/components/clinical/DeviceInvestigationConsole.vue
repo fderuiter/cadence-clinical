@@ -1280,7 +1280,7 @@ function executeAdjudication() {
   updateMetrics();
 }
 
-function generateMirReport(sc) {
+function generateMirReport(_sc) {
   activeTab.value = 'regulatory_exports';
 }
 
