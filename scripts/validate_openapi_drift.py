@@ -35,7 +35,6 @@ if sys.version_info < (3, 14):
 
 from scripts.runtime_guard import enforce_python_runtime, print_runtime_info
 
-
 TARGET_DOC_PATHS = [
     "docs/openapi",
     "docs/SDLC/03_API_Integration_Specification.md",
@@ -52,7 +51,9 @@ def check_openapi_drift() -> bool:
     print("--- Starting Inline OpenAPI Documentation Drift Check ---")
 
     # Step 1: Validate microservice OpenAPI schemas and export to docs/openapi/
-    print("\n[STEP 1] Validating microservice OpenAPI schemas and exporting JSON specs...")
+    print(
+        "\n[STEP 1] Validating microservice OpenAPI schemas and exporting JSON specs..."
+    )
     export_script = REPO_ROOT / "scripts" / "validate_schemas.py"
     export_dir = REPO_ROOT / "docs" / "openapi"
 
@@ -72,7 +73,9 @@ def check_openapi_drift() -> bool:
     print("✔ Microservice OpenAPI schemas validated and exported successfully.")
 
     # Step 2: Synchronize unified OpenAPI spec in 03_API_Integration_Specification.md
-    print("\n[STEP 2] Synchronizing unified OpenAPI spec into Markdown documentation...")
+    print(
+        "\n[STEP 2] Synchronizing unified OpenAPI spec into Markdown documentation..."
+    )
     sync_script = REPO_ROOT / "scripts" / "sync_openapi_spec.py"
 
     res_sync = subprocess.run(
@@ -83,7 +86,10 @@ def check_openapi_drift() -> bool:
     )
 
     if res_sync.returncode != 0:
-        print("\n[FAIL] Unified OpenAPI specification synchronization failed:", file=sys.stderr)
+        print(
+            "\n[FAIL] Unified OpenAPI specification synchronization failed:",
+            file=sys.stderr,
+        )
         print(res_sync.stdout, file=sys.stderr)
         print(res_sync.stderr, file=sys.stderr)
         return False
@@ -155,7 +161,9 @@ def check_openapi_drift() -> bool:
         )
         return False
 
-    print("\n[VALIDATION PASSED] API documentation files match the backend OpenAPI schemas. Zero drift detected.")
+    print(
+        "\n[VALIDATION PASSED] API documentation files match the backend OpenAPI schemas. Zero drift detected."
+    )
     return True
 
 

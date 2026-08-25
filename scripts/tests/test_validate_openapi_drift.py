@@ -11,7 +11,7 @@ Compliance:
 - Gate 3: Mandatory test coverage with 100% passing rate.
 """
 
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 from scripts.validate_openapi_drift import check_openapi_drift
 
@@ -20,8 +20,12 @@ from scripts.validate_openapi_drift import check_openapi_drift
 def test_check_openapi_drift_success(mock_run: MagicMock) -> None:
     """Test check_openapi_drift returns True when all scripts succeed and no drift is found."""
     mock_run.side_effect = [
-        MagicMock(returncode=0, stdout="Schema validation passed", stderr=""),  # validate_schemas
-        MagicMock(returncode=0, stdout="Sync spec passed", stderr=""),  # sync_openapi_spec
+        MagicMock(
+            returncode=0, stdout="Schema validation passed", stderr=""
+        ),  # validate_schemas
+        MagicMock(
+            returncode=0, stdout="Sync spec passed", stderr=""
+        ),  # sync_openapi_spec
         MagicMock(returncode=0, stdout="", stderr=""),  # git status --porcelain
     ]
 
@@ -65,7 +69,9 @@ def test_check_openapi_drift_detected_and_reverted(mock_run: MagicMock) -> None:
             returncode=0, stdout=" M docs/openapi/designer_openapi.json\n", stderr=""
         ),  # git status
         MagicMock(
-            returncode=0, stdout="diff --git a/docs/openapi/designer_openapi.json", stderr=""
+            returncode=0,
+            stdout="diff --git a/docs/openapi/designer_openapi.json",
+            stderr="",
         ),  # git diff
         MagicMock(returncode=0, stdout="", stderr=""),  # git checkout -- docs/...
         MagicMock(returncode=0, stdout="", stderr=""),  # git clean -fd docs/openapi/
@@ -76,5 +82,7 @@ def test_check_openapi_drift_detected_and_reverted(mock_run: MagicMock) -> None:
     assert mock_run.call_count == 6
 
     # Verify non-destructive cleanup calls were made
-    assert any("git" in c[0][0] and "checkout" in c[0][0] for c in mock_run.call_args_list)
+    assert any(
+        "git" in c[0][0] and "checkout" in c[0][0] for c in mock_run.call_args_list
+    )
     assert any("git" in c[0][0] and "clean" in c[0][0] for c in mock_run.call_args_list)
