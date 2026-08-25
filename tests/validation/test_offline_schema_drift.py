@@ -467,3 +467,100 @@ class TestOfflineSchemaDrift:
             # Clean up the temporary file
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
+
+    def test_committed_schema_visualizer_is_up_to_date(self) -> None:
+        """Validate that committed schema visualizers match freshly generated visualizers.
+
+        Ensures developers run `scripts/generate_schema_documentation.py` and commit the
+        resulting HTML visualizer and CDISC USDM compliance artifacts whenever domain models change.
+        """
+        import difflib
+        import tempfile
+
+        import pytest
+
+        import scripts.generate_schema_documentation
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            original_root = scripts.generate_schema_documentation.ROOT_DIR
+            try:
+                scripts.generate_schema_documentation.ROOT_DIR = tmp_path
+                scripts.generate_schema_documentation.main()
+            finally:
+                scripts.generate_schema_documentation.ROOT_DIR = original_root
+
+            repo_root = Path(__file__).parent.parent.parent.resolve()
+
+            files_to_check = [
+                (
+                    "docs/schema_visualizer.html",
+                    tmp_path / "docs" / "schema_visualizer.html",
+                ),
+                ("docs/schema/index.html", tmp_path / "docs" / "schema" / "index.html"),
+                (
+                    "docs/CDISC/cdisc_usdm_compliance.json",
+                    tmp_path / "docs" / "CDISC" / "cdisc_usdm_compliance.json",
+                ),
+                (
+                    "docs/schema/cdisc_usdm_compliance.json",
+                    tmp_path / "docs" / "schema" / "cdisc_usdm_compliance.json",
+                ),
+            ]
+
+            for rel_path, gen_file in files_to_check:
+                committed_file = repo_root / rel_path
+                assert committed_file.exists(), (
+                    f"Committed file not found at: {committed_file}"
+                )
+                assert gen_file.exists(), (
+                    f"Freshly generated file not found at: {gen_file}"
+                )
+
+                committed_content = committed_file.read_text(encoding="utf-8").strip()
+                generated_content = gen_file.read_text(encoding="utf-8").strip()
+
+                if committed_content != generated_content:
+                    diff = list(
+                        difflib.unified_diff(
+                            committed_content.splitlines(),
+                            generated_content.splitlines(),
+                            fromfile=f"committed/{rel_path}",
+                            tofile=f"generated/{rel_path}",
+                        )
+                    )
+                    diff_msg = "\n".join(diff[:50])
+                    pytest.fail(
+                        f"Domain models or schema definitions have changed but '{rel_path}' has not been regenerated and committed.\n"
+                        f"Please run 'uv run python scripts/generate_schema_documentation.py' and commit the updated file.\n"
+                        f"Diff:\n{diff_msg}"
+                    )
+
+    def test_schema_visualizers_use_vendored_assets(self) -> None:
+        """Validate that generated HTML visualizer artifacts use local vendored assets without CDNs or Tailwind."""
+        repo_root = Path(__file__).parent.parent.parent.resolve()
+        html_files = [
+            repo_root / "docs" / "schema_visualizer.html",
+            repo_root / "docs" / "schema" / "index.html",
+        ]
+        for html_file in html_files:
+            assert html_file.exists()
+            content = html_file.read_text(encoding="utf-8")
+            assert "cdn.tailwindcss.com" not in content, (
+                f"CDN link found in {html_file}"
+            )
+            assert "unpkg.com" not in content, f"CDN link found in {html_file}"
+            assert "vendor/tailwindcss.js" not in content, (
+                f"Tailwind asset reference found in {html_file}"
+            )
+            assert "vendor/vis-network.min.js" in content, (
+                f"Missing vendor script in {html_file}"
+            )
+
+        vendor_files = [
+            repo_root / "docs" / "vendor" / "vis-network.min.js",
+            repo_root / "docs" / "schema" / "vendor" / "vis-network.min.js",
+        ]
+        for vf in vendor_files:
+            assert vf.exists(), f"Vendor asset missing on disk: {vf}"
+            assert vf.stat().st_size > 1000, f"Vendor asset is empty: {vf}"

@@ -184,6 +184,15 @@ class SoACellView(BaseModel):
     derived_from_soa: bool = Field(
         False, description="Flag indicating selective lineage."
     )
+    section_number: str | None = Field(
+        None, description="Protocol section citation number coordinate (e.g., '6.1')."
+    )
+    page_number: int | None = Field(
+        None, description="Protocol page citation number coordinate (e.g., 18)."
+    )
+    citation_marker: str | None = Field(
+        None, description="Standardized verbatim citation marker string."
+    )
 
 
 class SoARowView(BaseModel):

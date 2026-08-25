@@ -28,6 +28,7 @@ from apps.designer.domain.digitization_models import (
 from apps.designer.rules import (
     detect_circular_dependencies,
 )
+from packages.compliance.services.protocol_rag import format_citation_marker
 
 logger = logging.getLogger(__name__)
 
@@ -678,12 +679,33 @@ def synthesize_ecrf_forms(
                 }
             )
 
+        sec_num = act.section_number or "5.1"
+        pg_num = act.page_number or 12
+        cit_marker = act.citation_marker or format_citation_marker(
+            "v1.0", sec_num, pg_num
+        )
+
+        items_copy = []
+        for raw_item in form_items:
+            item_dict = dict(raw_item)
+            item_sec = item_dict.get("section_number") or sec_num
+            item_pg = item_dict.get("page_number") or pg_num
+            item_dict["section_number"] = item_sec
+            item_dict["page_number"] = item_pg
+            item_dict["citation_marker"] = item_dict.get(
+                "citation_marker"
+            ) or format_citation_marker("v1.0", item_sec, item_pg)
+            items_copy.append(item_dict)
+
         form = SynthesizedECRFForm(
             form_id=f"FORM_{domain}",
             form_name=form_name,
             cdash_domain=domain,
-            items=form_items,
+            items=items_copy,
             rules=rules,
+            section_number=sec_num,
+            page_number=pg_num,
+            citation_marker=cit_marker,
         )
         synthesized_forms.append(form)
 

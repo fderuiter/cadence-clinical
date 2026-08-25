@@ -48,6 +48,12 @@ from apps.designer.domain.digitization_models import (
     CommitUSDMResponse,
     USDMProtocolExtractionResponse,
 )
+from apps.designer.domain.synthesis.faithfulness import (
+    evaluate_synthesis_faithfulness,
+)
+from apps.designer.domain.synthesis.soa_compiler import (
+    compile_soa_matrix_payload,
+)
 from apps.designer.infrastructure.neo4j_usdm_writer import commit_usdm_graph
 from packages.security.rbac import require_permission
 
@@ -157,6 +163,13 @@ async def commit_usdm_to_study(
     synthesized_forms = synthesize_ecrf_forms(payload.data)
 
     version_id = f"{study_id}_v1"
+    soa_matrix = await compile_soa_matrix_payload(driver, payload.data)
+    faithfulness_meta = evaluate_synthesis_faithfulness(
+        synthesized_forms=synthesized_forms,
+        soa_matrix=soa_matrix,
+        source_text=payload.data.study_title,
+        protocol_version=version_id,
+    )
 
     return CommitUSDMResponse(
         study_id=study_id,
@@ -165,6 +178,7 @@ async def commit_usdm_to_study(
         nodes_created=graph_res.get("nodes_created", 0),
         relationships_created=graph_res.get("relationships_created", 0),
         synthesized_forms=synthesized_forms,
+        faithfulness_metadata=faithfulness_meta,
         message=f"Successfully synthesized {len(synthesized_forms)} eCRF forms and committed USDM graph.",
     )
 
@@ -272,6 +286,7 @@ async def get_digitization_dag_job_status(
         is_terminal=is_term,
         final_usdm_payload=job.final_usdm_payload,
         synthesized_forms=job.synthesized_forms,
+        faithfulness_metadata=job.faithfulness_metadata,
     )
 
 
@@ -316,6 +331,7 @@ async def resume_digitization_dag_job(
         is_terminal=False,
         final_usdm_payload=job.final_usdm_payload,
         synthesized_forms=job.synthesized_forms,
+        faithfulness_metadata=job.faithfulness_metadata,
     )
 
 
@@ -366,6 +382,13 @@ async def compile_usdm_from_dag_job(
     # 2. Synthesize CDASH eCRFs & Rules
     synthesized_forms = synthesize_ecrf_forms(job.final_usdm_payload)
     version_id = f"{payload.study_id}_v1"
+    soa_matrix = await compile_soa_matrix_payload(driver, job.final_usdm_payload)
+    faithfulness_meta = evaluate_synthesis_faithfulness(
+        synthesized_forms=synthesized_forms,
+        soa_matrix=soa_matrix,
+        source_text=job.final_usdm_payload.study_title,
+        protocol_version=version_id,
+    )
 
     return CommitUSDMResponse(
         study_id=payload.study_id,
@@ -374,5 +397,6 @@ async def compile_usdm_from_dag_job(
         nodes_created=graph_res.get("nodes_created", 0),
         relationships_created=graph_res.get("relationships_created", 0),
         synthesized_forms=synthesized_forms,
+        faithfulness_metadata=faithfulness_meta,
         message=f"Successfully compiled and committed USDM graph for study '{payload.study_id}' with {len(synthesized_forms)} eCRF forms.",
     )

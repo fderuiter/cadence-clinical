@@ -1,5 +1,5 @@
 // Auto-generated from OpenAPI schema definition
-// Generated on: 2026-08-25T14:53:08.559Z
+// Generated on: 2026-08-25T18:27:59.698Z
 
 export interface ActivityAssignmentRequest {
   visit_id: string;
@@ -244,6 +244,7 @@ export interface CommitUSDMResponse {
   relationships_created: number;
   synthesized_forms?: SynthesizedECRFForm[];
   message: string;
+  faithfulness_metadata?: FaithfulnessVerificationMetadata | null;
 }
 
 export type ComparisonOperator = "==" | "!=" | "<" | "<=" | ">" | ">=";
@@ -404,6 +405,7 @@ export interface DAGJobStatusResponse {
   is_terminal: boolean;
   final_usdm_payload?: USDMProtocolExtractionResponse | null;
   synthesized_forms?: SynthesizedECRFForm[];
+  faithfulness_metadata?: FaithfulnessVerificationMetadata | null;
 }
 
 export interface DataCaptureEcrfImpact {
@@ -528,6 +530,9 @@ export interface ExtractedActivity {
   cdash_domain: string;
   biomedical_concept_code?: string | null;
   assigned_visit_names?: string[];
+  section_number?: string | null;
+  page_number?: number | null;
+  citation_marker?: string | null;
 }
 
 export interface ExtractedArm {
@@ -557,6 +562,15 @@ export interface ExtractedVisit {
   window_lower_days?: number;
   window_upper_days?: number;
   is_mandatory?: boolean;
+}
+
+export interface FaithfulnessVerificationMetadata {
+  faithfulness_score: number;
+  is_faithful: boolean;
+  verification_status?: "VERIFIED" | "FLAGGED_LOW_FAITHFULNESS";
+  citation_coverage?: number;
+  protocol_version?: string;
+  warnings?: string[];
 }
 
 export interface FeasibilityReport {
@@ -972,6 +986,9 @@ export interface SoACellView {
   details?: string | null;
   arm_id?: string | null;
   derived_from_soa?: boolean;
+  section_number?: string | null;
+  page_number?: number | null;
+  citation_marker?: string | null;
 }
 
 export interface SoAEntityCreatedResponse {
@@ -1133,6 +1150,9 @@ export interface SynthesizedECRFForm {
   cdash_domain: string;
   items?: Record<string, any>[];
   rules?: Record<string, any>[];
+  section_number?: string | null;
+  page_number?: number | null;
+  citation_marker?: string | null;
 }
 
 export interface TerminologyConcept {
@@ -1199,6 +1219,7 @@ export interface USDMProtocolExtractionResponse {
   activities?: ExtractedActivity[];
   criteria?: ExtractedCriterion[];
   confidence_score: number;
+  faithfulness_metadata?: FaithfulnessVerificationMetadata | null;
 }
 
 export interface UpdateArmRequest {

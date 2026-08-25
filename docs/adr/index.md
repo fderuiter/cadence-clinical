@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-08-25: Targeted Schema Provenance and Post Synthesis Faithfulness Scoring](2026-08-25-targeted-schema-provenance-and-post-synthesis-faithfulness-scoring.md)
 - [2026-08-23: Automated Golden Path Video Recording and GDrive Sync](2026-08-23-automated-golden-path-video-recording-and-gdrive-sync.md)
 - [2026-08-23: Medical Device and IVD Investigation Suite with UDI and Malfunction Quarantine](2026-08-23-medical-device-and-ivd-investigation-suite-with-udi-and-malfunction-quarantine.md)
 - [2026-08-22: Hermetic Containerized Statistical Computing Environment and Role-Gated Unblinded Data Vault](2026-08-22-hermetic-containerized-statistical-computing-environment-and-role-gated-unblinded-data-vault.md)
@@ -84,6 +85,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+- [2026-08-25: Hybrid Multi-Step Clinical Reasoning Core and Protocol Grounding Gate](2026-08-25-hybrid-multi-step-clinical-reasoning-core-and-protocol-grounding-gate.md)
 - [2026-08-21: AI Gateway Microservice and Three-Tier Clinical Intelligence Architecture](2026-08-21-ai-gateway-microservice-and-three-tier-clinical-intelligence-architecture.md)
 - [2026-08-18: Localize datetime helpers in security package](2026-08-18-localize-datetime-helpers-in-security-package.md)
 

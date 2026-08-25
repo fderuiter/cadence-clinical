@@ -26,10 +26,7 @@
     </div>
 
     <!-- Documents Data Table -->
-    <div
-      ref="containerRef"
-      class="table-responsive"
-    >
+    <div ref="containerRef" class="table-responsive">
       <table
         class="documents-table"
         role="grid"
@@ -39,53 +36,18 @@
       >
         <thead>
           <tr>
-            <th
-              scope="col"
-            >
-              Document Name
-            </th>
-            <th
-              scope="col"
-            >
-              Taxonomy
-            </th>
-            <th
-              scope="col"
-            >
-              Version
-            </th>
-            <th
-              scope="col"
-            >
-              Status
-            </th>
-            <th
-              scope="col"
-            >
-              Uploaded By
-            </th>
-            <th
-              scope="col"
-            >
-              Uploaded At
-            </th>
-            <th
-              scope="col"
-              class="actions-column"
-            >
-              Actions
-            </th>
+            <th scope="col">Document Name</th>
+            <th scope="col">Taxonomy</th>
+            <th scope="col">Version</th>
+            <th scope="col">Status</th>
+            <th scope="col">Uploaded By</th>
+            <th scope="col">Uploaded At</th>
+            <th scope="col" class="actions-column">Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr
-            v-if="paginatedDocuments.length === 0"
-          >
-            <td
-              colspan="7"
-              role="gridcell"
-              class="empty-table-cell"
-            >
+          <tr v-if="paginatedDocuments.length === 0">
+            <td colspan="7" role="gridcell" class="empty-table-cell">
               No documents have been uploaded for this artifact yet.
             </td>
           </tr>
@@ -98,8 +60,7 @@
               role="gridcell"
               :tabindex="getCellTabindex(rIndex, 0)"
               :class="{
-                'cell-active':
-                  isCellActive(rIndex, 0),
+                'cell-active': isCellActive(rIndex, 0),
               }"
               :data-row="rIndex"
               :data-col="0"
@@ -126,8 +87,7 @@
                   : getCellTabindex(rIndex, 1)
               "
               :class="{
-                'cell-active':
-                  isCellActive(rIndex, 1),
+                'cell-active': isCellActive(rIndex, 1),
               }"
               :data-row="rIndex"
               :data-col="1"
@@ -136,9 +96,7 @@
               @keydown="handleCellKeyDown($event, rIndex, 1, doc)"
             >
               <div
-                v-if="
-                  isEditing && isCellActive(rIndex, 1)
-                "
+                v-if="isEditing && isCellActive(rIndex, 1)"
                 class="inline-edit-container"
               >
                 <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
@@ -170,8 +128,7 @@
               role="gridcell"
               :tabindex="getCellTabindex(rIndex, 2)"
               :class="{
-                'cell-active':
-                  isCellActive(rIndex, 2),
+                'cell-active': isCellActive(rIndex, 2),
               }"
               :data-row="rIndex"
               :data-col="2"
@@ -184,8 +141,7 @@
               role="gridcell"
               :tabindex="getCellTabindex(rIndex, 3)"
               :class="{
-                'cell-active':
-                  isCellActive(rIndex, 3),
+                'cell-active': isCellActive(rIndex, 3),
               }"
               :data-row="rIndex"
               :data-col="3"
@@ -200,8 +156,7 @@
               role="gridcell"
               :tabindex="getCellTabindex(rIndex, 4)"
               :class="{
-                'cell-active':
-                  isCellActive(rIndex, 4),
+                'cell-active': isCellActive(rIndex, 4),
               }"
               :data-row="rIndex"
               :data-col="4"
@@ -216,8 +171,7 @@
               role="gridcell"
               :tabindex="getCellTabindex(rIndex, 5)"
               :class="{
-                'cell-active':
-                  isCellActive(rIndex, 5),
+                'cell-active': isCellActive(rIndex, 5),
               }"
               :data-row="rIndex"
               :data-col="5"
@@ -231,8 +185,7 @@
               role="gridcell"
               :tabindex="getCellTabindex(rIndex, 6)"
               :class="{
-                'cell-active':
-                  isCellActive(rIndex, 6),
+                'cell-active': isCellActive(rIndex, 6),
               }"
               :data-row="rIndex"
               :data-col="6"
@@ -505,21 +458,17 @@ const containerRef = ref(null);
 const tempTaxonomyCode = ref("");
 const inlineSelectRef = ref(null);
 
-const grid = use2DGrid(
-  () => paginatedDocuments.value.length,
-  7,
-  {
-    containerRef,
-    initialRow: 0,
-    initialCol: 0,
-    onCopyCell: (rIndex, cIndex, doc) => copyActiveCellValue(doc),
-    onCellAction: (rIndex, cIndex, doc, _event) => {
-      if (cIndex === 1) {
-        startEditing(rIndex, doc);
-      }
-    },
-  }
-);
+const grid = use2DGrid(() => paginatedDocuments.value.length, 7, {
+  containerRef,
+  initialRow: 0,
+  initialCol: 0,
+  onCopyCell: (rIndex, cIndex, doc) => copyActiveCellValue(doc),
+  onCellAction: (rIndex, cIndex, doc, _event) => {
+    if (cIndex === 1) {
+      startEditing(rIndex, doc);
+    }
+  },
+});
 
 const {
   activeRowIndex,

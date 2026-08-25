@@ -147,7 +147,12 @@ describe("2D Grid Keyboard Navigation & ARIA Semantics Engine", () => {
         coded_code: null,
         coded_term: null,
         suggestions: [
-          { pt_name: "Headache", llt_name: "Severe headache", code: "10019211", score: 0.95 },
+          {
+            pt_name: "Headache",
+            llt_name: "Severe headache",
+            code: "10019211",
+            score: 0.95,
+          },
         ],
       },
       {
@@ -203,7 +208,9 @@ describe("2D Grid Keyboard Navigation & ARIA Semantics Engine", () => {
 
       const cells = wrapper.findAll("td[role='gridcell']");
       const activeCells = cells.filter((c) => c.attributes("tabindex") === "0");
-      const inactiveCells = cells.filter((c) => c.attributes("tabindex") === "-1");
+      const inactiveCells = cells.filter(
+        (c) => c.attributes("tabindex") === "-1"
+      );
 
       expect(activeCells.length).toBe(1);
       expect(inactiveCells.length).toBe(cells.length - 1);
@@ -280,7 +287,9 @@ describe("2D Grid Keyboard Navigation & ARIA Semantics Engine", () => {
 
       const table = wrapper.find("table");
       expect(table.attributes("role")).toBe("grid");
-      expect(table.attributes("aria-label")).toBe("Artifact Documents Registry");
+      expect(table.attributes("aria-label")).toBe(
+        "Artifact Documents Registry"
+      );
 
       const headers = wrapper.findAll("th");
       headers.forEach((th) => {
