@@ -80,7 +80,7 @@ class ExecutionStateContext(BaseModel):
         default_factory=list,
         description="List of previously completed reasoning steps.",
     )
-    patient_context: dict[str, Any] | str | None = Field(
+    patient_context: list[dict[str, Any]] | dict[str, Any] | str | None = Field(
         default=None, description="Optional raw or masked patient record context."
     )
     protocol_chunks: list[ProtocolRAGContextChunk] = Field(
