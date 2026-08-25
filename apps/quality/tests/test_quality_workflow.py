@@ -25,7 +25,9 @@ def make_step_up_token(
 
     from jose import jwt
 
-    secret = secret or os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026")
+    secret = secret or os.getenv(
+        "GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"
+    )  # pragma: allowlist secret
 
     now = time.time()
     payload = {

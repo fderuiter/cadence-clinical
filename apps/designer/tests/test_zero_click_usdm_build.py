@@ -83,7 +83,9 @@ def get_gateway_auth_headers(
         Dictionary of gateway authentication headers.
     """
     timestamp = str(time.time())
-    secret = os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026")
+    secret = os.getenv(
+        "GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"
+    )  # pragma: allowlist secret
     payload = {
         "change_reason": change_reason,
         "roles": roles,

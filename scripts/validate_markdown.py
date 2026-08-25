@@ -45,9 +45,13 @@ MOCK_ENV_VARS = {
     "DEBUG": "True",
     "QUALITY_DATABASE_URL": "sqlite+aiosqlite:///:memory:",
     "SAFETY_DATABASE_URL": "sqlite+aiosqlite:///:memory:",
-    "GATEWAY_SECRET": "mock-gateway-secret-12345",  # pragma: allowlist secret
-    "SAFETY_SALT": "mock-safety-salt-12345",  # pragma: allowlist secret
-    "SIGNING_SECRET": "mock-signing-secret-12345",  # pragma: allowlist secret
+    "GATEWAY_SECRET": "valid-test-gateway-secret-key-2026",  # pragma: allowlist secret
+    "SAFETY_SALT": "valid-test-safety-salt-2026",  # pragma: allowlist secret
+    "SIGNING_SECRET": "designer-amendment-secure-key-12345",  # pragma: allowlist secret
+    "BIOSTAT_EXPORT_SALT": "valid-test-biostat-export-salt-2026",  # pragma: allowlist secret
+    "RTSM_MASTER_SECRET": "valid-test-rtsm-master-secret-key-2026",  # pragma: allowlist secret
+    "WEBHOOK_SIGNING_SECRET": "valid-test-webhook-signing-secret-2026",  # pragma: allowlist secret
+    "PSEUDONYMIZATION_SALT": "valid-test-pseudonymization-salt-2026",  # pragma: allowlist secret
     "NEO4J_URI": "bolt://localhost:7687",
     "NEO4J_USER": "neo4j",
     "NEO4J_PASSWORD": "password",  # pragma: allowlist secret

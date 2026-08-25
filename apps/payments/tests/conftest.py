@@ -73,7 +73,9 @@ def get_auth_headers(
         }
         headers["X-Sig-Token"] = jwt.encode(
             sig_payload,
-            os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"),
+            os.getenv(
+                "GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"
+            ),  # pragma: allowlist secret
             algorithm="HS256",
         )
     return headers

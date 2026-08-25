@@ -24,7 +24,9 @@ from apps.designer.delta import (
 )
 from apps.designer.main import app
 
-GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026")
+GATEWAY_SECRET = os.getenv(
+    "GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"
+)  # pragma: allowlist secret
 
 
 def get_auth_headers(

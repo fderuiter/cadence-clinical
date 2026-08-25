@@ -296,7 +296,9 @@ async def test_offline_sync_cryptographic_verification():
     }
 
     # Generate valid signature
-    secret = os.getenv("GATEWAY_SECRET", "valid-test-gateway-secret-key-2026").encode()
+    secret = os.getenv(
+        "GATEWAY_SECRET", "valid-test-gateway-secret-key-2026"
+    ).encode()  # pragma: allowlist secret
     sig = generate_canonical_signature(batch_data, secret)
 
     # Attach signature
