@@ -5,7 +5,7 @@
 </template>
 
 <script setup>
-import DeviceInvestigationConsole from '../components/clinical/DeviceInvestigationConsole.vue';
+import DeviceInvestigationConsole from "../components/clinical/DeviceInvestigationConsole.vue";
 </script>
 
 <style scoped>

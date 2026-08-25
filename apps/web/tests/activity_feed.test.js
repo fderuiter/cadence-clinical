@@ -51,7 +51,8 @@ vi.mock("../src/api/fileshare", () => ({
                 signature_manifestation: {
                   printed_name: "Dr. Investigator",
                   meaning: "Approved for clinical use",
-                  signature: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                  signature:
+                    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                 },
               },
             },
@@ -95,10 +96,16 @@ describe("feat(fileshare): 15 — Per-Document Activity Feed (#4322)", () => {
       });
       await flushPromises();
 
-      expect(wrapper.find(".drawer-title").text()).toBe("Document Activity Feed");
-      expect(wrapper.find(".drawer-subtitle").text()).toContain("Protocol_Amendment_v2.1.pdf");
+      expect(wrapper.find(".drawer-title").text()).toBe(
+        "Document Activity Feed"
+      );
+      expect(wrapper.find(".drawer-subtitle").text()).toContain(
+        "Protocol_Amendment_v2.1.pdf"
+      );
       expect(wrapper.find(".version-tag").text()).toBe("v2");
-      expect(wrapper.find(".gxp-badge-strip").text()).toContain("ICH E6(R2) & 21 CFR Part 11");
+      expect(wrapper.find(".gxp-badge-strip").text()).toContain(
+        "ICH E6(R2) & 21 CFR Part 11"
+      );
     });
 
     it("fetches and displays timeline events with icons, actors, and relative timestamps", async () => {
@@ -142,8 +149,12 @@ describe("feat(fileshare): 15 — Per-Document Activity Feed (#4322)", () => {
       // Expand details
       await toggleBtn.trigger("click");
       expect(approvalCard.find(".detail-content").exists()).toBe(true);
-      expect(approvalCard.find(".signature-box").text()).toContain("Dr. Investigator");
-      expect(approvalCard.find(".signature-box").text()).toContain("Approved for clinical use");
+      expect(approvalCard.find(".signature-box").text()).toContain(
+        "Dr. Investigator"
+      );
+      expect(approvalCard.find(".signature-box").text()).toContain(
+        "Approved for clinical use"
+      );
 
       // Collapse details
       await toggleBtn.trigger("click");

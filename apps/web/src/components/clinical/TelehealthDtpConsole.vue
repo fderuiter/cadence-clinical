@@ -1,16 +1,27 @@
 <template>
-  <div class="dct-console" role="region" aria-label="Telehealth Video and DTP Logistics Console">
+  <div
+    class="dct-console"
+    role="region"
+    aria-label="Telehealth Video and DTP Logistics Console"
+  >
     <!-- Header -->
     <header class="console-header">
       <div class="header-main">
         <div class="badge-row">
           <span class="badge badge-gxp">21 CFR Part 11</span>
-          <span class="badge badge-standard">WebRTC DTLS-SRTP &amp; USP &lt;1079&gt;</span>
+          <span class="badge badge-standard"
+            >WebRTC DTLS-SRTP &amp; USP &lt;1079&gt;</span
+          >
           <span class="badge badge-stream">Decentralized Clinical Trials</span>
         </div>
-        <h2 class="console-title">GxP Telehealth Consultations &amp; Direct-to-Patient (DTP) Logistics</h2>
+        <h2 class="console-title">
+          GxP Telehealth Consultations &amp; Direct-to-Patient (DTP) Logistics
+        </h2>
         <p class="console-subtitle">
-          End-to-end encrypted WebRTC video visits with GxP archived recording seals, synchronized eConsent co-viewing, tiered pediatric assent &amp; LAR dual-signatures, DTP cold-chain courier tracking, and in-home visiting nurse mobile eCRF synchronization.
+          End-to-end encrypted WebRTC video visits with GxP archived recording
+          seals, synchronized eConsent co-viewing, tiered pediatric assent &amp;
+          LAR dual-signatures, DTP cold-chain courier tracking, and in-home
+          visiting nurse mobile eCRF synchronization.
         </p>
       </div>
 
@@ -50,8 +61,12 @@
         </div>
         <div class="metric-content">
           <span class="metric-label">Telehealth Sessions</span>
-          <span class="metric-value">{{ metrics.total_telehealth_sessions }}</span>
-          <span class="metric-sub">{{ metrics.active_video_rooms }} rooms active</span>
+          <span class="metric-value">{{
+            metrics.total_telehealth_sessions
+          }}</span>
+          <span class="metric-sub"
+            >{{ metrics.active_video_rooms }} rooms active</span
+          >
         </div>
       </div>
 
@@ -61,7 +76,9 @@
         </div>
         <div class="metric-content">
           <span class="metric-label">Pediatric Assents / LAR</span>
-          <span class="metric-value">{{ metrics.pediatric_assents_completed }}</span>
+          <span class="metric-value">{{
+            metrics.pediatric_assents_completed
+          }}</span>
           <span class="metric-sub">Tiered dual-signatures sealed</span>
         </div>
       </div>
@@ -73,17 +90,27 @@
         <div class="metric-content">
           <span class="metric-label">DTP Courier Shipments</span>
           <span class="metric-value">{{ metrics.total_dtp_shipments }}</span>
-          <span class="metric-sub">{{ metrics.active_cold_chain_shipments }} in transit</span>
+          <span class="metric-sub"
+            >{{ metrics.active_cold_chain_shipments }} in transit</span
+          >
         </div>
       </div>
 
       <div class="metric-card">
-        <div class="metric-icon-box" :class="metrics.temperature_excursion_alerts > 0 ? 'bg-red' : 'bg-green'">
+        <div
+          class="metric-icon-box"
+          :class="
+            metrics.temperature_excursion_alerts > 0 ? 'bg-red' : 'bg-green'
+          "
+        >
           <span class="metric-icon">🌡️</span>
         </div>
         <div class="metric-content">
           <span class="metric-label">Cold-Chain Excursions</span>
-          <span class="metric-value" :class="{ 'text-danger': metrics.temperature_excursion_alerts > 0 }">
+          <span
+            class="metric-value"
+            :class="{ 'text-danger': metrics.temperature_excursion_alerts > 0 }"
+          >
             {{ metrics.temperature_excursion_alerts }}
           </span>
           <span class="metric-sub">USP &lt;1079&gt; stability budget</span>
@@ -134,7 +161,7 @@
     <main class="console-body">
       <!-- Loading State -->
       <div v-if="isLoading" class="loading-state">
-        <div class="spinner"></div>
+        <div class="spinner" />
         <p>Loading DCT clinical data &amp; telemetry...</p>
       </div>
 
@@ -142,10 +169,20 @@
       <section v-else-if="activeTab === 'telehealth'" class="tab-panel">
         <div class="panel-header">
           <div>
-            <h3 class="panel-title">WebRTC Telehealth Video Consultations &amp; GxP Archival</h3>
-            <p class="panel-desc">End-to-end encrypted video rooms, role authorization tokens, signaling channels, and 21 CFR Part 11 SHA-256 recording digital seals.</p>
+            <h3 class="panel-title">
+              WebRTC Telehealth Video Consultations &amp; GxP Archival
+            </h3>
+            <p class="panel-desc">
+              End-to-end encrypted video rooms, role authorization tokens,
+              signaling channels, and 21 CFR Part 11 SHA-256 recording digital
+              seals.
+            </p>
           </div>
-          <button type="button" class="btn btn-primary btn-sm" @click="openScheduleSessionModal">
+          <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            @click="openScheduleSessionModal"
+          >
             + Schedule Video Visit
           </button>
         </div>
@@ -180,25 +217,47 @@
                   </span>
                 </td>
                 <td>
-                  <span class="badge badge-participant">{{ s.participant_records ? s.participant_records.length : 0 }} joined</span>
+                  <span class="badge badge-participant"
+                    >{{
+                      s.participant_records ? s.participant_records.length : 0
+                    }}
+                    joined</span
+                  >
                 </td>
                 <td>
-                  <span v-if="s.recording_seal_metadata" class="badge badge-gxp" :title="s.recording_seal_metadata.part11_certification_statement">
+                  <span
+                    v-if="s.recording_seal_metadata"
+                    class="badge badge-gxp"
+                    :title="
+                      s.recording_seal_metadata.part11_certification_statement
+                    "
+                  >
                     🔒 Sealed (SHA-256)
                   </span>
                   <span v-else class="text-muted text-sm">Not archived</span>
                 </td>
                 <td class="actions-cell">
-                  <button type="button" class="btn btn-secondary btn-xs" @click="openRoomLauncher(s)">
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-xs"
+                    @click="openRoomLauncher(s)"
+                  >
                     🎥 Enter Room
                   </button>
-                  <button type="button" class="btn btn-accent btn-xs" @click="openArchiveModal(s)">
+                  <button
+                    type="button"
+                    class="btn btn-accent btn-xs"
+                    @click="openArchiveModal(s)"
+                  >
                     🔒 Archive Seal
                   </button>
                 </td>
               </tr>
               <tr v-if="sessions.length === 0">
-                <td colspan="8" class="empty-cell">No telehealth video visits scheduled. Click 'Schedule Video Visit' to create one.</td>
+                <td colspan="8" class="empty-cell">
+                  No telehealth video visits scheduled. Click 'Schedule Video
+                  Visit' to create one.
+                </td>
               </tr>
             </tbody>
           </table>
@@ -209,9 +268,15 @@
           <div class="room-sim-header">
             <div>
               <span class="badge badge-gxp">LIVE WebRTC Session</span>
-              <h4>{{ activeRoomSession.title }} ({{ activeRoomSession.room_id }})</h4>
+              <h4>
+                {{ activeRoomSession.title }} ({{ activeRoomSession.room_id }})
+              </h4>
             </div>
-            <button type="button" class="btn btn-secondary btn-xs" @click="activeRoomSession = null">
+            <button
+              type="button"
+              class="btn btn-secondary btn-xs"
+              @click="activeRoomSession = null"
+            >
               ✕ Close Room
             </button>
           </div>
@@ -219,7 +284,10 @@
           <div class="video-grid">
             <div class="video-card remote-video">
               <div class="video-overlay-top">
-                <span class="video-label">Remote Participant: {{ activeRoomSession.subject_id }} (Subject)</span>
+                <span class="video-label"
+                  >Remote Participant:
+                  {{ activeRoomSession.subject_id }} (Subject)</span
+                >
                 <span class="badge badge-stream">DTLS-SRTP Encrypted</span>
               </div>
               <div class="video-placeholder">
@@ -234,16 +302,29 @@
 
             <div class="video-card local-video">
               <div class="video-overlay-top">
-                <span class="video-label">Local Stream: Dr. Investigator (Host)</span>
+                <span class="video-label"
+                  >Local Stream: Dr. Investigator (Host)</span
+                >
               </div>
               <div class="video-placeholder small-avatar">
                 <span class="avatar-small">🩺</span>
                 <p>Local Camera Active</p>
               </div>
               <div class="video-controls">
-                <button type="button" class="btn-icon" title="Toggle Mic">🎤</button>
-                <button type="button" class="btn-icon" title="Toggle Cam">📹</button>
-                <button type="button" class="btn-icon" title="Co-View eConsent" @click="activeTab = 'assent'">📄 Co-View</button>
+                <button type="button" class="btn-icon" title="Toggle Mic">
+                  🎤
+                </button>
+                <button type="button" class="btn-icon" title="Toggle Cam">
+                  📹
+                </button>
+                <button
+                  type="button"
+                  class="btn-icon"
+                  title="Co-View eConsent"
+                  @click="activeTab = 'assent'"
+                >
+                  📄 Co-View
+                </button>
               </div>
             </div>
           </div>
@@ -252,9 +333,15 @@
           <div class="token-info-bar">
             <div>
               <span class="text-sm font-bold">Room Authorization Token:</span>
-              <code class="token-snippet">{{ currentRoomToken || 'cadence_rt_eyJyb29tX2lkIjoi...' }}</code>
+              <code class="token-snippet">{{
+                currentRoomToken || "cadence_rt_eyJyb29tX2lkIjoi..."
+              }}</code>
             </div>
-            <button type="button" class="btn btn-secondary btn-xs" @click="copyToken">
+            <button
+              type="button"
+              class="btn btn-secondary btn-xs"
+              @click="copyToken"
+            >
               📋 Copy Token
             </button>
           </div>
@@ -265,10 +352,20 @@
       <section v-else-if="activeTab === 'assent'" class="tab-panel">
         <div class="panel-header">
           <div>
-            <h3 class="panel-title">Interactive eConsent Co-Viewing &amp; Tiered Pediatric Assent</h3>
-            <p class="panel-desc">Synchronized presenter scrolling, age-appropriate pediatric storyboards, and Legally Authorized Representative (LAR) dual-signature manifests.</p>
+            <h3 class="panel-title">
+              Interactive eConsent Co-Viewing &amp; Tiered Pediatric Assent
+            </h3>
+            <p class="panel-desc">
+              Synchronized presenter scrolling, age-appropriate pediatric
+              storyboards, and Legally Authorized Representative (LAR)
+              dual-signature manifests.
+            </p>
           </div>
-          <button type="button" class="btn btn-primary btn-sm" @click="openAssentModal">
+          <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            @click="openAssentModal"
+          >
             + Execute Pediatric Assent &amp; LAR
           </button>
         </div>
@@ -278,42 +375,94 @@
           <div class="coview-card">
             <div class="coview-header">
               <div>
-                <span class="badge badge-standard">Synchronized eConsent Co-Viewer</span>
-                <span class="text-sm font-bold">Protocol Amendment v3.2 Informed Consent Form</span>
+                <span class="badge badge-standard"
+                  >Synchronized eConsent Co-Viewer</span
+                >
+                <span class="text-sm font-bold"
+                  >Protocol Amendment v3.2 Informed Consent Form</span
+                >
               </div>
               <div class="coview-actions">
-                <button type="button" class="btn btn-secondary btn-xs" @click="simulateScrollSync(-10)">▲ Scroll Up</button>
-                <button type="button" class="btn btn-secondary btn-xs" @click="simulateScrollSync(10)">▼ Scroll Down</button>
-                <span class="badge badge-participant">Sync {{ currentScrollPercent }}%</span>
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-xs"
+                  @click="simulateScrollSync(-10)"
+                >
+                  ▲ Scroll Up
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-xs"
+                  @click="simulateScrollSync(10)"
+                >
+                  ▼ Scroll Down
+                </button>
+                <span class="badge badge-participant"
+                  >Sync {{ currentScrollPercent }}%</span
+                >
               </div>
             </div>
 
             <div class="coview-viewport">
-              <div class="clause-box" :class="{ highlighted: currentClause === 'scope' }">
+              <div
+                class="clause-box"
+                :class="{ highlighted: currentClause === 'scope' }"
+              >
                 <h5>1. Purpose &amp; Overview of the Clinical Trial</h5>
-                <p>This clinical trial investigates the efficacy and safety of Investigational Medicinal Product CAD-4404 in subjects with chronic biomarker-positive disease. Your participation is completely voluntary.</p>
+                <p>
+                  This clinical trial investigates the efficacy and safety of
+                  Investigational Medicinal Product CAD-4404 in subjects with
+                  chronic biomarker-positive disease. Your participation is
+                  completely voluntary.
+                </p>
               </div>
 
-              <div class="clause-box highlighted" :class="{ highlighted: currentClause === 'procedures' }">
+              <div
+                class="clause-box highlighted"
+                :class="{ highlighted: currentClause === 'procedures' }"
+              >
                 <h5>2. Decentralized &amp; In-Home Study Procedures</h5>
-                <p>Procedures will be conducted either at the research clinic, via secure telehealth consultations, or during in-home visiting healthcare nurse visits. Investigational product will be delivered directly to your home in temperature-controlled packaging.</p>
+                <p>
+                  Procedures will be conducted either at the research clinic,
+                  via secure telehealth consultations, or during in-home
+                  visiting healthcare nurse visits. Investigational product will
+                  be delivered directly to your home in temperature-controlled
+                  packaging.
+                </p>
               </div>
 
-              <div class="clause-box" :class="{ highlighted: currentClause === 'risks' }">
+              <div
+                class="clause-box"
+                :class="{ highlighted: currentClause === 'risks' }"
+              >
                 <h5>3. Foreseeable Risks &amp; Discomforts</h5>
-                <p>Expected risks include mild injection site reactions, transient fatigue, or minor bruising from blood draws. Continuous biometric sensor monitoring will be used to ensure your ongoing safety.</p>
+                <p>
+                  Expected risks include mild injection site reactions,
+                  transient fatigue, or minor bruising from blood draws.
+                  Continuous biometric sensor monitoring will be used to ensure
+                  your ongoing safety.
+                </p>
               </div>
 
-              <div class="clause-box" :class="{ highlighted: currentClause === 'assent' }">
+              <div
+                class="clause-box"
+                :class="{ highlighted: currentClause === 'assent' }"
+              >
                 <h5>4. Pediatric Assent &amp; Parental/LAR Authorization</h5>
-                <p>For participants under 18 years of age, age-tailored assent has been reviewed and paired with simultaneous Legally Authorized Representative electronic authorization.</p>
+                <p>
+                  For participants under 18 years of age, age-tailored assent
+                  has been reviewed and paired with simultaneous Legally
+                  Authorized Representative electronic authorization.
+                </p>
               </div>
             </div>
           </div>
 
           <!-- Pediatric Assent Manifest Table -->
           <div class="assent-history-card">
-            <h4 class="card-subtitle">Executed Pediatric Assent &amp; LAR Bundles</h4>
+            <h4 class="card-subtitle">
+              Executed Pediatric Assent &amp; LAR Bundles
+            </h4>
             <div class="table-container">
               <table class="data-table" aria-label="Pediatric Assents Table">
                 <thead>
@@ -329,35 +478,60 @@
                 </thead>
                 <tbody>
                   <tr v-for="a in assents" :key="a.assent_id">
-                    <td><span class="mono-badge">{{ a.assent_id }}</span></td>
-                    <td><span class="badge badge-subj">{{ a.subject_id }}</span></td>
+                    <td>
+                      <span class="mono-badge">{{ a.assent_id }}</span>
+                    </td>
+                    <td>
+                      <span class="badge badge-subj">{{ a.subject_id }}</span>
+                    </td>
                     <td>
                       <span class="badge" :class="getTierClass(a.tier)">
                         {{ a.tier }} (Age {{ a.minor_age }})
                       </span>
                     </td>
                     <td>
-                      <span :class="a.comprehension_passed ? 'text-success font-bold' : 'text-danger'">
-                        {{ a.comprehension_score_percent }}% {{ a.comprehension_passed ? '✓' : '✗' }}
+                      <span
+                        :class="
+                          a.comprehension_passed
+                            ? 'text-success font-bold'
+                            : 'text-danger'
+                        "
+                      >
+                        {{ a.comprehension_score_percent }}%
+                        {{ a.comprehension_passed ? "✓" : "✗" }}
                       </span>
                     </td>
                     <td>
-                      <div><strong>{{ a.lar_name || 'N/A' }}</strong></div>
-                      <span class="text-sm text-muted">{{ a.lar_relationship || 'Self' }}</span>
+                      <div>
+                        <strong>{{ a.lar_name || "N/A" }}</strong>
+                      </div>
+                      <span class="text-sm text-muted">{{
+                        a.lar_relationship || "Self"
+                      }}</span>
                     </td>
                     <td>
-                      <span class="mono-badge text-xs" :title="a.cryptographic_bundle_hash">
+                      <span
+                        class="mono-badge text-xs"
+                        :title="a.cryptographic_bundle_hash"
+                      >
                         {{ a.cryptographic_bundle_hash.substring(0, 12) }}...
                       </span>
                     </td>
                     <td>
-                      <button type="button" class="btn btn-secondary btn-xs" @click="verifyAssentSeal(a)">
+                      <button
+                        type="button"
+                        class="btn btn-secondary btn-xs"
+                        @click="verifyAssentSeal(a)"
+                      >
                         🔍 Verify Seal
                       </button>
                     </td>
                   </tr>
                   <tr v-if="assents.length === 0">
-                    <td colspan="7" class="empty-cell">No pediatric assent bundles recorded. Click 'Execute Pediatric Assent' to create one.</td>
+                    <td colspan="7" class="empty-cell">
+                      No pediatric assent bundles recorded. Click 'Execute
+                      Pediatric Assent' to create one.
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -370,10 +544,20 @@
       <section v-else-if="activeTab === 'dtp'" class="tab-panel">
         <div class="panel-header">
           <div>
-            <h3 class="panel-title">Direct-to-Patient (DTP) Investigational Product Dispatch Tracking</h3>
-            <p class="panel-desc">Multi-zone cold chain monitoring, Arrhenius Mean Kinetic Temperature (MKT) calculations, chain of custody handoffs, and delivery signatures.</p>
+            <h3 class="panel-title">
+              Direct-to-Patient (DTP) Investigational Product Dispatch Tracking
+            </h3>
+            <p class="panel-desc">
+              Multi-zone cold chain monitoring, Arrhenius Mean Kinetic
+              Temperature (MKT) calculations, chain of custody handoffs, and
+              delivery signatures.
+            </p>
           </div>
-          <button type="button" class="btn btn-accent btn-sm" @click="openDispatchDtpModal">
+          <button
+            type="button"
+            class="btn btn-accent btn-sm"
+            @click="openDispatchDtpModal"
+          >
             + Dispatch DTP Shipment
           </button>
         </div>
@@ -395,36 +579,73 @@
             </thead>
             <tbody>
               <tr v-for="sh in shipments" :key="sh.shipment_id">
-                <td><span class="mono-badge font-bold">{{ sh.tracking_number }}</span></td>
-                <td><span class="badge badge-subj">{{ sh.subject_pseudonym_id }}</span></td>
-                <td><span class="badge badge-zone">{{ sh.temperature_zone }}</span></td>
+                <td>
+                  <span class="mono-badge font-bold">{{
+                    sh.tracking_number
+                  }}</span>
+                </td>
+                <td>
+                  <span class="badge badge-subj">{{
+                    sh.subject_pseudonym_id
+                  }}</span>
+                </td>
+                <td>
+                  <span class="badge badge-zone">{{
+                    sh.temperature_zone
+                  }}</span>
+                </td>
                 <td class="font-bold">{{ sh.current_temp_celsius }}°C</td>
                 <td>{{ sh.mkt_celsius }}°C</td>
                 <td>
-                  <span class="status-chip" :class="getShipmentStatusClass(sh.status)">
+                  <span
+                    class="status-chip"
+                    :class="getShipmentStatusClass(sh.status)"
+                  >
                     {{ sh.status }}
                   </span>
                 </td>
                 <td>
-                  <span class="status-chip" :class="getExcursionClass(sh.excursion_severity)">
+                  <span
+                    class="status-chip"
+                    :class="getExcursionClass(sh.excursion_severity)"
+                  >
                     {{ sh.excursion_severity }}
                   </span>
                 </td>
-                <td><span class="mono-badge text-xs">{{ sh.tamper_seal_id }}</span></td>
+                <td>
+                  <span class="mono-badge text-xs">{{
+                    sh.tamper_seal_id
+                  }}</span>
+                </td>
                 <td class="actions-cell">
-                  <button type="button" class="btn btn-secondary btn-xs" @click="openTelemetryModal(sh)">
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-xs"
+                    @click="openTelemetryModal(sh)"
+                  >
                     🌡️ Log Temp
                   </button>
-                  <button type="button" class="btn btn-secondary btn-xs" @click="openHandoffModal(sh)">
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-xs"
+                    @click="openHandoffModal(sh)"
+                  >
                     🤝 Handoff
                   </button>
-                  <button type="button" class="btn btn-primary btn-xs" @click="openDeliveryModal(sh)">
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-xs"
+                    @click="openDeliveryModal(sh)"
+                  >
                     ✍️ Deliver
                   </button>
                 </td>
               </tr>
               <tr v-if="shipments.length === 0">
-                <td colspan="9" class="empty-cell">No DTP courier shipments dispatched yet. Click 'Dispatch DTP Courier Kit' to create one.</td>
+                <td colspan="9" class="empty-cell">
+                  No DTP courier shipments dispatched yet. Click 'Dispatch DTP
+                  Courier Kit' to create one.
+                </td>
               </tr>
             </tbody>
           </table>
@@ -435,10 +656,20 @@
       <section v-else-if="activeTab === 'home_health'" class="tab-panel">
         <div class="panel-header">
           <div>
-            <h3 class="panel-title">Decentralized In-Home Healthcare Nurse Visits &amp; Offline eCRF Sync</h3>
-            <p class="panel-desc">Visiting nurse credentials, protocol task checklists (PK draws, IP dosing, ECGs), and mobile eCRF offline cache synchronization.</p>
+            <h3 class="panel-title">
+              Decentralized In-Home Healthcare Nurse Visits &amp; Offline eCRF
+              Sync
+            </h3>
+            <p class="panel-desc">
+              Visiting nurse credentials, protocol task checklists (PK draws, IP
+              dosing, ECGs), and mobile eCRF offline cache synchronization.
+            </p>
           </div>
-          <button type="button" class="btn btn-primary btn-sm" @click="openScheduleVisitModal">
+          <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            @click="openScheduleVisitModal"
+          >
             + Schedule In-Home Visit
           </button>
         </div>
@@ -460,40 +691,74 @@
             </thead>
             <tbody>
               <tr v-for="v in visits" :key="v.visit_id">
-                <td><span class="mono-badge">{{ v.visit_id }}</span></td>
-                <td><span class="badge badge-subj">{{ v.subject_id }}</span></td>
+                <td>
+                  <span class="mono-badge">{{ v.visit_id }}</span>
+                </td>
+                <td>
+                  <span class="badge badge-subj">{{ v.subject_id }}</span>
+                </td>
                 <td>{{ v.visit_name }}</td>
                 <td>
-                  <div><strong>{{ v.nurse_name }}</strong></div>
-                  <span class="text-sm text-muted">License: {{ v.nurse_license_number }}</span>
+                  <div>
+                    <strong>{{ v.nurse_name }}</strong>
+                  </div>
+                  <span class="text-sm text-muted"
+                    >License: {{ v.nurse_license_number }}</span
+                  >
                 </td>
                 <td>{{ formatDateTime(v.scheduled_start_utc) }}</td>
                 <td>
-                  <span class="status-chip" :class="getVisitStatusClass(v.status)">
+                  <span
+                    class="status-chip"
+                    :class="getVisitStatusClass(v.status)"
+                  >
                     {{ v.status }}
                   </span>
                 </td>
                 <td>
                   <span class="badge badge-participant">
-                    {{ v.procedures ? v.procedures.filter(p => p.completed).length : 0 }} / {{ v.procedures ? v.procedures.length : 0 }} done
+                    {{
+                      v.procedures
+                        ? v.procedures.filter((p) => p.completed).length
+                        : 0
+                    }}
+                    / {{ v.procedures ? v.procedures.length : 0 }} done
                   </span>
                 </td>
                 <td>
-                  <span class="status-chip" :class="v.sync_status === 'SYNCHRONIZED' ? 'chip-green' : 'chip-orange'">
+                  <span
+                    class="status-chip"
+                    :class="
+                      v.sync_status === 'SYNCHRONIZED'
+                        ? 'chip-green'
+                        : 'chip-orange'
+                    "
+                  >
                     {{ v.sync_status }}
                   </span>
                 </td>
                 <td class="actions-cell">
-                  <button type="button" class="btn btn-secondary btn-xs" @click="openVisitExecutor(v)">
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-xs"
+                    @click="openVisitExecutor(v)"
+                  >
                     🩺 Execute Tasks
                   </button>
-                  <button type="button" class="btn btn-accent btn-xs" @click="openOfflineSyncModal(v)">
+                  <button
+                    type="button"
+                    class="btn btn-accent btn-xs"
+                    @click="openOfflineSyncModal(v)"
+                  >
                     🔄 Sync Offline
                   </button>
                 </td>
               </tr>
               <tr v-if="visits.length === 0">
-                <td colspan="9" class="empty-cell">No in-home visiting nurse appointments scheduled. Click 'Schedule In-Home Visit' to add one.</td>
+                <td colspan="9" class="empty-cell">
+                  No in-home visiting nurse appointments scheduled. Click
+                  'Schedule In-Home Visit' to add one.
+                </td>
               </tr>
             </tbody>
           </table>
@@ -502,33 +767,74 @@
     </main>
 
     <!-- Modal 1: Schedule Telehealth Session -->
-    <div v-if="isScheduleSessionModalOpen" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div
+      v-if="isScheduleSessionModalOpen"
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+    >
       <div class="modal-card">
         <div class="modal-header">
           <h3>Schedule WebRTC Telehealth Consultation</h3>
-          <button type="button" class="btn-close" @click="isScheduleSessionModalOpen = false">✕</button>
+          <button
+            type="button"
+            class="btn-close"
+            @click="isScheduleSessionModalOpen = false"
+          >
+            ✕
+          </button>
         </div>
         <div class="modal-body">
           <form class="form-grid" @submit.prevent="submitScheduleSession">
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Study ID *</label>
-              <input v-model="newSessionForm.study_id" class="form-control" required />
+              <input
+                v-model="newSessionForm.study_id"
+                class="form-control"
+                required
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Subject ID *</label>
-              <input v-model="newSessionForm.subject_id" class="form-control" required />
+              <input
+                v-model="newSessionForm.subject_id"
+                class="form-control"
+                required
+              />
             </div>
             <div class="form-group span-2">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Consultation Title *</label>
-              <input v-model="newSessionForm.title" class="form-control" required />
+              <input
+                v-model="newSessionForm.title"
+                class="form-control"
+                required
+              />
             </div>
             <div class="form-group span-2">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Scheduled Start (UTC) *</label>
-              <input v-model="newSessionForm.scheduled_start_utc" type="datetime-local" class="form-control" required />
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="newSessionForm.scheduled_start_utc"
+                type="datetime-local"
+                class="form-control"
+                required
+              />
             </div>
             <div class="modal-footer span-2">
-              <button type="button" class="btn btn-secondary" @click="isScheduleSessionModalOpen = false">Cancel</button>
-              <button type="submit" class="btn btn-primary">Schedule Session</button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                @click="isScheduleSessionModalOpen = false"
+              >
+                Cancel
+              </button>
+              <button type="submit" class="btn btn-primary">
+                Schedule Session
+              </button>
             </div>
           </form>
         </div>
@@ -536,55 +842,118 @@
     </div>
 
     <!-- Modal 2: Dispatch DTP Shipment -->
-    <div v-if="isDispatchDtpModalOpen" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div
+      v-if="isDispatchDtpModalOpen"
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+    >
       <div class="modal-card">
         <div class="modal-header">
           <h3>Dispatch Direct-to-Patient (DTP) Drug Kit</h3>
-          <button type="button" class="btn-close" @click="isDispatchDtpModalOpen = false">✕</button>
+          <button
+            type="button"
+            class="btn-close"
+            @click="isDispatchDtpModalOpen = false"
+          >
+            ✕
+          </button>
         </div>
         <div class="modal-body">
           <form class="form-grid" @submit.prevent="submitDispatchDtp">
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Study ID *</label>
-              <input v-model="newShipmentForm.study_id" class="form-control" required />
+              <input
+                v-model="newShipmentForm.study_id"
+                class="form-control"
+                required
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Site ID *</label>
-              <input v-model="newShipmentForm.site_id" class="form-control" required />
+              <input
+                v-model="newShipmentForm.site_id"
+                class="form-control"
+                required
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Subject Pseudonym *</label>
-              <input v-model="newShipmentForm.subject_pseudonym_id" class="form-control" required />
+              <input
+                v-model="newShipmentForm.subject_pseudonym_id"
+                class="form-control"
+                required
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Destination Address Pseudonym *</label>
-              <input v-model="newShipmentForm.destination_address_pseudonym" class="form-control" required />
+              <input
+                v-model="newShipmentForm.destination_address_pseudonym"
+                class="form-control"
+                required
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Specialty Courier *</label>
-              <input v-model="newShipmentForm.courier_name" class="form-control" required />
+              <input
+                v-model="newShipmentForm.courier_name"
+                class="form-control"
+                required
+              />
             </div>
             <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Temperature Zone *</label>
-              <select v-model="newShipmentForm.temperature_zone" class="form-control" required>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <select
+                v-model="newShipmentForm.temperature_zone"
+                class="form-control"
+                required
+              >
                 <option value="REFRIGERATED">REFRIGERATED (2°C to 8°C)</option>
-                <option value="CONTROLLED_AMBIENT">CONTROLLED_AMBIENT (15°C to 25°C)</option>
+                <option value="CONTROLLED_AMBIENT">
+                  CONTROLLED_AMBIENT (15°C to 25°C)
+                </option>
                 <option value="FROZEN">FROZEN (-25°C to -15°C)</option>
                 <option value="ULTRA_COLD">ULTRA_COLD (-80°C to -60°C)</option>
                 <option value="CRYOGENIC">CRYOGENIC (-196°C to -150°C)</option>
               </select>
             </div>
             <div class="form-group span-2">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Kit Serials (Comma-separated) *</label>
-              <input v-model="newShipmentForm.kit_serials_input" class="form-control" required placeholder="KIT-LOT99-001, KIT-LOT99-002" />
+              <input
+                v-model="newShipmentForm.kit_serials_input"
+                class="form-control"
+                required
+                placeholder="KIT-LOT99-001, KIT-LOT99-002"
+              />
             </div>
             <div class="form-group span-2">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Tamper-Evident RFID Seal ID *</label>
-              <input v-model="newShipmentForm.tamper_seal_id" class="form-control" required />
+              <input
+                v-model="newShipmentForm.tamper_seal_id"
+                class="form-control"
+                required
+              />
             </div>
             <div class="modal-footer span-2">
-              <button type="button" class="btn btn-secondary" @click="isDispatchDtpModalOpen = false">Cancel</button>
-              <button type="submit" class="btn btn-accent">Dispatch Shipment</button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                @click="isDispatchDtpModalOpen = false"
+              >
+                Cancel
+              </button>
+              <button type="submit" class="btn btn-accent">
+                Dispatch Shipment
+              </button>
             </div>
           </form>
         </div>
@@ -594,11 +963,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
-import { interopService } from '../../api/interop';
+import { ref, reactive, onMounted } from "vue";
+import { interopService } from "../../api/interop";
 
 const isLoading = ref(false);
-const activeTab = ref('telehealth');
+const activeTab = ref("telehealth");
 
 const metrics = reactive({
   total_telehealth_sessions: 2,
@@ -614,195 +983,219 @@ const metrics = reactive({
 
 const sessions = ref([
   {
-    id: 'sess-001',
-    room_id: 'room-dct-boston-101',
-    study_id: 'STUDY-DCT-001',
-    subject_id: 'SUBJ-BOSTON-101',
-    title: 'Week 2 Telehealth Video Visit & eConsent',
+    id: "sess-001",
+    room_id: "room-dct-boston-101",
+    study_id: "STUDY-DCT-001",
+    subject_id: "SUBJ-BOSTON-101",
+    title: "Week 2 Telehealth Video Visit & eConsent",
     scheduled_start_utc: new Date().toISOString(),
-    status: 'IN_PROGRESS',
-    participant_records: [{ id: 'pi_01' }, { id: 'SUBJ-BOSTON-101' }],
+    status: "IN_PROGRESS",
+    participant_records: [{ id: "pi_01" }, { id: "SUBJ-BOSTON-101" }],
     recording_seal_metadata: null,
   },
   {
-    id: 'sess-002',
-    room_id: 'room-dct-chicago-202',
-    study_id: 'STUDY-DCT-001',
-    subject_id: 'SUBJ-CHI-202',
-    title: 'Monthly Safety & Symptom Check',
+    id: "sess-002",
+    room_id: "room-dct-chicago-202",
+    study_id: "STUDY-DCT-001",
+    subject_id: "SUBJ-CHI-202",
+    title: "Monthly Safety & Symptom Check",
     scheduled_start_utc: new Date(Date.now() + 86400000).toISOString(),
-    status: 'SCHEDULED',
+    status: "SCHEDULED",
     participant_records: [],
-    recording_seal_metadata: { part11_certification_statement: '21 CFR Part 11 Certified' },
-  }
+    recording_seal_metadata: {
+      part11_certification_statement: "21 CFR Part 11 Certified",
+    },
+  },
 ]);
 
 const assents = ref([
   {
-    assent_id: 'ASSENT-PEDS-001',
-    study_id: 'STUDY-DCT-001',
-    subject_id: 'SUBJ-PED-101',
-    tier: 'CHILD_7_11',
+    assent_id: "ASSENT-PEDS-001",
+    study_id: "STUDY-DCT-001",
+    subject_id: "SUBJ-PED-101",
+    tier: "CHILD_7_11",
     minor_age: 9,
     comprehension_score_percent: 100.0,
     comprehension_passed: true,
-    lar_name: 'Jane Connor',
-    lar_relationship: 'PARENT',
-    cryptographic_bundle_hash: '3f78a8bc819e917a94367f08d0e51703e3a98bc19e917a94367f08d0e51703e3',
-  }
+    lar_name: "Jane Connor",
+    lar_relationship: "PARENT",
+    cryptographic_bundle_hash:
+      "3f78a8bc819e917a94367f08d0e51703e3a98bc19e917a94367f08d0e51703e3",
+  },
 ]);
 
 const shipments = ref([
   {
-    shipment_id: 'DTP-001',
-    tracking_number: 'CAD-EXP-992180',
-    subject_pseudonym_id: 'SUBJ-PSEUDO-BOSTON-101',
-    temperature_zone: 'REFRIGERATED',
+    shipment_id: "DTP-001",
+    tracking_number: "CAD-EXP-992180",
+    subject_pseudonym_id: "SUBJ-PSEUDO-BOSTON-101",
+    temperature_zone: "REFRIGERATED",
     current_temp_celsius: 4.5,
     mkt_celsius: 4.6,
-    status: 'IN_TRANSIT',
-    excursion_severity: 'NONE',
-    tamper_seal_id: 'SEAL-RFID-9911',
+    status: "IN_TRANSIT",
+    excursion_severity: "NONE",
+    tamper_seal_id: "SEAL-RFID-9911",
   },
   {
-    shipment_id: 'DTP-002',
-    tracking_number: 'CAD-EXP-992181',
-    subject_pseudonym_id: 'SUBJ-PSEUDO-CHI-202',
-    temperature_zone: 'CRYOGENIC',
+    shipment_id: "DTP-002",
+    tracking_number: "CAD-EXP-992181",
+    subject_pseudonym_id: "SUBJ-PSEUDO-CHI-202",
+    temperature_zone: "CRYOGENIC",
     current_temp_celsius: -185.0,
     mkt_celsius: -184.8,
-    status: 'COURIER_DISPATCHED',
-    excursion_severity: 'NONE',
-    tamper_seal_id: 'SEAL-RFID-9912',
-  }
+    status: "COURIER_DISPATCHED",
+    excursion_severity: "NONE",
+    tamper_seal_id: "SEAL-RFID-9912",
+  },
 ]);
 
 const visits = ref([
   {
-    visit_id: 'VISIT-HOME-101',
-    subject_id: 'SUBJ-BOSTON-101',
-    visit_name: 'Week 4 In-Home PK Draw & IP Admin',
-    nurse_name: 'Nurse Florence Nightingale, RN',
-    nurse_license_number: 'RN-MA-884422',
+    visit_id: "VISIT-HOME-101",
+    subject_id: "SUBJ-BOSTON-101",
+    visit_name: "Week 4 In-Home PK Draw & IP Admin",
+    nurse_name: "Nurse Florence Nightingale, RN",
+    nurse_license_number: "RN-MA-884422",
     scheduled_start_utc: new Date().toISOString(),
-    status: 'PROCEDURES_IN_PROGRESS',
+    status: "PROCEDURES_IN_PROGRESS",
     procedures: [
-      { procedure_type: 'VITAL_SIGNS', completed: true },
-      { procedure_type: 'PK_BLOOD_DRAW', completed: true },
-      { procedure_type: 'IP_ADMINISTRATION', completed: false },
+      { procedure_type: "VITAL_SIGNS", completed: true },
+      { procedure_type: "PK_BLOOD_DRAW", completed: true },
+      { procedure_type: "IP_ADMINISTRATION", completed: false },
     ],
-    sync_status: 'SYNCHRONIZED',
-  }
+    sync_status: "SYNCHRONIZED",
+  },
 ]);
 
 const activeRoomSession = ref(null);
-const currentRoomToken = ref('');
+const currentRoomToken = ref("");
 const currentScrollPercent = ref(25);
-const currentClause = ref('procedures');
+const currentClause = ref("procedures");
 
 const isScheduleSessionModalOpen = ref(false);
 const newSessionForm = reactive({
-  study_id: 'STUDY-DCT-001',
-  subject_id: 'SUBJ-BOSTON-101',
-  title: 'Telehealth Video Consultation & eConsent Review',
+  study_id: "STUDY-DCT-001",
+  subject_id: "SUBJ-BOSTON-101",
+  title: "Telehealth Video Consultation & eConsent Review",
   scheduled_start_utc: new Date().toISOString().slice(0, 16),
 });
 
 const isDispatchDtpModalOpen = ref(false);
 const newShipmentForm = reactive({
-  study_id: 'STUDY-DCT-001',
-  site_id: 'SITE-101',
-  subject_pseudonym_id: 'SUBJ-PSEUDO-BOSTON-101',
-  destination_address_pseudonym: 'ADDR-PSEUDO-BOSTON-02138',
-  courier_name: 'World Courier Specialty Logistics',
-  temperature_zone: 'REFRIGERATED',
-  kit_serials_input: 'KIT-LOT99-001, KIT-LOT99-002',
-  tamper_seal_id: 'SEAL-RFID-' + Math.floor(Math.random() * 899999 + 100000),
+  study_id: "STUDY-DCT-001",
+  site_id: "SITE-101",
+  subject_pseudonym_id: "SUBJ-PSEUDO-BOSTON-101",
+  destination_address_pseudonym: "ADDR-PSEUDO-BOSTON-02138",
+  courier_name: "World Courier Specialty Logistics",
+  temperature_zone: "REFRIGERATED",
+  kit_serials_input: "KIT-LOT99-001, KIT-LOT99-002",
+  tamper_seal_id: "SEAL-RFID-" + Math.floor(Math.random() * 899999 + 100000),
 });
 
 async function refreshData() {
   isLoading.value = true;
   try {
-    const studyId = 'STUDY-DCT-001';
-    const [sessRes, assentRes, dtpRes, visitRes, metricRes] = await Promise.allSettled([
-      interopService.listTelehealthSessions({ studyId }),
-      interopService.listPediatricAssents({ studyId }),
-      interopService.listDtpShipments({ studyId }),
-      interopService.listInHomeVisits({ studyId }),
-      interopService.getDctMetrics(studyId),
-    ]);
+    const studyId = "STUDY-DCT-001";
+    const [sessRes, assentRes, dtpRes, visitRes, metricRes] =
+      await Promise.allSettled([
+        interopService.listTelehealthSessions({ studyId }),
+        interopService.listPediatricAssents({ studyId }),
+        interopService.listDtpShipments({ studyId }),
+        interopService.listInHomeVisits({ studyId }),
+        interopService.getDctMetrics(studyId),
+      ]);
 
-    if (sessRes.status === 'fulfilled' && sessRes.value?.sessions) {
+    if (sessRes.status === "fulfilled" && sessRes.value?.sessions) {
       sessions.value = sessRes.value.sessions;
     }
-    if (assentRes.status === 'fulfilled' && assentRes.value?.assents) {
+    if (assentRes.status === "fulfilled" && assentRes.value?.assents) {
       assents.value = assentRes.value.assents;
     }
-    if (dtpRes.status === 'fulfilled' && dtpRes.value?.shipments) {
+    if (dtpRes.status === "fulfilled" && dtpRes.value?.shipments) {
       shipments.value = dtpRes.value.shipments;
     }
-    if (visitRes.status === 'fulfilled' && visitRes.value?.visits) {
+    if (visitRes.status === "fulfilled" && visitRes.value?.visits) {
       visits.value = visitRes.value.visits;
     }
-    if (metricRes.status === 'fulfilled' && metricRes.value) {
+    if (metricRes.status === "fulfilled" && metricRes.value) {
       Object.assign(metrics, metricRes.value);
     }
   } catch (err) {
-    console.error('Error refreshing DCT data:', err);
+    console.error("Error refreshing DCT data:", err);
   } finally {
     isLoading.value = false;
   }
 }
 
 function formatDateTime(iso) {
-  if (!iso) return 'N/A';
+  if (!iso) return "N/A";
   return new Date(iso).toLocaleString();
 }
 
 function getStatusClass(status) {
   switch (status) {
-    case 'IN_PROGRESS': return 'chip-green';
-    case 'SCHEDULED': return 'chip-blue';
-    case 'WAITING_ROOM': return 'chip-orange';
-    case 'COMPLETED': return 'chip-purple';
-    default: return 'chip-gray';
+    case "IN_PROGRESS":
+      return "chip-green";
+    case "SCHEDULED":
+      return "chip-blue";
+    case "WAITING_ROOM":
+      return "chip-orange";
+    case "COMPLETED":
+      return "chip-purple";
+    default:
+      return "chip-gray";
   }
 }
 
 function getShipmentStatusClass(status) {
   switch (status) {
-    case 'DELIVERED': return 'chip-green';
-    case 'IN_TRANSIT':
-    case 'OUT_FOR_DELIVERY': return 'chip-blue';
-    case 'TEMP_EXCURSION_HOLD': return 'chip-red';
-    default: return 'chip-gray';
+    case "DELIVERED":
+      return "chip-green";
+    case "IN_TRANSIT":
+    case "OUT_FOR_DELIVERY":
+      return "chip-blue";
+    case "TEMP_EXCURSION_HOLD":
+      return "chip-red";
+    default:
+      return "chip-gray";
   }
 }
 
 function getExcursionClass(sev) {
   switch (sev) {
-    case 'NONE': return 'chip-green';
-    case 'MINOR_WARNING': return 'chip-orange';
-    case 'CRITICAL_EXCURSION_QUARANTINE': return 'chip-red';
-    default: return 'chip-gray';
+    case "NONE":
+      return "chip-green";
+    case "MINOR_WARNING":
+      return "chip-orange";
+    case "CRITICAL_EXCURSION_QUARANTINE":
+      return "chip-red";
+    default:
+      return "chip-gray";
   }
 }
 
 function getVisitStatusClass(status) {
   switch (status) {
-    case 'VISIT_COMPLETED': return 'chip-green';
-    case 'PROCEDURES_IN_PROGRESS':
-    case 'ARRIVED_ON_SITE': return 'chip-blue';
-    default: return 'chip-gray';
+    case "VISIT_COMPLETED":
+      return "chip-green";
+    case "PROCEDURES_IN_PROGRESS":
+    case "ARRIVED_ON_SITE":
+      return "chip-blue";
+    default:
+      return "chip-gray";
   }
 }
 
 function getTierClass(tier) {
   switch (tier) {
-    case 'CHILD_7_11': return 'badge-stream';
-    case 'ADOLESCENT_12_17': return 'badge-standard';
-    case 'LAR_PARENT_GUARDIAN': return 'badge-gxp';
-    default: return 'badge-subj';
+    case "CHILD_7_11":
+      return "badge-stream";
+    case "ADOLESCENT_12_17":
+      return "badge-standard";
+    case "LAR_PARENT_GUARDIAN":
+      return "badge-gxp";
+    default:
+      return "badge-subj";
   }
 }
 
@@ -816,22 +1209,30 @@ function openDispatchDtpModal() {
 
 function openRoomLauncher(s) {
   activeRoomSession.value = s;
-  currentRoomToken.value = 'cadence_rt_' + btoa(JSON.stringify({ room_id: s.room_id, subject_id: s.subject_id })) + '.sig_verified';
+  currentRoomToken.value =
+    "cadence_rt_" +
+    btoa(JSON.stringify({ room_id: s.room_id, subject_id: s.subject_id })) +
+    ".sig_verified";
 }
 
 function simulateScrollSync(delta) {
-  currentScrollPercent.value = Math.max(0, Math.min(100, currentScrollPercent.value + delta));
+  currentScrollPercent.value = Math.max(
+    0,
+    Math.min(100, currentScrollPercent.value + delta)
+  );
 }
 
 function copyToken() {
   if (navigator.clipboard) {
     navigator.clipboard.writeText(currentRoomToken.value);
-    alert('Room authorization token copied to clipboard!');
+    alert("Room authorization token copied to clipboard!");
   }
 }
 
 function verifyAssentSeal(a) {
-  alert(`Cryptographic Bundle Seal Verified:\nAssent ID: ${a.assent_id}\nSHA-256 Digest: ${a.cryptographic_bundle_hash}\nStatus: 100% Authentic & Part 11 Compliant`);
+  alert(
+    `Cryptographic Bundle Seal Verified:\nAssent ID: ${a.assent_id}\nSHA-256 Digest: ${a.cryptographic_bundle_hash}\nStatus: 100% Authentic & Part 11 Compliant`
+  );
 }
 
 async function submitScheduleSession() {
@@ -840,23 +1241,29 @@ async function submitScheduleSession() {
       study_id: newSessionForm.study_id,
       subject_id: newSessionForm.subject_id,
       title: newSessionForm.title,
-      scheduled_start_utc: new Date(newSessionForm.scheduled_start_utc).toISOString(),
+      scheduled_start_utc: new Date(
+        newSessionForm.scheduled_start_utc
+      ).toISOString(),
     });
     isScheduleSessionModalOpen.value = false;
     await refreshData();
   } catch (err) {
-    console.error('Failed to schedule telehealth visit:', err);
+    console.error("Failed to schedule telehealth visit:", err);
   }
 }
 
 async function submitDispatchDtp() {
   try {
-    const kitList = newShipmentForm.kit_serials_input.split(',').map(s => s.trim()).filter(Boolean);
+    const kitList = newShipmentForm.kit_serials_input
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
     await interopService.createDtpShipment({
       study_id: newShipmentForm.study_id,
       site_id: newShipmentForm.site_id,
       subject_pseudonym_id: newShipmentForm.subject_pseudonym_id,
-      destination_address_pseudonym: newShipmentForm.destination_address_pseudonym,
+      destination_address_pseudonym:
+        newShipmentForm.destination_address_pseudonym,
       courier_name: newShipmentForm.courier_name,
       temperature_zone: newShipmentForm.temperature_zone,
       kit_serials: kitList,
@@ -865,32 +1272,44 @@ async function submitDispatchDtp() {
     isDispatchDtpModalOpen.value = false;
     await refreshData();
   } catch (err) {
-    console.error('Failed to dispatch DTP shipment:', err);
+    console.error("Failed to dispatch DTP shipment:", err);
   }
 }
 
 function openAssentModal() {
-  alert('Pediatric Assent & LAR Dual-Signatory execution initiated for enrolled minor.');
+  alert(
+    "Pediatric Assent & LAR Dual-Signatory execution initiated for enrolled minor."
+  );
 }
 
 function openArchiveModal(s) {
-  alert(`Archiving 21 CFR Part 11 recording digital seal for session ${s.room_id}...`);
+  alert(
+    `Archiving 21 CFR Part 11 recording digital seal for session ${s.room_id}...`
+  );
 }
 
 function openTelemetryModal(sh) {
-  alert(`Cold chain data logger reading logged for tracking ${sh.tracking_number}.`);
+  alert(
+    `Cold chain data logger reading logged for tracking ${sh.tracking_number}.`
+  );
 }
 
 function openHandoffModal(sh) {
-  alert(`Chain of Custody handoff recorded for tracking ${sh.tracking_number}.`);
+  alert(
+    `Chain of Custody handoff recorded for tracking ${sh.tracking_number}.`
+  );
 }
 
 function openDeliveryModal(sh) {
-  alert(`Delivery confirmed with electronic signature for tracking ${sh.tracking_number}.`);
+  alert(
+    `Delivery confirmed with electronic signature for tracking ${sh.tracking_number}.`
+  );
 }
 
 function openVisitExecutor(v) {
-  alert(`Opening clinical procedure execution checklist for visit ${v.visit_id}...`);
+  alert(
+    `Opening clinical procedure execution checklist for visit ${v.visit_id}...`
+  );
 }
 
 function openOfflineSyncModal(v) {
@@ -1070,10 +1489,18 @@ onMounted(() => {
   font-size: 20px;
 }
 
-.bg-blue { background: #eff6ff; }
-.bg-green { background: #f0fdf4; }
-.bg-purple { background: #faf5ff; }
-.bg-red { background: #fef2f2; }
+.bg-blue {
+  background: #eff6ff;
+}
+.bg-green {
+  background: #f0fdf4;
+}
+.bg-purple {
+  background: #faf5ff;
+}
+.bg-red {
+  background: #fef2f2;
+}
 
 .metric-content {
   display: flex;
@@ -1186,12 +1613,30 @@ onMounted(() => {
   border-radius: 12px;
 }
 
-.chip-green { background: #dcfce7; color: #15803d; }
-.chip-blue { background: #dbeafe; color: #1d4ed8; }
-.chip-orange { background: #ffedd5; color: #c2410c; }
-.chip-purple { background: #f3e8ff; color: #7e22ce; }
-.chip-red { background: #fee2e2; color: #b91c1c; }
-.chip-gray { background: #f1f5f9; color: #475569; }
+.chip-green {
+  background: #dcfce7;
+  color: #15803d;
+}
+.chip-blue {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.chip-orange {
+  background: #ffedd5;
+  color: #c2410c;
+}
+.chip-purple {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+.chip-red {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.chip-gray {
+  background: #f1f5f9;
+  color: #475569;
+}
 
 .actions-cell {
   display: flex;
@@ -1242,7 +1687,8 @@ onMounted(() => {
   padding: 10px;
 }
 
-.video-overlay-top, .video-overlay-bottom {
+.video-overlay-top,
+.video-overlay-bottom {
   display: flex;
   justify-content: space-between;
   font-size: 11px;
@@ -1257,8 +1703,12 @@ onMounted(() => {
   margin: auto;
 }
 
-.avatar-large { font-size: 48px; }
-.avatar-small { font-size: 32px; }
+.avatar-large {
+  font-size: 48px;
+}
+.avatar-small {
+  font-size: 32px;
+}
 
 .video-controls {
   display: flex;
@@ -1298,7 +1748,8 @@ onMounted(() => {
   gap: 16px;
 }
 
-.coview-card, .assent-history-card {
+.coview-card,
+.assent-history-card {
   background: #f8fafc;
   border: 1px solid var(--border, #e2e8f0);
   border-radius: 6px;
@@ -1453,13 +1904,27 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.text-danger { color: #dc2626; }
-.text-success { color: #16a34a; }
-.font-bold { font-weight: 700; }
-.text-sm { font-size: 12px; }
-.text-xs { font-size: 11px; }
-.text-muted { color: var(--text-muted, #64748b); }
+.text-danger {
+  color: #dc2626;
+}
+.text-success {
+  color: #16a34a;
+}
+.font-bold {
+  font-weight: 700;
+}
+.text-sm {
+  font-size: 12px;
+}
+.text-xs {
+  font-size: 11px;
+}
+.text-muted {
+  color: var(--text-muted, #64748b);
+}
 </style>

@@ -80,10 +80,7 @@ const selectPersona = (persona) => {
         <span class="persona-label">{{ activePersona.label }}</span>
         <span class="persona-badge">{{ activePersona.badge }}</span>
       </div>
-      <span
-        class="dropdown-arrow"
-        aria-hidden="true"
-      >{{
+      <span class="dropdown-arrow" aria-hidden="true">{{
         isOpen ? "▲" : "▼"
       }}</span>
     </button>
@@ -94,9 +91,7 @@ const selectPersona = (persona) => {
       role="menu"
       aria-label="Available Personas"
     >
-      <div class="menu-header">
-        Active Persona & Role Scope
-      </div>
+      <div class="menu-header">Active Persona & Role Scope</div>
       <button
         v-for="persona in personas"
         :key="persona.id"

@@ -69,16 +69,15 @@ const ariaLabel = computed(() => {
 <template>
   <span
     class="confidence-badge"
-    :class="[
-      `confidence-${confidenceTier}`,
-      `confidence-size-${size}`,
-    ]"
+    :class="[`confidence-${confidenceTier}`, `confidence-size-${size}`]"
     role="status"
     :aria-label="ariaLabel"
     :title="ariaLabel"
   >
     <span class="confidence-dot" aria-hidden="true"></span>
-    <span v-if="showScore" class="confidence-score">{{ normalizedScore }}%</span>
+    <span v-if="showScore" class="confidence-score"
+      >{{ normalizedScore }}%</span
+    >
     <span v-if="showLabel" class="confidence-label">{{ tierLabel }}</span>
   </span>
 </template>

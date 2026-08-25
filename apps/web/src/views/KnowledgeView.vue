@@ -1,8 +1,5 @@
 <template>
-  <div
-    id="section-knowledge-hub"
-    class="dashboard-section active"
-  >
+  <div id="section-knowledge-hub" class="dashboard-section active">
     <!-- Header -->
     <div class="section-header">
       <div class="header-content-group">
@@ -12,11 +9,12 @@
           <span class="badge badge-standard">GxP Controlled Documents</span>
           <span class="badge badge-standard">Tamper-Evident Ledger</span>
         </div>
-        <h2 class="view-title">
-          Knowledge &amp; Support Hub
-        </h2>
+        <h2 class="view-title">Knowledge &amp; Support Hub</h2>
         <p class="view-subtitle">
-          Centralized, role-aware clinical standard operating procedure (SOP) repository, regulatory guidance, and contextual platform documentation with 21 CFR Part 11 immutable versioning, four-eyes approval controls, and full-text search.
+          Centralized, role-aware clinical standard operating procedure (SOP)
+          repository, regulatory guidance, and contextual platform documentation
+          with 21 CFR Part 11 immutable versioning, four-eyes approval controls,
+          and full-text search.
         </p>
       </div>
 
@@ -44,75 +42,67 @@
 
     <!-- Metric KPI Summary Cards -->
     <div class="stats-grid">
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         class="stat-card"
         :class="{ 'stat-card-active': activeStatusFilter === 'ALL' }"
         @click="setStatusFilter('ALL')"
       >
-        <div class="stat-icon alert-icon">
-          📚
-        </div>
+        <div class="stat-icon alert-icon">📚</div>
         <div class="stat-details">
           <div class="stat-value">
             {{ totalArticlesCount }}
           </div>
-          <div class="stat-label">
-            Total SOPs &amp; Guides
-          </div>
+          <div class="stat-label">Total SOPs &amp; Guides</div>
         </div>
       </div>
 
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         class="stat-card"
         :class="{ 'stat-card-active': activeStatusFilter === 'PUBLISHED' }"
         @click="setStatusFilter('PUBLISHED')"
       >
-        <div class="stat-icon capa-icon">
-          ✅
-        </div>
+        <div class="stat-icon capa-icon">✅</div>
         <div class="stat-details">
           <div class="stat-value text-success">
             {{ publishedArticlesCount }}
           </div>
-          <div class="stat-label">
-            Active Published SOPs
-          </div>
+          <div class="stat-label">Active Published SOPs</div>
         </div>
       </div>
 
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         class="stat-card"
         :class="{ 'stat-card-active': activeStatusFilter === 'IN_REVIEW' }"
         @click="setStatusFilter('IN_REVIEW')"
       >
-        <div class="stat-icon rbqm-icon">
-          🔍
-        </div>
+        <div class="stat-icon rbqm-icon">🔍</div>
         <div class="stat-details">
           <div class="stat-value text-warning">
             {{ inReviewArticlesCount }}
           </div>
-          <div class="stat-label">
-            Under Four-Eyes Review
-          </div>
+          <div class="stat-label">Under Four-Eyes Review</div>
         </div>
       </div>
 
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
         class="stat-card"
         :class="{ 'stat-card-active': activeStatusFilter === 'DRAFT' }"
         @click="setStatusFilter('DRAFT')"
       >
-        <div class="stat-icon breach-icon">
-          📝
-        </div>
+        <div class="stat-icon breach-icon">📝</div>
         <div class="stat-details">
           <div class="stat-value">
             {{ draftArticlesCount }}
           </div>
-          <div class="stat-label">
-            Working Draft Revisions
-          </div>
+          <div class="stat-label">Working Draft Revisions</div>
         </div>
       </div>
     </div>
@@ -120,10 +110,7 @@
     <!-- Main 3-Column Knowledge Workspace -->
     <div class="knowledge-layout">
       <!-- Column 1: Categories & Taxonomy Sidebar -->
-      <aside
-        id="knowledge-sidebar"
-        class="knowledge-sidebar"
-      >
+      <aside id="knowledge-sidebar" class="knowledge-sidebar">
         <div class="sidebar-box-header">
           <h4 class="sidebar-heading">
             <span class="heading-icon">🗂️</span> Categories
@@ -146,7 +133,9 @@
           >
             <span class="category-icon">📂</span>
             <span class="category-title">All Categories</span>
-            <span class="category-count">{{ filteredByPersonaArticles.length }}</span>
+            <span class="category-count">{{
+              filteredByPersonaArticles.length
+            }}</span>
           </button>
 
           <button
@@ -160,21 +149,19 @@
             <span class="category-icon">{{ getCategoryIcon(cat.slug) }}</span>
             <div class="category-text-block">
               <span class="category-title">{{ cat.name }}</span>
-              <span
-                v-if="cat.description"
-                class="category-desc"
-              >{{ cat.description }}</span>
+              <span v-if="cat.description" class="category-desc">{{
+                cat.description
+              }}</span>
             </div>
-            <span class="category-count">{{ getArticleCountForCategory(cat.id) }}</span>
+            <span class="category-count">{{
+              getArticleCountForCategory(cat.id)
+            }}</span>
           </button>
         </div>
 
         <!-- Filter by Status Selector -->
         <div class="sidebar-filter-section">
-          <label
-            for="status-filter-select"
-            class="filter-label"
-          >
+          <label for="status-filter-select" class="filter-label">
             Lifecycle Status Filter
           </label>
           <select
@@ -182,39 +169,20 @@
             v-model="activeStatusFilter"
             class="form-control form-select-sm"
           >
-            <option value="ALL">
-              All Lifecycle States
-            </option>
-            <option value="PUBLISHED">
-              Published Only
-            </option>
-            <option value="IN_REVIEW">
-              In Review
-            </option>
-            <option value="APPROVED">
-              Approved
-            </option>
-            <option value="DRAFT">
-              Working Drafts
-            </option>
-            <option value="REJECTED">
-              Rejected
-            </option>
-            <option value="SUPERSEDED">
-              Superseded
-            </option>
-            <option value="ARCHIVED">
-              Archived
-            </option>
+            <option value="ALL">All Lifecycle States</option>
+            <option value="PUBLISHED">Published Only</option>
+            <option value="IN_REVIEW">In Review</option>
+            <option value="APPROVED">Approved</option>
+            <option value="DRAFT">Working Drafts</option>
+            <option value="REJECTED">Rejected</option>
+            <option value="SUPERSEDED">Superseded</option>
+            <option value="ARCHIVED">Archived</option>
           </select>
         </div>
       </aside>
 
       <!-- Column 2: Article Directory & Search List -->
-      <section
-        id="knowledge-article-list-panel"
-        class="article-list-panel"
-      >
+      <section id="knowledge-article-list-panel" class="article-list-panel">
         <!-- Search and Tag Bar -->
         <div class="list-search-bar">
           <div class="search-input-wrapper">
@@ -226,7 +194,7 @@
               class="knowledge-search-input"
               placeholder="Search SOPs by title, tag, or content..."
               @input="onSearchInput"
-            >
+            />
             <button
               v-if="searchQuery"
               type="button"
@@ -239,10 +207,7 @@
           </div>
 
           <!-- Quick Tag Filter Chips -->
-          <div
-            v-if="availableTags.length > 0"
-            class="tag-chips-scroll"
-          >
+          <div v-if="availableTags.length > 0" class="tag-chips-scroll">
             <button
               v-for="tag in availableTags"
               :key="tag"
@@ -257,10 +222,7 @@
         </div>
 
         <!-- Articles Stream -->
-        <div
-          v-if="loading"
-          class="articles-loading-state"
-        >
+        <div v-if="loading" class="articles-loading-state">
           <div class="spinner" />
           <p>Loading clinical SOP repository...</p>
         </div>
@@ -269,16 +231,12 @@
           v-else-if="displayArticles.length === 0"
           class="articles-empty-state"
         >
-          <div class="empty-icon">
-            📄
-          </div>
+          <div class="empty-icon">📄</div>
           <h4>No SOPs Found</h4>
           <p v-if="searchQuery || selectedTag || activeStatusFilter !== 'ALL'">
             No articles match your current search or status filters.
           </p>
-          <p v-else>
-            No SOPs are currently visible for the active persona.
-          </p>
+          <p v-else>No SOPs are currently visible for the active persona.</p>
           <button
             v-if="searchQuery || selectedTag || activeStatusFilter !== 'ALL'"
             type="button"
@@ -289,10 +247,9 @@
           </button>
         </div>
 
-        <div
-          v-else
-          class="articles-stream"
-        >
+        <div v-else class="articles-stream">
+          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
             v-for="art in displayArticles"
             :key="art.id"
@@ -301,16 +258,10 @@
             @click="selectArticle(art)"
           >
             <div class="article-card-header">
-              <span
-                class="status-pill"
-                :class="getStatusPillClass(art.status)"
-              >
+              <span class="status-pill" :class="getStatusPillClass(art.status)">
                 {{ art.status }}
               </span>
-              <span
-                v-if="art.version_label"
-                class="badge badge-version"
-              >
+              <span v-if="art.version_label" class="badge badge-version">
                 v{{ art.version_label }}
               </span>
             </div>
@@ -320,22 +271,19 @@
             </h4>
 
             <div class="article-card-meta">
-              <span class="meta-category">📁 {{ art.category_name || "General" }}</span>
-              <span
-                v-if="art.updated_at"
-                class="meta-date"
-              >📅 {{ formatDate(art.updated_at) }}</span>
+              <span class="meta-category"
+                >📁 {{ art.category_name || "General" }}</span
+              >
+              <span v-if="art.updated_at" class="meta-date"
+                >📅 {{ formatDate(art.updated_at) }}</span
+              >
             </div>
 
             <div
               v-if="art.tags && art.tags.length > 0"
               class="article-card-tags"
             >
-              <span
-                v-for="t in getTagList(art.tags)"
-                :key="t"
-                class="mini-tag"
-              >
+              <span v-for="t in getTagList(art.tags)" :key="t" class="mini-tag">
                 #{{ t }}
               </span>
             </div>
@@ -344,30 +292,26 @@
       </section>
 
       <!-- Column 3: Article Reader & GxP Inspection Pane -->
-      <main
-        id="knowledge-reader-pane"
-        class="article-reader-pane"
-      >
-        <div
-          v-if="!selectedArticle"
-          class="reader-empty-state"
-        >
-          <div class="empty-icon">
-            📖
-          </div>
+      <main id="knowledge-reader-pane" class="article-reader-pane">
+        <div v-if="!selectedArticle" class="reader-empty-state">
+          <div class="empty-icon">📖</div>
           <h3>Select an SOP or Guideline</h3>
-          <p>Choose an article from the directory on the left to read guidance, inspect historical version snapshots, or review the 21 CFR Part 11 audit trail.</p>
+          <p>
+            Choose an article from the directory on the left to read guidance,
+            inspect historical version snapshots, or review the 21 CFR Part 11
+            audit trail.
+          </p>
         </div>
 
-        <div
-          v-else
-          class="reader-content-wrap"
-        >
+        <div v-else class="reader-content-wrap">
           <!-- Article Top Title & Metadata Bar -->
           <div class="reader-header-card">
             <div class="reader-meta-top">
               <div class="breadcrumbs">
-                <span class="crumb-category">📁 {{ selectedArticle.category_name || "General SOPs" }}</span>
+                <span class="crumb-category"
+                  >📁
+                  {{ selectedArticle.category_name || "General SOPs" }}</span
+                >
                 <span class="crumb-separator">/</span>
                 <span class="crumb-slug">{{ selectedArticle.slug }}</span>
               </div>
@@ -394,28 +338,27 @@
             <div class="reader-author-row">
               <div class="author-item">
                 <span class="author-label">Author:</span>
-                <span class="author-value">{{ selectedArticle.author_user_id || "system" }}</span>
+                <span class="author-value">{{
+                  selectedArticle.author_user_id || "system"
+                }}</span>
               </div>
-              <div
-                v-if="selectedArticle.last_edited_by"
-                class="author-item"
-              >
+              <div v-if="selectedArticle.last_edited_by" class="author-item">
                 <span class="author-label">Last Edited By:</span>
-                <span class="author-value">{{ selectedArticle.last_edited_by }}</span>
+                <span class="author-value">{{
+                  selectedArticle.last_edited_by
+                }}</span>
               </div>
-              <div
-                v-if="selectedArticle.approved_by"
-                class="author-item"
-              >
+              <div v-if="selectedArticle.approved_by" class="author-item">
                 <span class="author-label">Approved By:</span>
-                <span class="author-value text-success">✓ {{ selectedArticle.approved_by }}</span>
+                <span class="author-value text-success"
+                  >✓ {{ selectedArticle.approved_by }}</span
+                >
               </div>
-              <div
-                v-if="selectedArticle.updated_at"
-                class="author-item"
-              >
+              <div v-if="selectedArticle.updated_at" class="author-item">
                 <span class="author-label">Last Revised:</span>
-                <span class="author-value">{{ formatDate(selectedArticle.updated_at) }}</span>
+                <span class="author-value">{{
+                  formatDate(selectedArticle.updated_at)
+                }}</span>
               </div>
             </div>
 
@@ -442,7 +385,12 @@
               <span class="toolbar-label">👑 Admin Controls:</span>
 
               <!-- Draft & Rejected State Actions -->
-              <template v-if="selectedArticle.status === 'DRAFT' || selectedArticle.status === 'REJECTED'">
+              <template
+                v-if="
+                  selectedArticle.status === 'DRAFT' ||
+                  selectedArticle.status === 'REJECTED'
+                "
+              >
                 <button
                   id="btn-edit-draft"
                   class="btn btn-secondary btn-sm"
@@ -574,10 +522,7 @@
             >
               <pre>{{ selectedArticle.body_markdown }}</pre>
             </div>
-            <div
-              v-else
-              class="prose-empty"
-            >
+            <div v-else class="prose-empty">
               <p>No content has been authored for this SOP draft.</p>
             </div>
           </div>
@@ -591,29 +536,21 @@
             <div class="tab-section-header">
               <h4>Immutable Snapshot Versions</h4>
               <p class="section-desc">
-                Controlled snapshot archive of all historical versions under 21 CFR Part 11.
+                Controlled snapshot archive of all historical versions under 21
+                CFR Part 11.
               </p>
             </div>
 
-            <div
-              v-if="versionsLoading"
-              class="loading-box"
-            >
+            <div v-if="versionsLoading" class="loading-box">
               <div class="spinner" />
               <p>Loading version snapshots...</p>
             </div>
 
-            <div
-              v-else-if="versionsList.length === 0"
-              class="empty-box"
-            >
+            <div v-else-if="versionsList.length === 0" class="empty-box">
               <p>No snapshot versions recorded for this document.</p>
             </div>
 
-            <div
-              v-else
-              class="versions-table-wrap"
-            >
+            <div v-else class="versions-table-wrap">
               <table class="data-table">
                 <thead>
                   <tr>
@@ -627,12 +564,11 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr
-                    v-for="ver in versionsList"
-                    :key="ver.id"
-                  >
+                  <tr v-for="ver in versionsList" :key="ver.id">
                     <td>
-                      <span class="badge badge-version">v{{ ver.version_label }}</span>
+                      <span class="badge badge-version"
+                        >v{{ ver.version_label }}</span
+                      >
                     </td>
                     <td>#{{ ver.version_index }}</td>
                     <td>
@@ -644,12 +580,16 @@
                       </span>
                     </td>
                     <td>{{ ver.created_by || "system" }}</td>
-                    <td>{{ ver.reason_for_change || "Baseline initial version" }}</td>
+                    <td>
+                      {{ ver.reason_for_change || "Baseline initial version" }}
+                    </td>
                     <td>{{ formatDate(ver.created_at) }}</td>
                     <td>
                       <span
                         class="badge"
-                        :class="ver.is_locked ? 'badge-success' : 'badge-neutral'"
+                        :class="
+                          ver.is_locked ? 'badge-success' : 'badge-neutral'
+                        "
                       >
                         {{ ver.is_locked ? "🔒 Locked" : "📝 Draft" }}
                       </span>
@@ -669,29 +609,21 @@
             <div class="tab-section-header">
               <h4>21 CFR Part 11 Electronic Audit Ledger</h4>
               <p class="section-desc">
-                Append-only tamper-evident transaction log with SHA-256 cryptographic hashes.
+                Append-only tamper-evident transaction log with SHA-256
+                cryptographic hashes.
               </p>
             </div>
 
-            <div
-              v-if="auditLoading"
-              class="loading-box"
-            >
+            <div v-if="auditLoading" class="loading-box">
               <div class="spinner" />
               <p>Fetching immutable audit trail...</p>
             </div>
 
-            <div
-              v-else-if="auditLogList.length === 0"
-              class="empty-box"
-            >
+            <div v-else-if="auditLogList.length === 0" class="empty-box">
               <p>No audit trail logs recorded yet.</p>
             </div>
 
-            <div
-              v-else
-              class="audit-table-wrap"
-            >
+            <div v-else class="audit-table-wrap">
               <table class="data-table">
                 <thead>
                   <tr>
@@ -705,12 +637,11 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr
-                    v-for="log in auditLogList"
-                    :key="log.id"
-                  >
+                  <tr v-for="log in auditLogList" :key="log.id">
                     <td>
-                      <span class="badge badge-standard">{{ log.event_type }}</span>
+                      <span class="badge badge-standard">{{
+                        log.event_type
+                      }}</span>
                     </td>
                     <td>
                       <strong>{{ log.actor_user_id }}</strong>
@@ -726,13 +657,17 @@
                       <span v-else>—</span>
                     </td>
                     <td>v{{ log.version_label || "1.0" }}</td>
-                    <td>{{ log.reason_for_change || "Document lifecycle update" }}</td>
                     <td>
-                      <code
-                        class="hash-code"
-                        :title="log.sha256_hash"
-                      >
-                        {{ (log.sha256_hash || "sha256:e3b0c442").substring(0, 12) }}...
+                      {{ log.reason_for_change || "Document lifecycle update" }}
+                    </td>
+                    <td>
+                      <code class="hash-code" :title="log.sha256_hash">
+                        {{
+                          (log.sha256_hash || "sha256:e3b0c442").substring(
+                            0,
+                            12
+                          )
+                        }}...
                       </code>
                     </td>
                     <td>{{ formatDate(log.created_at) }}</td>
@@ -746,6 +681,8 @@
     </div>
 
     <!-- Modal 1: Create New Article Modal -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="isCreateArticleModalOpen"
       class="modal-overlay"
@@ -782,7 +719,7 @@
                 placeholder="e.g. SOP-ECRF-301: Adverse Event Severity Grading"
                 required
                 @input="autoGenerateSlug"
-              >
+              />
             </div>
 
             <div class="form-row">
@@ -795,7 +732,7 @@
                   class="form-control"
                   placeholder="sop-ecrf-301-adverse-events"
                   required
-                >
+                />
               </div>
               <div class="form-group col">
                 <label for="new-art-category">Category *</label>
@@ -825,7 +762,7 @@
                   type="text"
                   class="form-control"
                   placeholder="0.1"
-                >
+                />
               </div>
               <div class="form-group col">
                 <label for="new-art-tags">Tags (comma-separated)</label>
@@ -835,7 +772,7 @@
                   type="text"
                   class="form-control"
                   placeholder="ecrf, safety, adverse-events"
-                >
+                />
               </div>
             </div>
 
@@ -860,7 +797,7 @@
                 class="form-control"
                 placeholder="Initial authoring of standard operating procedure"
                 required
-              >
+              />
             </div>
           </div>
 
@@ -872,10 +809,7 @@
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              class="btn btn-primary"
-            >
+            <button type="submit" class="btn btn-primary">
               Save Working Draft
             </button>
           </div>
@@ -884,6 +818,8 @@
     </div>
 
     <!-- Modal 2: Edit Working Draft Modal -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="isEditDraftModalOpen"
       class="modal-overlay"
@@ -896,9 +832,7 @@
         aria-labelledby="edit-draft-modal-title"
       >
         <div class="modal-header">
-          <h3 id="edit-draft-modal-title">
-            ✏️ Edit Working Draft SOP
-          </h3>
+          <h3 id="edit-draft-modal-title">✏️ Edit Working Draft SOP</h3>
           <button
             type="button"
             class="modal-close-btn"
@@ -918,7 +852,7 @@
                 type="text"
                 class="form-control"
                 required
-              >
+              />
             </div>
 
             <div class="form-row">
@@ -945,7 +879,7 @@
                   v-model="editDraftForm.tagsInput"
                   type="text"
                   class="form-control"
-                >
+                />
               </div>
             </div>
 
@@ -957,7 +891,11 @@
                   class="btn-text-toggle"
                   @click="isPreviewMode = !isPreviewMode"
                 >
-                  {{ isPreviewMode ? "👁️ Show Raw Markdown" : "🔍 Show Live Preview" }}
+                  {{
+                    isPreviewMode
+                      ? "👁️ Show Raw Markdown"
+                      : "🔍 Show Live Preview"
+                  }}
                 </button>
               </div>
 
@@ -985,7 +923,7 @@
                 class="form-control"
                 placeholder="Updated procedural guidelines and regulatory notes"
                 required
-              >
+              />
             </div>
           </div>
 
@@ -997,10 +935,7 @@
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              class="btn btn-primary"
-            >
+            <button type="submit" class="btn btn-primary">
               Save Draft Changes
             </button>
           </div>
@@ -1009,6 +944,8 @@
     </div>
 
     <!-- Modal 3: Part 11 Action Justification / Reason Modal -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="isReasonModalOpen"
       class="modal-overlay"
@@ -1039,11 +976,10 @@
               {{ actionModalIntro }}
             </p>
 
-            <div
-              v-if="actionModalType === 'publish'"
-              class="form-group"
-            >
-              <label for="action-version-label">Published Version Label *</label>
+            <div v-if="actionModalType === 'publish'" class="form-group">
+              <label for="action-version-label"
+                >Published Version Label *</label
+              >
               <input
                 id="action-version-label"
                 v-model="actionVersionLabel"
@@ -1051,11 +987,13 @@
                 class="form-control"
                 placeholder="e.g. 1.0 or 2.0"
                 required
-              >
+              />
             </div>
 
             <div class="form-group">
-              <label for="action-reason-input">21 CFR Part 11 Reason for Change *</label>
+              <label for="action-reason-input"
+                >21 CFR Part 11 Reason for Change *</label
+              >
               <textarea
                 id="action-reason-input"
                 v-model="actionReason"
@@ -1075,11 +1013,7 @@
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              class="btn"
-              :class="actionButtonClass"
-            >
+            <button type="submit" class="btn" :class="actionButtonClass">
               {{ actionButtonLabel }}
             </button>
           </div>
@@ -1088,6 +1022,8 @@
     </div>
 
     <!-- Modal 4: Create Category Modal -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="isCreateCategoryModalOpen"
       class="modal-overlay"
@@ -1100,9 +1036,7 @@
         aria-labelledby="create-cat-modal-title"
       >
         <div class="modal-header">
-          <h3 id="create-cat-modal-title">
-            📁 Create Knowledge Category
-          </h3>
+          <h3 id="create-cat-modal-title">📁 Create Knowledge Category</h3>
           <button
             type="button"
             class="modal-close-btn"
@@ -1124,7 +1058,7 @@
                 placeholder="e.g. Safety & Pharmacovigilance"
                 required
                 @input="autoGenerateCategorySlug"
-              >
+              />
             </div>
 
             <div class="form-group">
@@ -1136,7 +1070,7 @@
                 class="form-control"
                 placeholder="safety-pharmacovigilance"
                 required
-              >
+              />
             </div>
 
             <div class="form-group">
@@ -1147,11 +1081,14 @@
                 type="text"
                 class="form-control"
                 placeholder="Guidelines for safety event intake, triage, and expedited reporting."
-              >
+              />
             </div>
 
             <div class="form-group">
-              <label class="form-label">Persona Visibility (All by default if empty)</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label class="form-label"
+                >Persona Visibility (All by default if empty)</label
+              >
               <div class="persona-checkbox-grid">
                 <label
                   v-for="p in PERSONA_PRESETS"
@@ -1162,7 +1099,7 @@
                     v-model="newCategoryForm.persona_visibility"
                     type="checkbox"
                     :value="p.key"
-                  >
+                  />
                   <span>{{ p.label }}</span>
                 </label>
               </div>
@@ -1177,10 +1114,7 @@
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              class="btn btn-primary"
-            >
+            <button type="submit" class="btn btn-primary">
               Create Category
             </button>
           </div>
@@ -1192,7 +1126,11 @@
 
 <script>
 import { computed, onMounted, ref, watch } from "vue";
-import { knowledgeService, DEFAULT_CATEGORIES, DEFAULT_MOCK_ARTICLES } from "../api/knowledge.js";
+import {
+  knowledgeService,
+  DEFAULT_CATEGORIES,
+  DEFAULT_MOCK_ARTICLES,
+} from "../api/knowledge.js";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
 
 export default {
@@ -1260,9 +1198,13 @@ export default {
     const actionButtonClass = ref("btn-primary");
 
     // Persona & Role Checking
-    const activePersonaKey = computed(() => authStore.currentPersona || "super_admin");
+    const activePersonaKey = computed(
+      () => authStore.currentPersona || "super_admin"
+    );
     const activePersonaLabel = computed(() => {
-      const p = PERSONA_PRESETS.find((preset) => preset.key === activePersonaKey.value);
+      const p = PERSONA_PRESETS.find(
+        (preset) => preset.key === activePersonaKey.value
+      );
       return p ? p.label : "Active Role";
     });
 
@@ -1272,7 +1214,11 @@ export default {
         return false;
       }
       const roles = authStore.normalizedRoles || [];
-      return current === "super_admin" || roles.includes("super_admin") || roles.includes("sponsor_admin");
+      return (
+        current === "super_admin" ||
+        roles.includes("super_admin") ||
+        roles.includes("sponsor_admin")
+      );
     });
 
     // Filtered Categories based on Persona
@@ -1283,8 +1229,12 @@ export default {
       const role = activePersonaKey.value;
       return categories.value.filter((c) => {
         if (c.is_deleted) return false;
-        if (!c.persona_visibility || c.persona_visibility.length === 0) return true;
-        return c.persona_visibility.includes(role) || c.persona_visibility.includes("all");
+        if (!c.persona_visibility || c.persona_visibility.length === 0)
+          return true;
+        return (
+          c.persona_visibility.includes(role) ||
+          c.persona_visibility.includes("all")
+        );
       });
     });
 
@@ -1325,7 +1275,9 @@ export default {
         list = list.filter((a) => {
           const matchTitle = a.title?.toLowerCase().includes(q);
           const matchSlug = a.slug?.toLowerCase().includes(q);
-          const matchBody = (a.body_markdown || a.body_html || "").toLowerCase().includes(q);
+          const matchBody = (a.body_markdown || a.body_html || "")
+            .toLowerCase()
+            .includes(q);
           const tags = getTagList(a.tags);
           const matchTags = tags.some((t) => t.toLowerCase().includes(q));
           return matchTitle || matchSlug || matchBody || matchTags;
@@ -1336,15 +1288,24 @@ export default {
     });
 
     // Aggregations / Metrics
-    const totalArticlesCount = computed(() => filteredByPersonaArticles.value.length);
+    const totalArticlesCount = computed(
+      () => filteredByPersonaArticles.value.length
+    );
     const publishedArticlesCount = computed(
-      () => filteredByPersonaArticles.value.filter((a) => a.status === "PUBLISHED").length
+      () =>
+        filteredByPersonaArticles.value.filter((a) => a.status === "PUBLISHED")
+          .length
     );
     const inReviewArticlesCount = computed(
-      () => filteredByPersonaArticles.value.filter((a) => a.status === "IN_REVIEW").length
+      () =>
+        filteredByPersonaArticles.value.filter((a) => a.status === "IN_REVIEW")
+          .length
     );
     const draftArticlesCount = computed(
-      () => filteredByPersonaArticles.value.filter((a) => a.status === "DRAFT" || a.status === "REJECTED").length
+      () =>
+        filteredByPersonaArticles.value.filter(
+          (a) => a.status === "DRAFT" || a.status === "REJECTED"
+        ).length
     );
 
     // Available Tags
@@ -1361,7 +1322,10 @@ export default {
       if (!tags) return [];
       if (Array.isArray(tags)) return tags;
       if (typeof tags === "string") {
-        return tags.split(",").map((t) => t.trim()).filter(Boolean);
+        return tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean);
       }
       return [];
     }
@@ -1371,13 +1335,20 @@ export default {
       if (slug.includes("clinical") || slug.includes("ecrf")) return "🩺";
       if (slug.includes("authoring") || slug.includes("mdr")) return "📋";
       if (slug.includes("monitoring") || slug.includes("ctms")) return "📊";
-      if (slug.includes("regulatory") || slug.includes("compliance") || slug.includes("audit")) return "🔒";
+      if (
+        slug.includes("regulatory") ||
+        slug.includes("compliance") ||
+        slug.includes("audit")
+      )
+        return "🔒";
       if (slug.includes("data") || slug.includes("coding")) return "🏷️";
       return "📁";
     }
 
     function getArticleCountForCategory(catId) {
-      return filteredByPersonaArticles.value.filter((a) => a.category_id === catId).length;
+      return filteredByPersonaArticles.value.filter(
+        (a) => a.category_id === catId
+      ).length;
     }
 
     function getStatusPillClass(status) {
@@ -1434,7 +1405,11 @@ export default {
     // Actions & Selection
     function selectCategory(catId) {
       selectedCategoryId.value = catId;
-      if (selectedArticle.value && catId && selectedArticle.value.category_id !== catId) {
+      if (
+        selectedArticle.value &&
+        catId &&
+        selectedArticle.value.category_id !== catId
+      ) {
         const firstMatch = displayArticles.value[0] || null;
         selectedArticle.value = firstMatch;
       }
@@ -1478,7 +1453,9 @@ export default {
       if (!selectedArticle.value) return;
       versionsLoading.value = true;
       try {
-        const list = await knowledgeService.listArticleVersions(selectedArticle.value.id);
+        const list = await knowledgeService.listArticleVersions(
+          selectedArticle.value.id
+        );
         versionsList.value = Array.isArray(list) ? list : [];
       } catch (err) {
         console.warn("Failed to load versions:", err);
@@ -1493,7 +1470,9 @@ export default {
       if (!selectedArticle.value) return;
       auditLoading.value = true;
       try {
-        const list = await knowledgeService.getArticleAuditLog(selectedArticle.value.id);
+        const list = await knowledgeService.getArticleAuditLog(
+          selectedArticle.value.id
+        );
         auditLogList.value = Array.isArray(list) ? list : [];
       } catch (err) {
         console.warn("Failed to load audit log:", err);
@@ -1512,7 +1491,8 @@ export default {
         category_id: defaultCat,
         version_label: "0.1",
         tagsInput: "",
-        body_markdown: "## Purpose & Scope\n\n### Responsibilities\n1. \n\n### Procedure\n1. ",
+        body_markdown:
+          "## Purpose & Scope\n\n### Responsibilities\n1. \n\n### Procedure\n1. ",
         reason_for_change: "Initial authoring of standard operating procedure",
       };
       isCreateArticleModalOpen.value = true;
@@ -1549,8 +1529,15 @@ export default {
           : [];
         const payload = {
           title: newArticleForm.value.title,
-          slug: newArticleForm.value.slug || newArticleForm.value.title.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-          category_id: newArticleForm.value.category_id || visibleCategories.value[0]?.id || "cat-clinical-ops",
+          slug:
+            newArticleForm.value.slug ||
+            newArticleForm.value.title
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-"),
+          category_id:
+            newArticleForm.value.category_id ||
+            visibleCategories.value[0]?.id ||
+            "cat-clinical-ops",
           version_label: newArticleForm.value.version_label || "0.1",
           tags,
           body_markdown: newArticleForm.value.body_markdown,
@@ -1595,8 +1582,13 @@ export default {
           body_markdown: editDraftForm.value.body_markdown,
           reason_for_change: editDraftForm.value.reason_for_change,
         };
-        const updated = await knowledgeService.updateArticleDraft(selectedArticle.value.id, payload);
-        const idx = articles.value.findIndex((a) => a.id === selectedArticle.value.id);
+        const updated = await knowledgeService.updateArticleDraft(
+          selectedArticle.value.id,
+          payload
+        );
+        const idx = articles.value.findIndex(
+          (a) => a.id === selectedArticle.value.id
+        );
         if (idx !== -1) {
           articles.value[idx] = updated;
         }
@@ -1610,8 +1602,10 @@ export default {
     function promptSubmitReview() {
       actionModalType.value = "submit_review";
       actionModalTitle.value = "📨 Submit Draft for Four-Eyes Review";
-      actionModalIntro.value = "Submitting this working draft will transition the document to IN_REVIEW status. An independent peer reviewer must review and approve this revision.";
-      actionReason.value = "Draft completed; submitted for formal quality & regulatory review.";
+      actionModalIntro.value =
+        "Submitting this working draft will transition the document to IN_REVIEW status. An independent peer reviewer must review and approve this revision.";
+      actionReason.value =
+        "Draft completed; submitted for formal quality & regulatory review.";
       actionButtonLabel.value = "Submit for Review";
       actionButtonClass.value = "btn-primary";
       isReasonModalOpen.value = true;
@@ -1620,8 +1614,10 @@ export default {
     function promptApproveArticle() {
       actionModalType.value = "approve";
       actionModalTitle.value = "✓ Approve Article Revision";
-      actionModalIntro.value = "Approving this article locks the working version snapshot as permanently immutable per 21 CFR Part 11 four-eyes principles.";
-      actionReason.value = "Verified procedural accuracy and regulatory compliance.";
+      actionModalIntro.value =
+        "Approving this article locks the working version snapshot as permanently immutable per 21 CFR Part 11 four-eyes principles.";
+      actionReason.value =
+        "Verified procedural accuracy and regulatory compliance.";
       actionButtonLabel.value = "Approve & Lock Version";
       actionButtonClass.value = "btn-success";
       isReasonModalOpen.value = true;
@@ -1630,8 +1626,10 @@ export default {
     function promptRejectArticle() {
       actionModalType.value = "reject";
       actionModalTitle.value = "✕ Reject Article Revision";
-      actionModalIntro.value = "Rejecting this draft returns it to REJECTED status. Please provide clear clinical or regulatory justification for rejection.";
-      actionReason.value = "Protocol amendment alignment requires updates before approval.";
+      actionModalIntro.value =
+        "Rejecting this draft returns it to REJECTED status. Please provide clear clinical or regulatory justification for rejection.";
+      actionReason.value =
+        "Protocol amendment alignment requires updates before approval.";
       actionButtonLabel.value = "Reject Draft";
       actionButtonClass.value = "btn-danger";
       isReasonModalOpen.value = true;
@@ -1640,8 +1638,10 @@ export default {
     function promptPublishArticle() {
       actionModalType.value = "publish";
       actionModalTitle.value = "🚀 Publish Approved SOP Live";
-      actionModalIntro.value = "Publishing will immediately make this document active across the platform and automatically supersede any previous published version.";
-      actionReason.value = "Formal regulatory release for clinical site operations.";
+      actionModalIntro.value =
+        "Publishing will immediately make this document active across the platform and automatically supersede any previous published version.";
+      actionReason.value =
+        "Formal regulatory release for clinical site operations.";
       actionVersionLabel.value = selectedArticle.value?.version_label || "1.0";
       actionButtonLabel.value = "Publish Live";
       actionButtonClass.value = "btn-primary";
@@ -1651,8 +1651,10 @@ export default {
     function promptArchiveArticle() {
       actionModalType.value = "archive";
       actionModalTitle.value = "📦 Archive Knowledge Article";
-      actionModalIntro.value = "Archiving will deprecate this SOP document and remove it from active clinical workflows while retaining 21 CFR Part 11 audit records.";
-      actionReason.value = "Replaced by updated master protocol and standard operating procedures.";
+      actionModalIntro.value =
+        "Archiving will deprecate this SOP document and remove it from active clinical workflows while retaining 21 CFR Part 11 audit records.";
+      actionReason.value =
+        "Replaced by updated master protocol and standard operating procedures.";
       actionButtonLabel.value = "Archive SOP";
       actionButtonClass.value = "btn-danger";
       isReasonModalOpen.value = true;
@@ -1666,11 +1668,17 @@ export default {
       try {
         let updated = null;
         if (actionModalType.value === "submit_review") {
-          updated = await knowledgeService.submitArticleReview(artId, { reason_for_change: reason });
+          updated = await knowledgeService.submitArticleReview(artId, {
+            reason_for_change: reason,
+          });
         } else if (actionModalType.value === "approve") {
-          updated = await knowledgeService.approveArticle(artId, { reason_for_change: reason });
+          updated = await knowledgeService.approveArticle(artId, {
+            reason_for_change: reason,
+          });
         } else if (actionModalType.value === "reject") {
-          updated = await knowledgeService.rejectArticle(artId, { reason_for_change: reason });
+          updated = await knowledgeService.rejectArticle(artId, {
+            reason_for_change: reason,
+          });
         } else if (actionModalType.value === "publish") {
           updated = await knowledgeService.publishArticle(artId, {
             reason_for_change: reason,
@@ -1714,7 +1722,11 @@ export default {
         }
         const payload = {
           name: newCategoryForm.value.name,
-          slug: newCategoryForm.value.slug || newCategoryForm.value.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+          slug:
+            newCategoryForm.value.slug ||
+            newCategoryForm.value.name
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-"),
           description: newCategoryForm.value.description,
           persona_visibility: newCategoryForm.value.persona_visibility,
         };
@@ -1749,7 +1761,9 @@ export default {
       () => activePersonaKey.value,
       () => {
         if (selectedArticle.value) {
-          const isStillVisible = displayArticles.value.some((a) => a.id === selectedArticle.value.id);
+          const isStillVisible = displayArticles.value.some(
+            (a) => a.id === selectedArticle.value.id
+          );
           if (!isStillVisible) {
             selectedArticle.value = displayArticles.value[0] || null;
           }

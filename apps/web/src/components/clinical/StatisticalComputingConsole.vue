@@ -1,26 +1,50 @@
 <template>
-  <div class="sce-console" role="region" aria-label="Validated Containerized Statistical Computing Environment">
+  <div
+    class="sce-console"
+    role="region"
+    aria-label="Validated Containerized Statistical Computing Environment"
+  >
     <!-- Header -->
     <header class="sce-header">
       <div class="header-main">
         <div class="badge-row">
           <span class="badge badge-gxp">21 CFR Part 11</span>
-          <span class="badge badge-reproducible">100% Bit-for-Bit Reproducible</span>
-          <span class="badge badge-sandbox">Air-Gapped Sandbox (R &amp; Python)</span>
+          <span class="badge badge-reproducible"
+            >100% Bit-for-Bit Reproducible</span
+          >
+          <span class="badge badge-sandbox"
+            >Air-Gapped Sandbox (R &amp; Python)</span
+          >
         </div>
-        <h2 class="sce-title">Validated Statistical Computing Environment (SCE)</h2>
+        <h2 class="sce-title">
+          Validated Statistical Computing Environment (SCE)
+        </h2>
         <p class="sce-subtitle">
-          Isolated execution workspace for biostatisticians with immutable package lockfile integrity (<code>uv.lock</code>, <code>renv.lock</code>),
-          cryptographically signed run manifests, 21 CFR Part 11 electronic signatures, and formal database lock authorization gating.
+          Isolated execution workspace for biostatisticians with immutable
+          package lockfile integrity (<code>uv.lock</code>,
+          <code>renv.lock</code>), cryptographically signed run manifests, 21
+          CFR Part 11 electronic signatures, and formal database lock
+          authorization gating.
         </p>
       </div>
 
       <div class="header-actions">
-        <div class="blinding-status-pill" :class="{ 'unblinded-active': isUnblindedMode }">
-          <span class="status-icon">{{ isUnblindedMode ? '🔓' : '🔒' }}</span>
+        <div
+          class="blinding-status-pill"
+          :class="{ 'unblinded-active': isUnblindedMode }"
+        >
+          <span class="status-icon">{{ isUnblindedMode ? "🔓" : "🔒" }}</span>
           <div class="status-info">
-            <span class="status-label">{{ isUnblindedMode ? 'Unblinded Analysis Active' : 'Blinded Analysis (Masked)' }}</span>
-            <span class="status-sub">{{ isUnblindedMode ? activeLockTokenId || 'Authorized Session' : 'Treatment variables masked' }}</span>
+            <span class="status-label">{{
+              isUnblindedMode
+                ? "Unblinded Analysis Active"
+                : "Blinded Analysis (Masked)"
+            }}</span>
+            <span class="status-sub">{{
+              isUnblindedMode
+                ? activeLockTokenId || "Authorized Session"
+                : "Treatment variables masked"
+            }}</span>
           </div>
         </div>
 
@@ -44,7 +68,11 @@
     </header>
 
     <!-- Navigation Sub-Tabs -->
-    <nav class="sce-nav-tabs" role="tablist" aria-label="Statistical Computing Tabs">
+    <nav
+      class="sce-nav-tabs"
+      role="tablist"
+      aria-label="Statistical Computing Tabs"
+    >
       <button
         role="tab"
         :aria-selected="activeTab === 'editor'"
@@ -87,12 +115,23 @@
           <div class="card-header">
             <div class="header-left">
               <h3 class="card-title">Analysis Program Authoring</h3>
-              <span class="version-tag">Version: {{ selectedProgram?.version || '1.0.0' }}</span>
+              <span class="version-tag"
+                >Version: {{ selectedProgram?.version || "1.0.0" }}</span
+              >
             </div>
             <div class="header-right">
-              <select v-model="selectedProgramId" class="form-select program-selector" @change="onProgramSelected">
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <select
+                v-model="selectedProgramId"
+                class="form-select program-selector"
+                @change="onProgramSelected"
+              >
                 <option value="">-- Select or Template Program --</option>
-                <option v-for="prog in programs" :key="prog.program_id" :value="prog.program_id">
+                <option
+                  v-for="prog in programs"
+                  :key="prog.program_id"
+                  :value="prog.program_id"
+                >
                   [{{ prog.language }}] {{ prog.name }} - {{ prog.title }}
                 </option>
               </select>
@@ -119,46 +158,97 @@
 
             <div class="template-selector">
               <span class="template-label">Load Template:</span>
-              <button type="button" class="btn btn-xs btn-outline" @click="loadTemplate('demographics')">Demographics (T-14.1)</button>
-              <button type="button" class="btn btn-xs btn-outline" @click="loadTemplate('adverse_events')">Adverse Events</button>
-              <button type="button" class="btn btn-xs btn-outline" @click="loadTemplate('vitals_summary')">Vital Signs Summary</button>
+              <button
+                type="button"
+                class="btn btn-xs btn-outline"
+                @click="loadTemplate('demographics')"
+              >
+                Demographics (T-14.1)
+              </button>
+              <button
+                type="button"
+                class="btn btn-xs btn-outline"
+                @click="loadTemplate('adverse_events')"
+              >
+                Adverse Events
+              </button>
+              <button
+                type="button"
+                class="btn btn-xs btn-outline"
+                @click="loadTemplate('vitals_summary')"
+              >
+                Vital Signs Summary
+              </button>
             </div>
           </div>
 
           <div class="meta-inputs-grid">
             <div class="form-group">
               <label class="form-label" for="prog-name">Script Filename</label>
-              <input id="prog-name" type="text" v-model="scriptName" class="form-input" placeholder="t_14_1_demog.py" />
+              <input
+                id="prog-name"
+                v-model="scriptName"
+                type="text"
+                class="form-input"
+                placeholder="t_14_1_demog.py"
+              />
             </div>
             <div class="form-group">
               <label class="form-label" for="prog-title">Program Title</label>
-              <input id="prog-title" type="text" v-model="scriptTitle" class="form-input" placeholder="Summary of Demographic Characteristics" />
+              <input
+                id="prog-title"
+                v-model="scriptTitle"
+                type="text"
+                class="form-input"
+                placeholder="Summary of Demographic Characteristics"
+              />
             </div>
             <div class="form-group">
-              <label class="form-label" for="prog-domain">Target CDISC Domain</label>
-              <input id="prog-domain" type="text" v-model="targetDomain" class="form-input" placeholder="ADSL / TLF-14.1" />
+              <label class="form-label" for="prog-domain"
+                >Target CDISC Domain</label
+              >
+              <input
+                id="prog-domain"
+                v-model="targetDomain"
+                type="text"
+                class="form-input"
+                placeholder="ADSL / TLF-14.1"
+              />
             </div>
           </div>
 
           <div class="code-editor-wrapper">
             <div class="editor-toolbar">
-              <span class="editor-filename">📝 {{ scriptName || 'untitled_analysis.py' }}</span>
-              <span class="code-digest-preview" v-if="computedCodeHash">SHA-256: <code>{{ computedCodeHash.slice(0, 16) }}...</code></span>
+              <span class="editor-filename"
+                >📝 {{ scriptName || "untitled_analysis.py" }}</span
+              >
+              <span v-if="computedCodeHash" class="code-digest-preview"
+                >SHA-256:
+                <code>{{ computedCodeHash.slice(0, 16) }}...</code></span
+              >
             </div>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <textarea
               v-model="sourceCode"
               class="code-textarea"
               placeholder="# Author validated statistical analysis code here..."
               rows="18"
               spellcheck="false"
-            ></textarea>
+            />
           </div>
 
           <div class="card-footer actions-footer">
-            <button type="button" class="btn btn-secondary" @click="saveProgramDraft" :disabled="isSaving">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              :disabled="isSaving"
+              @click="saveProgramDraft"
+            >
               💾 Save Program Definition
             </button>
-            <span class="text-muted text-xs">Immutable SHA-256 seal will be signed on execution dispatch</span>
+            <span class="text-muted text-xs"
+              >Immutable SHA-256 seal will be signed on execution dispatch</span
+            >
           </div>
         </div>
 
@@ -172,45 +262,82 @@
           <div class="runner-body">
             <!-- 1. Input Snapshot Selection -->
             <div class="form-group">
-              <label class="form-label" for="exec-snap">Input Version-Pinned Snapshot</label>
-              <select id="exec-snap" v-model="selectedSnapshotId" class="form-select">
+              <label class="form-label" for="exec-snap"
+                >Input Version-Pinned Snapshot</label
+              >
+              <select
+                id="exec-snap"
+                v-model="selectedSnapshotId"
+                class="form-select"
+              >
                 <option value="">-- Choose Sealed Snapshot --</option>
-                <option v-for="snap in snapshots" :key="snap.snapshot_id" :value="snap.snapshot_id">
-                  {{ snap.version_tag }} ({{ snap.milestone }}) - {{ snap.record_count }} records
+                <option
+                  v-for="snap in snapshots"
+                  :key="snap.snapshot_id"
+                  :value="snap.snapshot_id"
+                >
+                  {{ snap.version_tag }} ({{ snap.milestone }}) -
+                  {{ snap.record_count }} records
                 </option>
               </select>
-              <span class="field-hint" v-if="selectedSnapshot">
-                Digest: <code>{{ selectedSnapshot.sha256_digest.slice(0, 20) }}...</code>
+              <span v-if="selectedSnapshot" class="field-hint">
+                Digest:
+                <code
+                  >{{ selectedSnapshot.sha256_digest.slice(0, 20) }}...</code
+                >
               </span>
             </div>
 
             <!-- 2. Blinding & Database Lock Authorization -->
-            <div class="unblinded-gating-box" :class="{ 'gating-active': requestUnblinded }">
+            <div
+              class="unblinded-gating-box"
+              :class="{ 'gating-active': requestUnblinded }"
+            >
               <div class="toggle-row">
                 <label class="checkbox-label" for="unblind-req-checkbox">
                   <input
                     id="unblind-req-checkbox"
-                    type="checkbox"
                     v-model="requestUnblinded"
+                    type="checkbox"
                     class="form-checkbox"
                   />
-                  <span class="checkbox-text">Request Unblinded Treatment Arms Access</span>
+                  <span class="checkbox-text"
+                    >Request Unblinded Treatment Arms Access</span
+                  >
                 </label>
-                <span class="badge" :class="requestUnblinded ? 'badge-warn' : 'badge-neutral'">
-                  {{ requestUnblinded ? 'UNBLINDED' : 'BLINDED' }}
+                <span
+                  class="badge"
+                  :class="requestUnblinded ? 'badge-warn' : 'badge-neutral'"
+                >
+                  {{ requestUnblinded ? "UNBLINDED" : "BLINDED" }}
                 </span>
               </div>
 
               <div v-if="requestUnblinded" class="token-selection-group">
-                <label class="form-label" for="db-token-select">Database Lock Authorization Token (Required)</label>
-                <select id="db-token-select" v-model="selectedTokenId" class="form-select">
-                  <option value="">-- Select Valid Authorization Token --</option>
-                  <option v-for="tok in validTokens" :key="tok.token_id" :value="tok.token_id">
-                    {{ tok.token_id }} ({{ tok.milestone }}) - Issued to: {{ tok.issued_to }}
+                <label class="form-label" for="db-token-select"
+                  >Database Lock Authorization Token (Required)</label
+                >
+                <select
+                  id="db-token-select"
+                  v-model="selectedTokenId"
+                  class="form-select"
+                >
+                  <option value="">
+                    -- Select Valid Authorization Token --
+                  </option>
+                  <option
+                    v-for="tok in validTokens"
+                    :key="tok.token_id"
+                    :value="tok.token_id"
+                  >
+                    {{ tok.token_id }} ({{ tok.milestone }}) - Issued to:
+                    {{ tok.issued_to }}
                   </option>
                 </select>
                 <p class="token-warning">
-                  ⚠️ 21 CFR Part 11 Rule: Unblinded analysis requires active database lock token authorization with cryptographic signature.
+                  ⚠️ 21 CFR Part 11 Rule: Unblinded analysis requires active
+                  database lock token authorization with cryptographic
+                  signature.
                 </p>
               </div>
             </div>
@@ -229,7 +356,9 @@
                 </div>
                 <div class="bound-item">
                   <span class="bound-name">Network Egress:</span>
-                  <span class="bound-val badge-green">BLOCKED (Air-Gapped)</span>
+                  <span class="bound-val badge-green"
+                    >BLOCKED (Air-Gapped)</span
+                  >
                 </div>
                 <div class="bound-item">
                   <span class="bound-name">Filesystem:</span>
@@ -246,28 +375,48 @@
                 :disabled="isExecuting || !canExecute"
                 @click="dispatchExecution"
               >
-                <span v-if="isExecuting" class="spinner">⏳ Executing Sandbox Run...</span>
+                <span v-if="isExecuting" class="spinner"
+                  >⏳ Executing Sandbox Run...</span
+                >
                 <span v-else>🚀 Run Statistical Analysis in Sandbox</span>
               </button>
             </div>
 
             <!-- 5. Latest Execution Summary (if available) -->
-            <div v-if="latestRun" class="latest-run-card" :class="`status-${latestRun.status.toLowerCase()}`">
+            <div
+              v-if="latestRun"
+              class="latest-run-card"
+              :class="`status-${latestRun.status.toLowerCase()}`"
+            >
               <div class="run-header-row">
-                <span class="run-id-tag">Run: <code>{{ latestRun.run_id }}</code></span>
-                <span class="status-pill" :class="`pill-${latestRun.status.toLowerCase()}`">
+                <span class="run-id-tag"
+                  >Run: <code>{{ latestRun.run_id }}</code></span
+                >
+                <span
+                  class="status-pill"
+                  :class="`pill-${latestRun.status.toLowerCase()}`"
+                >
                   {{ latestRun.status }} ({{ latestRun.duration_ms }}ms)
                 </span>
               </div>
 
               <div class="manifest-seal-row">
                 <span class="seal-label">SHA-256 Manifest Seal:</span>
-                <code class="seal-code">{{ latestRun.manifest_sha256_seal }}</code>
+                <code class="seal-code">{{
+                  latestRun.manifest_sha256_seal
+                }}</code>
               </div>
 
               <div class="artifacts-summary">
-                <span class="art-count">Generated Output Artifacts: {{ latestRun.output_artifacts.length }}</span>
-                <button type="button" class="btn btn-xs btn-outline" @click="viewRunDetails(latestRun.run_id)">
+                <span class="art-count"
+                  >Generated Output Artifacts:
+                  {{ latestRun.output_artifacts.length }}</span
+                >
+                <button
+                  type="button"
+                  class="btn btn-xs btn-outline"
+                  @click="viewRunDetails(latestRun.run_id)"
+                >
                   View Full Manifest &amp; Artifacts →
                 </button>
               </div>
@@ -303,34 +452,70 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="run in runs" :key="run.run_id" :class="{ 'selected-row': selectedRunDetail?.run_id === run.run_id }">
-                <td class="cell-id"><code>{{ run.run_id }}</code></td>
-                <td class="cell-bold">{{ run.program_name }} (v{{ run.program_version }})</td>
-                <td>
-                  <span class="lang-tag" :class="`lang-${run.language.toLowerCase()}`">{{ run.language }}</span>
+              <tr
+                v-for="run in runs"
+                :key="run.run_id"
+                :class="{
+                  'selected-row': selectedRunDetail?.run_id === run.run_id,
+                }"
+              >
+                <td class="cell-id">
+                  <code>{{ run.run_id }}</code>
                 </td>
-                <td><span class="version-pill">{{ run.snapshot_version_tag }}</span></td>
+                <td class="cell-bold">
+                  {{ run.program_name }} (v{{ run.program_version }})
+                </td>
                 <td>
-                  <span v-if="run.is_unblinded_run" class="badge-unblind-tag">🔓 UNBLINDED</span>
+                  <span
+                    class="lang-tag"
+                    :class="`lang-${run.language.toLowerCase()}`"
+                    >{{ run.language }}</span
+                  >
+                </td>
+                <td>
+                  <span class="version-pill">{{
+                    run.snapshot_version_tag
+                  }}</span>
+                </td>
+                <td>
+                  <span v-if="run.is_unblinded_run" class="badge-unblind-tag"
+                    >🔓 UNBLINDED</span
+                  >
                   <span v-else class="badge-blinded-tag">BLINDED</span>
                 </td>
                 <td>
-                  <span class="status-pill" :class="`pill-${run.status.toLowerCase()}`">{{ run.status }}</span>
+                  <span
+                    class="status-pill"
+                    :class="`pill-${run.status.toLowerCase()}`"
+                    >{{ run.status }}</span
+                  >
                 </td>
                 <td class="cell-num">{{ run.duration_ms }} ms</td>
-                <td class="cell-num">{{ run.output_artifacts.length }} items</td>
+                <td class="cell-num">
+                  {{ run.output_artifacts.length }} items
+                </td>
                 <td class="cell-digest">
                   <span class="digest-pill" :title="run.manifest_sha256_seal">
                     🛡️ {{ run.manifest_sha256_seal.slice(0, 14) }}...
                   </span>
                 </td>
-                <td class="cell-date">{{ formatDate(run.execution_end) }}</td>
+                <td class="cell-date">
+                  {{ formatDate(run.execution_end) }}
+                </td>
                 <td>
                   <div class="action-buttons">
-                    <button type="button" class="btn btn-xs btn-outline" @click="viewRunDetails(run.run_id)">
+                    <button
+                      type="button"
+                      class="btn btn-xs btn-outline"
+                      @click="viewRunDetails(run.run_id)"
+                    >
                       Inspect
                     </button>
-                    <button type="button" class="btn btn-xs btn-primary" @click="verifyManifest(run.run_id)">
+                    <button
+                      type="button"
+                      class="btn btn-xs btn-primary"
+                      @click="verifyManifest(run.run_id)"
+                    >
                       Verify Seal
                     </button>
                   </div>
@@ -338,7 +523,8 @@
               </tr>
               <tr v-if="runs.length === 0">
                 <td colspan="11" class="text-center text-muted empty-cell">
-                  No statistical runs executed yet. Launch a program from the Statistical Workspace.
+                  No statistical runs executed yet. Launch a program from the
+                  Statistical Workspace.
                 </td>
               </tr>
             </tbody>
@@ -350,10 +536,23 @@
       <div v-if="selectedRunDetail" class="detail-drawer card">
         <div class="card-header">
           <div class="header-left">
-            <h3 class="card-title">Execution Run Manifest Inspector: <code>{{ selectedRunDetail.run_id }}</code></h3>
-            <span class="status-pill" :class="`pill-${selectedRunDetail.status.toLowerCase()}`">{{ selectedRunDetail.status }}</span>
+            <h3 class="card-title">
+              Execution Run Manifest Inspector:
+              <code>{{ selectedRunDetail.run_id }}</code>
+            </h3>
+            <span
+              class="status-pill"
+              :class="`pill-${selectedRunDetail.status.toLowerCase()}`"
+              >{{ selectedRunDetail.status }}</span
+            >
           </div>
-          <button type="button" class="btn-close" @click="selectedRunDetail = null">&times;</button>
+          <button
+            type="button"
+            class="btn-close"
+            @click="selectedRunDetail = null"
+          >
+            &times;
+          </button>
         </div>
 
         <div class="drawer-content">
@@ -381,47 +580,75 @@
             </div>
             <div class="prov-card">
               <span class="prov-label">Root Manifest Seal (SHA-256):</span>
-              <code class="text-bold text-success">{{ selectedRunDetail.manifest_sha256_seal }}</code>
+              <code class="text-bold text-success">{{
+                selectedRunDetail.manifest_sha256_seal
+              }}</code>
             </div>
           </div>
 
           <!-- Electronic Signature Block -->
           <div class="sig-block-card">
-            <h4 class="sig-title">✍️ 21 CFR Part 11 Electronic Signature Block</h4>
+            <h4 class="sig-title">
+              ✍️ 21 CFR Part 11 Electronic Signature Block
+            </h4>
             <div class="sig-grid">
               <div class="sig-item">
                 <span class="sig-lbl">Signer ID:</span>
-                <span class="sig-val">{{ selectedRunDetail.signature_block.signer_id }}</span>
+                <span class="sig-val">{{
+                  selectedRunDetail.signature_block.signer_id
+                }}</span>
               </div>
               <div class="sig-item">
                 <span class="sig-lbl">Regulatory Role:</span>
-                <span class="sig-val">{{ selectedRunDetail.signature_block.signer_role }}</span>
+                <span class="sig-val">{{
+                  selectedRunDetail.signature_block.signer_role
+                }}</span>
               </div>
               <div class="sig-item">
                 <span class="sig-lbl">Signed At (UTC):</span>
-                <span class="sig-val">{{ formatDate(selectedRunDetail.signature_block.signed_at) }}</span>
+                <span class="sig-val">{{
+                  formatDate(selectedRunDetail.signature_block.signed_at)
+                }}</span>
               </div>
               <div class="sig-item full-width">
                 <span class="sig-lbl">Signature Intent / Meaning:</span>
-                <span class="sig-val">{{ selectedRunDetail.signature_block.signature_meaning }}</span>
+                <span class="sig-val">{{
+                  selectedRunDetail.signature_block.signature_meaning
+                }}</span>
               </div>
               <div class="sig-item full-width">
                 <span class="sig-lbl">HMAC Cryptographic Signature:</span>
-                <code class="sig-hmac">{{ selectedRunDetail.signature_block.hmac_signature }}</code>
+                <code class="sig-hmac">{{
+                  selectedRunDetail.signature_block.hmac_signature
+                }}</code>
               </div>
             </div>
           </div>
 
           <!-- Generated Output Artifacts -->
           <div class="artifacts-section">
-            <h4 class="section-title">📊 Output Artifacts (Tables, Listings, Figures)</h4>
-            <div class="artifacts-list" v-if="selectedRunDetail.output_artifacts.length > 0">
-              <div v-for="art in selectedRunDetail.output_artifacts" :key="art.artifact_id" class="artifact-card">
+            <h4 class="section-title">
+              📊 Output Artifacts (Tables, Listings, Figures)
+            </h4>
+            <div
+              v-if="selectedRunDetail.output_artifacts.length > 0"
+              class="artifacts-list"
+            >
+              <div
+                v-for="art in selectedRunDetail.output_artifacts"
+                :key="art.artifact_id"
+                class="artifact-card"
+              >
                 <div class="art-header">
-                  <span class="art-icon">{{ getArtifactIcon(art.artifact_type) }}</span>
+                  <span class="art-icon">{{
+                    getArtifactIcon(art.artifact_type)
+                  }}</span>
                   <div class="art-meta">
                     <span class="art-name">{{ art.name }}</span>
-                    <span class="art-sub">{{ art.artifact_type }} • {{ art.size_bytes }} bytes • {{ art.mime_type }}</span>
+                    <span class="art-sub"
+                      >{{ art.artifact_type }} • {{ art.size_bytes }} bytes •
+                      {{ art.mime_type }}</span
+                    >
                   </div>
                   <span class="art-digest-pill" :title="art.sha256_digest">
                     SHA-256: {{ art.sha256_digest.slice(0, 16) }}...
@@ -432,15 +659,25 @@
                 </div>
               </div>
             </div>
-            <div v-else class="text-muted text-xs">No output artifacts produced by this run.</div>
+            <div v-else class="text-muted text-xs">
+              No output artifacts produced by this run.
+            </div>
           </div>
 
           <!-- Captured Stdout & Stderr -->
           <div class="logs-section">
-            <h4 class="section-title">🖥️ Execution Console Output (Stdout / Stderr)</h4>
+            <h4 class="section-title">
+              🖥️ Execution Console Output (Stdout / Stderr)
+            </h4>
             <div class="console-box">
-              <div class="console-header-bar">STDOUT / STDERR (Sandbox Log)</div>
-              <pre class="console-text">{{ selectedRunDetail.stdout_capture || selectedRunDetail.stderr_capture || '[No log output generated]' }}</pre>
+              <div class="console-header-bar">
+                STDOUT / STDERR (Sandbox Log)
+              </div>
+              <pre class="console-text">{{
+                selectedRunDetail.stdout_capture ||
+                selectedRunDetail.stderr_capture ||
+                "[No log output generated]"
+              }}</pre>
             </div>
           </div>
         </div>
@@ -451,68 +688,114 @@
     <div v-if="activeTab === 'lockfiles'" class="tab-panel">
       <div class="card lockfile-card">
         <div class="card-header">
-          <h3 class="card-title">Package Lockfile Integrity &amp; GxP Qualification Engine</h3>
+          <h3 class="card-title">
+            Package Lockfile Integrity &amp; GxP Qualification Engine
+          </h3>
           <span class="badge badge-reproducible">Strict Version Pinning</span>
         </div>
 
         <div class="lockfile-body">
           <p class="section-desc">
-            Enforces immutable package lockfiles (<code>renv.lock</code> for R and <code>uv.lock</code> for Python),
-            verifying cryptographic wheel/source digests and qualifying biostatistical packages for 100% reproducible regulatory submissions.
+            Enforces immutable package lockfiles (<code>renv.lock</code> for R
+            and <code>uv.lock</code> for Python), verifying cryptographic
+            wheel/source digests and qualifying biostatistical packages for 100%
+            reproducible regulatory submissions.
           </p>
 
           <div class="lock-test-grid">
             <div class="form-group">
-              <label class="form-label" for="lock-format-select">Lockfile Format</label>
-              <select id="lock-format-select" v-model="testLockType" class="form-select">
+              <label class="form-label" for="lock-format-select"
+                >Lockfile Format</label
+              >
+              <select
+                id="lock-format-select"
+                v-model="testLockType"
+                class="form-select"
+              >
                 <option value="UV_LOCK">uv.lock (Python TOML)</option>
                 <option value="RENV_LOCK">renv.lock (R JSON)</option>
-                <option value="REQUIREMENTS_TXT">requirements.txt (Hashes)</option>
+                <option value="REQUIREMENTS_TXT">
+                  requirements.txt (Hashes)
+                </option>
               </select>
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="lock-content-area">Lockfile Content</label>
+              <label class="form-label" for="lock-content-area"
+                >Lockfile Content</label
+              >
               <textarea
                 id="lock-content-area"
                 v-model="testLockContent"
                 class="code-textarea lock-textarea"
                 rows="10"
                 placeholder="Paste lockfile content to assert cryptographic integrity..."
-              ></textarea>
+              />
             </div>
 
             <div class="lock-actions-row">
-              <button type="button" class="btn btn-primary" @click="assertLockfileIntegrity" :disabled="isValidatingLock">
+              <button
+                type="button"
+                class="btn btn-primary"
+                :disabled="isValidatingLock"
+                @click="assertLockfileIntegrity"
+              >
                 🛡️ Validate Lockfile Integrity
               </button>
-              <button type="button" class="btn btn-secondary" @click="loadSampleLockfile">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                @click="loadSampleLockfile"
+              >
                 Load Sample Qualified Lockfile
               </button>
             </div>
 
             <!-- Lockfile Validation Result Box -->
-            <div v-if="lockValidationResult" class="validation-result-box" :class="`res-${lockValidationResult.status.toLowerCase()}`">
+            <div
+              v-if="lockValidationResult"
+              class="validation-result-box"
+              :class="`res-${lockValidationResult.status.toLowerCase()}`"
+            >
               <div class="res-header">
-                <span class="res-status-pill">{{ lockValidationResult.status }}</span>
-                <span class="res-count">{{ lockValidationResult.package_count }} Pinned Packages</span>
+                <span class="res-status-pill">{{
+                  lockValidationResult.status
+                }}</span>
+                <span class="res-count"
+                  >{{ lockValidationResult.package_count }} Pinned
+                  Packages</span
+                >
               </div>
               <div class="res-digest">
                 <span class="digest-lbl">Canonical Lockfile Digest:</span>
                 <code>{{ lockValidationResult.lock_digest }}</code>
               </div>
-              <p class="res-details">{{ lockValidationResult.details }}</p>
+              <p class="res-details">
+                {{ lockValidationResult.details }}
+              </p>
 
-              <div v-if="lockValidationResult.packages.length > 0" class="package-list-grid">
-                <div v-for="pkg in lockValidationResult.packages" :key="pkg.name" class="pkg-card">
+              <div
+                v-if="lockValidationResult.packages.length > 0"
+                class="package-list-grid"
+              >
+                <div
+                  v-for="pkg in lockValidationResult.packages"
+                  :key="pkg.name"
+                  class="pkg-card"
+                >
                   <div class="pkg-header">
                     <span class="pkg-name">{{ pkg.name }}</span>
                     <span class="pkg-ver">v{{ pkg.version }}</span>
                   </div>
                   <div class="pkg-footer">
-                    <span class="pkg-repo">{{ pkg.repository || 'Standard' }}</span>
-                    <span class="pkg-qual" :class="pkg.is_qualified ? 'qual-yes' : 'qual-no'">
-                      {{ pkg.is_qualified ? '✅ GxP Qualified' : '⚠️ Custom' }}
+                    <span class="pkg-repo">{{
+                      pkg.repository || "Standard"
+                    }}</span>
+                    <span
+                      class="pkg-qual"
+                      :class="pkg.is_qualified ? 'qual-yes' : 'qual-no'"
+                    >
+                      {{ pkg.is_qualified ? "✅ GxP Qualified" : "⚠️ Custom" }}
                     </span>
                   </div>
                 </div>
@@ -529,9 +812,16 @@
         <div class="card-header">
           <div class="header-left">
             <h3 class="card-title">Database Lock Authorization Tokens</h3>
-            <p class="card-sub">Formal cryptographic authorization tokens gating unblinded statistical analysis.</p>
+            <p class="card-sub">
+              Formal cryptographic authorization tokens gating unblinded
+              statistical analysis.
+            </p>
           </div>
-          <button type="button" class="btn btn-primary" @click="openIssueTokenModal">
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="openIssueTokenModal"
+          >
             🔑 Issue New Authorization Token
           </button>
         </div>
@@ -554,18 +844,38 @@
             </thead>
             <tbody>
               <tr v-for="tok in lockTokens" :key="tok.token_id">
-                <td class="cell-id"><code>{{ tok.token_id }}</code></td>
-                <td><span class="lock-ref">🔒 {{ tok.lock_id }}</span></td>
-                <td><span class="milestone-badge">{{ tok.milestone }}</span></td>
-                <td class="cell-bold">{{ tok.issued_to }}</td>
-                <td>
-                  <span class="roles-pill">{{ tok.authorized_roles.join(', ') }}</span>
+                <td class="cell-id">
+                  <code>{{ tok.token_id }}</code>
                 </td>
-                <td class="cell-date">{{ formatDate(tok.issued_at) }}</td>
-                <td class="cell-date">{{ formatDate(tok.expires_at) }}</td>
                 <td>
-                  <span v-if="tok.is_revoked" class="badge-revoked">REVOKED</span>
-                  <span v-else-if="isTokenExpired(tok.expires_at)" class="badge-expired">EXPIRED</span>
+                  <span class="lock-ref">🔒 {{ tok.lock_id }}</span>
+                </td>
+                <td>
+                  <span class="milestone-badge">{{ tok.milestone }}</span>
+                </td>
+                <td class="cell-bold">
+                  {{ tok.issued_to }}
+                </td>
+                <td>
+                  <span class="roles-pill">{{
+                    tok.authorized_roles.join(", ")
+                  }}</span>
+                </td>
+                <td class="cell-date">
+                  {{ formatDate(tok.issued_at) }}
+                </td>
+                <td class="cell-date">
+                  {{ formatDate(tok.expires_at) }}
+                </td>
+                <td>
+                  <span v-if="tok.is_revoked" class="badge-revoked"
+                    >REVOKED</span
+                  >
+                  <span
+                    v-else-if="isTokenExpired(tok.expires_at)"
+                    class="badge-expired"
+                    >EXPIRED</span
+                  >
                   <span v-else class="badge-active">ACTIVE</span>
                 </td>
                 <td class="cell-digest">
@@ -601,39 +911,97 @@
       <div class="modal-dialog card">
         <div class="modal-header">
           <h3 class="modal-title">Issue Database Lock Authorization Token</h3>
-          <button type="button" class="btn-close" @click="showIssueTokenModal = false">&times;</button>
+          <button
+            type="button"
+            class="btn-close"
+            @click="showIssueTokenModal = false"
+          >
+            &times;
+          </button>
         </div>
         <div class="modal-body">
           <div class="form-group">
-            <label class="form-label" for="new-lock-id">Database Lock Reference ID</label>
-            <input id="new-lock-id" type="text" v-model="newTokenLockId" class="form-input" placeholder="LOCK-STUDY-901-FINAL" />
+            <label class="form-label" for="new-lock-id"
+              >Database Lock Reference ID</label
+            >
+            <input
+              id="new-lock-id"
+              v-model="newTokenLockId"
+              type="text"
+              class="form-input"
+              placeholder="LOCK-STUDY-901-FINAL"
+            />
           </div>
           <div class="form-group">
-            <label class="form-label" for="new-lock-milestone">Milestone Tier</label>
-            <select id="new-lock-milestone" v-model="newTokenMilestone" class="form-select">
+            <label class="form-label" for="new-lock-milestone"
+              >Milestone Tier</label
+            >
+            <select
+              id="new-lock-milestone"
+              v-model="newTokenMilestone"
+              class="form-select"
+            >
               <option value="DATABASE_LOCK">DATABASE_LOCK</option>
               <option value="INTERIM_ANALYSIS_1">INTERIM_ANALYSIS_1</option>
               <option value="INTERIM_ANALYSIS_2">INTERIM_ANALYSIS_2</option>
               <option value="SAFETY_REVIEW">SAFETY_REVIEW</option>
-              <option value="REGULATORY_SUBMISSION">REGULATORY_SUBMISSION</option>
+              <option value="REGULATORY_SUBMISSION">
+                REGULATORY_SUBMISSION
+              </option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label" for="new-token-user">Issued To (User ID)</label>
-            <input id="new-token-user" type="text" v-model="newTokenIssuedTo" class="form-input" placeholder="lead_unblinded_statistician" />
+            <label class="form-label" for="new-token-user"
+              >Issued To (User ID)</label
+            >
+            <input
+              id="new-token-user"
+              v-model="newTokenIssuedTo"
+              type="text"
+              class="form-input"
+              placeholder="lead_unblinded_statistician"
+            />
           </div>
           <div class="form-group">
-            <label class="form-label" for="new-token-hours">Validity Period (Hours)</label>
-            <input id="new-token-hours" type="number" v-model.number="newTokenHours" class="form-input" min="1" max="720" />
+            <label class="form-label" for="new-token-hours"
+              >Validity Period (Hours)</label
+            >
+            <input
+              id="new-token-hours"
+              v-model.number="newTokenHours"
+              type="number"
+              class="form-input"
+              min="1"
+              max="720"
+            />
           </div>
           <div class="form-group">
-            <label class="form-label" for="new-token-reason">Regulatory Justification (21 CFR Part 11)</label>
-            <textarea id="new-token-reason" v-model="newTokenReason" class="form-input" rows="3" placeholder="Formally authorized by IDMC Charter for Interim Analysis 1 Unblinded Run"></textarea>
+            <label class="form-label" for="new-token-reason"
+              >Regulatory Justification (21 CFR Part 11)</label
+            >
+            <textarea
+              id="new-token-reason"
+              v-model="newTokenReason"
+              class="form-input"
+              rows="3"
+              placeholder="Formally authorized by IDMC Charter for Interim Analysis 1 Unblinded Run"
+            />
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" @click="showIssueTokenModal = false">Cancel</button>
-          <button type="button" class="btn btn-primary" @click="confirmIssueToken" :disabled="!newTokenLockId || !newTokenIssuedTo || !newTokenReason">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="showIssueTokenModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            :disabled="!newTokenLockId || !newTokenIssuedTo || !newTokenReason"
+            @click="confirmIssueToken"
+          >
             Issue &amp; Cryptographically Sign Token
           </button>
         </div>
@@ -643,14 +1011,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { statisticalComputingService } from '../../api/statisticalComputing';
-import { apiClient } from '../../api/apiClient';
+import { ref, computed, onMounted } from "vue";
+import { statisticalComputingService } from "../../api/statisticalComputing";
+import { apiClient } from "../../api/apiClient";
 
 const props = defineProps({
   studyId: {
     type: String,
-    default: 'STUDY-901',
+    default: "STUDY-901",
   },
   initialUnblinded: {
     type: Boolean,
@@ -659,7 +1027,7 @@ const props = defineProps({
 });
 
 // Navigation
-const activeTab = ref('editor');
+const activeTab = ref("editor");
 const isLoading = ref(false);
 const isSaving = ref(false);
 const isExecuting = ref(false);
@@ -670,34 +1038,36 @@ const programs = ref<any[]>([]);
 const snapshots = ref<any[]>([]);
 const runs = ref<any[]>([]);
 const lockTokens = ref<any[]>([]);
-const selectedProgramId = ref('');
-const selectedSnapshotId = ref('');
-const selectedTokenId = ref('');
+const selectedProgramId = ref("");
+const selectedSnapshotId = ref("");
+const selectedTokenId = ref("");
 const selectedRunDetail = ref<any>(null);
 const latestRun = ref<any>(null);
 const lockValidationResult = ref<any>(null);
 
 // Editor Form State
-const currentLanguage = ref('PYTHON');
-const scriptName = ref('t_14_1_demographics.py');
-const scriptTitle = ref('Summary of Demographic Characteristics (Table 14.1)');
-const targetDomain = ref('ADSL');
-const sourceCode = ref('');
+const currentLanguage = ref("PYTHON");
+const scriptName = ref("t_14_1_demographics.py");
+const scriptTitle = ref("Summary of Demographic Characteristics (Table 14.1)");
+const targetDomain = ref("ADSL");
+const sourceCode = ref("");
 const timeoutSeconds = ref(300);
 const memoryMb = ref(2048);
 const requestUnblinded = ref(props.initialUnblinded);
 
 // Issue Token Modal
 const showIssueTokenModal = ref(false);
-const newTokenLockId = ref('LOCK-STUDY-901-FINAL');
-const newTokenMilestone = ref('DATABASE_LOCK');
-const newTokenIssuedTo = ref('lead_unblinded_statistician');
+const newTokenLockId = ref("LOCK-STUDY-901-FINAL");
+const newTokenMilestone = ref("DATABASE_LOCK");
+const newTokenIssuedTo = ref("lead_unblinded_statistician");
 const newTokenHours = ref(24);
-const newTokenReason = ref('Authorized for interim unblinded efficacy evaluation per protocol SOP.');
+const newTokenReason = ref(
+  "Authorized for interim unblinded efficacy evaluation per protocol SOP."
+);
 
 // Lockfile Testing
-const testLockType = ref('UV_LOCK');
-const testLockContent = ref('');
+const testLockType = ref("UV_LOCK");
+const testLockContent = ref("");
 
 // Computed
 const selectedProgram = computed(() =>
@@ -712,13 +1082,11 @@ const validTokens = computed(() =>
   lockTokens.value.filter((t) => !t.is_revoked && !isTokenExpired(t.expires_at))
 );
 
-const isUnblindedMode = computed(() =>
-  requestUnblinded.value && !!selectedTokenId.value
+const isUnblindedMode = computed(
+  () => requestUnblinded.value && !!selectedTokenId.value
 );
 
-const activeLockTokenId = computed(() =>
-  selectedTokenId.value
-);
+const activeLockTokenId = computed(() => selectedTokenId.value);
 
 const canExecute = computed(() => {
   if (!selectedSnapshotId.value || !sourceCode.value) return false;
@@ -727,9 +1095,9 @@ const canExecute = computed(() => {
 });
 
 const computedCodeHash = computed(() => {
-  if (!sourceCode.value) return '';
+  if (!sourceCode.value) return "";
   // Fallback hash representation for UI preview
-  return 'SHA256-PENDING-DISPATCH';
+  return "SHA256-PENDING-DISPATCH";
 });
 
 // Templates
@@ -835,19 +1203,19 @@ cat("Generated Vital Signs Summary: t_14_3_vitals_summary.csv\\n")
 // Actions
 function switchLanguage(lang: string) {
   currentLanguage.value = lang;
-  if (lang === 'R') {
-    scriptName.value = scriptName.value.replace(/\.py$/, '.R');
-    if (!scriptName.value.endsWith('.R')) scriptName.value += '.R';
+  if (lang === "R") {
+    scriptName.value = scriptName.value.replace(/\.py$/, ".R");
+    if (!scriptName.value.endsWith(".R")) scriptName.value += ".R";
     sourceCode.value = rTemplates.demographics;
   } else {
-    scriptName.value = scriptName.value.replace(/\.R$/, '.py');
-    if (!scriptName.value.endsWith('.py')) scriptName.value += '.py';
+    scriptName.value = scriptName.value.replace(/\.R$/, ".py");
+    if (!scriptName.value.endsWith(".py")) scriptName.value += ".py";
     sourceCode.value = pythonTemplates.demographics;
   }
 }
 
 function loadTemplate(key: string) {
-  if (currentLanguage.value === 'R') {
+  if (currentLanguage.value === "R") {
     sourceCode.value = rTemplates[key] || rTemplates.demographics;
   } else {
     sourceCode.value = pythonTemplates[key] || pythonTemplates.demographics;
@@ -859,19 +1227,19 @@ function onProgramSelected() {
   if (p) {
     scriptName.value = p.name;
     scriptTitle.value = p.title;
-    targetDomain.value = p.target_domain || '';
+    targetDomain.value = p.target_domain || "";
     currentLanguage.value = p.language;
     sourceCode.value = p.source_code;
   }
 }
 
 function openNewProgramModal() {
-  selectedProgramId.value = '';
+  selectedProgramId.value = "";
   scriptName.value = `t_14_${programs.value.length + 1}_analysis.py`;
-  scriptTitle.value = 'New Statistical Analysis';
-  targetDomain.value = 'ADSL';
-  switchLanguage('PYTHON');
-  activeTab.value = 'editor';
+  scriptTitle.value = "New Statistical Analysis";
+  targetDomain.value = "ADSL";
+  switchLanguage("PYTHON");
+  activeTab.value = "editor";
 }
 
 async function saveProgramDraft() {
@@ -883,10 +1251,10 @@ async function saveProgramDraft() {
       title: scriptTitle.value,
       description: `Analysis program for ${targetDomain.value}`,
       language: currentLanguage.value,
-      version: '1.0.0',
+      version: "1.0.0",
       source_code: sourceCode.value,
       target_domain: targetDomain.value,
-      reason_for_change: 'Saved from Statistical Computing Console',
+      reason_for_change: "Saved from Statistical Computing Console",
     };
     const res = await statisticalComputingService.createProgram(payload);
     await loadPrograms();
@@ -894,7 +1262,7 @@ async function saveProgramDraft() {
       selectedProgramId.value = res.data.program.program_id;
     }
   } catch (err: any) {
-    console.error('Failed to save program:', err);
+    console.error("Failed to save program:", err);
     alert(`Save failed: ${err?.response?.data?.detail || err.message}`);
   } finally {
     isSaving.value = false;
@@ -913,12 +1281,12 @@ async function dispatchExecution() {
         study_id: props.studyId,
         name: scriptName.value,
         title: scriptTitle.value,
-        description: 'Auto-saved program on execution',
+        description: "Auto-saved program on execution",
         language: currentLanguage.value,
-        version: '1.0.0',
+        version: "1.0.0",
         source_code: sourceCode.value,
         target_domain: targetDomain.value,
-        reason_for_change: 'Auto-saved on run execution',
+        reason_for_change: "Auto-saved on run execution",
       });
       progId = saveRes.data.program.program_id;
       selectedProgramId.value = progId;
@@ -931,13 +1299,15 @@ async function dispatchExecution() {
       program_id: progId,
       snapshot_id: selectedSnapshotId.value,
       is_unblinded: requestUnblinded.value,
-      database_lock_token_id: requestUnblinded.value ? selectedTokenId.value : null,
+      database_lock_token_id: requestUnblinded.value
+        ? selectedTokenId.value
+        : null,
       sandbox_config: {
         timeout_seconds: timeoutSeconds.value,
         max_memory_mb: memoryMb.value,
         network_isolated: true,
       },
-      reason_for_execution: 'Dispatched from Statistical Computing Console',
+      reason_for_execution: "Dispatched from Statistical Computing Console",
     };
 
     const res = await statisticalComputingService.executeProgram(execPayload);
@@ -945,7 +1315,7 @@ async function dispatchExecution() {
     selectedRunDetail.value = res.data.manifest;
     await loadRuns();
   } catch (err: any) {
-    console.error('Execution failed:', err);
+    console.error("Execution failed:", err);
     alert(`Execution rejected: ${err?.response?.data?.detail || err.message}`);
   } finally {
     isExecuting.value = false;
@@ -956,9 +1326,9 @@ async function viewRunDetails(runId: string) {
   try {
     const res = await statisticalComputingService.getExecutionRun(runId);
     selectedRunDetail.value = res.data.run;
-    activeTab.value = 'runs';
+    activeTab.value = "runs";
   } catch (err) {
-    console.error('Failed to load run details:', err);
+    console.error("Failed to load run details:", err);
   }
 }
 
@@ -967,7 +1337,9 @@ async function verifyManifest(runId: string) {
     const res = await statisticalComputingService.verifyRunManifest(runId);
     const vr = res.data.result;
     if (vr.is_valid) {
-      alert(`✅ Manifest Verified!\n\nSeal: ${vr.stored_seal}\nSigner: ${vr.signer_id} (${vr.signer_role})\n${vr.details}`);
+      alert(
+        `✅ Manifest Verified!\n\nSeal: ${vr.stored_seal}\nSigner: ${vr.signer_id} (${vr.signer_role})\n${vr.details}`
+      );
     } else {
       alert(`❌ Verification Failed!\n\n${vr.details}`);
     }
@@ -995,14 +1367,29 @@ async function assertLockfileIntegrity() {
 }
 
 function loadSampleLockfile() {
-  if (testLockType.value === 'RENV_LOCK') {
+  if (testLockType.value === "RENV_LOCK") {
     testLockContent.value = JSON.stringify(
       {
-        R: { Version: '4.4.2' },
+        R: { Version: "4.4.2" },
         Packages: {
-          dplyr: { Package: 'dplyr', Version: '1.1.4', Source: 'CRAN', Hash: '9a77b8f9e1e2d3c4' },
-          rtables: { Package: 'rtables', Version: '0.6.6', Source: 'CRAN', Hash: 'c4d3e2f1a8b7c6d5' },
-          survival: { Package: 'survival', Version: '3.7-0', Source: 'CRAN', Hash: '1122334455667788' },
+          dplyr: {
+            Package: "dplyr",
+            Version: "1.1.4",
+            Source: "CRAN",
+            Hash: "9a77b8f9e1e2d3c4",
+          },
+          rtables: {
+            Package: "rtables",
+            Version: "0.6.6",
+            Source: "CRAN",
+            Hash: "c4d3e2f1a8b7c6d5",
+          },
+          survival: {
+            Package: "survival",
+            Version: "3.7-0",
+            Source: "CRAN",
+            Hash: "1122334455667788",
+          },
         },
       },
       null,
@@ -1035,17 +1422,24 @@ async function confirmIssueToken() {
       selectedTokenId.value = res.data.token.token_id;
     }
   } catch (err: any) {
-    alert(`Failed to issue token: ${err?.response?.data?.detail || err.message}`);
+    alert(
+      `Failed to issue token: ${err?.response?.data?.detail || err.message}`
+    );
   }
 }
 
 async function revokeToken(tokenId: string) {
   if (!confirm(`Are you sure you want to revoke token ${tokenId}?`)) return;
   try {
-    await statisticalComputingService.revokeLockToken(tokenId, 'Revoked by user action');
+    await statisticalComputingService.revokeLockToken(
+      tokenId,
+      "Revoked by user action"
+    );
     await loadTokens();
   } catch (err: any) {
-    alert(`Failed to revoke token: ${err?.response?.data?.detail || err.message}`);
+    alert(
+      `Failed to revoke token: ${err?.response?.data?.detail || err.message}`
+    );
   }
 }
 
@@ -1054,14 +1448,14 @@ function isTokenExpired(expiresAtStr: string) {
 }
 
 function getArtifactIcon(type: string) {
-  if (type === 'TABLE') return '📊';
-  if (type === 'FIGURE') return '📈';
-  if (type === 'LISTING') return '📜';
-  return '📁';
+  if (type === "TABLE") return "📊";
+  if (type === "FIGURE") return "📈";
+  if (type === "LISTING") return "📜";
+  return "📁";
 }
 
 function formatDate(isoStr: string) {
-  if (!isoStr) return '—';
+  if (!isoStr) return "—";
   return new Date(isoStr).toLocaleString();
 }
 
@@ -1071,13 +1465,13 @@ async function loadPrograms() {
     const res = await statisticalComputingService.getPrograms(props.studyId);
     programs.value = res.data.programs || [];
   } catch (err) {
-    console.error('Failed to load programs:', err);
+    console.error("Failed to load programs:", err);
   }
 }
 
 async function loadSnapshots() {
   try {
-    const res = await apiClient.get('/api/v1/interop/lakehouse/snapshots', {
+    const res = await apiClient.get("/api/v1/interop/lakehouse/snapshots", {
       params: { study_id: props.studyId },
     });
     snapshots.value = res.data.snapshots || [];
@@ -1085,16 +1479,18 @@ async function loadSnapshots() {
       selectedSnapshotId.value = snapshots.value[0].snapshot_id;
     }
   } catch (err) {
-    console.error('Failed to load snapshots:', err);
+    console.error("Failed to load snapshots:", err);
   }
 }
 
 async function loadRuns() {
   try {
-    const res = await statisticalComputingService.getExecutionRuns(props.studyId);
+    const res = await statisticalComputingService.getExecutionRuns(
+      props.studyId
+    );
     runs.value = res.data.runs || [];
   } catch (err) {
-    console.error('Failed to load runs:', err);
+    console.error("Failed to load runs:", err);
   }
 }
 
@@ -1102,18 +1498,25 @@ async function loadTokens() {
   try {
     const res = await statisticalComputingService.getLockTokens(props.studyId);
     lockTokens.value = res.data.tokens || [];
-    const active = lockTokens.value.find((t) => !t.is_revoked && !isTokenExpired(t.expires_at));
+    const active = lockTokens.value.find(
+      (t) => !t.is_revoked && !isTokenExpired(t.expires_at)
+    );
     if (active && !selectedTokenId.value) {
       selectedTokenId.value = active.token_id;
     }
   } catch (err) {
-    console.error('Failed to load tokens:', err);
+    console.error("Failed to load tokens:", err);
   }
 }
 
 async function loadData() {
   isLoading.value = true;
-  await Promise.all([loadPrograms(), loadSnapshots(), loadRuns(), loadTokens()]);
+  await Promise.all([
+    loadPrograms(),
+    loadSnapshots(),
+    loadRuns(),
+    loadTokens(),
+  ]);
   if (!sourceCode.value) {
     sourceCode.value = pythonTemplates.demographics;
   }

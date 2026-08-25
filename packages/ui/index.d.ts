@@ -55,7 +55,6 @@ export const AiSuggestionDrawer: DefineComponent<
 >;
 
 export const ClinicalFormField: DefineComponent<
-
   {
     field: any;
     modelValue?: string | number;

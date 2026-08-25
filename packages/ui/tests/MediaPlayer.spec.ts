@@ -4,8 +4,14 @@ import path from "path";
 import { MediaPlayer, FileUploadModal } from "../src/index.js";
 
 describe("MediaPlayer Component & Package Exports (#4314)", () => {
-  const componentPath = path.resolve(__dirname, "../src/components/MediaPlayer.vue");
-  const modalPath = path.resolve(__dirname, "../src/components/FileUploadModal.vue");
+  const componentPath = path.resolve(
+    __dirname,
+    "../src/components/MediaPlayer.vue"
+  );
+  const modalPath = path.resolve(
+    __dirname,
+    "../src/components/FileUploadModal.vue"
+  );
 
   it("exports MediaPlayer and FileUploadModal from ui package entry", () => {
     expect(MediaPlayer).toBeDefined();
@@ -59,7 +65,7 @@ describe("MediaPlayer Component & Package Exports (#4314)", () => {
   it("MediaPlayer defines accessible ARIA semantics and clinical design tokens", () => {
     const code = fs.readFileSync(componentPath, "utf-8");
     expect(code).toContain('role="region"');
-    expect(code).toContain(":aria-label=\"title\"");
+    expect(code).toContain(':aria-label="title"');
     expect(code).toContain('aria-label="Zoom Out"');
     expect(code).toContain('aria-label="Zoom In"');
     expect(code).toContain('aria-label="Rotate 90 Degrees"');

@@ -1,10 +1,7 @@
 <template>
   <div class="coding-queue-wrapper">
     <!-- Batch Action Bar (Appears when items are selected) -->
-    <div
-      v-if="codingStore.selectedCount > 0"
-      class="batch-action-bar"
-    >
+    <div v-if="codingStore.selectedCount > 0" class="batch-action-bar">
       <div class="batch-summary">
         <span class="badge badge-accent">{{ codingStore.selectedCount }}</span>
         <span>items selected for batch action</span>
@@ -35,10 +32,7 @@
     </div>
 
     <!-- Loading State -->
-    <div
-      v-if="codingStore.isLoading"
-      class="table-loading-state"
-    >
+    <div v-if="codingStore.isLoading" class="table-loading-state">
       <div class="spinner" />
       <p>Loading medical coding queue...</p>
     </div>
@@ -48,9 +42,7 @@
       v-else-if="codingStore.filteredAssignments.length === 0"
       class="table-empty-state"
     >
-      <div class="empty-icon">
-        🩺
-      </div>
+      <div class="empty-icon">🩺</div>
       <h3>No Coding Assignments Found</h3>
       <p>
         No adverse events or concomitant medications match the active filters.
@@ -58,30 +50,26 @@
     </div>
 
     <!-- Queue Table -->
-    <div
-      v-else
-      class="table-responsive"
-    >
+    <div v-else class="table-responsive">
       <table class="data-table coding-table">
         <thead>
           <tr>
             <th class="col-checkbox">
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 type="checkbox"
                 :checked="isAllSelected"
                 :indeterminate="isIndeterminate"
                 title="Select all filtered items"
                 @change="toggleSelectAll"
-              >
+              />
             </th>
             <th>Status</th>
             <th>Verbatim Term &amp; Source</th>
             <th>Dictionary</th>
             <th>Coded Code &amp; Term</th>
             <th>Match / Suggestions</th>
-            <th class="col-actions">
-              Actions
-            </th>
+            <th class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -92,11 +80,12 @@
           >
             <!-- Checkbox -->
             <td class="col-checkbox">
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 type="checkbox"
                 :checked="isSelected(item.id)"
                 @change="codingStore.toggleSelect(item.id)"
-              >
+              />
             </td>
 
             <!-- Status Badge -->
@@ -112,22 +101,15 @@
                 {{ item.verbatim_text }}
               </div>
               <div class="verbatim-meta">
-                <span
-                  v-if="item.source_field"
-                  class="meta-tag"
-                >{{
+                <span v-if="item.source_field" class="meta-tag">{{
                   item.source_field
                 }}</span>
-                <span
-                  v-if="item.domain"
-                  class="meta-tag domain-tag"
-                >{{
+                <span v-if="item.domain" class="meta-tag domain-tag">{{
                   item.domain
                 }}</span>
-                <span
-                  v-if="item.observation_id"
-                  class="meta-obs"
-                >Obs: {{ item.observation_id.substring(0, 8) }}...</span>
+                <span v-if="item.observation_id" class="meta-obs"
+                  >Obs: {{ item.observation_id.substring(0, 8) }}...</span
+                >
               </div>
             </td>
 
@@ -136,17 +118,12 @@
               <div class="dict-label">
                 {{ item.dictionary_type }}
               </div>
-              <div class="dict-version">
-                v{{ item.dictionary_version }}
-              </div>
+              <div class="dict-version">v{{ item.dictionary_version }}</div>
             </td>
 
             <!-- Coded Term & Code -->
             <td>
-              <div
-                v-if="item.coded_code"
-                class="coded-result-box"
-              >
+              <div v-if="item.coded_code" class="coded-result-box">
                 <div class="coded-term">
                   {{ item.coded_term }}
                 </div>
@@ -154,19 +131,13 @@
                   <code>{{ item.coded_code }}</code>
                 </div>
                 <!-- Hierarchy Tooltip / Hierarchy Preview -->
-                <div
-                  v-if="hasHierarchy(item)"
-                  class="hierarchy-preview"
-                >
+                <div v-if="hasHierarchy(item)" class="hierarchy-preview">
                   <span class="hierarchy-breadcrumb">{{
                     getHierarchySummary(item)
                   }}</span>
                 </div>
               </div>
-              <span
-                v-else
-                class="uncoded-placeholder"
-              >— Uncoded —</span>
+              <span v-else class="uncoded-placeholder">— Uncoded —</span>
             </td>
 
             <!-- Match / Suggestions -->
@@ -175,8 +146,8 @@
               <div
                 v-if="
                   item.suggestions &&
-                    Array.isArray(item.suggestions) &&
-                    item.suggestions.length > 0
+                  Array.isArray(item.suggestions) &&
+                  item.suggestions.length > 0
                 "
                 class="suggestions-container"
               >
@@ -184,25 +155,64 @@
                   v-for="(sug, sIdx) in item.suggestions.slice(0, 2)"
                   :key="sIdx"
                   class="suggestion-pill meddra-suggestion-chip"
-                  style="display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; margin-bottom: 4px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg);"
+                  style="
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                    padding: 6px 8px;
+                    margin-bottom: 4px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    background: var(--card-bg);
+                  "
                 >
-                  <div class="sug-terms-row" style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
-                    <span class="chip-tag chip-pt badge status-approved" style="font-size: 10px; font-weight: 600;">
+                  <div
+                    class="sug-terms-row"
+                    style="
+                      display: flex;
+                      flex-wrap: wrap;
+                      gap: 4px;
+                      align-items: center;
+                    "
+                  >
+                    <span
+                      class="chip-tag chip-pt badge status-approved"
+                      style="font-size: 10px; font-weight: 600"
+                    >
                       PT: {{ getSuggestionPt(sug) }}
                     </span>
-                    <span class="chip-tag chip-llt badge status-review" style="font-size: 10px;">
+                    <span
+                      class="chip-tag chip-llt badge status-review"
+                      style="font-size: 10px"
+                    >
                       LLT: {{ getSuggestionLlt(sug) }}
                     </span>
-                    <span class="sug-score badge" style="font-size: 9px; background: #f1f5f9; color: #475569;">
+                    <span
+                      class="sug-score badge"
+                      style="
+                        font-size: 9px;
+                        background: #f1f5f9;
+                        color: #475569;
+                      "
+                    >
                       {{ Math.round((sug.score || 0.95) * 100) }}%
                     </span>
                   </div>
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
-                    <code style="font-size: 10px; color: var(--text-muted);">{{ getSuggestionCode(sug) || "10019211" }}</code>
+                  <div
+                    style="
+                      display: flex;
+                      justify-content: space-between;
+                      align-items: center;
+                      margin-top: 2px;
+                    "
+                  >
+                    <code style="font-size: 10px; color: var(--text-muted)">{{
+                      getSuggestionCode(sug) || "10019211"
+                    }}</code>
                     <button
                       type="button"
                       class="btn btn-sm btn-primary btn-1click-approve btn-icon-accept"
-                      style="padding: 2px 6px; font-size: 11px; cursor: pointer;"
+                      style="padding: 2px 6px; font-size: 11px; cursor: pointer"
                       title="1-Click MedDRA Coding Approval"
                       @click="acceptSuggestion(item, sIdx, sug)"
                     >
@@ -213,21 +223,18 @@
                 <div
                   v-if="item.suggestions.length > 2"
                   class="more-suggestions"
-                  style="font-size: 10px; color: var(--text-muted);"
+                  style="font-size: 10px; color: var(--text-muted)"
                 >
                   +{{ item.suggestions.length - 2 }} more suggestions
                 </div>
               </div>
-              <div
-                v-else-if="item.score"
-                class="score-display"
-              >
+              <div v-else-if="item.score" class="score-display">
                 Score: {{ Math.round(item.score * 100) }}%
               </div>
               <div
                 v-else
                 class="no-suggestions-text"
-                style="font-size: 11px; color: var(--text-muted);"
+                style="font-size: 11px; color: var(--text-muted)"
               >
                 No auto-suggestions
               </div>
@@ -260,6 +267,8 @@
     </div>
 
     <!-- Inline Discrepancy Query Modal -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="isQueryModalOpen"
       class="modal-overlay"
@@ -301,7 +310,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. Uncodable verbatim clarification request"
-            >
+            />
           </div>
         </div>
         <div class="modal-footer">
@@ -327,6 +336,8 @@
     </div>
 
     <!-- Batch Code Modal -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="isBatchModalOpen"
       class="modal-overlay"
@@ -355,12 +366,8 @@
               v-model="batchDictType"
               class="form-control"
             >
-              <option value="MEDDRA">
-                MedDRA
-              </option>
-              <option value="WHODRUG">
-                WHODrug
-              </option>
+              <option value="MEDDRA">MedDRA</option>
+              <option value="WHODRUG">WHODrug</option>
             </select>
           </div>
           <div class="form-group">
@@ -371,7 +378,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. 10019211"
-            >
+            />
           </div>
           <div class="form-group">
             <label for="batch-term">Preferred Term / Drug Name</label>
@@ -381,7 +388,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. Headache"
-            >
+            />
           </div>
           <div class="form-group">
             <label for="batch-reason">GxP Reason for Change *</label>
@@ -391,7 +398,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. Batch coding consensus review"
-            >
+            />
           </div>
         </div>
         <div class="modal-footer">

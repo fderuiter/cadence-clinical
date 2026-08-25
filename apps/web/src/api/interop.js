@@ -40,7 +40,10 @@ export const interopService = {
    * Lists registered medical IoT sensor devices for a study.
    */
   listSensorDevices(studyId, options = {}) {
-    return apiClient.get(`/api/v1/interop/sensors/devices?study_id=${encodeURIComponent(studyId)}`, options);
+    return apiClient.get(
+      `/api/v1/interop/sensors/devices?study_id=${encodeURIComponent(studyId)}`,
+      options
+    );
   },
 
   /**
@@ -54,28 +57,41 @@ export const interopService = {
    * Queries calculated daily summary endpoints.
    */
   listDailySummaries(studyId, options = {}) {
-    return apiClient.get(`/api/v1/interop/sensors/daily-summaries?study_id=${encodeURIComponent(studyId)}`, options);
+    return apiClient.get(
+      `/api/v1/interop/sensors/daily-summaries?study_id=${encodeURIComponent(studyId)}`,
+      options
+    );
   },
 
   /**
    * Queries automated safety threshold alerts.
    */
   listSafetyAlerts(studyId, options = {}) {
-    return apiClient.get(`/api/v1/interop/sensors/safety-alerts?study_id=${encodeURIComponent(studyId)}`, options);
+    return apiClient.get(
+      `/api/v1/interop/sensors/safety-alerts?study_id=${encodeURIComponent(studyId)}`,
+      options
+    );
   },
 
   /**
    * Acknowledges a safety threshold alert with 21 CFR Part 11 sign-off.
    */
   acknowledgeSafetyAlert(alertId, body, options = {}) {
-    return apiClient.post(`/api/v1/interop/sensors/safety-alerts/${encodeURIComponent(alertId)}/acknowledge`, body, options);
+    return apiClient.post(
+      `/api/v1/interop/sensors/safety-alerts/${encodeURIComponent(alertId)}/acknowledge`,
+      body,
+      options
+    );
   },
 
   /**
    * Retrieves aggregate real-time IoT sensor metrics across a study.
    */
   getSensorMetrics(studyId, options = {}) {
-    return apiClient.get(`/api/v1/interop/sensors/metrics/${encodeURIComponent(studyId)}`, options);
+    return apiClient.get(
+      `/api/v1/interop/sensors/metrics/${encodeURIComponent(studyId)}`,
+      options
+    );
   },
 
   /**
@@ -89,21 +105,32 @@ export const interopService = {
    * Lists configured hospital EHR endpoints.
    */
   listEhrEndpoints(activeOnly = true, options = {}) {
-    return apiClient.get(`/api/v1/interop/esource/endpoints?active_only=${activeOnly}`, options);
+    return apiClient.get(
+      `/api/v1/interop/esource/endpoints?active_only=${activeOnly}`,
+      options
+    );
   },
 
   /**
    * Generates a signed SMART Backend Services client assertion JWT.
    */
   generateClientAssertion(body, options = {}) {
-    return apiClient.post(`/api/v1/interop/esource/smart/assertion`, body, options);
+    return apiClient.post(
+      `/api/v1/interop/esource/smart/assertion`,
+      body,
+      options
+    );
   },
 
   /**
    * Verifies an asymmetric client assertion JWT.
    */
   verifyClientAssertion(body, options = {}) {
-    return apiClient.post(`/api/v1/interop/esource/smart/verify`, body, options);
+    return apiClient.post(
+      `/api/v1/interop/esource/smart/verify`,
+      body,
+      options
+    );
   },
 
   /**
@@ -133,42 +160,63 @@ export const interopService = {
     if (params.skip !== undefined) query.append("skip", String(params.skip));
     if (params.limit !== undefined) query.append("limit", String(params.limit));
     const qs = query.toString();
-    return apiClient.get(`/api/v1/interop/esource/candidates${qs ? `?${qs}` : ""}`, options);
+    return apiClient.get(
+      `/api/v1/interop/esource/candidates${qs ? `?${qs}` : ""}`,
+      options
+    );
   },
 
   /**
    * Retrieves a specific candidate reconciliation record.
    */
   getEhrCandidate(candidateId, options = {}) {
-    return apiClient.get(`/api/v1/interop/esource/candidates/${encodeURIComponent(candidateId)}`, options);
+    return apiClient.get(
+      `/api/v1/interop/esource/candidates/${encodeURIComponent(candidateId)}`,
+      options
+    );
   },
 
   /**
    * 1-Click 'Accept & Commit' candidate EHR data into eCRF with Part 11 audit attribution.
    */
   acceptEhrCandidate(body, options = {}) {
-    return apiClient.post(`/api/v1/interop/esource/reconcile/accept`, body, options);
+    return apiClient.post(
+      `/api/v1/interop/esource/reconcile/accept`,
+      body,
+      options
+    );
   },
 
   /**
    * 1-Click 'Reject with Reason' to discard candidate EHR data with mandatory justification.
    */
   rejectEhrCandidate(body, options = {}) {
-    return apiClient.post(`/api/v1/interop/esource/reconcile/reject`, body, options);
+    return apiClient.post(
+      `/api/v1/interop/esource/reconcile/reject`,
+      body,
+      options
+    );
   },
 
   /**
    * 1-Click 'Raise Clinical Query' to open a formal discrepancy query for an EHR-to-eCRF mismatch.
    */
   raiseEhrClinicalQuery(body, options = {}) {
-    return apiClient.post(`/api/v1/interop/esource/reconcile/query`, body, options);
+    return apiClient.post(
+      `/api/v1/interop/esource/reconcile/query`,
+      body,
+      options
+    );
   },
 
   /**
    * Retrieves complete immutable FHIR provenance and Part 11 audit history for a candidate record.
    */
   getEhrProvenance(candidateId, options = {}) {
-    return apiClient.get(`/api/v1/interop/esource/provenance/${encodeURIComponent(candidateId)}`, options);
+    return apiClient.get(
+      `/api/v1/interop/esource/provenance/${encodeURIComponent(candidateId)}`,
+      options
+    );
   },
 
   // =========================================================================
@@ -176,49 +224,85 @@ export const interopService = {
   // =========================================================================
 
   scheduleTelehealthSession(body, options = {}) {
-    return apiClient.post(`/api/v1/interop/dct/telehealth/sessions`, body, options);
+    return apiClient.post(
+      `/api/v1/interop/dct/telehealth/sessions`,
+      body,
+      options
+    );
   },
 
   listTelehealthSessions(params = {}, options = {}) {
     const qs = new URLSearchParams();
     if (params.studyId) qs.append("study_id", params.studyId);
     if (params.subjectId) qs.append("subject_id", params.subjectId);
-    return apiClient.get(`/api/v1/interop/dct/telehealth/sessions${qs.toString() ? `?${qs.toString()}` : ""}`, options);
+    return apiClient.get(
+      `/api/v1/interop/dct/telehealth/sessions${qs.toString() ? `?${qs.toString()}` : ""}`,
+      options
+    );
   },
 
   getTelehealthSession(sessionId, options = {}) {
-    return apiClient.get(`/api/v1/interop/dct/telehealth/sessions/${encodeURIComponent(sessionId)}`, options);
+    return apiClient.get(
+      `/api/v1/interop/dct/telehealth/sessions/${encodeURIComponent(sessionId)}`,
+      options
+    );
   },
 
   generateRoomToken(sessionId, body, options = {}) {
-    return apiClient.post(`/api/v1/interop/dct/telehealth/sessions/${encodeURIComponent(sessionId)}/token`, body, options);
+    return apiClient.post(
+      `/api/v1/interop/dct/telehealth/sessions/${encodeURIComponent(sessionId)}/token`,
+      body,
+      options
+    );
   },
 
   sendWebRTCSignaling(sessionId, body, options = {}) {
-    return apiClient.post(`/api/v1/interop/dct/telehealth/sessions/${encodeURIComponent(sessionId)}/signaling`, body, options);
+    return apiClient.post(
+      `/api/v1/interop/dct/telehealth/sessions/${encodeURIComponent(sessionId)}/signaling`,
+      body,
+      options
+    );
   },
 
   syncCoViewState(sessionId, body, options = {}) {
-    return apiClient.post(`/api/v1/interop/dct/telehealth/sessions/${encodeURIComponent(sessionId)}/co-view`, body, options);
+    return apiClient.post(
+      `/api/v1/interop/dct/telehealth/sessions/${encodeURIComponent(sessionId)}/co-view`,
+      body,
+      options
+    );
   },
 
   archiveTelehealthRecording(sessionId, body, options = {}) {
-    return apiClient.post(`/api/v1/interop/dct/telehealth/sessions/${encodeURIComponent(sessionId)}/archive-recording`, body, options);
+    return apiClient.post(
+      `/api/v1/interop/dct/telehealth/sessions/${encodeURIComponent(sessionId)}/archive-recording`,
+      body,
+      options
+    );
   },
 
   submitPediatricAssent(body, options = {}) {
-    return apiClient.post(`/api/v1/interop/dct/econsent/pediatric-assent`, body, options);
+    return apiClient.post(
+      `/api/v1/interop/dct/econsent/pediatric-assent`,
+      body,
+      options
+    );
   },
 
   listPediatricAssents(params = {}, options = {}) {
     const qs = new URLSearchParams();
     if (params.studyId) qs.append("study_id", params.studyId);
     if (params.subjectId) qs.append("subject_id", params.subjectId);
-    return apiClient.get(`/api/v1/interop/dct/econsent/pediatric-assent${qs.toString() ? `?${qs.toString()}` : ""}`, options);
+    return apiClient.get(
+      `/api/v1/interop/dct/econsent/pediatric-assent${qs.toString() ? `?${qs.toString()}` : ""}`,
+      options
+    );
   },
 
   verifyPediatricAssent(assentId, options = {}) {
-    return apiClient.get(`/api/v1/interop/dct/econsent/pediatric-assent/${encodeURIComponent(assentId)}/verify`, options);
+    return apiClient.get(
+      `/api/v1/interop/dct/econsent/pediatric-assent/${encodeURIComponent(assentId)}/verify`,
+      options
+    );
   },
 
   createDtpShipment(body, options = {}) {
@@ -229,28 +313,51 @@ export const interopService = {
     const qs = new URLSearchParams();
     if (params.studyId) qs.append("study_id", params.studyId);
     if (params.siteId) qs.append("site_id", params.siteId);
-    if (params.subjectPseudonymId) qs.append("subject_pseudonym_id", params.subjectPseudonymId);
-    return apiClient.get(`/api/v1/interop/dct/dtp/shipments${qs.toString() ? `?${qs.toString()}` : ""}`, options);
+    if (params.subjectPseudonymId)
+      qs.append("subject_pseudonym_id", params.subjectPseudonymId);
+    return apiClient.get(
+      `/api/v1/interop/dct/dtp/shipments${qs.toString() ? `?${qs.toString()}` : ""}`,
+      options
+    );
   },
 
   getDtpShipment(trackingNumber, options = {}) {
-    return apiClient.get(`/api/v1/interop/dct/dtp/shipments/${encodeURIComponent(trackingNumber)}`, options);
+    return apiClient.get(
+      `/api/v1/interop/dct/dtp/shipments/${encodeURIComponent(trackingNumber)}`,
+      options
+    );
   },
 
   ingestDtpTemperature(trackingNumber, body, options = {}) {
-    return apiClient.post(`/api/v1/interop/dct/dtp/shipments/${encodeURIComponent(trackingNumber)}/temperature`, body, options);
+    return apiClient.post(
+      `/api/v1/interop/dct/dtp/shipments/${encodeURIComponent(trackingNumber)}/temperature`,
+      body,
+      options
+    );
   },
 
   recordDtpCustodyHandoff(trackingNumber, body, options = {}) {
-    return apiClient.post(`/api/v1/interop/dct/dtp/shipments/${encodeURIComponent(trackingNumber)}/handoff`, body, options);
+    return apiClient.post(
+      `/api/v1/interop/dct/dtp/shipments/${encodeURIComponent(trackingNumber)}/handoff`,
+      body,
+      options
+    );
   },
 
   confirmDtpDelivery(trackingNumber, body, options = {}) {
-    return apiClient.post(`/api/v1/interop/dct/dtp/shipments/${encodeURIComponent(trackingNumber)}/delivery`, body, options);
+    return apiClient.post(
+      `/api/v1/interop/dct/dtp/shipments/${encodeURIComponent(trackingNumber)}/delivery`,
+      body,
+      options
+    );
   },
 
   scheduleInHomeVisit(body, options = {}) {
-    return apiClient.post(`/api/v1/interop/dct/home-health/visits`, body, options);
+    return apiClient.post(
+      `/api/v1/interop/dct/home-health/visits`,
+      body,
+      options
+    );
   },
 
   listInHomeVisits(params = {}, options = {}) {
@@ -259,23 +366,39 @@ export const interopService = {
     if (params.siteId) qs.append("site_id", params.siteId);
     if (params.nurseId) qs.append("nurse_id", params.nurseId);
     if (params.subjectId) qs.append("subject_id", params.subjectId);
-    return apiClient.get(`/api/v1/interop/dct/home-health/visits${qs.toString() ? `?${qs.toString()}` : ""}`, options);
+    return apiClient.get(
+      `/api/v1/interop/dct/home-health/visits${qs.toString() ? `?${qs.toString()}` : ""}`,
+      options
+    );
   },
 
   getInHomeVisit(visitId, options = {}) {
-    return apiClient.get(`/api/v1/interop/dct/home-health/visits/${encodeURIComponent(visitId)}`, options);
+    return apiClient.get(
+      `/api/v1/interop/dct/home-health/visits/${encodeURIComponent(visitId)}`,
+      options
+    );
   },
 
   updateInHomeVisitStatus(visitId, body, options = {}) {
-    return apiClient.post(`/api/v1/interop/dct/home-health/visits/${encodeURIComponent(visitId)}/status`, body, options);
+    return apiClient.post(
+      `/api/v1/interop/dct/home-health/visits/${encodeURIComponent(visitId)}/status`,
+      body,
+      options
+    );
   },
 
   syncMobileECRF(visitId, body, options = {}) {
-    return apiClient.post(`/api/v1/interop/dct/home-health/visits/${encodeURIComponent(visitId)}/sync-ecrf`, body, options);
+    return apiClient.post(
+      `/api/v1/interop/dct/home-health/visits/${encodeURIComponent(visitId)}/sync-ecrf`,
+      body,
+      options
+    );
   },
 
   getDctMetrics(studyId, options = {}) {
-    return apiClient.get(`/api/v1/interop/dct/metrics/${encodeURIComponent(studyId)}`, options);
+    return apiClient.get(
+      `/api/v1/interop/dct/metrics/${encodeURIComponent(studyId)}`,
+      options
+    );
   },
 };
-

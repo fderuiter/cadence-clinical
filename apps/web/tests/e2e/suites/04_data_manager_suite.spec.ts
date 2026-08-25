@@ -27,13 +27,20 @@ test.describe("Suite 4: Clinical Data Manager Golden Path", () => {
       page,
       {
         username: "dm.lead",
-        roles: ["Data Manager", "Sponsor Designer", "Sponsor Admin", "Super Admin"],
+        roles: [
+          "Data Manager",
+          "Sponsor Designer",
+          "Sponsor Admin",
+          "Super Admin",
+        ],
       },
       "/cadence-clinical/rules"
     );
 
     // Verify Interactive Rules Designer
-    await expect(page.locator("h2")).toContainText("Interactive Rules Designer");
+    await expect(page.locator("h2")).toContainText(
+      "Interactive Rules Designer"
+    );
     await demoPause(page, 500);
 
     // Navigate to Medical Coding

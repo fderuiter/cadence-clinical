@@ -302,7 +302,10 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await expect(dropzone).toBeVisible();
     await expect(dropzone).toHaveAttribute("tabindex", "0");
     await expect(dropzone).toHaveAttribute("role", "button");
-    await expect(dropzone).toHaveAttribute("aria-label", "Upload receipt image for travel reimbursement");
+    await expect(dropzone).toHaveAttribute(
+      "aria-label",
+      "Upload receipt image for travel reimbursement"
+    );
 
     // 4. Form wrappers and numeric input attributes
     await page.click("#tab-btn-tasks button");

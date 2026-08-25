@@ -5,7 +5,7 @@
 </template>
 
 <script setup>
-import LabGovernanceConsole from '../components/clinical/LabGovernanceConsole.vue'
+import LabGovernanceConsole from "../components/clinical/LabGovernanceConsole.vue";
 </script>
 
 <style scoped>

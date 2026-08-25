@@ -53,7 +53,9 @@ describe("MediaPreviewModal.vue - Document Approval & Signatures", () => {
     expect(badge.text()).toContain("dr.smith");
 
     // "Approve this document" button should NOT be shown when already approved
-    expect(wrapper.find('[data-testid="approve-doc-btn"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="approve-doc-btn"]').exists()).toBe(
+      false
+    );
   });
 
   it("displays 'Approve this document' button when permissions.canApprove is true and document is not yet approved", () => {
@@ -111,7 +113,9 @@ describe("MediaPreviewModal.vue - Document Approval & Signatures", () => {
       },
     });
 
-    expect(wrapper.find('[data-testid="approve-doc-btn"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="approve-doc-btn"]').exists()).toBe(
+      false
+    );
   });
 
   it("invokes fileshareService.approveFile when ReAuthModal confirms and updates document state", async () => {
@@ -129,13 +133,15 @@ describe("MediaPreviewModal.vue - Document Approval & Signatures", () => {
       approval_status: "PENDING_APPROVAL",
     };
 
-    const approveSpy = vi.spyOn(fileshareService, "approveFile").mockResolvedValue({
-      id: "doc-104",
-      approval_status: "APPROVED",
-      approved_by: "authenticated_user",
-      approved_at: "2026-08-22T14:35:00Z",
-      approval_reason: "APPROVAL",
-    } as any);
+    const approveSpy = vi
+      .spyOn(fileshareService, "approveFile")
+      .mockResolvedValue({
+        id: "doc-104",
+        approval_status: "APPROVED",
+        approved_by: "authenticated_user",
+        approved_at: "2026-08-22T14:35:00Z",
+        approval_reason: "APPROVAL",
+      } as any);
 
     const wrapper = mount(MediaPreviewModal, {
       props: {

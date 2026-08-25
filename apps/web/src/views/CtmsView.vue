@@ -1,8 +1,5 @@
 <template>
-  <div
-    id="section-ctms"
-    class="dashboard-section active"
-  >
+  <div id="section-ctms" class="dashboard-section active">
     <!-- Header Section -->
     <div class="section-header">
       <h2>Clinical Trial Management System (CTMS)</h2>
@@ -22,11 +19,7 @@
         margin-bottom: 24px;
       "
     >
-      <div
-        id="kpi-total-subjects"
-        class="stat-card card"
-        style="padding: 16px"
-      >
+      <div id="kpi-total-subjects" class="stat-card card" style="padding: 16px">
         <div
           class="stat-label"
           style="
@@ -92,11 +85,7 @@
         </div>
       </div>
 
-      <div
-        id="kpi-sdv-percentage"
-        class="stat-card card"
-        style="padding: 16px"
-      >
+      <div id="kpi-sdv-percentage" class="stat-card card" style="padding: 16px">
         <div
           class="stat-label"
           style="
@@ -127,11 +116,7 @@
         </div>
       </div>
 
-      <div
-        id="kpi-open-queries"
-        class="stat-card card"
-        style="padding: 16px"
-      >
+      <div id="kpi-open-queries" class="stat-card card" style="padding: 16px">
         <div
           class="stat-label"
           style="
@@ -329,10 +314,7 @@
         style="margin-left: auto; display: flex; align-items: center; gap: 8px"
       >
         <strong>eTMF Compliance Status:</strong>
-        <span
-          v-if="loadingCompliance"
-          style="color: #64748b"
-        >Loading...</span>
+        <span v-if="loadingCompliance" style="color: #64748b">Loading...</span>
         <span
           v-else
           class="badge"
@@ -359,32 +341,19 @@
       <div class="grid-2-responsive">
         <!-- Site Milestones Card -->
         <div class="card">
-          <div class="card-title">
-            Site Operational Milestones
-          </div>
+          <div class="card-title">Site Operational Milestones</div>
           <div id="ctms-milestones-container">
             <table class="clinical-visit-matrix">
               <thead>
                 <tr>
-                  <th scope="col">
-                    Milestone Type
-                  </th>
-                  <th scope="col">
-                    Planned Date
-                  </th>
-                  <th scope="col">
-                    Actual Date
-                  </th>
-                  <th scope="col">
-                    Status
-                  </th>
+                  <th scope="col">Milestone Type</th>
+                  <th scope="col">Planned Date</th>
+                  <th scope="col">Actual Date</th>
+                  <th scope="col">Status</th>
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="m in milestones"
-                  :key="m.id"
-                >
+                <tr v-for="m in milestones" :key="m.id">
                   <td>
                     <strong>{{ m.milestone_type }}</strong>
                   </td>
@@ -398,7 +367,8 @@
                     <span
                       class="badge"
                       :class="{ gxp: m.status === 'ACHIEVED' }"
-                    >{{ m.status }}</span>
+                      >{{ m.status }}</span
+                    >
                   </td>
                 </tr>
                 <tr v-if="milestones.length === 0">
@@ -432,38 +402,21 @@
 
         <!-- Monitoring Visits Card -->
         <div class="card">
-          <div class="card-title">
-            CRA Site Monitoring Visits (MVR)
-          </div>
+          <div class="card-title">CRA Site Monitoring Visits (MVR)</div>
           <div id="ctms-visits-container">
             <table class="clinical-visit-matrix">
               <thead>
                 <tr>
-                  <th scope="col">
-                    Visit Type
-                  </th>
-                  <th scope="col">
-                    Scheduled Date
-                  </th>
-                  <th scope="col">
-                    Actual Date
-                  </th>
-                  <th scope="col">
-                    CRA Assigned
-                  </th>
-                  <th scope="col">
-                    Status
-                  </th>
-                  <th scope="col">
-                    Actions
-                  </th>
+                  <th scope="col">Visit Type</th>
+                  <th scope="col">Scheduled Date</th>
+                  <th scope="col">Actual Date</th>
+                  <th scope="col">CRA Assigned</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="v in visits"
-                  :key="v.id"
-                >
+                <tr v-for="v in visits" :key="v.id">
                   <td>
                     <strong>{{ v.visit_type }}</strong>
                   </td>
@@ -480,7 +433,8 @@
                     <span
                       class="badge"
                       :class="{ gxp: v.status === 'SIGNED_OFF' }"
-                    >{{ v.status }}</span>
+                      >{{ v.status }}</span
+                    >
                   </td>
                   <td>
                     <button
@@ -512,49 +466,29 @@
             >
               Schedule New Visit
             </button>
-            <button
-              id="btn-complete-visit"
-              class="btn"
-              @click="completeVisit"
-            >
+            <button id="btn-complete-visit" class="btn" @click="completeVisit">
               Complete Current Visit
             </button>
           </div>
         </div>
       </div>
 
-      <div
-        class="grid-2-responsive"
-        style="margin-top: var(--spacing-xl)"
-      >
+      <div class="grid-2-responsive" style="margin-top: var(--spacing-xl)">
         <!-- CRA Allocations & Workload Card -->
         <div class="card">
-          <div class="card-title">
-            CRA Allocation & Workload Summaries
-          </div>
+          <div class="card-title">CRA Allocation & Workload Summaries</div>
           <div id="ctms-workload-container">
             <table class="clinical-visit-matrix">
               <thead>
                 <tr>
-                  <th scope="col">
-                    CRA
-                  </th>
-                  <th scope="col">
-                    Active Allocations
-                  </th>
-                  <th scope="col">
-                    Allocated Sites
-                  </th>
-                  <th scope="col">
-                    Allocated Studies
-                  </th>
+                  <th scope="col">CRA</th>
+                  <th scope="col">Active Allocations</th>
+                  <th scope="col">Allocated Sites</th>
+                  <th scope="col">Allocated Studies</th>
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="a in allocations"
-                  :key="a.cra_id"
-                >
+                <tr v-for="a in allocations" :key="a.cra_id">
                   <td>
                     <strong>{{ a.cra_id }}</strong>
                   </td>
@@ -586,35 +520,20 @@
 
         <!-- Site Recruitment Metrics Card -->
         <div class="card">
-          <div class="card-title">
-            Site Recruitment Metrics
-          </div>
+          <div class="card-title">Site Recruitment Metrics</div>
           <div id="ctms-recruitment-container">
             <table class="clinical-visit-matrix">
               <thead>
                 <tr>
-                  <th scope="col">
-                    Site ID
-                  </th>
-                  <th scope="col">
-                    Screened
-                  </th>
-                  <th scope="col">
-                    Enrolled
-                  </th>
-                  <th scope="col">
-                    Target
-                  </th>
-                  <th scope="col">
-                    Progress
-                  </th>
+                  <th scope="col">Site ID</th>
+                  <th scope="col">Screened</th>
+                  <th scope="col">Enrolled</th>
+                  <th scope="col">Target</th>
+                  <th scope="col">Progress</th>
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="r in recruitment"
-                  :key="r.id"
-                >
+                <tr v-for="r in recruitment" :key="r.id">
                   <td>
                     <strong>{{ r.site_id }}</strong>
                   </td>
@@ -702,30 +621,14 @@
           <table class="clinical-visit-matrix">
             <thead>
               <tr>
-                <th scope="col">
-                  Active Site Staff
-                </th>
-                <th scope="col">
-                  Training Certificates
-                </th>
-                <th scope="col">
-                  Delegated Protocol Roles &amp; Duties
-                </th>
-                <th scope="col">
-                  Start Date
-                </th>
-                <th scope="col">
-                  End Date
-                </th>
-                <th scope="col">
-                  Status
-                </th>
-                <th scope="col">
-                  Signed Off
-                </th>
-                <th scope="col">
-                  Actions
-                </th>
+                <th scope="col">Active Site Staff</th>
+                <th scope="col">Training Certificates</th>
+                <th scope="col">Delegated Protocol Roles &amp; Duties</th>
+                <th scope="col">Start Date</th>
+                <th scope="col">End Date</th>
+                <th scope="col">Status</th>
+                <th scope="col">Signed Off</th>
+                <th scope="col">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -742,10 +645,23 @@
                 <td>
                   <div style="display: flex; flex-direction: column; gap: 4px">
                     <span
-                      v-for="(cert, idx) in getStaffCertificates(d.staff_user_id)"
+                      v-for="(cert, idx) in getStaffCertificates(
+                        d.staff_user_id
+                      )"
                       :key="idx"
                       class="badge"
-                      style="background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px"
+                      style="
+                        background-color: #f0fdf4;
+                        color: #166534;
+                        border: 1px solid #bbf7d0;
+                        font-size: 10px;
+                        font-weight: 600;
+                        padding: 2px 6px;
+                        border-radius: 4px;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 4px;
+                      "
                     >
                       <span>✓</span> {{ cert }}
                     </span>
@@ -757,7 +673,13 @@
                       v-for="task in d.task_codes"
                       :key="task"
                       class="badge"
-                      style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-size: 10px; font-family: monospace"
+                      style="
+                        background-color: #f1f5f9;
+                        color: #334155;
+                        border: 1px solid #cbd5e1;
+                        font-size: 10px;
+                        font-family: monospace;
+                      "
                     >
                       {{ task }}
                     </span>
@@ -766,18 +688,12 @@
                 <td>{{ d.start_date }}</td>
                 <td>{{ d.end_date || "—" }}</td>
                 <td>
-                  <span
-                    class="badge"
-                    :class="{ gxp: d.is_active }"
-                  >{{
+                  <span class="badge" :class="{ gxp: d.is_active }">{{
                     d.is_active ? "ACTIVE" : "INACTIVE"
                   }}</span>
                 </td>
                 <td>
-                  <span
-                    class="badge"
-                    :class="{ gxp: d.signed_off }"
-                  >{{
+                  <span class="badge" :class="{ gxp: d.signed_off }">{{
                     d.signed_off ? "YES" : "PENDING PI"
                   }}</span>
                 </td>
@@ -829,39 +745,21 @@
       </div>
 
       <!-- Audit History Card -->
-      <div
-        class="card"
-        style="margin-top: var(--spacing-xl)"
-      >
-        <div class="card-title">
-          Site DoA Audit Trail (Immutable GxP Log)
-        </div>
+      <div class="card" style="margin-top: var(--spacing-xl)">
+        <div class="card-title">Site DoA Audit Trail (Immutable GxP Log)</div>
         <div id="ctms-audit-container">
           <table class="clinical-visit-matrix">
             <thead>
               <tr>
-                <th scope="col">
-                  Timestamp
-                </th>
-                <th scope="col">
-                  User
-                </th>
-                <th scope="col">
-                  Role
-                </th>
-                <th scope="col">
-                  Action
-                </th>
-                <th scope="col">
-                  Justification Details
-                </th>
+                <th scope="col">Timestamp</th>
+                <th scope="col">User</th>
+                <th scope="col">Role</th>
+                <th scope="col">Action</th>
+                <th scope="col">Justification Details</th>
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="audit in auditHistory"
-                :key="audit.id"
-              >
+              <tr v-for="audit in auditHistory" :key="audit.id">
                 <td style="white-space: nowrap; font-size: 12px">
                   {{ new Date(audit.timestamp).toLocaleString() }}
                 </td>
@@ -871,7 +769,8 @@
                   <span
                     class="badge"
                     style="background: #e2e8f0; color: #334155"
-                  >{{ audit.action }}</span>
+                    >{{ audit.action }}</span
+                  >
                 </td>
                 <td style="font-size: 12px">
                   {{ audit.details }}
@@ -897,10 +796,14 @@
       <div class="card" style="margin-bottom: 20px">
         <div
           class="card-title"
-          style="display: flex; justify-content: space-between; align-items: center;"
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
         >
           <span>Investigator Grant Contract &amp; Site Budget Summary</span>
-          <div style="display: flex; gap: 8px;">
+          <div style="display: flex; gap: 8px">
             <button
               id="btn-create-template"
               class="btn btn-secondary"
@@ -932,43 +835,107 @@
           "
         >
           <div>
-            <div style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase;">Contract Title</div>
-            <div style="font-size: 15px; font-weight: 700; color: #0f172a; margin-top: 2px;">
-              {{ investigatorGrant?.contract_title || "Standard Site Agreement" }}
+            <div
+              style="
+                font-size: 11px;
+                color: #64748b;
+                font-weight: 700;
+                text-transform: uppercase;
+              "
+            >
+              Contract Title
             </div>
-            <div style="font-size: 12px; color: #64748b;">
-              Grant ID: {{ investigatorGrant?.id ? investigatorGrant.id.slice(0, 8) + '...' : 'Not Provisioned' }}
+            <div
+              style="
+                font-size: 15px;
+                font-weight: 700;
+                color: #0f172a;
+                margin-top: 2px;
+              "
+            >
+              {{
+                investigatorGrant?.contract_title || "Standard Site Agreement"
+              }}
+            </div>
+            <div style="font-size: 12px; color: #64748b">
+              Grant ID:
+              {{
+                investigatorGrant?.id
+                  ? investigatorGrant.id.slice(0, 8) + "..."
+                  : "Not Provisioned"
+              }}
             </div>
           </div>
 
           <div>
-            <div style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase;">Total Budget (v{{ investigatorGrant?.version_index || 1 }})</div>
-            <div style="font-size: 18px; font-weight: 800; color: #0f4c81; margin-top: 2px;">
-              {{ investigatorGrant ? `${investigatorGrant.currency} $${Number(investigatorGrant.total_budget).toLocaleString()}` : '$0.00' }}
+            <div
+              style="
+                font-size: 11px;
+                color: #64748b;
+                font-weight: 700;
+                text-transform: uppercase;
+              "
+            >
+              Total Budget (v{{ investigatorGrant?.version_index || 1 }})
             </div>
-            <div style="font-size: 12px; color: #166534;">
-              Status: {{ investigatorGrant?.status || 'ACTIVE' }}
+            <div
+              style="
+                font-size: 18px;
+                font-weight: 800;
+                color: #0f4c81;
+                margin-top: 2px;
+              "
+            >
+              {{
+                investigatorGrant
+                  ? `${investigatorGrant.currency} $${Number(investigatorGrant.total_budget).toLocaleString()}`
+                  : "$0.00"
+              }}
+            </div>
+            <div style="font-size: 12px; color: #166534">
+              Status: {{ investigatorGrant?.status || "ACTIVE" }}
             </div>
           </div>
 
           <div>
-            <div style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase;">Institutional Rates</div>
-            <div style="font-size: 13px; color: #334155; margin-top: 4px;">
-              <strong>Overhead:</strong> {{ investigatorGrant?.overhead_percentage || 0 }}% |
-              <strong>Withholding:</strong> {{ investigatorGrant?.withholding_percentage || 0 }}%
+            <div
+              style="
+                font-size: 11px;
+                color: #64748b;
+                font-weight: 700;
+                text-transform: uppercase;
+              "
+            >
+              Institutional Rates
             </div>
-            <div style="font-size: 12px; color: #64748b;">
-              Startup Fee: ${{ investigatorGrant?.fixed_startup_fee || 0 }} | Closeout: ${{ investigatorGrant?.fixed_closeout_fee || 0 }}
+            <div style="font-size: 13px; color: #334155; margin-top: 4px">
+              <strong>Overhead:</strong>
+              {{ investigatorGrant?.overhead_percentage || 0 }}% |
+              <strong>Withholding:</strong>
+              {{ investigatorGrant?.withholding_percentage || 0 }}%
+            </div>
+            <div style="font-size: 12px; color: #64748b">
+              Startup Fee: ${{ investigatorGrant?.fixed_startup_fee || 0 }} |
+              Closeout: ${{ investigatorGrant?.fixed_closeout_fee || 0 }}
             </div>
           </div>
 
           <div>
-            <div style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase;">Apply Multi-Tier Template</div>
-            <div style="display: flex; gap: 6px; margin-top: 4px;">
+            <div
+              style="
+                font-size: 11px;
+                color: #64748b;
+                font-weight: 700;
+                text-transform: uppercase;
+              "
+            >
+              Apply Multi-Tier Template
+            </div>
+            <div style="display: flex; gap: 6px; margin-top: 4px">
               <select
                 id="select-budget-template"
                 v-model="selectedTemplateId"
-                style="padding: 4px 8px; font-size: 12px;"
+                style="padding: 4px 8px; font-size: 12px"
               >
                 <option value="">-- Select Template --</option>
                 <option
@@ -996,14 +963,18 @@
       <div class="card" style="margin-bottom: 20px">
         <div
           class="card-title"
-          style="display: flex; justify-content: space-between; align-items: center;"
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
         >
           <span>Procedure Reimbursement Fee Schedule Matrix</span>
-          <div style="display: flex; gap: 8px; align-items: center;">
+          <div style="display: flex; gap: 8px; align-items: center">
             <select
               id="select-grid-version"
               v-model="filteredVersionIndex"
-              style="padding: 4px 8px; font-size: 12px;"
+              style="padding: 4px 8px; font-size: 12px"
               @change="loadProcedureGrids"
             >
               <option value="ALL">All Versions</option>
@@ -1021,7 +992,7 @@
           </div>
         </div>
 
-        <div style="overflow-x: auto;">
+        <div style="overflow-x: auto">
           <table class="clinical-visit-matrix">
             <thead>
               <tr>
@@ -1040,40 +1011,68 @@
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="grid in procedureGrids"
-                :key="grid.id"
-              >
-                <td style="font-weight: 600; color: #0f4c81;">{{ grid.visit_name }}</td>
+              <tr v-for="grid in procedureGrids" :key="grid.id">
+                <td style="font-weight: 600; color: #0f4c81">
+                  {{ grid.visit_name }}
+                </td>
                 <td>
-                  <span v-if="grid.activity_id" class="badge" style="background: #e0f2fe; color: #0369a1;">
+                  <span
+                    v-if="grid.activity_id"
+                    class="badge"
+                    style="background: #e0f2fe; color: #0369a1"
+                  >
                     {{ grid.activity_id }}
                   </span>
-                  <span v-else style="color: #94a3b8;">—</span>
+                  <span v-else style="color: #94a3b8">—</span>
                 </td>
                 <td>
-                  <span v-if="grid.form_id" class="badge" style="background: #f0fdf4; color: #166534;">
+                  <span
+                    v-if="grid.form_id"
+                    class="badge"
+                    style="background: #f0fdf4; color: #166534"
+                  >
                     {{ grid.form_id }}
                   </span>
-                  <span v-else style="color: #94a3b8;">—</span>
+                  <span v-else style="color: #94a3b8">—</span>
                 </td>
-                <td style="font-family: monospace; font-size: 12px;">{{ grid.procedure_code }}</td>
+                <td style="font-family: monospace; font-size: 12px">
+                  {{ grid.procedure_code }}
+                </td>
                 <td>{{ grid.procedure_name }}</td>
-                <td style="font-weight: 700;">${{ grid.base_amount.toFixed(2) }}</td>
+                <td style="font-weight: 700">
+                  ${{ grid.base_amount.toFixed(2) }}
+                </td>
                 <td>{{ grid.overhead_percentage }}%</td>
                 <td>{{ grid.withholding_percentage }}%</td>
                 <td>${{ (grid.patient_stipend || 0).toFixed(2) }}</td>
                 <td>${{ (grid.travel_reimbursement || 0).toFixed(2) }}</td>
-                <td><span class="badge" style="background: #f1f5f9; color: #475569;">v{{ grid.version_index }}</span></td>
                 <td>
-                  <span class="badge" :style="grid.is_active ? { background: '#dcfce7', color: '#166534' } : { background: '#fee2e2', color: '#991b1b' }">
-                    {{ grid.is_active ? 'ACTIVE' : 'HISTORICAL' }}
+                  <span
+                    class="badge"
+                    style="background: #f1f5f9; color: #475569"
+                    >v{{ grid.version_index }}</span
+                  >
+                </td>
+                <td>
+                  <span
+                    class="badge"
+                    :style="
+                      grid.is_active
+                        ? { background: '#dcfce7', color: '#166534' }
+                        : { background: '#fee2e2', color: '#991b1b' }
+                    "
+                  >
+                    {{ grid.is_active ? "ACTIVE" : "HISTORICAL" }}
                   </span>
                 </td>
               </tr>
               <tr v-if="procedureGrids.length === 0">
-                <td colspan="12" style="text-align: center; color: #64748b; padding: 16px;">
-                  No procedure fee items configured for this grant. Select a budget template or add procedure items manually.
+                <td
+                  colspan="12"
+                  style="text-align: center; color: #64748b; padding: 16px"
+                >
+                  No procedure fee items configured for this grant. Select a
+                  budget template or add procedure items manually.
                 </td>
               </tr>
             </tbody>
@@ -1082,14 +1081,21 @@
       </div>
 
       <!-- Dynamic Visit Payable & Multi-Currency Converter -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 20px;">
+      <div
+        style="
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+          gap: 20px;
+          margin-bottom: 20px;
+        "
+      >
         <div class="card">
           <div class="card-title">
             <span>Dynamic Visit Payable Calculator</span>
           </div>
 
-          <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-            <div style="flex: 1;">
+          <div style="display: flex; gap: 12px; margin-bottom: 16px">
+            <div style="flex: 1">
               <label for="calc-visit-select">Select Visit</label>
               <select
                 id="calc-visit-select"
@@ -1103,7 +1109,7 @@
               </select>
             </div>
 
-            <div style="flex: 1;">
+            <div style="flex: 1">
               <label for="calc-currency-select">Sponsor Currency (FX)</label>
               <select
                 id="calc-currency-select"
@@ -1121,49 +1127,161 @@
 
           <div
             v-if="visitPayableCalc"
-            style="background: #f8fafc; padding: 16px; border-radius: 6px; border: 1px solid #e2e8f0;"
+            style="
+              background: #f8fafc;
+              padding: 16px;
+              border-radius: 6px;
+              border: 1px solid #e2e8f0;
+            "
           >
-            <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
-              <span>Base Procedures Sum ({{ visitPayableCalc.procedures_count }} items):</span>
-              <strong>${{ (visitPayableCalc.base_amount || 0).toFixed(2) }}</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
-              <span>Institutional Overhead:</span>
-              <span style="color: #2563eb;">+${{ (visitPayableCalc.overhead_amount || 0).toFixed(2) }}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
-              <span>Patient Stipends:</span>
-              <span style="color: #166534;">+${{ (visitPayableCalc.patient_stipend_total || 0).toFixed(2) }}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
-              <span>Travel Reimbursement:</span>
-              <span style="color: #166534;">+${{ (visitPayableCalc.travel_reimbursement_total || 0).toFixed(2) }}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; border-top: 1px dashed #cbd5e1; padding-top: 6px;">
-              <span>Gross Payable Total:</span>
-              <strong>${{ (visitPayableCalc.gross_amount || 0).toFixed(2) }}</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
-              <span>Withholding / Retention Deduction:</span>
-              <span style="color: #dc2626;">-${{ (visitPayableCalc.withholding_amount || 0).toFixed(2) }}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: 800; color: #0f4c81; border-top: 2px solid #0f4c81; padding-top: 8px; margin-top: 8px;">
-              <span>Net Payable (Site Currency):</span>
-              <span>${{ (visitPayableCalc.net_amount || 0).toFixed(2) }} {{ visitPayableCalc.currency }}</span>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-size: 13px;
+                margin-bottom: 6px;
+              "
+            >
+              <span
+                >Base Procedures Sum ({{
+                  visitPayableCalc.procedures_count
+                }}
+                items):</span
+              >
+              <strong
+                >${{ (visitPayableCalc.base_amount || 0).toFixed(2) }}</strong
+              >
             </div>
             <div
-              v-if="visitPayableCalc.target_currency && visitPayableCalc.target_currency !== visitPayableCalc.currency"
-              style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #475569;"
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-size: 13px;
+                margin-bottom: 6px;
+              "
             >
-              <span>Converted Sponsor Total (FX Rate: {{ visitPayableCalc.exchange_rate }}): </span>
-              <strong style="color: #166534;">{{ visitPayableCalc.target_currency }} {{ (visitPayableCalc.converted_net_amount || 0).toFixed(2) }}</strong>
+              <span>Institutional Overhead:</span>
+              <span style="color: #2563eb"
+                >+${{
+                  (visitPayableCalc.overhead_amount || 0).toFixed(2)
+                }}</span
+              >
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-size: 13px;
+                margin-bottom: 6px;
+              "
+            >
+              <span>Patient Stipends:</span>
+              <span style="color: #166534"
+                >+${{
+                  (visitPayableCalc.patient_stipend_total || 0).toFixed(2)
+                }}</span
+              >
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-size: 13px;
+                margin-bottom: 6px;
+              "
+            >
+              <span>Travel Reimbursement:</span>
+              <span style="color: #166534"
+                >+${{
+                  (visitPayableCalc.travel_reimbursement_total || 0).toFixed(2)
+                }}</span
+              >
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-size: 13px;
+                margin-bottom: 6px;
+                border-top: 1px dashed #cbd5e1;
+                padding-top: 6px;
+              "
+            >
+              <span>Gross Payable Total:</span>
+              <strong
+                >${{ (visitPayableCalc.gross_amount || 0).toFixed(2) }}</strong
+              >
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-size: 13px;
+                margin-bottom: 6px;
+              "
+            >
+              <span>Withholding / Retention Deduction:</span>
+              <span style="color: #dc2626"
+                >-${{
+                  (visitPayableCalc.withholding_amount || 0).toFixed(2)
+                }}</span
+              >
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                font-size: 16px;
+                font-weight: 800;
+                color: #0f4c81;
+                border-top: 2px solid #0f4c81;
+                padding-top: 8px;
+                margin-top: 8px;
+              "
+            >
+              <span>Net Payable (Site Currency):</span>
+              <span
+                >${{ (visitPayableCalc.net_amount || 0).toFixed(2) }}
+                {{ visitPayableCalc.currency }}</span
+              >
+            </div>
+            <div
+              v-if="
+                visitPayableCalc.target_currency &&
+                visitPayableCalc.target_currency !== visitPayableCalc.currency
+              "
+              style="
+                margin-top: 8px;
+                padding-top: 8px;
+                border-top: 1px solid #e2e8f0;
+                font-size: 13px;
+                color: #475569;
+              "
+            >
+              <span
+                >Converted Sponsor Total (FX Rate:
+                {{ visitPayableCalc.exchange_rate }}):
+              </span>
+              <strong style="color: #166534"
+                >{{ visitPayableCalc.target_currency }}
+                {{
+                  (visitPayableCalc.converted_net_amount || 0).toFixed(2)
+                }}</strong
+              >
             </div>
           </div>
         </div>
 
         <!-- Budget Adjustments Section -->
         <div class="card">
-          <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+          <div
+            class="card-title"
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
+          >
             <span>Budget Adjustments &amp; Penalties</span>
             <button
               id="btn-add-adjustment"
@@ -1174,7 +1292,7 @@
             </button>
           </div>
 
-          <div style="overflow-x: auto;">
+          <div style="overflow-x: auto">
             <table class="clinical-visit-matrix">
               <thead>
                 <tr>
@@ -1186,24 +1304,42 @@
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="adj in budgetAdjustments"
-                  :key="adj.id"
-                >
+                <tr v-for="adj in budgetAdjustments" :key="adj.id">
                   <td>
                     <span
                       class="badge"
-                      :style="adj.amount >= 0 ? { background: '#dcfce7', color: '#166534' } : { background: '#fee2e2', color: '#991b1b' }"
+                      :style="
+                        adj.amount >= 0
+                          ? { background: '#dcfce7', color: '#166534' }
+                          : { background: '#fee2e2', color: '#991b1b' }
+                      "
                     >
                       {{ adj.adjustment_type }}
                     </span>
                   </td>
-                  <td style="font-size: 12px;">{{ adj.description }}</td>
-                  <td style="font-weight: 700;" :style="adj.amount >= 0 ? { color: '#166534' } : { color: '#dc2626' }">
-                    {{ adj.amount >= 0 ? '+' : '' }}${{ adj.amount.toFixed(2) }} {{ adj.currency }}
+                  <td style="font-size: 12px">
+                    {{ adj.description }}
+                  </td>
+                  <td
+                    style="font-weight: 700"
+                    :style="
+                      adj.amount >= 0
+                        ? { color: '#166534' }
+                        : { color: '#dc2626' }
+                    "
+                  >
+                    {{ adj.amount >= 0 ? "+" : "" }}${{ adj.amount.toFixed(2) }}
+                    {{ adj.currency }}
                   </td>
                   <td>
-                    <span class="badge" :style="adj.status === 'APPROVED' ? { background: '#dcfce7', color: '#166534' } : { background: '#fef3c7', color: '#92400e' }">
+                    <span
+                      class="badge"
+                      :style="
+                        adj.status === 'APPROVED'
+                          ? { background: '#dcfce7', color: '#166534' }
+                          : { background: '#fef3c7', color: '#92400e' }
+                      "
+                    >
                       {{ adj.status }}
                     </span>
                   </td>
@@ -1215,14 +1351,18 @@
                     >
                       Approve
                     </button>
-                    <span v-else style="font-size: 11px; color: #64748b;">
-                      ✓ {{ adj.approved_by || 'Approved' }}
+                    <span v-else style="font-size: 11px; color: #64748b">
+                      ✓ {{ adj.approved_by || "Approved" }}
                     </span>
                   </td>
                 </tr>
                 <tr v-if="budgetAdjustments.length === 0">
-                  <td colspan="5" style="text-align: center; color: #64748b; padding: 12px;">
-                    No passthrough reimbursements or penalty adjustments recorded.
+                  <td
+                    colspan="5"
+                    style="text-align: center; color: #64748b; padding: 12px"
+                  >
+                    No passthrough reimbursements or penalty adjustments
+                    recorded.
                   </td>
                 </tr>
               </tbody>
@@ -1237,7 +1377,7 @@
           <span>Grant Contract Amendments &amp; Version History Ledger</span>
         </div>
 
-        <div style="overflow-x: auto;">
+        <div style="overflow-x: auto">
           <table class="clinical-visit-matrix">
             <thead>
               <tr>
@@ -1252,30 +1392,47 @@
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="amend in contractAmendments"
-                :key="amend.id"
-              >
-                <td style="font-weight: 700; color: #0f4c81;">#{{ amend.amendment_number }}</td>
-                <td style="font-size: 12px; white-space: nowrap;">{{ new Date(amend.effective_date).toLocaleDateString() }}</td>
+              <tr v-for="amend in contractAmendments" :key="amend.id">
+                <td style="font-weight: 700; color: #0f4c81">
+                  #{{ amend.amendment_number }}
+                </td>
+                <td style="font-size: 12px; white-space: nowrap">
+                  {{ new Date(amend.effective_date).toLocaleDateString() }}
+                </td>
                 <td>${{ Number(amend.previous_budget).toLocaleString() }}</td>
-                <td style="font-weight: 700; color: #166534;">${{ Number(amend.revised_budget).toLocaleString() }}</td>
+                <td style="font-weight: 700; color: #166534">
+                  ${{ Number(amend.revised_budget).toLocaleString() }}
+                </td>
                 <td>
-                  <span class="badge" style="background: #e0f2fe; color: #0369a1;">
-                    v{{ amend.previous_version_index }} ➔ v{{ amend.new_version_index }}
+                  <span
+                    class="badge"
+                    style="background: #e0f2fe; color: #0369a1"
+                  >
+                    v{{ amend.previous_version_index }} ➔ v{{
+                      amend.new_version_index
+                    }}
                   </span>
                 </td>
-                <td style="font-size: 12px;">{{ amend.summary_of_changes }}</td>
+                <td style="font-size: 12px">
+                  {{ amend.summary_of_changes }}
+                </td>
                 <td>{{ amend.approved_by || amend.created_by }}</td>
                 <td>
-                  <span class="badge" style="background: #dcfce7; color: #166534;">
+                  <span
+                    class="badge"
+                    style="background: #dcfce7; color: #166534"
+                  >
                     {{ amend.status }}
                   </span>
                 </td>
               </tr>
               <tr v-if="contractAmendments.length === 0">
-                <td colspan="8" style="text-align: center; color: #64748b; padding: 16px;">
-                  Initial version (v1) active. No contract amendments executed yet.
+                <td
+                  colspan="8"
+                  style="text-align: center; color: #64748b; padding: 16px"
+                >
+                  Initial version (v1) active. No contract amendments executed
+                  yet.
                 </td>
               </tr>
             </tbody>
@@ -1285,14 +1442,9 @@
     </div>
 
     <!-- Modal: Create Budget Template -->
-    <div
-      v-if="showCreateTemplateModal"
-      class="modal-overlay"
-    >
+    <div v-if="showCreateTemplateModal" class="modal-overlay">
       <div class="modal">
-        <div class="modal-header">
-          Create Multi-Tier Budget Template
-        </div>
+        <div class="modal-header">Create Multi-Tier Budget Template</div>
         <div class="modal-body">
           <div class="form-group">
             <label for="tmpl-name">Template Name</label>
@@ -1301,69 +1453,107 @@
               v-model="newTmplName"
               type="text"
               placeholder="e.g. Oncology Phase III - Academic Center"
-            >
+            />
           </div>
           <div class="form-group">
             <label for="tmpl-tier">Tier Level</label>
             <select id="tmpl-tier" v-model="newTmplTier">
-              <option value="TIER_1_ACADEMIC">Tier 1 - Academic Medical Center</option>
-              <option value="TIER_2_COMMUNITY">Tier 2 - Community Health Clinic</option>
-              <option value="TIER_3_REGIONAL">Tier 3 - Regional Research Site</option>
+              <option value="TIER_1_ACADEMIC">
+                Tier 1 - Academic Medical Center
+              </option>
+              <option value="TIER_2_COMMUNITY">
+                Tier 2 - Community Health Clinic
+              </option>
+              <option value="TIER_3_REGIONAL">
+                Tier 3 - Regional Research Site
+              </option>
             </select>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
             <div class="form-group">
               <label for="tmpl-overhead">Overhead %</label>
-              <input id="tmpl-overhead" v-model.number="newTmplOverhead" type="number" step="0.5">
+              <input
+                id="tmpl-overhead"
+                v-model.number="newTmplOverhead"
+                type="number"
+                step="0.5"
+              />
             </div>
             <div class="form-group">
               <label for="tmpl-withholding">Withholding %</label>
-              <input id="tmpl-withholding" v-model.number="newTmplWithholding" type="number" step="0.5">
+              <input
+                id="tmpl-withholding"
+                v-model.number="newTmplWithholding"
+                type="number"
+                step="0.5"
+              />
             </div>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
             <div class="form-group">
               <label for="tmpl-startup">Fixed Startup Fee ($)</label>
-              <input id="tmpl-startup" v-model.number="newTmplStartup" type="number">
+              <input
+                id="tmpl-startup"
+                v-model.number="newTmplStartup"
+                type="number"
+              />
             </div>
             <div class="form-group">
               <label for="tmpl-closeout">Fixed Closeout Fee ($)</label>
-              <input id="tmpl-closeout" v-model.number="newTmplCloseout" type="number">
+              <input
+                id="tmpl-closeout"
+                v-model.number="newTmplCloseout"
+                type="number"
+              />
             </div>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
             <div class="form-group">
               <label for="tmpl-stipend">Per-Visit Patient Stipend ($)</label>
-              <input id="tmpl-stipend" v-model.number="newTmplStipend" type="number">
+              <input
+                id="tmpl-stipend"
+                v-model.number="newTmplStipend"
+                type="number"
+              />
             </div>
             <div class="form-group">
               <label for="tmpl-travel">Per-Visit Travel Reimb. ($)</label>
-              <input id="tmpl-travel" v-model.number="newTmplTravel" type="number">
+              <input
+                id="tmpl-travel"
+                v-model.number="newTmplTravel"
+                type="number"
+              />
             </div>
           </div>
           <div class="form-group">
             <label for="tmpl-reason">Reason for Change Justification</label>
-            <textarea id="tmpl-reason" v-model="newTmplReason" placeholder="State the justification reason for creating this budget template..."></textarea>
+            <textarea
+              id="tmpl-reason"
+              v-model="newTmplReason"
+              placeholder="State the justification reason for creating this budget template..."
+            />
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-cancel" @click="showCreateTemplateModal = false">Cancel</button>
-          <button class="btn btn-primary" @click="confirmCreateTemplate">Create Template</button>
+          <button
+            class="btn btn-cancel"
+            @click="showCreateTemplateModal = false"
+          >
+            Cancel
+          </button>
+          <button class="btn btn-primary" @click="confirmCreateTemplate">
+            Create Template
+          </button>
         </div>
       </div>
     </div>
 
     <!-- Modal: Add Procedure to Fee Grid -->
-    <div
-      v-if="showAddProcedureModal"
-      class="modal-overlay"
-    >
+    <div v-if="showAddProcedureModal" class="modal-overlay">
       <div class="modal">
-        <div class="modal-header">
-          Add Procedure to Fee Matrix Grid
-        </div>
+        <div class="modal-header">Add Procedure to Fee Matrix Grid</div>
         <div class="modal-body">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
             <div class="form-group">
               <label for="proc-visit">Visit Name</label>
               <select id="proc-visit" v-model="newProcVisit">
@@ -1376,64 +1566,111 @@
             </div>
             <div class="form-group">
               <label for="proc-code">CPT / Procedure Code</label>
-              <input id="proc-code" v-model="newProcCode" type="text" placeholder="e.g. CPT-93000">
+              <input
+                id="proc-code"
+                v-model="newProcCode"
+                type="text"
+                placeholder="e.g. CPT-93000"
+              />
             </div>
           </div>
           <div class="form-group">
             <label for="proc-name">Procedure Description</label>
-            <input id="proc-name" v-model="newProcName" type="text" placeholder="e.g. 12-Lead Electrocardiogram">
+            <input
+              id="proc-name"
+              v-model="newProcName"
+              type="text"
+              placeholder="e.g. 12-Lead Electrocardiogram"
+            />
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
             <div class="form-group">
               <label for="proc-activity">USDM Activity ID (Optional)</label>
-              <input id="proc-activity" v-model="newProcActivityId" type="text" placeholder="e.g. ACT-ECG-01">
+              <input
+                id="proc-activity"
+                v-model="newProcActivityId"
+                type="text"
+                placeholder="e.g. ACT-ECG-01"
+              />
             </div>
             <div class="form-group">
               <label for="proc-form">eCRF Form ID (Optional)</label>
-              <input id="proc-form" v-model="newProcFormId" type="text" placeholder="e.g. FORM-ECG-V1">
+              <input
+                id="proc-form"
+                v-model="newProcFormId"
+                type="text"
+                placeholder="e.g. FORM-ECG-V1"
+              />
             </div>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+          <div
+            style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px"
+          >
             <div class="form-group">
               <label for="proc-base">Base Amount ($)</label>
-              <input id="proc-base" v-model.number="newProcBase" type="number">
+              <input
+                id="proc-base"
+                v-model.number="newProcBase"
+                type="number"
+              />
             </div>
             <div class="form-group">
               <label for="proc-overhead">Overhead %</label>
-              <input id="proc-overhead" v-model.number="newProcOverhead" type="number">
+              <input
+                id="proc-overhead"
+                v-model.number="newProcOverhead"
+                type="number"
+              />
             </div>
             <div class="form-group">
               <label for="proc-withholding">Withholding %</label>
-              <input id="proc-withholding" v-model.number="newProcWithholding" type="number">
+              <input
+                id="proc-withholding"
+                v-model.number="newProcWithholding"
+                type="number"
+              />
             </div>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
             <div class="form-group">
               <label for="proc-stipend">Patient Stipend ($)</label>
-              <input id="proc-stipend" v-model.number="newProcStipend" type="number">
+              <input
+                id="proc-stipend"
+                v-model.number="newProcStipend"
+                type="number"
+              />
             </div>
             <div class="form-group">
               <label for="proc-travel">Travel Reimb. ($)</label>
-              <input id="proc-travel" v-model.number="newProcTravel" type="number">
+              <input
+                id="proc-travel"
+                v-model.number="newProcTravel"
+                type="number"
+              />
             </div>
           </div>
           <div class="form-group">
             <label for="proc-reason">Reason for Change Justification</label>
-            <textarea id="proc-reason" v-model="newProcReason" placeholder="State the justification reason..."></textarea>
+            <textarea
+              id="proc-reason"
+              v-model="newProcReason"
+              placeholder="State the justification reason..."
+            />
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-cancel" @click="showAddProcedureModal = false">Cancel</button>
-          <button class="btn btn-primary" @click="confirmAddProcedure">Add to Grid</button>
+          <button class="btn btn-cancel" @click="showAddProcedureModal = false">
+            Cancel
+          </button>
+          <button class="btn btn-primary" @click="confirmAddProcedure">
+            Add to Grid
+          </button>
         </div>
       </div>
     </div>
 
     <!-- Modal: Execute Contract Amendment -->
-    <div
-      v-if="showAmendmentModal"
-      class="modal-overlay"
-    >
+    <div v-if="showAmendmentModal" class="modal-overlay">
       <div class="modal">
         <div class="modal-header">
           Execute Contract Amendment (Version Increment)
@@ -1441,75 +1678,116 @@
         <div class="modal-body">
           <div class="form-group">
             <label for="amend-budget">Revised Total Budget ($)</label>
-            <input id="amend-budget" v-model.number="amendRevisedBudget" type="number">
+            <input
+              id="amend-budget"
+              v-model.number="amendRevisedBudget"
+              type="number"
+            />
           </div>
           <div class="form-group">
-            <label for="amend-summary">Summary of Protocol &amp; Rate Changes</label>
-            <textarea id="amend-summary" v-model="amendSummary" placeholder="Detail the reasons and scope of this budget contract amendment..."></textarea>
+            <label for="amend-summary"
+              >Summary of Protocol &amp; Rate Changes</label
+            >
+            <textarea
+              id="amend-summary"
+              v-model="amendSummary"
+              placeholder="Detail the reasons and scope of this budget contract amendment..."
+            />
           </div>
           <div class="form-group">
             <label for="amend-reason">GxP Reason for Change</label>
-            <input id="amend-reason" v-model="amendReason" type="text" placeholder="Protocol amendment execution">
+            <input
+              id="amend-reason"
+              v-model="amendReason"
+              type="text"
+              placeholder="Protocol amendment execution"
+            />
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-cancel" @click="showAmendmentModal = false">Cancel</button>
-          <button class="btn btn-primary" @click="confirmExecuteAmendment">Sign &amp; Execute Amendment</button>
+          <button class="btn btn-cancel" @click="showAmendmentModal = false">
+            Cancel
+          </button>
+          <button class="btn btn-primary" @click="confirmExecuteAmendment">
+            Sign &amp; Execute Amendment
+          </button>
         </div>
       </div>
     </div>
 
     <!-- Modal: Create Budget Adjustment -->
-    <div
-      v-if="showAdjustmentModal"
-      class="modal-overlay"
-    >
+    <div v-if="showAdjustmentModal" class="modal-overlay">
       <div class="modal">
-        <div class="modal-header">
-          Create Budget Adjustment / Penalty
-        </div>
+        <div class="modal-header">Create Budget Adjustment / Penalty</div>
         <div class="modal-body">
           <div class="form-group">
             <label for="adj-type">Adjustment Classification</label>
             <select id="adj-type" v-model="adjType">
-              <option value="PASSTHROUGH_REIMBURSEMENT">Passthrough Expense Reimbursement (+)</option>
-              <option value="PROTOCOL_DEVIATION_PENALTY">Protocol Deviation Penalty Deduction (-)</option>
-              <option value="OUT_OF_WINDOW_PENALTY">Out-of-Window Visit Penalty (-)</option>
-              <option value="SITE_BONUS">Site Enrollment Performance Bonus (+)</option>
-              <option value="DISCRETIONARY_CREDIT">Discretionary Sponsor Credit (+)</option>
+              <option value="PASSTHROUGH_REIMBURSEMENT">
+                Passthrough Expense Reimbursement (+)
+              </option>
+              <option value="PROTOCOL_DEVIATION_PENALTY">
+                Protocol Deviation Penalty Deduction (-)
+              </option>
+              <option value="OUT_OF_WINDOW_PENALTY">
+                Out-of-Window Visit Penalty (-)
+              </option>
+              <option value="SITE_BONUS">
+                Site Enrollment Performance Bonus (+)
+              </option>
+              <option value="DISCRETIONARY_CREDIT">
+                Discretionary Sponsor Credit (+)
+              </option>
             </select>
           </div>
           <div class="form-group">
-            <label for="adj-desc">Description &amp; Clinical Justification</label>
-            <input id="adj-desc" v-model="adjDescription" type="text" placeholder="e.g. Dry ice shipping courier reimbursement">
+            <label for="adj-desc"
+              >Description &amp; Clinical Justification</label
+            >
+            <input
+              id="adj-desc"
+              v-model="adjDescription"
+              type="text"
+              placeholder="e.g. Dry ice shipping courier reimbursement"
+            />
           </div>
-          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px">
             <div class="form-group">
               <label for="adj-amt">Amount ($)</label>
-              <input id="adj-amt" v-model.number="adjAmount" type="number" step="0.01">
+              <input
+                id="adj-amt"
+                v-model.number="adjAmount"
+                type="number"
+                step="0.01"
+              />
             </div>
             <div class="form-group">
               <label for="adj-curr">Currency</label>
-              <input id="adj-curr" v-model="adjCurrency" type="text">
+              <input id="adj-curr" v-model="adjCurrency" type="text" />
             </div>
           </div>
           <div class="form-group">
             <label for="adj-reason">GxP Reason for Change</label>
-            <textarea id="adj-reason" v-model="adjReason" placeholder="State reason for change..."></textarea>
+            <textarea
+              id="adj-reason"
+              v-model="adjReason"
+              placeholder="State reason for change..."
+            />
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-cancel" @click="showAdjustmentModal = false">Cancel</button>
-          <button class="btn btn-primary" @click="confirmCreateAdjustment">Save Adjustment</button>
+          <button class="btn btn-cancel" @click="showAdjustmentModal = false">
+            Cancel
+          </button>
+          <button class="btn btn-primary" @click="confirmCreateAdjustment">
+            Save Adjustment
+          </button>
         </div>
       </div>
     </div>
 
     <!-- Modal 1: General Change Justification -->
-    <div
-      v-if="showJustificationModal"
-      class="modal-overlay"
-    >
+    <div v-if="showJustificationModal" class="modal-overlay">
       <div class="modal">
         <div class="modal-header">
           {{ justificationTitle }}
@@ -1527,16 +1805,15 @@
             you must document a valid GxP justification reason for this action.
           </p>
           <div class="form-group">
-            <label for="modal-justification-reason">Change Justification Reason</label>
+            <label for="modal-justification-reason"
+              >Change Justification Reason</label
+            >
             <textarea
               id="modal-justification-reason"
               v-model="justificationReason"
               :placeholder="justificationPlaceholder"
             />
-            <div
-              v-if="justificationError"
-              class="error-msg"
-            >
+            <div v-if="justificationError" class="error-msg">
               ⚠️ {{ justificationError }}
             </div>
           </div>
@@ -1548,10 +1825,7 @@
           >
             Cancel
           </button>
-          <button
-            class="btn btn-primary"
-            @click="confirmJustification"
-          >
+          <button class="btn btn-primary" @click="confirmJustification">
             Confirm Change
           </button>
         </div>
@@ -1559,10 +1833,7 @@
     </div>
 
     <!-- Modal 2: FDA Part 11 Electronic Signature & Re-Authentication -->
-    <div
-      v-if="showSignatureModal"
-      class="modal-overlay"
-    >
+    <div v-if="showSignatureModal" class="modal-overlay">
       <div class="modal">
         <div class="modal-header">
           Electronic Signature & Identity Verification (Part 11)
@@ -1589,7 +1860,7 @@
               type="text"
               placeholder="Username"
               :disabled="sigBusy"
-            >
+            />
           </div>
 
           <div class="form-group">
@@ -1600,7 +1871,7 @@
               type="password"
               placeholder="Password"
               :disabled="sigBusy"
-            >
+            />
           </div>
 
           <div class="form-group">
@@ -1611,7 +1882,7 @@
               type="text"
               placeholder="MFA Token"
               :disabled="sigBusy"
-            >
+            />
           </div>
 
           <div class="form-group">
@@ -1624,17 +1895,15 @@
               <option value="INVESTIGATOR_SIGNATURE">
                 INVESTIGATOR_SIGNATURE (PI Endorsement)
               </option>
-              <option value="APPROVAL">
-                APPROVAL (Supervisory Approval)
-              </option>
-              <option value="TECHNICAL_QC">
-                TECHNICAL_QC
-              </option>
+              <option value="APPROVAL">APPROVAL (Supervisory Approval)</option>
+              <option value="TECHNICAL_QC">TECHNICAL_QC</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label for="sig-reason-for-change">Reason for Change / Justification</label>
+            <label for="sig-reason-for-change"
+              >Reason for Change / Justification</label
+            >
             <textarea
               id="sig-reason-for-change"
               v-model="sigReasonForChange"
@@ -1643,12 +1912,7 @@
             />
           </div>
 
-          <div
-            v-if="sigError"
-            class="error-msg"
-          >
-            ⚠️ {{ sigError }}
-          </div>
+          <div v-if="sigError" class="error-msg">⚠️ {{ sigError }}</div>
         </div>
         <div class="modal-footer">
           <button
@@ -1670,30 +1934,16 @@
     </div>
 
     <!-- Modal 3: Schedule Monitoring Visit -->
-    <div
-      v-if="showScheduleVisitModal"
-      class="modal-overlay"
-    >
+    <div v-if="showScheduleVisitModal" class="modal-overlay">
       <div class="modal">
-        <div class="modal-header">
-          Schedule Clinical Monitoring Visit
-        </div>
+        <div class="modal-header">Schedule Clinical Monitoring Visit</div>
         <div class="modal-body">
           <div class="form-group">
             <label for="sched-visit-type">Visit Type</label>
-            <select
-              id="sched-visit-type"
-              v-model="newVisitType"
-            >
-              <option value="SIV">
-                Site Initiation Visit (SIV)
-              </option>
-              <option value="IMV">
-                Interim Monitoring Visit (IMV)
-              </option>
-              <option value="COV">
-                Close Out Visit (COV)
-              </option>
+            <select id="sched-visit-type" v-model="newVisitType">
+              <option value="SIV">Site Initiation Visit (SIV)</option>
+              <option value="IMV">Interim Monitoring Visit (IMV)</option>
+              <option value="COV">Close Out Visit (COV)</option>
             </select>
           </div>
 
@@ -1703,7 +1953,7 @@
               id="sched-visit-date"
               v-model="newVisitScheduledDate"
               type="date"
-            >
+            />
           </div>
 
           <div class="form-group">
@@ -1713,11 +1963,13 @@
               v-model="newVisitCra"
               type="text"
               placeholder="e.g. cra_fderuiter"
-            >
+            />
           </div>
 
           <div class="form-group">
-            <label for="sched-visit-reason">Reason for Change / Setup Justification</label>
+            <label for="sched-visit-reason"
+              >Reason for Change / Setup Justification</label
+            >
             <textarea
               id="sched-visit-reason"
               v-model="newVisitReason"
@@ -1725,10 +1977,7 @@
             />
           </div>
 
-          <div
-            v-if="scheduleError"
-            class="error-msg"
-          >
+          <div v-if="scheduleError" class="error-msg">
             ⚠️ {{ scheduleError }}
           </div>
         </div>
@@ -1739,10 +1988,7 @@
           >
             Cancel
           </button>
-          <button
-            class="btn btn-primary"
-            @click="confirmScheduleVisit"
-          >
+          <button class="btn btn-primary" @click="confirmScheduleVisit">
             Schedule & Issue confirmation
           </button>
         </div>
@@ -1750,14 +1996,9 @@
     </div>
 
     <!-- Modal 4: Reallocate CRA Workload -->
-    <div
-      v-if="showReallocateModal"
-      class="modal-overlay"
-    >
+    <div v-if="showReallocateModal" class="modal-overlay">
       <div class="modal">
-        <div class="modal-header">
-          Allocate CRA to Site
-        </div>
+        <div class="modal-header">Allocate CRA to Site</div>
         <div class="modal-body">
           <div class="form-group">
             <label for="alloc-cra-id">CRA ID</label>
@@ -1766,26 +2007,21 @@
               v-model="allocCraId"
               type="text"
               placeholder="e.g. cra_alice"
-            >
+            />
           </div>
 
           <div class="form-group">
             <label for="alloc-status">Allocation Status</label>
-            <select
-              id="alloc-status"
-              v-model="allocStatus"
-            >
-              <option value="ACTIVE">
-                ACTIVE
-              </option>
-              <option value="INACTIVE">
-                INACTIVE
-              </option>
+            <select id="alloc-status" v-model="allocStatus">
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="INACTIVE">INACTIVE</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label for="alloc-reason">Reason for Change / Allocation Justification</label>
+            <label for="alloc-reason"
+              >Reason for Change / Allocation Justification</label
+            >
             <textarea
               id="alloc-reason"
               v-model="allocReason"
@@ -1793,24 +2029,13 @@
             />
           </div>
 
-          <div
-            v-if="allocError"
-            class="error-msg"
-          >
-            ⚠️ {{ allocError }}
-          </div>
+          <div v-if="allocError" class="error-msg">⚠️ {{ allocError }}</div>
         </div>
         <div class="modal-footer">
-          <button
-            class="btn btn-cancel"
-            @click="showReallocateModal = false"
-          >
+          <button class="btn btn-cancel" @click="showReallocateModal = false">
             Cancel
           </button>
-          <button
-            class="btn btn-primary"
-            @click="confirmReallocate"
-          >
+          <button class="btn btn-primary" @click="confirmReallocate">
             Save Allocation
           </button>
         </div>
@@ -1818,44 +2043,29 @@
     </div>
 
     <!-- Modal 5: Recruitment Metrics Update -->
-    <div
-      v-if="showRecruitmentModal"
-      class="modal-overlay"
-    >
+    <div v-if="showRecruitmentModal" class="modal-overlay">
       <div class="modal">
-        <div class="modal-header">
-          Log Site Recruitment Metrics Update
-        </div>
+        <div class="modal-header">Log Site Recruitment Metrics Update</div>
         <div class="modal-body">
           <div class="form-group">
             <label for="rec-screened">Screened Subject Count</label>
-            <input
-              id="rec-screened"
-              v-model="recScreened"
-              type="number"
-            >
+            <input id="rec-screened" v-model="recScreened" type="number" />
           </div>
 
           <div class="form-group">
             <label for="rec-enrolled">Enrolled Subject Count</label>
-            <input
-              id="rec-enrolled"
-              v-model="recEnrolled"
-              type="number"
-            >
+            <input id="rec-enrolled" v-model="recEnrolled" type="number" />
           </div>
 
           <div class="form-group">
             <label for="rec-target">Target Enrollment Count</label>
-            <input
-              id="rec-target"
-              v-model="recTarget"
-              type="number"
-            >
+            <input id="rec-target" v-model="recTarget" type="number" />
           </div>
 
           <div class="form-group">
-            <label for="rec-reason">Reason for Change / Update Justification</label>
+            <label for="rec-reason"
+              >Reason for Change / Update Justification</label
+            >
             <textarea
               id="rec-reason"
               v-model="recReason"
@@ -1863,24 +2073,13 @@
             />
           </div>
 
-          <div
-            v-if="recError"
-            class="error-msg"
-          >
-            ⚠️ {{ recError }}
-          </div>
+          <div v-if="recError" class="error-msg">⚠️ {{ recError }}</div>
         </div>
         <div class="modal-footer">
-          <button
-            class="btn btn-cancel"
-            @click="showRecruitmentModal = false"
-          >
+          <button class="btn btn-cancel" @click="showRecruitmentModal = false">
             Cancel
           </button>
-          <button
-            class="btn btn-primary"
-            @click="confirmRecruitment"
-          >
+          <button class="btn btn-primary" @click="confirmRecruitment">
             Submit Metrics
           </button>
         </div>
@@ -1888,14 +2087,9 @@
     </div>
 
     <!-- Modal 6: Delegate New Authority Task -->
-    <div
-      v-if="showDelegateModal"
-      class="modal-overlay"
-    >
+    <div v-if="showDelegateModal" class="modal-overlay">
       <div class="modal">
-        <div class="modal-header">
-          Delegate Site Trial Task
-        </div>
+        <div class="modal-header">Delegate Site Trial Task</div>
         <div class="modal-body">
           <div class="form-group">
             <label for="del-staff-id">Staff User ID</label>
@@ -1904,19 +2098,16 @@
               v-model="delStaffId"
               type="text"
               placeholder="e.g. kc-crc-001"
-            >
+            />
           </div>
 
           <div class="form-group">
             <label for="del-start-date">Start Date</label>
-            <input
-              id="del-start-date"
-              v-model="delStartDate"
-              type="date"
-            >
+            <input id="del-start-date" v-model="delStartDate" type="date" />
           </div>
 
           <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label>Delegated Duty Task Codes</label>
             <div
               style="
@@ -1942,14 +2133,17 @@
                   type="checkbox"
                   :value="task.value"
                   style="width: auto; margin: 0"
-                >
-                {{ task.text }} (<code>{{ task.value }}</code>)
+                />
+                {{ task.text }} (<code>{{ task.value }}</code
+                >)
               </label>
             </div>
           </div>
 
           <div class="form-group">
-            <label for="del-reason">Reason for Change / Delegation Justification</label>
+            <label for="del-reason"
+              >Reason for Change / Delegation Justification</label
+            >
             <textarea
               id="del-reason"
               v-model="delReason"
@@ -1957,24 +2151,13 @@
             />
           </div>
 
-          <div
-            v-if="delError"
-            class="error-msg"
-          >
-            ⚠️ {{ delError }}
-          </div>
+          <div v-if="delError" class="error-msg">⚠️ {{ delError }}</div>
         </div>
         <div class="modal-footer">
-          <button
-            class="btn btn-cancel"
-            @click="showDelegateModal = false"
-          >
+          <button class="btn btn-cancel" @click="showDelegateModal = false">
             Cancel
           </button>
-          <button
-            class="btn btn-primary"
-            @click="confirmDelegate"
-          >
+          <button class="btn btn-primary" @click="confirmDelegate">
             Submit Delegation
           </button>
         </div>
@@ -1982,36 +2165,20 @@
     </div>
 
     <!-- Modal 7: Create Site Milestone -->
-    <div
-      v-if="showCreateMilestoneModal"
-      class="modal-overlay"
-    >
+    <div v-if="showCreateMilestoneModal" class="modal-overlay">
       <div class="modal">
-        <div class="modal-header">
-          Add Site Milestone
-        </div>
+        <div class="modal-header">Add Site Milestone</div>
         <div class="modal-body">
           <div class="form-group">
             <label for="ms-type">Milestone Type</label>
-            <select
-              id="ms-type"
-              v-model="newMsType"
-            >
-              <option value="SITE_SELECTION">
-                SITE_SELECTION
-              </option>
-              <option value="INITIATION_VISIT">
-                INITIATION_VISIT
-              </option>
-              <option value="SITE_ACTIVATION">
-                SITE_ACTIVATION
-              </option>
+            <select id="ms-type" v-model="newMsType">
+              <option value="SITE_SELECTION">SITE_SELECTION</option>
+              <option value="INITIATION_VISIT">INITIATION_VISIT</option>
+              <option value="SITE_ACTIVATION">SITE_ACTIVATION</option>
               <option value="FIRST_SUBJECT_ENROLLED">
                 FIRST_SUBJECT_ENROLLED
               </option>
-              <option value="DB_LOCK">
-                DB_LOCK
-              </option>
+              <option value="DB_LOCK">DB_LOCK</option>
             </select>
           </div>
 
@@ -2021,21 +2188,14 @@
               id="ms-planned-date"
               v-model="newMsPlannedDate"
               type="date"
-            >
+            />
           </div>
 
           <div class="form-group">
             <label for="ms-status">Status</label>
-            <select
-              id="ms-status"
-              v-model="newMsStatus"
-            >
-              <option value="PLANNED">
-                PLANNED
-              </option>
-              <option value="ACHIEVED">
-                ACHIEVED
-              </option>
+            <select id="ms-status" v-model="newMsStatus">
+              <option value="PLANNED">PLANNED</option>
+              <option value="ACHIEVED">ACHIEVED</option>
             </select>
           </div>
 
@@ -2048,12 +2208,7 @@
             />
           </div>
 
-          <div
-            v-if="msError"
-            class="error-msg"
-          >
-            ⚠️ {{ msError }}
-          </div>
+          <div v-if="msError" class="error-msg">⚠️ {{ msError }}</div>
         </div>
         <div class="modal-footer">
           <button
@@ -2062,10 +2217,7 @@
           >
             Cancel
           </button>
-          <button
-            class="btn btn-primary"
-            @click="confirmCreateMilestone"
-          >
+          <button class="btn btn-primary" @click="confirmCreateMilestone">
             Add Milestone
           </button>
         </div>
@@ -2078,7 +2230,10 @@
     </div>
 
     <!-- RTSM & Dose Escalation Tab Content -->
-    <div v-if="activeTab === 'rtsm'" style="margin-top: 20px; display: flex; flex-direction: column; gap: 24px">
+    <div
+      v-if="activeTab === 'rtsm'"
+      style="margin-top: 20px; display: flex; flex-direction: column; gap: 24px"
+    >
       <AdaptiveDoseEscalationConsole :study-id="studyId" />
       <CellGeneTherapyCocConsole />
     </div>
@@ -2198,10 +2353,7 @@ const totalScreenedCount = computed(() => {
 
 const totalTargetCount = computed(() => {
   if (recruitment.value && recruitment.value.length > 0) {
-    return recruitment.value.reduce(
-      (sum, r) => sum + (r.target_count || 0),
-      0
-    );
+    return recruitment.value.reduce((sum, r) => sum + (r.target_count || 0), 0);
   }
   return 20;
 });
@@ -3050,7 +3202,10 @@ async function applyTemplate() {
     await apiClient.post(
       `/api/v1/ctms/financials/grants/${investigatorGrant.value.id}/apply-template`,
       { template_id: selectedTemplateId.value },
-      { changeReason: "Applied multi-tier budget template to investigator grant" }
+      {
+        changeReason:
+          "Applied multi-tier budget template to investigator grant",
+      }
     );
     await loadFinancialData();
   } catch (err) {
@@ -3063,17 +3218,25 @@ function openAddProcedureModal() {
   newProcName.value = "";
   newProcBase.value = 250.0;
   newProcOverhead.value = investigatorGrant.value?.overhead_percentage || 25.0;
-  newProcWithholding.value = investigatorGrant.value?.withholding_percentage || 10.0;
+  newProcWithholding.value =
+    investigatorGrant.value?.withholding_percentage || 10.0;
   newProcActivityId.value = "";
   newProcFormId.value = "";
-  newProcStipend.value = investigatorGrant.value?.patient_stipend_per_visit || 50.0;
-  newProcTravel.value = investigatorGrant.value?.travel_reimbursement_per_visit || 25.0;
+  newProcStipend.value =
+    investigatorGrant.value?.patient_stipend_per_visit || 50.0;
+  newProcTravel.value =
+    investigatorGrant.value?.travel_reimbursement_per_visit || 25.0;
   newProcReason.value = "";
   showAddProcedureModal.value = true;
 }
 
 async function confirmAddProcedure() {
-  if (!newProcCode.value.trim() || !newProcName.value.trim() || !investigatorGrant.value) return;
+  if (
+    !newProcCode.value.trim() ||
+    !newProcName.value.trim() ||
+    !investigatorGrant.value
+  )
+    return;
   try {
     const payload = {
       grant_id: investigatorGrant.value.id,
@@ -3101,7 +3264,8 @@ async function confirmAddProcedure() {
 
 function openAmendmentModal() {
   if (!investigatorGrant.value) return;
-  amendRevisedBudget.value = Number(investigatorGrant.value.total_budget || 0) + 50000;
+  amendRevisedBudget.value =
+    Number(investigatorGrant.value.total_budget || 0) + 50000;
   amendSummary.value = "";
   amendReason.value = "";
   showAmendmentModal.value = true;
@@ -3128,7 +3292,8 @@ async function confirmExecuteAmendment() {
           headers: {
             "X-Sig-Token": sigToken,
           },
-          changeReason: amendReason.value || reason || "Executed contract amendment",
+          changeReason:
+            amendReason.value || reason || "Executed contract amendment",
         }
       );
       showAmendmentModal.value = false;

@@ -240,7 +240,13 @@ const routes = [
     component: () => import("../views/CtmsView.vue"),
     meta: {
       requiresAuth: true,
-      requiresRole: ["cra", "monitor", "sponsor_admin", "site_investigator", "crc"],
+      requiresRole: [
+        "cra",
+        "monitor",
+        "sponsor_admin",
+        "site_investigator",
+        "crc",
+      ],
     },
   },
   {
@@ -495,8 +501,6 @@ const routes = [
     },
   },
 ];
-
-
 
 export const router = createRouter({
   // Use a GitHub Pages-compatible history mode resolving from the configured Pages base path

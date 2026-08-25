@@ -5,7 +5,10 @@ import { router } from "../src/router/index.js";
 import { useAuthStore } from "../src/stores/auth.js";
 import KnowledgeView from "../src/views/KnowledgeView.vue";
 import AppShell from "../src/components/AppShell.vue";
-import { DEFAULT_CATEGORIES, DEFAULT_MOCK_ARTICLES } from "../src/api/knowledge.js";
+import {
+  DEFAULT_CATEGORIES,
+  DEFAULT_MOCK_ARTICLES,
+} from "../src/api/knowledge.js";
 
 // Mock knowledge API service
 vi.mock("../src/api/knowledge.js", async (importOriginal) => {
@@ -14,14 +17,22 @@ vi.mock("../src/api/knowledge.js", async (importOriginal) => {
     ...actual,
     knowledgeService: {
       resolveContextualHelp: vi.fn((params) =>
-        Promise.resolve(actual.getFallbackContextualHelp(params?.route, params?.persona))
+        Promise.resolve(
+          actual.getFallbackContextualHelp(params?.route, params?.persona)
+        )
       ),
       getArticle: vi.fn((id) => {
-        const found = actual.DEFAULT_MOCK_ARTICLES.find((a) => a.id === id || a.slug === id);
+        const found = actual.DEFAULT_MOCK_ARTICLES.find(
+          (a) => a.id === id || a.slug === id
+        );
         return Promise.resolve(found || actual.DEFAULT_MOCK_ARTICLES[0]);
       }),
-      listArticles: vi.fn(() => Promise.resolve([...actual.DEFAULT_MOCK_ARTICLES])),
-      listCategories: vi.fn(() => Promise.resolve([...actual.DEFAULT_CATEGORIES])),
+      listArticles: vi.fn(() =>
+        Promise.resolve([...actual.DEFAULT_MOCK_ARTICLES])
+      ),
+      listCategories: vi.fn(() =>
+        Promise.resolve([...actual.DEFAULT_CATEGORIES])
+      ),
       createCategory: vi.fn((payload) =>
         Promise.resolve({
           id: `cat-mock-${Date.now()}`,
@@ -69,7 +80,9 @@ vi.mock("../src/api/knowledge.js", async (importOriginal) => {
         })
       ),
       submitArticleReview: vi.fn((id) => {
-        const found = actual.DEFAULT_MOCK_ARTICLES.find((a) => a.id === id) || actual.DEFAULT_MOCK_ARTICLES[0];
+        const found =
+          actual.DEFAULT_MOCK_ARTICLES.find((a) => a.id === id) ||
+          actual.DEFAULT_MOCK_ARTICLES[0];
         return Promise.resolve({
           ...found,
           status: "IN_REVIEW",
@@ -77,7 +90,9 @@ vi.mock("../src/api/knowledge.js", async (importOriginal) => {
         });
       }),
       approveArticle: vi.fn((id) => {
-        const found = actual.DEFAULT_MOCK_ARTICLES.find((a) => a.id === id) || actual.DEFAULT_MOCK_ARTICLES[0];
+        const found =
+          actual.DEFAULT_MOCK_ARTICLES.find((a) => a.id === id) ||
+          actual.DEFAULT_MOCK_ARTICLES[0];
         return Promise.resolve({
           ...found,
           status: "APPROVED",
@@ -86,7 +101,9 @@ vi.mock("../src/api/knowledge.js", async (importOriginal) => {
         });
       }),
       rejectArticle: vi.fn((id) => {
-        const found = actual.DEFAULT_MOCK_ARTICLES.find((a) => a.id === id) || actual.DEFAULT_MOCK_ARTICLES[0];
+        const found =
+          actual.DEFAULT_MOCK_ARTICLES.find((a) => a.id === id) ||
+          actual.DEFAULT_MOCK_ARTICLES[0];
         return Promise.resolve({
           ...found,
           status: "REJECTED",
@@ -94,7 +111,9 @@ vi.mock("../src/api/knowledge.js", async (importOriginal) => {
         });
       }),
       publishArticle: vi.fn((id, payload) => {
-        const found = actual.DEFAULT_MOCK_ARTICLES.find((a) => a.id === id) || actual.DEFAULT_MOCK_ARTICLES[0];
+        const found =
+          actual.DEFAULT_MOCK_ARTICLES.find((a) => a.id === id) ||
+          actual.DEFAULT_MOCK_ARTICLES[0];
         return Promise.resolve({
           ...found,
           status: "PUBLISHED",
@@ -103,7 +122,9 @@ vi.mock("../src/api/knowledge.js", async (importOriginal) => {
         });
       }),
       transitionArticle: vi.fn((id, payload) => {
-        const found = actual.DEFAULT_MOCK_ARTICLES.find((a) => a.id === id) || actual.DEFAULT_MOCK_ARTICLES[0];
+        const found =
+          actual.DEFAULT_MOCK_ARTICLES.find((a) => a.id === id) ||
+          actual.DEFAULT_MOCK_ARTICLES[0];
         return Promise.resolve({
           ...found,
           status: payload.target_status,
@@ -168,7 +189,9 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
       });
       await flushPromises();
 
-      expect(wrapper.find(".view-title").text()).toContain("Knowledge & Support Hub");
+      expect(wrapper.find(".view-title").text()).toContain(
+        "Knowledge & Support Hub"
+      );
       expect(wrapper.text()).toContain("21 CFR Part 11");
       expect(wrapper.text()).toContain("ICH GCP E6(R3)");
       expect(wrapper.text()).toContain("GxP Controlled Documents");
@@ -213,7 +236,9 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
 
       const categoryButtons = wrapper.findAll(".category-item-btn");
       // 1 "All Categories" + categories
-      expect(categoryButtons.length).toBeGreaterThanOrEqual(DEFAULT_CATEGORIES.length + 1);
+      expect(categoryButtons.length).toBeGreaterThanOrEqual(
+        DEFAULT_CATEGORIES.length + 1
+      );
       expect(wrapper.text()).toContain("Clinical Operations");
       expect(wrapper.text()).toContain("Study Authoring & MDR");
       expect(wrapper.text()).toContain("Regulatory & Quality Compliance");
@@ -382,7 +407,9 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
       await flushPromises();
 
       expect(wrapper.find("#sop-audit-viewer").exists()).toBe(true);
-      expect(wrapper.text()).toContain("21 CFR Part 11 Electronic Audit Ledger");
+      expect(wrapper.text()).toContain(
+        "21 CFR Part 11 Electronic Audit Ledger"
+      );
     });
   });
 
@@ -399,9 +426,13 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
       expect(wrapper.find("#create-art-modal-title").exists()).toBe(true);
 
       // Fill in form
-      await wrapper.find("#new-art-title").setValue("SOP-SAF-305: Safety Signal Detection");
+      await wrapper
+        .find("#new-art-title")
+        .setValue("SOP-SAF-305: Safety Signal Detection");
       await wrapper.find("#new-art-slug").setValue("sop-saf-305-safety-signal");
-      await wrapper.find("#new-art-body").setValue("## Purpose\nSafety signal detection SOP.");
+      await wrapper
+        .find("#new-art-body")
+        .setValue("## Purpose\nSafety signal detection SOP.");
       await wrapper.find("#new-art-reason").setValue("Initial draft creation");
 
       await wrapper.vm.handleCreateArticle();
@@ -432,12 +463,18 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
         await flushPromises();
 
         // Reason modal appears
-        expect(wrapper.find("#reason-modal-title").text()).toContain("Submit Draft");
-        await wrapper.find("#action-reason-input").setValue("Draft completed and ready for review");
+        expect(wrapper.find("#reason-modal-title").text()).toContain(
+          "Submit Draft"
+        );
+        await wrapper
+          .find("#action-reason-input")
+          .setValue("Draft completed and ready for review");
         await wrapper.vm.executeActionWithReason();
         await flushPromises();
 
-        expect(wrapper.find("#knowledge-reader-pane").text()).toContain("IN_REVIEW");
+        expect(wrapper.find("#knowledge-reader-pane").text()).toContain(
+          "IN_REVIEW"
+        );
       }
     });
 
@@ -461,12 +498,18 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
         await approveBtn.trigger("click");
         await flushPromises();
 
-        expect(wrapper.find("#reason-modal-title").text()).toContain("Approve Article");
-        await wrapper.find("#action-reason-input").setValue("Verified compliant");
+        expect(wrapper.find("#reason-modal-title").text()).toContain(
+          "Approve Article"
+        );
+        await wrapper
+          .find("#action-reason-input")
+          .setValue("Verified compliant");
         await wrapper.vm.executeActionWithReason();
         await flushPromises();
 
-        expect(wrapper.find("#knowledge-reader-pane").text()).toContain("APPROVED");
+        expect(wrapper.find("#knowledge-reader-pane").text()).toContain(
+          "APPROVED"
+        );
       }
     });
 
@@ -489,13 +532,19 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
         await publishBtn.trigger("click");
         await flushPromises();
 
-        expect(wrapper.find("#reason-modal-title").text()).toContain("Publish Approved SOP");
+        expect(wrapper.find("#reason-modal-title").text()).toContain(
+          "Publish Approved SOP"
+        );
         await wrapper.find("#action-version-label").setValue("2.0");
-        await wrapper.find("#action-reason-input").setValue("Formal regulatory publication");
+        await wrapper
+          .find("#action-reason-input")
+          .setValue("Formal regulatory publication");
         await wrapper.vm.executeActionWithReason();
         await flushPromises();
 
-        expect(wrapper.find("#knowledge-reader-pane").text()).toContain("PUBLISHED");
+        expect(wrapper.find("#knowledge-reader-pane").text()).toContain(
+          "PUBLISHED"
+        );
       }
     });
 
@@ -510,13 +559,19 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
       await flushPromises();
       expect(wrapper.find("#create-cat-modal-title").exists()).toBe(true);
 
-      await wrapper.find("#new-cat-name").setValue("Safety & Pharmacovigilance");
+      await wrapper
+        .find("#new-cat-name")
+        .setValue("Safety & Pharmacovigilance");
       await wrapper.find("#new-cat-slug").setValue("safety-pharmacovigilance");
-      await wrapper.find("#new-cat-desc").setValue("Safety intake and reporting procedures.");
+      await wrapper
+        .find("#new-cat-desc")
+        .setValue("Safety intake and reporting procedures.");
       await wrapper.vm.handleCreateCategory();
       await flushPromises();
 
-      expect(wrapper.find(".category-list").text()).toContain("Safety & Pharmacovigilance");
+      expect(wrapper.find(".category-list").text()).toContain(
+        "Safety & Pharmacovigilance"
+      );
     });
   });
 

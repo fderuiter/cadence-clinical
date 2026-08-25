@@ -777,7 +777,6 @@ export {
   ConfidenceBadge,
 };
 
-
 // Dynamic Hover Pointer Capability Detection
 export function initHoverDetection() {
   if (typeof window !== "undefined" && typeof document !== "undefined") {

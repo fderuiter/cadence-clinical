@@ -91,16 +91,10 @@ onUnmounted(() => {
 
         <div class="modal-footer">
           <slot name="footer">
-            <button
-              class="btn btn-secondary"
-              @click="closeModal"
-            >
+            <button class="btn btn-secondary" @click="closeModal">
               Cancel
             </button>
-            <button
-              class="btn btn-primary"
-              @click="emit('confirm')"
-            >
+            <button class="btn btn-primary" @click="emit('confirm')">
               Confirm
             </button>
           </slot>

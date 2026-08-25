@@ -5,6 +5,8 @@
     style="position: relative; z-index: 1000"
   >
     <!-- Translucent backdrop only on steps 1 and 5 to highlight onboarding introduction/completion without blocking interaction during edits -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="currentStep === 1 || currentStep === 5"
       class="onboarding-backdrop"

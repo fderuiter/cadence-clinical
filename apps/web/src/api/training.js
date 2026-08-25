@@ -27,7 +27,10 @@ export const trainingApi = {
    * Generate delta-training curriculum upon protocol amendment publication.
    */
   async generateAmendmentCurriculum(payload) {
-    const res = await api.post("/api/v1/training/curricula/generate-amendment", payload);
+    const res = await api.post(
+      "/api/v1/training/curricula/generate-amendment",
+      payload
+    );
     return res.data;
   },
 
@@ -35,7 +38,10 @@ export const trainingApi = {
    * Assign a curriculum to a clinical site user.
    */
   async assignCurriculum(curriculumId, payload) {
-    const res = await api.post(`/api/v1/training/curricula/${curriculumId}/assign`, payload);
+    const res = await api.post(
+      `/api/v1/training/curricula/${curriculumId}/assign`,
+      payload
+    );
     return res.data;
   },
 
@@ -59,7 +65,10 @@ export const trainingApi = {
    * Record time-on-page reading duration progress.
    */
   async recordProgress(assignmentId, payload) {
-    const res = await api.post(`/api/v1/training/assignments/${assignmentId}/progress`, payload);
+    const res = await api.post(
+      `/api/v1/training/assignments/${assignmentId}/progress`,
+      payload
+    );
     return res.data;
   },
 
@@ -67,7 +76,10 @@ export const trainingApi = {
    * Submit comprehension quiz answers and receive score evaluation (>= 80% passing).
    */
   async submitQuiz(assignmentId, payload) {
-    const res = await api.post(`/api/v1/training/assignments/${assignmentId}/submit-quiz`, payload);
+    const res = await api.post(
+      `/api/v1/training/assignments/${assignmentId}/submit-quiz`,
+      payload
+    );
     return res.data;
   },
 
@@ -75,7 +87,10 @@ export const trainingApi = {
    * Capture 21 CFR Part 11 electronic signature, generate sealed PDF certificate, and push to eTMF & eISF.
    */
   async signOffTraining(assignmentId, payload) {
-    const res = await api.post(`/api/v1/training/assignments/${assignmentId}/sign-off`, payload);
+    const res = await api.post(
+      `/api/v1/training/assignments/${assignmentId}/sign-off`,
+      payload
+    );
     return res.data;
   },
 
@@ -83,7 +98,9 @@ export const trainingApi = {
    * Retrieve generated completion certificate and SHA-256 seal for an assignment.
    */
   async getCertificate(assignmentId) {
-    const res = await api.get(`/api/v1/training/assignments/${assignmentId}/certificate`);
+    const res = await api.get(
+      `/api/v1/training/assignments/${assignmentId}/certificate`
+    );
     return res.data;
   },
 

@@ -27,7 +27,13 @@ test.describe("Suite 5: Safety Physician & Medical Reviewer Golden Path", () => 
       page,
       {
         username: "safety.officer",
-        roles: ["Safety Physician", "QPPV", "Medical Monitor", "Sponsor Admin", "Super Admin"],
+        roles: [
+          "Safety Physician",
+          "QPPV",
+          "Medical Monitor",
+          "Sponsor Admin",
+          "Super Admin",
+        ],
       },
       "/cadence-clinical/safety"
     );

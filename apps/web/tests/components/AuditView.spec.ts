@@ -11,7 +11,11 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: "/audit", name: "audit", component: AuditView },
-    { path: "/login", name: "login", component: { template: "<div>Login</div>" } },
+    {
+      path: "/login",
+      name: "login",
+      component: { template: "<div>Login</div>" },
+    },
   ],
 });
 
@@ -47,8 +51,10 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
       details: "Observation VS.VSSBP changed from 140 to 120 mmHg",
       old_value: { observation_id: "OBS-1042", value: "140", unit: "mmHg" },
       new_value: { observation_id: "OBS-1042", value: "120", unit: "mmHg" },
-      reason_for_change: "Typographical error corrected against paper source chart",
-      sha256_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      reason_for_change:
+        "Typographical error corrected against paper source chart",
+      sha256_hash:
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     },
     {
       id: "AUDIT-LOG-102",
@@ -62,7 +68,8 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
       old_value: { query_id: "QRY-208", status: "OPEN" },
       new_value: { query_id: "QRY-208", status: "CLOSED" },
       reason_for_change: "Investigator confirmation received and verified",
-      sha256_hash: "3a7bd3e2360a3d29eea436fcfb7e44c735d117c42d1c1835420b6b9942dd4f1b",
+      sha256_hash:
+        "3a7bd3e2360a3d29eea436fcfb7e44c735d117c42d1c1835420b6b9942dd4f1b",
     },
   ];
 
@@ -189,7 +196,9 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
     // Verify cryptographic SHA-256 hash
     const sha256Block = detailsRow.find(".sha256-hash");
     expect(sha256Block.exists()).toBe(true);
-    expect(sha256Block.text()).toContain("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+    expect(sha256Block.text()).toContain(
+      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    );
     expect(sha256Block.text()).toContain("SEAL VERIFIED");
   });
 

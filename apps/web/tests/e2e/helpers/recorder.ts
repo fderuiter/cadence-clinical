@@ -25,7 +25,10 @@ export function attachTripleSentinel(page: Page): SentinelRecord {
     if (msg.type() === "error") {
       const text = msg.text();
       // Filter out known benign dev server/favicon warnings
-      if (!text.includes("favicon.ico") && !text.includes("Download the Vue DevTools")) {
+      if (
+        !text.includes("favicon.ico") &&
+        !text.includes("Download the Vue DevTools")
+      ) {
         record.consoleErrors.push(text);
       }
     }
@@ -59,16 +62,24 @@ export function assertTripleSentinelClean(page: Page): void {
   if (!record) return;
 
   if (record.pageErrors.length > 0) {
-    throw new Error(`Triple Sentinel Page Errors detected:\n${record.pageErrors.join("\n")}`);
+    throw new Error(
+      `Triple Sentinel Page Errors detected:\n${record.pageErrors.join("\n")}`
+    );
   }
 
   if (record.consoleErrors.length > 0) {
-    throw new Error(`Triple Sentinel Console Errors detected:\n${record.consoleErrors.join("\n")}`);
+    throw new Error(
+      `Triple Sentinel Console Errors detected:\n${record.consoleErrors.join("\n")}`
+    );
   }
 
   if (record.failedRequests.length > 0) {
-    const failures = record.failedRequests.map((r) => `${r.method} ${r.url} -> HTTP ${r.status}`).join("\n");
-    throw new Error(`Triple Sentinel HTTP 5xx Server Failures detected:\n${failures}`);
+    const failures = record.failedRequests
+      .map((r) => `${r.method} ${r.url} -> HTTP ${r.status}`)
+      .join("\n");
+    throw new Error(
+      `Triple Sentinel HTTP 5xx Server Failures detected:\n${failures}`
+    );
   }
 }
 
@@ -85,7 +96,10 @@ export async function demoPause(page: Page, ms: number = 400): Promise<void> {
 /**
  * Highlight a UI element with a visual outline before interacting.
  */
-export async function highlightAndClick(page: Page, selector: string): Promise<void> {
+export async function highlightAndClick(
+  page: Page,
+  selector: string
+): Promise<void> {
   const loc = page.locator(selector).first();
   await loc.waitFor({ state: "visible", timeout: 8000 });
 
@@ -93,7 +107,8 @@ export async function highlightAndClick(page: Page, selector: string): Promise<v
     await loc.evaluate((el) => {
       const originalOutline = el.style.outline;
       const originalTransition = el.style.transition;
-      el.style.transition = "outline 0.2s ease-in-out, box-shadow 0.2s ease-in-out";
+      el.style.transition =
+        "outline 0.2s ease-in-out, box-shadow 0.2s ease-in-out";
       el.style.outline = "2px solid #00d2ff";
       el.style.boxShadow = "0 0 12px rgba(0, 210, 255, 0.6)";
       setTimeout(() => {
@@ -112,7 +127,12 @@ export async function highlightAndClick(page: Page, selector: string): Promise<v
 /**
  * Smoothly types text with human cadence into an input field.
  */
-export async function smoothType(page: Page, selector: string, text: string, charDelay: number = 30): Promise<void> {
+export async function smoothType(
+  page: Page,
+  selector: string,
+  text: string,
+  charDelay: number = 30
+): Promise<void> {
   const loc = page.locator(selector).first();
   await loc.waitFor({ state: "visible", timeout: 8000 });
   await loc.click();
@@ -140,6 +160,9 @@ export async function setPersonaAndNavigate(
   },
   targetPath: string
 ): Promise<void> {
+  if (page.url() === "about:blank" || !page.url().startsWith("http")) {
+    await page.goto(targetPath);
+  }
   await page.evaluate((authData) => {
     const payload = {
       isAuthenticated: true,

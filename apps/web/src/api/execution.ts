@@ -111,7 +111,11 @@ export const executionService = {
    * Triggers on-demand cross-domain anomaly evaluation for a subject.
    */
   evaluateAnomalies(body: any, options: any = {}): Promise<any> {
-    return apiClient.post(`/api/v1/execution/anomalies/evaluate`, body, options);
+    return apiClient.post(
+      `/api/v1/execution/anomalies/evaluate`,
+      body,
+      options
+    );
   },
 
   /**
@@ -119,7 +123,11 @@ export const executionService = {
    */
   adjudicateAnomalyCandidate(
     queryId: string,
-    body: { action: "APPROVE" | "REJECT"; reason: string; updated_message?: string },
+    body: {
+      action: "APPROVE" | "REJECT";
+      reason: string;
+      updated_message?: string;
+    },
     options: any = {}
   ): Promise<any> {
     return apiClient.post(

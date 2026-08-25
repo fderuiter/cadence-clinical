@@ -3,7 +3,9 @@
     <!-- Panel Header & IRC Persona Selector -->
     <div class="panel-header">
       <div class="header-titles">
-        <h3 class="panel-title">Blinded Dual-Reader Charter &amp; Tie-Breaker Adjudication</h3>
+        <h3 class="panel-title">
+          Blinded Dual-Reader Charter &amp; Tie-Breaker Adjudication
+        </h3>
         <span class="badge badge-gxp">21 CFR Part 11 &bull; IRC Protocol</span>
       </div>
 
@@ -39,15 +41,26 @@
     <!-- ========================================================================= -->
     <!-- VIEW A: Blinded Primary Reader Recording Form (Reader 1 / Reader 2)        -->
     <!-- ========================================================================= -->
-    <div v-if="activePersona === 'READER_1' || activePersona === 'READER_2'" class="blinded-reader-view">
+    <div
+      v-if="activePersona === 'READER_1' || activePersona === 'READER_2'"
+      class="blinded-reader-view"
+    >
       <!-- Blinding Enclosure Notice -->
       <div class="blinding-alert-box">
         <div class="alert-icon">🔒</div>
         <div class="alert-content">
-          <div class="alert-title">Blinded Independent Review Protocol Active</div>
+          <div class="alert-title">
+            Blinded Independent Review Protocol Active
+          </div>
           <div class="alert-text">
-            Operating as <strong>{{ activePersona === 'READER_1' ? 'Reader 1 (Dr. Sarah Miller)' : 'Reader 2 (Dr. James Wilson)' }}</strong>.
-            Subject treatment arm, clinical trial site, and peer reader observations are completely blinded per Charter section 3.1.
+            Operating as
+            <strong>{{
+              activePersona === "READER_1"
+                ? "Reader 1 (Dr. Sarah Miller)"
+                : "Reader 2 (Dr. James Wilson)"
+            }}</strong
+            >. Subject treatment arm, clinical trial site, and peer reader
+            observations are completely blinded per Charter section 3.1.
           </div>
         </div>
       </div>
@@ -56,7 +69,14 @@
       <div class="reader-form-card">
         <div class="card-header-row">
           <span class="card-subtitle">Reader Assessment Entry</span>
-          <span class="status-pill" :class="currentReaderStatus === 'COMPLETED' ? 'status-submitted' : 'status-pending'">
+          <span
+            class="status-pill"
+            :class="
+              currentReaderStatus === 'COMPLETED'
+                ? 'status-submitted'
+                : 'status-pending'
+            "
+          >
             Status: {{ currentReaderStatus }}
           </span>
         </div>
@@ -64,11 +84,15 @@
         <div class="metrics-preview-row">
           <div class="metric-card">
             <span class="metric-card-label">Target Lesions Count</span>
-            <span class="metric-card-val">{{ currentReaderLesions.length }}</span>
+            <span class="metric-card-val">{{
+              currentReaderLesions.length
+            }}</span>
           </div>
           <div class="metric-card">
             <span class="metric-card-label">Sum of Diameters (SLD)</span>
-            <span class="metric-card-val font-mono">{{ currentReaderSLD }} mm</span>
+            <span class="metric-card-val font-mono"
+              >{{ currentReaderSLD }} mm</span
+            >
           </div>
           <div class="metric-card">
             <span class="metric-card-label">Peer Read Status</span>
@@ -90,14 +114,21 @@
             </thead>
             <tbody>
               <tr v-for="l in currentReaderLesions" :key="l.lesion_id">
-                <td class="font-bold">{{ l.lesion_id }}</td>
+                <td class="font-bold">
+                  {{ l.lesion_id }}
+                </td>
                 <td>{{ l.organ_site }}</td>
                 <td class="font-mono">{{ l.longest_diameter_mm }} mm</td>
-                <td class="font-mono">{{ l.short_axis_mm ? l.short_axis_mm + ' mm' : '-' }}</td>
+                <td class="font-mono">
+                  {{ l.short_axis_mm ? l.short_axis_mm + " mm" : "-" }}
+                </td>
                 <td><span class="badge badge-target">TARGET</span></td>
               </tr>
               <tr v-if="currentReaderLesions.length === 0">
-                <td colspan="5" class="empty-row">No lesions added. Use the MPR Caliper tools to place measurements.</td>
+                <td colspan="5" class="empty-row">
+                  No lesions added. Use the MPR Caliper tools to place
+                  measurements.
+                </td>
               </tr>
             </tbody>
           </table>
@@ -106,7 +137,9 @@
         <!-- Qualitative Non-Target & Response Classification -->
         <div class="qualitative-assessment-grid">
           <div class="form-group">
-            <label for="non-target-select" class="form-label">Non-Target Lesion Status:</label>
+            <label for="non-target-select" class="form-label"
+              >Non-Target Lesion Status:</label
+            >
             <select
               id="non-target-select"
               v-model="currentAssessment.non_target_status"
@@ -121,7 +154,9 @@
           </div>
 
           <div class="form-group">
-            <label for="new-lesions-toggle" class="form-label">New Malignant Lesions Present?</label>
+            <label for="new-lesions-toggle" class="form-label"
+              >New Malignant Lesions Present?</label
+            >
             <div class="toggle-group">
               <button
                 type="button"
@@ -145,7 +180,9 @@
           </div>
 
           <div class="form-group full-width">
-            <label for="overall-response-select" class="form-label">Overall Categorical Response:</label>
+            <label for="overall-response-select" class="form-label"
+              >Overall Categorical Response:</label
+            >
             <select
               id="overall-response-select"
               v-model="currentAssessment.overall_response"
@@ -161,7 +198,9 @@
           </div>
 
           <div class="form-group full-width">
-            <label for="reader-notes-input" class="form-label">Radiologist Interpretation Notes:</label>
+            <label for="reader-notes-input" class="form-label"
+              >Radiologist Interpretation Notes:</label
+            >
             <textarea
               id="reader-notes-input"
               v-model="currentAssessment.assessment_notes"
@@ -169,7 +208,7 @@
               rows="2"
               placeholder="Enter blinded qualitative findings and slice references..."
               :disabled="currentReaderStatus === 'COMPLETED'"
-            ></textarea>
+            />
           </div>
         </div>
 
@@ -181,7 +220,9 @@
             class="btn-submit-read"
             @click="submitReaderRead"
           >
-            <span class="btn-icon">📤</span> Submit Blinded {{ activePersona === 'READER_1' ? 'Reader 1' : 'Reader 2' }} Assessment
+            <span class="btn-icon">📤</span> Submit Blinded
+            {{ activePersona === "READER_1" ? "Reader 1" : "Reader 2" }}
+            Assessment
           </button>
           <button
             v-else
@@ -202,16 +243,35 @@
       <!-- Discordance Evaluation Banner -->
       <div
         class="discordance-banner"
-        :class="isDiscordant ? 'banner-discordant' : (workflowStatus === 'ADJUDICATED' ? 'banner-adjudicated' : 'banner-concordant')"
+        :class="
+          isDiscordant
+            ? 'banner-discordant'
+            : workflowStatus === 'ADJUDICATED'
+              ? 'banner-adjudicated'
+              : 'banner-concordant'
+        "
       >
-        <div class="banner-icon">{{ isDiscordant ? '⚠️' : (workflowStatus === 'ADJUDICATED' ? '✅' : '🤝') }}</div>
+        <div class="banner-icon">
+          {{
+            isDiscordant ? "⚠️" : workflowStatus === "ADJUDICATED" ? "✅" : "🤝"
+          }}
+        </div>
         <div class="banner-info">
           <div class="banner-headline">
-            {{ isDiscordant ? 'Dual-Reader Discordance Detected — Tie-Breaker Required' : (workflowStatus === 'ADJUDICATED' ? 'Case Adjudicated & Sealed with 21 CFR Part 11 Signature' : 'Dual-Reader Concordance Achieved') }}
+            {{
+              isDiscordant
+                ? "Dual-Reader Discordance Detected — Tie-Breaker Required"
+                : workflowStatus === "ADJUDICATED"
+                  ? "Case Adjudicated & Sealed with 21 CFR Part 11 Signature"
+                  : "Dual-Reader Concordance Achieved"
+            }}
           </div>
           <div class="banner-subtext">
-            SLD Difference Delta: <strong>{{ (sldDelta * 100).toFixed(1) }}%</strong>
-            <span v-if="sldDelta > 0.20" class="threshold-tag">(Exceeds 20.0% Threshold)</span>
+            SLD Difference Delta:
+            <strong>{{ (sldDelta * 100).toFixed(1) }}%</strong>
+            <span v-if="sldDelta > 0.2" class="threshold-tag"
+              >(Exceeds 20.0% Threshold)</span
+            >
             &bull; Workflow Status: <strong>{{ workflowStatus }}</strong>
           </div>
         </div>
@@ -220,17 +280,28 @@
       <!-- Side-by-Side Dual-Reader Comparison Matrix -->
       <div class="side-by-side-grid">
         <!-- Reader 1 Assessment Card -->
-        <div class="reader-compare-card" :class="{ 'card-highlight': selectedBindingReader === 'READER_1' }">
+        <div
+          class="reader-compare-card"
+          :class="{ 'card-highlight': selectedBindingReader === 'READER_1' }"
+        >
           <div class="compare-header">
             <span class="reader-label">Reader 1: Dr. Sarah Miller</span>
-            <span class="response-badge" :class="'resp-' + (reader1Assessment.overall_response || 'pr').toLowerCase()">
+            <span
+              class="response-badge"
+              :class="
+                'resp-' +
+                (reader1Assessment.overall_response || 'pr').toLowerCase()
+              "
+            >
               {{ reader1Assessment.overall_response }}
             </span>
           </div>
           <div class="compare-body">
             <div class="compare-metric">
               <span class="lbl">Sum of Diameters (SLD):</span>
-              <span class="val font-mono">{{ reader1Assessment.sum_longest_diameters_mm }} mm</span>
+              <span class="val font-mono"
+                >{{ reader1Assessment.sum_longest_diameters_mm }} mm</span
+              >
             </div>
             <div class="compare-metric">
               <span class="lbl">Non-Target Status:</span>
@@ -238,27 +309,44 @@
             </div>
             <div class="compare-metric">
               <span class="lbl">New Lesions:</span>
-              <span class="val">{{ reader1Assessment.new_lesions_present ? 'Yes (' + reader1Assessment.new_lesions_count + ')' : 'None' }}</span>
+              <span class="val">{{
+                reader1Assessment.new_lesions_present
+                  ? "Yes (" + reader1Assessment.new_lesions_count + ")"
+                  : "None"
+              }}</span>
             </div>
             <div class="compare-notes">
               <span class="lbl">Notes:</span>
-              <p class="notes-txt">{{ reader1Assessment.assessment_notes || 'No notes provided.' }}</p>
+              <p class="notes-txt">
+                {{ reader1Assessment.assessment_notes || "No notes provided." }}
+              </p>
             </div>
           </div>
         </div>
 
         <!-- Reader 2 Assessment Card -->
-        <div class="reader-compare-card" :class="{ 'card-highlight': selectedBindingReader === 'READER_2' }">
+        <div
+          class="reader-compare-card"
+          :class="{ 'card-highlight': selectedBindingReader === 'READER_2' }"
+        >
           <div class="compare-header">
             <span class="reader-label">Reader 2: Dr. James Wilson</span>
-            <span class="response-badge" :class="'resp-' + (reader2Assessment.overall_response || 'pd').toLowerCase()">
+            <span
+              class="response-badge"
+              :class="
+                'resp-' +
+                (reader2Assessment.overall_response || 'pd').toLowerCase()
+              "
+            >
               {{ reader2Assessment.overall_response }}
             </span>
           </div>
           <div class="compare-body">
             <div class="compare-metric">
               <span class="lbl">Sum of Diameters (SLD):</span>
-              <span class="val font-mono">{{ reader2Assessment.sum_longest_diameters_mm }} mm</span>
+              <span class="val font-mono"
+                >{{ reader2Assessment.sum_longest_diameters_mm }} mm</span
+              >
             </div>
             <div class="compare-metric">
               <span class="lbl">Non-Target Status:</span>
@@ -266,13 +354,24 @@
             </div>
             <div class="compare-metric">
               <span class="lbl">New Lesions:</span>
-              <span class="val" :class="{ 'text-danger': reader2Assessment.new_lesions_present }">
-                {{ reader2Assessment.new_lesions_present ? 'Yes (' + reader2Assessment.new_lesions_count + ')' : 'None' }}
+              <span
+                class="val"
+                :class="{
+                  'text-danger': reader2Assessment.new_lesions_present,
+                }"
+              >
+                {{
+                  reader2Assessment.new_lesions_present
+                    ? "Yes (" + reader2Assessment.new_lesions_count + ")"
+                    : "None"
+                }}
               </span>
             </div>
             <div class="compare-notes">
               <span class="lbl">Notes:</span>
-              <p class="notes-txt">{{ reader2Assessment.assessment_notes || 'No notes provided.' }}</p>
+              <p class="notes-txt">
+                {{ reader2Assessment.assessment_notes || "No notes provided." }}
+              </p>
             </div>
           </div>
         </div>
@@ -282,21 +381,31 @@
       <div class="chair-decision-card">
         <div class="card-header-row">
           <span class="card-subtitle">Committee Chair Determination</span>
-          <span v-if="workflowStatus === 'ADJUDICATED'" class="badge badge-gxp">Locked &amp; Signed</span>
+          <span v-if="workflowStatus === 'ADJUDICATED'" class="badge badge-gxp"
+            >Locked &amp; Signed</span
+          >
         </div>
 
         <div class="form-row">
           <div class="form-group full-width">
-            <label for="binding-reader-select" class="form-label">Binding Final Assessment Source:</label>
+            <label for="binding-reader-select" class="form-label"
+              >Binding Final Assessment Source:</label
+            >
             <select
               id="binding-reader-select"
               v-model="selectedBindingReader"
               class="form-select font-bold"
               :disabled="workflowStatus === 'ADJUDICATED'"
             >
-              <option value="READER_1">Bind Reader 1 Determination (Partial Response - PR, 24.0mm)</option>
-              <option value="READER_2">Bind Reader 2 Determination (Progressive Disease - PD, 42.0mm)</option>
-              <option value="ADJUDICATOR">Adjudication Chair Independent Determination (PR, 22.0mm)</option>
+              <option value="READER_1">
+                Bind Reader 1 Determination (Partial Response - PR, 24.0mm)
+              </option>
+              <option value="READER_2">
+                Bind Reader 2 Determination (Progressive Disease - PD, 42.0mm)
+              </option>
+              <option value="ADJUDICATOR">
+                Adjudication Chair Independent Determination (PR, 22.0mm)
+              </option>
             </select>
           </div>
         </div>
@@ -313,7 +422,7 @@
               rows="3"
               placeholder="Detail medical justification for resolving discordance between readers..."
               :disabled="workflowStatus === 'ADJUDICATED'"
-            ></textarea>
+            />
           </div>
         </div>
 
@@ -326,7 +435,8 @@
             :disabled="!adjudicationRationale.trim()"
             @click="isSignoffModalOpen = true"
           >
-            <span class="btn-icon">✍️</span> Execute 21 CFR Part 11 Adjudication Sign-Off
+            <span class="btn-icon">✍️</span> Execute 21 CFR Part 11 Adjudication
+            Sign-Off
           </button>
 
           <div v-else class="post-adjudication-actions">
@@ -352,19 +462,36 @@
     <!-- ========================================================================= -->
     <!-- MODAL 1: 21 CFR Part 11 Step-Up Electronic Signature Dialog                -->
     <!-- ========================================================================= -->
-    <div v-if="isSignoffModalOpen" class="modal-overlay" role="dialog" aria-modal="true">
+    <div
+      v-if="isSignoffModalOpen"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+    >
       <div class="modal-card">
         <div class="modal-header">
-          <h4 class="modal-title">21 CFR Part 11 Adjudication Chair Sign-off</h4>
-          <button type="button" class="btn-close" @click="isSignoffModalOpen = false">✕</button>
+          <h4 class="modal-title">
+            21 CFR Part 11 Adjudication Chair Sign-off
+          </h4>
+          <button
+            type="button"
+            class="btn-close"
+            @click="isSignoffModalOpen = false"
+          >
+            ✕
+          </button>
         </div>
         <div class="modal-body">
           <div class="modal-warning-box">
-            <strong>Legal Manifestation:</strong> Executing this signature legally binds the final oncologic response determination and commits the tumor assessment to the study trial master record.
+            <strong>Legal Manifestation:</strong> Executing this signature
+            legally binds the final oncologic response determination and commits
+            the tumor assessment to the study trial master record.
           </div>
 
           <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label class="form-label">Signer Identity:</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
               type="text"
               class="form-input"
@@ -374,7 +501,9 @@
           </div>
 
           <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label class="form-label">Signing Reason:</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
               type="text"
               class="form-input"
@@ -384,7 +513,9 @@
           </div>
 
           <div class="form-group">
-            <label for="chair-password-input" class="form-label">Re-authentication Password / PIN:</label>
+            <label for="chair-password-input" class="form-label"
+              >Re-authentication Password / PIN:</label
+            >
             <input
               id="chair-password-input"
               v-model="chairPassword"
@@ -395,7 +526,13 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn-secondary" @click="isSignoffModalOpen = false">Cancel</button>
+          <button
+            type="button"
+            class="btn-secondary"
+            @click="isSignoffModalOpen = false"
+          >
+            Cancel
+          </button>
           <button
             type="button"
             class="btn-confirm-sign"
@@ -411,19 +548,40 @@
     <!-- ========================================================================= -->
     <!-- MODAL 2: Direct EDC eCRF Binding Preview Modal                             -->
     <!-- ========================================================================= -->
-    <div v-if="isEdcModalOpen" class="modal-overlay" role="dialog" aria-modal="true">
+    <div
+      v-if="isEdcModalOpen"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+    >
       <div class="modal-card modal-large">
         <div class="modal-header">
-          <h4 class="modal-title">Direct EDC eCRF Binding (Form: eCRF_TUMOR_ASSESSMENT)</h4>
-          <button type="button" class="btn-close" @click="isEdcModalOpen = false">✕</button>
+          <h4 class="modal-title">
+            Direct EDC eCRF Binding (Form: eCRF_TUMOR_ASSESSMENT)
+          </h4>
+          <button
+            type="button"
+            class="btn-close"
+            @click="isEdcModalOpen = false"
+          >
+            ✕
+          </button>
         </div>
         <div class="modal-body">
           <div class="json-preview-container">
-            <pre class="json-code"><code>{{ JSON.stringify(edcBindingData, null, 2) }}</code></pre>
+            <pre
+              class="json-code"
+            ><code>{{ JSON.stringify(edcBindingData, null, 2) }}</code></pre>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn-secondary" @click="isEdcModalOpen = false">Close</button>
+          <button
+            type="button"
+            class="btn-secondary"
+            @click="isEdcModalOpen = false"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
@@ -431,19 +589,38 @@
     <!-- ========================================================================= -->
     <!-- MODAL 3: CDISC SDTM TU/TR/RS Export Modal                                 -->
     <!-- ========================================================================= -->
-    <div v-if="isSdtmModalOpen" class="modal-overlay" role="dialog" aria-modal="true">
+    <div
+      v-if="isSdtmModalOpen"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+    >
       <div class="modal-card modal-large">
         <div class="modal-header">
           <h4 class="modal-title">CDISC SDTM Dataset Package (TU, TR, RS)</h4>
-          <button type="button" class="btn-close" @click="isSdtmModalOpen = false">✕</button>
+          <button
+            type="button"
+            class="btn-close"
+            @click="isSdtmModalOpen = false"
+          >
+            ✕
+          </button>
         </div>
         <div class="modal-body">
           <div class="json-preview-container">
-            <pre class="json-code"><code>{{ JSON.stringify(sdtmExportData, null, 2) }}</code></pre>
+            <pre
+              class="json-code"
+            ><code>{{ JSON.stringify(sdtmExportData, null, 2) }}</code></pre>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn-secondary" @click="isSdtmModalOpen = false">Close</button>
+          <button
+            type="button"
+            class="btn-secondary"
+            @click="isSdtmModalOpen = false"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
@@ -510,7 +687,8 @@ const reader2Assessment = ref({
   new_lesions_present: true,
   new_lesions_count: 1,
   overall_response: "PD",
-  assessment_notes: "Observed new subcapsular nodule in right hepatic lobe. Primary lesion increased in diameter.",
+  assessment_notes:
+    "Observed new subcapsular nodule in right hepatic lobe. Primary lesion increased in diameter.",
 });
 
 // Chair Adjudication State
@@ -528,7 +706,9 @@ const chairPassword = ref("");
 
 // Computed properties
 const currentReaderStatus = computed(() => {
-  return activePersona.value === "READER_1" ? reader1Status.value : reader2Status.value;
+  return activePersona.value === "READER_1"
+    ? reader1Status.value
+    : reader2Status.value;
 });
 
 const currentReaderLesions = computed(() => {
@@ -558,11 +738,19 @@ const sldDelta = computed(() => {
 });
 
 const isDiscordant = computed(() => {
-  if (reader1Status.value !== "COMPLETED" || reader2Status.value !== "COMPLETED") return false;
+  if (
+    reader1Status.value !== "COMPLETED" ||
+    reader2Status.value !== "COMPLETED"
+  )
+    return false;
   if (workflowStatus.value === "ADJUDICATED") return false;
-  const responseMismatch = reader1Assessment.value.overall_response !== reader2Assessment.value.overall_response;
-  const sldExceeds = sldDelta.value > 0.20;
-  const newLesionMismatch = reader1Assessment.value.new_lesions_present !== reader2Assessment.value.new_lesions_present;
+  const responseMismatch =
+    reader1Assessment.value.overall_response !==
+    reader2Assessment.value.overall_response;
+  const sldExceeds = sldDelta.value > 0.2;
+  const newLesionMismatch =
+    reader1Assessment.value.new_lesions_present !==
+    reader2Assessment.value.new_lesions_present;
   return responseMismatch || sldExceeds || newLesionMismatch;
 });
 
@@ -595,7 +783,8 @@ const edcBindingData = computed(() => ({
   overall_response: "PR",
   adjudication_status: workflowStatus.value,
   binding_source: selectedBindingReader.value,
-  manifest_sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  manifest_sha256:
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   signed_by: "chair_dr_smith",
   signed_at: "2026-08-24T14:45:00Z",
 }));

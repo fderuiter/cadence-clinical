@@ -1,8 +1,5 @@
 <template>
-  <div
-    id="section-rules"
-    class="dashboard-section active"
-  >
+  <div id="section-rules" class="dashboard-section active">
     <div class="section-header">
       <h2>Interactive Rules Designer</h2>
       <p>
@@ -26,10 +23,7 @@
         class="rules-gating-content"
         style="display: flex; gap: 16px; align-items: flex-start"
       >
-        <span
-          class="rules-gating-icon"
-          style="font-size: 2rem"
-        >🚫</span>
+        <span class="rules-gating-icon" style="font-size: 2rem">🚫</span>
         <div>
           <h3 class="rules-gating-title">
             21 CFR Part 11 Role Gating - Access Denied
@@ -83,10 +77,7 @@
       </div>
 
       <!-- Tab 1: Rules Designer -->
-      <div
-        v-if="activeTab === 'rules'"
-        class="grid-2-responsive"
-      >
+      <div v-if="activeTab === 'rules'" class="grid-2-responsive">
         <!-- Active Ruleset List -->
         <div
           class="card"
@@ -105,7 +96,8 @@
             <span
               v-if="loadingRules"
               style="font-size: 0.85rem; color: #64748b; font-weight: normal"
-            >Loading...</span>
+              >Loading...</span
+            >
           </div>
 
           <!-- Connection Error Banner if any -->
@@ -159,7 +151,8 @@
                       font-size: 0.95rem;
                       font-family: monospace;
                     "
-                  >{{ rule.id }}</strong>
+                    >{{ rule.id }}</strong
+                  >
                   <div style="display: flex; gap: 6px">
                     <button
                       class="btn"
@@ -210,7 +203,8 @@
                         font-size: 0.7rem;
                         padding: 2px 6px;
                       "
-                    >{{ rule.type }}</span>
+                      >{{ rule.type }}</span
+                    >
                   </div>
                   <div v-if="rule.type === 'skip_logic'">
                     <strong>Action:</strong> {{ rule.action }} field
@@ -218,13 +212,17 @@
                   </div>
                   <div v-else-if="rule.type === 'constraint'">
                     <strong>Target Field:</strong>
-                    <code>{{ rule.target_field }}</code> <br>
+                    <code>{{ rule.target_field }}</code> <br />
                     <strong>Discrepancy Message:</strong>
-                    <span style="font-style: italic; color: var(--primary)">"{{ rule.query_message }}"</span>
+                    <span style="font-style: italic; color: var(--primary)"
+                      >"{{ rule.query_message }}"</span
+                    >
                   </div>
                   <div v-else-if="rule.type === 'cross_form_check'">
                     <strong>Discrepancy Message:</strong>
-                    <span style="font-style: italic; color: var(--primary)">"{{ rule.query_message }}"</span>
+                    <span style="font-style: italic; color: var(--primary)"
+                      >"{{ rule.query_message }}"</span
+                    >
                   </div>
                 </div>
                 <div
@@ -269,10 +267,7 @@
           class="card"
           style="display: flex; flex-direction: column"
         >
-          <div
-            class="card-title"
-            style="margin-bottom: 16px"
-          >
+          <div class="card-title" style="margin-bottom: 16px">
             {{ editingRuleId ? "Edit Clinical Rule" : "Compose Clinical Rule" }}
           </div>
 
@@ -287,6 +282,8 @@
             "
           >
             <!-- Reusable Rule Editor Widget -->
+            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <div
               class="rule-editor-wrapper"
               @click="handleEditorClick"
@@ -356,10 +353,7 @@
                     margin-bottom: 8px;
                   "
                 >
-                  <div
-                    v-for="(f, i) in previewFailures"
-                    :key="i"
-                  >
+                  <div v-for="(f, i) in previewFailures" :key="i">
                     ⚠️ {{ f }}
                   </div>
                 </div>
@@ -378,10 +372,7 @@
                   v-if="previewCircularCycles.length > 0"
                   style="color: var(--error); font-weight: 600"
                 >
-                  <div
-                    v-for="(c, i) in previewCircularCycles"
-                    :key="i"
-                  >
+                  <div v-for="(c, i) in previewCircularCycles" :key="i">
                     🚨 {{ c }}
                   </div>
                 </div>
@@ -419,10 +410,7 @@
       </div>
 
       <!-- Tab 2: Query Life-Cycle Dashboard & History Viewer (Sub-Issue 11) -->
-      <div
-        v-else-if="activeTab === 'queries'"
-        class="card"
-      >
+      <div v-else-if="activeTab === 'queries'" class="card">
         <div
           class="card-title"
           style="
@@ -488,7 +476,7 @@
                 border-radius: 4px;
                 font-size: 0.85rem;
               "
-            >
+            />
             <button
               class="btn btn-primary"
               style="font-size: 0.85rem"
@@ -497,10 +485,7 @@
               Search Dictionary
             </button>
           </div>
-          <div
-            v-if="dictSearching"
-            style="font-size: 0.8rem; color: #64748b"
-          >
+          <div v-if="dictSearching" style="font-size: 0.8rem; color: #64748b">
             Querying dictionaries...
           </div>
           <div
@@ -543,7 +528,9 @@
           <div style="display: flex; gap: 6px; flex-wrap: wrap">
             <button
               class="btn btn-sm"
-              :class="queryFilterStatus === 'ALL' ? 'btn-primary' : 'btn-secondary'"
+              :class="
+                queryFilterStatus === 'ALL' ? 'btn-primary' : 'btn-secondary'
+              "
               style="font-size: 0.75rem; padding: 4px 10px"
               @click="queryFilterStatus = 'ALL'"
             >
@@ -551,7 +538,11 @@
             </button>
             <button
               class="btn btn-sm"
-              :class="queryFilterStatus === 'CANDIDATE' ? 'btn-primary' : 'btn-secondary'"
+              :class="
+                queryFilterStatus === 'CANDIDATE'
+                  ? 'btn-primary'
+                  : 'btn-secondary'
+              "
               style="font-size: 0.75rem; padding: 4px 10px"
               @click="queryFilterStatus = 'CANDIDATE'"
             >
@@ -559,7 +550,9 @@
             </button>
             <button
               class="btn btn-sm"
-              :class="queryFilterStatus === 'OPEN' ? 'btn-primary' : 'btn-secondary'"
+              :class="
+                queryFilterStatus === 'OPEN' ? 'btn-primary' : 'btn-secondary'
+              "
               style="font-size: 0.75rem; padding: 4px 10px"
               @click="queryFilterStatus = 'OPEN'"
             >
@@ -567,7 +560,11 @@
             </button>
             <button
               class="btn btn-sm"
-              :class="queryFilterStatus === 'ANSWERED' ? 'btn-primary' : 'btn-secondary'"
+              :class="
+                queryFilterStatus === 'ANSWERED'
+                  ? 'btn-primary'
+                  : 'btn-secondary'
+              "
               style="font-size: 0.75rem; padding: 4px 10px"
               @click="queryFilterStatus = 'ANSWERED'"
             >
@@ -575,7 +572,9 @@
             </button>
             <button
               class="btn btn-sm"
-              :class="queryFilterStatus === 'CLOSED' ? 'btn-primary' : 'btn-secondary'"
+              :class="
+                queryFilterStatus === 'CLOSED' ? 'btn-primary' : 'btn-secondary'
+              "
               style="font-size: 0.75rem; padding: 4px 10px"
               @click="queryFilterStatus = 'CLOSED'"
             >
@@ -585,7 +584,12 @@
 
           <button
             class="btn btn-sm btn-primary"
-            style="font-size: 0.8rem; display: flex; align-items: center; gap: 6px"
+            style="
+              font-size: 0.8rem;
+              display: flex;
+              align-items: center;
+              gap: 6px;
+            "
             :disabled="scanningAnomalies"
             @click="triggerAnomalyScan"
           >
@@ -595,47 +599,41 @@
         </div>
 
         <!-- Queries Table -->
-        <table
-          class="clinical-visit-matrix"
-          style="width: 100%"
-        >
+        <table class="clinical-visit-matrix" style="width: 100%">
           <thead>
             <tr>
-              <th scope="col">
-                ID
-              </th>
-              <th scope="col">
-                Subject / Visit
-              </th>
-              <th scope="col">
-                Field
-              </th>
-              <th scope="col">
-                Discrepancy Message / Responses
-              </th>
-              <th scope="col">
-                Status
-              </th>
-              <th scope="col">
-                Actions
-              </th>
+              <th scope="col">ID</th>
+              <th scope="col">Subject / Visit</th>
+              <th scope="col">Field</th>
+              <th scope="col">Discrepancy Message / Responses</th>
+              <th scope="col">Status</th>
+              <th scope="col">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="q in filteredQueries"
-              :key="q.id"
-            >
+            <tr v-for="q in filteredQueries" :key="q.id">
               <td>
                 <strong style="font-family: monospace">{{ q.id }}</strong>
                 <div
-                  v-if="q.origin === 'ANOMALY_DETECTOR' || q.origin === 'AI_ASSISTED' || q.query_type === 'CROSS_DOMAIN_ANOMALY'"
-                  style="font-size: 0.65rem; color: #8b5cf6; font-weight: bold; margin-top: 2px"
+                  v-if="
+                    q.origin === 'ANOMALY_DETECTOR' ||
+                    q.origin === 'AI_ASSISTED' ||
+                    q.query_type === 'CROSS_DOMAIN_ANOMALY'
+                  "
+                  style="
+                    font-size: 0.65rem;
+                    color: #8b5cf6;
+                    font-weight: bold;
+                    margin-top: 2px;
+                  "
                 >
                   ⚡ CROSS-DOMAIN
                 </div>
               </td>
-              <td>{{ q.subjectId || q.subject_id }} / {{ q.visitId || q.visit_id || 'N/A' }}</td>
+              <td>
+                {{ q.subjectId || q.subject_id }} /
+                {{ q.visitId || q.visit_id || "N/A" }}
+              </td>
               <td>
                 <code>{{ q.fieldId || q.test_code }}</code>
               </td>
@@ -647,26 +645,17 @@
                 >
                   <em>Details:</em> {{ q.explanation }}
                 </div>
-                <div
-                  v-if="q.response"
-                  style="color: #0369a1; margin-top: 4px"
-                >
+                <div v-if="q.response" style="color: #0369a1; margin-top: 4px">
                   <strong>Response:</strong> "{{ q.response }}" (Responded by:
                   {{ q.respondedBy }} on {{ q.respondedAt }})
                 </div>
-                <div
-                  v-if="q.closedBy"
-                  style="color: #15803d; margin-top: 4px"
-                >
+                <div v-if="q.closedBy" style="color: #15803d; margin-top: 4px">
                   <strong>Closed:</strong> by {{ q.closedBy }} on
                   {{ q.closedAt }}
                 </div>
               </td>
               <td>
-                <span
-                  class="badge"
-                  :class="getBadgeClass(q.status)"
-                >{{
+                <span class="badge" :class="getBadgeClass(q.status)">{{
                   q.status
                 }}</span>
               </td>
@@ -684,7 +673,12 @@
                   </button>
                   <button
                     class="btn btn-sm"
-                    style="padding: 4px 8px; font-size: 0.75rem; background-color: var(--error-bg); color: var(--error)"
+                    style="
+                      padding: 4px 8px;
+                      font-size: 0.75rem;
+                      background-color: var(--error-bg);
+                      color: var(--error);
+                    "
                     @click="promptAdjudicateCandidate(q, 'REJECT')"
                   >
                     Dismiss
@@ -721,9 +715,7 @@
                     Add Response
                   </button>
                 </div>
-                <div v-else>
-                  -
-                </div>
+                <div v-else>-</div>
               </td>
             </tr>
           </tbody>
@@ -788,8 +780,10 @@ const dashboardQueries = ref([
     status: "CANDIDATE",
     origin: "ANOMALY_DETECTOR",
     query_type: "CROSS_DOMAIN_ANOMALY",
-    message: "Severe Adverse Event 'Hepatotoxicity' recorded without concomitant medication.",
-    explanation: "Subject has severe AE without corresponding CM domain record to manage condition.",
+    message:
+      "Severe Adverse Event 'Hepatotoxicity' recorded without concomitant medication.",
+    explanation:
+      "Subject has severe AE without corresponding CM domain record to manage condition.",
     createdBy: "ANOMALY_DETECTOR_WORKER",
     createdAt: new Date().toISOString().slice(0, 10),
   },
@@ -845,7 +839,9 @@ const countClosedQueries = computed(() => {
 
 const filteredQueries = computed(() => {
   if (queryFilterStatus.value === "ALL") return dashboardQueries.value;
-  return dashboardQueries.value.filter((q) => q.status === queryFilterStatus.value);
+  return dashboardQueries.value.filter(
+    (q) => q.status === queryFilterStatus.value
+  );
 });
 
 function getBadgeClass(status) {
@@ -883,12 +879,19 @@ async function triggerAnomalyScan() {
     });
 
     if (res && res.anomalies && res.anomalies.length > 0) {
-      alert(`Anomaly scan complete: ${res.anomalies.length} cross-domain discrepancies evaluated (${res.queries_staged_count} staged).`);
+      alert(
+        `Anomaly scan complete: ${res.anomalies.length} cross-domain discrepancies evaluated (${res.queries_staged_count} staged).`
+      );
     } else {
-      alert("Cross-domain anomaly scan complete: No active discrepancies detected.");
+      alert(
+        "Cross-domain anomaly scan complete: No active discrepancies detected."
+      );
     }
   } catch (err) {
-    console.warn("Anomaly scan API call failed, providing local notification:", err);
+    console.warn(
+      "Anomaly scan API call failed, providing local notification:",
+      err
+    );
     alert("Cross-domain anomaly scan completed (local offline fallback).");
   } finally {
     scanningAnomalies.value = false;
@@ -1382,7 +1385,10 @@ async function confirmChangeReason(reasonText) {
         reason: reasonText,
       });
     } catch (err) {
-      console.warn("Candidate adjudication API call failed, applying local fallback:", err);
+      console.warn(
+        "Candidate adjudication API call failed, applying local fallback:",
+        err
+      );
     }
 
     if (adjAction === "APPROVE") {
@@ -1403,7 +1409,9 @@ async function confirmChangeReason(reasonText) {
 
     pendingCandidateAdjudication.value = null;
     showReasonModal.value = false;
-    alert(`Candidate query successfully ${adjAction === "APPROVE" ? "approved into OPEN status" : "dismissed as CANCELLED"}!`);
+    alert(
+      `Candidate query successfully ${adjAction === "APPROVE" ? "approved into OPEN status" : "dismissed as CANCELLED"}!`
+    );
     return;
   }
 

@@ -8,13 +8,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useRoute } from 'vue-router';
-import AggregateSafetyConsole from '../components/clinical/AggregateSafetyConsole.vue';
+import { computed } from "vue";
+import { useRoute } from "vue-router";
+import AggregateSafetyConsole from "../components/clinical/AggregateSafetyConsole.vue";
 
 const route = useRoute();
-const studyId = computed(() => (route.query.study_id as string) || 'STUDY-CAD-301');
-const compoundName = computed(() => (route.query.compound as string) || 'CADENCE-101');
+const studyId = computed(
+  () => (route.query.study_id as string) || "STUDY-CAD-301"
+);
+const compoundName = computed(
+  () => (route.query.compound as string) || "CADENCE-101"
+);
 </script>
 
 <style scoped>

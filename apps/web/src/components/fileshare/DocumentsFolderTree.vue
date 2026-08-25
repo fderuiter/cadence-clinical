@@ -4,9 +4,7 @@
     <div class="tree-header">
       <div class="tree-title-row">
         <span class="tree-title-icon">🗂️</span>
-        <h3 class="tree-title">
-          Clinical Document Tree
-        </h3>
+        <h3 class="tree-title">Clinical Document Tree</h3>
       </div>
       <div class="tree-search-bar">
         <input
@@ -15,7 +13,7 @@
           placeholder="Filter studies, sites, zones..."
           class="search-input"
           aria-label="Filter document folder hierarchy"
-        >
+        />
       </div>
       <div class="tree-quick-filters">
         <select
@@ -24,9 +22,7 @@
           aria-label="Filter study scope"
           @change="onStudySelectChange"
         >
-          <option value="">
-            All Studies
-          </option>
+          <option value="">All Studies</option>
           <option
             v-for="study in studiesTree"
             :key="study.id"
@@ -61,10 +57,7 @@
         </div>
       </div>
 
-      <div
-        v-if="filteredStudies.length === 0"
-        class="empty-tree-message"
-      >
+      <div v-if="filteredStudies.length === 0" class="empty-tree-message">
         No matching studies or folders found.
       </div>
 
@@ -87,13 +80,12 @@
           tabindex="0"
           @click="clickStudy(study)"
         >
-          <span class="toggle-icon">{{ isExpanded(study.id) ? "▼" : "▶" }}</span>
+          <span class="toggle-icon">{{
+            isExpanded(study.id) ? "▼" : "▶"
+          }}</span>
           <span class="folder-icon">🏥</span>
           <span class="study-code">[{{ study.code }}]</span>
-          <span
-            class="node-name"
-            :title="study.title"
-          >{{ study.id }}</span>
+          <span class="node-name" :title="study.title">{{ study.id }}</span>
         </div>
 
         <!-- Sites Loop -->
@@ -204,7 +196,9 @@
                         class="tree-node folder-node"
                         role="treeitem"
                         :aria-selected="selectedNodeKey === folder.id"
-                        :class="{ 'is-selected': selectedNodeKey === folder.id }"
+                        :class="{
+                          'is-selected': selectedNodeKey === folder.id,
+                        }"
                         tabindex="0"
                         @click="clickFolder(folder)"
                       >
@@ -289,12 +283,18 @@ const filteredStudies = computed(() => {
     .filter((study) => {
       if (studyFilter && study.id !== studyFilter) return false;
       if (!q) return true;
-      const matchStudy = study.id.toLowerCase().includes(q) || study.title.toLowerCase().includes(q) || study.code.toLowerCase().includes(q);
+      const matchStudy =
+        study.id.toLowerCase().includes(q) ||
+        study.title.toLowerCase().includes(q) ||
+        study.code.toLowerCase().includes(q);
       if (matchStudy) return true;
 
       // check if any child site or zone matches
       return study.sites.some((site) => {
-        return site.name.toLowerCase().includes(q) || site.id.toLowerCase().includes(q);
+        return (
+          site.name.toLowerCase().includes(q) ||
+          site.id.toLowerCase().includes(q)
+        );
       });
     })
     .map((study) => {
@@ -386,7 +386,9 @@ function onStudySelectChange() {
   if (!selectedStudyScope.value) {
     selectGlobalRoot();
   } else {
-    const found = props.studiesTree.find((s) => s.id === selectedStudyScope.value);
+    const found = props.studiesTree.find(
+      (s) => s.id === selectedStudyScope.value
+    );
     if (found) {
       clickStudy(found);
     }
