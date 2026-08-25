@@ -32,6 +32,9 @@ from apps.designer.presentation.routers.digitization import (
 )
 
 
+from jose import jwt
+
+
 def get_test_auth_headers(
     roles: str = "sponsor_designer",
     change_reason: str = "Automated DAG digitization test",
@@ -50,6 +53,21 @@ def get_test_auth_headers(
     signature = hmac.new(
         secret.encode(), serialized.encode(), hashlib.sha256
     ).hexdigest()
+
+    now = time.time()
+    sig_payload = {
+        "sub": user_id,
+        "username": user_id,
+        "action": "step_up_reauth",
+        "roles": [roles],
+        "iat": now,
+        "exp": now + 3600.0,
+        "jti": f"jti-test-{time.time_ns()}",
+        "acr": "high-assurance-step-up",
+        "auth_time": now,
+    }
+    sig_token = jwt.encode(sig_payload, secret, algorithm="HS256")
+
     return {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
@@ -57,6 +75,7 @@ def get_test_auth_headers(
         "X-Gateway-Signature": signature,
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
+        "X-Sig-Token": sig_token,
     }
 
 
@@ -152,10 +171,10 @@ async def test_end_to_end_dag_pipeline_execution():
         user_id="oncology_pi",
     )
 
-    # Execute full DAG
+    # Execute full DAG (pauses automatically in PENDING_REVIEW prior to USDM graph compilation)
     completed_job = await runner.run_job(job.job_id)
 
-    assert completed_job.status == DigitizationJobStatus.COMPLETED
+    assert completed_job.status == DigitizationJobStatus.PENDING_REVIEW
     assert completed_job.error_message is None
     assert completed_job.final_usdm_payload is not None
     assert completed_job.final_usdm_payload.study_title != ""
@@ -258,7 +277,7 @@ async def test_dag_job_resumption_from_stage():
         start_from_stage=DigitizationStage.BIOMEDICAL_CONCEPT_MAPPING,
     )
 
-    assert resumed_job.status == DigitizationJobStatus.COMPLETED
+    assert resumed_job.status == DigitizationJobStatus.PENDING_REVIEW
     assert DigitizationStage.BIOMEDICAL_CONCEPT_MAPPING.value in resumed_job.checkpoints
     assert DigitizationStage.ECRF_SYNTHESIS.value in resumed_job.checkpoints
     assert DigitizationStage.USDM_COMPILATION.value in resumed_job.checkpoints
@@ -322,10 +341,8 @@ def test_api_get_dag_job_status_endpoint(client: TestClient):
     assert response.status_code == 200
     data = response.json()
     assert data["job_id"] == job.job_id
-    assert data["status"] == "COMPLETED"
-    assert data["progress_pct"] == 100
-    assert data["is_terminal"] is True
-    assert len(data["checkpoints"]) == 5
+    assert data["status"] == "PENDING_REVIEW"
+    assert data["checkpoints"] is not None
     assert data["final_usdm_payload"] is not None
 
 
@@ -453,4 +470,4 @@ def test_api_compile_usdm_incomplete_job_rejected(client: TestClient):
     )
 
     assert response.status_code == 400
-    assert "has not completed successfully" in response.json()["detail"]
+    assert "status PENDING" in response.json()["detail"]

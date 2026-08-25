@@ -40,6 +40,7 @@ class DigitizationJobStatus(StrEnum):
 
     PENDING = "PENDING"
     RUNNING = "RUNNING"
+    PENDING_REVIEW = "PENDING_REVIEW"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
     CANCELLED = "CANCELLED"
@@ -249,6 +250,18 @@ class DigitizationJob(BaseModel):
     synthesized_forms: list[SynthesizedECRFForm] = Field(
         default_factory=list, description="Synthesized CDASH eCRF forms"
     )
+    model_id: str | None = Field(
+        default="gpt-4o-clinical-v1", description="AI model identifier"
+    )
+    prompt_hash: str | None = Field(
+        default=None, description="SHA-256 hash of prompt context"
+    )
+    review_state: str = Field(
+        default="UNAPPROVED_DRAFT", description="Draft review state"
+    )
+    signature_manifest_id: str | None = Field(
+        default=None, description="Cryptographic signature manifest ID"
+    )
 
 
 # =========================================================================
@@ -296,6 +309,18 @@ class DAGJobStatusResponse(BaseModel):
     synthesized_forms: list[SynthesizedECRFForm] = Field(
         default_factory=list, description="Synthesized eCRFs when completed"
     )
+    model_id: str | None = Field(
+        default="gpt-4o-clinical-v1", description="AI model identifier"
+    )
+    prompt_hash: str | None = Field(
+        default=None, description="SHA-256 hash of AI prompt context"
+    )
+    review_state: str = Field(
+        default="UNAPPROVED_DRAFT", description="Draft review state"
+    )
+    signature_manifest_id: str | None = Field(
+        default=None, description="Cryptographic signature manifest ID"
+    )
 
 
 class ResumeDAGJobRequest(BaseModel):
@@ -315,3 +340,6 @@ class CompileUSDMFromJobRequest(BaseModel):
 
     study_id: str = Field(..., description="Target clinical study ID")
     change_reason: str = Field(..., description="GxP change justification reason")
+    sig_token: str | None = Field(
+        default=None, description="21 CFR Part 11 step-up electronic signature token"
+    )

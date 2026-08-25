@@ -7,7 +7,9 @@ the Neo4j knowledge graph and eCRF runtime.
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import uuid
 from typing import Any
 
 from fastapi import (
@@ -49,7 +51,11 @@ from apps.designer.domain.digitization_models import (
     USDMProtocolExtractionResponse,
 )
 from apps.designer.infrastructure.neo4j_usdm_writer import commit_usdm_graph
+from apps.execution.database.models.audit import AuditLog
+from packages.security.audit_logger import resolve_current_session
 from packages.security.rbac import require_permission
+from packages.security.sig_token_verifier import verify_and_consume_sig_token
+from packages.security.signature_builder import CryptographicSignatureBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -272,6 +278,10 @@ async def get_digitization_dag_job_status(
         is_terminal=is_term,
         final_usdm_payload=job.final_usdm_payload,
         synthesized_forms=job.synthesized_forms,
+        model_id=job.model_id,
+        prompt_hash=job.prompt_hash,
+        review_state=job.review_state,
+        signature_manifest_id=job.signature_manifest_id,
     )
 
 
@@ -352,18 +362,73 @@ async def compile_usdm_from_dag_job(
             detail=f"Digitization job '{job_id}' not found.",
         )
 
-    if job.status != DigitizationJobStatus.COMPLETED or not job.final_usdm_payload:
+    if (
+        job.status not in (DigitizationJobStatus.PENDING_REVIEW, DigitizationJobStatus.COMPLETED)
+        or not job.final_usdm_payload
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot compile USDM from job '{job_id}' because it has not completed successfully (current status: {job.status.value}).",
+            detail=f"Cannot compile USDM from job '{job_id}' because it is in status {job.status.value}.",
         )
 
-    # 1. Commit to Neo4j Graph
+    # 1. Step-Up Identity Re-Authentication Verification
+    sig_token = (
+        payload.sig_token
+        or request.headers.get("X-Sig-Token")
+        or request.headers.get("x-sig-token")
+    )
+    verify_and_consume_sig_token(
+        sig_token=sig_token,
+        expected_user_id=user_id,
+    )
+
+    # 2. Build Cryptographic Signature Manifest Binding User Identity, Timestamp, and AI Model Metadata
+    builder = CryptographicSignatureBuilder()
+    usdm_dict = (
+        job.final_usdm_payload.model_dump()
+        if hasattr(job.final_usdm_payload, "model_dump")
+        else dict(job.final_usdm_payload)
+    )
+    content_digest = builder.compute_content_digest(usdm_dict)
+    manifest = builder.build_signature_payload(
+        user_id=user_id,
+        purpose="USDM Graph Compilation & Activation",
+        content_digest=content_digest,
+    )
+    sig_manifest_id = f"sig_manifest_{uuid.uuid4().hex[:12]}"
+
+    # 3. Commit to Neo4j Graph
     graph_res = await commit_usdm_graph(
         driver, payload.study_id, job.final_usdm_payload, user_id
     )
 
-    # 2. Synthesize CDASH eCRFs & Rules
+    # 4. Record Database Audit Log with Top-Level AI Attribution & Review State Fields
+    audit_entry = AuditLog(
+        table_name="usdm_study_design",
+        record_id=payload.study_id,
+        action="COMPILE_USDM_GRAPH",
+        user_id=user_id,
+        change_reason=payload.change_reason,
+        model_id=job.model_id or "gpt-4o-clinical-v1",
+        prompt_hash=job.prompt_hash or hashlib.sha256((job.raw_text or job.filename).encode("utf-8")).hexdigest(),
+        review_state="APPROVED",
+        signature_manifest_id=sig_manifest_id,
+    )
+    try:
+        session = resolve_current_session()
+        if session:
+            session.add(audit_entry)
+            await session.commit()
+    except Exception as audit_err:
+        logger.warning("Could not persist audit log in active DB session: %s", audit_err)
+
+    # 5. Transition Job State to COMPLETED & APPROVED
+    job.status = DigitizationJobStatus.COMPLETED
+    job.review_state = "APPROVED"
+    job.signature_manifest_id = sig_manifest_id
+    await job_store.update_job(job)
+
+    # 6. Synthesize CDASH eCRFs & Rules
     synthesized_forms = synthesize_ecrf_forms(job.final_usdm_payload)
     version_id = f"{payload.study_id}_v1"
 

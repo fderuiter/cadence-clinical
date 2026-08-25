@@ -14,6 +14,7 @@ Requirements: PRD-DDF-001, PRD-SYS-001, PRD-MDR-007, PRD-CRF-004, PRD-CRF-005
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
 import uuid
@@ -111,6 +112,7 @@ class DigitizationDAGRunner:
         """
         job_id = f"job_dag_{uuid.uuid4().hex[:12]}"
         raw_text = extract_text_from_document(file_content, filename)
+        prompt_hash = hashlib.sha256((raw_text or filename).encode("utf-8")).hexdigest()
 
         job = DigitizationJob(
             job_id=job_id,
@@ -121,6 +123,9 @@ class DigitizationDAGRunner:
             status=DigitizationJobStatus.PENDING,
             current_stage=None,
             created_by=user_id,
+            model_id="gpt-4o-clinical-v1",
+            prompt_hash=prompt_hash,
+            review_state="UNAPPROVED_DRAFT",
         )
         return await self.store.create_job(job)
 
@@ -196,11 +201,14 @@ class DigitizationDAGRunner:
                 for form in ecrf_checkpoint.data["synthesized_forms"]
             ]
 
-        job.status = DigitizationJobStatus.COMPLETED
+        job.status = DigitizationJobStatus.PENDING_REVIEW
+        job.review_state = "UNAPPROVED_DRAFT"
+        if not job.prompt_hash:
+            job.prompt_hash = hashlib.sha256((job.raw_text or job.filename).encode("utf-8")).hexdigest()
         job.error_message = None
         await self.store.update_job(job)
         logger.info(
-            "Digitization job %s completed all %d stages successfully.",
+            "Digitization job %s completed all %d stages and automatically paused in PENDING_REVIEW prior to graph compilation.",
             job_id,
             len(STAGE_EXECUTION_ORDER),
         )

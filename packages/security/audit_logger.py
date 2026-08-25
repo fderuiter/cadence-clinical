@@ -56,6 +56,18 @@ class AuditLogPayload(BaseModel):
     details: dict[str, Any] | None = Field(
         default_factory=dict, description="Structured contextual event details"
     )
+    model_id: str | None = Field(
+        default=None, description="AI model identifier"
+    )
+    prompt_hash: str | None = Field(
+        default=None, description="SHA-256 digest of AI prompt context"
+    )
+    review_state: str | None = Field(
+        default=None, description="Draft review state"
+    )
+    signature_manifest_id: str | None = Field(
+        default=None, description="Signature manifest reference"
+    )
 
 
 class AuditLogRecord(AuditLogPayload):
@@ -144,6 +156,10 @@ if HAS_SQLMODEL:
         )
         previous_digest: str
         sha256_digest: str
+        model_id: str | None = SQLField(default=None, nullable=True)
+        prompt_hash: str | None = SQLField(default=None, nullable=True)
+        review_state: str | None = SQLField(default=None, nullable=True)
+        signature_manifest_id: str | None = SQLField(default=None, nullable=True)
 
 else:
 

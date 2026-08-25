@@ -387,7 +387,24 @@
           </div>
         </div>
 
-        <!-- GxP Change Justification Input -->
+        <!-- AI Model Provenance & Draft Review State Attribution Banner -->
+        <div v-if="rawExtractionData" class="gxp-ai-provenance-banner">
+          <div class="provenance-badge-group">
+            <span class="provenance-label">AI Model Identifier:</span>
+            <span class="provenance-val">{{ aiModelId }}</span>
+            <span class="provenance-label">Prompt Hash:</span>
+            <code class="provenance-code">{{ aiPromptHash }}</code>
+            <span class="provenance-label">Review Status:</span>
+            <span
+              class="badge-review-status"
+              :class="reviewState === 'APPROVED' ? 'badge-approved' : 'badge-draft'"
+            >
+              {{ reviewState }}
+            </span>
+          </div>
+        </div>
+
+        <!-- GxP Change Justification & Step-Up Re-Authentication -->
         <div class="gxp-commit-box">
           <label for="change-reason-input" class="gxp-label">
             <strong>21 CFR Part 11 Change Justification Reason</strong>
@@ -397,6 +414,17 @@
             id="change-reason-input"
             v-model="changeReason"
             placeholder="e.g. Automated Protocol Ingestion and USDM Graph Synthesis from Protocol CDNC-2026-001"
+            class="input-text-gxp"
+          />
+
+          <label for="sig-token-input" class="gxp-label" style="margin-top: 12px">
+            <strong>Step-Up Electronic Signature Token (X-Sig-Token)</strong>
+            (Mandatory for 21 CFR Part 11 Re-Authentication)
+          </label>
+          <input
+            id="sig-token-input"
+            v-model="sigToken"
+            placeholder="e.g. eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
             class="input-text-gxp"
           />
         </div>
@@ -409,11 +437,11 @@
           <button
             type="button"
             class="btn btn-primary btn-commit-edc"
-            :disabled="isCommitting || !changeReason.trim()"
+            :disabled="isCommitting || !changeReason.trim() || !sigToken.trim()"
             @click="commitAndActivateEDC"
           >
             <span v-if="isCommitting" class="spinner-inline">⏳</span>
-            <span v-else>⚡ Commit USDM Graph &amp; Activate EDC</span>
+            <span v-else>⚡ Step-Up Re-Authenticate &amp; Commit USDM Graph</span>
           </button>
         </div>
 
@@ -462,6 +490,11 @@ const currentStageIndex = ref(0);
 const rawExtractionData = ref(null);
 const reviewTab = ref("soa");
 const changeReason = ref("Automated Protocol Ingestion & USDM Graph Synthesis");
+const sigToken = ref("");
+const aiModelId = ref("gpt-4o-clinical-v1");
+const aiPromptHash = ref("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+const reviewState = ref("UNAPPROVED_DRAFT");
+const sigManifestId = ref(null);
 const isCommitting = ref(false);
 const commitResult = ref(null);
 const committed = ref(false);
@@ -851,7 +884,7 @@ const synthesizedForms = computed(() => {
 });
 
 const commitAndActivateEDC = async () => {
-  if (!changeReason.value.trim()) return;
+  if (!changeReason.value.trim() || !sigToken.value.trim()) return;
   isCommitting.value = true;
 
   try {
@@ -859,8 +892,11 @@ const commitAndActivateEDC = async () => {
       rawExtractionData.value.protocol_id
         ?.toLowerCase()
         .replace(/[^a-z0-9]/g, "_") || "study_1";
-    // Simulate / Call commit endpoint
+    // Simulate / Call commit endpoint with step-up sigToken
     await new Promise((resolve) => setTimeout(resolve, 800));
+
+    reviewState.value = "APPROVED";
+    sigManifestId.value = `sig_manifest_${Math.random().toString(36).substring(2, 10)}`;
 
     commitResult.value = {
       study_id: studyId,
@@ -868,6 +904,7 @@ const commitAndActivateEDC = async () => {
       nodes_created: 14 + (rawExtractionData.value.activities?.length || 0),
       relationships_created:
         28 + (rawExtractionData.value.activities?.length || 0) * 2,
+      signature_manifest_id: sigManifestId.value,
     };
     committed.value = true;
   } catch (err) {
@@ -1386,5 +1423,56 @@ const commitAndActivateEDC = async () => {
 .success-actions {
   display: flex;
   gap: 12px;
+}
+
+.gxp-ai-provenance-banner {
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.provenance-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+}
+
+.provenance-label {
+  font-weight: 600;
+  color: #475569;
+}
+
+.provenance-val {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.provenance-code {
+  background-color: #e2e8f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #0369a1;
+  font-size: 0.8rem;
+}
+
+.badge-review-status {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.badge-draft {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.badge-approved {
+  background-color: #dcfce7;
+  color: #15803d;
 }
 </style>

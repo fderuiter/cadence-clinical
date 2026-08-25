@@ -71,7 +71,7 @@ async def execute_audit_sealing_cycle(db: AsyncSession, limit: int = 100) -> str
     unsealed_query = await db.execute(
         text(
             clean_query(
-                "SELECT id, table_name, record_id, action, user_id, timestamp, old_values, new_values, version_index, change_reason "
+                "SELECT id, table_name, record_id, action, user_id, timestamp, old_values, new_values, version_index, change_reason, model_id, prompt_hash, review_state, signature_manifest_id "
                 "FROM audit_schema.audit_logs WHERE cryptographic_seal IS NULL ORDER BY timestamp ASC, id ASC LIMIT :limit;",
                 db,
             )
@@ -106,6 +106,10 @@ async def execute_audit_sealing_cycle(db: AsyncSession, limit: int = 100) -> str
             "change_reason": (
                 str(rec.change_reason) if rec.change_reason is not None else None
             ),
+            "model_id": str(rec.model_id) if getattr(rec, "model_id", None) is not None else None,
+            "prompt_hash": str(rec.prompt_hash) if getattr(rec, "prompt_hash", None) is not None else None,
+            "review_state": str(rec.review_state) if getattr(rec, "review_state", None) is not None else None,
+            "signature_manifest_id": str(rec.signature_manifest_id) if getattr(rec, "signature_manifest_id", None) is not None else None,
         }
         serialized = json.dumps(record_payload, sort_keys=True).encode("utf-8")
         rec_hash = hashlib.sha256(serialized).hexdigest()
@@ -195,7 +199,7 @@ async def validate_ledger_integrity(db: AsyncSession) -> bool:
             records_query = await db.execute(
                 text(
                     clean_query(
-                        "SELECT id, table_name, record_id, action, user_id, timestamp, old_values, new_values, version_index, change_reason "
+                        "SELECT id, table_name, record_id, action, user_id, timestamp, old_values, new_values, version_index, change_reason, model_id, prompt_hash, review_state, signature_manifest_id "
                         "FROM audit_schema.audit_logs WHERE cryptographic_seal = :seal ORDER BY timestamp ASC, id ASC;",
                         db,
                     )
@@ -232,6 +236,10 @@ async def validate_ledger_integrity(db: AsyncSession) -> bool:
                         if rec.change_reason is not None
                         else None
                     ),
+                    "model_id": str(rec.model_id) if getattr(rec, "model_id", None) is not None else None,
+                    "prompt_hash": str(rec.prompt_hash) if getattr(rec, "prompt_hash", None) is not None else None,
+                    "review_state": str(rec.review_state) if getattr(rec, "review_state", None) is not None else None,
+                    "signature_manifest_id": str(rec.signature_manifest_id) if getattr(rec, "signature_manifest_id", None) is not None else None,
                 }
                 serialized = json.dumps(record_payload, sort_keys=True).encode("utf-8")
                 rec_hash = hashlib.sha256(serialized).hexdigest()

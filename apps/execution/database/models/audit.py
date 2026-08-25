@@ -30,6 +30,12 @@ class AuditLog(Base):
     change_reason: Mapped[str] = mapped_column(String(255), nullable=True)
     cryptographic_seal: Mapped[str] = mapped_column(String(64), nullable=True)
 
+    # Schema-Enforced Dual Attribution fields (21 CFR Part 11 & GxP AI compliance)
+    model_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    prompt_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    review_state: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    signature_manifest_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
 
 class AuditLedgerSeal(Base):
     __tablename__ = "audit_ledger_seals"

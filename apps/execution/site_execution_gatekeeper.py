@@ -46,6 +46,28 @@ class GatekeeperRejectionReason(StrEnum):
     TRAINING_REQUIRED = "TRAINING_REQUIRED"
     UNAUTHORIZED_DOA_ROLE = "UNAUTHORIZED_DOA_ROLE"
     MISSING_SITE_ID = "MISSING_SITE_ID"
+    UNAPPROVED_DRAFT_REVIEW_STATE = "UNAPPROVED_DRAFT_REVIEW_STATE"
+
+
+def assert_draft_review_state_approved(review_state: str | None) -> None:
+    """Validates that a clinical entity or protocol design is approved prior to downstream execution.
+
+    Raises:
+        HTTPException(403): If the entity is marked with an unapproved draft review state.
+    """
+    if review_state and str(review_state).upper() in (
+        "UNAPPROVED_DRAFT",
+        "PENDING_REVIEW",
+        "DRAFT",
+        "UNAPPROVED",
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error": "UNAPPROVED_DRAFT_REVIEW_STATE",
+                "message": f"Access to clinical entity with unapproved draft review state '{review_state}' is blocked until approved.",
+            },
+        )
 
 
 class GatekeeperDecision(BaseModel):
@@ -271,6 +293,7 @@ class SiteExecutionGatekeeper:
         protocol_version: str | None = "1.0.0",
         user_role: str | None = None,
         strict_doa: bool | None = None,
+        review_state: str | None = None,
     ) -> GatekeeperDecision:
         """Evaluate whether a clinical mutation operation is permitted at a specific site.
 
@@ -297,6 +320,18 @@ class SiteExecutionGatekeeper:
 
         op_upper = operation_type.upper().strip()
         normalized_proto = protocol_version or "1.0.0"
+
+        if review_state and str(review_state).upper() in (
+            "UNAPPROVED_DRAFT",
+            "PENDING_REVIEW",
+            "DRAFT",
+            "UNAPPROVED",
+        ):
+            rejection_reasons.append(GatekeeperRejectionReason.UNAPPROVED_DRAFT_REVIEW_STATE)
+            rejection_details["review_state"] = {
+                "review_state": review_state,
+                "reason": "Access to clinical entity marked with unapproved draft review state is blocked.",
+            }
 
         if not site_id or not site_id.strip():
             rejection_reasons.append(GatekeeperRejectionReason.MISSING_SITE_ID)
