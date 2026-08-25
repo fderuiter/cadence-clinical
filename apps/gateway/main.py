@@ -18,9 +18,9 @@ from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 
 import packages  # noqa: F401
-from apps.gateway.routers.cdisc import router as cdisc_router
-from apps.gateway.routers.ecoa import router as ecoa_router
-from apps.gateway.routers.usdm import router as usdm_router
+from apps.gateway.presentation.routers.cdisc import router as cdisc_router
+from apps.gateway.presentation.routers.ecoa import router as ecoa_router
+from apps.gateway.presentation.routers.usdm import router as usdm_router
 from packages.security import validate_branding
 
 

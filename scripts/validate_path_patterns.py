@@ -269,6 +269,17 @@ def run_layout_assertions(repo_root: Path):
                             "All services must use plural 'adapters' to maintain layout convergence."
                         )
 
+    # 5. Verify no top-level "routers" directory exists in any active microservice
+    if apps_dir.is_dir():
+        for p in apps_dir.iterdir():
+            if p.is_dir() and p.name not in {"web", "subject-portal", "__pycache__"}:
+                legacy_routers = p / "routers"
+                if legacy_routers.exists():
+                    raise AssertionError(
+                        f"Microservice '{p.name}' contains a legacy top-level 'routers' directory at '{legacy_routers.relative_to(repo_root)}'. "
+                        "All API routes must reside in 'presentation/routers' to enforce architectural convergence."
+                    )
+
 
 def validate_file(file_path: str, repo_root: Path) -> tuple[bool, str]:
     """

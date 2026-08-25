@@ -380,7 +380,7 @@ def main() -> None:
                                 },
                                 {
                                     "apps/execution/main.py",
-                                    "apps/execution/routers/sdv.py",
+                                    "apps/execution/presentation/routers/sdv.py",
                                 },
                                 {
                                     "apps/execution/biostat/deid.py",
@@ -400,7 +400,7 @@ def main() -> None:
                                 },
                                 {
                                     "apps/eisf/main.py",
-                                    "apps/eisf/routers/eisf.py",
+                                    "apps/eisf/presentation/routers/eisf.py",
                                 },
                                 {
                                     "apps/execution/main.py",
@@ -523,28 +523,12 @@ def main() -> None:
                                     "apps/designer/presentation/routers/designer_routes.py",
                                 },
                                 {
-                                    "apps/designer/presentation/routers/cascade.py",
-                                    "apps/designer/routers/cascade.py",
-                                },
-                                {
-                                    "apps/designer/presentation/routers/comments.py",
-                                    "apps/designer/routers/comments.py",
+                                    "apps/designer/presentation/routers/startup_matrix.py",
+                                    "apps/ctms/application/site_startup_service.py",
                                 },
                                 {
                                     "apps/designer/presentation/routers/designer_routes.py",
                                     "apps/etmf/presentation/routers/etmf.py",
-                                },
-                                {
-                                    "apps/designer/presentation/routers/protocol_export.py",
-                                    "apps/designer/routers/protocol_export.py",
-                                },
-                                {
-                                    "apps/designer/presentation/routers/quality_sentinel.py",
-                                    "apps/designer/routers/quality_sentinel.py",
-                                },
-                                {
-                                    "apps/designer/presentation/routers/synopsis.py",
-                                    "apps/designer/routers/synopsis.py",
                                 },
                                 {
                                     "apps/econsent/domain/localization/models.py",
@@ -615,6 +599,74 @@ def main() -> None:
                                 {
                                     "apps/web/src/components/fileshare/MediaPreviewModal.vue",
                                     "apps/web/src/components/etmf/PdfPreviewModal.vue",
+                                },
+                                {
+                                    "apps/safety/infrastructure/execution_client.py",
+                                    "apps/quality/infrastructure/execution_client.py",
+                                },
+                                {
+                                    "apps/safety/adapters/ai_narrative_client.py",
+                                    "apps/quality/infrastructure/execution_client.py",
+                                },
+                                {
+                                    "apps/execution/greenlight_gating.py",
+                                    "apps/execution/training_gating.py",
+                                },
+                                {
+                                    "apps/execution/sdtm_mapper.py",
+                                    "apps/interop/domain/sdtm_device_mapper.py",
+                                },
+                                {
+                                    "apps/execution/services/amendment_diff.py",
+                                    "apps/knowledge/services/training_service.py",
+                                },
+                                {
+                                    "apps/execution/presentation/routers/rtsm_schemas.py",
+                                    "apps/execution/domain/rtsm_models.py",
+                                },
+                                {
+                                    "apps/execution/domain/sdtm/sdtm_models.py",
+                                    "apps/interop/domain/cdr/models.py",
+                                },
+                                {
+                                    "apps/interop/models.py",
+                                    "apps/interop/infrastructure/models.py",
+                                },
+                                {
+                                    "apps/interop/presentation/dct_dtos.py",
+                                    "apps/interop/domain/dct_models.py",
+                                },
+                                {
+                                    "apps/interop/presentation/routers/lakehouse.py",
+                                    "apps/interop/presentation/routers/cdr_pipeline.py",
+                                },
+                                {
+                                    "apps/interop/domain/cdr/sdtm_pipeline.py",
+                                    "apps/interop/domain/cdr/adam_pipeline.py",
+                                },
+                                {
+                                    "apps/designer/infrastructure/document_renderer.py",
+                                    "apps/payments/services/pdf_remittance_generator.py",
+                                },
+                                {
+                                    "apps/designer/adapters/document_renderer.py",
+                                    "apps/payments/services/pdf_remittance_generator.py",
+                                },
+                                {
+                                    "apps/web/src/components/imaging/OncologyCalipers.vue",
+                                    "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
+                                },
+                                {
+                                    "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+                                    "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+                                },
+                                {
+                                    "apps/ctms/presentation/dtos.py",
+                                    "apps/ctms/domain/models.py",
+                                },
+                                {
+                                    "apps/quality/infrastructure/models.py",
+                                    "apps/quality/presentation/dtos.py",
                                 },
                             ]
                         ):

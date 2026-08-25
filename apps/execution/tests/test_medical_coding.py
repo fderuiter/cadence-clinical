@@ -733,7 +733,7 @@ async def test_coding_schemas_validation() -> None:
     """Verify schema-level validation of CoderActionRequest and DictionaryImportRequest."""
     from pydantic import ValidationError
 
-    from apps.execution.routers.coding_schemas import (
+    from apps.execution.presentation.routers.coding_schemas import (
         CoderActionRequest,
         DictionaryImportRequest,
         DictTypeEnum,

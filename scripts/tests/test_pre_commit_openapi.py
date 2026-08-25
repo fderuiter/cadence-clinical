@@ -59,8 +59,10 @@ def test_should_trigger_schema_generation() -> None:
     assert should_trigger_schema_generation(["apps/execution/main.py"])
 
     # Router triggers
-    assert should_trigger_schema_generation(["apps/execution/routers/sdv.py"])
-    assert should_trigger_schema_generation(["apps/ctms/routers/doa.py"])
+    assert should_trigger_schema_generation(
+        ["apps/execution/presentation/routers/sdv.py"]
+    )
+    assert should_trigger_schema_generation(["apps/ctms/presentation/routers/doa.py"])
 
     # Model and schema triggers
     assert should_trigger_schema_generation(["apps/ctms/models.py"])
