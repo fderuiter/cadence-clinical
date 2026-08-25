@@ -3,7 +3,7 @@
   "dependencies": {
     "hls.js": "^1.7.1",
     "keycloak-js": "^26.2.4",
-    "pinia": "^4.0.2",
+    "pinia": "^4.0.3",
     "ui": "workspace:*",
     "usdm-schemas": "workspace:*",
     "vue": "^3.5.40",
