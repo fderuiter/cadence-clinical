@@ -182,7 +182,42 @@ class InMemoryStoragePort(StoragePort[dict[str, Any]]):
         self._multipart_sessions.clear()
 
 
+class FakeAccessibilityValidator:
+    """In-memory test double adapter implementing AccessibilityValidatorPort."""
+
+    def __init__(self, should_fail: bool = False, violations: list[dict[str, Any]] | None = None) -> None:
+        self.should_fail = should_fail
+        self.violations = violations or (
+            [
+                {
+                    "id": "color-contrast",
+                    "description": "Elements must have sufficient color contrast",
+                    "nodes": [],
+                }
+            ]
+            if should_fail
+            else []
+        )
+
+    async def validate(self, openrosa_xml: str):
+        from packages.ddf.models import AccessibilityReport
+
+        form_hash = hashlib.sha256(openrosa_xml.encode("utf-8")).hexdigest()
+        if self.should_fail:
+            return AccessibilityReport(
+                status="FAIL",
+                form_hash=form_hash,
+                violations=self.violations,
+            )
+        return AccessibilityReport(
+            status="PASS",
+            form_hash=form_hash,
+            passes=[{"id": "valid-layout"}],
+        )
+
+
 __all__ = [
+    "FakeAccessibilityValidator",
     "InMemoryNotificationDispatcher",
     "InMemoryRepository",
     "InMemoryStoragePort",

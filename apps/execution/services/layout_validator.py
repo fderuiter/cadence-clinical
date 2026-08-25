@@ -78,32 +78,10 @@ async def run_layout_and_accessibility_checks(
 
     try:
         async with async_playwright() as p:
-            try:
-                browser = await p.chromium.launch(
-                    headless=True,
-                    args=["--no-sandbox", "--disable-setuid-sandbox"],
-                )
-            except Exception as e:
-                import sys
-
-                is_testing = "pytest" in sys.modules
-                if is_testing:
-                    import logging
-
-                    current_test = os.environ.get("PYTEST_CURRENT_TEST", "")
-                    logging.getLogger(__name__).warning(
-                        f"Bypassing GxP accessibility checks during unit test {current_test} because Playwright browser launch failed: {e}"
-                    )
-                    if "compliance" in current_test or "requirements" in current_test:
-                        mock_violations = [
-                            {
-                                "id": "color-contrast",
-                                "help": "Elements must have sufficient color contrast",
-                            }
-                        ]
-                        return mock_violations, [], [], [], []
-                    return [], [], [], [], []
-                raise e
+            browser = await p.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-setuid-sandbox"],
+            )
 
             page = await browser.new_page()
             await page.goto(f"file://{os.path.abspath(temp_path)}")

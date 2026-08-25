@@ -17,6 +17,7 @@ from apps.execution.database.context import audit_context, current_session
 from apps.execution.database.models import TranslationJob
 from apps.execution.services.layout_validator import save_accessibility_audit_log
 from packages.ddf import CompileOptions, DDFCompiler
+from packages.ddf.ports import AccessibilityValidatorPort
 
 
 class DDFJobRunner:
@@ -31,6 +32,7 @@ class DDFJobRunner:
         user_id: str | None = None,
         change_reason: str | None = None,
         job_id: str | None = None,
+        accessibility_validator: AccessibilityValidatorPort | None = None,
     ) -> None:
         """Background worker that translates USDM payload into CDISC ODM and OpenRosa XML layouts.
 
@@ -41,6 +43,7 @@ class DDFJobRunner:
             user_id: The user ID to attribute database modifications to.
             change_reason: The reason/justification for database modifications.
             job_id: The pre-generated UUID for the translation job.
+            accessibility_validator: Optional injected accessibility validator port adapter.
         """
         token = None
         with audit_context(user_id, change_reason):
@@ -60,8 +63,12 @@ class DDFJobRunner:
                             )
                             session.add(job)
 
+                        validator = (
+                            accessibility_validator
+                            or PlaywrightAccessibilityValidatorAdapter()
+                        )
                         compiler = DDFCompiler(
-                            accessibility_validator=PlaywrightAccessibilityValidatorAdapter()
+                            accessibility_validator=validator
                         )
 
                         result = await compiler.compile(
