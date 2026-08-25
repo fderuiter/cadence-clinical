@@ -16,7 +16,7 @@ dependencies = [
     "pydantic>=2.6.0",
     "sqlalchemy>=2.0.28",
     "packages-hexagonal",
-    "packages-security",
+    "packages-core",
 ]
 
 [tool.hatch.build.targets.wheel]

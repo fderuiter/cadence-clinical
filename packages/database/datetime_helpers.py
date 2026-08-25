@@ -4,7 +4,7 @@ import datetime as dt_module
 
 from sqlalchemy.types import DateTime, TypeDecorator
 
-from packages.security.datetime_helpers import (
+from packages.core.datetime_helpers import (
     AwareDatetime,
     serialize_utc_z,
     validate_timezone_aware_datetime,

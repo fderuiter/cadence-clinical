@@ -24,6 +24,7 @@ exclude = [
 ]
 
 [tool.uv.sources]
+packages-core = { workspace = true }
 packages-cli = { workspace = true }
 packages-security = { workspace = true }
 packages-database = { workspace = true }
